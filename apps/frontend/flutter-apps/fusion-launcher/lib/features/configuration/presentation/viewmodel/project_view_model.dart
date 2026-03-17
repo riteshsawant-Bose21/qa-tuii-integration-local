@@ -110,13 +110,13 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   ProductQueryModel? selectedProductToAdd;
 
-  bool _shouldPlaceNonPlacedSpeakers = false;
-  bool get shouldPlaceNonPlacedSpeakers => _shouldPlaceNonPlacedSpeakers;
-  void setShouldPlaceNonPlacedSpeakers(bool shouldPlace) {
-    if (shouldPlace == _shouldPlaceNonPlacedSpeakers) return;
-    _shouldPlaceNonPlacedSpeakers = shouldPlace;
-    updateProject();
-  }
+  // bool _shouldPlaceNonPlacedSpeakers = false;
+  // bool get shouldPlaceNonPlacedSpeakers => _shouldPlaceNonPlacedSpeakers;
+  // void setShouldPlaceNonPlacedSpeakers(bool shouldPlace) {
+  //   if (shouldPlace == _shouldPlaceNonPlacedSpeakers) return;
+  //   _shouldPlaceNonPlacedSpeakers = shouldPlace;
+  //   updateProject();
+  // }
 
   /// Global hover and selection state management
   SelectedItem? _selectedDevice;

@@ -28,6 +28,11 @@ abstract class FusionCanvasElementPainter extends FusionBasePainter {
     );
   }
 
+  @override
+  Rect getBounds(FusionCanvasPainter painter) {
+    return getTransformedRect(painter);
+  }
+
   FusionCanvasElementPainter({required this.item});
 
   @override

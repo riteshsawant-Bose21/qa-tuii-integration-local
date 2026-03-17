@@ -3,8 +3,9 @@ import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../fusion_canvas_painter.dart';
+import 'mixin/fusion_canvas_interactable_mixin.dart';
 
-abstract class FusionPolygonPainter extends FusionBasePainter {
+abstract class FusionPolygonPainter extends FusionBasePainter with FusionCanvasInteractibleMixin {
   final FusionCanvasPolygon polygon;
   FusionPolygonPainter({
     required this.polygon,
@@ -29,6 +30,10 @@ abstract class FusionPolygonPainter extends FusionBasePainter {
         );
       }
     }
+  }
+
+  Path? getPath(FusionCanvasPainter painter) {
+    return getPolygonPath(polygon, painter);
   }
 
   @override

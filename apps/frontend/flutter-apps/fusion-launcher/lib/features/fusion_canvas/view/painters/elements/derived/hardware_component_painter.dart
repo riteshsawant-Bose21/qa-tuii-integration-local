@@ -5,8 +5,10 @@ import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canv
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../fusion_canvas_element_painter.dart';
+import '../mixin/fusion_canvas_bounded_movement.dart';
+import 'listening_area_painter.dart';
 
-class HardwareComponentPainter extends FusionCanvasElementPainter {
+class HardwareComponentPainter extends FusionCanvasElementPainter with FusionCanvasBoundedMovement {
   final HardwareComponent hardware;
 
   HardwareComponentPainter({required this.hardware}) : super(item: FusionCanvasItem(id: hardware.id));
@@ -56,4 +58,13 @@ class HardwareComponentPainter extends FusionCanvasElementPainter {
 
   @override
   Size getSize() => const Size.square(30);
+
+  @override
+  Path getBoundPath(FusionCanvasPainter painter) {
+    final String? listiningAreaId = hardware.locationEntity.listeningAreaId;
+    final ListeningAreaPainter? listingAreaPainter =
+        painter.layers.whereType<ListeningAreaPainter>().where((ListeningAreaPainter p) => p.id == listiningAreaId).firstOrNull;
+    return listingAreaPainter?.getPath(painter) ?? Path()
+      ..addRect(getTransformedRect(painter));
+  }
 }

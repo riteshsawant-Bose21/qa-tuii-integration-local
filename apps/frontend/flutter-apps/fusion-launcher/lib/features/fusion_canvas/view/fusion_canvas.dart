@@ -170,6 +170,8 @@ class FusionCanvas extends StatelessWidget {
                                 final FusionCanvasInputContext inputContext = FusionCanvasInputContext(
                                   hoverState: hoverState,
                                   snapState: context.read<FusionSnapViewModel>().state,
+                                  resolveInteractionTargetAt: fusionCanvasPainter.getInteractionTargetAt,
+                                  resolveBoundedDeltaForLayer: fusionCanvasPainter.getBoundedDeltaForLayer,
                                 );
 
                                 // Delegate all input handling to the tool viewmodel

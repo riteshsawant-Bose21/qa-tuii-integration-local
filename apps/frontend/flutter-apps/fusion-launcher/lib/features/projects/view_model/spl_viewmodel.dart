@@ -55,6 +55,9 @@ class SplViewModel extends Cubit<SplState> {
   }
 
   Future<void> calculateSPL() async {
+    print(
+      "Calculating SPL with panel data: ${state.panelData}, current listening areas: ${state.listeningAreas.length}",
+    );
     // if (_engine == null) {
     //   debugPrint('calculateSPL: _engine is null');
     //   return;

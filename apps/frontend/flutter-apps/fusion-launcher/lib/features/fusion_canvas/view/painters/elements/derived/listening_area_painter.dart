@@ -5,6 +5,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../fusion_canvas_painter.dart';
 import '../fusion_rect_painter.dart';
+import '../mixin/fusion_canvas_interactable_mixin.dart';
 
 class ListeningAreaPainter extends FusionPolygonPainter {
   final ListeningArea listeningArea;
@@ -25,6 +26,24 @@ class ListeningAreaPainter extends FusionPolygonPainter {
   @override
   String toString() {
     return 'ListeningAreaPainter(name: ${listeningArea.name}, vertices: ${listeningArea.vertices.length})';
+  }
+
+  @override
+  Set<FusionCanvasLayerInteraction> get possibleInteractions => const <FusionCanvasLayerInteraction>{
+    FusionCanvasLayerInteraction.select,
+  };
+
+  @override
+  Set<FusionCanvasLayerInteraction>? possibleInteractionsForElement(
+    FusionCanvasElement element,
+  ) {
+    if (element is FusionCanvasPoint || element is FusionCanvasLine) {
+      return const <FusionCanvasLayerInteraction>{
+        FusionCanvasLayerInteraction.select,
+        FusionCanvasLayerInteraction.drag,
+      };
+    }
+    return null;
   }
 
   Color getColor(FusionCanvasPainter painter) => painter.context.colorScheme.elevation4;

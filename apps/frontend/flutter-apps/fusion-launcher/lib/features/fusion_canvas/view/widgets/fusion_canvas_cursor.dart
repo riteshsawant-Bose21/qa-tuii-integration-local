@@ -68,13 +68,14 @@ class FusionCanvasCursor extends StatelessWidget {
 
         final Alignment alignment = customCursor != null ? customCursor.$1 : cursorType.pointerTip;
         final Widget cursorWidget = customCursor != null ? customCursor.$2 : cursor;
+        final double size = 18;
         return Positioned(
-          left: effectiveMousePosition.dx + alignment.x * 24,
-          top: effectiveMousePosition.dy + alignment.y * -24,
+          left: effectiveMousePosition.dx + alignment.x * size,
+          top: effectiveMousePosition.dy + alignment.y * -size,
           child: IgnorePointer(
             child: SizedBox(
-              height: 24,
-              width: 24,
+              height: size,
+              width: size,
               child: cursorWidget,
             ),
           ),

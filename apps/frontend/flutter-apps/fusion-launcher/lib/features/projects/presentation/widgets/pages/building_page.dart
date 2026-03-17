@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/projects/viewmodel/building_page_state.dart';
 import 'package:fusion_launcher/features/schematics/presentation/widgets/cost_calculator_widget.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -28,13 +29,17 @@ class BuildingPage extends StatelessWidget {
     return MultiBlocProvider(
       providers: <SingleChildWidget>[
         BlocProvider<BuildingPageViewModel>(
-          create: (BuildContext context) => BuildingPageViewModel(),
+          create:
+              (BuildContext context) => BuildingPageViewModel(
+                projectViewModel: context.read<ProjectViewModel>(),
+              ),
         ),
       ],
       child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
         builder: (BuildContext context, ProjectViewModelState state) {
-          final ToolbarMode toolbarMode = context.watch<BuildingPageViewModel>().state.toolbarMode;
-          final String? currentSelectedListeningAreaId = context.watch<ProjectViewModel>().currentSelectedListeningAreaId;
+          final BuildingPageState buildingPageState = context.watch<BuildingPageViewModel>().state;
+          final ToolbarMode toolbarMode = buildingPageState.toolbarMode;
+          final String? currentSelectedListeningAreaId = buildingPageState.selectedListeningAreaId;
 
           return SemanticHelper.container(
             testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.buildingCanvas),
@@ -228,7 +233,6 @@ class BuildingPage extends StatelessWidget {
 
 class _DockItemPanel extends StatelessWidget {
   const _DockItemPanel({
-    super.key,
     required this.dockItem,
   });
 
