@@ -234,10 +234,7 @@ extension DroInputMapperService on ProjectService {
         ),
       );
 
-      //if there aare composite blocks add it here
-
-      //zone function is a mandatory now
-      List<DroProcessingBlock> userFacingBlocks = getProcessingBlocksData(zoneFunction!.id ?? "", isUserFacing: true);
+      List<DroProcessingBlock> userFacingBlocks = getProcessingBlocksData(zone.id, isUserFacing: true);
 
       final DroSubzoneControl droZoneControl = DroSubzoneControl(
         id: zone.id,

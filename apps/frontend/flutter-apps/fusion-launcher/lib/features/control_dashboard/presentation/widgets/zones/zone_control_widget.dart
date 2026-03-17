@@ -26,6 +26,10 @@ class ZoneControlCard extends StatelessWidget {
     return serviceLocator<ProjectViewModel>().getCircuitsInZone(zone.id);
   }
 
+  ProcessingBlockModel? get processingBlock {
+    return serviceLocator<ProjectViewModel>().getUserFacingGainBlockForZone(zoneId: zone.id);
+  }
+
   @override
   Widget build(BuildContext context) {
     print("Zone ${zone.name} has  muted state: ${zone.muted}");
@@ -48,7 +52,7 @@ class ZoneControlCard extends StatelessWidget {
             ZoneControlHeader(zone: zone),
 
             AudioMeterContainer(
-              muted: zone.muted,
+              meterId: processingBlock?.id,
             ),
 
             if (subZones.isEmpty) ...<Widget>[
@@ -60,7 +64,6 @@ class ZoneControlCard extends StatelessWidget {
                           .map(
                             (CircuitModel circuit) => DashboardCircuitWidget(
                               circuit: circuit,
-                              isZoneMuted: zone.muted,
                             ),
                           )
                           .toList(),

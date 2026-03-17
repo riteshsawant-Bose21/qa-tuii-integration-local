@@ -21,6 +21,7 @@ class PbOutMeter extends StatefulWidget {
 
 class _PbOutMeterState extends State<PbOutMeter> {
   int get dimensionOrDefault => widget.dimension ?? 0;
+  double _lastMeterValue = -60.0;
 
   @override
   void initState() {
@@ -38,8 +39,11 @@ class _PbOutMeterState extends State<PbOutMeter> {
   Widget build(BuildContext context) {
     return BlocSelector<MeterDataViewModel, MeterDataState, double>(
       selector: (MeterDataState state) {
-        // Fast dictionary lookup. Defaults to -60.0 if not found.
-        return state.meterValues?[widget.blockId]?.value[dimensionOrDefault] ?? -60.0;
+        final double? current = state.meterValues?[widget.blockId]?.value[dimensionOrDefault];
+        if (current != null) {
+          _lastMeterValue = current;
+        }
+        return _lastMeterValue;
       },
       builder: (BuildContext context, double meterValue) {
         return VerticalMeter(

@@ -13,7 +13,7 @@ class ConfigSyncViewModel extends Cubit<ConfigSyncState> {
   final DroConfigService droConfigService;
   final FusionConfigSyncService fusionConfigSyncService;
 
-  final String droServerUrl = '10.8.50.245:8080';
+  final String droServerUrl = '10.8.50.144:8080';
 
   ConfigSyncViewModel({
     required this.droConfigService,
