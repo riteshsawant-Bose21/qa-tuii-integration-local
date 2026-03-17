@@ -24,6 +24,13 @@ const (
 
 	HTTPTimeout = 5 * time.Second
 
+	SerialPath      = "/sys/firmware/devicetree/base/serial-number"
+	FirmwarePath    = "/etc/buildinfo"
+	ModelUnknown    = "Unknown"
+	SerialUnknown   = "Unknown"
+	FirmwareUnknown = "Unknown"
+	MacUnknown      = "Unknown"
+
 	MessageIDKey        = "id"
 	MessagePriorityKey  = "priority"
 	MessageTimestampKey = "timestamp"
@@ -72,4 +79,14 @@ const (
 	WSCodeDeviceNotFound   = 4005 // Device not found
 	WSCodeUpdateFailed     = 4006 // Update operation failed
 	WSCodeApplicationError = 4500 // General application error
+
+)
+
+// IoT device identity constants
+const (
+	DefaultIdentityFilePath = "/var/lib/device-identity/"
+	DefaultCAFileName       = "AmazonRootCA1.pem"
+	DefaultCSRFileName      = "device.csr"
+	DefaultCertFileName     = "device.x509.cert"
+	DefaultKeyFileName      = "device.key"
 )
