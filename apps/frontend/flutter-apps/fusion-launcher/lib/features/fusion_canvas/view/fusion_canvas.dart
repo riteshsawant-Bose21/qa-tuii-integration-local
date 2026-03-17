@@ -10,6 +10,7 @@ import 'package:fusion_launcher/features/fusion_canvas/view/widgets/canvas_contr
 import 'package:fusion_launcher/features/fusion_canvas/view/widgets/fusion_canvas_listeners_wrapper.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_tool_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/canvas/fusion_canvas_point.dart';
 import 'package:nested/nested.dart';
 
 import '../state/fusion_canvas_input_state.dart';

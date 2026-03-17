@@ -191,7 +191,7 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
   Future<ResponseCallback<UserModel>> getUserDetails() async {
     final ResponseCallback<UserModel> response = await _networkClient.get(
       api: FusionApiEndpoint.getProfile,
-      fromJson: (Map<String, dynamic> json) => UserModel.fromJson(json),
+      fromJson: (dynamic json) => UserModel.fromJson(json),
     );
     return response;
   }

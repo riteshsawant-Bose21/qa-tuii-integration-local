@@ -14,6 +14,7 @@ import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/features/create_new_project/views/create_new_project_dialog.dart';
 import 'package:fusion_launcher/features/media_files/view/configuration_media_files_pages.dart';
 import 'package:fusion_launcher/features/media_files/viewModel/media_files_view_model.dart';
+import 'package:fusion_launcher/features/projects/view_model/dsp_sync/config_sync_view_model.dart';
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/side_speaker_section.dart';
 import 'package:fusion_launcher/features/scheduling/view/scheduling_page.dart';
@@ -55,6 +56,7 @@ import '../widget/building/side_panel_widgets/schematic_properties.dart';
 import '../widget/building/side_panel_widgets/zone_and_listening_area.dart';
 import '../widget/configuration/side_panel_widgets/configuration_tab_switcher.dart';
 import '../widget/control_design_tab_switcher.dart';
+import '../widget/zmq_data/zmq_data_dialog.dart';
 
 class ProjectWorkArea extends StatefulWidget {
   const ProjectWorkArea({super.key});
@@ -953,14 +955,44 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                               alignment: Alignment.center,
                               child: SizedBox(
                                 height: 35,
-                                child: FusionNeumorphicButton(
-                                  semanticId: "push_configuration",
-                                  onTap: () {},
-                                  height: 20,
-                                  borderRadius: 6,
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  text: "Push Configuration",
-                                  textStyle: context.textTheme.labelMedium,
+                                child: BlocListener<ConfigSyncViewModel, ConfigSyncState>(
+                                  listener: (BuildContext context, ConfigSyncState state) {
+                                    if (state is ProcessingDataWithDro || state is SyncingConfigWithDsp) {
+                                      FusionUiUtils.showLoader(context);
+                                    } else {
+                                      FusionUiUtils.hideLoader(context);
+
+                                      if (state is DroProcessingFailed) {
+                                        FusionToast.error(
+                                          context,
+                                          message: state.message,
+                                        );
+                                      } else if (state is ConfigSyncFailure) {
+                                        FusionToast.error(
+                                          context,
+                                          message: state.message,
+                                        );
+                                      } else if (state is ConfigSyncedWithDsp) {
+                                        FusionToast.success(
+                                          context,
+                                          message: "Configuration synced successfully",
+                                        );
+                                      }
+                                    }
+                                  },
+                                  child: FusionNeumorphicButton(
+                                    semanticId: "push_configuration",
+                                    onTap: () {
+                                      serviceLocator<ConfigSyncViewModel>().refineAndSyncDataWithDsp(
+                                        droInput: serviceLocator<ProjectViewModel>().getDroInputData(),
+                                      );
+                                    },
+                                    height: 20,
+                                    borderRadius: 6,
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    text: "Push Configuration",
+                                    textStyle: context.textTheme.labelMedium,
+                                  ),
                                 ),
                               ),
                             ),
@@ -1164,6 +1196,38 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                             //   height: 24,
                             // ),
                           ),
+
+                          /// Meter data
+                          Container(
+                            width: 56,
+                            height: 48,
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: context.colorScheme.elevation1,
+                              border: Border(
+                                top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                              ),
+                            ),
+                            child: Tooltip(
+                              message: 'Meter data',
+                              child: InkWell(
+                                child: Icon(
+                                  Icons.electric_meter,
+                                  size: 24,
+                                  color: Theme.of(context).colorScheme.primaryWhite,
+                                ),
+                                onTap: () async {
+                                  showMeterDataPopup(context);
+                                },
+                              ),
+                            ),
+                            // child: Image.asset(
+                            //   "assets/images/share_icon.png",
+                            //   width: 24,
+                            //   height: 24,
+                            // ),
+                          ),
                           ControlDesignTabSwitcher(
                             onTabChanged: (int index) {
                               toggleFusionModes();
@@ -1303,7 +1367,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
     serviceLocator<ProjectViewModel>().saveProject();
 
     const JsonEncoder encoder = JsonEncoder.withIndent('  ');
-    final Map<String, dynamic> jsonMap = serviceLocator<ProjectViewModel>().getProjectJson();
+    final Map<String, dynamic> jsonMap = serviceLocator<ProjectViewModel>().getDroInputData().toJson();
     final String prettyJson = encoder.convert(jsonMap);
 
     showDialog(
