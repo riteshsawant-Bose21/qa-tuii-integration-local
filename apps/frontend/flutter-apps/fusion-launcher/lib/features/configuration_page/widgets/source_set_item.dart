@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/source_item.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_chain_view.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_sources.dart';
+import 'package:fusion_lib/constants/semantics/test_keys.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_button.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
@@ -16,8 +19,9 @@ import 'package:fusion_lib/models/project_entities/source_model.dart';
 import 'package:fusion_lib/models/project_entities/source_set_model.dart';
 
 import '../../../core/constants/assets_constants.dart';
-import '../../../core/service_locator.dart';
-import '../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../viewModel/source_sets_viewmodel/config_source_sets_state.dart';
+import '../viewModel/source_sets_viewmodel/config_source_sets_viewmodel.dart';
+import '../viewModel/sources_viewmodel/config_sources_viewmodel.dart';
 
 class SelectedSource {
   final String id;
@@ -30,8 +34,9 @@ class SourceSetItem extends StatefulWidget {
   final SourceSet sourceSet;
   final bool isDragHovered;
   final VoidCallback? onSourceDropped;
+  final int? index;
 
-  const SourceSetItem({required this.sourceSet, this.isDragHovered = false, this.onSourceDropped, super.key});
+  const SourceSetItem({required this.sourceSet, this.isDragHovered = false, this.onSourceDropped, super.key, this.index});
 
   @override
   State<SourceSetItem> createState() => _SourceSetItemState();
@@ -40,7 +45,9 @@ class SourceSetItem extends StatefulWidget {
 class _SourceSetItemState extends State<SourceSetItem> {
   late ValueNotifier<bool> _isSourcesSetExpanded;
 
-  ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
+  ConfigSourceSetsViewmodel get _sourceSetsViewmodel => context.read<ConfigSourceSetsViewmodel>();
+  ConfigSourcesViewmodel get _sourcesViewmodel => context.read<ConfigSourcesViewmodel>();
+  ProjectViewModel get _projectViewModel => context.read<ProjectViewModel>();
   final TextEditingController _sourceSetNameController = TextEditingController();
   final List<SelectedSource> _selectedSources = <SelectedSource>[];
   bool _isHovered = false;
@@ -77,12 +84,13 @@ class _SourceSetItemState extends State<SourceSetItem> {
     );
 
     /// Add selected sources to the new source set
-    _projectViewModel.updateSourceSet(sourceSet: newSourceSet);
+    _sourceSetsViewmodel.updateSourceSet(newSourceSet);
 
-    _projectViewModel.updateSourcesInSourceSet(
+    _sourceSetsViewmodel.updateSourcesInSourceSet(
       sourceSetId: newSourceSet.id,
       sourceIds: _selectedSources.map((SelectedSource s) => s.id).toList(),
     );
+    _sourcesViewmodel.syncWithProjectViewModel();
 
     /// Expand source set to show updated sources
     _isSourcesSetExpanded.value = true;
@@ -107,65 +115,81 @@ class _SourceSetItemState extends State<SourceSetItem> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 250),
-      alignment: AlignmentGeometry.topCenter,
-      child: ValueListenableBuilder<bool>(
-        valueListenable: _isSourcesSetExpanded,
-        builder: (BuildContext context, bool subZoneExpanded, Widget? child) {
-          return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-            builder: (BuildContext context, ProjectViewModelState state) {
-              return Column(
-                children: <Widget>[
-                  MouseRegion(
-                    onEnter: (_) => setState(() => _isHovered = true),
-                    onExit: (_) => setState(() => _isHovered = false),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, '${FusionTestKeys.instance.sourcesetdata}_${widget.index}'),
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 250),
+        alignment: AlignmentGeometry.topCenter,
+        child: ValueListenableBuilder<bool>(
+          valueListenable: _isSourcesSetExpanded,
+          builder: (BuildContext context, bool subZoneExpanded, Widget? child) {
+            return Column(
+              children: <Widget>[
+                MouseRegion(
+                  onEnter: (_) => setState(() => _isHovered = true),
+                  onExit: (_) => setState(() => _isHovered = false),
 
-                    child: GestureDetector(
-                      onTap: () {
-                        /// Toggle expand/collapse
-                        _isSourcesSetExpanded.value = !_isSourcesSetExpanded.value;
-                      },
-                      child: Container(
-                        margin: const EdgeInsets.only(top: 8, left: 8, right: 8),
-                        padding: const EdgeInsets.only(left: 12, right: 12),
-                        height: 36,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: widget.isDragHovered ? Theme.of(context).colorScheme.primary : Colors.transparent,
-                            width: 1.0,
-                          ),
-                          borderRadius: BorderRadius.circular(6),
-                          color:
-                              widget.isDragHovered
-                                  ? Theme.of(context).colorScheme.primary.withAlpha(50)
-                                  : (_isHovered ? context.colorScheme.elevation3 : context.colorScheme.elevation2),
+                  child: GestureDetector(
+                    onTap: () {
+                      /// Toggle expand/collapse
+                      _isSourcesSetExpanded.value = !_isSourcesSetExpanded.value;
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 8, left: 8, right: 8),
+                      padding: const EdgeInsets.only(left: 12, right: 12),
+                      height: 36,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: widget.isDragHovered ? Theme.of(context).colorScheme.primary : Colors.transparent,
+                          width: 1.0,
                         ),
+                        borderRadius: BorderRadius.circular(6),
+                        color:
+                            widget.isDragHovered
+                                ? Theme.of(context).colorScheme.primary.withAlpha(50)
+                                : (_isHovered ? context.colorScheme.elevation3 : context.colorScheme.elevation2),
+                      ),
+                      child: SemanticHelper.container(
+                        testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.sourcesetdataitmheader),
                         child: Row(
                           children: <Widget>[
                             /// Expand/collapse icon
-                            Icon(
-                              _isSourcesSetExpanded.value ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
-                              color: Theme.of(context).colorScheme.iconWhite,
+                            SemanticHelper.button(
+                              testId: SemanticHelper.createTestId(
+                                SemanticTypes.button,
+                                FusionTestKeys.instance.sourcesetdataitmheaderexpandcollapse,
+                              ),
+                              child: Icon(
+                                _isSourcesSetExpanded.value ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
+                                color: Theme.of(context).colorScheme.iconWhite,
+                              ),
                             ),
                             const SizedBox(width: 4),
 
                             /// Source set name
                             Expanded(
-                              child: FusionAppText(
-                                text: widget.sourceSet.name,
-                                maxLine: 1,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
+                              child: SemanticHelper.staticText(
+                                testId: SemanticHelper.createTestId(
+                                  SemanticTypes.text,
+                                  FusionTestKeys.instance.sourcesetdataitmheadername,
+                                ),
+                                child: FusionAppText(
+                                  text: widget.sourceSet.name,
+                                  maxLine: 1,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.copyWith(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ),
 
                             Visibility(
-                              visible: _projectViewModel.canLinkSourceSet(sourceSetId: widget.sourceSet.id),
-                              child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                                builder: (BuildContext context, ProjectViewModelState state) {
+                              visible: _sourceSetsViewmodel.canLinkSourceSet(sourceSetId: widget.sourceSet.id),
+                              child: BlocBuilder<ConfigSourceSetsViewmodel, ConfigSourceSetsState>(
+                                builder: (BuildContext context, ConfigSourceSetsState state) {
                                   return Tooltip(
                                     message: widget.sourceSet.isLinked ? 'Unlink Source Set' : 'Link Source Set',
                                     child: GestureDetector(
@@ -182,13 +206,13 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                                 secondaryButtonLabel: 'Cancel',
                                                 onPrimaryPressed: () {
                                                   if (widget.sourceSet.isLinked) {
-                                                    _projectViewModel.unlinkSourceSet(sourceSetId: widget.sourceSet.id);
+                                                    _sourceSetsViewmodel.unlinkSourceSet(sourceSetId: widget.sourceSet.id);
                                                     FusionToast.success(
                                                       context,
                                                       message: "Source set unlinked successfully",
                                                     );
                                                   } else {
-                                                    _projectViewModel.linkSourceSet(sourceSetId: widget.sourceSet.id);
+                                                    _sourceSetsViewmodel.linkSourceSet(sourceSetId: widget.sourceSet.id);
                                                     FusionToast.success(
                                                       context,
                                                       message: "Source set linked successfully",
@@ -201,6 +225,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                         );
                                       },
                                       child: FusionImage.asset(
+                                        semanticId: FusionTestKeys.instance.sourcesetdataitmheaderlink,
                                         widget.sourceSet.isLinked ? Assets.unLinkIcon : Assets.linkIcon,
                                         width: 22,
                                         height: 22,
@@ -220,7 +245,9 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                 onTap: () {
                                   ProcessingChainView.showForSourceSet(context, widget.sourceSet);
                                 },
+
                                 child: FusionImage.asset(
+                                  semanticId: FusionTestKeys.instance.sourcesetdataitmheaderprocessingblock,
                                   Assets.processingBlocksIcon,
                                   width: 18,
                                   height: 12,
@@ -236,6 +263,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                 key: _addSourceIconKey,
                                 onTap: _showEditSourceSetPopup,
                                 child: FusionImage.asset(
+                                  semanticId: FusionTestKeys.instance.sourcesetdataitmheadereditsource,
                                   Assets.addSourceIcon,
                                   width: 22,
                                   height: 22,
@@ -251,6 +279,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                               child: GestureDetector(
                                 onTap: _confirmDeleteSourceSet,
                                 child: FusionImage.asset(
+                                  semanticId: FusionTestKeys.instance.sourcesetdataitmheaderdeletesource,
                                   Assets.deleteIcon,
                                   width: 17,
                                   height: 17,
@@ -264,12 +293,12 @@ class _SourceSetItemState extends State<SourceSetItem> {
                       ),
                     ),
                   ),
-                  if (subZoneExpanded) _buildSourcesList(),
-                ],
-              );
-            },
-          );
-        },
+                ),
+                if (subZoneExpanded) _buildSourcesList(),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -282,7 +311,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
     }
 
     /// Pre-select sources already in this source set
-    final List<Source> currentSourcesInSet = _projectViewModel.getSourcesInSourceSet(sourceSetId: widget.sourceSet.id);
+    final List<Source> currentSourcesInSet = _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: widget.sourceSet.id);
     for (final Source s in currentSourcesInSet) {
       final bool alreadyAdded = _selectedSources.any((SelectedSource sel) => sel.id == s.id);
       if (!alreadyAdded) {
@@ -315,7 +344,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                 return SingleChildScrollView(
                   child: _SourceSetCreationWidget(
                     sourceSetNameController: _sourceSetNameController,
-                    availableSources: _projectViewModel.sources,
+                    availableSources: _sourceSetsViewmodel.getAllSources(),
                     selectedSources: _selectedSources,
                     onAddSourceSet: () {
                       _editSourceSet();
@@ -347,9 +376,9 @@ class _SourceSetItemState extends State<SourceSetItem> {
 
   /// Build the list of sources within the source set
   Widget _buildSourcesList() {
-    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-      builder: (BuildContext context, ProjectViewModelState state) {
-        final List<Source> sourceList = _projectViewModel.getSourcesInSourceSet(sourceSetId: widget.sourceSet.id);
+    return BlocBuilder<ConfigSourceSetsViewmodel, ConfigSourceSetsState>(
+      builder: (BuildContext context, ConfigSourceSetsState state) {
+        final List<Source> sourceList = _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: widget.sourceSet.id);
         return Container(
           padding: const EdgeInsets.only(top: 12, bottom: 12),
           margin: const EdgeInsets.only(left: 12, right: 12),
@@ -392,15 +421,34 @@ class _SourceSetItemState extends State<SourceSetItem> {
                         index: index,
                         source: sourceData,
                         isDragging: true,
+                        isInControlMode: _projectViewModel.isInControlMode,
                       ),
                     ),
                   ),
                 ),
                 childWhenDragging: Opacity(
                   opacity: 0.5,
-                  child: SourceItem(index: index, source: sourceData, isDragging: true),
+                  child: SourceItem(
+                    index: index,
+                    source: sourceData,
+                    isDragging: true,
+                    isInControlMode: _projectViewModel.isInControlMode,
+                  ),
                 ),
-                child: SourceItem(index: index, sourceSet: widget.sourceSet, source: sourceData, isDragging: _draggingSourceId == sourceData.id),
+                child: SemanticHelper.container(
+                  testId: SemanticHelper.createTestId(
+                    SemanticTypes.container,
+                    FusionTestKeys.instance.srcsetlistitem,
+                  ),
+                  child: SourceItem(
+                    semanticId: FusionTestKeys.instance.srcsetlistitem,
+                    index: index,
+                    sourceSet: widget.sourceSet,
+                    source: sourceData,
+                    isInControlMode: _projectViewModel.isInControlMode,
+                    isDragging: _draggingSourceId == sourceData.id,
+                  ),
+                ),
               );
             },
           ),
@@ -449,6 +497,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                           label: "Cancel",
                           textStyle: Theme.of(ctx).textTheme.labelLarge?.copyWith(fontSize: 11),
                           onTap: () => Navigator.of(ctx).pop(),
+                          accessLabel: 'source_set_cancel',
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -463,8 +512,10 @@ class _SourceSetItemState extends State<SourceSetItem> {
                           isActive: true,
                           onTap: () {
                             Navigator.of(ctx).pop();
-                            _projectViewModel.removeSourceSet(sourceSetId: widget.sourceSet.id);
+                            _sourceSetsViewmodel.deleteSourceSet(widget.sourceSet.id);
+                            _sourcesViewmodel.syncWithProjectViewModel();
                           },
+                          accessLabel: 'source_set_delete',
                         ),
                       ),
                     ],
@@ -848,6 +899,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                   onTap: () {
                     widget.onCancel.call();
                   },
+                  accessLabel: 'source_set_cancel',
                 ),
               ),
               const SizedBox(width: 8),
@@ -863,6 +915,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                   onTap: () {
                     widget.onAddSourceSet.call();
                   },
+                  accessLabel: 'source_set_edit',
                 ),
               ),
             ],

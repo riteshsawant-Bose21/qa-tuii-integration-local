@@ -19,7 +19,12 @@ class DelayBlock extends StatelessWidget {
     final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
 
     final String targetBlockId = watch.processingBlock.id;
-    return ProxyProvider<AlgorithmDataViewmodel, DelayController>(
+    return  SemanticHelper.container(
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.container,
+          'delay_block',
+        ),
+        child: ProxyProvider<AlgorithmDataViewmodel, DelayController>(
       key: ValueKey<String>(watch.processingBlock.id),
       create: (BuildContext context) {
         return DelayController(watch);
@@ -55,6 +60,8 @@ class DelayBlock extends StatelessWidget {
                           SizedBox(
                             width: 200,
                             child: PBDropdown<_UnitsType>(
+                                semanticId: 'delay_units_dropdown',
+
                               hintText: "Units",
                               onChanged: (_UnitsType value) {
                                 context.read<DelayController>().updateUnits(value.value);
@@ -81,6 +88,7 @@ class DelayBlock extends StatelessWidget {
                           SizedBox(
                             width: 80,
                             child: PBNumberTextField(
+                              semanticId: 'delay_text_field',
                               value: context.watch<DelayController>().currentDelay ?? 0,
                               onChanged: (num value) {
                                 context.read<DelayController>().updateDelay(value);
@@ -122,6 +130,7 @@ class DelayBlock extends StatelessWidget {
                         child: Padding(
                           padding: const EdgeInsets.all(12.0),
                           child: PbOutMeter(
+                            semanticId: 'delay_output_meter',
                             blockId: targetBlockId,
                           ),
                         ),
@@ -133,6 +142,7 @@ class DelayBlock extends StatelessWidget {
             ),
           );
         },
+      ),
       ),
     );
   }

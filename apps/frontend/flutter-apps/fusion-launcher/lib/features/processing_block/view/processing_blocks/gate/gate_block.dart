@@ -20,7 +20,12 @@ class GateBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
     final String targetBlockId = watch.processingBlock.id;
-    return ProxyProvider<AlgorithmDataViewmodel, GateController>(
+    return SemanticHelper.container(
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.container,
+          'gate_block',
+        ),
+        child: ProxyProvider<AlgorithmDataViewmodel, GateController>(
       key: ValueKey<String>(watch.processingBlock.id),
       create: (BuildContext context) {
         return GateController(watch);
@@ -38,10 +43,12 @@ class GateBlock extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 PBSection(
+                    semanticId: 'gate_threshold',
                   type: PBSectionType.left,
                   child: SizedBox(
                     width: 120,
                     child: PbContentSection(
+                        semanticId: 'gate_threshold',
                       title: "THRESHOLD",
                       footer: SizedBox(
                         width: 100,
@@ -49,6 +56,7 @@ class GateBlock extends StatelessWidget {
                           spacing: 10,
                           children: <Widget>[
                             PBNumberTextField(
+                                semanticId: 'gate_threshold_text_field',
                               value: controller.threshold ?? 0,
                               max: 0,
                               min: -60,
@@ -67,6 +75,7 @@ class GateBlock extends StatelessWidget {
                         ),
                       ),
                       child: VerticalSlider(
+                          semanticId: 'gate_threshold_slider',
                         value: controller.threshold ?? 0,
                         max: 0,
                         min: -60,
@@ -83,6 +92,7 @@ class GateBlock extends StatelessWidget {
                     width: 120,
 
                     child: PbContentSection(
+                        semanticId: 'gate_range',
                       title: "RANGE",
                       footer: SizedBox(
                         width: 100,
@@ -90,6 +100,7 @@ class GateBlock extends StatelessWidget {
                           spacing: 10,
                           children: <Widget>[
                             PBNumberTextField(
+                                semanticId: 'gate_range_text_field',
                               value: controller.range ?? 0,
                               max: 0.0,
                               min: -70,
@@ -108,6 +119,7 @@ class GateBlock extends StatelessWidget {
                         ),
                       ),
                       child: VerticalSlider(
+                          semanticId: 'gate_range_slider',
                         value: controller.range ?? 0,
                         max: 0.0,
                         min: -70,
@@ -131,6 +143,7 @@ class GateBlock extends StatelessWidget {
                             height: 50,
                           ),
                           _GateTextField(
+                              semanticId: 'gate_attack',
                             title: "ATTACK",
                             value: controller.attack ?? 0.5,
                             min: 0.5,
@@ -144,6 +157,7 @@ class GateBlock extends StatelessWidget {
                             height: 30,
                           ),
                           _GateTextField(
+                              semanticId: 'gate_hold',
                             title: "HOLD",
                             value: controller.hold ?? 0.1,
                             min: 0.1,
@@ -157,6 +171,7 @@ class GateBlock extends StatelessWidget {
                             height: 30,
                           ),
                           _GateTextField(
+                              semanticId: 'gate_decay',
                             title: "DECAY",
                             value: controller.decay ?? 5.0,
                             min: 5.0,
@@ -172,6 +187,7 @@ class GateBlock extends StatelessWidget {
                 ),
                 const Expanded(
                   child: PBSection(
+                      semanticId: 'gate_graph',
                     type: PBSectionType.middle,
                     child: Column(
                       children: <Widget>[
@@ -184,6 +200,7 @@ class GateBlock extends StatelessWidget {
                   ),
                 ),
                  PBSection(
+                   semanticId: 'gate_output',
                   type: PBSectionType.right,
                   child: SizedBox(
                     width: 100,
@@ -192,6 +209,7 @@ class GateBlock extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.all(12.0),
                         child: PbOutMeter(
+                          semanticId: 'gate_output',
                           blockId: targetBlockId,
                         ),
                       ),
@@ -202,6 +220,7 @@ class GateBlock extends StatelessWidget {
             ),
           );
         },
+      ),
       ),
     );
   }
@@ -215,7 +234,9 @@ class _GateTextField extends StatelessWidget {
     this.max,
     required this.onChanged,
     required this.title,
+    this.semanticId,
   });
+  final String? semanticId;
   final num value;
   final num? min;
   final num? max;
@@ -223,34 +244,41 @@ class _GateTextField extends StatelessWidget {
   final String title;
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: FusionAppText(
-            text: title,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.textInput,
+        'gate_text_field${semanticId ?? ''}',
+      ),
+      label: value.toString(),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: FusionAppText(
+              text: title,
+              style: context.textTheme.labelMedium?.copyWith(
+                color: context.colorScheme.textSecondary,
+              ),
+            ),
+          ),
+          Expanded(
+            child: PBNumberTextField(
+              onChanged: onChanged,
+              value: value,
+              min: min,
+              max: max,
+            ),
+          ),
+          const SizedBox(
+            width: 5,
+          ),
+          Text(
+            "ms",
             style: context.textTheme.labelMedium?.copyWith(
               color: context.colorScheme.textSecondary,
             ),
           ),
-        ),
-        Expanded(
-          child: PBNumberTextField(
-            onChanged: onChanged,
-            value: value,
-            min: min,
-            max: max,
-          ),
-        ),
-        const SizedBox(
-          width: 5,
-        ),
-        Text(
-          "ms",
-          style: context.textTheme.labelMedium?.copyWith(
-            color: context.colorScheme.textSecondary,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

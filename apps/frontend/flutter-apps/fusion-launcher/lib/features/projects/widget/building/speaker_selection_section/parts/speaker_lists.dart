@@ -26,7 +26,10 @@ class ProductQuerySpeakerList extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         SemanticHelper.formControl(
-          testId: SemanticHelper.createTestId(SemanticTypes.textInput, "speaker_search_input"),
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.textInput,
+            "speaker_search_input",
+          ),
           child: NeumorphicDarkTextField(
             controller: searchController,
             prefix: Padding(
@@ -39,7 +42,9 @@ class ProductQuerySpeakerList extends StatelessWidget {
             borderRadius: 8,
             contentPadding: const EdgeInsets.all(10),
             hintText: "Search devices...",
-            hintStyle: context.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.normal),
+            hintStyle: context.textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.normal,
+            ),
             onChanged: (String value) => speakerSelectionViewModel.setSearchQuery(value),
           ),
         ),
@@ -50,7 +55,10 @@ class ProductQuerySpeakerList extends StatelessWidget {
           children: <Widget>[
             Expanded(
               child: BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
-                builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
+                builder: (
+                  BuildContext context,
+                  SpeakerSelectionViewModelState vmState,
+                ) {
                   return FusionAppText(
                     text: vmState.sortOption.displayName,
                     style: context.textTheme.bodySmall?.copyWith(
@@ -64,13 +72,23 @@ class ProductQuerySpeakerList extends StatelessWidget {
             const SizedBox(width: 8),
 
             BlocBuilder<ProductQueryViewModel, ProductQueryViewModelState>(
-              buildWhen: (ProductQueryViewModelState previous, ProductQueryViewModelState current) => previous.isRefreshing != current.isRefreshing,
-              builder: (BuildContext context, ProductQueryViewModelState productQueryViewModelState) {
+              buildWhen:
+                  (
+                    ProductQueryViewModelState previous,
+                    ProductQueryViewModelState current,
+                  ) => previous.isRefreshing != current.isRefreshing,
+              builder: (
+                BuildContext context,
+                ProductQueryViewModelState productQueryViewModelState,
+              ) {
                 if (productQueryViewModelState.isRefreshing) {
                   return const CupertinoActivityIndicator(radius: 8);
                 } else {
                   return SemanticHelper.button(
-                    testId: SemanticHelper.createTestId(SemanticTypes.button, "refresh_products_button"),
+                    testId: SemanticHelper.createTestId(
+                      SemanticTypes.button,
+                      "refresh_products_button",
+                    ),
                     child: GestureDetector(
                       onTap: context.read<ProductQueryViewModel>().refresh,
                       child: const Tooltip(
@@ -92,15 +110,22 @@ class ProductQuerySpeakerList extends StatelessWidget {
 
             const SizedBox(width: 8),
             FusionArrowPopup(
+              semanticId: 'sort_products',
               blurAmount: 0,
               content: StatefulBuilder(
                 builder: (BuildContext context, StateSetter menuSetState) {
                   return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                    builder: (BuildContext context, ProjectViewModelState projectViewModelState) {
+                    builder: (
+                      BuildContext context,
+                      ProjectViewModelState projectViewModelState,
+                    ) {
                       return BlocProvider<SpeakerSelectionViewModel>.value(
                         value: speakerSelectionViewModel,
                         child: BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
-                          builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
+                          builder: (
+                            BuildContext context,
+                            SpeakerSelectionViewModelState vmState,
+                          ) {
                             return SizedBox(
                               width: 220,
                               child: Padding(
@@ -116,11 +141,16 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                       ),
                                     ),
                                     const SizedBox(height: 8),
-                                    ...SpeakerSortOption.values.map((SpeakerSortOption entry) {
+                                    ...SpeakerSortOption.values.map((
+                                      SpeakerSortOption entry,
+                                    ) {
                                       final bool selected = vmState.sortOption == entry;
 
                                       return SemanticHelper.container(
-                                        testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_sort_option_${entry.index}"),
+                                        testId: SemanticHelper.createTestId(
+                                          SemanticTypes.container,
+                                          "speaker_sort_option_${entry.index}",
+                                        ),
                                         child: GestureDetector(
                                           behavior: HitTestBehavior.translucent,
                                           onTap: () {
@@ -128,16 +158,26 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                             menuSetState(() {});
                                           },
                                           child: Padding(
-                                            padding: const EdgeInsets.symmetric(vertical: 6.0),
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 6.0,
+                                            ),
                                             child: Row(
                                               children: <Widget>[
                                                 SemanticHelper.toggle(
-                                                  testId: SemanticHelper.createTestId(SemanticTypes.toggle, "speaker_sort_option_toggle_${entry.index}"),
+                                                  testId: SemanticHelper.createTestId(
+                                                    SemanticTypes.toggle,
+                                                    "speaker_sort_option_toggle_${entry.index}",
+                                                  ),
                                                   value: selected,
                                                   child: Icon(
                                                     selected ? Icons.circle : Icons.radio_button_unchecked,
                                                     size: 14,
-                                                    color: selected ? context.colorScheme.primary : context.colorScheme.onSurface.withValues(alpha: 0.5),
+                                                    color:
+                                                        selected
+                                                            ? context.colorScheme.primary
+                                                            : context.colorScheme.onSurface.withValues(
+                                                              alpha: 0.5,
+                                                            ),
                                                   ),
                                                 ),
                                                 const SizedBox(width: 8),
@@ -167,13 +207,16 @@ class ProductQuerySpeakerList extends StatelessWidget {
                 },
               ),
               child: SemanticHelper.button(
-                testId: SemanticHelper.createTestId(SemanticTypes.button, "sort_products_button"),
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.button,
+                  "sort_products_button",
+                ),
                 child: MouseRegion(
                   cursor: SystemMouseCursors.click,
                   child: Tooltip(
                     message: "Sort products",
-                    child: FusionSvgIcon(
-                      icon: "assets/svg/sort.svg",
+                    child: FusionIcon.svg(
+                      "assets/svg/sort.svg",
                       color: context.colorScheme.onSurface,
                     ),
                   ),
@@ -184,14 +227,24 @@ class ProductQuerySpeakerList extends StatelessWidget {
         ),
 
         const SizedBox(height: 10),
-        Divider(thickness: 0.5, height: 0, color: context.colorScheme.strokeLight),
+        Divider(
+          thickness: 0.5,
+          height: 0,
+          color: context.colorScheme.strokeLight,
+        ),
 
         BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-          builder: (BuildContext context, ProjectViewModelState projectViewModelState) {
+          builder: (
+            BuildContext context,
+            ProjectViewModelState projectViewModelState,
+          ) {
             final List<Speaker> listeningAreaSpeakers = speakerSelectionViewModel.getAllPlacedNonPlacedSpeakers();
 
             return BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
-              builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
+              builder: (
+                BuildContext context,
+                SpeakerSelectionViewModelState vmState,
+              ) {
                 final ProductQueryViewModel productQueryViewModel = context.watch<ProductQueryViewModel>();
                 final bool isProductsLoading = productQueryViewModel.isLoading;
                 final List<SpeakerProduct> speakers = productQueryViewModel.speakers;
@@ -199,7 +252,10 @@ class ProductQuerySpeakerList extends StatelessWidget {
                 if (isProductsLoading) {
                   return Expanded(
                     child: SemanticHelper.container(
-                      testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_products_loading_indicator"),
+                      testId: SemanticHelper.createTestId(
+                        SemanticTypes.container,
+                        "speaker_products_loading_indicator",
+                      ),
                       child: const Center(
                         child: Padding(
                           padding: EdgeInsets.all(16.0),
@@ -210,7 +266,10 @@ class ProductQuerySpeakerList extends StatelessWidget {
                   );
                 } else if (speakers.isEmpty) {
                   return SemanticHelper.container(
-                    testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_products_empty_indicator"),
+                    testId: SemanticHelper.createTestId(
+                      SemanticTypes.container,
+                      "speaker_products_empty_indicator",
+                    ),
                     child: const Center(
                       child: Padding(
                         padding: EdgeInsets.all(16.0),
@@ -232,7 +291,9 @@ class ProductQuerySpeakerList extends StatelessWidget {
                           child: FusionAppText(
                             text: isSearchActive ? 'No speakers match your search.' : 'No products match the selected filters',
                             style: context.textTheme.bodySmall?.copyWith(
-                              color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+                              color: context.colorScheme.onSurface.withValues(
+                                alpha: 0.5,
+                              ),
                             ),
                           ),
                         ),
@@ -242,7 +303,9 @@ class ProductQuerySpeakerList extends StatelessWidget {
 
                   return Flexible(
                     child: ScrollConfiguration(
-                      behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+                      behavior: ScrollConfiguration.of(
+                        context,
+                      ).copyWith(scrollbars: false),
                       child: Builder(
                         builder: (BuildContext context) {
                           return ListView.separated(
@@ -253,7 +316,9 @@ class ProductQuerySpeakerList extends StatelessWidget {
                             itemBuilder: (BuildContext context, int index) {
                               final SpeakerProduct product = items[index];
 
-                              final bool isSelected = listeningAreaSpeakers.any((Speaker sp) => sp.productId == product.productId);
+                              final bool isSelected = listeningAreaSpeakers.any(
+                                (Speaker sp) => sp.productId == product.productId,
+                              );
 
                               return SpeakerCard(
                                 index: index,
@@ -281,7 +346,11 @@ class _SpeakerColorVarient {
   final SpeakerColor color;
   final String? cachedImagePath;
 
-  const _SpeakerColorVarient({required this.productId, required this.color, required this.cachedImagePath});
+  const _SpeakerColorVarient({
+    required this.productId,
+    required this.color,
+    required this.cachedImagePath,
+  });
 }
 
 class SpeakerCard extends StatefulWidget {
@@ -317,7 +386,9 @@ class _SpeakerCardState extends State<SpeakerCard> {
           // final String assetImagePath = context.read<ProductQueryViewModel>().cachedImages[widget.product.productId]?[key] ?? '';
           // final String assetImageName = context.read<ProductQueryViewModel>().getImageName(values.first);
 
-          final SpeakerColor speakerColor = SpeakerColor.getValueBasedOnKey(key);
+          final SpeakerColor speakerColor = SpeakerColor.getValueBasedOnKey(
+            key,
+          );
           if (filterColors.isEmpty || filterColors.contains(speakerColor)) {
             varients.add(
               _SpeakerColorVarient(
@@ -337,14 +408,18 @@ class _SpeakerCardState extends State<SpeakerCard> {
     // 3) Fallback to the first available variant
     _SpeakerColorVarient? nextSelection;
     if (selectedVarient != null) {
-      final int existingIdx = varients.indexWhere((_SpeakerColorVarient v) => v.color == selectedVarient!.color);
+      final int existingIdx = varients.indexWhere(
+        (_SpeakerColorVarient v) => v.color == selectedVarient!.color,
+      );
       if (existingIdx != -1) {
         nextSelection = varients[existingIdx];
       }
     }
 
     if (nextSelection == null && filterColors.isNotEmpty) {
-      final int filteredIdx = varients.indexWhere((_SpeakerColorVarient v) => filterColors.contains(v.color));
+      final int filteredIdx = varients.indexWhere(
+        (_SpeakerColorVarient v) => filterColors.contains(v.color),
+      );
       if (filteredIdx != -1) {
         nextSelection = varients[filteredIdx];
       }
@@ -364,7 +439,10 @@ class _SpeakerCardState extends State<SpeakerCard> {
         final double productPrice = context.read<ProductQueryViewModel>().getPrice(widget.product.productId);
 
         return SemanticHelper.container(
-          testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_card_${widget.index}"),
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.container,
+            "speaker_card_${widget.index}",
+          ),
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 4),
             decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
@@ -376,7 +454,10 @@ class _SpeakerCardState extends State<SpeakerCard> {
                   spacing: 10,
                   children: <Widget>[
                     SemanticHelper.container(
-                      testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_card_image_${widget.index}"),
+                      testId: SemanticHelper.createTestId(
+                        SemanticTypes.container,
+                        "speaker_card_image_${widget.index}",
+                      ),
                       child: Container(
                         width: 40,
                         height: 40,
@@ -388,7 +469,10 @@ class _SpeakerCardState extends State<SpeakerCard> {
                         child: Builder(
                           builder: (BuildContext context) {
                             if (selectedVarient?.cachedImagePath == null) return const SizedBox();
-                            return Image.asset(selectedVarient!.cachedImagePath!, fit: BoxFit.cover);
+                            return Image.asset(
+                              selectedVarient!.cachedImagePath!,
+                              fit: BoxFit.cover,
+                            );
                           },
                         ),
                       ),
@@ -411,6 +495,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
                               ),
                               const SizedBox(width: 4),
                               FusionArrowPopup(
+                                semanticId: 'speaker_card_info',
                                 content: SizedBox(
                                   width: 400,
                                   height: 280,
@@ -446,7 +531,9 @@ class _SpeakerCardState extends State<SpeakerCard> {
                                           ],
                                         ),
 
-                                        Divider(color: context.colorScheme.onSurface.withValues(alpha: 0.2)),
+                                        Divider(
+                                          color: context.colorScheme.onSurface.withValues(alpha: 0.2),
+                                        ),
                                         Builder(
                                           builder: (BuildContext context) {
                                             final String frequencyResponse = SpeakerSelectionViewModel.formatFrequencyRange(
@@ -459,7 +546,9 @@ class _SpeakerCardState extends State<SpeakerCard> {
                                             final String sensitivity = SpeakerSelectionViewModel.formatSensitivity(
                                               widget.product.sensitivity,
                                             );
-                                            final String maxSpl = SpeakerSelectionViewModel.formatMaxSpl(widget.product.maxSpl);
+                                            final String maxSpl = SpeakerSelectionViewModel.formatMaxSpl(
+                                              widget.product.maxSpl,
+                                            );
                                             final PowerHandling? p = widget.product.powerHandling;
                                             final String peakPower = SpeakerSelectionViewModel.formatPowerValue(
                                               value: p?.peak,
@@ -489,7 +578,9 @@ class _SpeakerCardState extends State<SpeakerCard> {
                                             };
 
                                             final List<Widget> children = <Widget>[
-                                              ...details.entries.map((MapEntry<String, String> entry) {
+                                              ...details.entries.map((
+                                                MapEntry<String, String> entry,
+                                              ) {
                                                 final String key = entry.key;
                                                 final String value = entry.value;
 
@@ -525,7 +616,10 @@ class _SpeakerCardState extends State<SpeakerCard> {
                                   ),
                                 ),
                                 child: SemanticHelper.container(
-                                  testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_card_info_${widget.index}"),
+                                  testId: SemanticHelper.createTestId(
+                                    SemanticTypes.container,
+                                    "speaker_card_info_${widget.index}",
+                                  ),
                                   child: Padding(
                                     padding: const EdgeInsets.only(top: 6),
                                     child: Icon(
@@ -544,7 +638,9 @@ class _SpeakerCardState extends State<SpeakerCard> {
                             text: "\$$productPrice",
                             style: context.textTheme.bodySmall?.copyWith(
                               fontWeight: FontWeight.normal,
-                              color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+                              color: context.colorScheme.onSurface.withValues(
+                                alpha: 0.5,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 5),
@@ -553,7 +649,9 @@ class _SpeakerCardState extends State<SpeakerCard> {
                             runSpacing: 4,
                             runAlignment: WrapAlignment.start,
                             children: <Widget>[
-                              ...productVarients.map((_SpeakerColorVarient colorVarient) {
+                              ...productVarients.map((
+                                _SpeakerColorVarient colorVarient,
+                              ) {
                                 final bool isSelected = selectedVarient?.color == colorVarient.color;
 
                                 return SemanticHelper.container(
@@ -567,7 +665,10 @@ class _SpeakerCardState extends State<SpeakerCard> {
                                       setState(() {});
                                     },
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: context.colorScheme.elevation3,
                                         borderRadius: BorderRadius.circular(60),
@@ -601,8 +702,12 @@ class _SpeakerCardState extends State<SpeakerCard> {
                       ),
                     ),
                     SemanticHelper.button(
-                      testId: SemanticHelper.createTestId(SemanticTypes.button, "add_speaker_button_${widget.index}"),
+                      testId: SemanticHelper.createTestId(
+                        SemanticTypes.button,
+                        "add_speaker_button_${widget.index}",
+                      ),
                       child: FusionNeumorphicButton(
+                        semanticId: 'add_speaker_button',
                         height: 24,
                         width: 24,
                         borderRadius: 6,

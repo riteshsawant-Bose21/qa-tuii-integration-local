@@ -65,6 +65,8 @@ class SourceData extends DeviceComponent {
   final SourceType type;
   final SourceConnectionType connectionType;
 
+  final PagingSourceType? pagingSourceType; // Only applicable for paging sources
+
   const SourceData({
     required this.type,
     required this.connectionType,
@@ -72,6 +74,7 @@ class SourceData extends DeviceComponent {
     required super.name,
     required super.id,
     required super.price,
+    this.pagingSourceType,
   });
 
   static const List<SourceData> microphoneItems = <SourceData>[
@@ -263,6 +266,49 @@ class SourceData extends DeviceComponent {
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
     ),
+  ];
+
+  static const List<SourceData> pagingItems = <SourceData>[
+    SourceData(
+      id: "message_player",
+      name: "Message Player",
+      assetPath: "assets/images/products/dvdplayer.png",
+      type: SourceType.paging,
+      connectionType: SourceConnectionType.analogInput,
+      pagingSourceType: PagingSourceType.messagePlayer,
+      price: 100.0,
+    ),
+    // todo : uncomment below paging sources once we have different configuration options for each paging source type
+    // SourceData(
+    //   id: "message_player_with_zone_select",
+    //   name: "Message Player w/Zone Select",
+    //   assetPath: "assets/images/products/dvdplayer.png",
+    //   type: SourceType.paging,
+    //   connectionType: SourceConnectionType.analogInput,
+    //   pagingSourceType: PagingSourceType.messagePlayerWithZoneSelect,
+    //
+    //   price: 100.0,
+    // ),
+    // SourceData(
+    //   id: "paging_mic",
+    //   name: "Paging Mic",
+    //   assetPath: "assets/images/products/hdmi.png",
+    //   type: SourceType.paging,
+    //   connectionType: SourceConnectionType.analogInput,
+    //   pagingSourceType: PagingSourceType.pagingMic,
+    //
+    //   price: 100.0,
+    // ),
+    // SourceData(
+    //   id: "paging_mic_with_zone_select",
+    //   name: "Paging Mic w/Zone Select",
+    //   assetPath: "assets/images/products/hdmi.png",
+    //   type: SourceType.paging,
+    //   connectionType: SourceConnectionType.analogInput,
+    //   pagingSourceType: PagingSourceType.pagingMicWithZoneSelect,
+    //
+    //   price: 100.0,
+    // ),
   ];
 
   static SourceConnectionType getSourceConnectionType(String id) {

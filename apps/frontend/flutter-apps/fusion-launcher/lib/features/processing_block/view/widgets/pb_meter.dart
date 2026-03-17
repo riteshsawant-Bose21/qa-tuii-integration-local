@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 
 import '../../dto/pb_item.dart';
 import '../../dto/pb_item_param.dart';
@@ -12,21 +14,29 @@ class PBMeter extends StatelessWidget {
     required this.item,
     this.showIntervals = true,
     this.handler,
+    this.semanticId,
   });
 
   final PBItem item;
   final bool showIntervals;
   final PBWidgetValueHandler? handler;
+  final String? semanticId;
 
   @override
   Widget build(BuildContext context) {
     final PBMeterParam data = (handler?.resolveForItem(item) ?? item.param) as PBMeterParam;
 
-    return VerticalMeter(
-      value: handler?.getValue(item) ?? item.value ?? 40,
-      min: data.min,
-      max: data.max,
-      showIntervals: showIntervals,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "PBMeter_${semanticId ?? ''}",
+      ),
+      child: VerticalMeter(
+        value: handler?.getValue(item) ?? item.value ?? 40,
+        min: data.min,
+        max: data.max,
+        showIntervals: showIntervals,
+      ),
     );
   }
 }

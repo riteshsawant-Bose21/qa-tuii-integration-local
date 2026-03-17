@@ -69,7 +69,10 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                 border: isSelected ? Border.all(color: context.colorScheme.strokeLight) : null,
               ),
               child: SemanticHelper.container(
-                testId: SemanticHelper.createTestId(SemanticTypes.container, "sub_zone_${widget.index}"),
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.container,
+                  "sub_zone_${widget.index}",
+                ),
                 child: Column(
                   children: <Widget>[
                     MouseRegion(
@@ -91,7 +94,10 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                               child: GestureDetector(
                                 onTap: () {
                                   /// Select  subzone on tap
-                                  _projectViewModel.setSelectedDevice(widget.subZoneId!, SelectedItemType.subzone);
+                                  _projectViewModel.setSelectedDevice(
+                                    widget.subZoneId!,
+                                    SelectedItemType.subzone,
+                                  );
                                 },
                                 // onTap: () => _isZoneExpanded.value = !_isZoneExpanded.value,
                                 child: _buildZoneName(context, widget.name),
@@ -105,15 +111,26 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                             //   onSpeakerAdded: onSpeakerAdded,
                             // ),
                             FusionArrowPopup(
-                              content: SpeakerQueryPopup(isFromBuildingPage: false, zoneId: widget.zoneId, subZoneId: widget.subZoneId),
+                              semanticId: "subzone_item_add_speaker",
+                              content: SpeakerQueryPopup(
+                                isFromBuildingPage: false,
+                                zoneId: widget.zoneId,
+                                subZoneId: widget.subZoneId,
+                              ),
                               backgroundColor: context.colorScheme.elevation1,
                               child: Row(
                                 children: <Widget>[
-                                  Icon(Icons.add, size: 10, color: context.colorScheme.iconWhite),
+                                  Icon(
+                                    Icons.add,
+                                    size: 10,
+                                    color: context.colorScheme.iconWhite,
+                                  ),
                                   const SizedBox(width: 4),
                                   FusionAppText(
                                     text: "Speaker",
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall?.copyWith(
                                       fontSize: 8,
                                       fontWeight: FontWeight.w400,
                                       color: context.colorScheme.textPrimary,
@@ -175,8 +192,15 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
               if (oldIndex < newIndex) {
                 newIndex -= 1;
               }
-              _projectViewModel.reOrderCircuitInZone(parentId: widget.subZoneId, oldIndex: oldIndex, newIndex: newIndex);
-              _projectViewModel.setSelectedDevice(widget.subZoneCircuit[oldIndex].id, SelectedItemType.circuit);
+              _projectViewModel.reOrderCircuitInZone(
+                parentId: widget.subZoneId,
+                oldIndex: oldIndex,
+                newIndex: newIndex,
+              );
+              _projectViewModel.setSelectedDevice(
+                widget.subZoneCircuit[oldIndex].id,
+                SelectedItemType.circuit,
+              );
             },
             itemBuilder: (BuildContext context, int index) {
               final CircuitModel circuitData = widget.subZoneCircuit[index];
@@ -185,7 +209,9 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
               final List<ListeningArea> location = _projectViewModel.getListeningAreasForCircuit(circuitId: circuitData.id);
               return DragTarget<CircuitModel>(
                 key: ValueKey<String>(deviceId),
-                onWillAcceptWithDetails: (DragTargetDetails<CircuitModel>? param) {
+                onWillAcceptWithDetails: (
+                  DragTargetDetails<CircuitModel>? param,
+                ) {
                   final CircuitModel? incoming = param?.data;
 
                   /// Only accept if the incoming circuit has the same name but different ID
@@ -214,15 +240,25 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                   if (incomingSpeakers.isNotEmpty) {
                     for (final Speaker speaker in incomingSpeakers) {
                       // serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
-                      serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitData.id);
+                      serviceLocator<ProjectViewModel>().addHardwareToCircuit(
+                        hwId: speaker.id,
+                        circuitId: circuitData.id,
+                      );
                     }
                   }
 
                   /// Remove the dragged circuit from the zone
-                  _projectViewModel.removeCircuitFromSubZone(circuitId: incoming.id, subZoneId: widget.subZoneId);
+                  _projectViewModel.removeCircuitFromSubZone(
+                    circuitId: incoming.id,
+                    subZoneId: widget.subZoneId,
+                  );
                   setState(() {});
                 },
-                builder: (BuildContext context, List<CircuitModel?> candidateData, List<dynamic> rejectedData) {
+                builder: (
+                  BuildContext context,
+                  List<CircuitModel?> candidateData,
+                  List<dynamic> rejectedData,
+                ) {
                   return Draggable<CircuitModel>(
                     data: circuitData,
                     feedback: Material(
@@ -248,19 +284,30 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                             circuitDeviceCount: speakers.length,
                             onDecrementHardwareInCircuit: () {
                               final Speaker speaker = speakers.last;
-                              serviceLocator<ProjectViewModel>().removeHardware(hardwareId: speaker.id);
+                              serviceLocator<ProjectViewModel>().removeHardware(
+                                hardwareId: speaker.id,
+                              );
                             },
                             onIncrementHardwareInCircuit: () {
                               final Speaker speaker = speakers.first.getClone();
-                              serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
-                              serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitData.id);
+                              serviceLocator<ProjectViewModel>().addHardware(
+                                hardware: speaker,
+                                autoSave: false,
+                              );
+                              serviceLocator<ProjectViewModel>().addHardwareToCircuit(
+                                hwId: speaker.id,
+                                circuitId: circuitData.id,
+                              );
                             },
 
                             projectViewModel: _projectViewModel,
                             onRename: () {},
                             onDuplicate: () {},
                             onDelete: () {
-                              _projectViewModel.removeCircuitFromSubZone(subZoneId: widget.subZoneId, circuitId: deviceId);
+                              _projectViewModel.removeCircuitFromSubZone(
+                                subZoneId: widget.subZoneId,
+                                circuitId: deviceId,
+                              );
                             },
                           ),
                         ),
@@ -314,19 +361,30 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                       circuitDeviceCount: speakers.length,
                       onDecrementHardwareInCircuit: () {
                         final Speaker speaker = speakers.last;
-                        serviceLocator<ProjectViewModel>().removeHardware(hardwareId: speaker.id);
+                        serviceLocator<ProjectViewModel>().removeHardware(
+                          hardwareId: speaker.id,
+                        );
                       },
                       onIncrementHardwareInCircuit: () {
                         final Speaker speaker = speakers.first.getClone();
-                        serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
-                        serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitData.id);
+                        serviceLocator<ProjectViewModel>().addHardware(
+                          hardware: speaker,
+                          autoSave: false,
+                        );
+                        serviceLocator<ProjectViewModel>().addHardwareToCircuit(
+                          hwId: speaker.id,
+                          circuitId: circuitData.id,
+                        );
                       },
 
                       projectViewModel: _projectViewModel,
                       onRename: () {},
                       onDuplicate: () {},
                       onDelete: () {
-                        _projectViewModel.removeCircuitFromSubZone(subZoneId: widget.subZoneId, circuitId: deviceId);
+                        _projectViewModel.removeCircuitFromSubZone(
+                          subZoneId: widget.subZoneId,
+                          circuitId: deviceId,
+                        );
                       },
                     ),
                   );
@@ -351,8 +409,8 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
   Widget _buildExpandIcon(BuildContext context, bool expanded) {
     return RotatedBox(
       quarterTurns: expanded ? 0 : 2,
-      child: FusionSvgIcon(
-        icon: AssetSvg.expandUp,
+      child: FusionIcon.svg(
+        AssetSvg.expandUp,
         size: FusionSizes.iconSize12,
         color: context.colorScheme.iconWhite,
       ),
@@ -402,7 +460,10 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
             ),
           ],
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "subzone_item_kebab_menu"),
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.button,
+          "subzone_item_kebab_menu",
+        ),
         child: Icon(
           Icons.more_vert,
           size: 14,

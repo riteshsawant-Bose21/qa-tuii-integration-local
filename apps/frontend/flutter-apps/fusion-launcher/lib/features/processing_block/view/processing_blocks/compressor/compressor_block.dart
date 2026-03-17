@@ -40,10 +40,12 @@ class CompressorBlock extends StatelessWidget {
               children: <Widget>[
                 /// Threshold Section
                 PBSection(
+                  semanticId: 'compressor_threshold',
                   type: PBSectionType.left,
                   child: SizedBox(
                     width: 120,
                     child: PbContentSection(
+                      semanticId: 'compressor_threshold',
                       title: "THRESHOLD",
                       footer: SizedBox(
                         width: 100,
@@ -69,6 +71,7 @@ class CompressorBlock extends StatelessWidget {
                         ),
                       ),
                       child: VerticalSlider(
+                        semanticId: 'compressor_threshold',
                         value: controller.threshold ?? 0,
                         max: 0.0,
                         min: -40,
@@ -88,6 +91,7 @@ class CompressorBlock extends StatelessWidget {
                     width: 120,
 
                     child: PbContentSection(
+                      semanticId: 'compressor_ratio',
                       title: "RATIO",
                       footer: SizedBox(
                         width: 100,
@@ -113,6 +117,7 @@ class CompressorBlock extends StatelessWidget {
                         ),
                       ),
                       child: VerticalSlider(
+                        semanticId: 'Ration_dB',
                         value: controller.ratio ?? 0,
                         max: 20.0,
                         min: 1,
@@ -139,6 +144,7 @@ class CompressorBlock extends StatelessWidget {
                             height: 50,
                           ),
                           _GateTextField(
+                            semanticId: 'compressor_attack',
                             title: "ATTACK",
                             value: controller.attack ?? 0.5,
                             min: 0.5,
@@ -152,6 +158,7 @@ class CompressorBlock extends StatelessWidget {
                             height: 30,
                           ),
                           _GateTextField(
+                            semanticId: 'compressor_release',
                             title: "RELEASE",
                             value: controller.release ?? 5.0,
                             min: 5.0,
@@ -169,6 +176,7 @@ class CompressorBlock extends StatelessWidget {
                 /// Graph Section
                 const Expanded(
                   child: PBSection(
+                    semanticId: 'compressor_graph',
                     type: PBSectionType.middle,
                     child: Column(
                       children: <Widget>[
@@ -189,12 +197,14 @@ class CompressorBlock extends StatelessWidget {
 
                     child: PbContentSection(
                       title: "Reduction",
+                      semanticId: 'compressor_reduction',
                       footer: SizedBox(
                         width: 100,
                         child: Column(
                           spacing: 10,
                           children: <Widget>[
                             PBNumberTextField(
+                              semanticId: 'compressor_reduction',
                               value: controller.reduction ?? 0,
                               max: 0.0,
                               min: -42,
@@ -213,6 +223,7 @@ class CompressorBlock extends StatelessWidget {
                         ),
                       ),
                       child: VerticalSlider(
+                        semanticId: 'Reduction_dB',
                         value: controller.reduction ?? 0,
                         max: 0.0,
                         min: -42,
@@ -227,14 +238,17 @@ class CompressorBlock extends StatelessWidget {
 
                 /// Output Meter Section
                 PBSection(
+                  semanticId: 'compressor_output',
                   type: PBSectionType.right,
                   child: SizedBox(
                     width: 100,
                     child: PbContentSection(
+                      semanticId: 'compressor_output',
                       title: "OUTPUT",
                       child: Padding(
                         padding: const EdgeInsets.all(12.0),
                         child: PbOutMeter(
+                          semanticId: 'compressor_output',
                           blockId: targetBlockId,
                         ),
                       ),
@@ -258,8 +272,10 @@ class _GateTextField extends StatelessWidget {
     this.max,
     required this.onChanged,
     required this.title,
+    this.semanticId,
   });
 
+  final String? semanticId;
   final num value;
   final num? min;
   final num? max;
@@ -268,34 +284,41 @@ class _GateTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: FusionAppText(
-            text: title,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.textInput,
+        'compressor_gate_text_field${semanticId ?? ''}',
+      ),
+      label: value.toString(),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: FusionAppText(
+              text: title,
+              style: context.textTheme.labelMedium?.copyWith(
+                color: context.colorScheme.textSecondary,
+              ),
+            ),
+          ),
+          Expanded(
+            child: PBNumberTextField(
+              onChanged: onChanged,
+              value: value,
+              min: min,
+              max: max,
+            ),
+          ),
+          const SizedBox(
+            width: 5,
+          ),
+          Text(
+            "ms",
             style: context.textTheme.labelMedium?.copyWith(
               color: context.colorScheme.textSecondary,
             ),
           ),
-        ),
-        Expanded(
-          child: PBNumberTextField(
-            onChanged: onChanged,
-            value: value,
-            min: min,
-            max: max,
-          ),
-        ),
-        const SizedBox(
-          width: 5,
-        ),
-        Text(
-          "ms",
-          style: context.textTheme.labelMedium?.copyWith(
-            color: context.colorScheme.textSecondary,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

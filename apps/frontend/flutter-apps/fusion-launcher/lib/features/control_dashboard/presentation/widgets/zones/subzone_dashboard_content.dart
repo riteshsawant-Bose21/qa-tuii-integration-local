@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_zones_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../../../../core/constants/assets_constants.dart';
 import '../../../../../core/service_locator.dart';
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../../../processing_block/view/processing_chain_view.dart';
 import 'audio_meter_widget.dart';
 import 'dashboard_circuit_widget.dart';
 import 'exandable_section.dart';
@@ -123,6 +126,28 @@ class _SubzoneDashboardContentState extends State<SubzoneDashboardContent> {
                     widget.subZone.muted ? Icons.volume_off_outlined : Icons.volume_up_outlined,
                     size: 16,
                     color: context.colorScheme.iconWhite,
+                  ),
+                ),
+
+                SemanticHelper.container(
+                  testId: SemanticHelper.createTestId(
+                    SemanticTypes.button,
+                    FusionTestKeys.instance.zoneheaderprocessingbutton,
+                  ),
+                  child: InkWell(
+                    onTap: () {
+                      ProcessingChainView.showForSubzone(
+                        context,
+                        widget.subZone,
+                      );
+                    },
+                    child: FusionImage.asset(
+                      Assets.processingBlocksFilledIcon,
+                      width: 24,
+                      height: 24,
+                      assetColor: context.colorScheme.primaryWhite,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
               ],

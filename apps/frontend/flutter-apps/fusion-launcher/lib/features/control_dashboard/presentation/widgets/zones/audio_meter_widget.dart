@@ -50,7 +50,7 @@ class _AudioMeterContainerState extends State<AudioMeterContainer> {
   Widget build(BuildContext context) {
     return RepaintBoundary(
       child: Container(
-        height: 60,
+        height: 40,
         // width: double.infinity,
         margin: EdgeInsets.symmetric(
           horizontal: widget.marginHorizontal,

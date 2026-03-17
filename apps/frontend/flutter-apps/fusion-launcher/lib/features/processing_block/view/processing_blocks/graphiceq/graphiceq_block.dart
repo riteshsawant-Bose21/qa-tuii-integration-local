@@ -22,7 +22,12 @@ class GraphicEqBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
     final String targetBlockId = watch.processingBlock.id;
-    return ProxyProvider<AlgorithmDataViewmodel, GraphicEqController>(
+    return SemanticHelper.container(
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.container,
+          'graphic_eq_block',
+        ),
+        child: ProxyProvider<AlgorithmDataViewmodel, GraphicEqController>(
       key: ValueKey<String>(watch.processingBlock.id),
       create: (BuildContext context) => GraphicEqController(watch),
       update: (BuildContext context, AlgorithmDataViewmodel valueHandler, GraphicEqController? previous) => GraphicEqController(valueHandler),
@@ -39,26 +44,27 @@ class GraphicEqBlock extends StatelessWidget {
               children: <Widget>[
                 const SizedBox(height: 10),
                 FusionNeumorphicButton(
+                    semanticId: 'graphic_eq_flatten_all',
                   text: "Flatten all",
                   width: 100,
                   height: 34,
-                  onTap: () => context.read<GraphicEqController>().flattenAll(),
+                      onTap: () => context.read<GraphicEqController>().flattenAll(),
                 ),
                 const SizedBox(height: 10),
                 Expanded(
                   child: DisabledWidgetWrapper(
-                    isDisabled: context.watch<GraphicEqController>().isGloballyBypassed,
+                        isDisabled: context.watch<GraphicEqController>().isGloballyBypassed,
                     child: Row(
                       children: <Widget>[
                         Expanded(
                           child: LayoutBuilder(
-                            builder: (BuildContext context, BoxConstraints constraints) {
-                              final int totalBands = GraphicEqController.totalGraphicEqBands;
-                              final double bandWidth = constraints.maxWidth / totalBands;
+                                builder: (BuildContext context, BoxConstraints constraints) {
+                                  final int totalBands = GraphicEqController.totalGraphicEqBands;
+                                  final double bandWidth = constraints.maxWidth / totalBands;
 
                               return Row(
-                                children: List<Widget>.generate(totalBands, (int index) {
-                                  final double value = context.watch<GraphicEqController>().getBandValue(index);
+                                    children: List<Widget>.generate(totalBands, (int index) {
+                                      final double value = context.watch<GraphicEqController>().getBandValue(index);
 
                                   return SizedBox(
                                     width: bandWidth,
@@ -66,30 +72,32 @@ class GraphicEqBlock extends StatelessWidget {
                                       clipBehavior: Clip.none,
                                       children: <Widget>[
                                         Container(
-                                          margin: const EdgeInsets.only(bottom: 80),
+                                              margin: const EdgeInsets.only(bottom: 80),
                                           decoration: BoxDecoration(
-                                            color: index.isOdd ? context.colorScheme.elevation2 : null,
-                                            borderRadius: BorderRadius.circular(FusionSizes.borderRadius2),
+                                                color: index.isOdd ? context.colorScheme.elevation2 : null,
+                                                borderRadius: BorderRadius.circular(FusionSizes.borderRadius2),
                                           ),
                                           child: Column(
                                             children: <Widget>[
                                               Expanded(
                                                 child: Padding(
-                                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                                      padding: const EdgeInsets.symmetric(vertical: 8),
                                                   child: VerticalSlider(
+                                                      semanticId:
+                                                          'graphic_eq_slider$index',
                                                     showIntervals: false,
                                                     value: value,
                                                     max: 15,
                                                     min: -15,
-                                                    onChanged: (num v) => context.read<GraphicEqController>().updateBandValue(index, v),
+                                                        onChanged: (num v) => context.read<GraphicEqController>().updateBandValue(index, v),
                                                   ),
                                                 ),
                                               ),
                                               FusionAppText(
                                                 text: formatFrequency(
-                                                  GraphicEqController.graphicEqFrequencies[index],
+                                                      GraphicEqController.graphicEqFrequencies[index],
                                                 ),
-                                                style: context.textTheme.labelSmall?.copyWith(fontSize: 11),
+                                                    style: context.textTheme.labelSmall?.copyWith(fontSize: 11),
                                               ),
                                               const SizedBox(height: 8),
                                             ],
@@ -103,10 +111,12 @@ class GraphicEqBlock extends StatelessWidget {
                                           child: SizedBox(
                                             width: bandWidth * 1.5,
                                             child: PBNumberTextField(
+                                                semanticId:
+                                                    'graphic_eq_text_field$index',
                                               min: -15,
                                               max: 15,
                                               value: value,
-                                              onChanged: (num v) => context.read<GraphicEqController>().updateBandValue(index, v),
+                                                  onChanged: (num v) => context.read<GraphicEqController>().updateBandValue(index, v),
                                             ),
                                           ),
                                         ),
@@ -126,7 +136,7 @@ class GraphicEqBlock extends StatelessWidget {
                           children: <Widget>[
                             Expanded(
                               child: Column(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: <Widget>[
                                   FusionAppText(text: "+15"),
                                   FusionAppText(text: "0"),
@@ -148,7 +158,7 @@ class GraphicEqBlock extends StatelessWidget {
                         Container(
                           decoration: BoxDecoration(
                             color: context.colorScheme.elevation2,
-                            borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
+                                borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
                           ),
                           child: Column(
                             children: <Widget>[
@@ -156,13 +166,13 @@ class GraphicEqBlock extends StatelessWidget {
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
                                   border: Border(
-                                    bottom: BorderSide(color: context.colorScheme.strokeLight),
+                                        bottom: BorderSide(color: context.colorScheme.strokeLight),
                                   ),
                                 ),
                                 child: FusionAppText(
                                   text: "OUTPUT",
-                                  style: context.textTheme.labelMedium?.copyWith(
-                                    color: context.colorScheme.textSecondary,
+                                      style: context.textTheme.labelMedium?.copyWith(
+                                        color: context.colorScheme.textSecondary,
                                   ),
                                 ),
                               ),
@@ -170,6 +180,7 @@ class GraphicEqBlock extends StatelessWidget {
                                 child: Padding(
                                   padding: const EdgeInsets.all(16),
                                   child: PbOutMeter(
+                                    semanticId: 'graphic_eq_output',
                                     blockId: targetBlockId,
                                   ),
                                 ),
@@ -185,6 +196,7 @@ class GraphicEqBlock extends StatelessWidget {
             ),
           );
         },
+        ),
       ),
     );
   }

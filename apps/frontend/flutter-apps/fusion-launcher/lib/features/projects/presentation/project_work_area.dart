@@ -11,7 +11,6 @@ import 'package:fusion_launcher/core/assets/asset_icons.dart';
 import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/spl_calculation/isolate_mace_calculation_manager.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
-import 'package:fusion_launcher/features/configuration_page/pages/configuration_events.dart';
 import 'package:fusion_launcher/features/create_new_project/views/create_new_project_dialog.dart';
 import 'package:fusion_launcher/features/media_files/view/configuration_media_files_pages.dart';
 import 'package:fusion_launcher/features/media_files/viewModel/media_files_view_model.dart';
@@ -20,7 +19,6 @@ import 'package:fusion_launcher/features/projects/view_model/project_sync_view_m
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/side_speaker_section.dart';
 import 'package:fusion_launcher/features/scheduling/view/scheduling_page.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_device_list_view.dart';
-import 'package:fusion_lib/constants/test_keys.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -40,8 +38,9 @@ import '../../../core/widgets/clean_widgets.dart';
 import '../../authentication/viewmodel/session_view_model.dart';
 import '../../commission/presentation/pages/network_config_trigger_page.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../configuration_events/widgets/configuration_events.dart';
 import '../../configuration_page/pages/configuration_processing_page.dart';
-import '../../configuration_page/pages/configuration_snapshots.dart';
+import '../../configuration_snapshot/widgets/configuration_snapshots.dart';
 import '../../control_dashboard/presentation/pages/fusion_control_dashboard.dart';
 import '../../devices/presentation/pages/fusion_devices_page.dart';
 import '../../devices/presentation/widgets/device_mapping_dialog.dart';
@@ -404,14 +403,14 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
 
   List<DockItemConfig> _createBuildingDockItems(ToolbarMode toolbarMode, FloorCanvasController floorCanvasController) {
     return <DockItemConfig>[
-      const DockItemConfig(
-        id: "1",
-        title: "FLOORS",
-        side: "left",
-        allowUndock: true,
-        isCollapsibleSection: false,
-        dockItemWidget: BuildingPlan(),
-      ),
+      // const DockItemConfig(
+      //   id: "1",
+      //   title: "FLOORS",
+      //   side: "left",
+      //   allowUndock: true,
+      //   isCollapsibleSection: false,
+      //   dockItemWidget: BuildingPlan(),
+      // ),
       DockItemConfig(
         id: "5",
         title: "PROPERTIES",
@@ -451,22 +450,22 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                   .toList(),
         ),
       ),
-      DockItemConfig(
-        id: "7",
-        title: toolbarMode == ToolbarMode.acoustics ? "LISTENING AREAS" : "ZONES",
-        side: "left",
-        controller: zoneAreaController,
-        allowUndock: false,
-        initiallyExpanded: true,
-        dockItemWidget:
-            toolbarMode == ToolbarMode.acoustics
-                ? ListeningAreasPanel(
-                  floorCanvasController: floorCanvasController,
-                )
-                : ZoneAndListeningAreaPanel(
-                  floorCanvasController: floorCanvasController,
-                ),
-      ),
+      // DockItemConfig(
+      //   id: "7",
+      //   title: toolbarMode == ToolbarMode.acoustics ? "LISTENING AREAS" : "ZONES",
+      //   side: "left",
+      //   controller: zoneAreaController,
+      //   allowUndock: false,
+      //   initiallyExpanded: true,
+      //   dockItemWidget:
+      //       toolbarMode == ToolbarMode.acoustics
+      //           ? ListeningAreasPanel(
+      //             floorCanvasController: floorCanvasController,
+      //           )
+      //           : ZoneAndListeningAreaPanel(
+      //             floorCanvasController: floorCanvasController,
+      //           ),
+      // ),
       // DockItemConfig(
       //   id: "8",
       //   title: "PRODUCT QUERY",
@@ -490,23 +489,23 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
           },
         ),
       ),
-      const DockItemConfig(
-        id: "20",
-        title: "SPEAKERS",
-        side: "left",
-        allowUndock: false,
-        isCollapsibleSection: false,
-        dockItemWidget: SpeakerSelectionWidget(),
-      ),
+      // const DockItemConfig(
+      //   id: "20",
+      //   title: "SPEAKERS",
+      //   side: "left",
+      //   allowUndock: false,
+      //   isCollapsibleSection: false,
+      //   dockItemWidget: SpeakerSelectionWidget(),
+      // ),
       // if (toolbarMode == ToolbarMode.system)
-      DockItemConfig(
-        id: "21",
-        title: "EQUIPMENT LOCATIONS",
-        side: "left",
-        allowUndock: false,
-        isCollapsibleSection: false,
-        dockItemWidget: toolbarMode == ToolbarMode.system ? const EquipmentLocationSection() : const SizedBox(),
-      ),
+      // DockItemConfig(
+      //   id: "21",
+      //   title: "EQUIPMENT LOCATIONS",
+      //   side: "left",
+      //   allowUndock: false,
+      //   isCollapsibleSection: false,
+      //   dockItemWidget: toolbarMode == ToolbarMode.system ? const EquipmentLocationSection() : const SizedBox(),
+      // ),
     ];
   }
 
@@ -514,38 +513,113 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
     /// Building tab
     final Widget buildingPage = BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
+        final ToolbarMode toolbarMode = context.watch<ProjectViewModel>().currentToolbarMode;
+        final String? currentSelectedListeningAreaId = context.watch<ProjectViewModel>().currentSelectedListeningAreaId;
+
         return FusionDockableArea(
           tabKey: "building_tab",
-          showLeft: true,
+          showLeft: false,
           showRight: true,
           mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
             builder: (BuildContext context, ProjectViewModelState state) {
-              return SemanticHelper.container(
-                testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.buildingCanvas),
-                child: BuildingCanvas(
-                  splRangeController: _splRangeController,
-                  onSplStateChanged: (bool value) {
-                    if (value) {
-                      productsController.collapse();
-                      splController.expand();
-                    } else {
-                      splController.collapse();
-                    }
-                  },
-                  floorCanvasController: _floorCanvasController,
-                  onCalculateSpl: calculateSPL,
-                  splPanelData: _lastPanelData!,
-                  onProductSelected: () {
-                    productsController.expand();
-                  },
-                  onProductDeselected: () {
-                    productsController.collapse();
-                  },
-                ),
+              return Row(
+                children: <Widget>[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      height: double.infinity,
+                      color: context.colorScheme.elevation1,
+                      child: FusionResizableSidebar(
+                        sections: <FusionResizableSidebarSection>[
+                          FusionResizableSidebarSection(
+                            sementicId: 'building_plan_floors_list',
+                            enableExpandCollapse: false,
+                            stickToTop: true,
+                            builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
+                              return const BuildingPlan();
+                            },
+                          ),
+                          FusionResizableSidebarSection(
+                            sementicId: 'building_plan_listening_areas_zones_lists',
+                            builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
+                              return Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  FusionSidebarSectionHeader(
+                                    title: toolbarMode == ToolbarMode.acoustics ? "LISTENING AREAS" : "ZONES",
+                                    isExpanded: isExpanded,
+                                    onTap: toggleExpand,
+                                  ),
+                                  Flexible(
+                                    child: SizeTransition(
+                                      sizeFactor: expandAnimation,
+                                      child: switch (toolbarMode) {
+                                        ToolbarMode.acoustics => ListeningAreasPanel(floorCanvasController: _floorCanvasController),
+                                        ToolbarMode.system => ZoneAndListeningAreaPanel(floorCanvasController: _floorCanvasController),
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+
+                          if (toolbarMode == ToolbarMode.system)
+                            FusionResizableSidebarSection(
+                              sementicId: 'building_plan_equipment_location',
+                              enableExpandCollapse: false,
+                              stickToBottom: true,
+                              builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
+                                return const EquipmentLocationSection();
+                              },
+                            ),
+
+                          if (toolbarMode == ToolbarMode.acoustics && currentSelectedListeningAreaId != null)
+                            FusionResizableSidebarSection(
+                              sementicId: 'building_plan_equipment_location',
+                              enableExpandCollapse: false,
+                              stickToBottom: true,
+                              builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
+                                return const SpeakerSelectionWidget();
+                              },
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: SemanticHelper.container(
+                        testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.buildingCanvas),
+                        child: BuildingCanvas(
+                          splRangeController: _splRangeController,
+                          onSplStateChanged: (bool value) {
+                            if (value) {
+                              productsController.collapse();
+                              splController.expand();
+                            } else {
+                              splController.collapse();
+                            }
+                          },
+                          floorCanvasController: _floorCanvasController,
+                          onCalculateSpl: calculateSPL,
+                          splPanelData: _lastPanelData!,
+                          onProductSelected: () {
+                            productsController.expand();
+                          },
+                          onProductDeselected: () {
+                            productsController.collapse();
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               );
             },
           ),
-          dockItemList: _createBuildingDockItems(serviceLocator<ProjectViewModel>().currentToolbarMode, _floorCanvasController),
+          dockItemList: _createBuildingDockItems(toolbarMode, _floorCanvasController),
         );
       },
     );
@@ -630,8 +704,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                               borderRadius: BorderRadius.circular(2),
                               color: isListingViewMode ? context.colorScheme.elevation3 : Colors.transparent,
                             ),
-                            child: FusionSvgIcon(
-                              icon: AssetSvg.listingViewIcon,
+                            child: FusionIcon.svg(
+                              AssetSvg.listingViewIcon,
                               size: 40,
                               color: context.colorScheme.primaryWhite,
                             ),
@@ -652,8 +726,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                               borderRadius: BorderRadius.circular(2),
                               color: isListingViewMode ? Colors.transparent : context.colorScheme.elevation3,
                             ),
-                            child: FusionSvgIcon(
-                              icon: AssetSvg.wiringViewIcon,
+                            child: FusionIcon.svg(
+                              AssetSvg.wiringViewIcon,
                               size: 40,
                               color: context.colorScheme.primaryWhite,
                             ),
@@ -907,6 +981,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                                     }
                                   },
                                   child: FusionNeumorphicButton(
+                                    semanticId: "push_configuration",
                                     onTap: () {
                                       serviceLocator<ConfigSyncViewModel>().refineAndSyncDataWithDsp(
                                         droInput: serviceLocator<ProjectViewModel>().getDroInputData(),
@@ -1221,7 +1296,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
 
             child: IconButton(
               icon: Icon(
-                Icons.home,
+                Icons.arrow_back_ios,
                 color: Theme.of(context).colorScheme.primaryWhite,
                 size: 20,
               ),

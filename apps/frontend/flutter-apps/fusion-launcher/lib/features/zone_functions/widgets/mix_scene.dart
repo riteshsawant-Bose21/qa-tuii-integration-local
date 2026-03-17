@@ -101,6 +101,7 @@ class _MixScenesState extends State<MixScenes> {
               valueListenable: isNewMixSceneNameNotifier,
               builder: (BuildContext context, bool isNewMixSceneName, Widget? child) {
                 return FusionNeumorphicButton(
+                  semanticId: 'mix_scene_${isNewMixSceneName ? "STORE" : "UPDATE"}',
                   text: isNewMixSceneName ? "STORE" : "UPDATE",
                   width: 94,
                   height: 32,
@@ -119,6 +120,7 @@ class _MixScenesState extends State<MixScenes> {
               valueListenable: isNewMixSceneNameNotifier,
               builder: (BuildContext context, bool isNewMixSceneName, Widget? child) {
                 return FusionNeumorphicButton(
+                  semanticId: 'mix_scene_delete',
                   text: "DELETE",
                   width: 94,
                   height: 32,

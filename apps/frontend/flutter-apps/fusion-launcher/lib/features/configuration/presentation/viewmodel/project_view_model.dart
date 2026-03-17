@@ -16,6 +16,7 @@ export 'functions/functions_view_model.dart';
 export 'hardware/hardware_view_model.dart';
 export 'listening_area/listening_area_view_model.dart';
 export 'media_files/media_file_view_models.dart';
+export 'message_player/message_player_view_model.dart';
 export 'mix_scenes/mix_scenes_view_model.dart';
 export 'processing_block/processing_block_viewmodel.dart';
 export 'project_images/project_image_view_model.dart';

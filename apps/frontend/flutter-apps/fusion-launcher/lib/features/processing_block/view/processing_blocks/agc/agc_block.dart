@@ -40,6 +40,7 @@ class AgcBlock extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 PBSection(
+                  semanticId: 'agc_threshold_section',
                   type: PBSectionType.left,
                   child: SizedBox(
                     width: _sectionWidth,
@@ -62,6 +63,7 @@ class AgcBlock extends StatelessWidget {
                           child: Padding(
                             padding: const EdgeInsets.all(16),
                             child: VerticalSlider(
+                              semanticId: 'agc_threshold_slider',
                               value: context.watch<AgcController>().currentThreshold,
                               max: 12,
                               min: -60,
@@ -74,6 +76,7 @@ class AgcBlock extends StatelessWidget {
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(border: Border(top: BorderSide(color: context.colorScheme.strokeLight))),
                           child: NeumorphicGainTextField(
+                            semanticId: 'agc_threshold_text_field',
                             controllerValue: context.watch<AgcController>().currentThreshold,
                             maxGain: 12,
                             minGain: -60,
@@ -92,8 +95,13 @@ class AgcBlock extends StatelessWidget {
                     ),
                   ),
                 ),
-                VerticalDivider(color: context.colorScheme.elevation1, width: 0, thickness: 2),
+                VerticalDivider(
+                  color: context.colorScheme.elevation1,
+                  width: 0,
+                  thickness: 2,
+                ),
                 PBSection(
+                  semanticId: 'agc_reduction',
                   type: PBSectionType.middle,
                   child: SizedBox(
                     width: _sectionWidth,
@@ -104,7 +112,11 @@ class AgcBlock extends StatelessWidget {
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: context.colorScheme.elevation2,
-                            border: Border(bottom: BorderSide(color: context.colorScheme.strokeLight)),
+                            border: Border(
+                              bottom: BorderSide(
+                                color: context.colorScheme.strokeLight,
+                              ),
+                            ),
                           ),
                           child: Center(
                             child: FusionAppText(
@@ -119,6 +131,7 @@ class AgcBlock extends StatelessWidget {
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: SimpleVerticalMeter(
+                              semanticId: 'agc_reduction_meter',
                               value: context.watch<AgcController>().currentReduction,
                               min: -60,
                               max: 12,
@@ -130,9 +143,14 @@ class AgcBlock extends StatelessWidget {
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: context.colorScheme.elevation2,
-                            border: Border(top: BorderSide(color: context.colorScheme.strokeLight)),
+                            border: Border(
+                              top: BorderSide(
+                                color: context.colorScheme.strokeLight,
+                              ),
+                            ),
                           ),
                           child: NeumorphicGainTextField(
+                            semanticId: 'agc_reduction_text_field',
                             controllerValue: 10,
                             maxGain: 12,
                             minGain: -60,
@@ -151,8 +169,13 @@ class AgcBlock extends StatelessWidget {
                     ),
                   ),
                 ),
-                VerticalDivider(color: context.colorScheme.elevation1, width: 0, thickness: 2),
+                VerticalDivider(
+                  color: context.colorScheme.elevation1,
+                  width: 0,
+                  thickness: 2,
+                ),
                 PBSection(
+                  semanticId: 'agc_output_section',
                   type: PBSectionType.right,
                   child: SizedBox(
                     width: _sectionWidth,
@@ -163,7 +186,11 @@ class AgcBlock extends StatelessWidget {
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: context.colorScheme.elevation2,
-                            border: Border(bottom: BorderSide(color: context.colorScheme.strokeLight)),
+                            border: Border(
+                              bottom: BorderSide(
+                                color: context.colorScheme.strokeLight,
+                              ),
+                            ),
                           ),
                           child: Center(
                             child: FusionAppText(
@@ -178,6 +205,7 @@ class AgcBlock extends StatelessWidget {
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: PbOutMeter(
+                              semanticId: 'agc_output_meter',
                               blockId: targetBlockId,
                             )
                           ),

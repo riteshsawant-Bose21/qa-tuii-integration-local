@@ -58,9 +58,13 @@ func (s *FusionServer) ListSnapshots(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	type snapshotsResponse struct {
+		Snapshots []string `json:"snapshots"`
+	}
+
 	// Write the JSON response with the snapshots.
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(map[string]any{"snapshots": snapshots})
+	json.NewEncoder(w).Encode(snapshotsResponse{Snapshots: snapshots})
 }
 
 // ActivateSnapshot handles HTTP POST requests to activate a specific snapshot.

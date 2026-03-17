@@ -19,7 +19,12 @@ class GainBlock extends StatelessWidget {
     final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
     final String targetBlockId = watch.processingBlock.id;
     // NO MORE BlocBuilder AT THE TOP!
-    return ProxyProvider<AlgorithmDataViewmodel, GainController>(
+    return SemanticHelper.container(
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.container,
+          'gain_block',
+        ),
+        child: ProxyProvider<AlgorithmDataViewmodel, GainController>(
       key: ValueKey<String>(targetBlockId),
       create: (BuildContext context) {
         return GainController(watch);
@@ -60,6 +65,7 @@ class GainBlock extends StatelessWidget {
                             SizedBox(
                               width: 80,
                               child: PBNumberTextField(
+                                semanticId: 'gain_text_field',
                                 value: (context.watch<GainController>().currentGainValue ?? 0).toDouble(),
                                 onChanged: (num value) {
                                   context.read<GainController>().updateGainValue(value);
@@ -79,6 +85,7 @@ class GainBlock extends StatelessWidget {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 12.0),
                           child: VerticalSlider(
+                            semanticId: 'gain_slider',
                             value: context.watch<GainController>().currentGainSliderValue ?? 0,
                             min: -60.0,
                             max: 12.0,
@@ -142,6 +149,7 @@ class GainBlock extends StatelessWidget {
                         child: Padding(
                           padding: const EdgeInsets.all(12.0),
                           child: PbOutMeter(
+                            semanticId: 'gain_output_meter',
                             blockId: targetBlockId,
                           ),
                         ),
@@ -153,6 +161,7 @@ class GainBlock extends StatelessWidget {
             ),
           );
         },
+      ),
       ),
     );
   }

@@ -57,74 +57,83 @@ class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: context.colorScheme.strokeLight, width: 1),
       ),
-      child: PopupMenuButton<String>(
-        color: context.colorScheme.elevation2,
-        shadowColor: Colors.transparent,
-        position: PopupMenuPosition.under,
+      child: FusionPopupMenu<T>(
+        // color: context.colorScheme.elevation2,
+        // shadowColor: Colors.transparent,
+        // position: PopupMenuPosition.under,
         tooltip: '',
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: BorderSide(color: context.colorScheme.strokeLight, width: 1),
-        ),
-        offset: const Offset(0, 10),
-        padding: EdgeInsets.zero,
-        menuPadding: EdgeInsets.zero,
-        clipBehavior: Clip.none,
-        itemBuilder: (BuildContext context) {
-          return <PopupMenuEntry<String>>[
-            PopupMenuItem<String>(
-              enabled: false,
-              height: 50,
-              padding: const EdgeInsets.all(8).copyWith(right: 0),
-              child: Builder(
-                builder: (BuildContext context) {
-                  if (widget.items.isEmpty) {
-                    return Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: FusionAppText(
-                        text: "Empty items",
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: context.colorScheme.onSurface.withValues(alpha: 0.5),
-                        ),
-                      ),
-                    );
-                  }
+        // shape: RoundedRectangleBorder(
+        //   borderRadius: BorderRadius.circular(8),
+        //   side: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+        // ),
+        // offset: const Offset(0, 10),
+        // padding: EdgeInsets.zero,
+        // menuPadding: EdgeInsets.zero,
+        // clipBehavior: Clip.none,
+        items: widget.items,
+        onSelected: widget.onSelect,
+        popupOffset: const Offset(0, 10),
+        itemBuilder: (BuildContext context, T option) => widget.valueBuilder != null ? widget.valueBuilder!(option) : widget.labelBuilder(option),
+        // itemBuilder: (BuildContext context) {
+        //   return <PopupMenuEntry<String>>[
+        //     PopupMenuItem<String>(
+        //       enabled: false,
+        //       height: 50,
+        //       padding: const EdgeInsets.all(8).copyWith(right: 0),
+        //       child: Builder(
+        //         builder: (BuildContext context) {
+        //           if (widget.items.isEmpty) {
+        //             return Padding(
+        //               padding: const EdgeInsets.all(8.0),
+        //               child: FusionAppText(
+        //                 text: "Empty items",
+        //                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
+        //                   color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+        //                 ),
+        //               ),
+        //             );
+        //           }
 
-                  return SizedBox(
-                    width: (childKey.currentContext?.findRenderObject() as RenderBox?)?.size.width, // Match trigger width
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        ...widget.items.map(
-                          (T value) => MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: GestureDetector(
-                              onTap: () {
-                                widget.onSelect(value);
-                                Navigator.of(context).pop();
-                              },
-                              behavior: HitTestBehavior.translucent,
-                              child: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                                child: widget.valueBuilder != null ? widget.valueBuilder!(value) : widget.labelBuilder(value),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ];
-        },
+        //           return SizedBox(
+        //             width: (childKey.currentContext?.findRenderObject() as RenderBox?)?.size.width, // Match trigger width
+        //             child: Column(
+        //               crossAxisAlignment: CrossAxisAlignment.start,
+        //               mainAxisSize: MainAxisSize.min,
+        //               children: <Widget>[
+        //                 ...widget.items.map(
+        //                   (T value) => MouseRegion(
+        //                     cursor: SystemMouseCursors.click,
+        //                     child: GestureDetector(
+        //                       onTap: () {
+        //                         widget.onSelect(value);
+        //                         Navigator.of(context).pop();
+        //                       },
+        //                       behavior: HitTestBehavior.translucent,
+        //                       child: Container(
+        //                         width: double.infinity,
+        //                         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        //                         child: widget.valueBuilder != null ? widget.valueBuilder!(value) : widget.labelBuilder(value),
+        //                       ),
+        //                     ),
+        //                   ),
+        //                 ),
+        //               ],
+        //             ),
+        //           );
+        //         },
+        //       ),
+        //     ),
+        //   ];
+        // },
         child: SemanticHelper.container(
-          testId: SemanticHelper.createTestId(SemanticTypes.container, "multi_section_dropdown_${widget.hintText}"),
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.container,
+            "multi_section_dropdown_${widget.hintText}",
+          ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0).copyWith(right: 8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 4.0,
+            ).copyWith(right: 8),
             child: Row(
               children: <Widget>[
                 Expanded(
@@ -138,8 +147,12 @@ class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
                           return FusionAppText(
                             text: widget.hintText ?? 'Select',
                             maxLine: 1,
-                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: context.colorScheme.onSurface.withValues(alpha: widget.value == null ? 0.5 : 1.0),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.labelLarge?.copyWith(
+                              color: context.colorScheme.onSurface.withValues(
+                                alpha: widget.value == null ? 0.5 : 1.0,
+                              ),
                               fontWeight: FontWeight.normal,
                               fontSize: 12,
                             ),
@@ -150,7 +163,10 @@ class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
                   ),
                 ),
                 SemanticHelper.container(
-                  testId: SemanticHelper.createTestId(SemanticTypes.container, "multi_section_dropdown_${widget.hintText}_arrow"),
+                  testId: SemanticHelper.createTestId(
+                    SemanticTypes.container,
+                    "multi_section_dropdown_${widget.hintText}_arrow",
+                  ),
                   child: Icon(
                     Icons.keyboard_arrow_down,
                     color: Colors.grey[600],
@@ -212,6 +228,7 @@ class _MultiSectionDropDownState<T> extends State<MultiSectionDropDown<T>> {
   @override
   Widget build(BuildContext context) {
     return FusionArrowPopup(
+      semanticId: 'multi_section_dropdown_${widget.hintText}',
       content: StatefulBuilder(
         builder: (BuildContext context, StateSetter stateSetter) {
           return _buildMenuContent(context, stateSetter);
@@ -238,7 +255,9 @@ class _MultiSectionDropDownState<T> extends State<MultiSectionDropDown<T>> {
                         text: widget.hintText ?? 'Select',
                         style: context.textTheme.labelLarge?.copyWith(
                           fontSize: 12,
-                          color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+                          color: context.colorScheme.onSurface.withValues(
+                            alpha: 0.5,
+                          ),
                         ),
                       );
                     }
@@ -281,7 +300,14 @@ class _MultiSectionDropDownState<T> extends State<MultiSectionDropDown<T>> {
             return DecoratedBox(
               decoration: BoxDecoration(
                 border: Border(
-                  bottom: isLast ? BorderSide.none : BorderSide(color: context.colorScheme.onSurface.withOpacity(0.1)),
+                  bottom:
+                      isLast
+                          ? BorderSide.none
+                          : BorderSide(
+                            color: context.colorScheme.onSurface.withOpacity(
+                              0.1,
+                            ),
+                          ),
                 ),
               ),
               child: Padding(
@@ -299,7 +325,10 @@ class _MultiSectionDropDownState<T> extends State<MultiSectionDropDown<T>> {
                         stateSetter(() {});
                       },
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 6,
+                          horizontal: 4,
+                        ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           spacing: 20,
@@ -332,7 +361,10 @@ class _MultiSectionDropDownState<T> extends State<MultiSectionDropDown<T>> {
                             Navigator.of(context).pop();
                           },
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 6,
+                            ),
                             child: widget.labelBuilder(item),
                           ),
                         ),
@@ -400,6 +432,7 @@ class _MultiSectionMultiSelectDropDownState<T> extends State<MultiSectionMultiSe
   @override
   Widget build(BuildContext context) {
     return FusionArrowPopup(
+      semanticId: 'multi_section_dropdown_${widget.hintText}',
       onDismiss: () {
         // Discard temp changes if popup closes
         _syncTempWithParent();
@@ -481,7 +514,9 @@ class _MultiSectionMultiSelectDropDownState<T> extends State<MultiSectionMultiSe
                         isLast
                             ? BorderSide.none
                             : BorderSide(
-                              color: context.colorScheme.onSurface.withOpacity(0.1),
+                              color: context.colorScheme.onSurface.withOpacity(
+                                0.1,
+                              ),
                             ),
                   ),
                 ),
@@ -672,6 +707,7 @@ class _MultiSelectDropDownState<T> extends State<MultiSelectDropDown<T>> {
   @override
   Widget build(BuildContext context) {
     return FusionArrowPopup(
+      semanticId: 'multi_section_dropdown_${widget.hintText}',
       onDismiss: _syncTempWithParent,
       showArrow: false,
       blurAmount: 0,

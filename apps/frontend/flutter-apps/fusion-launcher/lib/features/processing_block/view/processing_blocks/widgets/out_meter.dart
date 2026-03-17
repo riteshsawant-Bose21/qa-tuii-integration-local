@@ -39,6 +39,7 @@ class OutMeter extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(12.0),
               child: PbOutMeter(
+                semanticId: 'out_meter_vertical_meter',
                 blockId: blockId,
               ),
             ),

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 /// A unified and reusable image widget for the Fusion design system.
 ///
@@ -57,7 +58,12 @@ class FusionImage extends StatelessWidget {
   /// Custom error builder when loading the image fails.
   ///
   /// If not provided, a default broken image icon will be shown.
-  final Widget Function(BuildContext context, Object error, StackTrace? stackTrace)? errorBuilder;
+  final Widget Function(
+    BuildContext context,
+    Object error,
+    StackTrace? stackTrace,
+  )?
+  errorBuilder;
 
   /// The width of the image.
   final double? width;
@@ -79,6 +85,8 @@ class FusionImage extends StatelessWidget {
   /// Optional color to apply to asset images.
   final Color? assetColor;
 
+  final String? semanticId;
+
   /// Creates a [FusionImage] that loads from a network URL.
   const FusionImage.network(
     this.imageUrl, {
@@ -90,6 +98,7 @@ class FusionImage extends StatelessWidget {
     this.fit = BoxFit.cover,
     this.borderRadius,
     this.assetColor,
+    this.semanticId,
   }) : file = null,
        asset = null,
        isCircle = false;
@@ -99,6 +108,7 @@ class FusionImage extends StatelessWidget {
     this.file, {
     super.key,
     this.width,
+    this.semanticId,
     this.height,
     this.fit = BoxFit.cover,
     this.borderRadius,
@@ -113,6 +123,7 @@ class FusionImage extends StatelessWidget {
   const FusionImage.asset(
     this.asset, {
     super.key,
+    this.semanticId,
     this.width,
     this.height,
     this.fit = BoxFit.cover,
@@ -131,6 +142,7 @@ class FusionImage extends StatelessWidget {
   const FusionImage.circle({
     super.key,
     this.imageUrl,
+    this.semanticId,
     this.file,
     this.asset,
     this.placeholder,
@@ -148,7 +160,6 @@ class FusionImage extends StatelessWidget {
     Widget image;
 
     if (imageUrl != null) {
-      /// Network image with loading/error handling
       image = Image.network(
         imageUrl!,
         width: width,
@@ -157,7 +168,11 @@ class FusionImage extends StatelessWidget {
         loadingBuilder: (context, child, progress) {
           if (progress == null) return child;
           return placeholder ??
-              Center(
+              SemanticHelper.image(
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.icon,
+                  "fusion_image_${semanticId}",
+                ),
                 child: SizedBox(
                   width: 24,
                   height: 24,
@@ -177,32 +192,44 @@ class FusionImage extends StatelessWidget {
       );
     } else if (file != null) {
       /// File image
-      image = Image.file(
-        file!,
-        width: width,
-        height: height,
-        fit: fit,
-        errorBuilder: (context, error, stackTrace) {
-          if (errorBuilder != null) {
-            return errorBuilder!(context, error, stackTrace);
-          }
-          return Icon(Icons.broken_image, size: height, color: Colors.grey);
-        },
+      image = SemanticHelper.image(
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.icon,
+          "fusion_image_${semanticId}",
+        ),
+        child: Image.file(
+          file!,
+          width: width,
+          height: height,
+          fit: fit,
+          errorBuilder: (context, error, stackTrace) {
+            if (errorBuilder != null) {
+              return errorBuilder!(context, error, stackTrace);
+            }
+            return Icon(Icons.broken_image, size: height, color: Colors.grey);
+          },
+        ),
       );
     } else if (asset != null) {
       /// Asset image
-      image = Image.asset(
-        asset!,
-        width: width,
-        height: height,
-        fit: fit,
-        color: assetColor,
-        errorBuilder: (context, error, stackTrace) {
-          if (errorBuilder != null) {
-            return errorBuilder!(context, error, stackTrace);
-          }
-          return Icon(Icons.broken_image, size: height, color: Colors.grey);
-        },
+      image = SemanticHelper.image(
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.icon,
+          "fusion_image_${semanticId}",
+        ),
+        child: Image.asset(
+          asset!,
+          width: width,
+          height: height,
+          fit: fit,
+          color: assetColor,
+          errorBuilder: (context, error, stackTrace) {
+            if (errorBuilder != null) {
+              return errorBuilder!(context, error, stackTrace);
+            }
+            return Icon(Icons.broken_image, size: height, color: Colors.grey);
+          },
+        ),
       );
     } else {
       // Nothing provided
