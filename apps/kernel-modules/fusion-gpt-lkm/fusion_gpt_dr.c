@@ -64,6 +64,7 @@
 
 enum cal_state {
 	CAL_IDLE = 0,
+	CAL_PREBAKE_WAIT,
 	CAL_APPLY_POINT,
 	CAL_SETTLE,
 	CAL_MEASURE,
@@ -117,6 +118,54 @@ MODULE_PARM_DESC(cal_max_dac_step, "Maximum absolute DAC jump from startup cente
 static u32 cal_gain_search_step = 1000;
 module_param(cal_gain_search_step, uint, 0644);
 MODULE_PARM_DESC(cal_gain_search_step, "Gain step used in bounded one-shot target search");
+
+static bool cal_use_prebaked = false;
+module_param(cal_use_prebaked, bool, 0644);
+MODULE_PARM_DESC(cal_use_prebaked, "Skip startup probing and use prebaked model coefficients");
+
+static bool cal_pre_valid = false;
+module_param(cal_pre_valid, bool, 0644);
+MODULE_PARM_DESC(cal_pre_valid, "Prebaked model coefficients are valid");
+
+static int cal_pre_k1_q16 = 0;
+module_param(cal_pre_k1_q16, int, 0644);
+MODULE_PARM_DESC(cal_pre_k1_q16, "Prebaked k1 coefficient in Q16");
+
+static int cal_pre_k2_q16 = 0;
+module_param(cal_pre_k2_q16, int, 0644);
+MODULE_PARM_DESC(cal_pre_k2_q16, "Prebaked k2 coefficient in Q16");
+
+static int cal_pre_k3_q16 = 0;
+module_param(cal_pre_k3_q16, int, 0644);
+MODULE_PARM_DESC(cal_pre_k3_q16, "Prebaked k3 coefficient in Q16");
+
+static bool cal_capture_fit = true;
+module_param(cal_capture_fit, bool, 0644);
+MODULE_PARM_DESC(cal_capture_fit, "Capture fitted coefficients into cal_last_* for reuse");
+
+static int cal_last_k1_q16;
+module_param(cal_last_k1_q16, int, 0444);
+MODULE_PARM_DESC(cal_last_k1_q16, "Last fitted k1 coefficient in Q16 (read-only)");
+
+static int cal_last_k2_q16;
+module_param(cal_last_k2_q16, int, 0444);
+MODULE_PARM_DESC(cal_last_k2_q16, "Last fitted k2 coefficient in Q16 (read-only)");
+
+static int cal_last_k3_q16;
+module_param(cal_last_k3_q16, int, 0444);
+MODULE_PARM_DESC(cal_last_k3_q16, "Last fitted k3 coefficient in Q16 (read-only)");
+
+static u32 cal_pre_e0_samples = 3;
+module_param(cal_pre_e0_samples, uint, 0644);
+MODULE_PARM_DESC(cal_pre_e0_samples, "Number of sane PPS errors to average for prebaked e0");
+
+static u32 cal_pre_e0_abs_max = 1000;
+module_param(cal_pre_e0_abs_max, uint, 0644);
+MODULE_PARM_DESC(cal_pre_e0_abs_max, "Maximum absolute PPS error accepted for prebaked e0 collection");
+
+static u32 cal_pre_e0_max_wait = 12;
+module_param(cal_pre_e0_max_wait, uint, 0644);
+MODULE_PARM_DESC(cal_pre_e0_max_wait, "Maximum PPS intervals to wait for sane prebaked e0 samples");
 
 struct fusion_gpt
 {
@@ -515,6 +564,11 @@ static bool cal_fit_model(struct fusion_gpt *g, u32 *mean_residual_out)
 	g->cal_k1_q16 = (s32)k1_q16;
 	g->cal_k2_q16 = (s32)k2_q16;
 	g->cal_k3_q16 = (s32)k3_q16;
+	if (cal_capture_fit) {
+		cal_last_k1_q16 = g->cal_k1_q16;
+		cal_last_k2_q16 = g->cal_k2_q16;
+		cal_last_k3_q16 = g->cal_k3_q16;
+	}
 
 	*mean_residual_out = (u32)div_s64(residual_sum, 5);
 	return true;
@@ -635,15 +689,32 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 
           if (cal_enable && g->cal_state == CAL_IDLE &&
               g->dac_client && g->si5351b_client) {
-              cal_prepare_points(g);
-              g->cal_state = CAL_APPLY_POINT;
               g->error_integrator = 0;
               WRITE_ONCE(g->si_gain_pending, false);
-              pr_info("fusion_gpt: cal start center gain=%u dac=%d settle=%u measure=%u\n",
-                      g->cal_center_gain, g->cal_center_dac,
-                      max_t(u32, 1, cal_settle_pps),
-                      max_t(u32, 1, cal_measure_pps));
-              schedule_work(&g->dac_work);
+
+              if (cal_use_prebaked && cal_pre_valid) {
+                  g->cal_center_gain = g->si_gain_current;
+                  g->cal_center_dac = clamp(g->dac_target, 0, 255);
+                  g->cal_err_accum = 0;
+                  g->cal_err_samples = 0;
+                  g->cal_measure_left = max_t(u32, 1, cal_pre_e0_samples);
+                  g->cal_settle_left = max_t(u32, 1, cal_pre_e0_max_wait);
+                  g->cal_state = CAL_PREBAKE_WAIT;
+                  pr_info("fusion_gpt: cal prebaked wait center gain=%u dac=%d k=[%d %d %d] need=%u abs<=%u wait<=%u\n",
+                          g->cal_center_gain, g->cal_center_dac,
+                          cal_pre_k1_q16, cal_pre_k2_q16, cal_pre_k3_q16,
+                          max_t(u32, 1, cal_pre_e0_samples),
+                          cal_pre_e0_abs_max,
+                          max_t(u32, 1, cal_pre_e0_max_wait));
+              } else {
+                  cal_prepare_points(g);
+                  g->cal_state = CAL_APPLY_POINT;
+                  pr_info("fusion_gpt: cal start center gain=%u dac=%d settle=%u measure=%u\n",
+                          g->cal_center_gain, g->cal_center_dac,
+                          max_t(u32, 1, cal_settle_pps),
+                          max_t(u32, 1, cal_measure_pps));
+                  schedule_work(&g->dac_work);
+              }
           } else if (cal_enable && g->cal_state == CAL_IDLE &&
                      (!g->dac_client || !g->si5351b_client)) {
               g->cal_state = CAL_DONE;
@@ -651,7 +722,36 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
           }
 
           if (cal_active(g)) {
-              if (g->cal_state == CAL_SETTLE) {
+              if (g->cal_state == CAL_PREBAKE_WAIT) {
+                  long abs_err = (freq_error < 0) ? -freq_error : freq_error;
+
+                  if (abs_err <= cal_pre_e0_abs_max) {
+                      g->cal_err_accum += freq_error;
+                      g->cal_err_samples++;
+                  }
+
+                  if (g->cal_settle_left > 0)
+                      g->cal_settle_left--;
+
+                  if (g->cal_err_samples >= max_t(u32, 1, cal_pre_e0_samples)) {
+                      long e0 = (long)div_s64(g->cal_err_accum,
+                                              max_t(u32, 1, g->cal_err_samples));
+                      g->cal_probe_mean[0] = e0;
+                      g->cal_k1_q16 = cal_pre_k1_q16;
+                      g->cal_k2_q16 = cal_pre_k2_q16;
+                      g->cal_k3_q16 = cal_pre_k3_q16;
+                      cal_find_best_target(g, &g->si_gain_target, &g->dac_target);
+                      g->cal_state = CAL_APPLY_JUMP;
+                      pr_info("fusion_gpt: cal prebaked jump start center gain=%u dac=%d e0=%ld k=[%d %d %d]\n",
+                              g->cal_center_gain, g->cal_center_dac, e0,
+                              g->cal_k1_q16, g->cal_k2_q16, g->cal_k3_q16);
+                      schedule_work(&g->dac_work);
+                  } else if (g->cal_settle_left == 0) {
+                      g->cal_state = CAL_FAIL;
+                      pr_warn("fusion_gpt: cal prebaked e0 collection timed out, fallback to PI\n");
+                      schedule_work(&g->dac_work);
+                  }
+              } else if (g->cal_state == CAL_SETTLE) {
                   if (g->cal_settle_left > 0)
                       g->cal_settle_left--;
                   if (g->cal_settle_left == 0) {
