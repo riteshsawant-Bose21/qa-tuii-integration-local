@@ -46,19 +46,36 @@ public:
 
             if (!rows_name.empty())
             {
+                int_fast32_t rows_value;
+
                 if (processor.has_property(rows_name))
                 {
                     if (configuration->has_property(rows_name))
                     {
                         const PropertyConfiguration &pc =
                             configuration->get_property(rows_name);
-                        pc.get_value(num_rows);
+                        pc.get_value(rows_value);
+                        num_rows = static_cast<int>(rows_value);
+
+                        const PropertyDefinition &pd =
+                            processor.get_property(rows_name);
+                        int_fast32_t minimum_rows;
+                        int_fast32_t maximum_rows;
+                        pd.get_minimum_value(minimum_rows);
+                        pd.get_maximum_value(maximum_rows);
+
+                        if (num_rows < minimum_rows || num_rows > maximum_rows)
+                        {
+                            throw std::runtime_error("Invalid number of rows for property '"
+                                    + rows_name + "'.");
+                        }
                     }
                     else
                     {
                         const PropertyDefinition &pd =
                             processor.get_property(rows_name);
-                        pd.get_default_value(num_rows);
+                        pd.get_default_value(rows_value);
+                        num_rows = static_cast<int>(rows_value);
                     }
                 }
                 else if (processor.has_terminal(rows_name))
@@ -76,17 +93,35 @@ public:
             {
                 if (processor.has_property(columns_name))
                 {
+                    int_fast32_t columns_value;
+
                     if (configuration->has_property(columns_name))
                     {
                         const PropertyConfiguration &pc =
                             configuration->get_property(columns_name);
-                        pc.get_value(num_columns);
+                        pc.get_value(columns_value);
+                        num_columns = static_cast<int>(columns_value);
+
+                        const PropertyDefinition &pd =
+                            processor.get_property(columns_name);
+                        int_fast32_t minimum_columns;
+                        int_fast32_t maximum_columns;
+                        pd.get_minimum_value(minimum_columns);
+                        pd.get_maximum_value(maximum_columns);
+
+                        if (num_columns < minimum_columns
+                            || num_columns > maximum_columns)
+                        {
+                            throw std::runtime_error("Invalid number of columns for property '"
+                                    + columns_name + "'.");
+                        }
                     }
                     else
                     {
                         const PropertyDefinition &pd =
                             processor.get_property(columns_name);
-                        pd.get_default_value(num_columns);
+                        pd.get_default_value(columns_value);
+                        num_columns = static_cast<int>(columns_value);
                     }
                 }
                 else if (processor.has_terminal(columns_name))
@@ -365,7 +400,58 @@ public:
                       || std::is_same_v<T, float>)
         {
             definition.get_minimum_value(minimum_value);
-            definition.get_maximum_value(maximum_value);
+
+            std::string maximum_name;
+
+            definition.get_maximum_value(maximum_value, maximum_name);
+
+            if (!maximum_name.empty())
+            {
+                if (processor.has_property(maximum_name))
+                {
+                    if (configuration->has_property(maximum_name))
+                    {
+                        const PropertyConfiguration &pc =
+                            configuration->get_property(maximum_name);
+                        pc.get_value(maximum_value);
+
+                        const PropertyDefinition &pd =
+                            processor.get_property(maximum_name);
+                        T property_minimum;
+                        T property_maximum;
+                        pd.get_minimum_value(property_minimum);
+                        pd.get_maximum_value(property_maximum);
+
+                        if (maximum_value < property_minimum
+                            || maximum_value > property_maximum)
+                        {
+                            throw std::runtime_error("Invalid maximum_value for property '"
+                                    + maximum_name + "'.");
+                        }
+                    }
+                    else
+                    {
+                        const PropertyDefinition &pd =
+                            processor.get_property(maximum_name);
+                        pd.get_default_value(maximum_value);
+                    }
+                }
+                else if (processor.has_terminal(maximum_name))
+                {
+                    if (configuration->has_terminal(maximum_name))
+                    {
+                        const TerminalConfiguration &tc =
+                            configuration->get_terminal(maximum_name);
+                        maximum_value = tc.get_num_channels();
+                    }
+                }
+                else
+                {
+                    SPDLOG_ERROR("Telemetry '{}' has maximum_value '{}' but no property or terminal with that name.",
+                                 definition.get_name(), maximum_name);
+                    maximum_value = minimum_value;
+                }
+            }
         }
     }
 
