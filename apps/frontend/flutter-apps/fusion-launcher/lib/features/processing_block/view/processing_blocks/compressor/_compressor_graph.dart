@@ -6,7 +6,11 @@ class _CompressorGraph extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<CompressorController>(
-      builder: (BuildContext context, CompressorController controller, Widget? child) {
+      builder: (
+        BuildContext context,
+        CompressorController controller,
+        Widget? child,
+      ) {
         final List<GraphPoint> points = controller.getGraphPoints();
         return Padding(
           padding: const EdgeInsets.all(16.0),
@@ -50,7 +54,8 @@ class _CompressorGraphPainter extends StatefulWidget {
   final Function(int index, num value, DragDirection direction) onPointChanged;
 
   @override
-  State<_CompressorGraphPainter> createState() => _CompressorGraphPainterState();
+  State<_CompressorGraphPainter> createState() =>
+      _CompressorGraphPainterState();
 }
 
 class _CompressorGraphPainterState extends State<_CompressorGraphPainter> {
@@ -60,82 +65,112 @@ class _CompressorGraphPainterState extends State<_CompressorGraphPainter> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        // setState(() {
-        //   tappedPointIndex = null;
-        // });
-      },
-      onTapDown: (TapDownDetails details) {
-        final RenderBox renderBox = context.findRenderObject() as RenderBox;
-        final Offset localPosition = renderBox.globalToLocal(details.globalPosition);
-
-        // Find the closest draggable point
-        final int? pointIndex = _findClosestDraggablePoint(localPosition, renderBox.size);
-        if (pointIndex != null) {
-          setState(() {
-            tappedPointIndex = pointIndex;
-          });
-        }
-      },
-      onPanStart: (DragStartDetails details) {
-        final RenderBox renderBox = context.findRenderObject() as RenderBox;
-        final Offset localPosition = renderBox.globalToLocal(details.globalPosition);
-
-        // Find the closest draggable point
-        draggedPointIndex = _findClosestDraggablePoint(localPosition, renderBox.size);
-        if (draggedPointIndex != null) {
-          setState(() {
-            tappedPointIndex = null; // Clear tap highlight when dragging starts
-          });
-        }
-        lastPanPosition = localPosition;
-      },
-      onPanUpdate: (DragUpdateDetails details) {
-        if (draggedPointIndex != null) {
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        'compressor_graph',
+      ),
+      child: GestureDetector(
+        onTap: () {
+          // setState(() {
+          //   tappedPointIndex = null;
+          // });
+        },
+        onTapDown: (TapDownDetails details) {
           final RenderBox renderBox = context.findRenderObject() as RenderBox;
-          final Offset localPosition = renderBox.globalToLocal(details.globalPosition);
-          final Size size = renderBox.size;
+          final Offset localPosition = renderBox.globalToLocal(
+            details.globalPosition,
+          );
 
-          // Convert current pixel position to dB values
-          final double normalizedX = localPosition.dx / size.width;
-          final double normalizedY = 1.0 - (localPosition.dy / size.height); // Invert Y axis
-
-          final double dbX = (normalizedX * 60.0) - 60.0; // Convert to -60 to 0 dB range
-          final double dbY = (normalizedY * 60.0) - 60.0; // Convert to -60 to 0 dB range
-
-          if (lastPanPosition != null) {
-            final Offset delta = localPosition - lastPanPosition!;
-            final double deltaX = delta.dx.abs();
-            final double deltaY = delta.dy.abs();
-
-            // Determine drag direction and update accordingly
-            if (deltaX > deltaY) {
-              // Horizontal drag
-              widget.onPointChanged(draggedPointIndex!, dbX.clamp(-60.0, 0.0), DragDirection.horizontal);
-            } else {
-              // Vertical drag
-              widget.onPointChanged(draggedPointIndex!, dbY.clamp(-60.0, 0.0), DragDirection.vertical);
-            }
+          // Find the closest draggable point
+          final int? pointIndex = _findClosestDraggablePoint(
+            localPosition,
+            renderBox.size,
+          );
+          if (pointIndex != null) {
+            setState(() {
+              tappedPointIndex = pointIndex;
+            });
           }
+        },
+        onPanStart: (DragStartDetails details) {
+          final RenderBox renderBox = context.findRenderObject() as RenderBox;
+          final Offset localPosition = renderBox.globalToLocal(
+            details.globalPosition,
+          );
 
+          // Find the closest draggable point
+          draggedPointIndex = _findClosestDraggablePoint(
+            localPosition,
+            renderBox.size,
+          );
+          if (draggedPointIndex != null) {
+            setState(() {
+              tappedPointIndex =
+                  null; // Clear tap highlight when dragging starts
+            });
+          }
           lastPanPosition = localPosition;
-        }
-      },
-      onPanEnd: (DragEndDetails details) {
-        setState(() {
-          draggedPointIndex = null;
-        });
-        lastPanPosition = null;
-      },
-      child: CustomPaint(
-        painter: _GateCurvePainter(
-          points: widget.points,
-          draggedPointIndex: draggedPointIndex,
-          tappedPointIndex: tappedPointIndex,
-          theme: Theme.of(context),
+        },
+        onPanUpdate: (DragUpdateDetails details) {
+          if (draggedPointIndex != null) {
+            final RenderBox renderBox = context.findRenderObject() as RenderBox;
+            final Offset localPosition = renderBox.globalToLocal(
+              details.globalPosition,
+            );
+            final Size size = renderBox.size;
+
+            // Convert current pixel position to dB values
+            final double normalizedX = localPosition.dx / size.width;
+            final double normalizedY =
+                1.0 - (localPosition.dy / size.height); // Invert Y axis
+
+            final double dbX =
+                (normalizedX * 60.0) - 60.0; // Convert to -60 to 0 dB range
+            final double dbY =
+                (normalizedY * 60.0) - 60.0; // Convert to -60 to 0 dB range
+
+            if (lastPanPosition != null) {
+              final Offset delta = localPosition - lastPanPosition!;
+              final double deltaX = delta.dx.abs();
+              final double deltaY = delta.dy.abs();
+
+              // Determine drag direction and update accordingly
+              if (deltaX > deltaY) {
+                // Horizontal drag
+                widget.onPointChanged(
+                  draggedPointIndex!,
+                  dbX.clamp(-60.0, 0.0),
+                  DragDirection.horizontal,
+                );
+              } else {
+                // Vertical drag
+                widget.onPointChanged(
+                  draggedPointIndex!,
+                  dbY.clamp(-60.0, 0.0),
+                  DragDirection.vertical,
+                );
+              }
+            }
+
+            lastPanPosition = localPosition;
+          }
+        },
+        onPanEnd: (DragEndDetails details) {
+          setState(() {
+            draggedPointIndex = null;
+          });
+          lastPanPosition = null;
+        },
+        child: CustomPaint(
+          painter: _GateCurvePainter(
+            points: widget.points,
+            draggedPointIndex: draggedPointIndex,
+            tappedPointIndex: tappedPointIndex,
+            theme: Theme.of(context),
+          ),
+          size: Size.infinite,
         ),
-        size: Size.infinite,
       ),
     );
   }
@@ -297,7 +332,9 @@ class _GateCurvePainter extends CustomPainter {
   }
 
   void _drawAxisLabels(Canvas canvas, Size size) {
-    final TextStyle labelStyle = theme.textTheme.bodyMedium!.copyWith(color: theme.colorScheme.textGrey);
+    final TextStyle labelStyle = theme.textTheme.bodyMedium!.copyWith(
+      color: theme.colorScheme.textGrey,
+    );
 
     final TextStyle axisLabelStyle = theme.textTheme.labelLarge!.copyWith(
       fontWeight: FontWeight.bold,
@@ -359,7 +396,10 @@ class _GateCurvePainter extends CustomPainter {
     canvas.save();
     // Translate to the desired position and rotate -90 degrees
     // Position it further left to avoid overlap with value labels
-    canvas.translate(-labelPadding - axisTitlePadding - 30, size.height / 2 + yAxisTitlePainter.width / 2);
+    canvas.translate(
+      -labelPadding - axisTitlePadding - 30,
+      size.height / 2 + yAxisTitlePainter.width / 2,
+    );
     canvas.rotate(-3.14159 / 2); // -90 degrees in radians
     yAxisTitlePainter.paint(canvas, Offset.zero);
     // Restore the canvas state

@@ -10,10 +10,13 @@ export 'dockable_side_bar/fusion_dock_floating_panel.dart';
 export 'dockable_side_bar/fusion_dock_side_bar.dart';
 export 'dockable_side_bar/fusion_dockable_area.dart';
 export 'form_fields/fusion_drop_down_button_form_field.dart';
+export 'dockable_side_bar/fusion_resizable_sidebar.dart';
+
 /// form fields
 export 'form_fields/fusion_text_field.dart';
 export 'form_fields/fusion_text_form_field.dart';
 export 'form_fields/fusion_toggle_switch.dart';
+export 'form_fields/text_fleld.dart';
 export 'others/fusion_arrow_popup.dart';
 export 'others/fusion_checkbox.dart';
 export 'others/fusion_container.dart';

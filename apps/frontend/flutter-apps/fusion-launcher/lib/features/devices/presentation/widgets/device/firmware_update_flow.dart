@@ -10,10 +10,12 @@ class CompactFirmwareUpdateWidget extends StatefulWidget {
   const CompactFirmwareUpdateWidget({super.key});
 
   @override
-  State<CompactFirmwareUpdateWidget> createState() => _CompactFirmwareUpdateWidgetState();
+  State<CompactFirmwareUpdateWidget> createState() =>
+      _CompactFirmwareUpdateWidgetState();
 }
 
-class _CompactFirmwareUpdateWidgetState extends State<CompactFirmwareUpdateWidget> {
+class _CompactFirmwareUpdateWidgetState
+    extends State<CompactFirmwareUpdateWidget> {
   UpdateStage _stage = UpdateStage.idle;
   double _progress = 0.0;
   Timer? _simulationTimer;
@@ -36,14 +38,17 @@ class _CompactFirmwareUpdateWidgetState extends State<CompactFirmwareUpdateWidge
   void _simulateProgress() {
     _simulationTimer?.cancel();
     // Update every 50ms to create a smooth loading effect
-    _simulationTimer = Timer.periodic(const Duration(milliseconds: 50), (Timer timer) {
+    _simulationTimer = Timer.periodic(const Duration(milliseconds: 50), (
+      Timer timer,
+    ) {
       if (!mounted) {
         timer.cancel();
         return;
       }
 
       setState(() {
-        _progress += 0.02; // Increment progress (50 steps = 2.5 seconds approx per stage)
+        _progress +=
+            0.02; // Increment progress (50 steps = 2.5 seconds approx per stage)
 
         // STAGE TRANSITION LOGIC
         if (_progress >= 1.0) {
@@ -81,6 +86,7 @@ class _CompactFirmwareUpdateWidgetState extends State<CompactFirmwareUpdateWidge
       case UpdateStage.idle:
         return Center(
           child: FusionNeumorphicButton(
+            semanticId: 'firmware_update_button',
             text: "Check for Update",
             padding: const EdgeInsets.symmetric(
               horizontal: 2,
@@ -116,6 +122,7 @@ class _CompactFirmwareUpdateWidgetState extends State<CompactFirmwareUpdateWidge
               ),
             ),
             FusionNeumorphicButton(
+              semanticId: 'firmware_update_retry_button',
               text: "Retry",
               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
               borderRadius: 4,
@@ -147,7 +154,10 @@ class _CompactFirmwareUpdateWidgetState extends State<CompactFirmwareUpdateWidge
     }
   }
 
-  Widget _buildProgressIndicator({required String label, required double progress}) {
+  Widget _buildProgressIndicator({
+    required String label,
+    required double progress,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -159,7 +169,9 @@ class _CompactFirmwareUpdateWidgetState extends State<CompactFirmwareUpdateWidge
             value: progress,
             minHeight: 4, // Thin line
             backgroundColor: Colors.grey.withOpacity(0.3),
-            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF90CAF9)), // Light Blue
+            valueColor: const AlwaysStoppedAnimation<Color>(
+              Color(0xFF90CAF9),
+            ), // Light Blue
           ),
         ),
         const SizedBox(height: 8),
@@ -167,7 +179,9 @@ class _CompactFirmwareUpdateWidgetState extends State<CompactFirmwareUpdateWidge
           text: label,
           style: context.textTheme.labelMedium?.copyWith(
             color: context.colorScheme.textSecondary,
-            fontStyle: FontStyle.italic, // Matches the "Copying files..." style in image
+            fontStyle:
+                FontStyle
+                    .italic, // Matches the "Copying files..." style in image
           ),
         ),
       ],

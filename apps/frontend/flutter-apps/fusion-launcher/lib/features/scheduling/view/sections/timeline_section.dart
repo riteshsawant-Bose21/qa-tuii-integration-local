@@ -18,7 +18,10 @@ class _TimelineSection extends StatelessWidget {
         child: BlocBuilder<TimelineCubit, TimelineState>(
           builder: (BuildContext context, TimelineState state) {
             return SemanticHelper.button(
-              testId: SemanticHelper.createTestId(SemanticTypes.button, "timeline_section"),
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.button,
+                "timeline_section",
+              ),
               child: Column(
                 children: <Widget>[
                   Padding(
@@ -26,24 +29,31 @@ class _TimelineSection extends StatelessWidget {
                     child: Row(
                       children: <Widget>[
                         FusionAppText(
-                          text: DateFormat("MMMM yyyy").format(state.visibleMonth),
+                          text: DateFormat(
+                            "MMMM yyyy",
+                          ).format(state.visibleMonth),
                           textAlign: TextAlign.center,
                           style: context.textTheme.bodyMedium,
                         ),
                         const Spacer(),
 
                         FusionTextButton(
+                          accessLabel: 'timeline_section_now_button',
                           width: 100,
                           height: 32,
                           label: "Now",
                           backgroundColor: context.colorScheme.elevation3,
                           onTap: () {
-                            BlocProvider.of<TimelineCubit>(context).goToMonth(DateTime.now());
+                            BlocProvider.of<TimelineCubit>(
+                              context,
+                            ).goToMonth(DateTime.now());
                           },
                         ),
                         IconButton(
                           onPressed: () {
-                            BlocProvider.of<TimelineCubit>(context).previousMonth();
+                            BlocProvider.of<TimelineCubit>(
+                              context,
+                            ).previousMonth();
                           },
                           icon: const Icon(Icons.chevron_left_rounded),
                         ),
