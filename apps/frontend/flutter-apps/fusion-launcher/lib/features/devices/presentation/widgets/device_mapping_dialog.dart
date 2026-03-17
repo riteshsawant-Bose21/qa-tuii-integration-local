@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/devices/presentation/widgets/dro/dro_config_screen.dart';
 import 'package:fusion_launcher/features/devices/presentation/widgets/settings/device_global_settings_tab.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -56,7 +57,9 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
                       ? DeviceMappingScreen(
                         devices: _fusionDevices,
                       )
-                      : const DeviceGlobalSettingsTab(),
+                      : _selectedTabIndex == 1
+                      ? const DeviceGlobalSettingsTab()
+                      : const DroConfigScreen(),
             ),
           ],
         ),
@@ -107,6 +110,8 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
               _buildTab(context, 'Mapping', 0),
               const SizedBox(width: 32),
               _buildTab(context, 'Settings', 1),
+              const SizedBox(width: 32),
+              _buildTab(context, "Dro config", 2),
             ],
           ),
         ],

@@ -6,7 +6,6 @@ import 'package:fusion_launcher/features/processing_block/viewmodel/algorithm_da
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
 import '../../../../zone_functions/widgets/neumorphic_audio_toggle_button.dart';
-import '../../widgets/pb_slider.dart';
 import '../widgets/pb_block_layout.dart';
 
 part '_gain_controller.dart';

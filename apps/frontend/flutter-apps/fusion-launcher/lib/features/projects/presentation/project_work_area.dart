@@ -1367,7 +1367,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
     serviceLocator<ProjectViewModel>().saveProject();
 
     const JsonEncoder encoder = JsonEncoder.withIndent('  ');
-    final Map<String, dynamic> jsonMap = serviceLocator<ProjectViewModel>().getDroInputData().toJson();
+    final Map<String, dynamic> jsonMap = serviceLocator<ProjectViewModel>().getProjectJson();
     final String prettyJson = encoder.convert(jsonMap);
 
     showDialog(

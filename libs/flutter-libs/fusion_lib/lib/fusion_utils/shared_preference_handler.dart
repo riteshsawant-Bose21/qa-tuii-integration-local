@@ -69,6 +69,7 @@ enum SharedPreferenceKeys {
   themeMode,
   lastProjectSyncTime,
   skipLogin,
+  droIpAddress,
 }
 
 extension SharedPreferenceKeysExtension on SharedPreferenceKeys {
@@ -82,6 +83,8 @@ extension SharedPreferenceKeysExtension on SharedPreferenceKeys {
         return 'last_project_sync_time';
       case SharedPreferenceKeys.skipLogin:
         return 'skip_login';
+      case SharedPreferenceKeys.droIpAddress:
+        return 'dro_ip_address';
     }
   }
 }

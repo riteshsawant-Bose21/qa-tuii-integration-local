@@ -13,7 +13,7 @@ class ConfigSyncViewModel extends Cubit<ConfigSyncState> {
   final DroConfigService droConfigService;
   final FusionConfigSyncService fusionConfigSyncService;
 
-  final String droServerUrl = '10.8.50.144:8080';
+  String get droServerUrl => serviceLocator<FusionPreferences>().droServerUrl;
 
   ConfigSyncViewModel({
     required this.droConfigService,
@@ -31,6 +31,7 @@ class ConfigSyncViewModel extends Cubit<ConfigSyncState> {
       droServerUrl: droServerUrl,
     );
     if (response.success) {
+      serviceLocator<ProjectViewModel>().updateDroResponse(response.data!.toJson());
       // autoPopulateWiringDetails(droResponseData: response.data!);
       emit(DroResponseReceived(droResponseData: response.data!));
     } else {
