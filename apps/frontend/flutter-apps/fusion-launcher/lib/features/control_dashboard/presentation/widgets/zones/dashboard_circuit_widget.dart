@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/assets/asset_icons.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_zones_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../../../../core/constants/assets_constants.dart';
+import '../../../../processing_block/view/processing_chain_view.dart';
 import 'audio_meter_widget.dart';
 
 class DashboardCircuitWidget extends StatelessWidget {
@@ -61,6 +64,20 @@ class DashboardCircuitWidget extends StatelessWidget {
                   circuit.muted ? Icons.volume_off_outlined : Icons.volume_up_outlined,
                   size: 16,
                   color: context.colorScheme.onPrimary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () {
+                  ProcessingChainView.showForCircuit(context, circuit);
+                },
+                child: FusionImage.asset(
+                  semanticId: FusionTestKeys.instance.zonecircuititmimg2,
+                  Assets.processingBlocksFilledIcon,
+                  width: 22,
+                  height: 22,
+                  assetColor: context.colorScheme.primaryWhite,
+                  fit: BoxFit.contain,
                 ),
               ),
             ],
