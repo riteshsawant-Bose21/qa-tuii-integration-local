@@ -165,10 +165,12 @@ class ProcessingChainView extends StatelessWidget {
                               customBorder: const CircleBorder(),
                               child: Padding(
                                 padding: const EdgeInsets.all(8.0),
-                                child: Icon(
-                                  semanticLabel: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.instance.processingdialogclose),
-                                  LucideIcons.x200,
-                                  color: context.colorScheme.iconDefault,
+                                child: SemanticHelper.button(
+                                  testId : SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.instance.processingdialogclose),
+                                  child: Icon(
+                                    LucideIcons.x200,
+                                    color: context.colorScheme.iconDefault,
+                                  ),
                                 ),
                               ),
                             ),
@@ -391,28 +393,33 @@ class ProcessingChainView extends StatelessWidget {
                                                                           vertical:
                                                                               4,
                                                                         ),
-                                                                    child: Row(
-                                                                      spacing: 12,
-                                                                      children: <
-                                                                        Widget
-                                                                      >[
-                                                                        _PBIcon(
-                                                                          icon:
-                                                                              block.iconAsset,
-                                                                          isActive:
-                                                                              block.id ==
-                                                                              state.selectedBlock.id,
-                                                                        ),
-                                                                        if (isOpen)
-                                                                          FusionAppText(
-                                                                            text:
-                                                                                block.name,
-                                                                            style: context.textTheme.bodySmall?.copyWith(
-                                                                              color:
-                                                                                  context.colorScheme.textPrimary,
-                                                                            ),
+                                                                    child: SemanticHelper.container(
+                                                                      testId: SemanticHelper.createTestId(SemanticTypes.container, 'processing_block_$index'),
+                                                                      label: block.name,
+                                                                      isChecked: block.id == state.selectedBlock.id,
+                                                                      child: Row(
+                                                                        spacing: 12,
+                                                                        children: <
+                                                                          Widget
+                                                                        >[
+                                                                          _PBIcon(
+                                                                            icon:
+                                                                                block.iconAsset,
+                                                                            isActive:
+                                                                                block.id ==
+                                                                                state.selectedBlock.id,
                                                                           ),
-                                                                      ],
+                                                                          if (isOpen)
+                                                                            FusionAppText(
+                                                                              text:
+                                                                                  block.name,
+                                                                              style: context.textTheme.bodySmall?.copyWith(
+                                                                                color:
+                                                                                    context.colorScheme.textPrimary,
+                                                                              ),
+                                                                            ),
+                                                                        ],
+                                                                      ),
                                                                     ),
                                                                   ),
                                                                 ),

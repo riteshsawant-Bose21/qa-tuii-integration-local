@@ -1432,7 +1432,7 @@ class _ZoneCardState extends State<ZoneCard> {
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,
-        "${FusionTestKeys.instance.zonecircuititm}_${widget.index}",
+        "${FusionTestKeys.instance.zonecircuititm}_$index",
       ),
       child: Container(
         decoration: BoxDecoration(
