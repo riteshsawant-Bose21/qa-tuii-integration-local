@@ -295,9 +295,7 @@ extension HardwareViewModel on ProjectViewModel {
             return !(product?.isSubwoofer ?? false);
           }).toList();
 
-      if (targetSpeakers.isEmpty) {
-        return ResponseCallback<bool>.failure('Add at least one non-subwoofer speaker to auto-place.');
-      }
+      if (targetSpeakers.isEmpty) return ResponseCallback<bool>.failure('Add at least one non-subwoofer speaker to auto-place.');
 
       final List<Offset> candidatePoints = _calculateAutoPlacedPositions(
         listeningArea: listeningArea,
