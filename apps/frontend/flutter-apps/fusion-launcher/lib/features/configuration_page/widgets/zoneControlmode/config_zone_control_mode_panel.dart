@@ -2,12 +2,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/control_dashboard/presentation/widgets/zones/exandable_section.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../../control_dashboard/presentation/widgets/zones/audio_meter_widget.dart';
 import '../../../control_dashboard/presentation/widgets/zones/dashboard_circuit_widget.dart';
-import '../../../control_dashboard/presentation/widgets/zones/subzone_dashboard_content.dart';
+import 'config_audio_meter.dart';
+import 'config_circuit_exandable_section.dart';
+import 'config_control_mode_subzone_listing.dart';
 import 'config_zone_control_header.dart';
 
 class ConfigZoneControlModePanel extends StatelessWidget {
@@ -34,15 +34,17 @@ class ConfigZoneControlModePanel extends StatelessWidget {
         color: context.colorScheme.elevation2,
         child: Column(
           children: <Widget>[
+            /// Zone header with name and mute control
             ConfigZoneControlHeader(zone: zone),
 
-            AudioMeterContainer(
+            /// Zone audio meter showing current audio levels and mute status
+            ConfigAudioMeter(
               muted: zone.muted,
             ),
 
             if (subZones.isEmpty) ...<Widget>[
               if (circuits.isNotEmpty) ...<Widget>[
-                CircuitExpandableSection(
+                ConfigCircuitExpandableSection(
                   title: 'Circuits',
                   children:
                       circuits
@@ -56,51 +58,12 @@ class ConfigZoneControlModePanel extends StatelessWidget {
                 ),
               ],
             ] else ...<Widget>[
-              SubZonesListing(
+              ConfigControlModeSubzoneListing(
                 subZones: subZones,
               ),
             ],
           ],
         ),
-      ),
-    );
-  }
-}
-
-class SubZonesListing extends StatelessWidget {
-  final List<SubZone> subZones;
-
-  const SubZonesListing({
-    super.key,
-    required this.subZones,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation1,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(8.0),
-          bottomRight: Radius.circular(8.0),
-        ),
-      ),
-      child: Column(
-        children: <Widget>[
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: subZones.length,
-            itemBuilder: (BuildContext context, int index) {
-              final SubZone subZone = subZones[index];
-              final bool isLastItem = index == subZones.length - 1;
-              return SubzoneDashboardContent(
-                subZone: subZone,
-                isLast: isLastItem,
-              );
-            },
-          ),
-        ],
       ),
     );
   }
