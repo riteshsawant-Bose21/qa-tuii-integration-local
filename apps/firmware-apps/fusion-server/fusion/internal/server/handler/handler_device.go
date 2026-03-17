@@ -210,7 +210,11 @@ func (h *Handler) getLocalCSR() ([]byte, error) {
 // resetLocalDevice performs the necessary steps to reset the local device, such as removing certificates
 func resetLocalDevice() error {
 	err := os.Remove(fmt.Sprintf("%s%s", api.DefaultIdentityFilePath, api.DefaultCertFileName))
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil {
+		if os.IsNotExist(err) {
+			logging.GetLogger().Info("Certificate file already does not exist, nothing to remove")
+			return nil
+		}
 		return fmt.Errorf("error removing certificate file: %v", err)
 	}
 

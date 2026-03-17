@@ -3,19 +3,7 @@ package api
 import "time"
 
 const (
-	AudioFilesLocation = "/var/lib/fusion/audio"
-
-	AdminPort          = "9090"
-	ControllerPort     = "7950"
-	HTTPPort           = "8080"
-	MessageTriggerPort = 7949
-	SAPPort            = "9875" // As defined: https://datatracker.ietf.org/doc/html/rfc2974
-	UDPPort            = "7947"
-
-	ContentType  = "Content-Type"
-	JsonMIMEType = "application/json"
-	TextMIMEType = "text/plain"
-	Protocol     = "http://"
+	FirmwareUnknown = "Unknown"
 
 	FusionEpoch     = "_fusion_epoch"
 	FusionVersion   = "_fusion_version"
@@ -24,17 +12,17 @@ const (
 
 	HTTPTimeout = 5 * time.Second
 
-	SerialPath      = "/sys/firmware/devicetree/base/serial-number"
-	FirmwarePath    = "/etc/buildinfo"
-	ModelUnknown    = "Unknown"
-	SerialUnknown   = "Unknown"
-	FirmwareUnknown = "Unknown"
-	MacUnknown      = "Unknown"
+	MacUnknown = "Unknown"
 
 	MessageIDKey        = "id"
 	MessagePriorityKey  = "priority"
 	MessageTimestampKey = "timestamp"
 	MessageZonesKey     = "zones"
+	ModelUnknown        = "Unknown"
+
+	Protocol = "http://"
+
+	SerialUnknown = "Unknown"
 
 	SnapshotIDKey = "snapshot_id"
 
@@ -82,11 +70,28 @@ const (
 
 )
 
-// IoT device identity constants
 const (
+	ContentType  = "Content-Type"
+	JsonMIMEType = "application/json"
+	TextMIMEType = "text/plain"
+)
+
+const (
+	AdminPort          = "9090"
+	ControllerPort     = "7950"
+	HTTPPort           = "8080"
+	MessageTriggerPort = 7949
+	SAPPort            = "9875" // As defined: https://datatracker.ietf.org/doc/html/rfc2974
+	UDPPort            = "7947"
+)
+
+const (
+	AudioFilesLocation      = "/var/lib/fusion/audio"
 	DefaultIdentityFilePath = "/var/lib/device-identity/"
 	DefaultCAFileName       = "AmazonRootCA1.pem"
 	DefaultCSRFileName      = "device.csr"
 	DefaultCertFileName     = "device.x509.cert"
 	DefaultKeyFileName      = "device.key"
+	FirmwarePath            = "/etc/buildinfo"
+	SerialPath              = "/sys/firmware/devicetree/base/serial-number"
 )
