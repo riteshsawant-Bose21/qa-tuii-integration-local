@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/src/services/text_formatter.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_lib/fusion_algorithms/surface_speakers_autolayout/surface_speakers_autolayout.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../../core/assets/asset_svg.dart';
+import '../../../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../widgets/text_field.dart';
+import 'constant_enums.dart';
 
 class AutoPlaceDialog extends StatefulWidget {
-  const AutoPlaceDialog({super.key, this.result, required this.onUpdate});
+  const AutoPlaceDialog({super.key, this.result});
 
   final AutoPlacementResult? result;
-  final ValueChanged<AutoPlacementResult> onUpdate;
 
   @override
   State<AutoPlaceDialog> createState() => _AutoPlaceDialogState();
@@ -15,11 +20,18 @@ class AutoPlaceDialog extends StatefulWidget {
 
 class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
   late AutoPlacementResult _result;
+  final TextEditingController ceilingHeightController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _result = widget.result ?? const AutoPlacementResult();
+  }
+
+  @override
+  void dispose() {
+    ceilingHeightController.dispose();
+    super.dispose();
   }
 
   @override
@@ -90,8 +102,14 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
               height: 34,
               child: ElevatedButton(
                 onPressed: () {
-                  widget.onUpdate.call(_result);
-                  Navigator.of(context).pop();
+                  final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+                  final ResponseCallback<bool> response = projectViewModel.runAutoPlacementForCurrentListeningArea(autoPlacementResult: _result);
+                  if (!response.success) {
+                    FusionToast.error(context, message: response.message);
+                  } else {
+                    FusionToast.success(context, message: 'Auto-placement completed successfully');
+                    Navigator.of(context).pop();
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: cs.elevation3,
@@ -110,6 +128,11 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
 
   Widget _buildSpacingSection(BuildContext context) {
     final ColorScheme cs = context.colorScheme;
+
+    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+    final ListeningArea? selectedListeningArea = projectViewModel.getCurrentSelectedListeningArea();
+    ceilingHeightController.text = selectedListeningArea?.ceilingHeight.toString() ?? '';
+
     return Padding(
       padding: const EdgeInsets.all(12.0),
       child: Column(
@@ -130,8 +153,8 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
                       context,
                       label: 'Edge-to-edge',
                       icon: AssetSvg.edgeToEdge,
-                      selected: _result.autoPlaceSpacingPreset == AutoPlaceSpacingPreset.edgeToEdge,
-                      onTap: () => setState(() => _result = _result.copyWith(autoPlaceSpacingPreset: AutoPlaceSpacingPreset.edgeToEdge)),
+                      selected: _result.autoPlaceCoveragePreference == CoveragePreference.edgeToEdge,
+                      onTap: () => setState(() => _result = _result.copyWith(autoPlaceCoveragePreference: CoveragePreference.edgeToEdge)),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -140,8 +163,8 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
                       context,
                       label: 'Minimum Overlap',
                       icon: AssetSvg.minOverlap,
-                      selected: _result.autoPlaceSpacingPreset == AutoPlaceSpacingPreset.minimumOverlap,
-                      onTap: () => setState(() => _result = _result.copyWith(autoPlaceSpacingPreset: AutoPlaceSpacingPreset.minimumOverlap)),
+                      selected: _result.autoPlaceCoveragePreference == CoveragePreference.minimumOverlap,
+                      onTap: () => setState(() => _result = _result.copyWith(autoPlaceCoveragePreference: CoveragePreference.minimumOverlap)),
                     ),
                   ),
                 ],
@@ -154,8 +177,8 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
                       context,
                       label: 'Center-to-center',
                       icon: AssetSvg.centreToCentre,
-                      selected: _result.autoPlaceSpacingPreset == AutoPlaceSpacingPreset.centerToCenter,
-                      onTap: () => setState(() => _result = _result.copyWith(autoPlaceSpacingPreset: AutoPlaceSpacingPreset.centerToCenter)),
+                      selected: _result.autoPlaceCoveragePreference == CoveragePreference.centerToCenter,
+                      onTap: () => setState(() => _result = _result.copyWith(autoPlaceCoveragePreference: CoveragePreference.centerToCenter)),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -164,8 +187,10 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
                       context,
                       label: 'Customize',
                       icon: AssetSvg.customise,
-                      selected: _result.autoPlaceSpacingPreset == AutoPlaceSpacingPreset.customize,
-                      onTap: () => setState(() => _result = _result.copyWith(autoPlaceSpacingPreset: AutoPlaceSpacingPreset.customize)),
+                      // selected: _result.autoPlaceCoveragePreference == CoveragePreference.customize,
+                      selected: false,
+                      // onTap: () => setState(() => _result = _result.copyWith(autoPlaceCoveragePreference: CoveragePreference.customize)),
+                      onTap: () {},
                     ),
                   ),
                 ],
@@ -174,18 +199,67 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
               _labeledRadioNumber(
                 context,
                 label: 'Custom',
-                selected: _result.autoPlaceSpacingPreset == AutoPlaceSpacingPreset.customize,
-                value: _result.autoPlaceCustomSpacing,
-                onSelect: () => setState(() => _result = _result.copyWith(autoPlaceSpacingPreset: AutoPlaceSpacingPreset.customize)),
-                onChanged: (double v) => setState(() => _result = _result.copyWith(autoPlaceCustomSpacing: v)),
+                // selected: _result.autoPlaceCoveragePreference == AutoPlaceCoveragePreference.customize,
+                selected: false,
+                // value: _result.autoPlaceCustomSpacing,
+                value: 0.0,
+                // onSelect: () => setState(() => _result = _result.copyWith(autoPlaceCoveragePreference: AutoPlaceCoveragePreference.customize)),
+                onSelect: () {},
+                // onChanged: (double v) => setState(() => _result = _result.copyWith(autoPlaceCustomSpacing: v)),
+                onChanged: (double v) {},
               ),
               const SizedBox(height: 8),
               _labeledCheckboxNumber(
                 context,
                 label: 'Match Grid',
-                selected: _result.autoPlaceMatchGrid,
+                // selected: _result.autoPlaceMatchGrid,
+                selected: false,
                 value: 0.6,
-                onChanged: (bool v) => setState(() => _result = _result.copyWith(autoPlaceMatchGrid: v)),
+                // onChanged: (bool v) => setState(() => _result = _result.copyWith(autoPlaceMatchGrid: v)),
+                onChanged: (bool v) {},
+              ),
+
+              const SizedBox(height: 10),
+              Row(
+                spacing: 5,
+                children: <Widget>[
+                  Expanded(child: FusionAppText(text: "Coverage Angle", style: context.textTheme.bodySmall)),
+                  Expanded(
+                    child: PropertyTextField(
+                      initialValue: _result.autoPlaceCoverageAngle.toStringAsFixed(0),
+                      onSubmitted: (String raw) {
+                        final double? parsed = double.tryParse(raw);
+                        if (parsed != null) {
+                          setState(() => _result = _result.copyWith(autoPlaceCoverageAngle: parsed.clamp(0.0, 180.0)));
+                        }
+                      },
+                      inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^\d{0,3}$'))],
+                    ),
+                  ),
+                  FusionAppText(
+                    text: "deg",
+                    capitalize: false,
+                    style: context.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              BuildingPageTextField(
+                label: "Ceiling Height (m)",
+                controller: ceilingHeightController,
+                hintText: "e.g. ${ListeningHeightOption.maxListeningHeight}",
+                fillColor: context.colorScheme.elevation1,
+                inputFormatters: <TextInputFormatter>[
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
+                onFieldSubmitted: (String newValue) {
+                  if (selectedListeningArea == null) return;
+                  final double? parsed = double.tryParse(newValue);
+                  if (parsed == null) return;
+                  final ListeningArea updatedLA = selectedListeningArea.copyWith(ceilingHeight: parsed.toString());
+                  projectViewModel.updateListeningArea(area: updatedLA);
+                },
               ),
               const SizedBox(height: 10),
               FusionAppText(
@@ -244,8 +318,8 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
                       context,
                       label: 'Square',
                       icon: AssetSvg.autoplaceSquare,
-                      selected: _result.autoPlaceLayoutPreset == AutoPlaceLayoutPreset.square,
-                      onTap: () => setState(() => _result = _result.copyWith(autoPlaceLayoutPreset: AutoPlaceLayoutPreset.square)),
+                      selected: _result.autoPlaceLayoutPattern == LayoutPattern.square,
+                      onTap: () => setState(() => _result = _result.copyWith(autoPlaceLayoutPattern: LayoutPattern.square)),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -254,8 +328,8 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
                       context,
                       label: 'Hexagonal',
                       icon: AssetSvg.autoplaceHexagonal,
-                      selected: _result.autoPlaceLayoutPreset == AutoPlaceLayoutPreset.hexagonal,
-                      onTap: () => setState(() => _result = _result.copyWith(autoPlaceLayoutPreset: AutoPlaceLayoutPreset.hexagonal)),
+                      selected: _result.autoPlaceLayoutPattern == LayoutPattern.hexagonal,
+                      onTap: () => setState(() => _result = _result.copyWith(autoPlaceLayoutPattern: LayoutPattern.hexagonal)),
                     ),
                   ),
                 ],
@@ -264,17 +338,21 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
               _xyField(
                 context,
                 axis: 'X',
-                label: 'Grid',
-                value: _result.autoPlaceGridX,
-                onChanged: (double v) => setState(() => _result = _result.copyWith(autoPlaceGridX: v)),
+                label: 'Grid Offset',
+                // value: _result.autoPlaceGridX,
+                value: 0.0,
+                // onChanged: (double v) => setState(() => _result = _result.copyWith(autoPlaceGridX: v)),
+                onChanged: (double v) {},
               ),
               const SizedBox(height: 8),
               _xyField(
                 context,
                 axis: 'Y',
-                label: 'Offset',
-                value: _result.autoPlaceOffsetY,
-                onChanged: (double v) => setState(() => _result = _result.copyWith(autoPlaceOffsetY: v)),
+                label: '',
+                // value: _result.autoPlaceOffsetY,
+                value: 0.0,
+                // onChanged: (double v) => setState(() => _result = _result.copyWith(autoPlaceOffsetY: v)),
+                onChanged: (double v) {},
               ),
             ],
           ),

@@ -181,9 +181,12 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                     label: "Listener Height",
                                     value: listeningHeightOption.displayName,
                                     labelBuilder: (String option) => option,
-                                    options: ListeningHeightOption.values.map((ListeningHeightOption option) => option.displayName).toList(),
+                                    options: ListeningHeightOption.values.map((ListeningHeightOption e) => e.displayName).toList(),
                                     onOptionSelected: (int selectedIndex, String newValue) {
-                                      speakerSelectionViewModel.setListenerHeight(selectedIndex);
+                                      final ListeningHeightOption? selectedOption = ListeningHeightOption.values.firstWhereOrNull((ListeningHeightOption e) => e.displayName == newValue);
+                                      if (selectedOption != null) {
+                                        speakerSelectionViewModel.setListenerHeight(selectedOption);
+                                      }
                                     },
                                   ),
 
@@ -192,7 +195,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                     BuildingPageTextField(
                                       label: "Custom Height",
                                       controller: customListeningHeightController,
-                                      hintText: "e.g. 4.5",
+                                      hintText: "e.g. ${ListeningHeightOption.maxListeningHeight}",
                                       inputFormatters: <TextInputFormatter>[
                                         FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
                                         LengthLimitingTextInputFormatter(8),
@@ -202,28 +205,24 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                         final double? parsed = double.tryParse(value);
                                         if (parsed == null) return 'Invalid decimal';
                                         if (parsed <= 0) return 'Must be > 0';
-                                        if (parsed > 1000) return 'Too large';
+                                        if (parsed > ListeningHeightOption.maxListeningHeight) return 'Too large';
                                         return null;
                                       },
                                       onFieldSubmitted: (String newValue) {
-                                        final bool valid = speakerSelectionViewModel.setCustomListeningHeight(newValue);
-                                        if (!valid) {
+                                        final double? parsed = double.tryParse(newValue);
+                                        if (parsed != null && parsed > 0 && parsed <= ListeningHeightOption.maxListeningHeight) {
+                                          speakerSelectionViewModel.setCustomListeningHeight(parsed);
+                                        } else {
                                           customListeningHeightController.text = selectedListeningArea.listeningHeight.toString();
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                'Please enter a valid decimal value between 0.1 and 1000',
-                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white),
-                                              ),
-                                              backgroundColor: Theme.of(context).colorScheme.error,
-                                              duration: const Duration(seconds: 2),
-                                            ),
+                                          FusionToast.error(
+                                            context,
+                                            message: 'Please enter a valid listening height between 0 and ${ListeningHeightOption.maxListeningHeight} meters',
                                           );
                                         }
                                       },
                                       onChanged: (String value) {
                                         final double? parsed = double.tryParse(value);
-                                        if (value.isNotEmpty && (parsed == null || parsed <= 0 || parsed > 1000)) {
+                                        if (value.isNotEmpty && (parsed == null || parsed <= 0 || parsed > ListeningHeightOption.maxListeningHeight)) {
                                           customListeningHeightController.selection = TextSelection.fromPosition(
                                             TextPosition(offset: customListeningHeightController.text.length),
                                           );
@@ -235,7 +234,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                   BuildingPageTextField(
                                     label: "Ceiling Height (m)",
                                     controller: ceilingHeightController,
-                                    hintText: "e.g. 3.2",
+                                    hintText: "e.g. ${ListeningHeightOption.maxListeningHeight}",
                                     fillColor: context.colorScheme.elevation1,
                                     inputFormatters: <TextInputFormatter>[
                                       FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),

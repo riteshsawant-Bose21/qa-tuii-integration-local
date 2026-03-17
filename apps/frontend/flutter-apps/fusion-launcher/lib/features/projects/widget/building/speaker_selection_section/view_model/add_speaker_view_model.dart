@@ -158,12 +158,12 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     if (!isSuggestMode) return;
     final ListeningArea? la = selectedListeningArea;
     if (la == null) return;
-    if (la.mountingType == null || la.environmentType == null || la.splRange == null) return;
+    if (la.environmentType == null || la.splRange == null) return;
 
     try {
       final List<SpeakerProduct> speakers = serviceLocator<ProductQueryViewModel>().speakers;
       final SplInput input = SplInput(
-        mountingType: <String>[la.mountingType!.name],
+        mountingType: <String>[la.mountingType.name],
         speakerHeight: double.tryParse(la.ceilingHeight) ?? 0.0,
         listenerHeight: la.listeningHeight,
         environment: la.environmentType!.name,
@@ -223,7 +223,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
         }
 
         final SplInput input = SplInput(
-          mountingType: <String>[selectedListeningArea!.mountingType!.name],
+          mountingType: <String>[selectedListeningArea!.mountingType.name],
           speakerHeight: double.tryParse(selectedListeningArea!.ceilingHeight) ?? 0.0,
           listenerHeight: selectedListeningArea!.listeningHeight,
           environment: selectedListeningArea!.environmentType!.name,
@@ -327,26 +327,20 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     }
   }
 
-  void setListenerHeight(int selectedIndex) {
+  void setListenerHeight(ListeningHeightOption option) {
     if (selectedListeningArea == null) return;
-    final ListeningHeightOption selectedOption = ListeningHeightOption.values[selectedIndex];
-    final double heightValue = ListeningHeightOption.getValue(selectedOption) ?? 3.0;
+    final double heightValue = ListeningHeightOption.getValue(option) ?? selectedListeningArea?.customListeningAreaHeight ?? 1.1;
     final ListeningArea updatedLA = selectedListeningArea!.copyWith(listeningHeight: heightValue);
     projectViewModel.updateListeningArea(area: updatedLA);
     _recalculateIfSuggestMode();
   }
 
   /// Returns true if value was valid and applied, false otherwise.
-  bool setCustomListeningHeight(String value) {
-    if (selectedListeningArea == null) return false;
-    final double? parsed = double.tryParse(value);
-    if (parsed != null && parsed > 0 && parsed <= 1000) {
-      final ListeningArea updatedLA = selectedListeningArea!.copyWith(listeningHeight: parsed);
-      projectViewModel.updateListeningArea(area: updatedLA);
-      _recalculateIfSuggestMode();
-      return true;
-    }
-    return false;
+  void setCustomListeningHeight(double value) {
+    if (selectedListeningArea == null) return;
+    final ListeningArea updatedLA = selectedListeningArea!.copyWith(listeningHeight: value);
+    projectViewModel.updateListeningArea(area: updatedLA);
+    _recalculateIfSuggestMode();
   }
 
   void setCeilingHeight(String value) {
@@ -594,37 +588,28 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
 
     final LowFrequency? lowFrequency = selectedListeningArea?.lowFrequency;
 
-    if (lowFrequency != null) {
-      filtered = filtered.where((SpeakerProduct p) {
-        final FrequencyRange? fr = p.frequencyRange;
-
-        switch (lowFrequency) {
-          case LowFrequency.withSubwoofer:
-            // In withSubwoofer mode, don't filter mid-high speakers by frequency range at all
-            return true;
-          case LowFrequency.fullRange:
-            // Full-range: must have a reasonably wide frequency response that extends to at least 20Hz
-            if (fr == null) return false;
-            return fr.low <= 20 && fr.high >= 15000;
-          case LowFrequency.extendedBass:
-            // Extended bass: must extend to at least 30Hz on the low end (no requirement on high end)
-            if (fr == null) return false;
-            return fr.low <= 30;
-        }
-      });
+    if (lowFrequency == LowFrequency.withSubwoofer) {
+      // Keep select-mode catalog broad; frequency split is handled by the Mid-High/Subwoofer tabs.
+      filtered = filtered.where((SpeakerProduct p) => !p.isSubwoofer);
     }
 
     // Color filter
     final String wantedColor = state.selectedColor.name.toLowerCase();
-    filtered = filtered.where((SpeakerProduct p) {
-      final Map<String, List<String>> assetMap = p.assets.assets;
-      if (assetMap.isEmpty) return false;
-      return assetMap.entries.any((MapEntry<String, List<String>> entry) {
-        final String key = entry.key.toLowerCase();
-        final List<String> urls = entry.value;
-        return wantedColor == key && urls.isNotEmpty;
-      });
-    });
+    final List<SpeakerProduct> colorFiltered =
+        filtered.where((SpeakerProduct p) {
+          final Map<String, List<String>> assetMap = p.assets.assets;
+          if (assetMap.isEmpty) return false;
+          return assetMap.entries.any((MapEntry<String, List<String>> entry) {
+            final String key = entry.key.toLowerCase();
+            final List<String> urls = entry.value;
+            return wantedColor == key && urls.isNotEmpty;
+          });
+        }).toList();
+
+    // If no products exist in the selected color, avoid hiding the entire catalog.
+    if (colorFiltered.isNotEmpty) {
+      filtered = colorFiltered;
+    }
 
     // Environment filter
     final ListeningArea? currentSelectedListeningArea = serviceLocator<ProjectViewModel>().getCurrentSelectedListeningArea();

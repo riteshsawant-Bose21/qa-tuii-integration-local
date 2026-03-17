@@ -488,21 +488,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                                 data: ThemeData.dark(),
                                                 child: AutoPlaceDialog(
                                                   result: listeningArea.autoPlacementResult,
-                                                  onUpdate: (AutoPlacementResult value) {
-                                                    final ResponseCallback<bool> response = projectViewModel.runAutoPlacementForCurrentListeningArea(
-                                                      autoPlacementResult: value,
-                                                    );
-                                                    if (!response.success || response.message.isNotEmpty) {
-                                                      ScaffoldMessenger.of(context).showSnackBar(
-                                                        SnackBar(
-                                                          content: Text(response.message),
-                                                          backgroundColor:
-                                                              response.success ? context.colorScheme.primaryColor : Theme.of(context).colorScheme.error,
-                                                          duration: const Duration(seconds: 3),
-                                                        ),
-                                                      );
-                                                    }
-                                                  },
+                                                   
                                                 ),
                                               ),
                                             ),
