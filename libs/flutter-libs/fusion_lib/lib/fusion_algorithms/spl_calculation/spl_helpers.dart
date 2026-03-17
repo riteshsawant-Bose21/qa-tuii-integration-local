@@ -59,9 +59,9 @@ SpeakerRecommendations recommendNearestSpeakers(
   String environment,
   double splReqMin,
   double splReqMid,
-  double splReqMax,
-  List<SpeakerProduct> speakers,
-) {
+  double splReqMax, {
+  List<SpeakerProduct>? speakers,
+}) {
   final envLower = environment.toLowerCase();
 
   String? bestMinModel;
@@ -72,7 +72,7 @@ SpeakerRecommendations recommendNearestSpeakers(
   double bestMidDiff = double.infinity;
   double bestMaxDiff = double.infinity;
 
-  final speakerModels = speakers.map(
+  final speakerModels = speakers?.map(
     (item) {
       return SpeakerModel(
         model: item.modelName,
@@ -94,8 +94,13 @@ SpeakerRecommendations recommendNearestSpeakers(
     },
   );
 
-  // Set the speaker catalog database for lookup in recommendations
-  SpeakerCatalog.database = {for (final speaker in speakerModels) speaker.model: speaker};
+  if (speakerModels == null) {
+    // This fallback is needed for testing since 
+    // the shared database is not populated in test environment.
+    SpeakerCatalog.database = SpeakerCatalog.fallbackDatabase;
+  } else {
+    SpeakerCatalog.database = {for (final speaker in speakerModels) speaker.model: speaker};
+  }
 
   for (final speaker in SpeakerCatalog.getAllSpeakers().values) {
     // Check if mounting type matches

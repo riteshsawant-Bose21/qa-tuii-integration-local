@@ -176,11 +176,11 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       if (la.lowFrequency == LowFrequency.withSubwoofer) {
         final List<SpeakerProduct> nonSubs = speakers.where((SpeakerProduct s) => !s.isSubwoofer).toList();
         final List<SpeakerProduct> subs = speakers.where((SpeakerProduct s) => s.isSubwoofer).toList();
-        final SplMultiMountResult midHighResult = calculateSpl(input, nonSubs);
+        final SplMultiMountResult midHighResult = calculateSpl(input, speakers: nonSubs);
         SplMultiMountResult? subResult;
         if (subs.isNotEmpty) {
           try {
-            subResult = calculateSpl(input, subs);
+            subResult = calculateSpl(input, speakers: subs);
           } catch (_) {}
         }
         emit(
@@ -193,7 +193,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
         );
       } else {
         final List<SpeakerProduct> nonSubs = speakers.where((SpeakerProduct s) => !s.isSubwoofer).toList();
-        final SplMultiMountResult result = calculateSpl(input, nonSubs);
+        final SplMultiMountResult result = calculateSpl(input, speakers: nonSubs);
         emit(state.copyWith(splResult: result, clearSuggestedProductId: true, clearSuggestedSubwooferProductId: true, clearSplResultSubwoofer: true));
       }
     } catch (_) {
@@ -236,11 +236,11 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
         if (selectedListeningArea!.lowFrequency == LowFrequency.withSubwoofer) {
           final List<SpeakerProduct> nonSubs = speakers.where((SpeakerProduct s) => !s.isSubwoofer).toList();
           final List<SpeakerProduct> subs = speakers.where((SpeakerProduct s) => s.isSubwoofer).toList();
-          final SplMultiMountResult midHighResult = calculateSpl(input, nonSubs);
+          final SplMultiMountResult midHighResult = calculateSpl(input, speakers: nonSubs);
           SplMultiMountResult? subResult;
           if (subs.isNotEmpty) {
             try {
-              subResult = calculateSpl(input, subs);
+              subResult = calculateSpl(input, speakers: subs);
             } catch (_) {}
           }
           emit(
@@ -253,7 +253,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
           );
         } else {
           final List<SpeakerProduct> nonSubs = speakers.where((SpeakerProduct s) => !s.isSubwoofer).toList();
-          final SplMultiMountResult result = calculateSpl(input, nonSubs);
+          final SplMultiMountResult result = calculateSpl(input, speakers: nonSubs);
           emit(state.copyWith(splResult: result, clearSuggestedProductId: true, clearSuggestedSubwooferProductId: true, clearSplResultSubwoofer: true));
         }
       } catch (e) {

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/product_data/models/speaker_product.dart';
 
 class SplCalculationWidget extends StatefulWidget {
   const SplCalculationWidget({super.key});
@@ -419,7 +418,7 @@ class _SplCalculationWidgetState extends State<SplCalculationWidget> {
         ],
       );
 
-      final SplMultiMountResult result = calculateSpl(input, <SpeakerProduct>[]);
+      final SplMultiMountResult result = calculateSpl(input);
       setState(() {
         splResult = result;
       });
