@@ -45,11 +45,15 @@ func (c *Cluster) getMacAddress() string {
 func (c *Cluster) isCertificateValid() bool {
 	certContent, err := os.ReadFile(fmt.Sprintf("%s%s", utils.DefaultIdentityFilePath, utils.DefaultCertFileName))
 	if err != nil {
+		if os.IsNotExist(err) {
+			logging.GetLogger().Warn("Certificate file not found.")
+			return false
+		}
 		logging.GetLogger().Error("Error reading certificate file: %v", err)
 		return false
 	}
 
-	isExpired, err := c.isCertificateContentExpiredOrNearExpiry(certContent, 0) // Check if cert is expired
+	isExpired, err := isCertificateContentExpiredOrNearExpiry(certContent, 0) // Check if cert is expired
 	if err != nil {
 		logging.GetLogger().Error("Error checking certificate expiry: %v", err)
 		return false

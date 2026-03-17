@@ -36,9 +36,9 @@ func (c *Cluster) SetDeviceCertificate(deviceID string, certPEM []byte) error {
 	deviceInfos := c.fetchAllDeviceInfos()
 
 	var targetDevice *api.DeviceInfo
-	for _, info := range deviceInfos {
+	for idx, info := range deviceInfos {
 		if info.Id == deviceID {
-			targetDevice = &info
+			targetDevice = &deviceInfos[idx]
 			break
 		}
 	}
@@ -47,14 +47,14 @@ func (c *Cluster) SetDeviceCertificate(deviceID string, certPEM []byte) error {
 		return fmt.Errorf("Device %s not found", deviceID)
 	}
 
-	if certPEM == nil {
+	if len(certPEM) == 0 {
 		return fmt.Errorf("Certificate data is empty")
 	}
 
 	if c.hostIsLocal(targetDevice.Address) {
 
 		// Check if we should replace the certificate
-		shouldReplace, err := c.shouldReplaceCertificate(fmt.Sprintf("%s%s", utils.DefaultIdentityFilePath, utils.DefaultCertFileName), certPEM)
+		shouldReplace, err := shouldReplaceCertificate(fmt.Sprintf("%s%s", utils.DefaultIdentityFilePath, utils.DefaultCertFileName), certPEM)
 		if err != nil {
 			logging.GetLogger().Error("Error checking certificate replacement: %v", err)
 			return err
@@ -112,9 +112,9 @@ func (c *Cluster) GetDeviceCSR(deviceID string) ([]byte, error) {
 	deviceInfos := c.fetchAllDeviceInfos()
 
 	var targetDevice *api.DeviceInfo
-	for _, info := range deviceInfos {
+	for idx, info := range deviceInfos {
 		if info.Id == deviceID {
-			targetDevice = &info
+			targetDevice = &deviceInfos[idx]
 			break
 		}
 	}
@@ -154,9 +154,9 @@ func (c *Cluster) ResetDeviceCertificate(deviceID string) error {
 	deviceInfos := c.fetchAllDeviceInfos()
 
 	var targetDevice *api.DeviceInfo
-	for _, info := range deviceInfos {
+	for idx, info := range deviceInfos {
 		if info.Id == deviceID {
-			targetDevice = &info
+			targetDevice = &deviceInfos[idx]
 			break
 		}
 	}
@@ -167,7 +167,7 @@ func (c *Cluster) ResetDeviceCertificate(deviceID string) error {
 
 	if c.hostIsLocal(targetDevice.Address) {
 		// If this is the local device, perform reset locally
-		if err := c.resetLocalDevice(); err != nil {
+		if err := resetLocalDevice(); err != nil {
 			return fmt.Errorf("failed to reset device: %v", err)
 		}
 		return nil
@@ -199,7 +199,7 @@ func (c *Cluster) ResetDeviceCertificate(deviceID string) error {
 }
 
 // resetLocalDevice performs the necessary steps to reset the local device, such as removing certificates
-func (c *Cluster) resetLocalDevice() error {
+func resetLocalDevice() error {
 	err := os.Remove(fmt.Sprintf("%s%s", utils.DefaultIdentityFilePath, utils.DefaultCertFileName))
 	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("error removing certificate file: %v", err)
@@ -214,7 +214,7 @@ func (c *Cluster) resetLocalDevice() error {
 // - The existing certificate is expired
 // - The existing certificate is near expiry (within 3 months)
 // - The new certificate content is different from existing
-func (c *Cluster) shouldReplaceCertificate(certPath string, newCertContent []byte) (bool, error) {
+func shouldReplaceCertificate(certPath string, newCertContent []byte) (bool, error) {
 	// Check if file exists
 	if _, err := os.Stat(certPath); os.IsNotExist(err) {
 		logging.GetLogger().Info("Certificate file does not exist, will create new one")
@@ -234,7 +234,7 @@ func (c *Cluster) shouldReplaceCertificate(certPath string, newCertContent []byt
 	}
 
 	// Check if existing certificate is expired or near expiry
-	isExpiredOrNear, err := c.isCertificateContentExpiredOrNearExpiry(existingContent, 3) // 3 months threshold
+	isExpiredOrNear, err := isCertificateContentExpiredOrNearExpiry(existingContent, 3) // 3 months threshold
 	if err != nil {
 		logging.GetLogger().Warn("Failed to check certificate expiry, will replace: %v", err)
 		return true, nil
@@ -246,7 +246,7 @@ func (c *Cluster) shouldReplaceCertificate(certPath string, newCertContent []byt
 	}
 
 	// Validate the new certificate to ensure it's not expired
-	newCertExpired, err := c.isCertificateContentExpiredOrNearExpiry(newCertContent, 0) // Check if new cert is already expired
+	newCertExpired, err := isCertificateContentExpiredOrNearExpiry(newCertContent, 0) // Check if new cert is already expired
 	if err != nil {
 		return false, fmt.Errorf("failed to validate new certificate: %v", err)
 	}
@@ -261,7 +261,7 @@ func (c *Cluster) shouldReplaceCertificate(certPath string, newCertContent []byt
 }
 
 // isCertificateContentExpiredOrNearExpiry checks if certificate content is expired or near expiry
-func (c *Cluster) isCertificateContentExpiredOrNearExpiry(certContent []byte, monthsThreshold int) (bool, error) {
+func isCertificateContentExpiredOrNearExpiry(certContent []byte, monthsThreshold int) (bool, error) {
 	// Decode PEM block
 	block, _ := pem.Decode(certContent)
 	if block == nil {
