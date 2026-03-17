@@ -29,12 +29,6 @@ const (
 	pushPullInterval    = 1 * time.Second
 	retryInterval       = 2 * time.Second
 	retryTimes          = 5
-	serialPath          = "/sys/firmware/devicetree/base/serial-number"
-	firmwarePath        = "/etc/buildinfo"
-	modelUnknown        = "Unknown"
-	serialUnknown       = "Unknown"
-	firmwareUnknown     = "Unknown"
-	macUnknown          = "Unknown"
 	suspicionMult       = 3
 	tcpTimeout          = 10 * time.Second
 

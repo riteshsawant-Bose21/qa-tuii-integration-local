@@ -6,6 +6,7 @@ import (
 	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/routes"
+	"fusion/internal/utils"
 	"io"
 	"net"
 	"net/http"
@@ -28,7 +29,7 @@ func (c *Cluster) UpdateDeviceInfo(device_id string, patch *api.DevicePatch) err
 		return err
 	}
 
-	if c.hostIsLocal(localInfo.Address) {
+	if c.HostIsLocal(localInfo.Address) {
 		return c.UpdateDeviceInfoLocal(patch)
 	}
 	return c.updateRemoteDevice(device_id, localInfo, patch)
@@ -110,12 +111,12 @@ func (c *Cluster) getDeviceInfoLocal() api.DeviceInfo {
 		Name:                     name,
 		Location:                 location,
 		Address:                  c.appConfig.BindAddr,
-		ModelName:                c.getModelName(),
-		SerialNumber:             c.getSerialNumber(),
-		FirmwareVersion:          c.getFirmwareVersion(),
-		MacAddress:               c.getMacAddress(),
+		ModelName:                utils.GetModelName(),
+		SerialNumber:             utils.GetSerialNumber(),
+		FirmwareVersion:          utils.GetFirmwareVersion(),
+		MacAddress:               utils.GetMacAddress(),
 		IsPrimaryNode:            c.isLocalNodePrimary(),
-		IsDeviceCertificateValid: c.isCertificateValid(),
+		IsDeviceCertificateValid: utils.IsCertificateValid(),
 	}
 
 	return deviceInfo
@@ -129,7 +130,7 @@ func (c *Cluster) updateRemoteDevice(deviceID string, localInfo *api.DeviceInfo,
 	}
 
 	localPatchAddress := net.JoinHostPort(localInfo.Address, api.AdminPort)
-	url := getLocalURL(localPatchAddress, routes.DeviceEndpoint)
+	url := utils.GetLocalURL(localPatchAddress, routes.DeviceEndpoint)
 
 	req, err := http.NewRequest(http.MethodPatch, url, bytes.NewReader(jsonBody))
 	if err != nil {

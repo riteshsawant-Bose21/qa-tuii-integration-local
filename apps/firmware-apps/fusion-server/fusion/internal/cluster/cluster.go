@@ -300,14 +300,14 @@ func fetchGenericFromAdmin[T any](
 	logger := logging.GetLogger()
 
 	for _, addr := range c.getNodeAdminAddresses() {
-		if c.hostIsLocal(addr) {
+		if c.HostIsLocal(addr) {
 			all = append(all, localFetch()...)
 			continue
 		}
 
 		remoteSlice, err := remoteFetch(addr, endpoint)
 		if err != nil {
-			url := getLocalURL(addr, endpoint)
+			url := utils.GetLocalURL(addr, endpoint)
 			logger.Error("GET %s failed: %v", url, err)
 			continue
 		}
@@ -400,7 +400,7 @@ func (c *Cluster) PostGenericToAdmin(
 ) error {
 
 	for _, addr := range c.getNodeAdminAddresses() {
-		if c.hostIsLocal(addr) {
+		if c.HostIsLocal(addr) {
 			// If this is the local address, invoke localFn() directly:
 			if err := localFn(); err != nil {
 				return fmt.Errorf("local function failed: %w", err)
@@ -409,7 +409,7 @@ func (c *Cluster) PostGenericToAdmin(
 		}
 
 		// POST to the remote node’s admin endpoint
-		urlStr := getLocalURL(addr, endpoint)
+		urlStr := utils.GetLocalURL(addr, endpoint)
 		resp, err := http.Post(urlStr, "", nil)
 		if err != nil {
 			return err
@@ -426,12 +426,12 @@ func postGenericToAdminLast(
 	localFn func() error,
 ) error {
 	for _, addr := range c.getNodeAdminAddresses() {
-		if c.hostIsLocal(addr) {
+		if c.HostIsLocal(addr) {
 			continue
 		}
 
 		// POST to the remote node’s admin endpoint
-		urlStr := getLocalURL(addr, endpoint)
+		urlStr := utils.GetLocalURL(addr, endpoint)
 		resp, err := http.Post(urlStr, "", nil)
 		if err != nil {
 			logging.GetLogger().Error("POST to %s failed: %v", urlStr, err)
@@ -457,7 +457,7 @@ func postGenericToAdminLast(
 // getLocalEndpointResponse calls a endpoint
 func getLocalEndpointResponse(c *Cluster, addr, endpoint string) (response *http.Response, err error) {
 
-	url := getLocalURL(addr, endpoint)
+	url := utils.GetLocalURL(addr, endpoint)
 	resp, err := c.httpClient.Get(url)
 	if err != nil {
 		return nil, err
@@ -471,8 +471,8 @@ func getLocalEndpointResponse(c *Cluster, addr, endpoint string) (response *http
 	return resp, nil
 }
 
-// hostIsLocal checks if the address is the local memberlist node
-func (c *Cluster) hostIsLocal(addr string) bool {
+// HostIsLocal checks if the address is the local memberlist node
+func (c *Cluster) HostIsLocal(addr string) bool {
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
 		if addrErr, ok := err.(*net.AddrError); ok &&
@@ -494,10 +494,4 @@ func (c *Cluster) isLocalNodePrimary() bool {
 	}
 
 	return false
-}
-
-// getLocalURL builds a full API URL to the endpoint
-// fixme: need to move it to utils
-func getLocalURL(addr, endpoint string) string {
-	return fmt.Sprintf("%s%s%s", api.Protocol, addr, endpoint)
 }
