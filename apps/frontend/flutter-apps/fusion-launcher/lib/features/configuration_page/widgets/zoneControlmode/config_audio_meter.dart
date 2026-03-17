@@ -8,12 +8,12 @@ import 'dart:math';
 
 import 'package:fusion_lib/fusion_lib.dart';
 
-class AudioMeterContainer extends StatefulWidget {
+class ConfigAudioMeter extends StatefulWidget {
   final double marginHorizontal;
   final double marginVertical;
   final bool muted;
 
-  const AudioMeterContainer({
+  const ConfigAudioMeter({
     super.key,
     this.marginHorizontal = 16,
     this.marginVertical = 0,
@@ -21,10 +21,10 @@ class AudioMeterContainer extends StatefulWidget {
   });
 
   @override
-  State<AudioMeterContainer> createState() => _AudioMeterContainerState();
+  State<ConfigAudioMeter> createState() => _ConfigAudioMeterState();
 }
 
-class _AudioMeterContainerState extends State<AudioMeterContainer> {
+class _ConfigAudioMeterState extends State<ConfigAudioMeter> {
   // Initial value
   double _targetValue = -60;
   Timer? _simulationTimer;
@@ -76,7 +76,7 @@ class _AudioMeterContainerState extends State<AudioMeterContainer> {
   }
 
   @override
-  void didUpdateWidget(covariant AudioMeterContainer oldWidget) {
+  void didUpdateWidget(covariant ConfigAudioMeter oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.muted != oldWidget.muted) {
       if (widget.muted) {
