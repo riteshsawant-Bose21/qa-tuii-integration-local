@@ -564,7 +564,9 @@ BDIFClient::BDIFClient(const bosepro::BlockConfiguration &configuration)
     std::string boot_pin_spec;
 
     get_property("uart_device", uart_device_);
-    get_property("num_amps", num_amps);
+    int_fast32_t num_amps_value;
+    get_property("num_amps", num_amps_value);
+    num_amps = static_cast<int>(num_amps_value);
     get_property("reset_pin", reset_pin_spec);
     get_property("mute_pin", mute_pin_spec);
     get_property("boot_pin", boot_pin_spec);
