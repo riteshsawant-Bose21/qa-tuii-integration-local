@@ -114,15 +114,16 @@ type ConfigValue struct {
 
 // DeviceInfo represents device configuration data.
 type DeviceInfo struct {
-	Address         string `json:"address"`
-	Id              string `json:"id"`
-	Location        string `json:"location"`
-	Name            string `json:"name"`
-	ModelName       string `json:"model_name"`
-	MacAddress      string `json:"mac_address"`
-	SerialNumber    string `json:"serial_number"`
-	IsPrimaryNode   bool   `json:"is_primary"`
-	FirmwareVersion string `json:"firmware_version"`
+	Address                  string `json:"address"`
+	Id                       string `json:"id"`
+	Location                 string `json:"location"`
+	Name                     string `json:"name"`
+	ModelName                string `json:"model_name"`
+	MacAddress               string `json:"mac_address"`
+	SerialNumber             string `json:"serial_number"`
+	IsPrimaryNode            bool   `json:"is_primary"`
+	FirmwareVersion          string `json:"firmware_version"`
+	IsDeviceCertificateValid bool   `json:"is_device_certificate_valid"`
 }
 
 // DevicePatch represents patchable device configuration data.

@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	"fusion/internal/network"
 	"fusion/internal/routes"
+	"fusion/internal/utils"
 	"io"
 	"net"
 	"net/http"
-	"os"
 
 	json "github.com/goccy/go-json"
 )
@@ -108,15 +107,16 @@ func (c *Cluster) getDeviceInfoLocal() api.DeviceInfo {
 	}
 
 	deviceInfo := api.DeviceInfo{
-		Id:              id,
-		Name:            name,
-		Location:        location,
-		Address:         c.appConfig.BindAddr,
-		ModelName:       c.getModelName(),
-		SerialNumber:    c.getSerialNumber(),
-		FirmwareVersion: c.getFirmwareVersion(),
-		MacAddress:      c.getMacAddress(),
-		IsPrimaryNode:   c.isLocalNodePrimary(),
+		Id:                       id,
+		Name:                     name,
+		Location:                 location,
+		Address:                  c.appConfig.BindAddr,
+		ModelName:                utils.GetModelName(),
+		SerialNumber:             utils.GetSerialNumber(),
+		FirmwareVersion:          utils.GetFirmwareVersion(),
+		MacAddress:               utils.GetMacAddress(),
+		IsPrimaryNode:            c.isLocalNodePrimary(),
+		IsDeviceCertificateValid: utils.IsCertificateValid(),
 	}
 
 	return deviceInfo
@@ -130,7 +130,7 @@ func (c *Cluster) updateRemoteDevice(deviceID string, localInfo *api.DeviceInfo,
 	}
 
 	localPatchAddress := net.JoinHostPort(localInfo.Address, api.AdminPort)
-	url := getLocalURL(localPatchAddress, routes.DeviceEndpoint)
+	url := utils.GetLocalURL(localPatchAddress, routes.DeviceEndpoint)
 
 	req, err := http.NewRequest(http.MethodPatch, url, bytes.NewReader(jsonBody))
 	if err != nil {
@@ -212,39 +212,6 @@ func validateNoDuplication(
 	}
 
 	return nil
-}
-
-func (c *Cluster) getModelName() string {
-	return modelUnknown
-}
-
-func (c *Cluster) getFirmwareVersion() string {
-	data, err := os.ReadFile(firmwarePath)
-	if err != nil {
-		logging.GetLogger().Warn("%s not found.", firmwarePath)
-		return firmwareUnknown
-	} else {
-		return string(bytes.TrimRight(data, "\x00\n"))
-	}
-}
-
-func (c *Cluster) getSerialNumber() string {
-	data, err := os.ReadFile(serialPath)
-	if err != nil {
-		logging.GetLogger().Warn("%s not found.", serialPath)
-		return serialUnknown
-	} else {
-		return string(bytes.TrimRight(data, "\x00\n"))
-	}
-}
-
-func (c *Cluster) getMacAddress() string {
-	macAddr, err := network.GetMacAddress()
-	if err != nil {
-		logging.GetLogger().Warn("Unable to read MAC address: %v", err)
-		return macUnknown
-	}
-	return macAddr
 }
 
 // refreshDeviceDefaults seeds default Id and Name into persistence on startup if not already set.
