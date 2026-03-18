@@ -62,9 +62,20 @@ class CanvasToolBar extends StatelessWidget {
               child: Row(
                 children: <Widget>[
                   AnimatedSwitcher(
+                    layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+                      return Stack(
+                        alignment: Alignment.centerLeft,
+                        children: <Widget>[
+                          ...previousChildren,
+                          if (currentChild != null) currentChild,
+                        ],
+                      );
+                    },
                     transitionBuilder:
-                        (Widget child, Animation<double> animation) =>
-                            SlideTransition(position: Tween<Offset>(begin: const Offset(-0.5, 0), end: Offset.zero).animate(animation), child: child),
+                        (Widget child, Animation<double> animation) => SlideTransition(
+                          position: Tween<Offset>(begin: const Offset(-1, 0), end: Offset.zero).animate(animation),
+                          child: child,
+                        ),
                     duration: const Duration(milliseconds: 200),
                     child: currentMode == ToolbarMode.acoustics ? const AcousticToolBar() : const SystemToolbar(),
                   ),
