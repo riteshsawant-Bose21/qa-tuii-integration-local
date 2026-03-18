@@ -58,20 +58,20 @@ runs:
         moon run fusion-core:integration-tests
         VERSION="${{ steps.read_version.outputs.version }}-${GITHUB_RUN_NUMBER}+$(git rev-parse --short HEAD)"
         docker build \
-          -t ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image:$(git rev-parse --short HEAD) \
-          -t ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image:latest \
+          -t ${{ inputs.DOCKER_REGISTRY_DEV }}/fusion-api-image:$(git rev-parse --short HEAD) \
+          -t ${{ inputs.DOCKER_REGISTRY_DEV }}/fusion-api-image:latest \
           .
 
         docker build \
           -f sync-lambda.dockerfile \
-          -t ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image-product-data:$(git rev-parse --short HEAD) \
-          -t ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image-product-data:latest \
+          -t ${{ inputs.DOCKER_REGISTRY_DEV }}/product-sync-image:$(git rev-parse --short HEAD) \
+          -t ${{ inputs.DOCKER_REGISTRY_DEV }}/product-sync-image:latest \
           .
 
         cd ../lambda-authorizer/
         docker build \
-          -t ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image-auth:$(git rev-parse --short HEAD) \
-          -t ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image-auth:latest \
+          -t ${{ inputs.DOCKER_REGISTRY_DEV }}/auth-image:$(git rev-parse --short HEAD) \
+          -t ${{ inputs.DOCKER_REGISTRY_DEV }}/auth-image:latest \
           .
 
     - name: Login to ECR
@@ -95,27 +95,27 @@ runs:
       shell: bash
       working-directory: apps/cloud-backend/fusion-core
       run: |
-        docker push ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image:$(git rev-parse --short HEAD)
-        docker push ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image:latest
-        docker push ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image-auth:$(git rev-parse --short HEAD)
-        docker push ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image-auth:latest
-        docker push ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image-product-data:$(git rev-parse --short HEAD)
-        docker push ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image-product-data:latest
+        docker push ${{ inputs.DOCKER_REGISTRY_DEV }}/fusion-api-image:$(git rev-parse --short HEAD)
+        docker push ${{ inputs.DOCKER_REGISTRY_DEV }}/fusion-api-image:latest
+        docker push ${{ inputs.DOCKER_REGISTRY_DEV }}/auth-image:$(git rev-parse --short HEAD)
+        docker push ${{ inputs.DOCKER_REGISTRY_DEV }}/auth-image:latest
+        docker push ${{ inputs.DOCKER_REGISTRY_DEV }}/product-sync-image:$(git rev-parse --short HEAD)
+        docker push ${{ inputs.DOCKER_REGISTRY_DEV }}/product-sync-image:latest
         
-    - name: Trigger new ECS deployment
-      if: >-
-        ${{
-          (
-            github.event_name == 'push' &&
-            (
-              github.ref_name == 'develop' ||
-              startsWith(github.ref_name, 'release/')
-            )
-          )
-        }}
-      shell: bash
-      working-directory: apps/cloud-backend/fusion-core
-      env:
-        AWS_ACCESS_KEY_ID: ${{ inputs.AWS_ACCESS_KEY_ID_DEV }}
-        AWS_SECRET_ACCESS_KEY: ${{ inputs.AWS_SECRET_ACCESS_KEY_DEV }}
-      run: aws ecs update-service --cluster ${{ inputs.AWS_ECS_CLUSTER }} --service ${{ inputs.AWS_ECS_SERVICE }} --task-definition ${{ inputs.AWS_ECS_TASK_DEFINITION }} --force-new-deployment
+    # - name: Trigger new ECS deployment
+    #   if: >-
+    #     ${{
+    #       (
+    #         github.event_name == 'push' &&
+    #         (
+    #           github.ref_name == 'develop' ||
+    #           startsWith(github.ref_name, 'release/')
+    #         )
+    #       )
+    #     }}
+    #   shell: bash
+    #   working-directory: apps/cloud-backend/fusion-core
+    #   env:
+    #     AWS_ACCESS_KEY_ID: ${{ inputs.AWS_ACCESS_KEY_ID_DEV }}
+    #     AWS_SECRET_ACCESS_KEY: ${{ inputs.AWS_SECRET_ACCESS_KEY_DEV }}
+    #   run: aws ecs update-service --cluster ${{ inputs.AWS_ECS_CLUSTER }} --service ${{ inputs.AWS_ECS_SERVICE }} --task-definition ${{ inputs.AWS_ECS_TASK_DEFINITION }} --force-new-deployment

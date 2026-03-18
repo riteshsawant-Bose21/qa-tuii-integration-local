@@ -3,6 +3,7 @@ package permissions
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -943,5 +944,1033 @@ func TestAllRegisteredEndpoints_WithInsufficientLevel(t *testing.T) {
 				t.Errorf("Unfulfilled expectations: %v", err)
 			}
 		})
+	}
+}
+
+func TestCheckEndpointPermissionWithContext_AllowWithDirectPermission(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	// Mock GetUserPermissions query
+	permRows := sqlmock.NewRows([]string{"name", "key"}).
+		AddRow("project.read", "read")
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("user@example.com").
+		WillReturnRows(permRows)
+
+	// Mock user context query
+	ctxRows := sqlmock.NewRows([]string{"id", "name", "account_id", "account_name", "account_type", "role_id"}).
+		AddRow("user-123", "Editor", "acc-456", "Bose Corp", "Enterprise", "role-789")
+	mock.ExpectQuery("SELECT u.id::text, r.name, u.account_id::text, a.name, at.name, r.id::text").
+		WithArgs("user@example.com").
+		WillReturnRows(ctxRows)
+
+	allowed, userCtx, err := checker.CheckEndpointPermissionWithContext(ctx, "user@example.com", "GET", "/api/v1/projects")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if !allowed {
+		t.Error("Expected allowed=true for user with direct permission")
+	}
+	if userCtx == nil {
+		t.Fatal("Expected non-nil user context")
+	}
+	if userCtx.UserID != "user-123" {
+		t.Errorf("Expected UserID=user-123, got %s", userCtx.UserID)
+	}
+	if userCtx.Role != "Editor" {
+		t.Errorf("Expected Role=Editor, got %s", userCtx.Role)
+	}
+	if userCtx.AccountID != "acc-456" {
+		t.Errorf("Expected AccountID=acc-456, got %s", userCtx.AccountID)
+	}
+	if userCtx.AccountName != "Bose Corp" {
+		t.Errorf("Expected AccountName=Bose Corp, got %s", userCtx.AccountName)
+	}
+	if userCtx.AccountType != "Enterprise" {
+		t.Errorf("Expected AccountType=Enterprise, got %s", userCtx.AccountType)
+	}
+	if userCtx.RoleID != "role-789" {
+		t.Errorf("Expected RoleID=role-789, got %s", userCtx.RoleID)
+	}
+	if userCtx.Permissions != "project.read:read" {
+		t.Errorf("Expected Permissions=project.read:read, got %s", userCtx.Permissions)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+func TestCheckEndpointPermissionWithContext_DenyInsufficientDirectPermission(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	// User has project.create but only at read level (needs write)
+	permRows := sqlmock.NewRows([]string{"name", "key"}).
+		AddRow("project.create", "read")
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("user@example.com").
+		WillReturnRows(permRows)
+
+	allowed, userCtx, err := checker.CheckEndpointPermissionWithContext(ctx, "user@example.com", "POST", "/api/v1/projects")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if allowed {
+		t.Error("Expected allowed=false for insufficient direct permission level")
+	}
+	if userCtx != nil {
+		t.Error("Expected nil user context when denied")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+func TestCheckEndpointPermissionWithContext_DenyNoPermission(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	// User has no permissions at all
+	permRows := sqlmock.NewRows([]string{"name", "key"})
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("user@example.com").
+		WillReturnRows(permRows)
+
+	allowed, userCtx, err := checker.CheckEndpointPermissionWithContext(ctx, "user@example.com", "POST", "/api/v1/projects")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if allowed {
+		t.Error("Expected allowed=false with no permissions")
+	}
+	if userCtx != nil {
+		t.Error("Expected nil user context when denied")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+func TestCheckEndpointPermissionWithContext_AllowWithPatternPermission(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	// User has wildcard project.* permission
+	permRows := sqlmock.NewRows([]string{"name", "key"}).
+		AddRow("project.*", "write")
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("user@example.com").
+		WillReturnRows(permRows)
+
+	// Mock user context query
+	ctxRows := sqlmock.NewRows([]string{"id", "name", "account_id", "account_name", "account_type", "role_id"}).
+		AddRow("user-123", "Admin", "acc-456", "Bose Corp", "Enterprise", "role-789")
+	mock.ExpectQuery("SELECT u.id::text, r.name, u.account_id::text, a.name, at.name, r.id::text").
+		WithArgs("user@example.com").
+		WillReturnRows(ctxRows)
+
+	allowed, userCtx, err := checker.CheckEndpointPermissionWithContext(ctx, "user@example.com", "POST", "/api/v1/projects")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if !allowed {
+		t.Error("Expected allowed=true for user with wildcard pattern permission")
+	}
+	if userCtx == nil {
+		t.Fatal("Expected non-nil user context")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+func TestCheckEndpointPermissionWithContext_DenyPatternPermissionInsufficientLevel(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	// User has wildcard project.* but only read level (needs write for POST)
+	permRows := sqlmock.NewRows([]string{"name", "key"}).
+		AddRow("project.*", "read")
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("user@example.com").
+		WillReturnRows(permRows)
+
+	allowed, userCtx, err := checker.CheckEndpointPermissionWithContext(ctx, "user@example.com", "POST", "/api/v1/projects")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if allowed {
+		t.Error("Expected allowed=false for insufficient wildcard permission level")
+	}
+	if userCtx != nil {
+		t.Error("Expected nil user context when denied")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+func TestCheckEndpointPermissionWithContext_AllowWithAdminPermission(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	// User has "admin" role permission with sufficient level
+	permRows := sqlmock.NewRows([]string{"name", "key"}).
+		AddRow("admin", "admin")
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("admin@example.com").
+		WillReturnRows(permRows)
+
+	// Mock user context query
+	ctxRows := sqlmock.NewRows([]string{"id", "name", "account_id", "account_name", "account_type", "role_id"}).
+		AddRow("admin-1", "Admin", "acc-1", "Admin Corp", "Enterprise", "role-1")
+	mock.ExpectQuery("SELECT u.id::text, r.name, u.account_id::text, a.name, at.name, r.id::text").
+		WithArgs("admin@example.com").
+		WillReturnRows(ctxRows)
+
+	allowed, userCtx, err := checker.CheckEndpointPermissionWithContext(ctx, "admin@example.com", "DELETE", "/api/v1/projects/abc-123")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if !allowed {
+		t.Error("Expected allowed=true for admin user")
+	}
+	if userCtx == nil {
+		t.Fatal("Expected non-nil user context for admin")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+func TestCheckEndpointPermissionWithContext_DenyAdminInsufficientLevel(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	// User has "admin" key but only "read" level, insufficient for write requirement
+	// Also no "*" (full access) key
+	permRows := sqlmock.NewRows([]string{"name", "key"}).
+		AddRow("admin", "read")
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("user@example.com").
+		WillReturnRows(permRows)
+
+	allowed, userCtx, err := checker.CheckEndpointPermissionWithContext(ctx, "user@example.com", "POST", "/api/v1/projects")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if allowed {
+		t.Error("Expected allowed=false for admin with insufficient level and no full access")
+	}
+	if userCtx != nil {
+		t.Error("Expected nil user context when denied")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+func TestCheckEndpointPermissionWithContext_AdminInsufficientButFullAccessSufficient(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	// User has "admin" key but only "read" level, but also has "*" (full access) with "write"
+	permRows := sqlmock.NewRows([]string{"name", "key"}).
+		AddRow("admin", "read").
+		AddRow("*", "write")
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("user@example.com").
+		WillReturnRows(permRows)
+
+	// Mock user context query
+	ctxRows := sqlmock.NewRows([]string{"id", "name", "account_id", "account_name", "account_type", "role_id"}).
+		AddRow("user-1", "Admin", "acc-1", "Corp", "Enterprise", "role-1")
+	mock.ExpectQuery("SELECT u.id::text, r.name, u.account_id::text, a.name, at.name, r.id::text").
+		WithArgs("user@example.com").
+		WillReturnRows(ctxRows)
+
+	allowed, userCtx, err := checker.CheckEndpointPermissionWithContext(ctx, "user@example.com", "POST", "/api/v1/projects")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if !allowed {
+		t.Error("Expected allowed=true when admin insufficient but full access is sufficient")
+	}
+	if userCtx == nil {
+		t.Fatal("Expected non-nil user context")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+func TestCheckEndpointPermissionWithContext_AdminInsufficientAndFullAccessInsufficient(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	// User has "admin" key at "read" level AND "*" at "read" level — both insufficient for "write"
+	permRows := sqlmock.NewRows([]string{"name", "key"}).
+		AddRow("admin", "read").
+		AddRow("*", "read")
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("user@example.com").
+		WillReturnRows(permRows)
+
+	allowed, userCtx, err := checker.CheckEndpointPermissionWithContext(ctx, "user@example.com", "POST", "/api/v1/projects")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if allowed {
+		t.Error("Expected allowed=false when both admin and full access have insufficient level")
+	}
+	if userCtx != nil {
+		t.Error("Expected nil user context when denied")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+func TestCheckEndpointPermissionWithContext_NoAdminButFullAccessSufficient(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	// User has no "admin" key but has "*" (full access) at "write" level
+	permRows := sqlmock.NewRows([]string{"name", "key"}).
+		AddRow("*", "write")
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("user@example.com").
+		WillReturnRows(permRows)
+
+	// Mock user context query
+	ctxRows := sqlmock.NewRows([]string{"id", "name", "account_id", "account_name", "account_type", "role_id"}).
+		AddRow("user-1", "SuperAdmin", "acc-1", "Corp", "Enterprise", "role-1")
+	mock.ExpectQuery("SELECT u.id::text, r.name, u.account_id::text, a.name, at.name, r.id::text").
+		WithArgs("user@example.com").
+		WillReturnRows(ctxRows)
+
+	allowed, userCtx, err := checker.CheckEndpointPermissionWithContext(ctx, "user@example.com", "DELETE", "/api/v1/projects/abc-123")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if !allowed {
+		t.Error("Expected allowed=true with full access permission")
+	}
+	if userCtx == nil {
+		t.Fatal("Expected non-nil user context")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+func TestCheckEndpointPermissionWithContext_NoAdminNoFullAccess(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	// User has no "admin", no "*", no matching feature
+	permRows := sqlmock.NewRows([]string{"name", "key"}).
+		AddRow("product.read", "read")
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("user@example.com").
+		WillReturnRows(permRows)
+
+	allowed, userCtx, err := checker.CheckEndpointPermissionWithContext(ctx, "user@example.com", "POST", "/api/v1/projects")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if allowed {
+		t.Error("Expected allowed=false with no admin and no full access")
+	}
+	if userCtx != nil {
+		t.Error("Expected nil user context when denied")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+func TestCheckEndpointPermissionWithContext_NoAdminButFullAccessInsufficient(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	// User has no "admin", has "*" but at "read" level — insufficient for "write"
+	permRows := sqlmock.NewRows([]string{"name", "key"}).
+		AddRow("*", "read")
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("user@example.com").
+		WillReturnRows(permRows)
+
+	allowed, userCtx, err := checker.CheckEndpointPermissionWithContext(ctx, "user@example.com", "POST", "/api/v1/projects")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if allowed {
+		t.Error("Expected allowed=false when full access level is insufficient")
+	}
+	if userCtx != nil {
+		t.Error("Expected nil user context when denied")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+func TestCheckEndpointPermissionWithContext_UnregisteredEndpointAllowed(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	// No permission registered for this endpoint — authentication-only
+	// GetUserPermissions still called for context
+	permRows := sqlmock.NewRows([]string{"name", "key"}).
+		AddRow("project.read", "read")
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("user@example.com").
+		WillReturnRows(permRows)
+
+	// Mock user context query
+	ctxRows := sqlmock.NewRows([]string{"id", "name", "account_id", "account_name", "account_type", "role_id"}).
+		AddRow("user-1", "Editor", "acc-1", "Corp", "Enterprise", "role-1")
+	mock.ExpectQuery("SELECT u.id::text, r.name, u.account_id::text, a.name, at.name, r.id::text").
+		WithArgs("user@example.com").
+		WillReturnRows(ctxRows)
+
+	allowed, userCtx, err := checker.CheckEndpointPermissionWithContext(ctx, "user@example.com", "GET", "/api/v1/health")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if !allowed {
+		t.Error("Expected allowed=true for unregistered endpoint")
+	}
+	if userCtx == nil {
+		t.Fatal("Expected non-nil user context for authenticated user")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+func TestCheckEndpointPermissionWithContext_GetUserPermissionsError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	// Simulate database error on permissions query
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("user@example.com").
+		WillReturnError(fmt.Errorf("connection refused"))
+
+	allowed, userCtx, err := checker.CheckEndpointPermissionWithContext(ctx, "user@example.com", "GET", "/api/v1/projects")
+
+	if err == nil {
+		t.Error("Expected error for database failure")
+	}
+	if allowed {
+		t.Error("Expected allowed=false on error")
+	}
+	if userCtx != nil {
+		t.Error("Expected nil user context on error")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+func TestCheckEndpointPermissionWithContext_UserContextQueryError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	// Permissions query succeeds
+	permRows := sqlmock.NewRows([]string{"name", "key"}).
+		AddRow("project.read", "read")
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("user@example.com").
+		WillReturnRows(permRows)
+
+	// User context query fails
+	mock.ExpectQuery("SELECT u.id::text, r.name, u.account_id::text, a.name, at.name, r.id::text").
+		WithArgs("user@example.com").
+		WillReturnError(sql.ErrNoRows)
+
+	allowed, userCtx, err := checker.CheckEndpointPermissionWithContext(ctx, "user@example.com", "GET", "/api/v1/projects")
+
+	if err == nil {
+		t.Error("Expected error when user context query fails")
+	}
+	if allowed {
+		t.Error("Expected allowed=false on user context error")
+	}
+	if userCtx != nil {
+		t.Error("Expected nil user context on error")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+func TestCheckEndpointPermissionWithContext_MultiplePermissionsInContext(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	// User has multiple permissions
+	permRows := sqlmock.NewRows([]string{"name", "key"}).
+		AddRow("project.read", "read").
+		AddRow("project.create", "write").
+		AddRow("product.read", "read")
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("user@example.com").
+		WillReturnRows(permRows)
+
+	// Mock user context query
+	ctxRows := sqlmock.NewRows([]string{"id", "name", "account_id", "account_name", "account_type", "role_id"}).
+		AddRow("user-1", "Editor", "acc-1", "Corp", "Enterprise", "role-1")
+	mock.ExpectQuery("SELECT u.id::text, r.name, u.account_id::text, a.name, at.name, r.id::text").
+		WithArgs("user@example.com").
+		WillReturnRows(ctxRows)
+
+	allowed, userCtx, err := checker.CheckEndpointPermissionWithContext(ctx, "user@example.com", "GET", "/api/v1/projects")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if !allowed {
+		t.Error("Expected allowed=true")
+	}
+	if userCtx == nil {
+		t.Fatal("Expected non-nil user context")
+	}
+	// Verify that permissions string contains all permissions (order may vary)
+	if userCtx.Permissions == "" {
+		t.Error("Expected non-empty permissions string")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+// =====================================================
+// GetUserPermissions edge case tests
+// =====================================================
+
+func TestGetUserPermissions_QueryError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("user@example.com").
+		WillReturnError(sql.ErrConnDone)
+
+	perms, err := checker.GetUserPermissions(ctx, "user@example.com")
+
+	if err == nil {
+		t.Error("Expected error for database query failure")
+	}
+	if perms != nil {
+		t.Error("Expected nil permissions on error")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+func TestGetUserPermissions_ScanError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	// Return rows with wrong column types to trigger scan error
+	rows := sqlmock.NewRows([]string{"name", "key"}).
+		AddRow(nil, nil) // NULL values will cause scan error for string type
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("user@example.com").
+		WillReturnRows(rows)
+
+	perms, err := checker.GetUserPermissions(ctx, "user@example.com")
+
+	if err == nil {
+		t.Error("Expected error for scan failure")
+	}
+	if perms != nil {
+		t.Error("Expected nil permissions on scan error")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+func TestGetUserPermissions_EmptyResult(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	rows := sqlmock.NewRows([]string{"name", "key"})
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("user@example.com").
+		WillReturnRows(rows)
+
+	perms, err := checker.GetUserPermissions(ctx, "user@example.com")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if len(perms) != 0 {
+		t.Errorf("Expected empty permissions map, got %d entries", len(perms))
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+// =====================================================
+// CheckUserPermission edge case tests
+// =====================================================
+
+func TestCheckUserPermission_Success(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	rows := sqlmock.NewRows([]string{"key"}).AddRow("write")
+	mock.ExpectQuery("SELECT a.key FROM app_user").
+		WithArgs("user@example.com", "project.create").
+		WillReturnRows(rows)
+
+	allowed, err := checker.CheckUserPermission(ctx, "user@example.com", "project.create", "write")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if !allowed {
+		t.Error("Expected allowed=true for sufficient permission")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+func TestCheckUserPermission_InsufficientLevel(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	rows := sqlmock.NewRows([]string{"key"}).AddRow("read")
+	mock.ExpectQuery("SELECT a.key FROM app_user").
+		WithArgs("user@example.com", "project.create").
+		WillReturnRows(rows)
+
+	allowed, err := checker.CheckUserPermission(ctx, "user@example.com", "project.create", "write")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if allowed {
+		t.Error("Expected allowed=false for insufficient permission level")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+func TestCheckUserPermission_NoRows(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	mock.ExpectQuery("SELECT a.key FROM app_user").
+		WithArgs("user@example.com", "project.delete").
+		WillReturnError(sql.ErrNoRows)
+
+	allowed, err := checker.CheckUserPermission(ctx, "user@example.com", "project.delete", "write")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if allowed {
+		t.Error("Expected allowed=false when no permission row exists")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+// =====================================================
+// isPermissionSufficient edge case tests
+// =====================================================
+
+func TestIsPermissionSufficient_UnknownUserLevel(t *testing.T) {
+	result := isPermissionSufficient("superadmin", "read")
+	if result {
+		t.Error("Expected false for unknown user level 'superadmin'")
+	}
+}
+
+func TestIsPermissionSufficient_UnknownRequiredLevel(t *testing.T) {
+	result := isPermissionSufficient("read", "superadmin")
+	if result {
+		t.Error("Expected false for unknown required level 'superadmin'")
+	}
+}
+
+func TestIsPermissionSufficient_BothUnknown(t *testing.T) {
+	result := isPermissionSufficient("unknown1", "unknown2")
+	if result {
+		t.Error("Expected false when both levels are unknown")
+	}
+}
+
+func TestIsPermissionSufficient_NoneLevel(t *testing.T) {
+	result := isPermissionSufficient("none", "read")
+	if result {
+		t.Error("Expected false for 'none' user level accessing 'read'")
+	}
+}
+
+func TestIsPermissionSufficient_CaseInsensitive(t *testing.T) {
+	result := isPermissionSufficient("READ", "read")
+	if !result {
+		t.Error("Expected true for case-insensitive match")
+	}
+}
+
+// =====================================================
+// CheckEndpointPermission - admin permission path
+// =====================================================
+
+func TestCheckEndpointPermission_AdminPermissionSufficient(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	// User has "admin" permission at admin level — no direct feature match
+	rows := sqlmock.NewRows([]string{"name", "key"}).
+		AddRow("admin", "admin")
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("admin@example.com").
+		WillReturnRows(rows)
+
+	allowed, err := checker.CheckEndpointPermission(ctx, "admin@example.com", "DELETE", "/api/v1/projects/abc-123")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if !allowed {
+		t.Error("Expected allowed=true for admin user with sufficient level")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+func TestCheckEndpointPermission_AdminPermissionInsufficient(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	// User has "admin" key but only "read" level — insufficient for write-required endpoint
+	rows := sqlmock.NewRows([]string{"name", "key"}).
+		AddRow("admin", "read")
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("user@example.com").
+		WillReturnRows(rows)
+
+	allowed, err := checker.CheckEndpointPermission(ctx, "user@example.com", "POST", "/api/v1/projects")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if allowed {
+		t.Error("Expected allowed=false for admin with insufficient level")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+func TestCheckEndpointPermission_GetPermissionsError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+		WithArgs("user@example.com").
+		WillReturnError(fmt.Errorf("database connection lost"))
+
+	allowed, err := checker.CheckEndpointPermission(ctx, "user@example.com", "GET", "/api/v1/projects")
+
+	if err == nil {
+		t.Error("Expected error when GetUserPermissions fails")
+	}
+	if allowed {
+		t.Error("Expected allowed=false on error")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unfulfilled expectations: %v", err)
+	}
+}
+
+// =====================================================
+// findEndpointPermission edge case tests
+// =====================================================
+
+func TestFindEndpointPermission_ExactMatch(t *testing.T) {
+	db, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+
+	perm := checker.findEndpointPermission("GET", "/api/v1/projects")
+	if perm == nil {
+		t.Error("Expected to find permission for GET /api/v1/projects")
+	}
+}
+
+func TestFindEndpointPermission_ParameterizedMatch(t *testing.T) {
+	db, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+
+	perm := checker.findEndpointPermission("PATCH", "/api/v1/projects/some-uuid-123")
+	if perm == nil {
+		t.Error("Expected to find permission for parameterized path")
+	}
+}
+
+func TestFindEndpointPermission_NoMatch(t *testing.T) {
+	db, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+
+	perm := checker.findEndpointPermission("GET", "/api/v1/nonexistent")
+	if perm != nil {
+		t.Error("Expected nil for unregistered endpoint")
+	}
+}
+
+func TestFindEndpointPermission_CaseInsensitiveMethod(t *testing.T) {
+	db, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+
+	perm := checker.findEndpointPermission("get", "/api/v1/projects")
+	if perm == nil {
+		t.Error("Expected to find permission with lowercase method")
+	}
+}
+
+func TestFindEndpointPermission_MalformedKeySkipped(t *testing.T) {
+	db, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+
+	// Inject a malformed key (no colon separator) into the permissions map
+	checker.permissions["malformed-key-no-colon"] = &EndpointPermission{
+		Feature:       "test.feature",
+		RequiredLevel: "read",
+		Description:   "Malformed key for testing",
+	}
+
+	// Search for a path that won't exact-match, forcing iteration over all keys including the malformed one
+	perm := checker.findEndpointPermission("GET", "/api/v1/nonexistent/path/here")
+	if perm != nil {
+		t.Error("Expected nil — malformed key should be skipped, and no other pattern matches")
 	}
 }
