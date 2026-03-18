@@ -61,8 +61,27 @@
                     "module": "bdif_client",
                     "property_settings": [
                         { "name": "uart_device", "value": "/dev/ttymxc2" },
-                        { "name": "boot0_gpio_num", "value": 517 },
-                        { "name": "nrst_gpio_num", "value": 8 }
+                        { "name": "num_amps", "value": 4 },
+                        { "name": "reset_pin", "value": "/sys/devices/virtual/bosepro/powersmart/gpio_amp_rstn" },
+                        { "name": "mute_pin", "value": "/sys/devices/virtual/bosepro/powersmart/gpio_amp_mute" },
+                        { "name": "boot_pin", "value": "gpiod:gpiochip5:5" }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "ui_control",
+            "property_settings": [
+                { "name": "period_ms", "value": 100 }
+            ],
+            "blocks": [
+                {
+                    "name": "ui_control",
+                    "module": "bdif_client",
+                    "property_settings": [
+                        { "name": "uart_device", "value": "/dev/ttymxc0" },
+                        { "name": "reset_pin", "value": "gpiod:gpiochip5:4" },
+                        { "name": "boot_pin", "value": "gpiod:gpiochip5:3" }
                     ]
                 }
             ]
