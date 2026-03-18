@@ -29,7 +29,7 @@ func (c *Cluster) UpdateDeviceInfo(device_id string, patch *api.DevicePatch) err
 		return err
 	}
 
-	if c.HostIsLocal(localInfo.Address) {
+	if c.hostIsLocal(localInfo.Address) {
 		return c.UpdateDeviceInfoLocal(patch)
 	}
 	return c.updateRemoteDevice(device_id, localInfo, patch)
