@@ -309,77 +309,77 @@ class GpioPage extends StatelessWidget {
                                           ),
                                         ),
 
-                                  if (gpio.direction == GpioDirection.output)
-                                    SemanticHelper.button(
-                                      testId: SemanticHelper.createTestId(SemanticTypes.button, "gpio_output_status_switch_$index"),
-                                      child: FusionSwitch(
-                                        value: gpio.isEnabled ?? false,
-                                        height: 30,
-                                        width: 50,
-                                        onChanged: (_) {
-                                          context.read<GpioViewmodel>().updateGpio(gpio.copyWith(isEnabled: !(gpio.isEnabled ?? false)));
-                                        },
-                                        // activeThumbColor: Colors.black,
-                                        // materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                        // thumbColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
-                                        //   if (states.contains(WidgetState.selected)) {
-                                        //     return Theme.of(context).colorScheme.primaryWhite;
-                                        //   }
-                                        //   return context.colorScheme.primaryBlack;
-                                        // }),
-                                        // trackColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
-                                        //   if (states.contains(WidgetState.selected)) {
-                                        //     return Theme.of(context).colorScheme.primaryBlack;
-                                        //   }
-                                        //   return context.colorScheme.primaryBlack;
-                                        // }),
-                                        // trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
-                                      ),
-                                    )
-                                  else
-                                    FusionButton(label: "Test", accessLabel: 'gpio_page_test_button', onTap: () {}),
-
-                                  if (gpio.direction == GpioDirection.input)
-                                    SemanticHelper.button(
-                                      testId: SemanticHelper.createTestId(SemanticTypes.button, "gpio_input_configure_event_button_$index"),
-                                      child: InkWell(
-                                        onTap: () {
-                                          /// getEventsForGPI if existis this directly navigate to Configuration tab
-                                          final FusionEvent? eventsForGPI = serviceLocator<ProjectViewModel>().getEventsForGPI(
-                                            gpiId: gpio.id,
-                                          );
-                                          if (eventsForGPI != null) {
-                                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                                              /// Set the selected event ID to the existing event for this GPI
-                                              serviceLocator<ProjectViewModel>().setSelectedEventId(eventsForGPI.id);
-                                            });
-                                          } else {
-                                            /// Add the event to the project
-                                            serviceLocator<ProjectViewModel>().addEventForGPI(
-                                              gpiId: gpio.id,
-                                            );
-                                          }
-
-                                          /// Navigate to Configuration tab (index 3)
-                                          // projectTabBroadcastController.add(3);
-
-                                          /// Switch to Events sub-tab within Configuration
-                                          serviceLocator<ProjectViewModel>().setConfigurationMenuMode(
-                                            ConfigurationMenuMode.events,
-                                          );
-                                        },
-                                        child: Center(
-                                          child: SvgPicture.asset(
-                                            "assets/icons/scheduler/run.svg",
-                                            width: 25,
-                                            height: 25,
-                                            color: context.colorScheme.iconWhite,
+                                      if (gpio.direction == GpioDirection.output)
+                                        SemanticHelper.button(
+                                          testId: SemanticHelper.createTestId(SemanticTypes.button, "gpio_output_status_switch_$index"),
+                                          child: FusionSwitch(
+                                            value: gpio.isEnabled ?? false,
+                                            height: 30,
+                                            width: 50,
+                                            onChanged: (_) {
+                                              context.read<GpioViewmodel>().updateGpio(gpio.copyWith(isEnabled: !(gpio.isEnabled ?? false)));
+                                            },
+                                            // activeThumbColor: Colors.black,
+                                            // materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                            // thumbColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
+                                            //   if (states.contains(WidgetState.selected)) {
+                                            //     return Theme.of(context).colorScheme.primaryWhite;
+                                            //   }
+                                            //   return context.colorScheme.primaryBlack;
+                                            // }),
+                                            // trackColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
+                                            //   if (states.contains(WidgetState.selected)) {
+                                            //     return Theme.of(context).colorScheme.primaryBlack;
+                                            //   }
+                                            //   return context.colorScheme.primaryBlack;
+                                            // }),
+                                            // trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
                                           ),
-                                        ),
-                                      ),
-                                    )
-                                  else
-                                    const SizedBox(),
+                                        )
+                                      else
+                                        FusionButton(label: "Test", accessLabel: 'gpio_page_test_button', onTap: () {}),
+
+                                      if (gpio.direction == GpioDirection.input)
+                                        SemanticHelper.button(
+                                          testId: SemanticHelper.createTestId(SemanticTypes.button, "gpio_input_configure_event_button_$index"),
+                                          child: InkWell(
+                                            onTap: () {
+                                              /// getEventsForGPI if existis this directly navigate to Configuration tab
+                                              final FusionEvent? eventsForGPI = serviceLocator<ProjectViewModel>().getEventsForGPI(
+                                                gpiId: gpio.id,
+                                              );
+                                              if (eventsForGPI != null) {
+                                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                                  /// Set the selected event ID to the existing event for this GPI
+                                                  serviceLocator<ProjectViewModel>().setSelectedEventId(eventsForGPI.id);
+                                                });
+                                              } else {
+                                                /// Add the event to the project
+                                                serviceLocator<ProjectViewModel>().addEventForGPI(
+                                                  gpiId: gpio.id,
+                                                );
+                                              }
+
+                                              /// Navigate to Configuration tab (index 3)
+                                              // projectTabBroadcastController.add(3);
+
+                                              /// Switch to Events sub-tab within Configuration
+                                              serviceLocator<ProjectViewModel>().setConfigurationMenuMode(
+                                                ConfigurationMenuMode.events,
+                                              );
+                                            },
+                                            child: Center(
+                                              child: SvgPicture.asset(
+                                                "assets/icons/scheduler/run.svg",
+                                                width: 25,
+                                                height: 25,
+                                                color: context.colorScheme.iconWhite,
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                      else
+                                        const SizedBox(),
 
                                       SemanticHelper.button(
                                         testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_gpio_button_$index"),
