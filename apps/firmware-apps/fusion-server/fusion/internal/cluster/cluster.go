@@ -300,7 +300,7 @@ func fetchGenericFromAdmin[T any](
 	logger := logging.GetLogger()
 
 	for _, addr := range c.getNodeAdminAddresses() {
-		if c.HostIsLocal(addr) {
+		if c.hostIsLocal(addr) {
 			all = append(all, localFetch()...)
 			continue
 		}
@@ -394,34 +394,34 @@ func fetchAndDecode[T any](
 }
 
 func (c *Cluster) FetchGenericWithTargetDevice(
-    deviceID string,
-    endpointTemplate string, 
-    localFn func() ([]byte, error),
-    remoteFn func(url string) ([]byte, error),
+	deviceID string,
+	endpointTemplate string,
+	localFn func() ([]byte, error),
+	remoteFn func(url string) ([]byte, error),
 ) ([]byte, error) {
 
-    deviceInfos := c.GetAllDevicesInfo()
+	deviceInfos := c.GetAllDevicesInfo()
 
-    var targetDevice *api.DeviceInfo
-    for i := range deviceInfos {
-        if deviceInfos[i].Id == deviceID {
-            targetDevice = &deviceInfos[i]
-            break
-        }
-    }
-    if targetDevice == nil {
-        return nil, fmt.Errorf("device %s not found", deviceID)
-    }
+	var targetDevice *api.DeviceInfo
+	for i := range deviceInfos {
+		if deviceInfos[i].Id == deviceID {
+			targetDevice = &deviceInfos[i]
+			break
+		}
+	}
+	if targetDevice == nil {
+		return nil, fmt.Errorf("device %s not found", deviceID)
+	}
 
-    if c.HostIsLocal(targetDevice.Address) {
-        return localFn()
-    }
+	if c.hostIsLocal(targetDevice.Address) {
+		return localFn()
+	}
 
-    deviceAddress := net.JoinHostPort(targetDevice.Address, api.AdminPort)
-    endpoint := strings.Replace(endpointTemplate, "{id}", deviceID, 1)
-    url := utils.GetLocalURL(deviceAddress, endpoint)
+	deviceAddress := net.JoinHostPort(targetDevice.Address, api.AdminPort)
+	endpoint := strings.Replace(endpointTemplate, "{id}", deviceID, 1)
+	url := utils.GetLocalURL(deviceAddress, endpoint)
 
-    return remoteFn(url)
+	return remoteFn(url)
 }
 
 func (c *Cluster) PostGenericToTargetDevice(
@@ -444,7 +444,7 @@ func (c *Cluster) PostGenericToTargetDevice(
 		return fmt.Errorf("device %s not found", deviceID)
 	}
 
-	if c.HostIsLocal(targetDevice.Address) {
+	if c.hostIsLocal(targetDevice.Address) {
 		return localFn(payload)
 	}
 
@@ -462,7 +462,7 @@ func (c *Cluster) PostGenericToAdmin(
 ) error {
 
 	for _, addr := range c.getNodeAdminAddresses() {
-		if c.HostIsLocal(addr) {
+		if c.hostIsLocal(addr) {
 			// If this is the local address, invoke localFn() directly:
 			if err := localFn(); err != nil {
 				return fmt.Errorf("local function failed: %w", err)
@@ -488,7 +488,7 @@ func postGenericToAdminLast(
 	localFn func() error,
 ) error {
 	for _, addr := range c.getNodeAdminAddresses() {
-		if c.HostIsLocal(addr) {
+		if c.hostIsLocal(addr) {
 			continue
 		}
 
@@ -533,8 +533,8 @@ func getLocalEndpointResponse(c *Cluster, addr, endpoint string) (response *http
 	return resp, nil
 }
 
-// HostIsLocal checks if the address is the local memberlist node
-func (c *Cluster) HostIsLocal(addr string) bool {
+// hostIsLocal checks if the address is the local memberlist node
+func (c *Cluster) hostIsLocal(addr string) bool {
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
 		if addrErr, ok := err.(*net.AddrError); ok &&

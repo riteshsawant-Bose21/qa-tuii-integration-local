@@ -22,5 +22,4 @@ type ClusterInterface interface {
 	//device_id is also a field in the patch and can be updated.
 	UpdateDeviceInfo(device_id string, patch *api.DevicePatch) error
 	UpdateDeviceInfoLocal(patch *api.DevicePatch) error
-	HostIsLocal(addr string) bool
 }
