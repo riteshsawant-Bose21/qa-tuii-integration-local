@@ -19,6 +19,9 @@ class MessageConfigPanel extends StatelessWidget {
       testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.messageconfigpanel),
       child: BlocBuilder<MessagePlayerConfigCubit, MessagePlayerConfigState>(
         builder: (BuildContext context, MessagePlayerConfigState state) {
+          final MessagePlayerConfigCubit messagePlayerConfigCubit = context.read<MessagePlayerConfigCubit>();
+          final MediaFileModel? mediaFile = messagePlayerConfigCubit.getMediaFileForSelectedMessage();
+
           final MessageModel? selectedMessage = state.selectedMessage;
 
           if (selectedMessage == null) {
@@ -33,56 +36,54 @@ class MessageConfigPanel extends StatelessWidget {
             );
           }
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                // Message Name
-                _MessageNameField(
-                  initialValue: selectedMessage.name,
-                  onChanged: (String value) {
-                    context.read<MessagePlayerConfigCubit>().updateMessageName(value);
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              /// Message Name
+              _MessageNameField(
+                initialValue: selectedMessage.name,
+                onChanged: (String value) {
+                  context.read<MessagePlayerConfigCubit>().updateMessageName(value);
+                },
+              ),
+
+                const SizedBox(height: 20),
+
+              /// Audio File
+              _AudioFileSection(
+                selectedMessage: selectedMessage,
+                state: state,
+              ),
+
+              /// Audio Player (only show if audio file is selected)
+              if (messagePlayerConfigCubit.hasMediaAssignedToSelectedMessage() && mediaFile != null) ...<Widget>[
+                const SizedBox(height: 16),
+                _AudioPlayerWidget(state: state),
+
+                  const SizedBox(height: 16),
+
+                /// Gain Control
+                _GainControlSection(
+                  gain: selectedMessage.gain,
+                  onChanged: (double value) {
+                    context.read<MessagePlayerConfigCubit>().updateGain(value);
                   },
                 ),
-
                 const SizedBox(height: 20),
 
-                // Audio File
-                _AudioFileSection(
-                  selectedMessage: selectedMessage,
-                  state: state,
-                ),
-
-                // Audio Player (only show if audio file is selected)
-                if (context.read<MessagePlayerConfigCubit>().hasMediaAssignedToSelectedMessage()) ...<Widget>[
-                  const SizedBox(height: 16),
-                  _AudioPlayerWidget(state: state),
-
-                  const SizedBox(height: 16),
-
-                  // Gain Control
-                  _GainControlSection(
-                    gain: selectedMessage.gain,
-                    onChanged: (double value) {
-                      context.read<MessagePlayerConfigCubit>().updateGain(value);
-                    },
-                  ),
-                ],
-
-                const SizedBox(height: 20),
-
-                // Repeat Settings
+                /// Repeat Settings
                 _RepeatSettingsSection(
                   repeat: selectedMessage.repeat,
                   repeatCount: selectedMessage.repeatCount,
                   intervalSeconds: selectedMessage.repeatIntervalSeconds,
                 ),
               ],
-            ),
-          );
-        },
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

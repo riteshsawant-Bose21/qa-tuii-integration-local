@@ -718,6 +718,10 @@ public:
   }
 
 private:
+#ifdef USE_MAC_THREADS
+  void pin_thread(std::thread & /*t*/, const char * /*thread_label*/) const {
+  }
+#else
   void pin_thread(std::thread &t, const char *thread_label) const {
     constexpr int kTelemetryCpu = 0;
     cpu_set_t cpuset;
@@ -728,13 +732,19 @@ private:
       SPDLOG_WARN("Failed to set {} affinity to CPU {}: {}", thread_label, kTelemetryCpu, strerror(rc));
     }
   }
+#endif
 
+#ifdef USE_MAC_THREADS
+  void name_thread(std::thread & /*t*/, const char * /*name*/) const {
+  }
+#else
   void name_thread(std::thread &t, const char *name) const {
     int rc = pthread_setname_np(t.native_handle(), name);
     if (rc != 0) {
       SPDLOG_WARN("Failed to set thread name '{}': {}", name, strerror(rc));
     }
   }
+#endif
 
   std::string getTimestamp() const {
     auto now = std::chrono::system_clock::now();
