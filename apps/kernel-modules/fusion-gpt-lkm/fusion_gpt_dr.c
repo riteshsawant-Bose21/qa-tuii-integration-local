@@ -167,6 +167,14 @@ static u32 cal_pre_e0_max_wait = 12;
 module_param(cal_pre_e0_max_wait, uint, 0644);
 MODULE_PARM_DESC(cal_pre_e0_max_wait, "Maximum PPS intervals to wait for sane prebaked e0 samples");
 
+static u32 lock_err_thresh = 1;
+module_param(lock_err_thresh, uint, 0644);
+MODULE_PARM_DESC(lock_err_thresh, "Absolute PPS error threshold in ticks required to declare discipline ready");
+
+static u32 lock_consecutive = 5;
+module_param(lock_consecutive, uint, 0644);
+MODULE_PARM_DESC(lock_consecutive, "Consecutive in-threshold PPS samples required to declare discipline ready");
+
 struct fusion_gpt
 {
 	void __iomem *base;
@@ -241,6 +249,10 @@ struct fusion_gpt
   s32 cal_k1_q16;
   s32 cal_k2_q16;
   s32 cal_k3_q16;
+
+  /* Sticky startup-ready flag for downstream GPT clients. */
+  bool discipline_ready;
+  u32 lock_streak;
 };
 
 
@@ -256,6 +268,43 @@ static inline u64 ceil_div_u64(u64 a, u64 b)
 	return (a + b - 1) / b;
 }
 
+static void gpt_reset_timing_state_locked(struct fusion_gpt *g)
+{
+	g->pps_seq = 0;
+	g->pps_icr1_last32 = 0;
+	g->pps_icr1_last64 = 0;
+	g->pps_valid = false;
+	g->last_if2_cap64 = 0;
+	g->if2_valid = false;
+	g->phc_epoch_ns = 0;
+	g->pps_epoch_cnt64 = 0;
+	g->phc_epoch_valid = false;
+	g->phc_aligned = false;
+	g->pending_future_anchor = false;
+	g->pending_future_phc_ns = 0;
+	g->latest_freq_error = 0;
+	g->error_integrator = 0;
+	g->sq_err_sum = 0;
+	g->err_count = 0;
+	WRITE_ONCE(g->si_gain_pending, false);
+	WRITE_ONCE(g->discipline_ready, false);
+	g->lock_streak = 0;
+	g->cal_state = cal_enable ? CAL_IDLE : CAL_DONE;
+	g->cal_probe_idx = 0;
+	g->cal_settle_left = 0;
+	g->cal_measure_left = 0;
+	g->cal_err_accum = 0;
+	g->cal_err_samples = 0;
+	g->cal_center_gain = g->si_gain_current;
+	g->cal_center_dac = clamp(g->dac_target, 0, 255);
+	memset(g->cal_probe_gain, 0, sizeof(g->cal_probe_gain));
+	memset(g->cal_probe_dac, 0, sizeof(g->cal_probe_dac));
+	memset(g->cal_probe_mean, 0, sizeof(g->cal_probe_mean));
+	g->cal_k1_q16 = 0;
+	g->cal_k2_q16 = 0;
+	g->cal_k3_q16 = 0;
+}
+
 /* 64-bit tick synth (read-mostly) */
 static u64 gpt_read_ticks64(struct fusion_gpt *g)
 {
@@ -269,6 +318,9 @@ static u64 gpt_read_ticks64(struct fusion_gpt *g)
 
 static inline void gpt_tick_direct(struct fusion_gpt *g)
 {
+	if (!READ_ONCE(g->discipline_ready))
+		return;
+
 	const struct fusion_gpt_client_ops *ops = READ_ONCE(g->ops);
 	if (ops && ops->tick)
 		ops->tick(g->ops_ctx, gpt_read_ticks64(g));
@@ -355,7 +407,6 @@ int fusion_gpt_set_phc_anchor(u64 phc_ns_at_pps)
 {
     struct fusion_gpt *g;
     unsigned long flags;
-    int rc = -ENODEV;
 
     mutex_lock(&gpt_singleton_lock);
     g = gpt_singleton;
@@ -368,14 +419,9 @@ int fusion_gpt_set_phc_anchor(u64 phc_ns_at_pps)
     if (phc_ns_at_pps == 0) {
         g->pending_future_anchor = false;
         g->pending_future_phc_ns = 0;
-        g->phc_epoch_ns = 0;
-        g->pps_epoch_cnt64 = 0;
-        g->phc_epoch_valid = false;
-        g->phc_aligned = false;
         pr_debug("fusion_gpt: phc anchor cleared\n");
-        rc = 0;
         raw_spin_unlock_irqrestore(&g->pps_lock, flags);
-        return rc;
+        return 0;
     }
 
     /* Touch shared PPS/epoch state from process context: IRQ-safe */
@@ -389,10 +435,8 @@ int fusion_gpt_set_phc_anchor(u64 phc_ns_at_pps)
     g->phc_epoch_valid   = false;
 
     pr_debug("fusion_gpt: phc anchor armed %llu\n", phc_ns_at_pps);
-    rc = 0;
     raw_spin_unlock_irqrestore(&g->pps_lock, flags);
-
-    return rc;
+    return 0;
 }
 EXPORT_SYMBOL(fusion_gpt_set_phc_anchor);
 
@@ -416,6 +460,51 @@ int fusion_gpt_get_phc_status(bool *epoch_valid, bool *aligned, u32 *pps_seq)
 	return 0;
 }
 EXPORT_SYMBOL(fusion_gpt_get_phc_status);
+
+int fusion_gpt_get_timing_status(struct fusion_gpt_timing_status *status)
+{
+	struct fusion_gpt *g;
+	unsigned long flags;
+
+	if (!status)
+		return -EINVAL;
+
+	mutex_lock(&gpt_singleton_lock);
+	g = gpt_singleton;
+	mutex_unlock(&gpt_singleton_lock);
+	if (!g)
+		return -ENODEV;
+
+	raw_spin_lock_irqsave(&g->pps_lock, flags);
+	status->pps_seen = g->pps_valid;
+	status->discipline_ready = READ_ONCE(g->discipline_ready);
+	status->epoch_valid = g->phc_epoch_valid;
+	status->aligned = READ_ONCE(g->phc_aligned);
+	status->pps_seq = g->pps_seq;
+	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
+	return 0;
+}
+EXPORT_SYMBOL(fusion_gpt_get_timing_status);
+
+int fusion_gpt_reset_timing_state(void)
+{
+	struct fusion_gpt *g;
+	unsigned long flags;
+
+	mutex_lock(&gpt_singleton_lock);
+	g = gpt_singleton;
+	mutex_unlock(&gpt_singleton_lock);
+	if (!g)
+		return -ENODEV;
+
+	raw_spin_lock_irqsave(&g->pps_lock, flags);
+	gpt_reset_timing_state_locked(g);
+	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
+
+	pr_info("fusion_gpt: timing state reset\n");
+	return 0;
+}
+EXPORT_SYMBOL(fusion_gpt_reset_timing_state);
 
 u64 fusion_gpt_read_phc_ns(void)
 {
@@ -454,6 +543,21 @@ u64 fusion_gpt_read_phc_ns(void)
 }
 EXPORT_SYMBOL(fusion_gpt_read_phc_ns);
 
+bool fusion_gpt_clock_ready(void)
+{
+	struct fusion_gpt *g;
+	bool ready = false;
+
+	rcu_read_lock();
+	g = rcu_dereference(gpt_singleton);
+	if (g)
+		ready = READ_ONCE(g->discipline_ready);
+	rcu_read_unlock();
+
+	return ready;
+}
+EXPORT_SYMBOL(fusion_gpt_clock_ready);
+
 static void gpt_program_next_compare(struct fusion_gpt *g)
 {
 	u32 inc = PERIOD_TICKS_BASE;
@@ -472,6 +576,36 @@ static inline bool cal_active(const struct fusion_gpt *g)
 	return g->cal_state != CAL_IDLE &&
 	       g->cal_state != CAL_DONE &&
 	       g->cal_state != CAL_FAIL;
+}
+
+static void gpt_update_discipline_ready(struct fusion_gpt *g, long freq_error)
+{
+	long abs_err = (freq_error < 0) ? -freq_error : freq_error;
+	u32 thresh = READ_ONCE(lock_err_thresh);
+	u32 needed = max_t(u32, 1, READ_ONCE(lock_consecutive));
+
+	if (READ_ONCE(g->discipline_ready))
+		return;
+
+	if (cal_active(g)) {
+		g->lock_streak = 0;
+		return;
+	}
+
+	if (abs_err > thresh) {
+		g->lock_streak = 0;
+		return;
+	}
+
+	if (g->lock_streak < needed)
+		g->lock_streak++;
+
+	if (g->lock_streak >= needed) {
+		WRITE_ONCE(g->discipline_ready, true);
+		pr_info("fusion_gpt: lock achieved\n");
+		pr_info("fusion_gpt: discipline ready (|err| <= %u ticks for %u PPS)\n",
+			thresh, needed);
+	}
 }
 
 static void cal_prepare_points(struct fusion_gpt *g)
@@ -885,6 +1019,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
                else phase_error = rem;
           }
           g->latest_freq_error = freq_error;
+          gpt_update_discipline_ready(g, freq_error);
 
           u32 rms_jitter = 0;
           if (g->err_count > 0) {
@@ -1205,30 +1340,7 @@ static int gpt_start(struct fusion_gpt *g)
 	seqlock_init(&g->ticks_sl);
 
 	raw_spin_lock_init(&g->pps_lock);
-	g->pps_seq = 0;
-	g->pps_icr1_last32 = 0;
-	g->pps_icr1_last64 = 0;
-	g->pps_valid = false;
-	g->phc_epoch_ns = 0;
-	g->pps_epoch_cnt64 = 0;
-	g->phc_epoch_valid = false;
-	g->phc_aligned = false;
-	g->pending_future_anchor = false;
-	g->pending_future_phc_ns = 0;
-	g->cal_state = cal_enable ? CAL_IDLE : CAL_DONE;
-	g->cal_probe_idx = 0;
-	g->cal_settle_left = 0;
-	g->cal_measure_left = 0;
-	g->cal_err_accum = 0;
-	g->cal_err_samples = 0;
-	g->cal_center_gain = g->si_gain_current;
-	g->cal_center_dac = clamp(g->dac_target, 0, 255);
-	memset(g->cal_probe_gain, 0, sizeof(g->cal_probe_gain));
-	memset(g->cal_probe_dac, 0, sizeof(g->cal_probe_dac));
-	memset(g->cal_probe_mean, 0, sizeof(g->cal_probe_mean));
-	g->cal_k1_q16 = 0;
-	g->cal_k2_q16 = 0;
-	g->cal_k3_q16 = 0;
+	gpt_reset_timing_state_locked(g);
 
 	g->next_ocr1 = g->last32 + PERIOD_TICKS_BASE;
 	wrl(g, g->next_ocr1, GPT_OCR1);

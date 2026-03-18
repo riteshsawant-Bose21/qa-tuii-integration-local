@@ -914,14 +914,26 @@ static int handle_set_phc_anchor(struct fusion_cn_manager *mgr,
                                  struct fusion_cn_ctrl_msg *reply)
 {
     u64 phc_ns_at_pps;
+    struct fusion_gpt_timing_status timing_status;
+    int status_rc;
 
     if (msg->data_size != sizeof(phc_ns_at_pps))
         return reply->err = -EINVAL;
 
     phc_ns_at_pps = *(const u64 *)msg->data;
     reply->err = fusion_gpt_set_phc_anchor(phc_ns_at_pps);
-    if (!reply->err)
+    if (!reply->err) {
+        if (phc_ns_at_pps) {
+            status_rc = fusion_gpt_get_timing_status(&timing_status);
+            if (!status_rc) {
+                pr_info("fusion_cn: timing status at set_phc_anchor pps_seen=%d discipline_ready=%d epoch_valid=%d aligned=%d pps_seq=%u\n",
+                        timing_status.pps_seen, timing_status.discipline_ready,
+                        timing_status.epoch_valid, timing_status.aligned,
+                        timing_status.pps_seq);
+            }
+        }
         pr_info("fusion_cn: set_phc_anchor %llu\n", phc_ns_at_pps);
+    }
     return 0;
 }
 
@@ -947,6 +959,51 @@ static int handle_get_phc_status(struct fusion_cn_manager *mgr,
 
     reply->data_size = sizeof(r);
     reply->err = 0;
+    return 0;
+}
+
+struct fc_get_timing_status_reply
+{
+    bool pps_seen;
+    bool discipline_ready;
+    bool epoch_valid;
+    bool aligned;
+    u32  pps_seq;
+} __packed;
+
+static int handle_get_timing_status(struct fusion_cn_manager *mgr,
+                                    struct fusion_cn_ctrl_msg *msg,
+                                    struct fusion_cn_ctrl_msg *reply)
+{
+    struct fusion_gpt_timing_status status;
+    struct fc_get_timing_status_reply r;
+    int rc = fusion_gpt_get_timing_status(&status);
+
+    if (rc)
+        return reply->err = rc;
+
+    r.pps_seen = status.pps_seen;
+    r.discipline_ready = status.discipline_ready;
+    r.epoch_valid = status.epoch_valid;
+    r.aligned = status.aligned;
+    r.pps_seq = status.pps_seq;
+
+    reply->data = kmemdup(&r, sizeof(r), GFP_KERNEL);
+    if (!reply->data)
+        return reply->err = -ENOMEM;
+
+    reply->data_size = sizeof(r);
+    reply->err = 0;
+    return 0;
+}
+
+static int handle_reset_timing_state(struct fusion_cn_manager *mgr,
+                                     struct fusion_cn_ctrl_msg *msg,
+                                     struct fusion_cn_ctrl_msg *reply)
+{
+    reply->err = fusion_gpt_reset_timing_state();
+    if (!reply->err)
+        pr_info("fusion_cn: timing state reset\n");
     return 0;
 }
 
@@ -1002,6 +1059,8 @@ static const struct message_handler_entry message_handlers[] = {
     { FUSION_CN_CTRL_CMD_GET_METRICS,   handle_get_metrics },
     { FUSION_CN_CTRL_CMD_SET_PHC_ANCHOR, handle_set_phc_anchor },
     { FUSION_CN_CTRL_CMD_GET_PHC_STATUS, handle_get_phc_status },
+    { FUSION_CN_CTRL_CMD_GET_TIMING_STATUS, handle_get_timing_status },
+    { FUSION_CN_CTRL_CMD_RESET_TIMING_STATE, handle_reset_timing_state },
     { FUSION_CN_CTRL_CMD_SET_DEBUG, handle_set_debug },
     { FUSION_CN_CTRL_CMD_SET_ETH_IFACE, handle_set_eth_iface },
     { 0, NULL }
