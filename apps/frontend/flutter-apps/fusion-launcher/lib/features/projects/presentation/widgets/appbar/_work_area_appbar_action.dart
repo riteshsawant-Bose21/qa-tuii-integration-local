@@ -11,23 +11,55 @@ class _WorkAreaAppbarAction extends StatelessWidget {
         if (!isInDesignMode && serviceLocator<ProjectViewModel>().virtualIP != null)
           Container(
             width: 160,
-            decoration: const BoxDecoration(
-              border: Border.symmetric(
-                // vertical: BorderSide(width: 1, color: context.colorScheme.elevation2),
+            decoration: BoxDecoration(
+              color: context.colorScheme.elevation1,
+              border: Border(
+                top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
               ),
             ),
 
             alignment: Alignment.center,
             child: SizedBox(
               height: 35,
-              child: FusionNeumorphicButton(
-                semanticId: "push_configuration",
-                onTap: () {},
-                height: 20,
-                borderRadius: 6,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                text: "Push Configuration",
-                textStyle: context.textTheme.labelMedium,
+              child: BlocListener<ConfigSyncViewModel, ConfigSyncState>(
+                listener: (BuildContext context, ConfigSyncState state) {
+                  if (state is ProcessingDataWithDro || state is SyncingConfigWithDsp) {
+                    FusionUiUtils.showLoader(context);
+                  } else {
+                    FusionUiUtils.hideLoader(context);
+
+                    if (state is DroProcessingFailed) {
+                      FusionToast.error(
+                        context,
+                        message: state.message,
+                      );
+                    } else if (state is ConfigSyncFailure) {
+                      FusionToast.error(
+                        context,
+                        message: state.message,
+                      );
+                    } else if (state is ConfigSyncedWithDsp) {
+                      FusionToast.success(
+                        context,
+                        message: "Configuration synced successfully",
+                      );
+                    }
+                  }
+                },
+                child: FusionNeumorphicButton(
+                  semanticId: "push_configuration",
+                  onTap: () {
+                    serviceLocator<ConfigSyncViewModel>().refineAndSyncDataWithDsp(
+                      droInput: serviceLocator<ProjectViewModel>().getDroInputData(),
+                    );
+                  },
+                  height: 20,
+                  borderRadius: 6,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  text: "Push Configuration",
+                  textStyle: context.textTheme.labelMedium,
+                ),
               ),
             ),
           ),
@@ -39,8 +71,10 @@ class _WorkAreaAppbarAction extends StatelessWidget {
               width: 56,
               height: 48,
               decoration: BoxDecoration(
-                border: Border.symmetric(
-                  vertical: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                color: context.colorScheme.elevation1,
+                border: Border(
+                  top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                  bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
                 ),
               ),
               alignment: Alignment.center,
