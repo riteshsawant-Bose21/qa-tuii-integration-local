@@ -40,12 +40,23 @@ struct Metadata {
     static constexpr uint32_t MAGIC = 0x424d5441; // "BMTA"
     static constexpr uint16_t PROTOCOL_VERSION = 1;
     static constexpr uint16_t SCHEMA_VERSION = 1;
-    static constexpr std::size_t META_DATA_MAX_SIZE =
-                                    sizeof(uint32_t) +
-                                    2*sizeof(uint16_t) +
-                                    NAME_MAX_LENGTH*sizeof(char) +
-                                    3*sizeof(std::size_t) +
+    static constexpr std::size_t HEADER_SIZE =
+                                    sizeof(MAGIC) +
+                                    sizeof(PROTOCOL_VERSION) +
+                                    sizeof(SCHEMA_VERSION);
+    static constexpr std::size_t NAME_FIELD_SIZE =
+                                    NAME_MAX_LENGTH * sizeof(char);
+    static constexpr std::size_t SCALAR_FIELD_SIZE =
+                                    sizeof(std::size_t) +  // size
+                                    sizeof(std::size_t) +  // totalBytesWritten
+                                    sizeof(std::size_t);   // numberOfWriteBlocks
+    static constexpr std::size_t WRITE_BLOCK_STORAGE_SIZE =
                                     sizeof(WriteBlock) * MAX_WRITE_BLOCKS;
+    static constexpr std::size_t META_DATA_MAX_SIZE =
+                                    HEADER_SIZE +
+                                    NAME_FIELD_SIZE +
+                                    SCALAR_FIELD_SIZE +
+                                    WRITE_BLOCK_STORAGE_SIZE;
 
     uint32_t magic;                         // Magic value for identifying metadata layout
     uint16_t protocolVersion;              // Shared memory metadata protocol version

@@ -5,11 +5,14 @@ namespace {
 
 std::size_t expectedMetadataSize()
 {
-    return sizeof(uint32_t) +
-           2 * sizeof(uint16_t) +
-           bosepro::Metadata::NAME_MAX_LENGTH * sizeof(char) +
-           3 * sizeof(std::size_t) +
-           sizeof(bosepro::WriteBlock) * bosepro::Metadata::MAX_WRITE_BLOCKS;
+    return bosepro::Metadata::META_DATA_MAX_SIZE;
+}
+
+std::size_t totalBytesWrittenOffset()
+{
+    return bosepro::Metadata::HEADER_SIZE +
+           bosepro::Metadata::NAME_FIELD_SIZE +
+           sizeof(std::size_t); // size
 }
 
 void validateMetadataHeader(const bosepro::Metadata& metadata)
@@ -140,9 +143,6 @@ void bosepro::Metadata::serialize(char* buffer, std::size_t bufferSize) const {
  * Updates the totalBytesWritten field in the serialized metadata buffer.
  */
 void bosepro::Metadata::updateTotalBytesWrittenInBuffer(char* buffer, std::size_t bufferSize) const {
-    // Calculate the expected offset for totalBytesWritten
-    std::size_t offset = sizeof(uint32_t) + 2*sizeof(uint16_t) + sizeof(name) + sizeof(size);
-
     // Calculate the expected minimum buffer size
     std::size_t expectedSize = expectedMetadataSize();
 
@@ -152,7 +152,7 @@ void bosepro::Metadata::updateTotalBytesWrittenInBuffer(char* buffer, std::size_
     }
 
     // Update the totalBytesWritten field in the buffer
-    char* totalBytesWrittenPtr = buffer + offset;
+    char* totalBytesWrittenPtr = buffer + totalBytesWrittenOffset();
     std::memcpy(totalBytesWrittenPtr, &totalBytesWritten, sizeof(totalBytesWritten));
 }
 
@@ -160,9 +160,6 @@ void bosepro::Metadata::updateTotalBytesWrittenInBuffer(char* buffer, std::size_
  * Deserializes only the totalBytesWritten field from a serialized metadata buffer.
  */
 void bosepro::Metadata::deserializeTotalBytesWritten(const char* buffer, std::size_t bufferSize)  {
-    // Calculate the expected offset for totalBytesWritten
-    std::size_t offset = sizeof(uint32_t) + 2*sizeof(uint16_t) + sizeof(name) + sizeof(size);
-
     // Calculate the expected minimum buffer size
     std::size_t expectedSize = expectedMetadataSize();
 
@@ -172,6 +169,6 @@ void bosepro::Metadata::deserializeTotalBytesWritten(const char* buffer, std::si
     }
 
     // Read the totalBytesWritten field from the buffer
-    const char* totalBytesWrittenPtr = buffer + offset;
+    const char* totalBytesWrittenPtr = buffer + totalBytesWrittenOffset();
     std::memcpy(&totalBytesWritten, totalBytesWrittenPtr, sizeof(totalBytesWritten));
 }
