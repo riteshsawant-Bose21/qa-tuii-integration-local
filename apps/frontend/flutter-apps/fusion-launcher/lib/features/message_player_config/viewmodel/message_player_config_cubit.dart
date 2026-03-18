@@ -18,6 +18,9 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
   StreamSubscription<Duration>? _positionSubscription;
   StreamSubscription<Duration>? _durationSubscription;
 
+  /// Tracks whether playback has completed so we reload on next play instead of resume
+  bool _isCompleted = false;
+
   MessagePlayerConfigCubit() : super(const MessagePlayerInitial()) {
     _initializeAudioPlayer();
   }
@@ -42,9 +45,13 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
       if (loaded == null) return;
 
       if (playerState == PlayerState.playing) {
+        _isCompleted = false;
         emit(loaded.copyWith(isPlaying: true));
-      } else if (playerState == PlayerState.paused || playerState == PlayerState.stopped || playerState == PlayerState.completed) {
+      } else if (playerState == PlayerState.paused || playerState == PlayerState.stopped) {
         emit(loaded.copyWith(isPlaying: false));
+      } else if (playerState == PlayerState.completed) {
+        _isCompleted = true;
+        emit(loaded.copyWith(isPlaying: false, currentPosition: Duration.zero));
       }
     });
 
@@ -407,9 +414,15 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
     if (loaded.isPlaying) {
       await _audioPlayer.pause();
     } else {
-      // Load audio if not already loaded
-      if (loaded.totalDuration == null) {
+      // Reload if source not yet set, or if previous playback completed
+      // (calling resume() on a completed player causes a TimeoutException)
+      if (loaded.totalDuration == null || _isCompleted) {
         await _loadAudioFile(mediaFile.id);
+        _isCompleted = false;
+        // Restore any seek position the user dragged to before pressing play
+        if (loaded.currentPosition > Duration.zero) {
+          await _audioPlayer.seek(loaded.currentPosition);
+        }
       }
       await _audioPlayer.resume();
     }
@@ -418,6 +431,11 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
   /// Seek audio to position
   Future<void> seekTo(Duration position) async {
     await _audioPlayer.seek(position);
+    // Update state immediately — onPositionChanged stream may not fire when paused/stopped
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded != null) {
+      emit(loaded.copyWith(currentPosition: position));
+    }
   }
 
   Future<void> _stopPlayback() async {
