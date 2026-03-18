@@ -8,7 +8,6 @@
 #include <linux/ktime.h>
 #include <linux/kthread.h>
 #include <linux/sched.h>
-#include <linux/sched/types.h>
 #include <linux/cpumask.h>
 #include <linux/smp.h>
 #include <linux/math64.h>
@@ -277,34 +276,64 @@ static void do_metrics(struct fusion_cn_manager *mgr)
 {
     struct stream_node *node, *tmp;
     unsigned long flags;
+    struct {
+        struct fusion_cn_rtp_stream *rtp;
+        struct fusion_cn_substream  *alsa;
+        bool is_source;
+    } todo[FUSION_CN_MAX_STREAMS];
+    int todo_cnt = 0;
 
     if (!atomic_read(&mgr->state.is_started))
         return;
 
     read_lock_irqsave(&mgr->rtp.lock, flags);
 
-    /* One helper macro to avoid duplication */
-#define AGG_ON_PENDING(list_head)                                              \
+    /* Collect work under lock, then aggregate outside */
+#define COLLECT_PENDING(list_head)                                             \
     list_for_each_entry_safe(node, tmp, &(list_head), node) {                  \
         struct fusion_cn_rtp_stream *r = node->rtp_stream;                     \
+        struct fusion_cn_substream  *a = node->alsa_stream;                    \
         if (!r || !r->metrics) continue;                                       \
         if (!atomic_xchg(&node->metrics_pending, 0)) continue;                 \
+        if (todo_cnt >= FUSION_CN_MAX_STREAMS) {                               \
+            atomic_set(&node->metrics_pending, 1);                             \
+            continue;                                                         \
+        }                                                                      \
+        if (!kref_get_unless_zero(&r->ref)) {                                  \
+            atomic_set(&node->metrics_pending, 1);                             \
+            continue;                                                         \
+        }                                                                      \
         if (!r->info.is_source) {                                              \
-            u32 jb = fusion_cn_alsa_get_buffer_depth(node->alsa_stream);       \
-            fusion_cn_metrics_aggregate_rx(r->metrics, jb);                    \
-        } else {                                                                \
-            fusion_cn_metrics_aggregate_tx(r->metrics);                        \
-        }                                                                       \
+            if (!a || !kref_get_unless_zero(&a->ref)) {                        \
+                kref_put(&r->ref, fusion_cn_rtp_stream_release);               \
+                atomic_set(&node->metrics_pending, 1);                         \
+                continue;                                                     \
+            }                                                                  \
+        }                                                                      \
+        todo[todo_cnt++] = (typeof(todo[0])) {                                 \
+            .rtp = r, .alsa = a, .is_source = r->info.is_source                \
+        };                                                                     \
     }
 
-    AGG_ON_PENDING(mgr->active_streams.fn_sink);
-    AGG_ON_PENDING(mgr->active_streams.fn_source);
-    AGG_ON_PENDING(mgr->active_streams.aes67_sink);
-    AGG_ON_PENDING(mgr->active_streams.aes67_source);
+    COLLECT_PENDING(mgr->active_streams.fn_sink);
+    COLLECT_PENDING(mgr->active_streams.fn_source);
+    COLLECT_PENDING(mgr->active_streams.aes67_sink);
+    COLLECT_PENDING(mgr->active_streams.aes67_source);
 
-#undef AGG_ON_PENDING
+#undef COLLECT_PENDING
 
     read_unlock_irqrestore(&mgr->rtp.lock, flags);
+
+    for (int i = 0; i < todo_cnt; i++) {
+        if (!todo[i].is_source) {
+            u32 jb = fusion_cn_alsa_get_buffer_depth(todo[i].alsa);
+            fusion_cn_metrics_aggregate_rx(todo[i].rtp->metrics, jb);
+            kref_put(&todo[i].alsa->ref, fusion_cn_alsa_substream_release);
+        } else {
+            fusion_cn_metrics_aggregate_tx(todo[i].rtp->metrics);
+        }
+        kref_put(&todo[i].rtp->ref, fusion_cn_rtp_stream_release);
+    }
 }
 
 /* Manager Functions */
@@ -515,6 +544,7 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
         }
         process_thread = worker->task;
         set_cpus_allowed_ptr(process_thread, cpumask_of(3));
+        /* RT prio set from userspace (irq-affinity.sh) */
         kthread_init_work(&process_work, audio_frame_process_work);
         atomic_set(&process_pending, 0);
         /* Publish the worker only after fully initialized */
@@ -603,9 +633,7 @@ static int remove_stream(struct fusion_cn_manager *mgr,
         return ret;
     }
 
-    /* Free metrics and node now that readers can’t see it */
-    fusion_cn_metrics_destroy(rtp_stream->metrics);
-    rtp_stream->metrics = NULL;
+    /* Metrics are released with the RTP stream refcount */
 
     ret = fusion_cn_alsa_remove_substream(alsa_stream);
     

@@ -121,6 +121,16 @@ See **Local.md** for detailed local debugging instructions.
 
 # Running a Distributed Cluster (Multipass)
 
+Make sure the build folder is empty, then run:
+
+Build: 
+
+```bash
+./build-fusion-server
+```
+
+This will create the `fusion-server_linux_arm64` binary inside the build folder.
+
 Launch:
 
 ```bash
@@ -150,6 +160,14 @@ VIP:
 ```
 http://192.168.2.100:8080
 ```
+
+# Verbose mode
+The service file is located at 
+/lib/systemd/system/fusion-server.service
+
+add verbose at the end of the line like
+
+ExecStart=/usr/local/bin/fusion-server -verbose
 
 # REST API Overview
 
@@ -249,3 +267,22 @@ Run a subset:
 ./scripts/multipass/run-tests --snapshot
 ```
 
+# Troubleshooting macOS [ Tahoe ] and Multipass Issues
+
+## SSH Connection Failed: "No route to host"
+
+If you encounter the following error when setting up multipass instances:
+
+```
+Copying fusion-server binary...
+ssh connection failed: 'Failed to connect: No route to host'
+✗ Failed to copy fusion-server binary
+✗ Failed to setup instance fusion1
+```
+
+**Fix**: Enable "Local Network" permissions under Privacy & Security settings for both Multipass and VS Code in macOS System Preferences.
+Run UDP chaos mesh test:
+
+```bash
+./scripts/multipass/run-tests --udp-chaos
+```

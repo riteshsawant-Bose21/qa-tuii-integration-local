@@ -133,7 +133,7 @@ class _SchedulerSection extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
               ),
-              FusionButton(label: "Test", onTap: () {}),
+              FusionButton(label: "Test",accessLabel: 'scheduler_test_button', onTap: () {}),
               SemanticHelper.button(
                 testId: SemanticHelper.createTestId(SemanticTypes.button, "scheduler_run_button_$index"),
                 child: InkWell(
@@ -155,7 +155,7 @@ class _SchedulerSection extends StatelessWidget {
                     }
 
                     /// Navigate to Configuration tab (index 3)
-                    projectTabBroadcastController.add(3);
+                    // projectTabBroadcastController.add(3);
 
                     /// Switch to Events sub-tab within Configuration
                     serviceLocator<ProjectViewModel>().setConfigurationMenuMode(

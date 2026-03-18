@@ -6,7 +6,6 @@ import 'package:fusion_launcher/features/home/presentation/widgets/saved_project
 import 'package:fusion_launcher/features/home/presentation/widgets/settings_tab_content.dart';
 import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../../../core/service_locator.dart';
 import 'profile_account_secutity_section.dart';
@@ -36,7 +35,7 @@ class ProfilePreferencesTab extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            FusionDarkDropdown<MeasurementUnit>(
+            FusionDropdown2<MeasurementUnit>(
               selectedValue: MeasurementUnit.fromString(profile.measurementUnit),
               onChanged: (MeasurementUnit value) {
                 userProfileManager.value = userProfileManager.value.copyWith(
@@ -49,7 +48,7 @@ class ProfilePreferencesTab extends StatelessWidget {
               labelBuilder: (MeasurementUnit value) => "${value.displayName} (${value.symbol})",
             ),
             const SizedBox(height: 10),
-            FusionDarkDropdown<CurrencyType>(
+            FusionDropdown2<CurrencyType>(
               selectedValue: CurrencyType.fromString(profile.currency),
               onChanged: (CurrencyType value) {
                 userProfileManager.value = userProfileManager.value.copyWith(
@@ -62,7 +61,7 @@ class ProfilePreferencesTab extends StatelessWidget {
               labelBuilder: (CurrencyType value) => value.name.toUpperCase(),
             ),
             const SizedBox(height: 10),
-            FusionDarkDropdown<FusionLanguages>(
+            FusionDropdown2<FusionLanguages>(
               selectedValue: FusionLanguages.fromString(profile.language),
               onChanged: (FusionLanguages value) {
                 userProfileManager.value = userProfileManager.value.copyWith(
@@ -128,7 +127,7 @@ class ProfilePreferencesTab extends StatelessWidget {
 
             const SizedBox(height: 10),
             BorderedTextfield(
-              initialValue: profile.location,
+              controllerValue: profile.location,
               label: "Location",
               hintText: "Default Location",
               isEnabled: false,
@@ -138,7 +137,7 @@ class ProfilePreferencesTab extends StatelessWidget {
               spacing: 10,
               children: <Widget>[
                 Expanded(
-                  child: FusionDarkDropdown<CurrencyType>(
+                  child: FusionDropdown2<CurrencyType>(
                     selectedValue: CurrencyType.fromString(profile.currency),
                     onChanged: (CurrencyType value) {
                       userProfileManager.value = userProfileManager.value.copyWith(

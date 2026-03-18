@@ -33,14 +33,24 @@ class EdgeMaxSpeakerLayoutWidget extends StatefulWidget {
   const EdgeMaxSpeakerLayoutWidget({super.key});
 
   @override
-  State<EdgeMaxSpeakerLayoutWidget> createState() => _EdgeMaxSpeakerLayoutWidgetState();
+  State<EdgeMaxSpeakerLayoutWidget> createState() =>
+      _EdgeMaxSpeakerLayoutWidgetState();
 }
 
-class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget> {
-  final TextEditingController _lengthController = TextEditingController(text: '7.0');
-  final TextEditingController _widthController = TextEditingController(text: '4.0');
-  final TextEditingController _ceilingHeightController = TextEditingController(text: '3.0');
-  final TextEditingController _listenerHeightController = TextEditingController(text: '1.2');
+class _EdgeMaxSpeakerLayoutWidgetState
+    extends State<EdgeMaxSpeakerLayoutWidget> {
+  final TextEditingController _lengthController = TextEditingController(
+    text: '7.0',
+  );
+  final TextEditingController _widthController = TextEditingController(
+    text: '4.0',
+  );
+  final TextEditingController _ceilingHeightController = TextEditingController(
+    text: '3.0',
+  );
+  final TextEditingController _listenerHeightController = TextEditingController(
+    text: '1.2',
+  );
 
   EdgeMaxPlacementResult? _result;
   RectangularRoom? _currentRoom;
@@ -72,7 +82,9 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
       final double length = double.parse(_lengthController.text);
       final double width = double.parse(_widthController.text);
       final double ceilingHeight = double.parse(_ceilingHeightController.text);
-      final double listenerHeight = double.parse(_listenerHeightController.text);
+      final double listenerHeight = double.parse(
+        _listenerHeightController.text,
+      );
 
       _currentRoom = RectangularRoom(
         length: length,
@@ -94,13 +106,16 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
       await _animateSteps();
 
       // Calculate final result
-      final EdgeMaxPlacementResult result = EdgeMaxSpeakerPlacementService.calculateCompleteResult(_currentRoom!);
+      final EdgeMaxPlacementResult result =
+          EdgeMaxSpeakerPlacementService.calculateCompleteResult(_currentRoom!);
       setState(() {
         _result = result;
       });
     } catch (e) {
       setState(() {
-        _validationErrors = <String>['Invalid input: Please enter valid numbers'];
+        _validationErrors = <String>[
+          'Invalid input: Please enter valid numbers',
+        ];
         _isLoading = false;
       });
     }
@@ -110,7 +125,8 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
     _calculationSteps.clear();
 
     // Get calculation details for reference
-    final Map<String, dynamic> details = EdgeMaxAutoPlacement.getCalculationDetails(room);
+    final Map<String, dynamic> details =
+        EdgeMaxAutoPlacement.getCalculationDetails(room);
     final double utd = details['utd'] as double;
     final double lsd = details['lsd'] as double;
     final String speakerType = details['speaker_type'] as String;
@@ -132,7 +148,10 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
           'Height Difference': '${room.heightDifference.toStringAsFixed(2)}m',
           'Is Valid': room.isValidRectangle ? 'Yes' : 'No',
         },
-        result: room.isValidRectangle ? '✓ Room is valid rectangular shape' : '✗ Invalid room shape',
+        result:
+            room.isValidRectangle
+                ? '✓ Room is valid rectangular shape'
+                : '✗ Invalid room shape',
       ),
     );
 
@@ -151,7 +170,8 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
           'Vertical Angle': speakerType == 'EM-LP' ? '80°' : '75°',
           'Horizontal Angle': speakerType == 'EM-LP' ? '120°' : '90°',
         },
-        result: 'Selected $speakerType speakers (${room.ceilingHeight <= 3.7 ? 'Low ceiling' : 'Standard ceiling'})',
+        result:
+            'Selected $speakerType speakers (${room.ceilingHeight <= 3.7 ? 'Low ceiling' : 'Standard ceiling'})',
       ),
     );
 
@@ -167,7 +187,8 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
         },
         outputs: <String, dynamic>{
           'UTD': '${utd.toStringAsFixed(2)}m',
-          'Formula': 'UTD = ${room.heightDifference.toStringAsFixed(2)} × tan(${speakerType == 'EM-LP' ? '80' : '75'}°)',
+          'Formula':
+              'UTD = ${room.heightDifference.toStringAsFixed(2)} × tan(${speakerType == 'EM-LP' ? '80' : '75'}°)',
         },
         result: 'UTD = ${utd.toStringAsFixed(2)}m',
       ),
@@ -179,16 +200,24 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
       CalculationStep(
         stepNumber: 4,
         title: 'Diagonal Corner Coverage Decision',
-        description: 'Compare UTD with room diagonal to determine corner placement',
+        description:
+            'Compare UTD with room diagonal to determine corner placement',
         inputs: <String, dynamic>{
           'UTD': '${utd.toStringAsFixed(2)}m',
           'Room Diagonal': '${room.diagonal.toStringAsFixed(2)}m',
         },
         outputs: <String, dynamic>{
-          'UTD vs Diagonal': utdGreaterThanDiagonal ? 'UTD ≥ Diagonal' : 'UTD < Diagonal',
-          'Corner Strategy': utdGreaterThanDiagonal ? 'Place Corner #1 only' : 'Place Corner #1 & #3',
+          'UTD vs Diagonal':
+              utdGreaterThanDiagonal ? 'UTD ≥ Diagonal' : 'UTD < Diagonal',
+          'Corner Strategy':
+              utdGreaterThanDiagonal
+                  ? 'Place Corner #1 only'
+                  : 'Place Corner #1 & #3',
         },
-        result: utdGreaterThanDiagonal ? 'Place speaker in corner 1 only' : 'Place speakers in opposite corners (1 & 3)',
+        result:
+            utdGreaterThanDiagonal
+                ? 'Place speaker in corner 1 only'
+                : 'Place speakers in opposite corners (1 & 3)',
       ),
     );
 
@@ -208,9 +237,11 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
         outputs: <String, dynamic>{
           'LSD': '${lsd.toStringAsFixed(2)}m',
           'Double LSD': '${(2 * lsd).toStringAsFixed(2)}m',
-          'Formula': 'LSD = ${room.heightDifference.toStringAsFixed(2)} × 2 × tan($halfAngle)',
+          'Formula':
+              'LSD = ${room.heightDifference.toStringAsFixed(2)} × 2 × tan($halfAngle)',
         },
-        result: 'LSD = ${lsd.toStringAsFixed(2)}m (using $speakerType $horizontalAngle coverage)',
+        result:
+            'LSD = ${lsd.toStringAsFixed(2)}m (using $speakerType $horizontalAngle coverage)',
       ),
     );
 
@@ -232,7 +263,8 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
           'd2 > LSD': needsCorner2 ? 'Yes → Add Corner #2' : 'No',
           'UTD < d1': needsCorner4 ? 'Yes → Add Corner #4' : 'No',
         },
-        result: 'Additional corners: ${needsCorner2 ? 'Corner #2 ' : ''}${needsCorner4 ? 'Corner #4' : ''}${!needsCorner2 && !needsCorner4 ? 'None' : ''}',
+        result:
+            'Additional corners: ${needsCorner2 ? 'Corner #2 ' : ''}${needsCorner4 ? 'Corner #4' : ''}${!needsCorner2 && !needsCorner4 ? 'None' : ''}',
       ),
     );
 
@@ -243,15 +275,22 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
       CalculationStep(
         stepNumber: 7,
         title: 'Wall Speaker Analysis',
-        description: 'Determine if additional wall speakers are needed to fill coverage gaps',
+        description:
+            'Determine if additional wall speakers are needed to fill coverage gaps',
         inputs: <String, dynamic>{
           'Room Length (d2)': '${room.length}m',
           'Room Width (d3)': '${room.width}m',
           'Double LSD (2×LSD)': '${(2 * lsd).toStringAsFixed(2)}m',
         },
         outputs: <String, dynamic>{
-          'd2 > 2×LSD': needsLengthWall ? 'Yes → Add $speakerType between corners 1-2 (and 3-4 if speakers exist)' : 'No',
-          'd3 > 2×LSD': needsWidthWall ? 'Yes → Add $speakerType between corners 1-4 and 2-3' : 'No',
+          'd2 > 2×LSD':
+              needsLengthWall
+                  ? 'Yes → Add $speakerType between corners 1-2 (and 3-4 if speakers exist)'
+                  : 'No',
+          'd3 > 2×LSD':
+              needsWidthWall
+                  ? 'Yes → Add $speakerType between corners 1-4 and 2-3'
+                  : 'No',
         },
         result:
             'Wall speakers: ${needsLengthWall ? 'Top/Bottom walls (1-2, 3-4) ' : ''}${needsWidthWall ? 'Left/Right walls (1-4, 2-3)' : ''}${!needsLengthWall && !needsWidthWall ? 'None needed' : ''}',
@@ -259,7 +298,8 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
     );
 
     // Step 8: Final Placement Summary
-    final EdgeMaxPlacementResult finalResult = EdgeMaxSpeakerPlacementService.calculateCompleteResult(room);
+    final EdgeMaxPlacementResult finalResult =
+        EdgeMaxSpeakerPlacementService.calculateCompleteResult(room);
     _calculationSteps.add(
       CalculationStep(
         stepNumber: 8,
@@ -275,11 +315,14 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
             'EM90 (Corner)': '${finalResult.summary.getCountByType('EM90')}',
             'EM180 (Wall)': '${finalResult.summary.getCountByType('EM180')}',
           } else ...<String, String>{
-            'EM-LP90 (Corner)': '${finalResult.summary.getCountByType('EM-LP90')}',
-            'EM-LP180 (Wall)': '${finalResult.summary.getCountByType('EM-LP180')}',
+            'EM-LP90 (Corner)':
+                '${finalResult.summary.getCountByType('EM-LP90')}',
+            'EM-LP180 (Wall)':
+                '${finalResult.summary.getCountByType('EM-LP180')}',
           },
         },
-        result: 'Algorithm complete: ${finalResult.summary.totalSpeakers} speakers placed',
+        result:
+            'Algorithm complete: ${finalResult.summary.totalSpeakers} speakers placed',
       ),
     );
   }
@@ -404,9 +447,18 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                                 .map(
                                   (String error) => Row(
                                     children: <Widget>[
-                                      const Icon(Icons.error, color: Colors.red, size: 16),
+                                      const Icon(
+                                        Icons.error,
+                                        color: Colors.red,
+                                        size: 16,
+                                      ),
                                       const SizedBox(width: 8),
-                                      Text(error, style: const TextStyle(color: Colors.red)),
+                                      Text(
+                                        error,
+                                        style: const TextStyle(
+                                          color: Colors.red,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 )
@@ -425,10 +477,16 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                               ? const SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                               : const Icon(Icons.calculate),
-                      label: Text(_isLoading ? 'Calculating...' : 'Calculate Step-by-Step'),
+                      label: Text(
+                        _isLoading
+                            ? 'Calculating...'
+                            : 'Calculate Step-by-Step',
+                      ),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -452,11 +510,17 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                   children: <Widget>[
                     Row(
                       children: <Widget>[
-                        const Icon(Icons.timeline, color: Colors.blue, size: 28),
+                        const Icon(
+                          Icons.timeline,
+                          color: Colors.blue,
+                          size: 28,
+                        ),
                         const SizedBox(width: 12),
                         Text(
                           'EdgeMax Algorithm Steps',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          style: Theme.of(
+                            context,
+                          ).textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: Colors.blue,
                           ),
@@ -465,13 +529,20 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                     ),
                     const SizedBox(height: 8),
                     LinearProgressIndicator(
-                      value: _currentStep > _totalSteps ? 1.0 : _currentStep / _totalSteps,
+                      value:
+                          _currentStep > _totalSteps
+                              ? 1.0
+                              : _currentStep / _totalSteps,
                       backgroundColor: Colors.grey.shade300,
-                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        Colors.blue,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _currentStep > _totalSteps ? 'All steps completed!' : 'Step $_currentStep of $_totalSteps',
+                      _currentStep > _totalSteps
+                          ? 'All steps completed!'
+                          : 'Step $_currentStep of $_totalSteps',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Colors.grey[600],
                       ),
@@ -486,10 +557,19 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                       itemBuilder: (BuildContext context, int index) {
                         final CalculationStep step = _calculationSteps[index];
                         final bool isActive = index < _currentStep;
-                        final bool isCurrent = index == _currentStep - 1 && _currentStep <= _totalSteps;
-                        final bool isCompleted = index < _currentStep - 1 || _currentStep > _totalSteps;
+                        final bool isCurrent =
+                            index == _currentStep - 1 &&
+                            _currentStep <= _totalSteps;
+                        final bool isCompleted =
+                            index < _currentStep - 1 ||
+                            _currentStep > _totalSteps;
 
-                        return _buildStepWidget(step, isActive, isCurrent, isCompleted);
+                        return _buildStepWidget(
+                          step,
+                          isActive,
+                          isCurrent,
+                          isCompleted,
+                        );
                       },
                     ),
                   ],
@@ -560,11 +640,17 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                   children: <Widget>[
                     Row(
                       children: <Widget>[
-                        const Icon(Icons.view_in_ar, color: Colors.green, size: 28),
+                        const Icon(
+                          Icons.view_in_ar,
+                          color: Colors.green,
+                          size: 28,
+                        ),
                         const SizedBox(width: 12),
                         Text(
                           'Final Room Layout',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          style: Theme.of(
+                            context,
+                          ).textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: Colors.green,
                           ),
@@ -604,14 +690,30 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                       ),
                       child: Column(
                         children: <Widget>[
-                          _buildSummaryRow('Total Speakers', '${_result!.summary.totalSpeakers}', isTotal: true),
+                          _buildSummaryRow(
+                            'Total Speakers',
+                            '${_result!.summary.totalSpeakers}',
+                            isTotal: true,
+                          ),
                           // Show speaker breakdown based on ceiling height
                           if (_currentRoom!.ceilingHeight > 3.7) ...<Widget>[
-                            _buildSummaryRow('EM90 (Corner)', '${_result!.summary.getCountByType('EM90')}'),
-                            _buildSummaryRow('EM180 (Wall)', '${_result!.summary.getCountByType('EM180')}'),
+                            _buildSummaryRow(
+                              'EM90 (Corner)',
+                              '${_result!.summary.getCountByType('EM90')}',
+                            ),
+                            _buildSummaryRow(
+                              'EM180 (Wall)',
+                              '${_result!.summary.getCountByType('EM180')}',
+                            ),
                           ] else ...<Widget>[
-                            _buildSummaryRow('EM-LP90 (Corner)', '${_result!.summary.getCountByType('EM-LP90')}'),
-                            _buildSummaryRow('EM-LP180 (Wall)', '${_result!.summary.getCountByType('EM-LP180')}'),
+                            _buildSummaryRow(
+                              'EM-LP90 (Corner)',
+                              '${_result!.summary.getCountByType('EM-LP90')}',
+                            ),
+                            _buildSummaryRow(
+                              'EM-LP180 (Wall)',
+                              '${_result!.summary.getCountByType('EM-LP180')}',
+                            ),
                           ],
                         ],
                       ),
@@ -645,19 +747,26 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: _result!.placements.length,
                       itemBuilder: (BuildContext context, int index) {
-                        final SpeakerPlacement placement = _result!.placements[index];
+                        final SpeakerPlacement placement =
+                            _result!.placements[index];
                         return Container(
                           margin: const EdgeInsets.only(bottom: 8.0),
                           decoration: BoxDecoration(
-                            color: _getSpeakerColor(placement.speakerType).withOpacity(0.1),
+                            color: _getSpeakerColor(
+                              placement.speakerType,
+                            ).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: _getSpeakerColor(placement.speakerType).withOpacity(0.3),
+                              color: _getSpeakerColor(
+                                placement.speakerType,
+                              ).withOpacity(0.3),
                             ),
                           ),
                           child: ListTile(
                             leading: CircleAvatar(
-                              backgroundColor: _getSpeakerColor(placement.speakerType),
+                              backgroundColor: _getSpeakerColor(
+                                placement.speakerType,
+                              ),
                               child: Text(
                                 '${index + 1}',
                                 style: const TextStyle(
@@ -668,7 +777,9 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                             ),
                             title: Text(
                               placement.speakerType,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -703,7 +814,12 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
     );
   }
 
-  Widget _buildStepWidget(CalculationStep step, bool isActive, bool isCurrent, bool isCompleted) {
+  Widget _buildStepWidget(
+    CalculationStep step,
+    bool isActive,
+    bool isCurrent,
+    bool isCompleted,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16.0),
       child: FusionFlatContainer(
@@ -748,11 +864,15 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
                                 ),
                               )
                               : Icon(
-                                isCompleted || isActive ? Icons.check : Icons.pending,
+                                isCompleted || isActive
+                                    ? Icons.check
+                                    : Icons.pending,
                                 color: Colors.white,
                                 size: 20,
                               ),
@@ -808,7 +928,11 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                       children: <Widget>[
                         Row(
                           children: <Widget>[
-                            Icon(Icons.input, color: Colors.blue.shade700, size: 16),
+                            Icon(
+                              Icons.input,
+                              color: Colors.blue.shade700,
+                              size: 16,
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               'Inputs',
@@ -827,7 +951,10 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: <Widget>[
-                                Text(entry.key, style: const TextStyle(fontSize: 12)),
+                                Text(
+                                  entry.key,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
                                 Text(
                                   entry.value.toString(),
                                   style: const TextStyle(
@@ -859,7 +986,11 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                       children: <Widget>[
                         Row(
                           children: <Widget>[
-                            Icon(Icons.output, color: Colors.orange.shade700, size: 16),
+                            Icon(
+                              Icons.output,
+                              color: Colors.orange.shade700,
+                              size: 16,
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               'Calculations',
@@ -878,7 +1009,10 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: <Widget>[
-                                Text(entry.key, style: const TextStyle(fontSize: 12)),
+                                Text(
+                                  entry.key,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
                                 Text(
                                   entry.value.toString(),
                                   style: const TextStyle(
@@ -906,7 +1040,11 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                   ),
                   child: Row(
                     children: <Widget>[
-                      Icon(Icons.check_circle, color: Colors.green.shade700, size: 16),
+                      Icon(
+                        Icons.check_circle,
+                        color: Colors.green.shade700,
+                        size: 16,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -1011,13 +1149,16 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                   ),
 
                   // Enhanced Speaker Positions
-                  ..._result!.placements.asMap().entries.map((MapEntry<int, SpeakerPlacement> entry) {
+                  ..._result!.placements.asMap().entries.map((
+                    MapEntry<int, SpeakerPlacement> entry,
+                  ) {
                     final int index = entry.key;
                     final SpeakerPlacement placement = entry.value;
 
                     final double visualX = placement.position.x * scaleX;
                     // Flip Y coordinate: room (0,0) = bottom-left, Flutter (0,0) = top-left
-                    final double visualY = visualHeight - (placement.position.y * scaleY);
+                    final double visualY =
+                        visualHeight - (placement.position.y * scaleY);
 
                     return _buildEnhancedSpeaker(
                       index: index,
@@ -1037,7 +1178,12 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
           ),
 
           // Enhanced Room Dimension Labels
-          ..._buildEnhancedDimensionLabels(roomLength, roomWidth, visualWidth, visualHeight),
+          ..._buildEnhancedDimensionLabels(
+            roomLength,
+            roomWidth,
+            visualWidth,
+            visualHeight,
+          ),
 
           // Coordinate System
           _buildCoordinateSystem(visualWidth, visualHeight),
@@ -1096,7 +1242,9 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
                   offset: const Offset(0, 5),
                 ),
                 BoxShadow(
-                  color: _getSpeakerColor(placement.speakerType).withOpacity(0.4),
+                  color: _getSpeakerColor(
+                    placement.speakerType,
+                  ).withOpacity(0.4),
                   blurRadius: 15,
                   offset: const Offset(0, 0),
                 ),
@@ -1113,8 +1261,14 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
         ),
         // Enhanced Speaker Label - dynamically positioned to stay visible
         Positioned(
-          left: (visualX + 120 > containerWidth) ? visualX - 120 : visualX + 30, // Avoid going off-screen right
-          top: (visualY - 50 < 0) ? visualY + 30 : visualY - 50, // Avoid going off-screen top
+          left:
+              (visualX + 120 > containerWidth)
+                  ? visualX - 120
+                  : visualX + 30, // Avoid going off-screen right
+          top:
+              (visualY - 50 < 0)
+                  ? visualY + 30
+                  : visualY - 50, // Avoid going off-screen top
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
@@ -1291,7 +1445,11 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
     ];
   }
 
-  List<Widget> _buildCoverageAreas(double scaleX, double scaleY, double visualHeight) {
+  List<Widget> _buildCoverageAreas(
+    double scaleX,
+    double scaleY,
+    double visualHeight,
+  ) {
     if (_result == null) return <Widget>[];
 
     // Simplified coverage areas - you could enhance this based on actual coverage calculations
@@ -1299,7 +1457,8 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
       final double visualX = placement.position.x * scaleX;
       // Flip Y coordinate: room (0,0) = bottom-left, Flutter (0,0) = top-left
       final double visualY = visualHeight - (placement.position.y * scaleY);
-      final double coverageRadius = placement.speakerType.contains('180') ? 60.0 : 45.0;
+      final double coverageRadius =
+          placement.speakerType.contains('180') ? 60.0 : 45.0;
 
       return Positioned(
         left: visualX - coverageRadius,
@@ -1452,6 +1611,7 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
   }) {
     return FusionTextFormField(
       controller: controller,
+      semanticId: '$label Input Field',
       prefixIcon: Icon(icon, size: 20),
       title: label,
       hintText: "",

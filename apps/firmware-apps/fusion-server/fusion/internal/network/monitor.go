@@ -1,7 +1,9 @@
 package network
 
 import (
+	"fmt"
 	"fusion-services-core/logging"
+	"fusion/internal/utils"
 	"net"
 	"sync"
 	"time"
@@ -15,13 +17,15 @@ type Monitor struct {
 	onChange ChangeCallback
 	stopChan chan struct{}
 	wg       sync.WaitGroup
+	iface    string
 }
 
-func NewMonitor(interval time.Duration, cb ChangeCallback) *Monitor {
+func NewMonitor(interval time.Duration, iface string, cb ChangeCallback) *Monitor {
 	return &Monitor{
 		interval: interval,
 		onChange: cb,
 		stopChan: make(chan struct{}),
+		iface:    iface,
 	}
 }
 
@@ -29,7 +33,7 @@ func (m *Monitor) Start() error {
 
 	logger := logging.GetLogger()
 
-	ip, err := getLocalIP()
+	ip, err := utils.GetLocalIPByInterface(m.iface)
 	if err != nil {
 		return err
 	}
@@ -45,7 +49,7 @@ func (m *Monitor) Start() error {
 		for {
 			select {
 			case <-ticker.C:
-				current, err := getLocalIP()
+				current, err := utils.GetLocalIPByInterface(m.iface)
 				if err != nil {
 					logger.Error("Failed to get IP: %v", err)
 					continue
@@ -69,14 +73,51 @@ func (m *Monitor) Stop() {
 	m.wg.Wait()
 }
 
-// getLocalIP returns the primary IP address used for outbound communication
-func getLocalIP() (string, error) {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
+// GetMacAddress returns the MAC address of the primary network interface
+func GetMacAddress() (string, error) {
+	logger := logging.GetLogger()
+
+	// Get the local IP to identify which interface is primary
+	localIP, err := utils.GetLocalIP()
 	if err != nil {
+		logger.Info("GetMacAddress: failed to get local IP: %v", err)
 		return "", err
 	}
-	defer conn.Close()
+	logger.Info("GetMacAddress: local IP is %s", localIP)
 
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	return localAddr.IP.String(), nil
+	// Get all network interfaces
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		logger.Info("GetMacAddress: failed to get network interfaces: %v", err)
+		return "", err
+	}
+	logger.Info("GetMacAddress: found %d network interfaces", len(interfaces))
+
+	// Find the interface with the matching IP
+	for _, iface := range interfaces {
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+
+		for _, addr := range addrs {
+			ipNet, ok := addr.(*net.IPNet)
+			if !ok {
+				continue
+			}
+
+			// Check if this interface has our local IP
+			if ipNet.IP.String() == localIP {
+				// Return the hardware address (MAC)
+				if len(iface.HardwareAddr) > 0 {
+					macAddr := iface.HardwareAddr.String()
+					logger.Info("GetMacAddress: found MAC address %s for interface %s", macAddr, iface.Name)
+					return macAddr, nil
+				}
+			}
+		}
+	}
+
+	logger.Info("GetMacAddress: no MAC address found for IP %s", localIP)
+	return "", fmt.Errorf("no MAC address found for IP %s", localIP)
 }

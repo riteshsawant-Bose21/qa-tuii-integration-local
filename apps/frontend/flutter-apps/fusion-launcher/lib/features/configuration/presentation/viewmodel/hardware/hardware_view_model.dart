@@ -76,12 +76,16 @@ extension HardwareViewModel on ProjectViewModel {
           SourceType.mic => <String>['peq', 'gate', 'compressor', 'agc'],
           SourceType.media => <String>['peq', 'compressor', 'agc'],
           SourceType.generic => <String>['peq', 'compressor'],
+          SourceType.paging => <String>['peq', 'compressor'],
         };
         for (final String algo in chain) {
           addProcessingBlockToSource(
-            processingBlock: ProcessingBlockModel.sourceBlocks.firstWhere(
-              (ProcessingBlockModel element) => element.algorithmId == algo,
-            ),
+            processingBlock:
+                ProcessingBlockModel.sourceBlocks
+                    .firstWhere(
+                      (ProcessingBlockModel element) => element.algorithmId == algo,
+                    )
+                    .clone(),
             sourceId: hardware.id,
             autoSave: false,
           );
@@ -413,12 +417,12 @@ extension HardwareViewModel on ProjectViewModel {
 
       if (nonPlacedSpeakers.length == 1) {
         // Last speaker placed
-        setShouldPlaceNonPlacedSpeakers(false);
+        // setShouldPlaceNonPlacedSpeakers(false);
         updateProject();
       }
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add selected product as hardware: $e");
-      setShouldPlaceNonPlacedSpeakers(false);
+      // setShouldPlaceNonPlacedSpeakers(false);
     }
   }
 

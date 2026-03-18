@@ -9,11 +9,11 @@
 #include <linux/of_irq.h>
 #include <linux/io.h>
 #include <linux/interrupt.h>
-#include <linux/irq_work.h>
 #include <linux/spinlock.h>
 #include <linux/math64.h>
 #include <linux/seqlock.h>
 #include <linux/clk.h>
+#include <linux/rcupdate.h>
 #include "fusion_gpt_client.h"
 
 #define GPT_CR      0x00
@@ -58,8 +58,6 @@ struct fusion_gpt
 
 	u32 next_ocr1;
 	u8  frac;
-
-	struct irq_work tick_iw;
 
 	u32 last32;
 	u64 hi;
@@ -113,9 +111,8 @@ static u64 gpt_read_ticks64(struct fusion_gpt *g)
 	return (hi | lo);
 }
 
-static void gpt_tick_iw(struct irq_work *iw)
+static inline void gpt_tick_direct(struct fusion_gpt *g)
 {
-	struct fusion_gpt *g = container_of(iw, struct fusion_gpt, tick_iw);
 	const struct fusion_gpt_client_ops *ops = READ_ONCE(g->ops);
 	if (ops && ops->tick)
 		ops->tick(g->ops_ctx, gpt_read_ticks64(g));
@@ -126,11 +123,11 @@ u64 fusion_gpt_read_ticks64(void)
 	struct fusion_gpt *g;
 	u64 ret = 0;
 
-	mutex_lock(&gpt_singleton_lock);
-	g = gpt_singleton;
+	rcu_read_lock();
+	g = rcu_dereference(gpt_singleton);
 	if (g)
 		ret = gpt_read_ticks64(g);
-	mutex_unlock(&gpt_singleton_lock);
+	rcu_read_unlock();
 
 	return ret;
 }
@@ -182,9 +179,6 @@ void fusion_gpt_unregister_client(void)
 	/* Make readers see NULL first */
 	WRITE_ONCE(g->ops, NULL);
 	smp_mb(); /* publish NULL before we flush */
-
-	/* Ensure any queued work that might have captured a non-NULL ops is done */
-	irq_work_sync(&g->tick_iw);
 
 	if (g->ops_owner)
 		module_put(g->ops_owner);
@@ -274,9 +268,12 @@ u64 fusion_gpt_read_phc_ns(void)
 	u64 now64, epoch_cnt64, epoch_ns, dt_ticks, ns = 0;
 	bool valid;
 
-	mutex_lock(&gpt_singleton_lock);
-	g = gpt_singleton;
-	mutex_unlock(&gpt_singleton_lock);
+	rcu_read_lock();
+	g = rcu_dereference(gpt_singleton);
+	if (!g) {
+		rcu_read_unlock();
+		return 0;
+	}
 	if (!g) return 0;
 
 	/* Snapshot epoch under pps_lock */
@@ -285,7 +282,10 @@ u64 fusion_gpt_read_phc_ns(void)
 	epoch_ns    = g->phc_epoch_ns;
 	epoch_cnt64 = g->pps_epoch_cnt64;
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
-	if (!valid) return 0;
+	if (!valid) {
+		rcu_read_unlock();
+		return 0;
+	}
 
 	/* Read current 64-bit counter safely */
 	now64 = gpt_read_ticks64(g);
@@ -293,6 +293,7 @@ u64 fusion_gpt_read_phc_ns(void)
 	/* Convert ticks→ns with 10 MHz = 100 ns/tick */
 	dt_ticks = now64 - epoch_cnt64;
 	ns = epoch_ns + dt_ticks * 100ULL;
+	rcu_read_unlock();
 	return ns;
 }
 EXPORT_SYMBOL(fusion_gpt_read_phc_ns);
@@ -447,8 +448,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 			if (clr) wrl(g, clr, GPT_SR);
 
 			/* Still notify the client for this tick */
-			if (READ_ONCE(g->ops))
-				irq_work_queue(&g->tick_iw);
+			gpt_tick_direct(g);
 
 			return IRQ_HANDLED;                         /* skip normal schedule this time */
 		}
@@ -456,8 +456,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 		/* Normal path once aligned (or if no epoch yet) */
 		gpt_program_next_compare(g);
 		clr |= SR_OF1;
-		if (READ_ONCE(g->ops))
-			irq_work_queue(&g->tick_iw);
+		gpt_tick_direct(g);
 	}
 
 	if (clr) wrl(g, clr, GPT_SR);
@@ -545,7 +544,7 @@ static int gpt_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, g);
-	init_irq_work(&g->tick_iw, gpt_tick_iw);
+	
 	mutex_init(&g->ops_lock);
 
 	ret = devm_request_irq(&pdev->dev, g->irq, gpt_irq, IRQF_NO_THREAD,
@@ -557,7 +556,7 @@ static int gpt_probe(struct platform_device *pdev)
 
 	/* publish after start */
 	mutex_lock(&gpt_singleton_lock);
-	gpt_singleton = g;
+	rcu_assign_pointer(gpt_singleton, g);
 	mutex_unlock(&gpt_singleton_lock);
 
 	dev_info(&pdev->dev,
@@ -576,8 +575,9 @@ static void gpt_remove(struct platform_device *pdev)
 	u32 cr = rdl(g, GPT_CR);
 
 	mutex_lock(&gpt_singleton_lock);
-	gpt_singleton = NULL;
+	rcu_assign_pointer(gpt_singleton, NULL);
 	mutex_unlock(&gpt_singleton_lock);
+	synchronize_rcu();
 
 	wrl(g, 0, GPT_IR);                               /* mask all */
 	wrl(g, SR_OF1 | SR_IF1 | SR_IF2, GPT_SR);        /* W1C clear any latched */

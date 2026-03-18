@@ -72,6 +72,10 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.elevation1,
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.strokeLight,
+            width: 1,
+          ),
         ),
         child: Column(
           children: <Widget>[
@@ -89,7 +93,7 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
 
   Widget _buildHeader(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
@@ -110,12 +114,12 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
               letterSpacing: 0.5,
             ),
           ),
-          IconButton(
-            icon: Icon(
+          InkWell(
+            child: Icon(
               Icons.close,
               color: Theme.of(context).colorScheme.iconDefault,
             ),
-            onPressed: () {
+            onTap: () {
               _showCloseDialog();
             },
           ),
@@ -324,7 +328,7 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
   void _verifyVIP(String vipAddress) async {
     FusionUiUtils.showLoader(context);
     // Simulate VIP verification
-    await Future<void>.delayed(const Duration(seconds: 1));
+    await Future<void>.delayed(const Duration(milliseconds: 500));
     if (mounted) {
       serviceLocator<ProjectViewModel>().setVirtualIP(ip: vipAddress);
       FusionUiUtils.hideLoader(context);

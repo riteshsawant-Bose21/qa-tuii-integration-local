@@ -10,7 +10,7 @@ class WifiSettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(40.0),
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -27,8 +27,12 @@ class WifiSettingsPage extends StatelessWidget {
                 const ReadonlyTextView(value: "NamithGym"),
                 const SizedBox(width: 16),
                 FusionNeumorphicButton(
+                  semanticId: 'wifi_settings_configure_button',
                   borderRadius: 6,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   margin: EdgeInsets.zero,
                   text: "Configure Wifi",
                   onTap: () {},

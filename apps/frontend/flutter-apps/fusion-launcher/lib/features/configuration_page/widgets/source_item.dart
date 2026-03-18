@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/configuration_page/widgets/source_meter.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_chain_view.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_sources.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../core/constants/assets_constants.dart';
+import '../../message_player_config/view/message_player_config_dialog.dart';
 
 class SourceItem extends StatefulWidget {
   final Source source;
   final SourceSet? sourceSet;
   final bool isDragging;
   final int index;
+  final String? semanticId;
+  final bool? isInControlMode;
 
   const SourceItem({
     required this.source,
@@ -16,6 +21,8 @@ class SourceItem extends StatefulWidget {
     this.isDragging = false,
     required this.index,
     super.key,
+    this.semanticId,
+    this.isInControlMode,
   });
 
   @override
@@ -27,24 +34,30 @@ class _SourceItemState extends State<SourceItem> {
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) {
-        if (!_isHovered) {
-          setState(() => _isHovered = true);
-        }
-      },
-      onExit: (_) {
-        if (_isHovered) {
-          setState(() => _isHovered = false);
-        }
-      },
-      child: SemanticHelper.container(
-        testId: SemanticHelper.createTestId(SemanticTypes.container, "source_item_${widget.index}"),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        '${FusionTestKeys.instance.sourcedataitems}_${widget.semanticId}_${widget.index}',
+      ),
+      child: MouseRegion(
+        onEnter: (_) {
+          if (!_isHovered) {
+            setState(() => _isHovered = true);
+          }
+        },
+        onExit: (_) {
+          if (_isHovered) {
+            setState(() => _isHovered = false);
+          }
+        },
         child: Container(
           decoration: BoxDecoration(
             color: widget.isDragging ? context.colorScheme.primary.withAlpha(150) : (_isHovered ? context.colorScheme.elevation2 : null),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: widget.isDragging ? context.colorScheme.primary : Colors.transparent, width: 1.0),
+            border: Border.all(
+              color: widget.isDragging ? context.colorScheme.primary : Colors.transparent,
+              width: 1.0,
+            ),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           child: Row(
@@ -59,37 +72,66 @@ class _SourceItemState extends State<SourceItem> {
                     fit: BoxFit.contain,
                   ),
                 ),
+
               if (widget.sourceSet != null) const SizedBox(width: 8),
               FusionImage.asset(
+                semanticId: FusionTestKeys.instance.sourcelistitemimage,
                 widget.source.assetImagePath,
                 width: 24,
                 height: 24,
                 fit: BoxFit.contain,
               ),
               const SizedBox(width: 12),
+              if (widget.isInControlMode != null && widget.isInControlMode!) ...<Widget>[
+                SourceMeter(sourceId: widget.source.id),
+
+                const SizedBox(width: 12),
+              ],
+
               Expanded(
                 child: FusionAppText(
+                  semanticId: FusionTestKeys.instance.sourcelistitemname,
                   text: widget.source.name,
                   maxLine: 1,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontSize: 11),
                 ),
               ),
-              // todo : add configuration icon back in when source configuration is supported (ex:media player)
-              // const FusionImage.asset(
-              //   Assets.configurationFilledIcon,
-              //   width: 24,
-              //   height: 24,
-              //   fit: BoxFit.contain,
-              // ),
+              // todo : based on the pagingSourceType show different popup with different configuration options
+              /// Show configuration icon only if source has a paging source type
+              Visibility(
+                visible: widget.source.pagingSourceType != null && !widget.isDragging,
+                child: InkWell(
+                  onTap: () {
+                    MessagePlayerConfigDialog.show(
+                      context,
+                      sourceId: widget.source.id,
+                    );
+                  },
+                  child: FusionImage.asset(
+                    Assets.configurationFilledIcon,
+                    width: 24,
+                    height: 24,
+                    assetColor: context.colorScheme.primaryWhite,
+
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
               const SizedBox(width: 8),
               if (!widget.isDragging)
                 SemanticHelper.button(
-                  testId: SemanticHelper.createTestId(SemanticTypes.button, "source_item_${widget.index}_processing"),
+                  testId: SemanticHelper.createTestId(
+                    SemanticTypes.button,
+                    "${FusionTestKeys.instance.sourceitemprocessing}_${widget.index}",
+                  ),
                   child: InkWell(
                     onTap: () {
                       ProcessingChainView.showForSource(context, widget.source);
                     },
                     child: FusionImage.asset(
+                      semanticId: FusionTestKeys.instance.sourceitemprocessing,
                       Assets.processingBlocksFilledIcon,
                       width: 24,
                       height: 24,

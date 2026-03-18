@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 
 import '../../dto/pb_item.dart';
 import '../../dto/pb_item_param.dart';
@@ -12,21 +14,30 @@ class PBMeter extends StatelessWidget {
     required this.item,
     this.showIntervals = true,
     this.handler,
+    this.semanticId,
   });
 
   final PBItem item;
   final bool showIntervals;
   final PBWidgetValueHandler? handler;
+  final String? semanticId;
 
   @override
   Widget build(BuildContext context) {
     final PBMeterParam data = (handler?.resolveForItem(item) ?? item.param) as PBMeterParam;
 
-    return VerticalMeter(
-      value: handler?.getValue(item) ?? item.value ?? 40,
-      min: data.min,
-      max: data.max,
-      showIntervals: showIntervals,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "PBMeter_${semanticId ?? ''}",
+      ),
+      value: (handler?.getValue(item) ?? item.value ?? 40).toStringAsFixed(1),
+      child: VerticalMeter(
+        value: handler?.getValue(item) ?? item.value ?? 40,
+        min: data.min,
+        max: data.max,
+        showIntervals: showIntervals,
+      ),
     );
   }
 }
@@ -44,7 +55,7 @@ class VerticalMeter extends StatelessWidget {
     this.intervalSpacing = 50.0,
     this.intervalTickWidth = 10.0,
     this.intervalGap,
-    this.animationDuration = const Duration(milliseconds: 300),
+    this.animationDuration = const Duration(milliseconds: 100),
   });
 
   final num value;
@@ -195,127 +206,6 @@ class VerticalMeter extends StatelessWidget {
               ],
             ),
           ),
-        );
-      },
-    );
-  }
-}
-
-class SimpleVerticalMeter extends StatelessWidget {
-  const SimpleVerticalMeter({
-    super.key,
-    required this.value,
-    this.min = -42,
-    this.max = 0,
-
-    this.width = 4,
-
-    this.trackColor = const Color(0xFF6B6B6B),
-    this.activeColor = const Color(0xFF2ECC71),
-
-    this.intervalGap,
-    this.intervalSpacing = 50,
-
-    this.isBottomToTop = false,
-  });
-
-  final double value;
-  final double min;
-  final double max;
-
-  final double width;
-  final Color trackColor;
-  final Color activeColor;
-
-  final double? intervalGap;
-  final double intervalSpacing;
-
-  /// NEW
-  final bool isBottomToTop;
-
-  double _normalize(double v) => ((v - min) / (max - min)).clamp(0.0, 1.0);
-
-  List<double> _generateIntervals(double height) {
-    if (intervalGap != null) {
-      final int count = ((max - min) / intervalGap!).floor() + 1;
-
-      return List<double>.generate(
-        count,
-        (int i) => max - (i * intervalGap!),
-      ).where((double e) => e >= min).toList();
-    }
-
-    final int tickCount = (height / intervalSpacing).floor().clamp(3, 10);
-    final double step = (max - min) / (tickCount - 1);
-
-    return List<double>.generate(
-      tickCount,
-      (int i) => max - (i * step),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints c) {
-        final double h = c.maxHeight;
-        final double normalized = _normalize(value);
-        final double activeHeight = normalized * h;
-        final List<double> intervals = _generateIntervals(h);
-
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            /// SCALE
-            SizedBox(
-              width: 40,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children:
-                    intervals
-                        .map(
-                          (double v) => Text(
-                            v.round().toString(),
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 10,
-                            ),
-                          ),
-                        )
-                        .toList(),
-              ),
-            ),
-
-            const SizedBox(width: 6),
-
-            /// BAR
-            ClipRRect(
-              borderRadius: BorderRadius.circular(100),
-              child: SizedBox(
-                width: width,
-                height: h,
-                child: Stack(
-                  children: <Widget>[
-                    /// TRACK
-                    Container(color: trackColor),
-
-                    /// ACTIVE PART (direction aware)
-                    Align(
-                      alignment: isBottomToTop ? Alignment.bottomCenter : Alignment.topCenter,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        curve: Curves.easeOut,
-                        height: activeHeight,
-                        color: activeColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
         );
       },
     );

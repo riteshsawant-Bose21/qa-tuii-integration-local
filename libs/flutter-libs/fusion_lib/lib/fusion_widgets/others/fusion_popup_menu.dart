@@ -12,7 +12,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
     required this.child,
     this.tooltip,
     this.popupOffset = const Offset(10, 10),
-    this.semanticsId
+    this.semanticsId,
   });
   final List<T> items;
   final ValueChanged<T> onSelected;
@@ -26,7 +26,12 @@ class FusionPopupMenu<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final childKey = GlobalKey();
-    var createTestId = semanticsId??SemanticHelper.createTestId(SemanticTypes.dropdown, tooltip ?? 'popup_menu');
+    var createTestId =
+        semanticsId ??
+        SemanticHelper.createTestId(
+          SemanticTypes.dropdown,
+          tooltip ?? 'popup_menu',
+        );
     return SemanticHelper.button(
       testId: createTestId,
       child: CustomPopupMenuButton<T>(
@@ -37,7 +42,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
         offset: popupOffset,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.0),
-          side: BorderSide(color: context.colorScheme.strokeLight, width: 2),
+          side: BorderSide(color: context.colorScheme.strokeLight, width: 1),
         ),
         color: context.colorScheme.elevation2,
         itemBuilder: (context) => List<PopupMenuEntry<T>>.generate(
@@ -50,8 +55,12 @@ class FusionPopupMenu<T> extends StatelessWidget {
               value: item,
 
               padding: EdgeInsets.all(0),
-              child: SemanticHelper.button(
-                testId: SemanticHelper.createTestId(SemanticTypes.dropdownItem, tooltip ?? 'popup_menu_item_$index'),
+              child: SemanticHelper.dropdown(
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.dropdown,
+                  tooltip ?? 'popup_menu_item_$index',
+                ),
+                value: tooltip,
                 child: SizedBox(
                   width: width2,
                   child: Padding(
@@ -111,7 +120,10 @@ class CustomPopupMenuButton<T> extends StatefulWidget {
     this.style,
     this.menuSemanticLabel,
     this.requestFocus,
-  }) : assert(!(child != null && icon != null), 'You can only pass [child] or [icon], not both.');
+  }) : assert(
+         !(child != null && icon != null),
+         'You can only pass [child] or [icon], not both.',
+       );
 
   /// Called when the button is pressed to create the items to show in the menu.
   final PopupMenuItemBuilder<T> itemBuilder;
@@ -379,7 +391,10 @@ class _CustomPopupMenuButtonState<T> extends State<CustomPopupMenuButton<T>> {
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromPoints(
         button.localToGlobal(offset, ancestor: overlay),
-        button.localToGlobal(button.size.bottomRight(Offset.zero) + offset, ancestor: overlay),
+        button.localToGlobal(
+          button.size.bottomRight(Offset.zero) + offset,
+          ancestor: overlay,
+        ),
       ),
       Offset.zero & overlay.size,
     );
@@ -479,7 +494,10 @@ class _CustomPopupMenuButtonState<T> extends State<CustomPopupMenuButton<T>> {
     return Semantics(
       child: IconButton(
         key: StandardComponentType.moreButton.key,
-        icon: Semantics(expanded: _isMenuExpanded, child: widget.icon ?? Icon(Icons.adaptive.more)),
+        icon: Semantics(
+          expanded: _isMenuExpanded,
+          child: widget.icon ?? Icon(Icons.adaptive.more),
+        ),
         padding: widget.padding,
         splashRadius: widget.splashRadius,
         iconSize: widget.iconSize ?? popupMenuTheme.iconSize ?? iconTheme.size,

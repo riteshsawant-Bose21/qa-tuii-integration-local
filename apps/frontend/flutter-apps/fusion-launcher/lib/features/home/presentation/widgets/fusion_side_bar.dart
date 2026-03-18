@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/utils/bug_report_popup.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/home/presentation/pages/launcher_home_page.dart';
-import 'package:fusion_launcher/features/home/presentation/widgets/saved_projects_tab.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../../core/services/user_session_manager.dart';
+import '../../../create_new_project/views/create_new_project_dialog.dart';
+import '../../../projects/presentation/widgets/appbar/project_work_area_appbar.dart' show handleExportLogs;
 
 class FusionSidebar extends StatefulWidget {
   final ValueNotifier<bool> showAllProjects;
@@ -72,34 +72,43 @@ class _FusionSidebarState extends State<FusionSidebar> {
                   spacing: 10,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: <Widget>[
-                        SemanticHelper.button(
-                          testId: SemanticHelper.createTestId(SemanticTypes.button, "dashboard_sidebar_notification_button"),
-                          child: Badge(
-                            smallSize: 10, // ← tiny dot size
-                            alignment: Alignment.topRight,
-                            backgroundColor: FusionDarkColorPallette.green20,
-                            textColor: FusionDarkColorPallette.green20,
-                            padding: const EdgeInsets.only(),
-                            textStyle: const TextStyle(fontSize: 0),
-                            child: Container(
-                              height: 36,
-                              width: 36,
-                              decoration: BoxDecoration(
-                                color: context.colorScheme.elevation4,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                LucideIcons.bell,
-                                size: 16,
-                                color: context.colorScheme.primaryWhite,
+                    GestureDetector(
+                      onTap:
+                          () => widget.onTabChanged?.call(
+                            DashboardTabs.testLibrady,
+                          ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: <Widget>[
+                          SemanticHelper.button(
+                            testId: SemanticHelper.createTestId(
+                              SemanticTypes.button,
+                              "dashboard_sidebar_notification_button",
+                            ),
+                            child: Badge(
+                              smallSize: 10, // ← tiny dot size
+                              alignment: Alignment.topRight,
+                              backgroundColor: FusionDarkColorPallette.green20,
+                              textColor: FusionDarkColorPallette.green20,
+                              padding: const EdgeInsets.only(),
+                              textStyle: const TextStyle(fontSize: 0),
+                              child: Container(
+                                height: 36,
+                                width: 36,
+                                decoration: BoxDecoration(
+                                  color: context.colorScheme.elevation4,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  LucideIcons.bell,
+                                  size: 16,
+                                  color: context.colorScheme.primaryWhite,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
 
                     // ========== User Info Tile ==========
@@ -120,7 +129,10 @@ class _FusionSidebarState extends State<FusionSidebar> {
                     ),
                     FutureBuilder<UserModel?>(
                       future: UserSessionManager.getSignedInUserProfile(),
-                      builder: (BuildContext context, AsyncSnapshot<UserModel?> asyncSnapshot) {
+                      builder: (
+                        BuildContext context,
+                        AsyncSnapshot<UserModel?> asyncSnapshot,
+                      ) {
                         if (asyncSnapshot.hasData) {
                           final UserModel user = asyncSnapshot.data!;
                           return Column(
@@ -193,15 +205,26 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: <Widget>[
                                     SemanticHelper.formControl(
-                                      testId: SemanticHelper.createTestId(SemanticTypes.textInput, "dashboard_sidebar_search_input"),
+                                      testId: SemanticHelper.createTestId(
+                                        SemanticTypes.textInput,
+                                        "dashboard_sidebar_search_input",
+                                      ),
                                       child: const NeumorphicDarkTextField(
                                         hintText: 'Search',
                                         prefix: Padding(
-                                          padding: EdgeInsets.symmetric(horizontal: 8),
-                                          child: Icon(LucideIcons.search, size: 10),
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                          ),
+                                          child: Icon(
+                                            LucideIcons.search,
+                                            size: 10,
+                                          ),
                                         ),
                                         borderRadius: 8,
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                        contentPadding: EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 8,
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(height: 10),
@@ -211,21 +234,30 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                       title: DashboardTabs.home.name,
                                       semanticsId: 'home_tab',
                                       isSelected: widget.selectedTab == DashboardTabs.home,
-                                      onTap: () => widget.onTabChanged?.call(DashboardTabs.home),
+                                      onTap:
+                                          () => widget.onTabChanged?.call(
+                                            DashboardTabs.home,
+                                          ),
                                     ),
                                     _HoverNavItem(
                                       icon: Icons.account_circle,
                                       title: DashboardTabs.profile.name,
                                       semanticsId: 'profile_tab',
                                       isSelected: widget.selectedTab == DashboardTabs.profile,
-                                      onTap: () => widget.onTabChanged?.call(DashboardTabs.profile),
+                                      onTap:
+                                          () => widget.onTabChanged?.call(
+                                            DashboardTabs.profile,
+                                          ),
                                     ),
                                     _HoverNavItem(
                                       icon: Icons.settings_sharp,
                                       title: DashboardTabs.settings.name,
                                       semanticsId: 'settings_tab',
                                       isSelected: widget.selectedTab == DashboardTabs.settings,
-                                      onTap: () => widget.onTabChanged?.call(DashboardTabs.settings),
+                                      onTap:
+                                          () => widget.onTabChanged?.call(
+                                            DashboardTabs.settings,
+                                          ),
                                     ),
                                     _HoverNavItem(
                                       icon: Icons.account_circle,
@@ -272,8 +304,12 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: <Widget>[
                                     GuideShowcaseWrapper(
+                                      semanticId: 'fusion_sidebar_new_project',
                                       step: GuideShowCaseSteps.myProjects,
-                                      onHighlightedSpotTap: (TapDownDetails details) => CreateNewProjectDialog.show(context),
+                                      onHighlightedSpotTap:
+                                          (TapDownDetails details) => CreateNewProjectDialog.show(
+                                            context,
+                                          ),
                                       // onHighlightedSpotTap: (TapDownDetails details) => _showNewProjectDialog(context),
                                       child: _HoverNavItem(
                                         icon: Icons.description,
@@ -281,7 +317,10 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                         semanticsId: 'my_projects_section',
                                         trailing: Icons.add_sharp,
                                         // onTap: () => _showNewProjectDialog(context),
-                                        onTap: () => CreateNewProjectDialog.show(context),
+                                        onTap:
+                                            () => CreateNewProjectDialog.show(
+                                              context,
+                                            ),
                                       ),
                                     ),
                                     _HoverNavItem(
@@ -290,7 +329,9 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                       isSelected: widget.selectedTab == DashboardTabs.savedProjects,
                                       semanticsId: 'saved_projects_section',
                                       onTap: () {
-                                        widget.onTabChanged?.call(DashboardTabs.savedProjects);
+                                        widget.onTabChanged?.call(
+                                          DashboardTabs.savedProjects,
+                                        );
                                       },
                                     ),
                                   ],
@@ -303,7 +344,10 @@ class _FusionSidebarState extends State<FusionSidebar> {
                       // Build number text
                       const Divider(height: 0),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 16.0,
+                        ),
                         child: Text(
                           'Build- $_appVersion',
                           style: const TextStyle(
@@ -319,7 +363,10 @@ class _FusionSidebarState extends State<FusionSidebar> {
 
                       // Submit Feedback button
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 8.0,
+                        ),
                         child: _HoverNavItem(
                           icon: Icons.feedback_rounded,
                           title: 'Submit Feedback',
@@ -356,30 +403,45 @@ class _FusionSidebarState extends State<FusionSidebar> {
       context: context,
       builder: (BuildContext ctx) {
         return AlertDialog(
-          title: FusionAppText(text: "Sign Out", style: context.textTheme.titleMedium),
+          title: FusionAppText(
+            text: "Sign Out",
+            style: context.textTheme.titleMedium,
+          ),
           content: const FusionAppText(
             text: "Are you sure you want to sign out? ",
           ),
           actions: <Widget>[
             SemanticHelper.button(
-              testId: SemanticHelper.createTestId(SemanticTypes.button, "dashboard_sidebar_signout_button"),
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.button,
+                "dashboard_sidebar_signout_button",
+              ),
               child: NeumorphicDarkButton(
                 onTap: () async {
                   await serviceLocator<AuthViewModel>().logout();
                 },
                 height: 32,
                 borderRadius: 8,
-                child: FusionAppText(text: "Sign Out", style: context.textTheme.labelMedium),
+                child: FusionAppText(
+                  text: "Sign Out",
+                  style: context.textTheme.labelMedium,
+                ),
               ),
             ),
             const SizedBox(height: 5),
             SemanticHelper.button(
-              testId: SemanticHelper.createTestId(SemanticTypes.button, "dashboard_sidebar_cancel_button"),
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.button,
+                "dashboard_sidebar_cancel_button",
+              ),
               child: NeumorphicDarkButton(
                 onTap: () => Navigator.pop(ctx),
                 height: 32,
                 borderRadius: 8,
-                child: FusionAppText(text: "Cancel", style: context.textTheme.labelMedium),
+                child: FusionAppText(
+                  text: "Cancel",
+                  style: context.textTheme.labelMedium,
+                ),
               ),
             ),
           ],
@@ -424,7 +486,10 @@ class _HoverNavItemState extends State<_HoverNavItem> {
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: SemanticHelper.container(
-        testId: SemanticHelper.createTestId(SemanticTypes.listItem, widget.semanticsId),
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.listItem,
+          widget.semanticsId,
+        ),
         child: InkWell(
           onTap: widget.onTap,
           borderRadius: BorderRadius.circular(8),

@@ -7,7 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/service_locator.dart';
 import '../configuration/presentation/viewmodel/project_view_model.dart';
-import 'additional_settings/source_matrix_settings/source_matrix_settings.dart';
+import '../zone_function_settings/matrix_settings/matrix_settings.dart';
 import 'widgets/mix_scene.dart';
 import 'widgets/neumorphic_audio_toggle_button.dart';
 import 'widgets/neumorphic_text_with_popup_slider_button.dart';
@@ -393,6 +393,7 @@ class _SourceMatrixControlsState extends State<SourceMatrixControls> {
                                     ),
                                   ),
                                   FusionNeumorphicButton(
+                                    semanticId: 'source_matrix_icon',
                                     onTap: () {
                                       projectViewModel.updateMatrixSettings(
                                         matrixSettings: matrixSetting.copyWith(

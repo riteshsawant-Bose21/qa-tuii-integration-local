@@ -12,12 +12,24 @@ class _EquipmentLocationDropdown extends StatelessWidget {
         return BlocBuilder<EquipmentLocationSelectionViewmodel, String?>(
           builder: (BuildContext context, String? selected) {
             return FusionContainer(
-              child: BuildingPageDronDown<EquipLocation?>(
-                value: selected != null ? equipmentLocations.firstWhere((EquipLocation element) => element.id == selected) : null,
+              child: BuildingPageDropDown<EquipLocation>(
+                value:
+                    selected != null
+                        ? equipmentLocations.firstWhere((EquipLocation element) => element.id == selected)
+                        : EquipLocation(
+                          id: "create_new",
+                          name: "Create New Location",
+                        ),
                 hintText: "Select Equipment Location",
-                items: <EquipLocation?>[...equipmentLocations, null],
-                onSelect: (EquipLocation? newValue) {
-                  if (newValue != null) {
+                items: <EquipLocation>[
+                  ...equipmentLocations,
+                  EquipLocation(
+                    id: "create_new",
+                    name: "Create New Location",
+                  ),
+                ],
+                onSelect: (EquipLocation newValue) {
+                  if (newValue.id != "create_new") {
                     BlocProvider.of<EquipmentLocationSelectionViewmodel>(context).selectEquipmentLocation(newValue.id);
                   } else {
                     BlocProvider.of<ProjectViewModel>(
@@ -25,8 +37,8 @@ class _EquipmentLocationDropdown extends StatelessWidget {
                     ).addEquipLocation(equipLocation: EquipLocation(name: "Equipment Location ${equipmentLocations.length + 1}"));
                   }
                 },
-                labelBuilder: (EquipLocation? option) {
-                  if (option == null) {
+                labelBuilder: (EquipLocation option) {
+                  if (option.id == "create_new") {
                     return Row(
                       children: <Widget>[
                         Icon(Icons.add, color: context.colorScheme.iconDefault),

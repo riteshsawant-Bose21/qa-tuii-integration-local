@@ -26,6 +26,7 @@ class CreateZonePopup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FusionArrowPopup(
+      semanticId: 'create_zone_popup',
       backgroundColor: context.colorScheme.elevation1,
       content: NewWidget(isFromBuildingPage: isFromBuildingPage),
       child: child,
@@ -71,7 +72,10 @@ class _NewWidgetState extends State<NewWidget> {
                         ),
                       ),
                       SemanticHelper.button(
-                        testId: SemanticHelper.createTestId(SemanticTypes.button, "create_zone_close_button"),
+                        testId: SemanticHelper.createTestId(
+                          SemanticTypes.button,
+                          "create_zone_close_button",
+                        ),
                         child: MouseRegion(
                           cursor: SystemMouseCursors.click,
                           child: GestureDetector(
@@ -86,7 +90,11 @@ class _NewWidgetState extends State<NewWidget> {
                     ],
                   ),
                 ),
-                Divider(thickness: 0.5, height: 0, color: context.colorScheme.strokeLight),
+                Divider(
+                  thickness: 0.5,
+                  height: 0,
+                  color: context.colorScheme.strokeLight,
+                ),
                 Flexible(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(16).copyWith(top: 0),
@@ -96,10 +104,16 @@ class _NewWidgetState extends State<NewWidget> {
                         // container 20 x 20
                         const SizedBox(height: 10),
                         BlocBuilder<CreateZoneViewModel, CreateZoneViewModelState>(
-                          buildWhen: (CreateZoneViewModelState previous, CreateZoneViewModelState current) {
+                          buildWhen: (
+                            CreateZoneViewModelState previous,
+                            CreateZoneViewModelState current,
+                          ) {
                             return previous.zoneName != current.zoneName || previous.zoneColor != current.zoneColor;
                           },
-                          builder: (BuildContext context, CreateZoneViewModelState state) {
+                          builder: (
+                            BuildContext context,
+                            CreateZoneViewModelState state,
+                          ) {
                             final String zoneName = state.zoneName;
                             final String zoneColor = state.zoneColor;
 
@@ -116,7 +130,10 @@ class _NewWidgetState extends State<NewWidget> {
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: SemanticHelper.formControl(
-                                    testId: SemanticHelper.createTestId(SemanticTypes.textInput, "create_zone_name_input"),
+                                    testId: SemanticHelper.createTestId(
+                                      SemanticTypes.textInput,
+                                      "create_zone_name_input",
+                                    ),
                                     child: PropertyTextField(
                                       initialValue: zoneName,
                                       onChanged: context.read<CreateZoneViewModel>().setZoneName,
@@ -133,52 +150,88 @@ class _NewWidgetState extends State<NewWidget> {
                         SizedBox(
                           width: 400,
                           child: SemanticHelper.container(
-                          testId: SemanticHelper.createTestId(SemanticTypes.container, "zone_color_options"),
-                          child: BlocBuilder<CreateZoneViewModel, CreateZoneViewModelState>(
-                            buildWhen: (CreateZoneViewModelState previous, CreateZoneViewModelState current) {
-                              return previous.zoneColor != current.zoneColor;
-                            },
-                            builder: (BuildContext context, CreateZoneViewModelState state) {
-                              return GridView.builder(
-                                shrinkWrap: true,
-                                padding: const EdgeInsets.only(),
-                                physics: const NeverScrollableScrollPhysics(),
-                                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                                  maxCrossAxisExtent: 21,
-                                  crossAxisSpacing: 8,
-                                  mainAxisSpacing: 8,
-                                ),
-                                itemCount: Zone.zoneColors.length,
-                                itemBuilder: (BuildContext context, int index) {
-                                  final String hexCode = Zone.zoneColors[index];
-                                  final Color color = hexToColor(hexCode);
-                                  final bool isSelected = state.zoneColor == hexCode;
+                            testId: SemanticHelper.createTestId(
+                              SemanticTypes.container,
+                              "zone_color_options",
+                            ),
+                            child: BlocBuilder<CreateZoneViewModel, CreateZoneViewModelState>(
+                              buildWhen: (
+                                CreateZoneViewModelState previous,
+                                CreateZoneViewModelState current,
+                              ) {
+                                return previous.zoneColor != current.zoneColor;
+                              },
+                              builder: (
+                                BuildContext context,
+                                CreateZoneViewModelState state,
+                              ) {
+                                return GridView.builder(
+                                  shrinkWrap: true,
+                                  padding: const EdgeInsets.only(),
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                                    maxCrossAxisExtent: 21,
+                                    crossAxisSpacing: 8,
+                                    mainAxisSpacing: 8,
+                                  ),
+                                  itemCount: Zone.zoneColors.length,
+                                  itemBuilder: (
+                                    BuildContext context,
+                                    int index,
+                                  ) {
+                                    final String hexCode = Zone.zoneColors[index];
+                                    final Color color = hexToColor(hexCode);
+                                    final bool isSelected = state.zoneColor == hexCode;
 
-                                  return GestureDetector(
-                                    onTap: () {
-                                      context.read<CreateZoneViewModel>().setZoneColor(hexCode);
-                                    },
-                                    child: SemanticHelper.container(
-                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "zone_color_option_$index"),
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: color,
-                                          borderRadius: BorderRadius.circular(4),
-                                          border: isSelected ? Border.all(color: Colors.white, width: 2) : null,
+                                    return GestureDetector(
+                                      onTap: () {
+                                        context.read<CreateZoneViewModel>().setZoneColor(hexCode);
+                                      },
+                                      child: SemanticHelper.container(
+                                        testId: SemanticHelper.createTestId(
+                                          SemanticTypes.container,
+                                          "zone_color_option_$index",
                                         ),
-                                        child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 12) : null,
+                                        value: hexCode,
+                                        isChecked: isSelected,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: color,
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                            border:
+                                                isSelected
+                                                    ? Border.all(
+                                                      color: Colors.white,
+                                                      width: 2,
+                                                    )
+                                                    : null,
+                                          ),
+                                          child:
+                                              isSelected
+                                                  ? const Icon(
+                                                    Icons.check,
+                                                    color: Colors.white,
+                                                    size: 12,
+                                                  )
+                                                  : null,
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
+                                    );
+                                  },
+                                );
+                              },
+                            ),
                           ),
-                        ),
                         ),
 
                         const SizedBox(height: 20),
-                        Divider(thickness: 0.5, height: 0, color: context.colorScheme.strokeLight),
+                        Divider(
+                          thickness: 0.5,
+                          height: 0,
+                          color: context.colorScheme.strokeLight,
+                        ),
                         const SizedBox(height: 20),
 
                         Row(
@@ -194,7 +247,7 @@ class _NewWidgetState extends State<NewWidget> {
                             ),
                             Expanded(
                               flex: 2,
-                              child: BuildingPageDronDown<ZoneFunctionsType>(
+                              child: BuildingPageDropDown<ZoneFunctionsType>(
                                 value: state.zoneFunctionType,
                                 items: ZoneFunctionsType.values,
                                 labelBuilder: (ZoneFunctionsType option) {
@@ -228,14 +281,20 @@ class _NewWidgetState extends State<NewWidget> {
                               ),
                               Expanded(
                                 flex: 2,
-                                child: _buildListeningAreaSelectionSection(context),
+                                child: _buildListeningAreaSelectionSection(
+                                  context,
+                                ),
                               ),
                             ],
                           ),
                         ],
                         const SizedBox(height: 20),
 
-                        Divider(thickness: 0.5, height: 0, color: context.colorScheme.strokeLight),
+                        Divider(
+                          thickness: 0.5,
+                          height: 0,
+                          color: context.colorScheme.strokeLight,
+                        ),
                         const SizedBox(height: 10),
 
                         const CreateSubzoneWidget(),
@@ -257,6 +316,7 @@ class _NewWidgetState extends State<NewWidget> {
                             ),
                             const SizedBox(width: 15),
                             FusionNeumorphicButton(
+                              semanticId: 'create_zone_save_button',
                               onTap: () => context.read<CreateZoneViewModel>().createZone(context),
                               color: context.colorScheme.surface,
                               text: "Save",

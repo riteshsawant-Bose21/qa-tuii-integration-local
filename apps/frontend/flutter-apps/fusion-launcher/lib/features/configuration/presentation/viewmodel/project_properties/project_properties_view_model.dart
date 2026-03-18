@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/projects/view_model/meter_data/meter_data_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/endpoints.dart';
@@ -108,6 +110,9 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
         recordSnapshot();
       }
       projectManager.setVirtualIP(ip);
+      if (serviceLocator<MeterDataViewModel>().hasActiveObservers) {
+        serviceLocator<MeterDataViewModel>().refreshSubscriber();
+      }
       if (autoSave) {
         saveProject();
       }
@@ -119,12 +124,12 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   }
 
   //set meta data
-  void setMetaData({required String metaData, bool autoSave = true}) {
+  void updateProjectMetaData({required ProjectMetaData metaData, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.setMetaData(metaData);
+      projectManager.updateProjectMetaData(metaData: metaData);
       if (autoSave) {
         saveProject();
       }
@@ -132,6 +137,16 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to set meta data: $e");
       throwError("Failed to set meta data: $e");
+    }
+  }
+
+  ProjectMetaData? get projectMetaData {
+    try {
+      return projectManager.getProjectMetadata();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get project metadata: $e");
+      throwError("Failed to get project metadata: $e");
+      return null;
     }
   }
 
@@ -207,7 +222,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
       currentSelectedListeningAreaId = null;
       currentSelectedZoneId = null;
       currentSelectedSubZoneId = null;
-      setShouldPlaceNonPlacedSpeakers(false);
+      // setShouldPlaceNonPlacedSpeakers(false);
 
       projectManager.setCurrentFloorIndex(index);
       updateProject();
@@ -224,7 +239,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
 
   void setCurrentSelectedListeningArea(String? area) {
     currentSelectedListeningAreaId = area;
-    if (area == null) setShouldPlaceNonPlacedSpeakers(false);
+    // if (area == null) setShouldPlaceNonPlacedSpeakers(false);
     updateProject();
   }
 
@@ -286,5 +301,25 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   void clearSelectedSubZone() {
     currentSelectedSubZoneId = null;
     updateProject();
+  }
+
+  void updateDroResponse(Map<String, dynamic> droResponse) {
+    try {
+      projectManager.updateDroResponse(droResponse);
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to update DRO response: $e");
+      throwError("Failed to update DRO response: $e");
+    }
+  }
+
+  Map<String, dynamic>? getDroResponse() {
+    try {
+      return projectManager.getDroResponse();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get DRO response: $e");
+      throwError("Failed to get DRO response: $e");
+      return null;
+    }
   }
 }

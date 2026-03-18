@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-class BuildingPageDronDown<T> extends StatefulWidget {
+class BuildingPageDropDown<T> extends StatefulWidget {
   final T? value;
   final String? hintText;
   final List<T> items;
@@ -9,7 +9,7 @@ class BuildingPageDronDown<T> extends StatefulWidget {
   final Widget Function(T option) labelBuilder;
   final Widget Function(T option)? valueBuilder;
 
-  const BuildingPageDronDown({
+  const BuildingPageDropDown({
     super.key,
     this.value,
     this.hintText,
@@ -20,10 +20,10 @@ class BuildingPageDronDown<T> extends StatefulWidget {
   });
 
   @override
-  State<BuildingPageDronDown<T>> createState() => _BuildingPageDronDownState<T>();
+  State<BuildingPageDropDown<T>> createState() => _BuildingPageDropDownState<T>();
 }
 
-class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
+class _BuildingPageDropDownState<T> extends State<BuildingPageDropDown<T>> {
   bool isFocused = false;
   late FocusNode _focusNode;
 
@@ -71,9 +71,7 @@ class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
         // menuPadding: EdgeInsets.zero,
         // clipBehavior: Clip.none,
         items: widget.items,
-        onSelected: (T value) {
-          widget.onSelect(value);
-        },
+        onSelected: widget.onSelect,
         popupOffset: const Offset(0, 10),
         itemBuilder: (BuildContext context, T option) => widget.valueBuilder != null ? widget.valueBuilder!(option) : widget.labelBuilder(option),
         // itemBuilder: (BuildContext context) {
@@ -128,9 +126,14 @@ class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
         //   ];
         // },
         child: SemanticHelper.container(
-          testId: SemanticHelper.createTestId(SemanticTypes.container, "multi_section_dropdown_${widget.hintText}"),
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.container,
+            "multi_section_dropdown_${widget.hintText}",
+          ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0).copyWith(right: 8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 4.0,
+            ).copyWith(right: 8),
             child: Row(
               children: <Widget>[
                 Expanded(
@@ -144,8 +147,12 @@ class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
                           return FusionAppText(
                             text: widget.hintText ?? 'Select',
                             maxLine: 1,
-                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: context.colorScheme.onSurface.withValues(alpha: widget.value == null ? 0.5 : 1.0),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.labelLarge?.copyWith(
+                              color: context.colorScheme.onSurface.withValues(
+                                alpha: widget.value == null ? 0.5 : 1.0,
+                              ),
                               fontWeight: FontWeight.normal,
                               fontSize: 12,
                             ),
@@ -156,7 +163,10 @@ class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
                   ),
                 ),
                 SemanticHelper.container(
-                  testId: SemanticHelper.createTestId(SemanticTypes.container, "multi_section_dropdown_${widget.hintText}_arrow"),
+                  testId: SemanticHelper.createTestId(
+                    SemanticTypes.container,
+                    "multi_section_dropdown_${widget.hintText}_arrow",
+                  ),
                   child: Icon(
                     Icons.keyboard_arrow_down,
                     color: Colors.grey[600],
@@ -218,6 +228,7 @@ class _MultiSectionDropDownState<T> extends State<MultiSectionDropDown<T>> {
   @override
   Widget build(BuildContext context) {
     return FusionArrowPopup(
+      semanticId: 'multi_section_dropdown_${widget.hintText}',
       content: StatefulBuilder(
         builder: (BuildContext context, StateSetter stateSetter) {
           return _buildMenuContent(context, stateSetter);
@@ -244,7 +255,9 @@ class _MultiSectionDropDownState<T> extends State<MultiSectionDropDown<T>> {
                         text: widget.hintText ?? 'Select',
                         style: context.textTheme.labelLarge?.copyWith(
                           fontSize: 12,
-                          color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+                          color: context.colorScheme.onSurface.withValues(
+                            alpha: 0.5,
+                          ),
                         ),
                       );
                     }
@@ -287,7 +300,14 @@ class _MultiSectionDropDownState<T> extends State<MultiSectionDropDown<T>> {
             return DecoratedBox(
               decoration: BoxDecoration(
                 border: Border(
-                  bottom: isLast ? BorderSide.none : BorderSide(color: context.colorScheme.onSurface.withOpacity(0.1)),
+                  bottom:
+                      isLast
+                          ? BorderSide.none
+                          : BorderSide(
+                            color: context.colorScheme.onSurface.withOpacity(
+                              0.1,
+                            ),
+                          ),
                 ),
               ),
               child: Padding(
@@ -305,7 +325,10 @@ class _MultiSectionDropDownState<T> extends State<MultiSectionDropDown<T>> {
                         stateSetter(() {});
                       },
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 6,
+                          horizontal: 4,
+                        ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           spacing: 20,
@@ -338,7 +361,10 @@ class _MultiSectionDropDownState<T> extends State<MultiSectionDropDown<T>> {
                             Navigator.of(context).pop();
                           },
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 6,
+                            ),
                             child: widget.labelBuilder(item),
                           ),
                         ),
@@ -406,6 +432,7 @@ class _MultiSectionMultiSelectDropDownState<T> extends State<MultiSectionMultiSe
   @override
   Widget build(BuildContext context) {
     return FusionArrowPopup(
+      semanticId: 'multi_section_dropdown_${widget.hintText}',
       onDismiss: () {
         // Discard temp changes if popup closes
         _syncTempWithParent();
@@ -487,7 +514,9 @@ class _MultiSectionMultiSelectDropDownState<T> extends State<MultiSectionMultiSe
                         isLast
                             ? BorderSide.none
                             : BorderSide(
-                              color: context.colorScheme.onSurface.withOpacity(0.1),
+                              color: context.colorScheme.onSurface.withOpacity(
+                                0.1,
+                              ),
                             ),
                   ),
                 ),
@@ -678,6 +707,7 @@ class _MultiSelectDropDownState<T> extends State<MultiSelectDropDown<T>> {
   @override
   Widget build(BuildContext context) {
     return FusionArrowPopup(
+      semanticId: 'multi_section_dropdown_${widget.hintText}',
       onDismiss: _syncTempWithParent,
       showArrow: false,
       blurAmount: 0,

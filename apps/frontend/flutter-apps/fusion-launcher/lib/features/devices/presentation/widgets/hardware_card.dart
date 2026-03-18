@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'device_models.dart';
 
 class HardwareCard extends StatelessWidget {
-  final NetworkHardware hardware;
+  final FusionNetworkDevice hardware;
   final VoidCallback? onDragStarted;
   final VoidCallback? onDragEnd;
 
@@ -39,12 +38,10 @@ class HardwareCard extends StatelessWidget {
   }
 
   Widget _buildCardContent(BuildContext context, {bool isDragging = false}) {
-    final bool isAssigned = hardware.assignedToDeviceId != null;
-
     return Container(
       // Use constrained width during drag, otherwise fit parent
       width: isDragging ? 280 : null,
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
       decoration: BoxDecoration(
         // color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.circular(8),
@@ -69,7 +66,7 @@ class HardwareCard extends StatelessWidget {
                       // 2. FLEXIBLE: Ensures text doesn't force width issues
                       Flexible(
                         child: FusionAppText(
-                          text: hardware.modelName,
+                          text: hardware.name,
                           style: context.textTheme.bodyMedium,
                           textOverflow: TextOverflow.ellipsis,
                           maxLine: 1,
@@ -79,7 +76,7 @@ class HardwareCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Flexible(
                         child: FusionAppText(
-                          text: "IP: ${hardware.ipAddress}",
+                          text: "IP: ${hardware.address}",
                           style: context.textTheme.labelSmall?.copyWith(
                             color: context.colorScheme.textSecondary,
                           ),

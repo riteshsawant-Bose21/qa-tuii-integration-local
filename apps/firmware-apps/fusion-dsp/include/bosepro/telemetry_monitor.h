@@ -449,6 +449,11 @@ public:
 
 
 private:
+#ifdef USE_MAC_THREADS
+    void pin_thread(std::thread & /*t*/, const char * /*thread_label*/) const
+    {
+    }
+#else
     void pin_thread(std::thread &t, const char *thread_label) const
     {
         constexpr int kTelemetryCpu = 0;
@@ -461,7 +466,13 @@ private:
             SPDLOG_WARN("Failed to set {} affinity to CPU {}: {}", thread_label, kTelemetryCpu, strerror(rc));
         }
     }
+#endif
 
+#ifdef USE_MAC_THREADS
+    void name_thread(std::thread & /*t*/, const char * /*name*/) const
+    {
+    }
+#else
     void name_thread(std::thread &t, const char *name) const
     {
         int rc = pthread_setname_np(t.native_handle(), name);
@@ -470,6 +481,7 @@ private:
             SPDLOG_WARN("Failed to set thread name '{}': {}", name, strerror(rc));
         }
     }
+#endif
 
     /// Callback to send event telemetry on UDS
     ///
@@ -576,9 +588,9 @@ private:
     {
         TelemetryMessage req = telemetry_messages->get_default_command("pub_register_req");
         size_t meter_blob_size = telemetry_messages->get_default_meter().serialize_message().size();
-        shm_sizes = {get_meters_size("HI", meter_blob_size),
-                      get_meters_size("MED", meter_blob_size),
-                      get_meters_size("LO", meter_blob_size)};
+        shm_sizes = {static_cast<int_fast32_t>(get_meters_size("HI", meter_blob_size)),
+                      static_cast<int_fast32_t>(get_meters_size("MED", meter_blob_size)),
+                      static_cast<int_fast32_t>(get_meters_size("LO", meter_blob_size))};
         req.get_parameters().set_block_size(shm_sizes);
         req.set_packet_id();
 
@@ -702,7 +714,7 @@ private:
         shm.writeNumberBytesToSharedMemory();
 
         TelemetryMessage rsp = telemetry_messages->get_default_command("update_meters_rsp");
-        rsp.get_parameters().set_value("OK");
+        rsp.get_parameters().set_value(std::string("OK"));
         rsp.set_packet_id(req.get_packet_id());
 
         SPDLOG_TRACE("Sending response: \n{}", rsp.serialize_message());
@@ -866,7 +878,7 @@ private:
     NamedSharedMemoryManager& shm_manager;
     int telemetry_fd;
     std::vector<std::string> shm_names;
-    std::vector<size_t> shm_sizes;
+    std::vector<int_fast32_t> shm_sizes;
     struct sockaddr_un telemetry_manager_addr;
 
     int error;

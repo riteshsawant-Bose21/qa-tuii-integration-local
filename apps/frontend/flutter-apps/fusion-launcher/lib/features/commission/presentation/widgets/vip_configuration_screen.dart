@@ -46,38 +46,77 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
       child: Column(
         children: <Widget>[
           Expanded(
-            child:
-                _isAutoSelect
-                    ? Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          maxWidth: 500,
-                        ),
-                        child: _buildFormSection(),
-                      ),
-                    )
-                    : Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            child: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                final double maxWidth = constraints.maxWidth;
+                final double formCenterWidth = maxWidth < 500 ? maxWidth : 500.0;
+                // 56 is the total width of the middle gap: 20 + 16(VerticalDivider) + 20
+                final double splitSideWidth = ((maxWidth - 56) / 2).clamp(0.0, double.infinity);
+
+                return TweenAnimationBuilder<double>(
+                  tween: Tween<double>(
+                    begin: _isAutoSelect ? 0.0 : 1.0,
+                    end: _isAutoSelect ? 0.0 : 1.0,
+                  ),
+                  duration: const Duration(milliseconds: 600),
+                  curve: Curves.fastLinearToSlowEaseIn,
+                  builder: (BuildContext context, double value, Widget? formChild) {
+                    final double currentLeftX = (maxWidth > 500 ? (maxWidth - formCenterWidth) / 2 : 0.0) * (1 - value);
+                    final double currentLeftWidth = formCenterWidth + (splitSideWidth - formCenterWidth) * value;
+
+                    return Stack(
                       children: <Widget>[
-                        // Left side - Form
-                        Expanded(
-                          flex: 1,
-                          child: _buildFormSection(),
+                        // Left Form
+                        Positioned(
+                          left: currentLeftX,
+                          top: 0,
+                          bottom: 0,
+                          width: currentLeftWidth,
+                          child: Align(
+                            alignment: Alignment(0, -value), // Animate from center vertically to top
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: formChild!,
+                            ),
+                          ),
                         ),
-                        const SizedBox(width: 20),
                         // Divider
-                        VerticalDivider(
-                          thickness: 1,
-                          color: context.colorScheme.strokeLight,
-                        ),
-                        const SizedBox(width: 20),
-                        // Right side - Devices
-                        Expanded(
-                          flex: 1,
-                          child: _buildDeviceListSection(),
-                        ),
+                        if (value > 0.01)
+                          Positioned(
+                            left: currentLeftX + currentLeftWidth + 20,
+                            top: 0,
+                            bottom: 0,
+                            width: 16,
+                            child: Opacity(
+                              opacity: value,
+                              child: VerticalDivider(
+                                thickness: 1,
+                                color: context.colorScheme.strokeLight,
+                              ),
+                            ),
+                          ),
+                        // Right Devices
+                        if (value > 0.01)
+                          Positioned(
+                            left: currentLeftX + currentLeftWidth + 56,
+                            top: 0,
+                            bottom: 0,
+                            width: splitSideWidth,
+                            child: Opacity(
+                              opacity: value,
+                              child: FractionalTranslation(
+                                translation: Offset(0.05 * (1 - value), 0),
+                                child: _buildDeviceListSection(),
+                              ),
+                            ),
+                          ),
                       ],
-                    ),
+                    );
+                  },
+                  child: _buildFormSection(),
+                );
+              },
+            ),
           ),
           const SizedBox(height: 32),
           // Bottom Button
@@ -85,6 +124,7 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
             child: SizedBox(
               width: 300,
               child: FusionNeumorphicButton(
+                semanticId: 'verify_and_proceed_button',
                 text: 'Verify and proceed',
                 onTap: _verify,
                 height: 35,
@@ -114,6 +154,7 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
         Row(
           children: <Widget>[
             FusionCheckbox(
+              semanticId: 'vip_configuration_auto_select',
               value: _isAutoSelect,
               onChanged: () {
                 final bool newValue = !_isAutoSelect;
@@ -124,7 +165,7 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
             ),
             const SizedBox(width: 8),
             Text(
-              'Select hardware automatically',
+              'Select device automatically',
               style: TextStyle(
                 color: context.colorScheme.textBody,
                 fontSize: 13,
@@ -194,7 +235,8 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
           'List of the devices on the Fusion network',
           style: TextStyle(
             color: context.colorScheme.textPrimary,
-            fontSize: 16, // Slightly smaller than main title? Or match 20? Design looks same font size maybe slightly smaller
+            fontSize:
+                16, // Slightly smaller than main title? Or match 20? Design looks same font size maybe slightly smaller
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -234,7 +276,10 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
               child: Opacity(
                 opacity: _isAutoSelect ? 0.5 : 1.0,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: context.colorScheme.elevation2,
                     borderRadius: BorderRadius.circular(8),
@@ -262,10 +307,18 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: isSelected ? context.colorScheme.green : context.colorScheme.strokeDark, // Use green for selected based on screenshot
+                            color:
+                                isSelected
+                                    ? context.colorScheme.green
+                                    : context
+                                        .colorScheme
+                                        .strokeDark, // Use green for selected based on screenshot
                             width: 1.5,
                           ),
-                          color: isSelected ? context.colorScheme.green : Colors.transparent,
+                          color:
+                              isSelected
+                                  ? context.colorScheme.green
+                                  : Colors.transparent,
                         ),
                         child:
                             isSelected

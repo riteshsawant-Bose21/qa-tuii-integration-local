@@ -23,7 +23,8 @@ class SchematicListingSection extends StatefulWidget {
   });
 
   @override
-  State<SchematicListingSection> createState() => _SchematicListingSectionState();
+  State<SchematicListingSection> createState() =>
+      _SchematicListingSectionState();
 }
 
 class _SchematicListingSectionState extends State<SchematicListingSection> {
@@ -39,11 +40,15 @@ class _SchematicListingSectionState extends State<SchematicListingSection> {
         ),
       ],
       child: FusionFlatContainer(
-        semanticsId: SemanticHelper.createTestId(SemanticTypes.container, "expandable_section_container_${widget.sectionTitle.toLowerCase()}"),
+        semanticsId: SemanticHelper.createTestId(
+          SemanticTypes.container,
+          "expandable_section_container_${widget.sectionTitle.toLowerCase()}",
+        ),
         padding: EdgeInsets.zero,
         child: BlocBuilder<SearchControlViewModel, SearchState>(
           builder: (BuildContext context, SearchState state) {
-            final SearchControlViewModel viewModel = context.watch<SearchControlViewModel>();
+            final SearchControlViewModel viewModel =
+                context.watch<SearchControlViewModel>();
             final bool showSearchBar = state is SearchingState;
 
             return Column(
@@ -56,7 +61,10 @@ class _SchematicListingSectionState extends State<SchematicListingSection> {
                 ///
                 ///
                 SemanticHelper.container(
-                  testId: SemanticHelper.createTestId(SemanticTypes.container, "expandable_section_header_container_${widget.sectionTitle.toLowerCase()}"),
+                  testId: SemanticHelper.createTestId(
+                    SemanticTypes.container,
+                    "expandable_section_header_container_${widget.sectionTitle.toLowerCase()}",
+                  ),
                   child: Container(
                     height: 44,
                     padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -67,7 +75,10 @@ class _SchematicListingSectionState extends State<SchematicListingSection> {
                           child: ClipRect(
                             child: AnimatedSwitcher(
                               duration: const Duration(milliseconds: 200),
-                              layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+                              layoutBuilder: (
+                                Widget? currentChild,
+                                List<Widget> previousChildren,
+                              ) {
                                 return Stack(
                                   alignment: Alignment.centerLeft,
                                   children: <Widget>[
@@ -77,34 +88,47 @@ class _SchematicListingSectionState extends State<SchematicListingSection> {
                                 );
                               },
                               transitionBuilder:
-                                  (Widget child, Animation<double> animation) => FadeTransition(
-                                    opacity: animation,
-                                    child: SlideTransition(
-                                      position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero).animate(animation),
-                                      child: child,
-                                    ),
-                                  ),
+                                  (Widget child, Animation<double> animation) =>
+                                      FadeTransition(
+                                        opacity: animation,
+                                        child: SlideTransition(
+                                          position: Tween<Offset>(
+                                            begin: const Offset(1, 0),
+                                            end: Offset.zero,
+                                          ).animate(animation),
+                                          child: child,
+                                        ),
+                                      ),
                               child:
                                   (state is SearchingState)
                                       ? SemanticHelper.formControl(
-                                        testId: SemanticHelper.createTestId(SemanticTypes.textInput, "section_search_${widget.sectionTitle.toLowerCase()}"),
+                                        testId: SemanticHelper.createTestId(
+                                          SemanticTypes.textInput,
+                                          "section_search_${widget.sectionTitle.toLowerCase()}",
+                                        ),
                                         child: FusionTextField(
+                                          semanticFieldId:
+                                              'section_search_${widget.sectionTitle.toLowerCase()}',
                                           focusNode: viewModel.focusNode,
                                           controller: viewModel.controller,
                                           style: context.textTheme.labelSmall,
                                           color: context.colorScheme.elevation2,
-                                          hintText: widget.searchHint ?? "Search ${widget.sectionTitle.toLowerCase()}",
+                                          hintText:
+                                              widget.searchHint ??
+                                              "Search ${widget.sectionTitle.toLowerCase()}",
                                         ),
                                       )
                                       : FusionAppText(
                                         text: widget.sectionTitle.toUpperCase(),
                                         maxLine: 1,
                                         textAlign: TextAlign.start,
-                                        style: context.textTheme.bodySmall?.copyWith(
-                                          fontWeight: FontWeight.w500,
-                                          fontSize: FusionSizes.fontSize12,
-                                          color: context.colorScheme.textBody,
-                                        ),
+                                        style: context.textTheme.bodySmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w500,
+                                              fontSize: FusionSizes.fontSize12,
+                                              color:
+                                                  context.colorScheme.textBody,
+                                            ),
                                       ),
                             ),
                           ),
@@ -113,7 +137,9 @@ class _SchematicListingSectionState extends State<SchematicListingSection> {
                         SemanticHelper.button(
                           testId: SemanticHelper.createTestId(
                             SemanticTypes.button,
-                            showSearchBar ? "${widget.sectionTitle.toLowerCase()}_search_close_icon" : "${widget.sectionTitle.toLowerCase()}_search_icon",
+                            showSearchBar
+                                ? "${widget.sectionTitle.toLowerCase()}_search_close_icon"
+                                : "${widget.sectionTitle.toLowerCase()}_search_icon",
                           ),
                           child: InkWell(
                             onTap: () {
@@ -126,14 +152,17 @@ class _SchematicListingSectionState extends State<SchematicListingSection> {
                             child: AnimatedSwitcher(
                               duration: const Duration(milliseconds: 200),
                               transitionBuilder:
-                                  (Widget child, Animation<double> animation) => FadeTransition(
-                                    opacity: animation,
-                                    child: child,
-                                  ),
+                                  (Widget child, Animation<double> animation) =>
+                                      FadeTransition(
+                                        opacity: animation,
+                                        child: child,
+                                      ),
 
                               child: Icon(
                                 key: ValueKey<bool>(showSearchBar),
-                                showSearchBar ? LucideIcons.x200 : LucideIcons.search200,
+                                showSearchBar
+                                    ? LucideIcons.x200
+                                    : LucideIcons.search200,
                                 size: FusionSizes.iconSize16,
                                 color: context.colorScheme.primaryWhite,
                               ),

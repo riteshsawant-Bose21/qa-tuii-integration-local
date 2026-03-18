@@ -32,33 +32,28 @@ class AudioControlTab extends StatelessWidget {
         child: Column(
           children: <Widget>[
             // Row 1: Audio Inputs & Outputs
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: <Widget>[
-                  SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.28,
-                    child: AudioStatusCard(
-                      title: "AUDIO INPUTS",
-                      content: AudioInputsUsageSection(
-                        hardwareComponent: hardwareComponent,
-                      ),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: AudioStatusCard(
+                    title: "AUDIO INPUTS",
+                    content: AudioInputsUsageSection(
+                      hardwareComponent: hardwareComponent,
                     ),
                   ),
-                  const SizedBox(width: 5),
-                  SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.28,
-                    child: AudioStatusCard(
-                      title: "AUDIO OUTPUTS",
-                      content: AudioOutputsUsageSection(
-                        hardwareComponent: hardwareComponent,
-                      ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: AudioStatusCard(
+                    title: "AUDIO OUTPUTS",
+                    content: AudioOutputsUsageSection(
+                      hardwareComponent: hardwareComponent,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 4),
             // Row 2: Control I/O & AES67
             Row(
               children: <Widget>[
@@ -70,7 +65,7 @@ class AudioControlTab extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 5),
+                const SizedBox(width: 4),
                 Expanded(
                   child:
                       isDsp

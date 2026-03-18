@@ -41,7 +41,19 @@ export 'project_entities/non_processing/fusion_event.dart';
 export 'fusion_auth/user_model.dart';
 export 'project_cloud/project_list_response.dart';
 export 'project_entities/media_files/media_file_model.dart';
+export 'project_entities/canvas/fusion_canvas_line.dart';
+export 'project_entities/canvas/fusion_canvas_element.dart';
+export 'project_entities/canvas/fusion_canvas_item.dart';
+export 'project_entities/canvas/fusion_canvas_point.dart';
+export 'project_entities/canvas/fusion_canvas_polygon.dart';
 
 export 'timezones/time_zone.dart';
+export 'project_entities/message_player_model.dart';
 
 export 'mdns/mdns_device.dart';
+
+export 'dro/dro_input_model.dart';
+
+export 'fusion_device/fusion_network_device.dart';
+
+export 'dro/dro_response.dart';

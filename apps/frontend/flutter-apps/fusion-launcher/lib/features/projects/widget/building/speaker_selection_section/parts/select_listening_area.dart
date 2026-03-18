@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/schematic_properties.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/add_speaker_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -12,11 +11,15 @@ import '../../widgets/drop_down.dart';
 class SelectListeningArea extends StatelessWidget {
   final SpeakerSelectionViewModel speakerSelectionViewModel;
 
-  const SelectListeningArea({super.key, required this.speakerSelectionViewModel});
+  const SelectListeningArea({
+    super.key,
+    required this.speakerSelectionViewModel,
+  });
 
   @override
   Widget build(BuildContext context) {
     return FusionArrowPopup(
+      semanticId: 'select_listening_area',
       blurAmount: 0,
       showArrow: false,
       backgroundColor: context.colorScheme.elevation1,
@@ -49,7 +52,10 @@ class SelectListeningArea extends StatelessWidget {
                               children: <Widget>[
                                 Expanded(
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 10,
+                                    ),
                                     child: FusionAppText(
                                       text: area.name,
                                       style: context.textTheme.bodySmall?.copyWith(
@@ -101,8 +107,12 @@ class SelectListeningArea extends StatelessWidget {
 
                         return FusionAppText(
                           text: "Select listening area",
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withAlpha(100),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withAlpha(100),
                           ),
                         );
                       },
@@ -111,7 +121,9 @@ class SelectListeningArea extends StatelessWidget {
                   // arrow icon
                   Icon(
                     LucideIcons.chevronDown200,
-                    color: Theme.of(context).colorScheme.onSurface.withAlpha(100),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withAlpha(100),
                   ),
                 ],
               ),
@@ -141,7 +153,10 @@ class __CreateNewListeningAreaWidgetState extends State<_CreateNewListeningAreaW
 
   void _addNewLocationToFloor() {
     if (listeningAreaNameController.text.trim().isEmpty || _selectedFloor == null) {
-      FusionToast.error(context, message: "Please enter location name and select a floor");
+      FusionToast.error(
+        context,
+        message: "Please enter location name and select a floor",
+      );
       return;
     }
 
@@ -150,25 +165,32 @@ class __CreateNewListeningAreaWidgetState extends State<_CreateNewListeningAreaW
 
     final ListeningArea newListeningArea = ListeningArea(
       name: locationName,
-      vertices: <Offset>[
-        const Offset(0, 0),
-        const Offset(100, 0),
-        const Offset(100, 100),
-        const Offset(0, 100),
-      ],
+      vertices: <FusionCanvasPoint>[],
     );
 
     final String? zoneId = context.read<SpeakerSelectionViewModel>().zoneId;
     final String? subZoneId = context.read<SpeakerSelectionViewModel>().subZoneId;
-    serviceLocator<ProjectViewModel>().addListeningArea(area: newListeningArea, floorId: floorId);
+    serviceLocator<ProjectViewModel>().addListeningArea(
+      area: newListeningArea,
+      floorId: floorId,
+    );
 
     if (subZoneId != null) {
-      projectViewModel.addListeningAreaToSubZone(subZoneId: subZoneId, areaId: newListeningArea.id);
+      projectViewModel.addListeningAreaToSubZone(
+        subZoneId: subZoneId,
+        areaId: newListeningArea.id,
+      );
     } else if (zoneId != null) {
-      projectViewModel.addListeningAreaToZone(zoneId: zoneId, listeningAreaId: newListeningArea.id);
+      projectViewModel.addListeningAreaToZone(
+        zoneId: zoneId,
+        listeningAreaId: newListeningArea.id,
+      );
     }
 
-    FusionToast.success(context, message: "Listening area '${newListeningArea.name}' created");
+    FusionToast.success(
+      context,
+      message: "Listening area '${newListeningArea.name}' created",
+    );
     widget.onListeningAreaCreated(newListeningArea);
 
     // clear inputs
@@ -233,9 +255,12 @@ class __CreateNewListeningAreaWidgetState extends State<_CreateNewListeningAreaW
                   decoration: BoxDecoration(
                     color: context.colorScheme.elevation1,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: context.colorScheme.elevation2, width: 1),
+                    border: Border.all(
+                      color: context.colorScheme.elevation2,
+                      width: 1,
+                    ),
                   ),
-                  child: BuildingPageDronDown<FloorModel>(
+                  child: BuildingPageDropDown<FloorModel>(
                     value: _selectedFloor,
                     items: serviceLocator<ProjectViewModel>().getAllFloors(),
                     onSelect: (FloorModel selectedValue) {
@@ -277,7 +302,10 @@ class __CreateNewListeningAreaWidgetState extends State<_CreateNewListeningAreaW
                     child: GestureDetector(
                       onTap: _addNewLocationToFloor,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: FusionDarkColorPallette.green20,
                           borderRadius: BorderRadius.circular(8),

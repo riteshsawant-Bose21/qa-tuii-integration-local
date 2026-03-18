@@ -42,6 +42,7 @@ class MessagePlayerCard extends StatelessWidget {
         if (isPlaying && playingTrack != null) ...<Widget>[
           // --- Active Playing State UI (Image 5 top item) ---
           FusionContainer(
+            raised: true,
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               decoration: BoxDecoration(
@@ -76,6 +77,7 @@ class MessagePlayerCard extends StatelessWidget {
                   ),
                   FusionContainer(
                     borderRadius: 100,
+                    raised: true,
                     child: Container(
                       decoration: BoxDecoration(
                         color: context.colorScheme.elevation1,

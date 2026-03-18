@@ -4,6 +4,7 @@ import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/project_manger/dro/dro_input_mapper.dart';
 
 export 'circuit/circuit_viewmodel.dart';
 export 'equip_location/equip_location_view_model.dart';
@@ -15,6 +16,7 @@ export 'functions/functions_view_model.dart';
 export 'hardware/hardware_view_model.dart';
 export 'listening_area/listening_area_view_model.dart';
 export 'media_files/media_file_view_models.dart';
+export 'message_player/message_player_view_model.dart';
 export 'mix_scenes/mix_scenes_view_model.dart';
 export 'processing_block/processing_block_viewmodel.dart';
 export 'project_images/project_image_view_model.dart';
@@ -105,18 +107,18 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   ProjectMode currentProjectMode = ProjectMode.systemListingMode;
 
-  ToolbarMode currentToolbarMode = ToolbarMode.acoustics;
+  // ToolbarMode currentToolbarMode = ToolbarMode.acoustics;
   ConfigurationMenuMode currentConfigurationMenuMode = ConfigurationMenuMode.processing;
 
   ProductQueryModel? selectedProductToAdd;
 
-  bool _shouldPlaceNonPlacedSpeakers = false;
-  bool get shouldPlaceNonPlacedSpeakers => _shouldPlaceNonPlacedSpeakers;
-  void setShouldPlaceNonPlacedSpeakers(bool shouldPlace) {
-    if (shouldPlace == _shouldPlaceNonPlacedSpeakers) return;
-    _shouldPlaceNonPlacedSpeakers = shouldPlace;
-    updateProject();
-  }
+  // bool _shouldPlaceNonPlacedSpeakers = false;
+  // bool get shouldPlaceNonPlacedSpeakers => _shouldPlaceNonPlacedSpeakers;
+  // void setShouldPlaceNonPlacedSpeakers(bool shouldPlace) {
+  //   if (shouldPlace == _shouldPlaceNonPlacedSpeakers) return;
+  //   _shouldPlaceNonPlacedSpeakers = shouldPlace;
+  //   updateProject();
+  // }
 
   /// Global hover and selection state management
   SelectedItem? _selectedDevice;
@@ -323,6 +325,10 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     return projectManager.getCurrentProjectJson();
   }
 
+  DroInputModel getDroInputData() {
+    return projectManager.getDroInputData();
+  }
+
   /// Clears the current project selection.
   void closeProject() {
     if (state is ProjectLoaded) {
@@ -435,16 +441,16 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     currentDeviceTypeIndex = -1;
   }
 
-  void setToolbarMode(ToolbarMode mode) {
-    if (currentToolbarMode != mode) {
-      currentToolbarMode = mode;
-      // Reset selections when switching modes
-      changeDeviceTypeIndex(-1);
-      setSelectedProductToAdd(null);
-      setShouldPlaceNonPlacedSpeakers(false);
-      emit(ToolbarModeChanged(mode));
-    }
-  }
+  // void setToolbarMode(ToolbarMode mode) {
+  //   if (currentToolbarMode != mode) {
+  //     currentToolbarMode = mode;
+  //     // Reset selections when switching modes
+  //     changeDeviceTypeIndex(-1);
+  //     setSelectedProductToAdd(null);
+  //     setShouldPlaceNonPlacedSpeakers(false);
+  //     emit(ToolbarModeChanged(mode));
+  //   }
+  // }
 
   void setConfigurationMenuMode(ConfigurationMenuMode mode) {
     if (currentConfigurationMenuMode != mode) {

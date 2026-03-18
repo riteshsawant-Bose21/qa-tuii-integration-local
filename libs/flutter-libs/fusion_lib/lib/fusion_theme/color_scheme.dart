@@ -36,6 +36,8 @@ extension ColorExtends on ColorScheme {
   static const Color _textPlaceholderD = Color(0xFF77746E);
   static const Color _textDisabledL = Color(0xFFC6C2BA);
   static const Color _textDisabledD = Color(0xFF595752);
+  static const Color _GreenThemeDisabledTextL = Color(0xFF828282);
+  static const Color _GreenThemeDisabledTextD = Color(0xFF828282);
 
   // Elevation Colors
   static const Color _elevation1L = Color(0xFFF5F3F0);
@@ -48,6 +50,8 @@ extension ColorExtends on ColorScheme {
   static const Color _elevation4D = Color(0xFF595752);
   static const Color _elevation5L = Color(0xFF77746E);
   static const Color _elevation5D = Color(0xFF77746E);
+  static const Color _elevation6L = Color(0xFFB4AFA6);
+  static const Color _elevation6D = Color(0xFFB4AFA6);
 
   // Stroke Colors
   static const Color _strokeLightL = Color(0xFFDBD7CE);
@@ -206,6 +210,8 @@ extension ColorExtends on ColorScheme {
   static const Color _spl500D = Color(0xFF5BA884);
   static const Color _spl600L = Color(0xFFE8F3EE);
   static const Color _spl600D = Color(0xFF3E996E);
+  static const Color _GreenThemeDisabledD = Color(0xFF2F4F42);
+  static const Color _GreenThemeDisabledL = Color(0xFFCAE5D9);
 
   // Expressive Dark mode
   static const Color _expressiveShadowDarkD = Color(0xFF000000);
@@ -236,8 +242,11 @@ extension ColorExtends on ColorScheme {
   Color get textSecondary => isDarkMode ? _textSecondaryD : _textSecondaryL;
   Color get textBody => isDarkMode ? _textBodyD : _textBodyL;
   Color get textLabel => isDarkMode ? _textLabelD : _textLabelL;
-  Color get textPlaceholder => isDarkMode ? _textPlaceholderD : _textPlaceholderL;
+  Color get textPlaceholder =>
+      isDarkMode ? _textPlaceholderD : _textPlaceholderL;
   Color get textDisabled => isDarkMode ? _textDisabledD : _textDisabledL;
+  Color get GreenThemeDisabledText =>
+      isDarkMode ? _GreenThemeDisabledTextD : _GreenThemeDisabledTextL;
 
   // Elevation Colors
   Color get elevation1 => isDarkMode ? _elevation1D : _elevation1L;
@@ -245,6 +254,7 @@ extension ColorExtends on ColorScheme {
   Color get elevation3 => isDarkMode ? _elevation3D : _elevation3L;
   Color get elevation4 => isDarkMode ? _elevation4D : _elevation4L;
   Color get elevation5 => isDarkMode ? _elevation5D : _elevation5L;
+  Color get elevation6 => isDarkMode ? _elevation6D : _elevation6L;
 
   // Stroke Colors
   Color get strokeLight => isDarkMode ? _strokeLightD : _strokeLightL;
@@ -333,6 +343,8 @@ extension ColorExtends on ColorScheme {
   Color get spl400 => isDarkMode ? _spl400D : _spl400L;
   Color get spl500 => isDarkMode ? _spl500D : _spl500L;
   Color get spl600 => isDarkMode ? _spl600D : _spl600L;
+  Color get GreenThemeDisabled =>
+      isDarkMode ? _GreenThemeDisabledD : _GreenThemeDisabledL;
 
   // Commission Colors
   Color get cardDark => isDarkMode ? _cardDarkD : _cardDarkL;
@@ -370,6 +382,10 @@ extension ColorExtends on ColorScheme {
   ///
   /// Shadow Colors
   ///
-  Color get shadowDark => isDarkMode ? _expressiveShadowDarkD.withValues(alpha: 0.5) : _expressiveShadowDarkD.withValues(alpha: 0.14);
-  Color get shadowLight => isDarkMode ? _expressiveShadowLightD.withAlpha((0.1 * 255).toInt()) : _expressiveShadowLightL;
+  Color get shadowDark => isDarkMode
+      ? _expressiveShadowDarkD.withValues(alpha: 0.5)
+      : _expressiveShadowDarkD.withValues(alpha: 0.14);
+  Color get shadowLight => isDarkMode
+      ? _expressiveShadowLightD.withAlpha((0.1 * 255).toInt())
+      : _expressiveShadowLightL;
 }

@@ -63,9 +63,9 @@ class ListeningAreaProperties extends StatelessWidget {
 
         //prepare List<PropertyRow> rows from selectedListeningArea vertices
         final List<PropertyRow> rows =
-            selectedListeningArea.vertices.asMap().entries.map((MapEntry<int, Offset> entry) {
+            selectedListeningArea.vertices.asMap().entries.map((MapEntry<int, FusionCanvasPoint> entry) {
               final int index = entry.key + 1; // Start index from 1
-              final Offset vertex = entry.value;
+              final Offset vertex = entry.value.position;
               return PropertyRow(
                 title: "P $index",
                 x: double.parse(vertex.dx.toStringAsFixed(2)),
@@ -603,6 +603,7 @@ class _PropertyListWidgetState extends State<PropertyListWidget> {
               },
               child: FusionAppText(
                 text: _showAll ? "Show Less" : "Show More",
+                semanticId: SemanticHelper.createTestId(SemanticTypes.button, _showAll ? "show_less" : "show_more"),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 11,
                   color: Theme.of(context).primaryColor,

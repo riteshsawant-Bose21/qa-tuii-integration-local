@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/projects/viewmodel/building_page_state.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/service_locator.dart';
+import '../../../viewmodel/building_page_viewmodel.dart';
 import 'parts/select_speaker_popup.dart';
 
 class SpeakerSelectionWidget extends StatefulWidget {
@@ -27,7 +29,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
             final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
             final ListeningArea? currentSelectedListeningAreaId = projectViewModel.getCurrentSelectedListeningArea();
 
-            if (currentSelectedListeningAreaId == null || projectViewModel.currentToolbarMode == ToolbarMode.system) {
+            if (currentSelectedListeningAreaId == null || context.watch<BuildingPageViewModel>().state.toolbarMode == ToolbarMode.system) {
               return const SizedBox.shrink();
             }
 
@@ -35,33 +37,23 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
               testId: SemanticHelper.createTestId(SemanticTypes.container, "side_speaker_selection_section"),
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Theme.of(context).colorScheme.primaryBlack,
-                      width: 1,
-                    ),
-                  ),
-                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: <Widget>[
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                    Padding(
+                      padding: const EdgeInsets.all(12),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: <Widget>[
-                          Expanded(
-                            child: FusionAppText(
-                              text: "SPEAKERS",
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontSize: 11,
-                              ),
+                          FusionAppText(
+                            text: "SPEAKERS",
+                            style: context.textTheme.bodyMedium?.copyWith(
+                              fontSize: 11,
+                              color: context.colorScheme.textPrimary,
                             ),
                           ),
-
                           Builder(
                             builder: (BuildContext context) {
                               final String? areaId = projectViewModel.currentSelectedListeningAreaId;
@@ -126,231 +118,170 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
 
                         if (allSpeaekers.isEmpty) return const SizedBox.shrink();
 
-                        final bool shouldPlaceNonPlacedSpeakers = projectViewModel.shouldPlaceNonPlacedSpeakers;
+                        final bool shouldPlaceNonPlacedSpeakers = context.watch<BuildingPageViewModel>().state.toolState is SpeakerPlacementState;
 
-                        return Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Column(
-                            children: <Widget>[
-                              SemanticHelper.container(
-                                testId: SemanticHelper.createTestId(SemanticTypes.container, "side_speaker_selection_section_expansion_section"),
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _isExpanded = !_isExpanded;
-                                    });
-                                  },
-                                  behavior: HitTestBehavior.translucent,
-                                  child: Row(
-                                    children: <Widget>[
-                                      SemanticHelper.toggle(
-                                        testId: SemanticHelper.createTestId(SemanticTypes.toggle, "side_speaker_selection_section_expand_collapse"),
-                                        value: _isExpanded,
-                                        child: Icon(
-                                          _isExpanded ? LucideIcons.chevronDown200 : LucideIcons.chevronRight200,
-                                          size: 16,
-                                          color: context.colorScheme.onSurface,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      SemanticHelper.staticText(
-                                        testId: SemanticHelper.createTestId(SemanticTypes.text, "side_speaker_selection_section_name"),
-                                        child: FusionAppText(
-                                          text: listeningArea.name,
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w500,
+                        return Flexible(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                SemanticHelper.container(
+                                  testId: SemanticHelper.createTestId(SemanticTypes.container, "side_speaker_selection_section_expansion_section"),
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _isExpanded = !_isExpanded;
+                                      });
+                                    },
+                                    behavior: HitTestBehavior.translucent,
+                                    child: Row(
+                                      children: <Widget>[
+                                        SemanticHelper.toggle(
+                                          testId: SemanticHelper.createTestId(SemanticTypes.toggle, "side_speaker_selection_section_expand_collapse"),
+                                          value: _isExpanded,
+                                          child: Icon(
+                                            _isExpanded ? LucideIcons.chevronDown200 : LucideIcons.chevronRight200,
+                                            size: 16,
+                                            color: context.colorScheme.onSurface,
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                        const SizedBox(width: 8),
+                                        SemanticHelper.staticText(
+                                          testId: SemanticHelper.createTestId(SemanticTypes.text, "side_speaker_selection_section_name"),
+                                          child: FusionAppText(
+                                            text: listeningArea.name,
+                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
 
-                              if (_isExpanded) ...<Widget>[
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    const SizedBox(height: 10),
-                                    GestureDetector(
-                                      onTap: () {
-                                        if (nonPlacedSpeakers.isNotEmpty) {
-                                          projectViewModel.setShouldPlaceNonPlacedSpeakers(!projectViewModel.shouldPlaceNonPlacedSpeakers);
-                                        }
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(
-                                            color: shouldPlaceNonPlacedSpeakers ? context.colorScheme.surfaceDim : Colors.transparent,
-                                            width: 1,
+                                if (_isExpanded) ...<Widget>[
+                                  const SizedBox(height: 10),
+                                  GestureDetector(
+                                    onTap: () {
+                                      if (nonPlacedSpeakers.isNotEmpty) {
+                                        context.read<BuildingPageViewModel>().setShouldPlaceNonPlacedSpeakers(!shouldPlaceNonPlacedSpeakers);
+                                      }
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: shouldPlaceNonPlacedSpeakers ? context.colorScheme.surfaceDim : Colors.transparent,
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: <Widget>[
+                                          Container(
+                                            width: 24,
+                                            height: 24,
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: FusionImage.asset(
+                                              serviceLocator<ProjectViewModel>().getHardwareImage(
+                                                productId: allSpeaekers.first.productId ?? 0,
+                                                currentImagePath: allSpeaekers.first.assetImagePath,
+                                              ),
+                                            ),
                                           ),
-                                        ),
-                                        child: Row(
-                                          children: <Widget>[
-                                            Container(
-                                              width: 24,
-                                              height: 24,
-                                              padding: const EdgeInsets.all(4),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white,
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: FusionImage.asset(
-                                                serviceLocator<ProjectViewModel>().getHardwareImage(
-                                                  productId: allSpeaekers.first.productId ?? 0,
-                                                  currentImagePath: allSpeaekers.first.assetImagePath,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              child: FusionAppText(
-                                                text: allSpeaekers.first.speakerSKU,
-                                                style: context.textTheme.bodySmall?.copyWith(
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            if (allSpeaekers.isNotEmpty) ...<Widget>[
-                                              // edit icon
-                                              PopupMenuButton<String>(
-                                                color: Colors.transparent,
-                                                shadowColor: Colors.transparent,
-                                                tooltip: 'Edit speakers',
-                                                padding: EdgeInsets.zero,
-                                                menuPadding: EdgeInsets.zero,
-                                                clipBehavior: Clip.none,
-                                                offset: const Offset(45, 0),
-                                                constraints: const BoxConstraints(minWidth: 1000),
-                                                child: SemanticHelper.button(
-                                                  testId: SemanticHelper.createTestId(SemanticTypes.button, "edit_speaker_button"),
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.all(3.0),
-                                                    child: Icon(
-                                                      LucideIcons.pencil200,
-                                                      size: 12,
-                                                      color: context.colorScheme.onSurface,
-                                                    ),
-                                                  ),
-                                                ),
-                                                itemBuilder: (BuildContext context) {
-                                                  return <PopupMenuEntry<String>>[
-                                                    PopupMenuItem<String>(
-                                                      enabled: false,
-                                                      padding: EdgeInsets.zero,
-                                                      child: Theme(
-                                                        data: ThemeData.dark(),
-                                                        child: const SpeakerQueryPopup(isFromBuildingPage: true),
-                                                      ),
-                                                    ),
-                                                  ];
-                                                },
-                                              ),
-                                            ],
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    if (placedSpeakers.isNotEmpty) ...<Widget>[
-                                      const SizedBox(height: 5),
-                                      Padding(
-                                        padding: const EdgeInsets.only(left: 36),
-                                        child: Row(
-                                          children: <Widget>[
-                                            Expanded(
-                                              child: FusionAppText(
-                                                text: 'Placed',
-                                                style: context.textTheme.bodySmall?.copyWith(
-                                                  color: context.colorScheme.onSurface,
-                                                ),
-                                              ),
-                                            ),
-
-                                            const SizedBox(width: 8),
-                                            FusionAppText(
-                                              text: "${placedSpeakers.length}",
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: FusionAppText(
+                                              text: allSpeaekers.first.speakerSKU,
                                               style: context.textTheme.bodySmall?.copyWith(
-                                                color: context.colorScheme.onSurface,
+                                                fontWeight: FontWeight.w500,
                                               ),
                                             ),
-
-                                            if (nonPlacedSpeakers.isEmpty) ...<Widget>[
-                                              const SizedBox(width: 8),
-                                              MouseRegion(
-                                                cursor: SystemMouseCursors.click,
-                                                child: GestureDetector(
-                                                  onTap: () {
-                                                    final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
-                                                    final Speaker clonedSpeaker = placedSpeakers.last.getClone();
-                                                    clonedSpeaker.pos = null;
-                                                    projectViewModel.addHardware(hardware: clonedSpeaker);
-                                                  },
-                                                  child: SemanticHelper.button(
-                                                    testId: SemanticHelper.createTestId(SemanticTypes.button, "add_one_more_placed_speaker_to_non_placed"),
-                                                    child: Icon(
-                                                      LucideIcons.plus200,
-                                                      size: 12,
-                                                      color: context.colorScheme.onSurface,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-
-                                    if (nonPlacedSpeakers.isNotEmpty) ...<Widget>[
-                                      const SizedBox(height: 5),
-                                      Padding(
-                                        padding: const EdgeInsets.only(left: 36),
-                                        child: Row(
-                                          children: <Widget>[
-                                            Expanded(
-                                              child: FusionAppText(
-                                                text: 'Unplaced',
-                                                style: context.textTheme.bodySmall?.copyWith(
-                                                  color: context.colorScheme.onSurface,
-                                                ),
-                                              ),
-                                            ),
-                                            MouseRegion(
-                                              cursor: SystemMouseCursors.click,
-                                              child: GestureDetector(
-                                                onTap: () {
-                                                  final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
-                                                  projectViewModel.decreaseQty();
-                                                },
-                                                child: SemanticHelper.button(
-                                                  testId: SemanticHelper.createTestId(SemanticTypes.button, "decrease_non_placed_speaker_quantity_button"),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          if (allSpeaekers.isNotEmpty) ...<Widget>[
+                                            // edit icon
+                                            PopupMenuButton<String>(
+                                              color: Colors.transparent,
+                                              shadowColor: Colors.transparent,
+                                              tooltip: 'Edit speakers',
+                                              padding: EdgeInsets.zero,
+                                              menuPadding: EdgeInsets.zero,
+                                              clipBehavior: Clip.none,
+                                              offset: const Offset(45, 0),
+                                              constraints: const BoxConstraints(minWidth: 1000),
+                                              child: SemanticHelper.button(
+                                                testId: SemanticHelper.createTestId(SemanticTypes.button, "edit_speaker_button"),
+                                                child: Padding(
+                                                  padding: const EdgeInsets.all(3.0),
                                                   child: Icon(
-                                                    LucideIcons.minus200,
+                                                    LucideIcons.pencil200,
                                                     size: 12,
                                                     color: context.colorScheme.onSurface,
                                                   ),
                                                 ),
                                               ),
+                                              itemBuilder: (BuildContext context) {
+                                                return <PopupMenuEntry<String>>[
+                                                  PopupMenuItem<String>(
+                                                    enabled: false,
+                                                    padding: EdgeInsets.zero,
+                                                    child: Theme(
+                                                      data: ThemeData.dark(),
+                                                      child: const SpeakerQueryPopup(isFromBuildingPage: true),
+                                                    ),
+                                                  ),
+                                                ];
+                                              },
                                             ),
-                                            const SizedBox(width: 8),
-                                            FusionAppText(
-                                              text: "${nonPlacedSpeakers.length}",
-                                              style: context.textTheme.bodySmall,
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  if (placedSpeakers.isNotEmpty) ...<Widget>[
+                                    const SizedBox(height: 5),
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 36),
+                                      child: Row(
+                                        children: <Widget>[
+                                          Expanded(
+                                            child: FusionAppText(
+                                              text: 'Placed',
+                                              style: context.textTheme.bodySmall?.copyWith(
+                                                color: context.colorScheme.onSurface,
+                                              ),
                                             ),
+                                          ),
+
+                                          const SizedBox(width: 8),
+                                          FusionAppText(
+                                            text: "${placedSpeakers.length}",
+                                            style: context.textTheme.bodySmall?.copyWith(
+                                              color: context.colorScheme.onSurface,
+                                            ),
+                                          ),
+
+                                          if (nonPlacedSpeakers.isEmpty) ...<Widget>[
                                             const SizedBox(width: 8),
                                             MouseRegion(
                                               cursor: SystemMouseCursors.click,
                                               child: GestureDetector(
                                                 onTap: () {
                                                   final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
-                                                  projectViewModel.increaseQty();
+                                                  final Speaker clonedSpeaker = placedSpeakers.last.getClone();
+                                                  clonedSpeaker.pos = null;
+                                                  projectViewModel.addHardware(hardware: clonedSpeaker);
                                                 },
                                                 child: SemanticHelper.button(
-                                                  testId: SemanticHelper.createTestId(SemanticTypes.button, "increase_non_placed_speaker_quantity_button"),
+                                                  testId: SemanticHelper.createTestId(SemanticTypes.button, "add_one_more_placed_speaker_to_non_placed"),
                                                   child: Icon(
                                                     LucideIcons.plus200,
                                                     size: 12,
@@ -360,13 +291,72 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                               ),
                                             ),
                                           ],
-                                        ),
+                                        ],
                                       ),
-                                    ],
+                                    ),
                                   ],
-                                ),
+
+                                  if (nonPlacedSpeakers.isNotEmpty) ...<Widget>[
+                                    const SizedBox(height: 5),
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 36),
+                                      child: Row(
+                                        children: <Widget>[
+                                          Expanded(
+                                            child: FusionAppText(
+                                              text: 'Unplaced',
+                                              style: context.textTheme.bodySmall?.copyWith(
+                                                color: context.colorScheme.onSurface,
+                                              ),
+                                            ),
+                                          ),
+                                          MouseRegion(
+                                            cursor: SystemMouseCursors.click,
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
+                                                projectViewModel.decreaseQty();
+                                              },
+                                              child: SemanticHelper.button(
+                                                testId: SemanticHelper.createTestId(SemanticTypes.button, "decrease_non_placed_speaker_quantity_button"),
+                                                child: Icon(
+                                                  LucideIcons.minus200,
+                                                  size: 12,
+                                                  color: context.colorScheme.onSurface,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          FusionAppText(
+                                            text: "${nonPlacedSpeakers.length}",
+                                            style: context.textTheme.bodySmall,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          MouseRegion(
+                                            cursor: SystemMouseCursors.click,
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
+                                                projectViewModel.increaseQty();
+                                              },
+                                              child: SemanticHelper.button(
+                                                testId: SemanticHelper.createTestId(SemanticTypes.button, "increase_non_placed_speaker_quantity_button"),
+                                                child: Icon(
+                                                  LucideIcons.plus200,
+                                                  size: 12,
+                                                  color: context.colorScheme.onSurface,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ],
-                            ],
+                            ),
                           ),
                         );
                       },

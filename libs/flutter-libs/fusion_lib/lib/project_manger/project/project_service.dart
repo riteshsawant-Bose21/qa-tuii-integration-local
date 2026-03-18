@@ -34,6 +34,7 @@ class ProjectService {
   final DateTime? lastUploadedAt;
   final bool isDeleted;
   final bool isCloudInstance;
+  final ProjectMetaData metadata;
 
   final FloorRepository floors;
   final ListeningAreaRepository listeningAreas;
@@ -57,6 +58,7 @@ class ProjectService {
   final SchedulerRepository schedulerConfig;
   final EventsRepository events;
   final MediaFileRepository mediaFiles;
+  final MessageRepository messages;
 
   final RelationshipManager relationships;
 
@@ -96,6 +98,8 @@ class ProjectService {
     this.venue,
     this.lastUploadedAt,
     this.isCloudInstance = false,
+    required this.metadata,
+
     FloorRepository? floors,
     ListeningAreaRepository? listeningAreas,
     ZoneRepository? zones,
@@ -119,6 +123,7 @@ class ProjectService {
     SchedulerRepository? schedulerConfig,
     EventsRepository? events,
     MediaFileRepository? mediaFiles,
+    MessageRepository? messages,
   }) : floors = floors ?? FloorRepository(),
        listeningAreas = listeningAreas ?? ListeningAreaRepository(),
        zones = zones ?? ZoneRepository(),
@@ -141,7 +146,71 @@ class ProjectService {
        gpioConfigs = gpioRepository ?? GPIORepository(),
        schedulerConfig = schedulerConfig ?? SchedulerRepository(),
        events = events ?? EventsRepository(),
-       mediaFiles = mediaFiles ?? MediaFileRepository();
+       mediaFiles = mediaFiles ?? MediaFileRepository(),
+       messages = messages ?? MessageRepository();
+
+  ProjectService updateVip(String? vip) {
+    ProjectService projectService = ProjectService(
+      id: id,
+      name: name,
+      projectName: projectName,
+      colors: colors,
+      virtualIP: vip,
+      currentFloorIndex: currentFloorIndex,
+      droResponse: droResponse,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      minSPL: minSPL,
+      maxSPL: maxSPL,
+      isInControlMode: isInControlMode,
+      application: application,
+      budget: budget,
+      description: description,
+      environmentType: environmentType,
+      isArchived: isArchived,
+      isStarred: isStarred,
+      lockedByUser: lockedByUser,
+      projectFileUrl: projectFileUrl,
+      projectPhase: projectPhase,
+      thumbnailUrl: thumbnailUrl,
+      venue: venue,
+      isDeleted: isDeleted,
+      lastUploadedAt: lastUploadedAt,
+      floors: floors,
+      listeningAreas: listeningAreas,
+      zones: zones,
+      subZones: subZones,
+      sourceSets: sourceSets,
+      hardware: hardware,
+      fusionDevices: fusionDevices,
+      suggestedFusionDevices: suggestedFusionDevices,
+      amplifiers: amplifiers,
+      circuits: circuits,
+      wiringConnection: wiringConnection,
+      processingBlocks: processingBlocks,
+      relationships: relationships,
+      isInHardwareMode: isInHardwareMode,
+      isCloudInstance: isCloudInstance,
+      zoneFunctions: zoneFunctions,
+      prioritySourceData: prioritySourceData,
+      equipLocations: equipLocations,
+      scenesRepository: snapshots,
+      sceneActionRepository: sceneActions,
+      sceneSetRepository: sceneSets,
+      gpioRepository: gpioConfigs,
+      schedulerConfig: schedulerConfig,
+      events: events,
+      mediaFiles: mediaFiles,
+      messages: messages,
+      metadata: metadata,
+    );
+
+    // Preserve undo/redo stacks
+    projectService.undoStack = List.from(undoStack);
+    projectService.redoStack = List.from(redoStack);
+
+    return projectService;
+  }
 
   ProjectService copyWith({
     String? id,
@@ -153,7 +222,6 @@ class ProjectService {
     Map<String, dynamic>? droResponse,
     DateTime? createdAt,
     DateTime? updatedAt,
-    String? metaData,
     double? minSPL,
     double? maxSPL,
     bool? isInControlMode,
@@ -171,6 +239,7 @@ class ProjectService {
     bool? isDeleted,
     DateTime? lastUploadedAt,
     bool? isCloudInstance,
+    ProjectMetaData? metadata,
     FloorRepository? floors,
     ListeningAreaRepository? listeningAreas,
     ZoneRepository? zones,
@@ -195,6 +264,7 @@ class ProjectService {
     SchedulerRepository? schedulerConfig,
     EventsRepository? events,
     MediaFileRepository? mediaFiles,
+    MessageRepository? messages,
   }) {
     ProjectService projectService = ProjectService(
       id: id ?? this.id,
@@ -247,6 +317,8 @@ class ProjectService {
       schedulerConfig: schedulerConfig ?? this.schedulerConfig,
       events: events ?? this.events,
       mediaFiles: mediaFiles ?? this.mediaFiles,
+      messages: messages ?? this.messages,
+      metadata: metadata ?? this.metadata,
     );
 
     // Preserve undo/redo stacks
@@ -321,6 +393,8 @@ class ProjectService {
       "schedulerConfig": schedulerConfig.toJson((s) => s.toJson()),
       "events": events.toJson((e) => e.toJson()),
       "mediaFiles": mediaFiles.toJson((m) => m.toJson()),
+      "messages": messages.toJson((m) => m.toJson()),
+      'metadata': metadata.toJson(),
     };
   }
 
@@ -353,6 +427,7 @@ class ProjectService {
       isDeleted: json["is_deleted"] ?? false,
       lastUploadedAt: json["lastUploadedAt"] != null ? DateTime.parse(json["lastUploadedAt"]) : null,
       isCloudInstance: json["isCloudInstance"] ?? false,
+      metadata: json['metadata'] != null ? ProjectMetaData.fromJson(json['metadata'] as Map<String, dynamic>) : ProjectMetaData.empty(),
     );
 
     service.floors.fromJsonList(json["floors"], (m) => FloorModel.fromJson(m), "id");
@@ -400,6 +475,7 @@ class ProjectService {
     service.schedulerConfig.fromJsonList(json["schedulerConfig"], (m) => ScheduleConfig.fromJson(m), "id");
     service.events.fromJsonList(json["events"], (m) => FusionEvent.fromJson(m), "id");
     service.mediaFiles.fromJsonList(json["mediaFiles"], (m) => MediaFileModel.fromJson(m), "id");
+    service.messages.fromJsonList(json["messages"], (m) => MessageModel.fromJson(m), "id");
 
     service.relationships.fromJson(json["relationships"]);
 

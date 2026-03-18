@@ -24,7 +24,7 @@ class AppInterceptors extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
-    debugPrint(" Dio Error Code is ${err.response?.statusCode} ");
+    print(" Dio Error Code is ${err.response?.statusCode} ");
     // if (err.response?.statusCode == 401 && err.requestOptions.path.isBackendServerEndpoint() && err.requestOptions.path.isTokenRequired()) {
     //   // Handle 401 error - token expired
     //   await _handleTokenExpiry(err, handler);
@@ -293,7 +293,9 @@ class AppInterceptors extends Interceptor {
           message: 'API returned error status',
         );
 
-        FusionUiUtils.showErrorDialog(dioError);
+        // Show error dialog for non-success responses
+        //commented now to avoid showing for Fusion server errors
+        // FusionUiUtils.showErrorDialog(dioError);
       }
     }
   }

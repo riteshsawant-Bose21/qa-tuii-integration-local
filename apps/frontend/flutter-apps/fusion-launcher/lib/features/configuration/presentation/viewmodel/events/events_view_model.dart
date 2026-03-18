@@ -66,7 +66,10 @@ extension EventsViewModel on ProjectViewModel {
       if (autoSave) {
         saveProject();
       }
-      selectedEventId = addedEvent.id;
+      // Use setSelectedEventId (not direct field assignment) so ProjectViewModel
+      // emits ProjectUpdated.  ConfigEventsViewmodel listens for this and calls
+      // syncWithProjectViewModel(), which picks up the new event and pre-selects it.
+      setSelectedEventId(addedEvent.id);
       return addedEvent;
     } catch (ex) {
       throwError("Failed to add GPI event: $ex");
@@ -344,6 +347,9 @@ extension EventsViewModel on ProjectViewModel {
       final List<FusionEvent> timedEvents = getAllTimedEvents();
       final List<EventItemEntity> scheduledEventItems =
           timedEvents.map((FusionEvent event) {
+            // if(event.item != null || event.item!.itemId != null) {
+            //
+            // }
             final ScheduleConfig? schedule = getScheduleById(event.item!.itemId);
             if (schedule != null) {
               return EventItemEntity(

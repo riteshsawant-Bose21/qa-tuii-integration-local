@@ -39,6 +39,9 @@ class FusionTextField extends StatelessWidget {
   /// Callback for when the text changes.
   final ValueChanged<String>? onChanged;
 
+  // Callback for when the field is submitted (e.g., pressing "Enter").
+  final ValueChanged<String>? onSubmitted;
+
   /// Whether the field is enabled or read-only.
   final bool enabled;
 
@@ -74,7 +77,7 @@ class FusionTextField extends StatelessWidget {
   final bool autofocus;
 
   final Color? color;
-  final String? semanticFieldId;
+  final String semanticFieldId;
 
   final EdgeInsetsGeometry? contentPadding;
   final double? height;
@@ -87,6 +90,7 @@ class FusionTextField extends StatelessWidget {
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
     this.onChanged,
+    this.onSubmitted,
     this.enabled = true,
     this.prefixIcon,
     this.suffixIcon,
@@ -100,7 +104,7 @@ class FusionTextField extends StatelessWidget {
     this.inputFormatters,
     this.autofocus = false,
     this.color,
-    this.semanticFieldId,
+    required this.semanticFieldId,
     this.contentPadding,
     this.height,
     this.width,
@@ -126,11 +130,16 @@ class FusionTextField extends StatelessWidget {
       enabledBorder: border ?? InputBorder.none,
       focusedBorder: border ?? InputBorder.none,
       isDense: true,
-      contentPadding: contentPadding ?? const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      contentPadding:
+          contentPadding ??
+          const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
     );
 
     return SemanticHelper.formControl(
-      testId: SemanticHelper.createTestId(SemanticTypes.textInput, semanticFieldId ?? "fusion_text_field"),
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.textInput,
+        semanticFieldId ?? "fusion_text_field",
+      ),
       child: SizedBox(
         height: height,
         width: width,
@@ -141,6 +150,7 @@ class FusionTextField extends StatelessWidget {
           obscureText: obscureText,
           keyboardType: keyboardType,
           onChanged: onChanged,
+          onSubmitted: onSubmitted,
           enabled: enabled,
           autofocus: autofocus,
           style: style ?? theme.textTheme.bodySmall,

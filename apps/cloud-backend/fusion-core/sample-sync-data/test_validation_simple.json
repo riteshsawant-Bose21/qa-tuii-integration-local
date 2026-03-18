@@ -1,0 +1,45 @@
+{
+  "speakers": [
+    {
+      "id": 999001,
+      "model_name": "Test Speaker",
+      "model_family": "Test Family", 
+      "description": "A test speaker for validation",
+      "last_modified": "2024-01-15T12:00:00Z",
+      "audio_specifications": {
+        "frequency_range": "50Hz - 20kHz"
+      },
+      "power_specifications": {
+        "power_consumption": 50
+      },
+      "networking": {
+        "ethernet": true,
+        "wireless": false
+      },
+      "bsf_url": "not-a-valid-url",
+      "data_sheet_url": "",
+      "images": [
+        "image1.jpg",
+        "image2.jpg"
+      ],
+      "power_handling": {
+        "continuous": "100W",
+        "peak": "200W"
+      },
+      "sensitivity": {
+        "value": "90dB",
+        "measurement": "1W/1m"
+      },
+      "frequency_range": {
+        "low": "50Hz",
+        "high": "20kHz"
+      },
+      "nominal_impedance": {
+        "value": "8 ohms"
+      },
+      "connectivity": {
+        "inputs": ["XLR", "1/4 inch"]
+      }
+    }
+  ]
+}

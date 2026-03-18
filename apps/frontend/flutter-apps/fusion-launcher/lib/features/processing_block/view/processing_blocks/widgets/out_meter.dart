@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/processing_block/view/widgets/pb_meter.dart';
+import 'package:fusion_launcher/features/processing_block/view/widgets/pb_out_meter.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 class OutMeter extends StatelessWidget {
-  const OutMeter({super.key});
+  final String blockId;
+
+  const OutMeter({super.key, required this.blockId});
 
   @override
   Widget build(BuildContext context) {
@@ -33,13 +35,12 @@ class OutMeter extends StatelessWidget {
               text: "OUTPUT",
             ),
           ),
-          const Expanded(
+          Expanded(
             child: Padding(
-              padding: EdgeInsets.all(12.0),
-              child: VerticalMeter(
-                value: -60,
-                min: -60,
-                max: 0,
+              padding: const EdgeInsets.all(12.0),
+              child: PbOutMeter(
+                semanticId: 'out_meter_vertical_meter',
+                blockId: blockId,
               ),
             ),
           ),

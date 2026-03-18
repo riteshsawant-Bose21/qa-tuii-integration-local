@@ -5,6 +5,7 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
+import '../../../../viewmodel/building_page_viewmodel.dart';
 import '../view_model/add_speaker_view_model.dart';
 import 'properties_and_filter_section.dart';
 import 'speaker_lists.dart';
@@ -27,16 +28,23 @@ class SpeakerQueryPopup extends StatefulWidget {
 class SpeakerQueryPopupState extends State<SpeakerQueryPopup> {
   final TextEditingController searchController = TextEditingController();
 
+  ProjectViewModel get projectViewModel => serviceLocator<ProjectViewModel>();
+
   @override
   void initState() {
     super.initState();
-    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-    projectViewModel.setShouldPlaceNonPlacedSpeakers(false);
+  }
+
+  void onClose() {
+    final int totalNonPlacedSpeakers = projectViewModel.getNonPlacedSpeakersForCurrentListeningArea().length;
+    context.read<BuildingPageViewModel>().setShouldPlaceNonPlacedSpeakers(totalNonPlacedSpeakers > 0);
   }
 
   @override
   void dispose() {
+    onClose();
     searchController.dispose();
+
     super.dispose();
   }
 

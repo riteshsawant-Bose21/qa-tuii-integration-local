@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/devices/presentation/widgets/dro/dro_config_screen.dart';
 import 'package:fusion_launcher/features/devices/presentation/widgets/settings/device_global_settings_tab.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'device_mapping_screen.dart';
-import 'device_models.dart';
 
 class DeviceMappingDialog extends StatefulWidget {
   const DeviceMappingDialog({super.key});
@@ -25,87 +25,14 @@ class DeviceMappingDialog extends StatefulWidget {
 
 class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
   int _selectedTabIndex = 0;
-  List<NetworkHardware> _networkHardware = <NetworkHardware>[];
 
   List<HardwareComponent> get _fusionDevices {
     // Combine DSPs, Amplifiers, and Controllers
     final List<HardwareComponent> dsp = serviceLocator<ProjectViewModel>().fusionDsps;
     final List<HardwareComponent> amplifiers = serviceLocator<ProjectViewModel>().amplifiers;
     final List<HardwareComponent> controllers = serviceLocator<ProjectViewModel>().fusionControllers;
-    return <HardwareComponent>[...dsp, ...amplifiers, ...controllers];
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeMockData();
-  }
-
-  void _initializeMockData() {
-    // Mock project devices
-
-    // Mock network hardware
-    _networkHardware = <NetworkHardware>[
-      NetworkHardware(
-        id: 'hw1',
-        modelName: 'Fusion Mini FM6',
-        ipAddress: '192.168.50.100',
-        firmware: 'v1.1.0',
-        type: NetworkHardwareType.dsp,
-      ),
-      NetworkHardware(
-        id: 'hw2',
-        modelName: 'Fusion Mini FM6',
-        ipAddress: '192.168.50.100',
-        firmware: 'v1.1.0',
-        type: NetworkHardwareType.dsp,
-      ),
-      NetworkHardware(
-        id: 'hw3',
-        modelName: 'Control Pal LT',
-        ipAddress: '192.168.50.100',
-        firmware: 'v1.1.0',
-        type: NetworkHardwareType.controller,
-      ),
-      NetworkHardware(
-        id: 'hw4',
-        modelName: 'Control Pal Pro',
-        ipAddress: '192.168.50.100',
-        firmware: 'v1.1.0',
-        type: NetworkHardwareType.controller,
-      ),
-      NetworkHardware(
-        id: 'hw5',
-        modelName: 'Power Smart 8300',
-        ipAddress: '192.168.50.100',
-        firmware: 'v1.1.0',
-        type: NetworkHardwareType.amplifier,
-      ),
-    ];
-  }
-
-  void _handleAssignHardware(HardwareComponent device, NetworkHardware? hardware) {
-    setState(() {
-      // 1. Unassign: Find any hardware currently assigned to THIS device and clear it.
-      // We iterate through the list to ensure we catch the specific hardware instance
-      // that is currently holding this device's ID.
-      for (final NetworkHardware hw in _networkHardware) {
-        if (hw.assignedToDeviceId == device.id) {
-          hw.assignedToDeviceId = null;
-        }
-      }
-
-      // 2. Assign: If a new hardware is selected, link it to this device.
-      if (hardware != null) {
-        // We look up the hardware in the main list to ensure we are modifying the
-        // source of truth (in case 'hardware' passed in is a copy).
-        final NetworkHardware targetHw = _networkHardware.firstWhere((NetworkHardware hw) => hw.id == hardware.id);
-
-        // Setting this automatically overwrites any previous device ID,
-        // handling the case where we "steal" hardware from another device.
-        targetHw.assignedToDeviceId = device.id;
-      }
-    });
+    final List<HardwareComponent> endpoints = serviceLocator<ProjectViewModel>().fusionEndpoints;
+    return <HardwareComponent>[...dsp, ...amplifiers, ...controllers, ...endpoints];
   }
 
   @override
@@ -123,16 +50,16 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
         ),
         child: Column(
           children: <Widget>[
-            _buildHeader(),
+            _buildHeader(context),
             Expanded(
               child:
                   _selectedTabIndex == 0
                       ? DeviceMappingScreen(
                         devices: _fusionDevices,
-                        networkHardware: _networkHardware,
-                        onAssignHardware: _handleAssignHardware,
                       )
-                      : const DeviceGlobalSettingsTab(),
+                      : _selectedTabIndex == 1
+                      ? const DeviceGlobalSettingsTab()
+                      : const DroConfigScreen(),
             ),
           ],
         ),
@@ -140,9 +67,9 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 12),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
@@ -162,12 +89,12 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
                   text: 'CONFIGURE NETWORK',
                   style: context.textTheme.labelMedium,
                 ),
-                IconButton(
-                  icon: Icon(
+                InkWell(
+                  child: Icon(
                     Icons.close,
                     color: context.colorScheme.iconWhite,
                   ),
-                  onPressed: () {
+                  onTap: () {
                     Navigator.of(context).pop();
                     if (serviceLocator<ProjectViewModel>().virtualIP == null) {
                       serviceLocator<ProjectViewModel>().toggleControlMode();
@@ -180,9 +107,11 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
           // Tabs
           Row(
             children: <Widget>[
-              _buildTab('Mapping', 0),
+              _buildTab(context, 'Mapping', 0),
               const SizedBox(width: 32),
-              _buildTab('Settings', 1),
+              _buildTab(context, 'Settings', 1),
+              const SizedBox(width: 32),
+              _buildTab(context, "Dro config", 2),
             ],
           ),
         ],
@@ -190,7 +119,7 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
     );
   }
 
-  Widget _buildTab(String label, int index) {
+  Widget _buildTab(BuildContext context, String label, int index) {
     final bool isSelected = _selectedTabIndex == index;
 
     return InkWell(
@@ -200,7 +129,7 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
         });
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.only(top: 14, bottom: 4),
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
@@ -212,9 +141,9 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
         child: FusionAppText(
           text: label,
           style: TextStyle(
-            color: isSelected ? context.colorScheme.primary : const Color(0xFF77746E),
+            color: isSelected ? context.colorScheme.textPrimary : context.colorScheme.iconDefault,
             fontSize: 14,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w200,
           ),
         ),
       ),
