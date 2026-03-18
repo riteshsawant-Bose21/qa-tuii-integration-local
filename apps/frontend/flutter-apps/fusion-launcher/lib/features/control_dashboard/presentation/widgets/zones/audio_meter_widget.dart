@@ -3,21 +3,23 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-
-import 'dart:math';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:fusion_lib/fusion_lib.dart';
+
+import '../../../../../core/service_locator.dart';
+import '../../../../projects/view_model/meter_data/meter_data_view_model.dart';
 
 class AudioMeterContainer extends StatefulWidget {
   final double marginHorizontal;
   final double marginVertical;
-  final bool muted;
+  final String? meterId;
 
   const AudioMeterContainer({
     super.key,
     this.marginHorizontal = 16,
     this.marginVertical = 0,
-    this.muted = false,
+    required this.meterId,
   });
 
   @override
@@ -25,71 +27,25 @@ class AudioMeterContainer extends StatefulWidget {
 }
 
 class _AudioMeterContainerState extends State<AudioMeterContainer> {
-  // Initial value
-  double _targetValue = -60;
-  Timer? _simulationTimer;
-  final Random _random = Random();
+  double _lastMeterValue = -60.0;
+  late final MeterDataViewModel _meterDataViewModel;
 
   @override
   void initState() {
     super.initState();
-    // Update frequency: 120ms (approx 8 updates/sec) for fluid motion
-    if (!widget.muted) {
-      _startSimulation();
-    }
-  }
-
-  void _startSimulation() {
-    _simulationTimer?.cancel();
-    _simulationTimer = Timer.periodic(const Duration(milliseconds: 150), (Timer timer) {
-      if (mounted && !widget.muted) {
-        setState(() {
-          _targetValue = _generateRealisticDb();
-        });
-      }
-    });
-  }
-
-  double _generateRealisticDb() {
-    final double roll = _random.nextDouble(); // 0.0 to 1.0
-
-    if (roll < 0.70) {
-      // --- NORMAL SPEECH/MUSIC (70% Chance) ---
-      // Range: -36 to -12
-      // This is the "green/yellow" active zone
-      return -36 + (_random.nextDouble() * 24);
-    } else if (roll < 0.90) {
-      // --- QUIET / PAUSE (20% Chance) ---
-      // Range: -55 to -40
-      return -55 + (_random.nextDouble() * 15);
-    } else {
-      // --- PEAK / LOUD (10% Chance) ---
-      // Range: -12 to +1.5 (occasionally clips)
-      return -12 + (_random.nextDouble() * 13.5);
-    }
+    _meterDataViewModel = serviceLocator<MeterDataViewModel>();
+    _meterDataViewModel.registerObserver();
   }
 
   @override
   void dispose() {
-    _simulationTimer?.cancel();
+    _meterDataViewModel.unregisterObserver();
     super.dispose();
   }
 
   @override
   void didUpdateWidget(covariant AudioMeterContainer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.muted != oldWidget.muted) {
-      if (widget.muted) {
-        _simulationTimer?.cancel();
-        if (mounted) {
-          setState(() {
-            _targetValue = -60; // Reset to silence when muted
-          });
-        }
-      } else {
-        _startSimulation();
-      }
-    }
   }
 
   @override
@@ -104,18 +60,31 @@ class _AudioMeterContainerState extends State<AudioMeterContainer> {
         ),
         color: Colors.transparent,
         // TweenAnimationBuilder interpolates from "old value" to "new value"
-        child: TweenAnimationBuilder<double>(
-          tween: Tween<double>(begin: -60, end: _targetValue),
-          // Duration slightly longer than timer tick (150ms vs 120ms) creates a
-          // "lag" effect that feels like a real analog needle physics
-          duration: const Duration(milliseconds: 150),
-          curve: Curves.fastOutSlowIn,
-          builder: (BuildContext context, double animatedValue, Widget? child) {
-            return AudioMeterWidget(
-              currentValue: animatedValue,
-              minDb: -60,
-              maxDb: 0,
-              limitDb: -10,
+        child: BlocSelector<MeterDataViewModel, MeterDataState, double>(
+          bloc: _meterDataViewModel,
+          selector: (MeterDataState state) {
+            if (widget.meterId == null) return _lastMeterValue;
+            final double? current = state.meterValues?[widget.meterId]?.value[0];
+            if (current != null) {
+              _lastMeterValue = current;
+            }
+            return _lastMeterValue;
+          },
+          builder: (BuildContext context, double meterValue) {
+            return TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: -60, end: meterValue),
+              // Duration slightly longer than timer tick (150ms vs 120ms) creates a
+              // "lag" effect that feels like a real analog needle physics
+              duration: const Duration(milliseconds: 150),
+              curve: Curves.fastOutSlowIn,
+              builder: (BuildContext context, double animatedValue, Widget? child) {
+                return AudioMeterWidget(
+                  currentValue: animatedValue,
+                  minDb: -60,
+                  maxDb: 0,
+                  limitDb: -10,
+                );
+              },
             );
           },
         ),

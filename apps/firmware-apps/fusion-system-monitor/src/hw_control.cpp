@@ -5,9 +5,6 @@
 #include <string>
 #include <map>
 #include <sstream>
-#include <chrono>
-#include <thread>
-#include <atomic>
 
 #define SYSFS_ROOT "/sys/devices/virtual/bosepro/"
 
@@ -16,7 +13,7 @@ namespace {
 class HWControl : public bosepro::Module {
 public:
     HWControl(const bosepro::BlockConfiguration &configuration);
-    virtual ~HWControl();
+    virtual ~HWControl() = default;
     virtual void process() override;
 
 private:
@@ -28,24 +25,17 @@ private:
     std::map<int, std::string> php_path_map;
     std::map<int, std::string> gpio_ctrl_path_map;
 
-    int num_gain_chs;
+    int_fast32_t num_gain_chs;
     std::vector<std::string> gain_paths;
-    int num_php_chs;
+    int_fast32_t num_php_chs;
     std::vector<std::string> php_paths;
-    int num_user_gpio;
+    int_fast32_t num_user_gpio;
     std::vector<std::string> user_gpio_ctrl_paths;
-
-    std::string system_mute_path;
-    int system_unmute_time;
-    std::atomic<bool> system_unmuted;
 
     void change_gain_post_func(int index);
     void change_php_post_func(int index);
     void change_gpio_dir_post_func(int index);
     void change_gpio_val_post_func(int index);
-    double read_uptime_seconds() const;
-    void schedule_unmute();
-    void do_unmute(const std::string &path);
 
     MODULE_DECLARE(HWControl);
 };
@@ -61,9 +51,6 @@ HWControl::HWControl(const bosepro::BlockConfiguration &configuration)
     get_property("php_paths", php_paths);
     get_property("num_user_gpio", num_user_gpio);
     get_property("user_gpio_ctrl_paths", user_gpio_ctrl_paths);
-    get_property("system_mute_path", system_mute_path);
-    get_property("system_unmute_time", system_unmute_time);
-    system_unmuted = false;
 
     // Map each index to its GPIO path for fast lookup
     for (size_t i = 0; i < gain_paths.size(); ++i) {
@@ -81,8 +68,6 @@ HWControl::HWControl(const bosepro::BlockConfiguration &configuration)
     assign_parameter("php", php, POST_FUNCTION_VECTOR(change_php_post_func));
     assign_parameter("gpio_dir", gpio_dir, POST_FUNCTION_VECTOR(change_gpio_dir_post_func));
     assign_parameter("gpio_val", gpio_val, POST_FUNCTION_VECTOR(change_gpio_val_post_func));
-
-    schedule_unmute();
 }
 
 void HWControl::change_gain_post_func(int index)
@@ -200,66 +185,6 @@ void HWControl::change_gpio_val_post_func(int index)
 
     gpio_val_out << value << std::endl;
     SPDLOG_DEBUG("Set gpio_ctrl[{}] to {}", index, value);
-}
-
-double HWControl::read_uptime_seconds() const
-{
-    std::ifstream in("/proc/uptime");
-    if (!in.is_open()) {
-        return -1.0;
-    }
-    double uptime = -1.0;
-    in >> uptime;
-    return uptime;
-}
-
-HWControl::~HWControl()
-{
-    system_unmuted = true;
-}
-
-void HWControl::schedule_unmute()
-{
-    if (system_unmute_time <= 0 || system_mute_path.empty()) {
-        return;
-    }
-
-    const double uptime = read_uptime_seconds();
-    double delay = static_cast<double>(system_unmute_time);
-    if (uptime >= 0.0) {
-        delay = static_cast<double>(system_unmute_time) - uptime;
-    }
-
-    if (delay <= 0.0) {
-        do_unmute(SYSFS_ROOT + system_mute_path);
-        return;
-    }
-
-    const std::string path = SYSFS_ROOT + system_mute_path;
-    std::thread([this, path, delay]() {
-        std::this_thread::sleep_for(std::chrono::milliseconds(
-            static_cast<int64_t>(delay * 1000.0)));
-        if (!system_unmuted.load()) {
-            do_unmute(path);
-        }
-    }).detach();
-}
-
-void HWControl::do_unmute(const std::string &path)
-{
-    if (system_unmuted.exchange(true)) {
-        return;
-    }
-
-    std::ofstream out(path);
-    if (!out.is_open()) {
-        SPDLOG_ERROR("Failed to open system_mute_path: {}", path);
-        system_unmuted = false;
-        return;
-    }
-
-    out << 1 << std::endl;
-    SPDLOG_INFO("System unmuted via {}", path);
 }
 
 void HWControl::process() {

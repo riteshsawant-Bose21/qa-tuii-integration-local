@@ -51,7 +51,7 @@ class ConfigZoneControlModePanel extends StatelessWidget {
                           .map(
                             (CircuitModel circuit) => DashboardCircuitWidget(
                               circuit: circuit,
-                              isZoneMuted: zone.muted,
+                              fromConfiguration: true,
                             ),
                           )
                           .toList(),

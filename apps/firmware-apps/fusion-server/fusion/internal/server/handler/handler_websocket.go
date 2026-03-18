@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	"fusion/internal/persistence"
 	"time"
 
 	json "github.com/goccy/go-json"
@@ -124,7 +123,7 @@ func (h *Handler) handleDeviceByIDWithSubscription(request *api.WebSocketRequest
 func (h *Handler) handleUpdateDeviceInfoWithNotification(request *api.WebSocketRequest, server WebSocketServer) (*api.WebSocketResponse, error) {
 	var payload struct {
 		DeviceID string `json:"device_id"`
-		persistence.DevicePatch
+		api.DevicePatch
 	}
 
 	if err := json.Unmarshal(request.Data, &payload); err != nil {
@@ -192,40 +191,19 @@ func createErrorResponse(id *string, code int, message string) *api.WebSocketRes
 }
 
 // getDevicesList retrieves all devices
-func (h *Handler) getDevicesList() ([]persistence.DeviceInfo, error) {
-	if h.deviceProvider == nil {
-		// Fallback to local device only if provider not set
-		deviceInfo, err := h.persistence.GetDeviceInfo()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get device info: %v", err)
-		}
+func (h *Handler) getDevicesList() ([]api.DeviceInfo, error) {
 
-		return []persistence.DeviceInfo{*deviceInfo}, nil
-	}
+	devicesInfo := h.clusterTransport.GetAllDevicesInfo()
 
-	// Use device provider for cluster-aware access
-	return h.deviceProvider.GetAllDeviceInfos(), nil
+	return devicesInfo, nil
+
 }
 
 // getDeviceByID retrieves a specific device by ID
-func (h *Handler) getDeviceByID(deviceID string) (*persistence.DeviceInfo, error) {
-	if h.deviceProvider == nil {
-		// Fallback to local device only if provider not set
-		deviceInfo, err := h.persistence.GetDeviceInfo()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get device info: %v", err)
-		}
-
-		// Check if requested device ID matches local device
-		if deviceInfo.Id != deviceID {
-			return nil, fmt.Errorf("device not found")
-		}
-
-		return deviceInfo, nil
-	}
+func (h *Handler) getDeviceByID(deviceID string) (*api.DeviceInfo, error) {
 
 	// Search all cluster devices
-	allDevices := h.deviceProvider.GetAllDeviceInfos()
+	allDevices := h.clusterTransport.GetAllDevicesInfo()
 
 	// Find device with matching ID
 	for i, deviceInfo := range allDevices {
@@ -239,10 +217,6 @@ func (h *Handler) getDeviceByID(deviceID string) (*persistence.DeviceInfo, error
 }
 
 // updateDeviceInfo updates device information
-func (h *Handler) updateDeviceInfo(deviceID string, patch *persistence.DevicePatch) error {
-	if h.deviceProvider == nil {
-		return fmt.Errorf("device provider not available")
-	}
-
-	return h.deviceProvider.UpdateDeviceInfoForWebSocket(deviceID, patch)
+func (h *Handler) updateDeviceInfo(deviceID string, patch *api.DevicePatch) error {
+	return h.clusterTransport.UpdateDeviceInfo(deviceID, patch)
 }
