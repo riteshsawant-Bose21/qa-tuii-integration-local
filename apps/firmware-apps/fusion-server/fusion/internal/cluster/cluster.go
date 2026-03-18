@@ -424,7 +424,7 @@ func (c *Cluster) FetchGenericWithTargetDevice(
 	return remoteFn(url)
 }
 
-func (c *Cluster) PostGenericToTargetDevice(
+func (c *Cluster) DoGenericToTargetDevice(
 	deviceID string,
 	endpointTemplate string,
 	payload []byte,

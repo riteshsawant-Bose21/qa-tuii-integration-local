@@ -2,10 +2,16 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"testing"
+	"time"
 
 	"fusion/internal/api"
 	"fusion/internal/routes"
@@ -35,6 +41,28 @@ func firstDeviceID(t *testing.T) string {
 	return devices[0].Id
 }
 
+// generateSelfSignedCertPEM creates a minimal self-signed X.509 certificate in PEM format.
+func generateSelfSignedCertPEM(t *testing.T) []byte {
+	t.Helper()
+	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
+	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	require.NoError(t, err)
+	template := x509.Certificate{
+		SerialNumber: serialNumber,
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(24 * time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+	}
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &privKey.PublicKey, privKey)
+	require.NoError(t, err)
+	var buf bytes.Buffer
+	err = pem.Encode(&buf, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	require.NoError(t, err)
+	return buf.Bytes()
+}
+
 // TestGetCSR exercises GET /devices/{id}/csr.
 func TestGetCSR(t *testing.T) {
 	deviceID := firstDeviceID(t)
@@ -52,9 +80,9 @@ func TestGetCSR(t *testing.T) {
 // TestSetDeviceCertificate exercises POST /devices/{id}/certificate.
 func TestSetDeviceCertificate(t *testing.T) {
 	deviceID := firstDeviceID(t)
-	fakeCert := []byte("-----BEGIN CERTIFICATE-----\nfake\n-----END CERTIFICATE-----\n")
+	certPEM := generateSelfSignedCertPEM(t)
 	url := certsHelperURL(fmt.Sprintf("%s/%s/certificate", routes.DevicesEndpoint, deviceID))
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(fakeCert))
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(certPEM))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", api.TextMIMEType)
 	resp, err := http.DefaultClient.Do(req)
@@ -93,7 +121,7 @@ func TestCertificateErrorCases(t *testing.T) {
 			name:       "GetCSR non-existent device",
 			url:        certsHelperURL(fmt.Sprintf("%s/%s/csr", routes.DevicesEndpoint, "nonexistent")),
 			method:     http.MethodGet,
-			wantStatus: http.StatusInternalServerError,
+			wantStatus: http.StatusNotFound,
 		},
 		{
 			name:       "SetDeviceCertificate wrong method",

@@ -40,7 +40,7 @@ func (h *Handler) HandleGetCSR(deviceID string) ([]byte, error) {
 
 // HandleSetDeviceCertificate sets the device certificate for the specified device ID. If the target device ID is the local device, it will write the certificate to the local file system. If the target device is remote, it will send a request to the remote device to set its certificate.
 func (h *Handler) HandleSetDeviceCertificate(deviceID string, certPEM []byte) error {
-	return h.clusterTransport.PostGenericToTargetDevice(
+	return h.clusterTransport.DoGenericToTargetDevice(
 		deviceID,
 		routes.DevicesIDCertificateEndpoint,
 		certPEM,
@@ -51,7 +51,7 @@ func (h *Handler) HandleSetDeviceCertificate(deviceID string, certPEM []byte) er
 
 // ResetDeviceCertificate resets the device certificate for the specified device ID. If the target device ID is the local device, it will remove the certificate file from the local file system. If the target device is remote, it will send a request to the remote device to reset its certificate.
 func (h *Handler) ResetDeviceCertificate(deviceID string) error {
-	return h.clusterTransport.PostGenericToTargetDevice(
+	return h.clusterTransport.DoGenericToTargetDevice(
 		deviceID,
 		routes.DevicesIDResetEndpoint,
 		nil,
@@ -65,7 +65,7 @@ func (h *Handler) getLocalCSR() ([]byte, error) {
 	csrContent, err := os.ReadFile(fmt.Sprintf("%s%s", api.DefaultIdentityFilePath, api.DefaultCSRFileName))
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("CSR file not found")
+			return nil, err
 		}
 		logging.GetLogger().Error("Error reading CSR file: %v", err)
 		return nil, fmt.Errorf("Error reading CSR file: %v", err)
@@ -80,7 +80,11 @@ func (h *Handler) getRemoteCSR(url string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to get CSR from device: %v", err)
 	}
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logging.GetLogger().Error("Error reading response body: %v", err)
+		return nil, fmt.Errorf("error reading response body: %v", err)
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		logging.GetLogger().Error("Remote CSR request to %s failed with status %d: %s", url, resp.StatusCode, string(body))

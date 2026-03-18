@@ -14,7 +14,7 @@ type ClusterInterface interface {
 	SendReliable(node *memberlist.Node, msg []byte) error
 	PostGenericToAdmin(endpoint string, localFn func() error) error
 	FetchGenericWithTargetDevice(deviceID string, endpointTemplate string, localFn func() ([]byte, error), remoteFn func(url string) ([]byte, error)) ([]byte, error)
-	PostGenericToTargetDevice(deviceID, endpointTemplate string, certPEM []byte, localFn func(certPEM []byte) error, remoteFn func(certPEM []byte, url string) error) error
+	DoGenericToTargetDevice(deviceID, endpointTemplate string, payload []byte, localFn func(payload []byte) error, remoteFn func(payload []byte, url string) error) error
 	GetAllDevicesInfo() []api.DeviceInfo
 	GetDeviceInfoLocal() api.DeviceInfo
 

@@ -7,6 +7,7 @@ import (
 	"fusion/internal/utils"
 	"io"
 	"net/http"
+	"os"
 
 	json "github.com/goccy/go-json"
 )
@@ -96,7 +97,11 @@ func (c *FusionServer) GetCSR(w http.ResponseWriter, r *http.Request) {
 
 	csr, err := c.handler.HandleGetCSR(deviceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error getting CSR: %v", err), http.StatusInternalServerError)
+		if os.IsNotExist(err) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, fmt.Sprintf("Error getting CSR: %v", err), http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -150,4 +155,3 @@ func (c *FusionServer) ResetDeviceCertificate(w http.ResponseWriter, r *http.Req
 
 	w.WriteHeader(http.StatusNoContent)
 }
-

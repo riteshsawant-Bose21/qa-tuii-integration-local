@@ -309,7 +309,7 @@ setup_instance() {
         openssl genrsa -out device.key 2048
         openssl req -new -key device.key -out device.csr -subj '/CN=$device_id/O=BoseProfessional'
         chmod 600 device.key
-        curl -s https://www.amazontrust.com/repository/AmazonRootCA1.pem -o AmazonRootCA1.pem
+        curl -fSLo AmazonRootCA1.pem https://www.amazontrust.com/repository/AmazonRootCA1.pem
     "; then
         print_error "Failed to setup device identity"
         return 1
