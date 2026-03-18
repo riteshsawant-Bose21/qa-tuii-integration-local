@@ -393,6 +393,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                                   absorbing: true,
 
                                   child: CircuitDeviceWidget(
+                                    caller: 'zone',
                                     prefix: "feedback_",
                                     index: index,
                                     deviceId: deviceId,
@@ -439,6 +440,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                                     width: 220,
 
                                     child: CircuitDeviceWidget(
+                                      caller: 'zone',
                                       prefix: "child_drag_",
                                       index: index,
                                       deviceId: deviceId,
@@ -477,6 +479,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                               ),
                             ),
                             child: CircuitDeviceWidget(
+                              caller: 'zone',
                               prefix: "child_",
                               index: index,
                               deviceId: deviceId,

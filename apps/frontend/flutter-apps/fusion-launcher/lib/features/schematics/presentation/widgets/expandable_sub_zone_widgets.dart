@@ -299,6 +299,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                         child: SizedBox(
                           width: 220,
                           child: CircuitDeviceWidget(
+                            caller: 'sub_zone',
                             prefix: "drag_",
                             index: index,
                             deviceId: deviceId,
@@ -354,6 +355,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                         child: SizedBox(
                           width: 220,
                           child: CircuitDeviceWidget(
+                            caller: 'sub_zone',
                             prefix: "child_",
                             index: index,
                             circuitModel: circuitData,
@@ -386,6 +388,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                       ),
                     ),
                     child: CircuitDeviceWidget(
+                      caller: 'sub_zone',
                       prefix: "child_",
                       index: index,
                       deviceId: deviceId,

@@ -22,6 +22,7 @@ class CircuitDeviceWidget extends StatefulWidget {
   final VoidCallback onDelete;
   final VoidCallback onDecrementHardwareInCircuit;
   final VoidCallback onIncrementHardwareInCircuit;
+  final String? caller;
 
   final int index;
 
@@ -42,6 +43,7 @@ class CircuitDeviceWidget extends StatefulWidget {
     required this.assetImagePath,
     required this.index,
     required this.speakers,
+    required this.caller,
   });
 
   @override
@@ -81,7 +83,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: SemanticHelper.container(
-                testId: SemanticHelper.createTestId(SemanticTypes.container, "circuit_${widget.index}"),
+                testId: SemanticHelper.createTestId(SemanticTypes.container, "circuit_${widget.caller}_${widget.index}"),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
