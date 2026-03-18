@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_algorithms/device_recommender/dsp_device_recommendation.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 class DeviceRecommenderWidget extends StatefulWidget {
@@ -72,7 +73,14 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget> with 
       );
 
       // Get device recommendations from the new analog algorithm
-      final List<String> devices = DeviceRecommender.recommendAnalogDevices(input);
+      final List<String> devices =
+          DspDeviceRecommendation()
+              .recommendDevices(
+                analogInputs: totalAnalogInputs,
+                analogOutputs: totalLineOutputs + totalLoudspeakerOutputs,
+              )
+              .map((RecommendedDeviceResult result) => result.device)
+              .toList();
 
       if (devices.isEmpty) {
         return "No suitable device configuration found";
