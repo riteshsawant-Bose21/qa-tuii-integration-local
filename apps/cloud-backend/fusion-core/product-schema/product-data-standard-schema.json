@@ -139,13 +139,17 @@
           "$ref": "#/$defs/measurement"
         },
         "max_spl": {
-          "$ref": "#/$defs/measurement"
+          "$ref": "#/$defs/maxSpl"
         },
         "frequency_range": {
           "$ref": "#/$defs/frequencyRange"
         },
         "frequency_response": {
-          "$ref": "#/$defs/frequencyResponse"
+          "type": "array",
+          "description": "Frequency response curve data points",
+          "items": {
+            "$ref": "#/$defs/frequencyResponsePoint"
+          }
         },
         "frequency_response_curve": {
           "type": "array",
@@ -250,10 +254,6 @@
           "type": "boolean",
           "description": "Whether the speaker is a subwoofer"
         },
-        "is_weather_rated": {
-          "type": "boolean",
-          "description": "Whether the speaker is weather rated"
-        },
         "is_high_impedance_rated": {
           "type": "boolean",
           "description": "Whether the speaker supports high impedance"
@@ -303,7 +303,6 @@
         "voltage_taps",
         "images",
         "is_subwoofer",
-        "is_weather_rated",
         "is_high_impedance_rated"
       ],
       "additionalProperties": false
@@ -510,22 +509,11 @@
           }
         },
         "dimensions": {
-          "type": "object",
-          "description": "Product dimensions",
-          "properties": {
-            "rack_space": {
-              "type": "string",
-              "description": "Rack space requirement"
-            },
-            "size": {
-              "type": "array",
-              "description": "Dimensions in different units",
-              "items": {
-                "$ref": "#/$defs/dimensions"
-              }
-            }
-          },
-          "additionalProperties": false
+          "type": "array",
+          "description": "Product dimensions in different units",
+          "items": {
+            "$ref": "#/$defs/dimensions"
+          }
         },
         "net_weight": {
           "type": "array",
@@ -798,6 +786,24 @@
       ],
       "additionalProperties": false
     },
+    "maxSpl": {
+      "type": "object",
+      "title": "Maximum SPL Specification",
+      "description": "Maximum sound pressure level measurements at 1 meter",
+      "properties": {
+        "continuous": {
+          "$ref": "#/$defs/valueWithUnit"
+        },
+        "peak": {
+          "$ref": "#/$defs/valueWithUnit"
+        }
+      },
+      "required": [
+        "continuous",
+        "peak"
+      ],
+      "additionalProperties": false
+    },
     "measurement": {
       "type": "object",
       "title": "Measurement with Unit",
@@ -920,55 +926,6 @@
       ],
       "additionalProperties": false
     },
-    "frequencyResponse": {
-      "type": "object",
-      "title": "Frequency Response",
-      "properties": {
-        "at": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "level": {
-                "$ref": "#/$defs/valueWithUnit"
-              },
-              "range": {
-                "type": "object",
-                "properties": {
-                  "min": {
-                    "type": "number",
-                    "minimum": 0
-                  },
-                  "max": {
-                    "type": "number",
-                    "minimum": 0
-                  },
-                  "unit": {
-                    "type": "string",
-                    "const": "Hz"
-                  }
-                },
-                "required": [
-                  "min",
-                  "max",
-                  "unit"
-                ],
-                "additionalProperties": false
-              }
-            },
-            "required": [
-              "level",
-              "range"
-            ],
-            "additionalProperties": false
-          }
-        }
-      },
-      "required": [
-        "at"
-      ],
-      "additionalProperties": false
-    },
     "frequencyResponsePoint": {
       "type": "object",
       "title": "Frequency Response Point",
@@ -1061,9 +1018,7 @@
           "type": "string",
           "enum": [
             "mm",
-            "inches",
-            "cm",
-            "m"
+            "inches"
           ]
         },
         "height": {
