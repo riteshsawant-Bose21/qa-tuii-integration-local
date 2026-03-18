@@ -260,6 +260,9 @@ HWControl::HWControl(const bosepro::BlockConfiguration &configuration)
 
     if (!php_led_name.empty()) {
         php_led_chip_path = discover_pwm_chip_path(php_led_name);
+        if (!php_led_chip_path.empty()) {
+            set_pwm_output(php_led_chip_path, kPhpLedPwmChannel, false);
+        }
     }
 
     assign_parameter("gain", gain, POST_FUNCTION_VECTOR(change_gain_post_func));
