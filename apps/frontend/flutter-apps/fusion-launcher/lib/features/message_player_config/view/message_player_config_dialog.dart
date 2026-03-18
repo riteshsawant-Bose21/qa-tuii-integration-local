@@ -5,6 +5,7 @@ import 'package:fusion_launcher/features/message_player_config/view/widgets/mess
 import 'package:fusion_launcher/features/message_player_config/view/widgets/message_config_panel.dart';
 import 'package:fusion_launcher/features/message_player_config/view/widgets/zone_assignment_panel.dart';
 import 'package:fusion_launcher/features/message_player_config/view/widgets/empty_state_view.dart';
+import 'package:fusion_lib/constants/semantics/features/message_player/messageplayerKeys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -77,39 +78,42 @@ class _MessagePlayerConfigDialogContent extends StatelessWidget {
 
           /// Dialog content
           Center(
-            child: Container(
-              clipBehavior: Clip.hardEdge,
-              margin: const EdgeInsets.all(24.0),
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.7,
-                maxHeight: MediaQuery.of(context).size.height * 0.85,
-              ),
-              decoration: BoxDecoration(
-                color: context.colorScheme.elevation1,
-                border: Border.all(color: context.colorScheme.strokeLight),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  /// Header
-                  _buildHeader(context),
+            child: SemanticHelper.container(
+              testId: SemanticHelper.createTestId(SemanticTypes.container, 'message_player_config_dialog'),
+              child: Container(
+                clipBehavior: Clip.hardEdge,
+                margin: const EdgeInsets.all(24.0),
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.7,
+                  maxHeight: MediaQuery.of(context).size.height * 0.85,
+                ),
+                decoration: BoxDecoration(
+                  color: context.colorScheme.elevation1,
+                  border: Border.all(color: context.colorScheme.strokeLight),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    /// Header
+                    _buildHeader(context),
 
-                  /// Main content
-                  Expanded(
-                    child: BlocBuilder<MessagePlayerConfigCubit, MessagePlayerConfigState>(
-                      builder: (BuildContext context, MessagePlayerConfigState state) {
-                        if (state is MessagePlayerLoading) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-                        if (state.hasNoMessages) {
-                          return const EmptyStateView();
-                        }
-                        return const _ConfigurationContent();
-                      },
+                    /// Main content
+                    Expanded(
+                      child: BlocBuilder<MessagePlayerConfigCubit, MessagePlayerConfigState>(
+                        builder: (BuildContext context, MessagePlayerConfigState state) {
+                          if (state is MessagePlayerLoading) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+                          if (state.hasNoMessages) {
+                            return const EmptyStateView();
+                          }
+                          return const _ConfigurationContent();
+                        },
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -120,45 +124,50 @@ class _MessagePlayerConfigDialogContent extends StatelessWidget {
 
   /// Dialog header with title and close button
   Widget _buildHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: context.colorScheme.strokeLight,
-            width: 1,
-          ),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: <Widget>[
-          FusionAppText(
-            text: 'MESSAGE PLAYER',
-            style: context.textTheme.bodySmall?.copyWith(
-              letterSpacing: 1.0,
-              fontWeight: FontWeight.w600,
-              color: context.colorScheme.textPrimary,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.messageplayerconfigheader),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: context.colorScheme.strokeLight,
+              width: 1,
             ),
           ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            FusionAppText(
+              semanticId: FusionTestKeys.instance.messageplayerconfigheadertxt,
+              text: 'MESSAGE PLAYER',
+              style: context.textTheme.bodySmall?.copyWith(
+                letterSpacing: 1.0,
+                fontWeight: FontWeight.w600,
+                color: context.colorScheme.textPrimary,
+              ),
+            ),
 
-          /// Close button
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () => _onClose(context),
-              customBorder: const CircleBorder(),
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Icon(
-                  LucideIcons.x,
-                  color: context.colorScheme.iconDefault,
-                  size: 20,
+            /// Close button
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _onClose(context),
+                customBorder: const CircleBorder(),
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: FusionIcon.icon(
+                    semanticId: FusionTestKeys.instance.messageplayerconfigheadericon,
+                    LucideIcons.x,
+                    color: context.colorScheme.iconDefault,
+                    size: 20,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -30,3 +30,4 @@ export 'fusion_storage/fusion_secure_storage_impl.dart';
 export 'fusion_widgets/buttons/buttons.dart';
 export 'fusion_widgets/cards/fusion_cards.dart';
 export 'constants/fusion_constants.dart';
+export 'fusion_widgets/form_fields/fusiondropdown.dart';

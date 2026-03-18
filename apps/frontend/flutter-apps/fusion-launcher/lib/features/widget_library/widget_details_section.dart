@@ -24,6 +24,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fusion_launcher/features/widget_library/models/widget_item.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_widgets/form_fields/text_fleld.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_flat_container.dart';
 import 'package:fusion_lib/models/dock_item_config.dart';
 import 'package:fusion_lib/models/fusion_dock_item.dart';
@@ -737,8 +738,8 @@ FusionAppButton(
         _buildWithCopy(
           context: context,
           preview: CustomTextField(
-            semanticId: "Default",
-            label: "Default",
+            semanticId: "Outline",
+            label: "Outline",
             hint: "Value",
             controller: TextEditingController(),
             variant: FusionFieldVariant.outline,
@@ -1197,6 +1198,7 @@ RadioButton(
 
   Widget _buildDropDownVariants(BuildContext context) {
     int selectedIndex = 0;
+    String? selectedFruit;
     return Column(
       children: <Widget>[
         // ================= DROPDOWN =================
@@ -1225,6 +1227,95 @@ RadioButton(
             },
           ),
 
+          code: '''
+FusionDropDown<String>(
+            semanticId: "itembased",
+            items: <String>["Small", "Medium", "Large"],
+            selectedIndex: selectedIndex,
+
+            itemBuilder: (BuildContext context, String item, bool isSelected) {
+              return Text(
+                item,
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              );
+            },
+
+            childBuilder: (BuildContext context, int index, String item) {
+              return Text(item);
+            },
+
+            onSelected: (int index) {
+              setState(() => selectedIndex = index);
+            },
+          ),
+''',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionDropDown<String>(
+            semanticId: "itembased",
+            items: <String>["Small", "Medium", "Large"],
+            selectedIndex: selectedIndex,
+
+            itemBuilder: (BuildContext context, String item, bool isSelected) {
+              return Text(
+                item,
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              );
+            },
+
+            childBuilder: (BuildContext context, int index, String item) {
+              return Text(item);
+            },
+
+            onSelected: (int index) {
+              setState(() => selectedIndex = index);
+            },
+          ),
+
+          code: '''
+FusionDropDown<String>(
+            semanticId: "itembased",
+            items: <String>["Small", "Medium", "Large"],
+            selectedIndex: selectedIndex,
+
+            itemBuilder: (BuildContext context, String item, bool isSelected) {
+              return Text(
+                item,
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              );
+            },
+
+            childBuilder: (BuildContext context, int index, String item) {
+              return Text(item);
+            },
+
+            onSelected: (int index) {
+              setState(() => selectedIndex = index);
+            },
+          ),
+''',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionNeumorphicDropdown<String>(
+            items: const <String>["Apple", "Banana", "Mango", "Orange"],
+            value: selectedFruit,
+            hintText: "Select fruit",
+            itemLabelBuilder: (String item) => item,
+            onChanged: (String value) {
+              setState(() {
+                selectedFruit = value;
+              });
+              print(selectedFruit);
+            },
+          ),
           code: '''
 FusionDropDown<String>(
             semanticId: "itembased",

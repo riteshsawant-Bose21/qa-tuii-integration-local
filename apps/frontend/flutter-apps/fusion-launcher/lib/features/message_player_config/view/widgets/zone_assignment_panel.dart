@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/message_player_config/viewmodel/message_player_config_cubit.dart';
+import 'package:fusion_lib/constants/semantics/features/message_player/messageplayerKeys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Right panel for assigning zones to the selected message
@@ -9,41 +10,45 @@ class ZoneAssignmentPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: context.colorScheme.elevation1,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          FusionAppText(text: 'Assign Zones', style: context.textTheme.l1Medium),
-          const SizedBox(height: 12),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.zoneassign),
+      child: Container(
+        color: context.colorScheme.elevation1,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            FusionAppText(semanticId: FusionTestKeys.instance.zoneassigntxt, text: 'Assign Zones', style: context.textTheme.l1Medium),
+            const SizedBox(height: 12),
 
-          /// Zone list or empty state
-          Expanded(
-            child: BlocBuilder<MessagePlayerConfigCubit, MessagePlayerConfigState>(
-              builder: (BuildContext context, MessagePlayerConfigState state) {
-                final MessageModel? selectedMessage = state.selectedMessage;
+            /// Zone list or empty state
+            Expanded(
+              child: BlocBuilder<MessagePlayerConfigCubit, MessagePlayerConfigState>(
+                builder: (BuildContext context, MessagePlayerConfigState state) {
+                  final MessageModel? selectedMessage = state.selectedMessage;
 
-                if (selectedMessage == null) {
-                  return Center(
-                    child: FusionAppText(
-                      text: 'Select a message to assign zones',
-                      style: context.textTheme.bodySmall?.copyWith(
-                        color: context.colorScheme.textSecondary,
+                  if (selectedMessage == null) {
+                    return Center(
+                      child: FusionAppText(
+                        semanticId: FusionTestKeys.instance.zoneassignselecttxt,
+                        text: 'Select a message to assign zones',
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: context.colorScheme.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                  );
-                }
+                    );
+                  }
 
-                return _ZoneList(
-                  availableZones: state.availableZones,
-                  selectedMessageId: selectedMessage.id,
-                );
-              },
+                  return _ZoneList(
+                    availableZones: state.availableZones,
+                    selectedMessageId: selectedMessage.id,
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -69,7 +74,7 @@ class _ZoneList extends StatelessWidget {
         FusionMultiSelectPopupMenu<Zone>(
           items: availableZones,
           selectedItems: selectedZones,
-          semanticsId: 'zone_assignment_dropdown',
+          semanticsId: FusionTestKeys.instance.zoneassignmentdropdown,
           tooltip: 'Select zones',
           itemLabelBuilder: (Zone zone) => zone.name,
           onSave: cubit.updateZoneAssignments,
@@ -89,9 +94,13 @@ class _ZoneList extends StatelessWidget {
             ),
             child: Row(
               children: <Widget>[
-                Icon(Icons.add, size: 16, color: context.colorScheme.textPrimary),
+                FusionIcon.icon(Icons.add, size: 16, color: context.colorScheme.textPrimary),
                 const SizedBox(width: 8),
-                FusionAppText(text: availableZones.isEmpty ? 'No zones available' : 'Select zone', style: context.textTheme.l1Regular),
+                FusionAppText(
+                  semanticId: FusionTestKeys.instance.zoneassignselectzonetxt,
+                  text: availableZones.isEmpty ? 'No zones available' : 'Select zone',
+                  style: context.textTheme.l1Regular,
+                ),
               ],
             ),
           ),
@@ -156,7 +165,7 @@ class _ZoneItem extends StatelessWidget {
           children: <Widget>[
             FusionCheckbox(
               value: isAssigned,
-              semanticId: 'zone_checkbox_${zone.id}',
+              semanticId: '${FusionTestKeys.instance.zonecheckbox}_${zone.id}',
               onChanged: onToggle,
             ),
             const SizedBox(width: 12),

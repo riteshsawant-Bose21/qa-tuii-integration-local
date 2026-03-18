@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/source_item.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_chain_view.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_sources.dart';
@@ -19,6 +18,7 @@ import 'package:fusion_lib/models/project_entities/source_model.dart';
 import 'package:fusion_lib/models/project_entities/source_set_model.dart';
 
 import '../../../core/constants/assets_constants.dart';
+import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../viewModel/source_sets_viewmodel/config_source_sets_state.dart';
 import '../viewModel/source_sets_viewmodel/config_source_sets_viewmodel.dart';
 import '../viewModel/sources_viewmodel/config_sources_viewmodel.dart';
@@ -124,6 +124,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
           valueListenable: _isSourcesSetExpanded,
           builder: (BuildContext context, bool subZoneExpanded, Widget? child) {
             return Column(
+              mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 MouseRegion(
                   onEnter: (_) => setState(() => _isHovered = true),
@@ -383,74 +384,79 @@ class _SourceSetItemState extends State<SourceSetItem> {
           padding: const EdgeInsets.only(top: 12, bottom: 12),
           margin: const EdgeInsets.only(left: 12, right: 12),
           color: context.colorScheme.elevation2.withAlpha(100),
-          child: ReorderableListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            buildDefaultDragHandles: false,
-            itemCount: sourceList.length,
-            onReorder: (int oldIndex, int newIndex) {},
-            itemBuilder: (BuildContext context, int index) {
-              final Source sourceData = sourceList[index];
-              return Draggable<Source>(
-                data: sourceData,
-                key: ValueKey<String>(sourceList[index].id),
-                dragAnchorStrategy: pointerDragAnchorStrategy,
-                onDragStarted: () {
-                  setState(() {
-                    _draggingSourceId = sourceData.id;
-                  });
-                },
-                onDraggableCanceled: (_, __) {
-                  setState(() {
-                    _draggingSourceId = null;
-                  });
-                },
-                onDragEnd: (_) {
-                  setState(() {
-                    _draggingSourceId = null;
-                  });
-                },
-                feedback: Material(
-                  color: Colors.transparent,
-                  child: Opacity(
-                    opacity: 0.8,
-                    child: Container(
-                      color: context.colorScheme.elevation1,
-                      width: 220,
-                      child: SourceItem(
-                        index: index,
-                        source: sourceData,
-                        isDragging: true,
-                        isInControlMode: _projectViewModel.isInControlMode,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 250),
+            child: ReorderableListView.builder(
+              shrinkWrap: true,
+              primary: false,
+              physics: const NeverScrollableScrollPhysics(),
+              buildDefaultDragHandles: false,
+              itemCount: sourceList.length,
+              onReorder: (int oldIndex, int newIndex) {},
+              itemBuilder: (BuildContext context, int index) {
+                final Source sourceData = sourceList[index];
+                return Draggable<Source>(
+                  data: sourceData,
+                  key: ValueKey<String>(sourceList[index].id),
+                  dragAnchorStrategy: pointerDragAnchorStrategy,
+                  onDragStarted: () {
+                    setState(() {
+                      _draggingSourceId = sourceData.id;
+                    });
+                  },
+                  onDraggableCanceled: (_, __) {
+                    setState(() {
+                      _draggingSourceId = null;
+                    });
+                  },
+                  onDragEnd: (_) {
+                    setState(() {
+                      _draggingSourceId = null;
+                    });
+                  },
+                  feedback: Material(
+                    color: Colors.transparent,
+                    child: Opacity(
+                      opacity: 0.8,
+                      child: Container(
+                        color: context.colorScheme.elevation1,
+                        width: 220,
+                        child: SourceItem(
+                          index: index,
+                          source: sourceData,
+                          isInControlMode: _projectViewModel.isInControlMode,
+
+                          isDragging: true,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                childWhenDragging: Opacity(
-                  opacity: 0.5,
-                  child: SourceItem(
-                    index: index,
-                    source: sourceData,
-                    isDragging: true,
-                    isInControlMode: _projectViewModel.isInControlMode,
+                  childWhenDragging: Opacity(
+                    opacity: 0.5,
+                    child: SourceItem(
+                      index: index,
+                      source: sourceData,
+                      isDragging: true,
+                      isInControlMode: _projectViewModel.isInControlMode,
+                    ),
                   ),
-                ),
-                child: SemanticHelper.container(
-                  testId: SemanticHelper.createTestId(
-                    SemanticTypes.container,
-                    FusionTestKeys.instance.srcsetlistitem,
+                  child: SemanticHelper.container(
+                    testId: SemanticHelper.createTestId(
+                      SemanticTypes.container,
+                      FusionTestKeys.instance.srcsetlistitem,
+                    ),
+                    child: SourceItem(
+                      semanticId: FusionTestKeys.instance.srcsetlistitem,
+                      index: index,
+                      sourceSet: widget.sourceSet,
+                      source: sourceData,
+                      isInControlMode: _projectViewModel.isInControlMode,
+                      isDragging: _draggingSourceId == sourceData.id,
+                    ),
                   ),
-                  child: SourceItem(
-                    semanticId: FusionTestKeys.instance.srcsetlistitem,
-                    index: index,
-                    sourceSet: widget.sourceSet,
-                    source: sourceData,
-                    isInControlMode: _projectViewModel.isInControlMode,
-                    isDragging: _draggingSourceId == sourceData.id,
-                  ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         );
       },
