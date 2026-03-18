@@ -25,8 +25,8 @@ private:
     void initialize_coefficients();
     bool check_coefficients_changed();
 
-    int channels;
-    int num_taps;
+    int_fast32_t channels;
+    int_fast32_t num_taps;
     int frame_size;
     int sample_rate;
     

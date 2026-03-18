@@ -1,46 +1,25 @@
 package transport
 
 import (
-	"fmt"
+	"fusion/internal/api"
 
 	"github.com/hashicorp/memberlist"
 )
 
-// ClusterTransport abstracts the underlying cluster transport so components
+// ClusterInterface abstracts the underlying cluster transport so components
 // (like the pubsub Hub) don't need to depend directly on memberlist.
-type ClusterTransport interface {
+type ClusterInterface interface {
 	LocalNode() *memberlist.Node
-	Members() []*memberlist.Node
+	MemberListMembers() []*memberlist.Node
 	SendReliable(node *memberlist.Node, msg []byte) error
-}
+	PostGenericToAdmin(endpoint string, localFn func() error) error
+	FetchGenericWithTargetDevice(deviceID string, endpointTemplate string, localFn func() ([]byte, error), remoteFn func(url string) ([]byte, error)) ([]byte, error)
+	DoGenericToTargetDevice(deviceID, endpointTemplate string, payload []byte, localFn func(payload []byte) error, remoteFn func(payload []byte, url string) error) error
+	GetAllDevicesInfo() []api.DeviceInfo
+	GetDeviceInfoLocal() api.DeviceInfo
 
-// MemberlistTransport is a concrete adapter over *memberlist.Memberlist.
-type MemberlistTransport struct {
-	ml *memberlist.Memberlist
-}
-
-// NewMemberlistTransport wraps a memberlist instance in a ClusterTransport.
-func NewMemberlistTransport(ml *memberlist.Memberlist) *MemberlistTransport {
-	return &MemberlistTransport{ml: ml}
-}
-
-func (t *MemberlistTransport) LocalNode() *memberlist.Node {
-	if t == nil || t.ml == nil {
-		return nil
-	}
-	return t.ml.LocalNode()
-}
-
-func (t *MemberlistTransport) Members() []*memberlist.Node {
-	if t == nil || t.ml == nil {
-		return nil
-	}
-	return t.ml.Members()
-}
-
-func (t *MemberlistTransport) SendReliable(n *memberlist.Node, msg []byte) error {
-	if t == nil || t.ml == nil {
-		return fmt.Errorf("memberlist transport not initialized")
-	}
-	return t.ml.SendReliable(n, msg)
+	//device_id is the id for which the patch needs to be applied.
+	//device_id is also a field in the patch and can be updated.
+	UpdateDeviceInfo(device_id string, patch *api.DevicePatch) error
+	UpdateDeviceInfoLocal(patch *api.DevicePatch) error
 }

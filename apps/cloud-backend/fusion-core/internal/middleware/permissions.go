@@ -51,6 +51,8 @@ func SetupProjectPermissions(acc *AccessControlConfig) {
 	// Project GET endpoints - require read permission
 	acc.RegisterPermission("GET", fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointProjects), ProjectRead, PermissionRead, "View all projects")
 
+	acc.RegisterPermission("GET", fmt.Sprintf("%s%s%s", constants.APIV1Path, constants.EndpointProjects, constants.EndpointProjectByID), ProjectRead, PermissionRead, "View project by ID")
+
 	// Project CREATE endpoint - require write permission
 	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointProjects), ProjectCreate, PermissionWrite, "Create new project")
 

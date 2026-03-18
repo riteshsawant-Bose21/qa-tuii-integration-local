@@ -59,8 +59,7 @@ const (
 	DevicesCertificateEndpoint     = DevicesEndpoint + "/certificate"
 	DevicesIDResetEndpoint         = DevicesIDEndpoint + "/reset"
 	DevicesResetEndpoint           = DevicesEndpoint + "/reset"
-
-	EndpointsEndpoint = "/endpoints"
+	EndpointsEndpoint              = "/endpoints"
 
 	HealthEndpoint = "/health"
 

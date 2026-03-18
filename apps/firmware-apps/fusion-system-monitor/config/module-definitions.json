@@ -179,24 +179,19 @@
                     "default_value": "/dev/ttymxc2"
                 },
                 {
-                    "name": "num_amps",
+                    "name": "fw_file",
+                    "value_type": "string",
+                    "default_value": ""
+                },
+                {
+                    "name": "nrst_gpio_num",
                     "value_type": "integer",
-                    "default_value": 4
+                    "default_value": "255"
                 },
                 {
-                    "name": "reset_pin",
-                    "value_type": "string",
-                    "default_value": ""
-                },
-                {
-                    "name": "mute_pin",
-                    "value_type": "string",
-                    "default_value": ""
-                },
-                {
-                    "name": "boot_pin",
-                    "value_type": "string",
-                    "default_value": ""
+                    "name": "boot0_gpio_num",
+                    "value_type": "integer",
+                    "default_value": "255"
                 }
             ],
             "parameters": [

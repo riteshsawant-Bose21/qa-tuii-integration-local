@@ -329,6 +329,11 @@ definitions:
         example: 3
         type: integer
     type: object
+  types.GetProjectByIDResponse:
+    properties:
+      project:
+        $ref: '#/definitions/types.Project'
+    type: object
   types.OrganizationUsersResponse:
     properties:
       account:
@@ -1713,6 +1718,40 @@ paths:
       security:
       - BearerAuth: []
       summary: Delete project
+      tags:
+      - projects
+    get:
+      consumes:
+      - application/json
+      description: Get a project by its ID
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved project
+          schema:
+            $ref: '#/definitions/types.GetProjectByIDResponse'
+        "400":
+          description: Bad request - Invalid query parameters
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get project by ID
       tags:
       - projects
     patch:
