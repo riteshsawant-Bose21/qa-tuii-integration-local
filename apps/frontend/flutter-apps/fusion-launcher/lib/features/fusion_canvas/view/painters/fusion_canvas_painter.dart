@@ -17,6 +17,7 @@ import '../../state/fusion_snap_state.dart';
 import '../../state/tools/select_tool_state.dart';
 import '../../viewmodel/fusion_canvas_hover_viewmodel.dart';
 import '../../viewmodel/fusion_canvas_image_viewmodel.dart';
+import '../../viewmodel/fusion_canvas_state_viewmodel.dart' show FusionCanvasStateViewModel;
 import 'elements/mixin/fusion_canvas_bounded_movement.dart';
 import 'elements/mixin/fusion_canvas_interactable_mixin.dart';
 
@@ -39,6 +40,8 @@ class FusionCanvasPainter extends CustomPainter {
   });
   @override
   void paint(Canvas canvas, Size size) {
+    context.read<FusionCanvasStateViewModel>().setCanvasSize(size);
+
     canvas.save();
     final Offset offset = state.offset;
     canvas.translate(offset.dx, offset.dy);

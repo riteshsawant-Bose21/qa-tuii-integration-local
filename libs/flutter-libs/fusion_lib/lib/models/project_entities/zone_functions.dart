@@ -172,8 +172,10 @@ class ZoneFunctions {
   String get algorithmName {
     switch (type) {
       case ZoneFunctionsType.sourceSelect:
-      case ZoneFunctionsType.sourceSelectWithPriority:
         return "source_selector";
+      case ZoneFunctionsType.sourceSelectWithPriority:
+        return "priority_source_selector";
+
       case ZoneFunctionsType.sourceMix:
       case ZoneFunctionsType.sourceMixWithPriority:
         return "source_selector";

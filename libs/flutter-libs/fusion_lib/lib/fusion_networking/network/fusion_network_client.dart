@@ -42,7 +42,9 @@ class FusionNetworkClient {
 
   String geApiUrl(FusionApiEndpoint api, {String? baseUrlToOverride, bool isSecure = true}) {
     if (baseUrlToOverride != null) {
-      return isSecure ? "https://$baseUrlToOverride${api.path}" : "http://$baseUrlToOverride${api.path}";
+      return isSecure
+          ? "https://$baseUrlToOverride${api.path}"
+          : "http://${baseUrlToOverride.contains(':') ? baseUrlToOverride : '$baseUrlToOverride:8080'}${api.path}";
     }
     if (api.type == FusionApiType.droServer) {
       return "http://localhost:8080${api.path}";

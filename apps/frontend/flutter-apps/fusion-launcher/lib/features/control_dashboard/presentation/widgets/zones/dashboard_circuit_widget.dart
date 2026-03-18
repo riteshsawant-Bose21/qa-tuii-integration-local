@@ -10,11 +10,13 @@ import 'audio_meter_widget.dart';
 class DashboardCircuitWidget extends StatelessWidget {
   final CircuitModel circuit;
   final EdgeInsetsGeometry? margin;
+  final bool fromConfiguration;
 
   const DashboardCircuitWidget({
     super.key,
     required this.circuit,
     this.margin,
+    this.fromConfiguration = false,
   });
 
   @override
@@ -46,7 +48,7 @@ class DashboardCircuitWidget extends StatelessWidget {
                 ),
               ),
 
-              // const Spacer(),
+              const Spacer(),
 
               // InkWell(
               //   onTap: () {
@@ -62,20 +64,22 @@ class DashboardCircuitWidget extends StatelessWidget {
               //     color: context.colorScheme.onPrimary,
               //   ),
               // ),
-              const SizedBox(width: 8),
-              InkWell(
-                onTap: () {
-                  ProcessingChainView.showForCircuit(context, circuit);
-                },
-                child: FusionImage.asset(
-                  semanticId: FusionTestKeys.instance.zonecircuititmimg2,
-                  Assets.processingBlocksFilledIcon,
-                  width: 22,
-                  height: 22,
-                  assetColor: context.colorScheme.primaryWhite,
-                  fit: BoxFit.contain,
+              if (fromConfiguration) ...<Widget>[
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () {
+                    ProcessingChainView.showForCircuit(context, circuit);
+                  },
+                  child: FusionImage.asset(
+                    semanticId: FusionTestKeys.instance.zonecircuititmimg2,
+                    Assets.processingBlocksFilledIcon,
+                    width: 22,
+                    height: 22,
+                    assetColor: context.colorScheme.primaryWhite,
+                    fit: BoxFit.contain,
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
           AudioMeterContainer(

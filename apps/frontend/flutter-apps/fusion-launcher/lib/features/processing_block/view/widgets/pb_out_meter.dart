@@ -26,22 +26,25 @@ class PbOutMeter extends StatefulWidget {
 class _PbOutMeterState extends State<PbOutMeter> {
   int get dimensionOrDefault => widget.dimension ?? 0;
   double _lastMeterValue = -60.0;
+  late final MeterDataViewModel _meterDataViewModel;
 
   @override
   void initState() {
     super.initState();
-    serviceLocator<MeterDataViewModel>().registerObserver();
+    _meterDataViewModel = serviceLocator<MeterDataViewModel>();
+    _meterDataViewModel.registerObserver();
   }
 
   @override
   void dispose() {
-    serviceLocator<MeterDataViewModel>().unregisterObserver();
+    _meterDataViewModel.unregisterObserver();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocSelector<MeterDataViewModel, MeterDataState, double>(
+      bloc: _meterDataViewModel,
       selector: (MeterDataState state) {
         final double? current = state.meterValues?[widget.blockId]?.value[dimensionOrDefault];
         if (current != null) {

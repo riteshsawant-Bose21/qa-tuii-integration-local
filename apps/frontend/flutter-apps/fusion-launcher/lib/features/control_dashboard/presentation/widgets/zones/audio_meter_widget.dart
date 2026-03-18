@@ -28,16 +28,18 @@ class AudioMeterContainer extends StatefulWidget {
 
 class _AudioMeterContainerState extends State<AudioMeterContainer> {
   double _lastMeterValue = -60.0;
+  late final MeterDataViewModel _meterDataViewModel;
 
   @override
   void initState() {
     super.initState();
-    serviceLocator<MeterDataViewModel>().registerObserver();
+    _meterDataViewModel = serviceLocator<MeterDataViewModel>();
+    _meterDataViewModel.registerObserver();
   }
 
   @override
   void dispose() {
-    serviceLocator<MeterDataViewModel>().unregisterObserver();
+    _meterDataViewModel.unregisterObserver();
     super.dispose();
   }
 
@@ -59,6 +61,7 @@ class _AudioMeterContainerState extends State<AudioMeterContainer> {
         color: Colors.transparent,
         // TweenAnimationBuilder interpolates from "old value" to "new value"
         child: BlocSelector<MeterDataViewModel, MeterDataState, double>(
+          bloc: _meterDataViewModel,
           selector: (MeterDataState state) {
             if (widget.meterId == null) return _lastMeterValue;
             final double? current = state.meterValues?[widget.meterId]?.value[0];
@@ -68,7 +71,6 @@ class _AudioMeterContainerState extends State<AudioMeterContainer> {
             return _lastMeterValue;
           },
           builder: (BuildContext context, double meterValue) {
-            print("Meter value for ${widget.meterId}: $meterValue dB");
             return TweenAnimationBuilder<double>(
               tween: Tween<double>(begin: -60, end: meterValue),
               // Duration slightly longer than timer tick (150ms vs 120ms) creates a

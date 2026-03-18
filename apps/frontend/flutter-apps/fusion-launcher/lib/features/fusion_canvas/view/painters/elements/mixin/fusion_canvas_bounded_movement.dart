@@ -37,7 +37,7 @@ mixin FusionCanvasBoundedMovement on FusionBasePainter {
     final Offset desiredOffset = currentOffset + delta;
 
     final Offset boundedOffset = getBoundedOffset(desiredOffset, painter);
-    print('Current Offset: $currentOffset, Desired Offset: $desiredOffset Bounded Offset: $boundedOffset');
+    // print('Current Offset: $currentOffset, Desired Offset: $desiredOffset Bounded Offset: $boundedOffset');
     return boundedOffset - currentOffset;
   }
 }

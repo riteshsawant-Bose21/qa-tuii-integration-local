@@ -40,28 +40,24 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
 
   String get location {
     if (widget.device.locationEntity.listeningAreaId != null) {
-      final Zone? zone = serviceLocator<ProjectViewModel>()
-          .getZonesForListeningArea(
-            areaId: widget.device.locationEntity.listeningAreaId!,
-          );
+      final Zone? zone = serviceLocator<ProjectViewModel>().getZonesForListeningArea(
+        areaId: widget.device.locationEntity.listeningAreaId!,
+      );
       if (zone != null) {
         return zone.name;
       }
-      final SubZone? subZone = serviceLocator<ProjectViewModel>()
-          .getSubZoneForListeningArea(
-            areaId: widget.device.locationEntity.listeningAreaId!,
-          );
+      final SubZone? subZone = serviceLocator<ProjectViewModel>().getSubZoneForListeningArea(
+        areaId: widget.device.locationEntity.listeningAreaId!,
+      );
       if (subZone != null) {
-        final Zone? parentZone = serviceLocator<ProjectViewModel>()
-            .getZoneForSubZone(subZoneId: subZone.id);
+        final Zone? parentZone = serviceLocator<ProjectViewModel>().getZoneForSubZone(subZoneId: subZone.id);
         if (parentZone != null) {
           return "${parentZone.name} > ${subZone.name}";
         }
         return subZone.name;
       }
     }
-    final EquipLocation? location = serviceLocator<ProjectViewModel>()
-        .getEquipLocationForHardware(hardwareId: widget.device.id);
+    final EquipLocation? location = serviceLocator<ProjectViewModel>().getEquipLocationForHardware(hardwareId: widget.device.id);
     if (location != null) {
       return location.name;
     }
@@ -70,22 +66,24 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
 
   bool get isOnline {
     //Mock logic - In real implementation, this would be based on actual device status
-    return widget.index != 4;
+    // return widget.index != 4;
+    return false;
   }
 
   String? get alertMsg {
     //Mock logic - In real implementation, this would be based on actual device alerts
-    if (widget.index % 5 == 0) {
-      return "Open Circuit Fault Channel: 3 , Zone: Reception, Circuit: DM5SE";
-    } else if (widget.index % 3 == 0) {
-      return "High Temperature Warning";
-    }
+    // if (widget.index % 5 == 0) {
+    //   return "Open Circuit Fault Channel: 3 , Zone: Reception, Circuit: DM5SE";
+    // } else if (widget.index % 3 == 0) {
+    //   return "High Temperature Warning";
+    // }
     return null;
   }
 
   bool get isCritical {
     //Mock logic - In real implementation, this would be based on actual alert severity
-    return widget.index % 5 == 0;
+    // return widget.index % 5 == 0;
+    return false;
   }
 
   @override
@@ -97,8 +95,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
     return InkWell(
       onTap: () {
         if (!_isPlayingAnimation) {
-          if (widget.device is! Amplifier ||
-              !widget.device.hardwareName.toLowerCase().startsWith("pp")) {
+          if (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp")) {
             Navigator.pushNamed(
               context,
               Routes.deviceDetails,
@@ -164,10 +161,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                                         width: 6,
                                         height: 6,
                                         decoration: BoxDecoration(
-                                          color:
-                                              isOnline
-                                                  ? context.colorScheme.green
-                                                  : context.colorScheme.error,
+                                          color: isOnline ? context.colorScheme.green : context.colorScheme.error,
                                           shape: BoxShape.circle,
                                         ),
                                       ),
@@ -192,14 +186,10 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                                         Flexible(
                                           child: FusionAppText(
                                             text: widget.device.hardwareName,
-                                            style: context.textTheme.labelSmall!
-                                                .copyWith(
-                                                  color:
-                                                      context
-                                                          .colorScheme
-                                                          .textPrimary,
-                                                  fontSize: 11,
-                                                ),
+                                            style: context.textTheme.labelSmall!.copyWith(
+                                              color: context.colorScheme.textPrimary,
+                                              fontSize: 11,
+                                            ),
                                             textOverflow: TextOverflow.ellipsis,
                                             maxLine: 1,
                                           ),
@@ -212,24 +202,17 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                                             horizontal: 6,
                                           ),
                                           decoration: BoxDecoration(
-                                            color:
-                                                context
-                                                    .colorScheme
-                                                    .textSecondary,
+                                            color: context.colorScheme.textSecondary,
                                             shape: BoxShape.circle,
                                           ),
                                         ),
                                         Expanded(
                                           child: FusionAppText(
                                             text: location,
-                                            style: context.textTheme.labelSmall!
-                                                .copyWith(
-                                                  color:
-                                                      context
-                                                          .colorScheme
-                                                          .textPrimary,
-                                                  fontSize: 11,
-                                                ),
+                                            style: context.textTheme.labelSmall!.copyWith(
+                                              color: context.colorScheme.textPrimary,
+                                              fontSize: 11,
+                                            ),
                                             textOverflow: TextOverflow.ellipsis,
                                             maxLine: 1,
                                           ),
@@ -250,26 +233,20 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                               children: <Widget>[
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: <Widget>[
                                       FusionAppText(
                                         text: _loadingTitle,
-                                        style: context.textTheme.labelMedium
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                        style: context.textTheme.labelMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                       const SizedBox(height: 4),
                                       FusionAppText(
                                         text: _loadingMessage,
-                                        style: context.textTheme.labelSmall
-                                            ?.copyWith(
-                                              color:
-                                                  context
-                                                      .colorScheme
-                                                      .textSecondary,
-                                            ),
+                                        style: context.textTheme.labelSmall?.copyWith(
+                                          color: context.colorScheme.textSecondary,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -294,11 +271,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                           Expanded(
                             flex: 2,
                             child:
-                                (isOnline &&
-                                        (widget.device is! Amplifier ||
-                                            !widget.device.hardwareName
-                                                .toLowerCase()
-                                                .startsWith("pp")))
+                                (isOnline && (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp")))
                                     ? Align(
                                       alignment: Alignment.centerLeft,
                                       child: CompactThermostatWidget(
@@ -312,11 +285,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                           Expanded(
                             flex: 2,
                             child:
-                                (isOnline &&
-                                        (widget.device is! Amplifier ||
-                                            !widget.device.hardwareName
-                                                .toLowerCase()
-                                                .startsWith("pp")))
+                                (isOnline && (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp")))
                                     ? Row(
                                       children: <Widget>[
                                         GaugeWidget(
@@ -336,11 +305,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                           Expanded(
                             flex: 2,
                             child:
-                                (isOnline &&
-                                        (widget.device is FusionDsp ||
-                                            (widget.device is Amplifier &&
-                                                widget.device.hardwareName
-                                                    .startsWith("PSM"))))
+                                (isOnline && (widget.device is FusionDsp || (widget.device is Amplifier && widget.device.hardwareName.startsWith("PSM"))))
                                     ? Row(
                                       children: <Widget>[
                                         DiskUsageWidget(
@@ -364,16 +329,14 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: <Widget>[
                                 if (widget.device is! FusionDsp &&
-                                    (widget.device is! Amplifier ||
-                                        !widget.device.hardwareName
-                                            .toLowerCase()
-                                            .startsWith("pp"))) ...<Widget>[
+                                    (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp"))) ...<Widget>[
                                   FusionNeumorphicButton(
                                     semanticId: 'standby_button',
                                     width: 26,
                                     height: 26,
                                     borderRadius: 6,
                                     color: context.colorScheme.elevation2,
+                                    enabled: false,
                                     onTap: () {
                                       _showStandbyConfirmation(context);
                                     },
@@ -387,15 +350,13 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                                   const SizedBox(width: 10),
                                 ],
 
-                                if (widget.device is! Amplifier ||
-                                    !widget.device.hardwareName
-                                        .toLowerCase()
-                                        .startsWith("pp"))
+                                if (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp"))
                                   FusionNeumorphicButton(
                                     semanticId: 'restart_button',
                                     width: 26,
                                     height: 26,
                                     borderRadius: 6,
+                                    enabled: false,
                                     color: context.colorScheme.elevation2,
                                     onTap: () {
                                       _showRestartConfirmation(context);
@@ -426,10 +387,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color:
-                      isCritical
-                          ? context.colorScheme.errorFill
-                          : context.colorScheme.warningFill,
+                  color: isCritical ? context.colorScheme.errorFill : context.colorScheme.warningFill,
                   borderRadius: const BorderRadius.only(
                     bottomLeft: Radius.circular(6),
                     bottomRight: Radius.circular(6),
@@ -438,13 +396,8 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                 child: Row(
                   children: <Widget>[
                     Icon(
-                      isCritical
-                          ? Icons.error_outline
-                          : Icons.warning_amber_rounded,
-                      color:
-                          isCritical
-                              ? context.colorScheme.errorText
-                              : context.colorScheme.warningText,
+                      isCritical ? Icons.error_outline : Icons.warning_amber_rounded,
+                      color: isCritical ? context.colorScheme.errorText : context.colorScheme.warningText,
                       size: 14,
                     ),
                     const SizedBox(width: 8),
@@ -452,10 +405,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                       child: FusionAppText(
                         text: alertMsg!,
                         style: context.textTheme.labelSmall!.copyWith(
-                          color:
-                              isCritical
-                                  ? context.colorScheme.errorText
-                                  : context.colorScheme.warningText,
+                          color: isCritical ? context.colorScheme.errorText : context.colorScheme.warningText,
                         ),
                         textOverflow: TextOverflow.ellipsis,
                         maxLine: 1,
@@ -476,8 +426,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
       builder:
           (BuildContext context) => FusionConfirmationPopup(
             title: 'STANDBY',
-            description:
-                'Do you want to set ${widget.device.name} device to standby ?',
+            description: 'Do you want to set ${widget.device.name} device to standby ?',
             onConfirm: () {
               // TODO: Implement actual standby logic
               _startLoadingState('Please wait...', 'Device going standby');

@@ -21,6 +21,7 @@ import '../../../../../core/assets/asset_icons.dart';
 import '../../../../authentication/viewmodel/session_view_model.dart';
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../../devices/presentation/widgets/device_mapping_dialog.dart';
+import '../../../view_model/dsp_sync/config_sync_view_model.dart';
 import '../../../widget/control_design_tab_switcher.dart';
 
 part '_app_bar_content.dart';

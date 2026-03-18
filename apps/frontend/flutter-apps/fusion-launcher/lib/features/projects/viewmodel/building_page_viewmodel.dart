@@ -40,7 +40,11 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
       emit(
         state.copyWith(
           toolbarMode: ToolbarMode.system,
-          toolState: SystemToolState(),
+          toolState: _defaultToolForMode(
+            ToolbarMode.acoustics,
+            selectedListeningAreaId: _projectViewModel.currentSelectedListeningAreaId,
+            selectedSpeakerId: _projectViewModel.currentSelectedHardwareId,
+          ),
         ),
       );
     }
@@ -48,6 +52,10 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
 
   void setTool(BuildingPageToolState toolState) {
     emit(state.copyWith(toolState: _toolStateWithProjectSelection(toolState)));
+  }
+
+  void addSourceState() {
+    emit(state.copyWith(toolState: AddSourceState()));
   }
 
   void cancelState() {
@@ -115,22 +123,24 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
     }
 
     final BuildingPageToolState nextToolState =
-        listeningAreaChanged && isSpeakerPlacementMode
-            ? _defaultToolForMode(
-              state.toolbarMode,
-              selectedListeningAreaId: nextListeningAreaId,
-              selectedSpeakerId: nextSpeakerId,
-            )
-            : state.toolState;
+    // listeningAreaChanged && isSpeakerPlacementMode
+    // ?
+    _defaultToolForMode(
+      state.toolbarMode,
+      selectedListeningAreaId: nextListeningAreaId,
+      selectedSpeakerId: nextSpeakerId,
+    );
+    // : state.toolState;
 
+    final BuildingPageState copyWith = state.copyWith(
+      toolState: nextToolState,
+      selectedListeningAreaId: nextListeningAreaId,
+      selectedSpeakerId: nextSpeakerId,
+      clearSelectedListeningAreaId: listeningAreaChanged && nextListeningAreaId == null,
+      clearSelectedSpeakerId: speakerChanged && nextSpeakerId == null,
+    );
     emit(
-      state.copyWith(
-        toolState: nextToolState,
-        selectedListeningAreaId: nextListeningAreaId,
-        selectedSpeakerId: nextSpeakerId,
-        clearSelectedListeningAreaId: listeningAreaChanged && nextListeningAreaId == null,
-        clearSelectedSpeakerId: speakerChanged && nextSpeakerId == null,
-      ),
+      copyWith,
     );
   }
 
@@ -139,13 +149,13 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
     String? selectedListeningAreaId,
     String? selectedSpeakerId,
   }) {
-    if (mode == ToolbarMode.acoustics) {
-      return SelectToolState(
-        selectedListeningAreaId: selectedListeningAreaId,
-        selectedSpeakerId: selectedSpeakerId,
-      );
-    }
-    return SystemToolState();
+    // if (mode == ToolbarMode.acoustics) {
+    return SelectToolState(
+      selectedListeningAreaId: selectedListeningAreaId,
+      selectedSpeakerId: selectedSpeakerId,
+    );
+    // }
+    // return SystemToolState();
   }
 
   BuildingPageToolState _toolStateWithProjectSelection(BuildingPageToolState toolState) {
@@ -180,6 +190,9 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
   }
 
   SpeakerPlacementCursorState? getSpeakerPlacementCursorState() {
+    if (!isSpeakerPlacementMode) {
+      return null;
+    }
     try {
       final List<Speaker> nonPlacedSpeakers = _projectViewModel.getNonPlacedSpeakersForCurrentListeningArea();
       if (!isSpeakerPlacementMode || nonPlacedSpeakers.isEmpty) {

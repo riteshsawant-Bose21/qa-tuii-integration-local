@@ -70,6 +70,7 @@ class DroResultData {
   final List<Map<String, dynamic>>? deviceConnections;
   final List<Map<String, dynamic>>? devices;
   final String? imageInput;
+  final String? imageOutput;
   final List<Map<String, dynamic>>? ioPorts;
   final List<Map<String, dynamic>>? latencies;
   final int? totalCost;
@@ -79,6 +80,7 @@ class DroResultData {
     this.devices,
     this.deviceConnections,
     this.imageInput,
+    this.imageOutput,
     this.ioPorts,
     this.latencies,
     this.totalCost,
@@ -90,6 +92,7 @@ class DroResultData {
       devices: (json['devices'] as List<dynamic>?)?.map((dynamic e) => Map<String, dynamic>.from(e as Map<String, dynamic>)).toList(),
       deviceConnections: (json['device_connections'] as List<dynamic>?)?.map((dynamic e) => Map<String, dynamic>.from(e as Map<String, dynamic>)).toList(),
       imageInput: json['image_input'] as String?,
+      imageOutput: json['image_output'] as String?,
       ioPorts: (json['io_ports'] as List<dynamic>?)?.map((dynamic e) => Map<String, dynamic>.from(e as Map<String, dynamic>)).toList(),
       latencies: (json['latencies'] as List<dynamic>?)?.map((dynamic e) => Map<String, dynamic>.from(e as Map<String, dynamic>)).toList(),
       totalCost: json['total_cost'] as int?,
@@ -101,6 +104,7 @@ class DroResultData {
       'aes67_streams': aes67Streams,
       'devices': devices,
       'image_input': imageInput,
+      'image_output': imageOutput,
       'io_ports': ioPorts,
       'latencies': latencies,
       'total_cost': totalCost,
@@ -113,6 +117,7 @@ class DroResultData {
     List<Map<String, dynamic>>? devices,
     List<Map<String, dynamic>>? deviceConnections,
     String? imageInput,
+    String? imageOutput,
     List<Map<String, dynamic>>? ioPorts,
     List<Map<String, dynamic>>? latencies,
     int? totalCost,
@@ -122,6 +127,7 @@ class DroResultData {
       devices: devices ?? this.devices,
       deviceConnections: deviceConnections ?? this.deviceConnections,
       imageInput: imageInput ?? this.imageInput,
+      imageOutput: imageOutput ?? this.imageOutput,
       ioPorts: ioPorts ?? this.ioPorts,
       latencies: latencies ?? this.latencies,
       totalCost: totalCost ?? this.totalCost,

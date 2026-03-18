@@ -328,7 +328,7 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
   void _verifyVIP(String vipAddress) async {
     FusionUiUtils.showLoader(context);
     // Simulate VIP verification
-    await Future<void>.delayed(const Duration(seconds: 1));
+    await Future<void>.delayed(const Duration(milliseconds: 500));
     if (mounted) {
       serviceLocator<ProjectViewModel>().setVirtualIP(ip: vipAddress);
       FusionUiUtils.hideLoader(context);

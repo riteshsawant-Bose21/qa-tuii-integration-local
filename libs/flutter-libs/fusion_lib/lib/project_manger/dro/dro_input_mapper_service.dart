@@ -192,12 +192,39 @@ extension DroInputMapperService on ProjectService {
         );
       }
 
+      List<PrioritySourceData> prioritySources = getPrioritySourcesDataInZone(zone.id);
+
+      if (prioritySources.isNotEmpty) {
+        for (int i = 0; i < prioritySources.length; i++) {
+          PrioritySourceData prioritySource = prioritySources[i];
+          droSourceConnections.add(
+            DroSourceConnection(
+              sourceChainId: prioritySource.sourceId,
+              sourceTerminal: "out",
+              sourceChannel: 1,
+              destinationTerminal: "paging_in",
+              destinationChannel: i + 1,
+            ),
+          );
+        }
+      }
+
+      Map<String, dynamic> algorithmProperties = prioritySources.isEmpty
+          ? {
+              "source_channels": 1,
+            }
+          : {
+              "source_channels": 1,
+              "total_channels": functionSources.length + 1,
+              "priority_count": prioritySources.length,
+            };
+
       droZoneFunctions.add(
         DroZoneFunction(
           id: zoneFunction.id,
           name: zoneFunction.name,
           algorithm: zoneFunction.algorithmName,
-          algorithmProperties: {"source_channels": 1},
+          algorithmProperties: algorithmProperties,
           algorithmTerminals: DroAlgorithmTerminals(
             inTerminal: functionSources.length,
             outTerminal: 1,
