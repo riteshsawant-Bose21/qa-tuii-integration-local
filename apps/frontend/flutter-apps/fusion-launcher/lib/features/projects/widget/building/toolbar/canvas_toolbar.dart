@@ -82,9 +82,6 @@ class CanvasToolBar extends StatelessWidget {
           ),
           const AnimatedSize(
             duration: Duration(milliseconds: 200),
-            // transitionBuilder:
-            //     (Widget child, Animation<double> animation) =>
-            //         SlideTransition(position: Tween<Offset>(begin: const Offset(0.5, 0), end: Offset.zero).animate(animation), child: child),
             child: _TernaryToolbar(),
           ),
         ],
