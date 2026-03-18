@@ -16,6 +16,12 @@ class BuildingPageState {
     if (toolState case SpeakerPlacementState(:final String? selectedListeningAreaId)) {
       return selectedListeningAreaId;
     }
+    if (toolState case SplSelectToolState(:final String? selectedListeningAreaId)) {
+      return selectedListeningAreaId;
+    }
+    if (toolState case SystemSelectToolState(:final String? selectedListeningAreaId)) {
+      return selectedListeningAreaId;
+    }
     return null;
   }
 
@@ -24,6 +30,12 @@ class BuildingPageState {
       return selectedSpeakerId;
     }
     if (toolState case SpeakerPlacementState(:final String? selectedSpeakerId)) {
+      return selectedSpeakerId;
+    }
+    if (toolState case SplSelectToolState(:final String? selectedSpeakerId)) {
+      return selectedSpeakerId;
+    }
+    if (toolState case SystemSelectToolState(:final String? selectedSpeakerId)) {
       return selectedSpeakerId;
     }
     return null;
@@ -112,11 +124,45 @@ abstract class BuildingPageToolState {}
 
 class SystemToolState extends BuildingPageToolState {}
 
-class DrawingListingAreaState extends BuildingPageToolState {}
-
 class MeasuringToolState extends BuildingPageToolState {}
 
-class SelectToolState extends BuildingPageToolState {
+abstract class SplToolState extends BuildingPageToolState {}
+
+class IdleSplToolState extends SplToolState {}
+
+class SplSelectToolState extends SplToolState {
+  final String? selectedListeningAreaId;
+  final String? selectedSpeakerId;
+
+  SplSelectToolState({this.selectedListeningAreaId, this.selectedSpeakerId});
+
+  SplSelectToolState copyWith({
+    String? selectedListeningAreaId,
+    String? selectedSpeakerId,
+    bool clearSelectedListeningAreaId = false,
+    bool clearSelectedSpeakerId = false,
+  }) {
+    return SplSelectToolState(
+      selectedListeningAreaId: clearSelectedListeningAreaId ? null : selectedListeningAreaId ?? this.selectedListeningAreaId,
+      selectedSpeakerId: clearSelectedSpeakerId ? null : selectedSpeakerId ?? this.selectedSpeakerId,
+    );
+  }
+
+  @override
+  bool operator ==(covariant BuildingPageToolState other) {
+    if (identical(this, other)) return true;
+    return other is SplSelectToolState && other.selectedListeningAreaId == selectedListeningAreaId && other.selectedSpeakerId == selectedSpeakerId;
+  }
+
+  @override
+  int get hashCode => Object.hash(selectedListeningAreaId, selectedSpeakerId);
+}
+
+abstract class ListeningAreaToolState extends BuildingPageToolState {}
+
+class DrawingListeningAreaState extends ListeningAreaToolState {}
+
+class SelectToolState extends ListeningAreaToolState {
   final String? selectedListeningAreaId;
   final String? selectedSpeakerId;
 
@@ -144,9 +190,7 @@ class SelectToolState extends BuildingPageToolState {
   int get hashCode => Object.hash(selectedListeningAreaId, selectedSpeakerId);
 }
 
-class SplToolState extends BuildingPageToolState {}
-
-class SpeakerPlacementState extends BuildingPageToolState {
+class SpeakerPlacementState extends ListeningAreaToolState {
   final String? selectedListeningAreaId;
   final String? selectedSpeakerId;
 
@@ -174,4 +218,30 @@ class SpeakerPlacementState extends BuildingPageToolState {
   int get hashCode => Object.hash(selectedListeningAreaId, selectedSpeakerId);
 }
 
-class AddSourceState extends BuildingPageToolState {}
+class SystemSelectToolState extends SystemToolState {
+  final String? selectedListeningAreaId;
+  final String? selectedSpeakerId;
+
+  SystemSelectToolState({this.selectedListeningAreaId, this.selectedSpeakerId});
+
+  SystemSelectToolState copyWith({
+    String? selectedListeningAreaId,
+    String? selectedSpeakerId,
+    bool clearSelectedListeningAreaId = false,
+    bool clearSelectedSpeakerId = false,
+  }) {
+    return SystemSelectToolState(
+      selectedListeningAreaId: clearSelectedListeningAreaId ? null : selectedListeningAreaId ?? this.selectedListeningAreaId,
+      selectedSpeakerId: clearSelectedSpeakerId ? null : selectedSpeakerId ?? this.selectedSpeakerId,
+    );
+  }
+
+  @override
+  bool operator ==(covariant BuildingPageToolState other) {
+    if (identical(this, other)) return true;
+    return other is SystemSelectToolState && other.selectedListeningAreaId == selectedListeningAreaId && other.selectedSpeakerId == selectedSpeakerId;
+  }
+
+  @override
+  int get hashCode => Object.hash(selectedListeningAreaId, selectedSpeakerId);
+}
