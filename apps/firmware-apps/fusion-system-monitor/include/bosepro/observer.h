@@ -1,3 +1,5 @@
+#pragma once
+
 #include <arpa/inet.h>
 #include <atomic>
 #include <cctype>
@@ -23,7 +25,9 @@
 #include <unordered_map>
 #include <vector>
 #include <pthread.h>
+#ifndef USE_MAC_THREADS
 #include <sched.h>
+#endif
 
 /**
  * @brief Represents a component of a JSON path.
@@ -716,6 +720,10 @@ public:
   }
 
 private:
+#ifdef USE_MAC_THREADS
+  void pin_thread(std::thread & /*t*/, const char * /*thread_label*/) const {
+  }
+#else
   void pin_thread(std::thread &t, const char *thread_label) const {
     constexpr int kTelemetryCpu = 0;
     cpu_set_t cpuset;
@@ -726,13 +734,23 @@ private:
       SPDLOG_WARN("Failed to set {} affinity to CPU {}: {}", thread_label, kTelemetryCpu, strerror(rc));
     }
   }
+#endif
 
+#ifdef USE_MAC_THREADS
+  void name_thread(std::thread & /*t*/, const char *name) const {
+    int rc = pthread_setname_np(name);
+    if (rc != 0) {
+      SPDLOG_WARN("Failed to set thread name '{}': {}", name, strerror(rc));
+    }
+  }
+#else
   void name_thread(std::thread &t, const char *name) const {
     int rc = pthread_setname_np(t.native_handle(), name);
     if (rc != 0) {
       SPDLOG_WARN("Failed to set thread name '{}': {}", name, strerror(rc));
     }
   }
+#endif
 
   // Logging helper.
   void log(const std::string &message) const {
