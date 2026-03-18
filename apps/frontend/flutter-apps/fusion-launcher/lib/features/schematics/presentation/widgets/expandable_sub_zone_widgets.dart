@@ -111,7 +111,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                             //   onSpeakerAdded: onSpeakerAdded,
                             // ),
                             FusionArrowPopup(
-                              semanticId: "subzone_item_add_speaker",
+                              semanticId: "add_speakers_menu",
                               content: SpeakerQueryPopup(
                                 isFromBuildingPage: false,
                                 zoneId: widget.zoneId,
@@ -268,6 +268,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                         child: SizedBox(
                           width: 220,
                           child: CircuitDeviceWidget(
+                            caller: 'sub_zone',
                             prefix: "drag_",
                             index: index,
                             deviceId: deviceId,
@@ -320,6 +321,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                         child: SizedBox(
                           width: 220,
                           child: CircuitDeviceWidget(
+                            caller: 'sub_zone',
                             prefix: "child_",
                             index: index,
                             circuitModel: circuitData,
@@ -345,6 +347,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                       ),
                     ),
                     child: CircuitDeviceWidget(
+                      caller: 'sub_zone',
                       prefix: "child_",
                       index: index,
                       deviceId: deviceId,
@@ -419,6 +422,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
 
   Widget _buildZoneName(BuildContext context, String name) {
     return FusionAppText(
+      semanticId: "sub_zone_name_${widget.index}",
       text: name,
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
         fontSize: 11,

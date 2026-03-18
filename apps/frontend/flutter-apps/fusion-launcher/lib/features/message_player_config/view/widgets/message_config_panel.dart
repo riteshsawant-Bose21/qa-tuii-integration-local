@@ -15,6 +15,9 @@ class MessageConfigPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<MessagePlayerConfigCubit, MessagePlayerConfigState>(
       builder: (BuildContext context, MessagePlayerConfigState state) {
+        final MessagePlayerConfigCubit messagePlayerConfigCubit = context.read<MessagePlayerConfigCubit>();
+        final MediaFileModel? mediaFile = messagePlayerConfigCubit.getMediaFileForSelectedMessage();
+
         final MessageModel? selectedMessage = state.selectedMessage;
 
         if (selectedMessage == null) {
@@ -33,7 +36,7 @@ class MessageConfigPanel extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              // Message Name
+              /// Message Name
               _MessageNameField(
                 initialValue: selectedMessage.name,
                 onChanged: (String value) {
@@ -43,36 +46,35 @@ class MessageConfigPanel extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              // Audio File
+              /// Audio File
               _AudioFileSection(
                 selectedMessage: selectedMessage,
                 state: state,
               ),
 
-              // Audio Player (only show if audio file is selected)
-              if (context.read<MessagePlayerConfigCubit>().hasMediaAssignedToSelectedMessage()) ...<Widget>[
+              /// Audio Player (only show if audio file is selected)
+              if (messagePlayerConfigCubit.hasMediaAssignedToSelectedMessage() && mediaFile != null) ...<Widget>[
                 const SizedBox(height: 16),
                 _AudioPlayerWidget(state: state),
 
                 const SizedBox(height: 16),
 
-                // Gain Control
+                /// Gain Control
                 _GainControlSection(
                   gain: selectedMessage.gain,
                   onChanged: (double value) {
                     context.read<MessagePlayerConfigCubit>().updateGain(value);
                   },
                 ),
+                const SizedBox(height: 20),
+
+                /// Repeat Settings
+                _RepeatSettingsSection(
+                  repeat: selectedMessage.repeat,
+                  repeatCount: selectedMessage.repeatCount,
+                  intervalSeconds: selectedMessage.repeatIntervalSeconds,
+                ),
               ],
-
-              const SizedBox(height: 20),
-
-              // Repeat Settings
-              _RepeatSettingsSection(
-                repeat: selectedMessage.repeat,
-                repeatCount: selectedMessage.repeatCount,
-                intervalSeconds: selectedMessage.repeatIntervalSeconds,
-              ),
             ],
           ),
         );
