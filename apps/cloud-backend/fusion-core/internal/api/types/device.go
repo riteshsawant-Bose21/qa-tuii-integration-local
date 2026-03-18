@@ -23,7 +23,7 @@ type DeviceCreateResponse struct {
 // DeviceUpdateRequest represents the request payload for updating an existing device.
 type DeviceUpdateRequest struct {
 	DeviceName      string `json:"device_name"`
-	ClientDeviceID  string `json:"client_device_id" binding:"required"`
+	ClientDeviceID  string `json:"client_device_id"`
 	FirmwareVersion string `json:"firmware_version"`
 	DeviceZone      string `json:"device_zone"`
 	DeviceLocation  string `json:"device_location"`
@@ -63,12 +63,11 @@ type CommandType string
 
 const (
 	CommandRestart CommandType = "REBOOT"
-	CommandStandby CommandType = "STANDBY"
 )
 
 // CommandRequest represents the request payload for sending a command to the device cluster.
 type CommandRequest struct {
-	Command   CommandType `json:"command" binding:"required"`
+	Command   CommandType `json:"command" binding:"required" example:"REBOOT" enums:"REBOOT" validate:"oneof=REBOOT"`
 	ProjectID string      `json:"project_id" binding:"required"`
 	DeviceIDs []string    `json:"device_ids"`
 }
