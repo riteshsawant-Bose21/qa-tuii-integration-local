@@ -393,6 +393,68 @@ func fetchAndDecode[T any](
 	return decodeSlice(resp.Body, dest)
 }
 
+func (c *Cluster) FetchGenericWithTargetDevice(
+    deviceID string,
+    endpointTemplate string, 
+    localFn func() ([]byte, error),
+    remoteFn func(url string) ([]byte, error),
+) ([]byte, error) {
+
+    deviceInfos := c.GetAllDevicesInfo()
+
+    var targetDevice *api.DeviceInfo
+    for i := range deviceInfos {
+        if deviceInfos[i].Id == deviceID {
+            targetDevice = &deviceInfos[i]
+            break
+        }
+    }
+    if targetDevice == nil {
+        return nil, fmt.Errorf("device %s not found", deviceID)
+    }
+
+    if c.HostIsLocal(targetDevice.Address) {
+        return localFn()
+    }
+
+    deviceAddress := net.JoinHostPort(targetDevice.Address, api.AdminPort)
+    endpoint := strings.Replace(endpointTemplate, "{id}", deviceID, 1)
+    url := utils.GetLocalURL(deviceAddress, endpoint)
+
+    return remoteFn(url)
+}
+
+func (c *Cluster) PostGenericToTargetDevice(
+	deviceID string,
+	endpointTemplate string,
+	payload []byte,
+	localFn func(payload []byte) error,
+	remoteFn func(payload []byte, url string) error,
+) error {
+	deviceInfos := c.GetAllDevicesInfo()
+
+	var targetDevice *api.DeviceInfo
+	for i := range deviceInfos {
+		if deviceInfos[i].Id == deviceID {
+			targetDevice = &deviceInfos[i]
+			break
+		}
+	}
+	if targetDevice == nil {
+		return fmt.Errorf("device %s not found", deviceID)
+	}
+
+	if c.HostIsLocal(targetDevice.Address) {
+		return localFn(payload)
+	}
+
+	deviceAddress := net.JoinHostPort(targetDevice.Address, api.AdminPort)
+	endpoint := strings.Replace(endpointTemplate, "{id}", deviceID, 1)
+	url := utils.GetLocalURL(deviceAddress, endpoint)
+
+	return remoteFn(payload, url)
+}
+
 // PostGenericToAdmin POSTs to an admin route on all nodes
 func (c *Cluster) PostGenericToAdmin(
 	endpoint string,
