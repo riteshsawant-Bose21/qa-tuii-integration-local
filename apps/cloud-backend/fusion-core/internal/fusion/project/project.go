@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	constants "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/constants"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 	errorutils "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"go.uber.org/zap"
@@ -212,6 +213,45 @@ func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllP
 		Page:       1,
 		TotalPages: 1,
 	}, nil
+}
+
+// GetProjectById retrieves a project by its ID with metadata.
+func (s *Service) GetProjectById(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
+	// SelectByID handles user assignment validation via JOIN and returns full project with metadata
+	var project *types.Project
+	var err error
+
+	switch userAuth.Role.RoleName {
+	case constants.SuperAdminRoleName:
+		project, err = s.dbService.SelectByID(ctx, projectID, userAuth, logger)
+	case constants.AdminRoleName:
+		project, err = s.dbService.GetProjectByIDForAccount(ctx, projectID, userAuth, logger)
+	default:
+		project, err = s.dbService.GetProjectByIDForUser(ctx, projectID, userAuth, logger)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Generate presigned URLs for project files
+	presignURL, err := s.generateProjectFileURL(ctx, project.ID, types.ProjectFileTypeProjectFile, time.Minute*5, "get", logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate presign URL for project %s: %v", project.ID, err)
+	}
+	if presignURL != "" {
+		project.ProjectFileURL = &presignURL
+	}
+
+	thumbnailURL, err := s.generateProjectFileURL(ctx, project.ID, types.ProjectFileTypeProjectThumbnail, time.Minute*5, "get", logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate thumbnail URL for project %s: %v", project.ID, err)
+	}
+	if thumbnailURL != "" {
+		project.ThumbnailURL = &thumbnailURL
+	}
+
+	return project, nil
 }
 
 // UpdateProject modifies an existing project.
