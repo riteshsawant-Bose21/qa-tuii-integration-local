@@ -365,6 +365,11 @@ func BuildInternalURL(address, port, endpoint string) string {
 	return fmt.Sprintf("%s%s:%s%s", api.Protocol, address, port, endpoint)
 }
 
+// GetLocalURL builds a full API URL to the endpoint
+func GetLocalURL(addr, endpoint string) string {
+	return fmt.Sprintf("%s%s%s", api.Protocol, addr, endpoint)
+}
+
 // GetLocalIP returns the primary IP address used for outbound communication
 func GetLocalIP() (string, error) {
 	conn, err := net.Dial("udp", "8.8.8.8:80")

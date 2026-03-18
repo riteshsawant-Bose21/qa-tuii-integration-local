@@ -142,6 +142,63 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 	response.OK(ctx, res)
 }
 
+// GetProjectByID retrieves a project by its ID.
+// @Summary Get project by ID
+// @Description Get a project by its ID
+// @Tags projects
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param projectId path string true "Project ID"
+// @Success 200 {object} types.GetProjectByIDResponse "Successfully retrieved project"
+// @Failure 404 {object} types.ErrorResponse "Project not found"
+// @Failure 400 {object} types.ErrorResponse "Bad request - Invalid query parameters"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
+// @Router /projects/{projectId} [get]
+func (h *ProjectHandler) GetProjectByID(ctx *gin.Context) {
+
+	loggerFromContext, exists := ctx.Get("logger")
+	if !exists {
+		response.InternalError(ctx)
+		return
+	}
+	logger := loggerFromContext.(*zap.Logger)
+
+	projectID := ctx.Param("projectId")
+
+	// Validate UUID format
+	if !validation.IsValidUUID(projectID) {
+		response.NotFound(ctx, errorutil.ErrMsgProjectNotFound)
+		return
+	}
+
+	userAuth, exists := ctx.Get("user_auth")
+	if !exists {
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
+		return
+	}
+
+	user, ok := userAuth.(*types.UserAuthorizationResponse)
+	if !ok || user == nil {
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
+		return
+	}
+
+	res, err := h.project.GetProjectById(ctx, projectID, *user, logger)
+	if err != nil {
+		// Check if it's a "not found" error (project doesn't exist or user not assigned)
+		if err.Error() == errorutil.ErrMsgProjectNotFound || err.Error() == errorutil.ErrMsgSQLNoRows {
+			response.NotFound(ctx, errorutil.ErrMsgProjectNotFound)
+			return
+		}
+		response.InternalError(ctx)
+		return
+	}
+
+	response.OK(ctx, res)
+}
+
+
 // UpdateProject updates an existing project.
 // @Summary Update project
 // @Description Update an existing project by its ID
