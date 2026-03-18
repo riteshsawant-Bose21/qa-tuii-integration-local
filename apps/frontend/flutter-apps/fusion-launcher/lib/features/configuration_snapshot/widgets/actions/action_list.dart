@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/viewModel/actions_viewmodel/config_snapshot_actions_state.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/viewModel/actions_viewmodel/config_snapshot_actions_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/scenes_viewmodel/config_scene_sets_state.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/scenes_viewmodel/config_scene_sets_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/config_snapshots_state.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/config_snapshots_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/widgets/actions/snapshot_action_row_data.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/widgets/actions/snapshot_action_row_header.dart';
@@ -133,8 +136,6 @@ class ActionList extends StatelessWidget {
     final ConfigSnapshotsViewmodel configSnapshotsViewmodel = context.read<ConfigSnapshotsViewmodel>();
 
     final List<SceneActionModel> actionsList = state.actions;
-    final SnapshotsModel? selectedScene = configSnapshotsViewmodel.getSelectedSnapshotModel();
-    final SceneSetModel? sceneSet = configSnapshotsViewmodel.getSceneSetForSelectedSnapshot();
 
     return Expanded(
       child: SemanticHelper.container(
@@ -142,18 +143,33 @@ class ActionList extends StatelessWidget {
         child: Column(
           children: <Widget>[
             /// Snapshot Header Widget
-            SnapshotHeaderWidget(
-              snapshotName: sceneSet != null ? "${sceneSet.name} > ${selectedScene?.name}" : selectedScene?.name ?? "",
-              onNameChanged: (String newName) {
-                if (selectedScene != null) {
-                  final SnapshotsModel scene = selectedScene.copyWith(name: newName);
-                  configSnapshotsViewmodel.updateSnapshot(scene);
-                }
+            BlocBuilder<ConfigSnapshotsViewmodel, ConfigSnapshotsState>(
+              builder: (BuildContext context, ConfigSnapshotsState snapshotsState) {
+                return BlocBuilder<ConfigSceneSetsViewmodel, ConfigSceneSetsState>(
+                  builder: (BuildContext context, ConfigSceneSetsState sceneSetsState) {
+                    final SnapshotsModel? selectedScene = configSnapshotsViewmodel.getSelectedSnapshotModel();
+                    final SceneSetModel? sceneSet = configSnapshotsViewmodel.getSceneSetForSelectedSnapshot();
+                    return SnapshotHeaderWidget(
+                      snapshotName: selectedScene?.name ?? "",
+                      sceneSetNameName: sceneSet?.name,
+                      onNameChanged: (String newName) {
+                        if (selectedScene != null) {
+                          final SnapshotsModel scene = selectedScene.copyWith(name: newName);
+                          configSnapshotsViewmodel.updateSnapshot(scene);
+                          // Also sync scene sets so the header rebuilds for scene-set snapshots
+                          // (getAllSnapshots only returns standalone snapshots, so ConfigSnapshotsViewmodel
+                          // state won't change for scene-set snapshots without this extra sync)
+                          context.read<ConfigSceneSetsViewmodel>().syncWithProjectViewModel();
+                        }
+                      },
+                      onAdd: () {
+                        actionsCubit.addAction();
+                      },
+                      onReorder: () {},
+                    );
+                  },
+                );
               },
-              onAdd: () {
-                actionsCubit.addAction();
-              },
-              onReorder: () {},
             ),
 
             /// Action Row Header
