@@ -323,13 +323,17 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                               penToolEvents: FusionPenToolEvents(
                                                 onPathClosed: (List<FusionCanvasPoint> value) {
                                                   final ProjectViewModel projectVM = serviceLocator<ProjectViewModel>();
+                                                  final ListeningArea listeningArea = ListeningArea(
+                                                    vertices: value,
+                                                    name: "Listening Area ${projectVM.listeningAreas.length + 1}",
+                                                  );
                                                   projectVM.addListeningArea(
-                                                    area: ListeningArea(
-                                                      vertices: value,
-                                                      name: "Listening Area ${projectVM.listeningAreas.length + 1}",
-                                                    ),
+                                                    area: listeningArea,
                                                     floorId: floor.id,
                                                   );
+                                                  projectVM.setCurrentSelectedHardware(null);
+                                                  projectVM.setCurrentSelectedListeningArea(listeningArea.id);
+
                                                   calculateSpl(context);
                                                 },
                                               ),
