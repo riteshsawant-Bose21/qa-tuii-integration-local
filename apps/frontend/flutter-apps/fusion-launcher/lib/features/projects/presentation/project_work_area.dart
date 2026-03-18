@@ -173,31 +173,16 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
       buildingPage,
 
       /// Schematics tab
-      _WorkAreaContent(
-        appBarHeight: appBarHeight,
-        child: const SystemPage(),
-      ),
+      const WorkSafeAreaContent(child: SystemPage()),
 
-      _WorkAreaContent(appBarHeight: appBarHeight, child: configurationPage),
+      WorkSafeAreaContent(child: configurationPage),
     ];
 
     _controlWidgets = <Widget>[
-      _WorkAreaContent(
-        appBarHeight: appBarHeight,
-        child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionControlDashboardPage(),
-      ),
-      _WorkAreaContent(
-        appBarHeight: appBarHeight,
-        child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionDevicesPage(),
-      ),
-      _WorkAreaContent(
-        appBarHeight: appBarHeight,
-        child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : buildingPage,
-      ),
-      _WorkAreaContent(
-        appBarHeight: appBarHeight,
-        child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : configurationPage,
-      ),
+      WorkSafeAreaContent(child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionControlDashboardPage()),
+      WorkSafeAreaContent(child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionDevicesPage()),
+      WorkSafeAreaContent(child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : buildingPage),
+      WorkSafeAreaContent(child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : configurationPage),
     ];
   }
 
@@ -225,28 +210,31 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
             }
           },
           builder: (BuildContext context, ProjectViewModelState state) {
-            return Scaffold(
-              backgroundColor: context.colorScheme.primaryBlack,
-              body: Stack(
-                children: <Widget>[
-                  /// Tab Bar Section
-                  Positioned(
-                    child:
-                        _currentWidgets.isNotEmpty
-                            ? IndexedStack(
-                              index: _tabController.index.clamp(0, _currentWidgets.length - 1),
-                              children: _currentWidgets,
-                            )
-                            : const Center(child: CircularProgressIndicator()),
-                  ),
-                  SizedBox(
-                    height: appBarHeight,
-                    child: ProjectWorkAreaAppBar(
-                      currentTabs: _currentTabs,
-                      tabController: _tabController,
+            return WorkAreaScope(
+              appBarHeight: appBarHeight,
+              child: Scaffold(
+                backgroundColor: context.colorScheme.primaryBlack,
+                body: Stack(
+                  children: <Widget>[
+                    /// Tab Bar Section
+                    Positioned(
+                      child:
+                          _currentWidgets.isNotEmpty
+                              ? IndexedStack(
+                                index: _tabController.index.clamp(0, _currentWidgets.length - 1),
+                                children: _currentWidgets,
+                              )
+                              : const Center(child: CircularProgressIndicator()),
                     ),
-                  ),
-                ],
+                    SizedBox(
+                      height: appBarHeight,
+                      child: ProjectWorkAreaAppBar(
+                        currentTabs: _currentTabs,
+                        tabController: _tabController,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -256,16 +244,32 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
   }
 }
 
-class _WorkAreaContent extends StatelessWidget {
-  const _WorkAreaContent({super.key, required this.child, required this.appBarHeight});
-  final Widget child;
+class WorkAreaScope extends InheritedWidget {
+  const WorkAreaScope({super.key, required this.appBarHeight, required super.child});
+
   final double appBarHeight;
+
+  static WorkAreaScope of(BuildContext context) {
+    final WorkAreaScope? scope = context.dependOnInheritedWidgetOfExactType<WorkAreaScope>();
+    assert(scope != null, 'WorkAreaScope not found in context');
+    return scope!;
+  }
+
+  @override
+  bool updateShouldNotify(covariant WorkAreaScope oldWidget) {
+    return appBarHeight != oldWidget.appBarHeight;
+  }
+}
+
+class WorkSafeAreaContent extends StatelessWidget {
+  const WorkSafeAreaContent({super.key, required this.child});
+  final Widget child;
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        top: appBarHeight,
-      ),
+    final double appBarHeight = WorkAreaScope.of(context).appBarHeight;
+    return SafeArea(
+      minimum: EdgeInsets.only(top: appBarHeight),
       child: child,
     );
   }

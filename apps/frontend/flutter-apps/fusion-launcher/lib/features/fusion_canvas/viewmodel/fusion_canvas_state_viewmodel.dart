@@ -8,7 +8,7 @@ import '../view/painters/fusion_canvas_painter.dart';
 class FusionCanvasStateViewModel extends Cubit<FusionCanvasState> {
   FusionCanvasStateViewModel() : super(IdleFusionCanvasState(offset: Offset.zero, scale: 1.0));
 
-  double get minScale => 0.1;
+  double get minScale => 0.05;
   double get maxScale => 2.0;
 
   Size? _canvasSize;
@@ -123,7 +123,7 @@ class FusionCanvasStateViewModel extends Cubit<FusionCanvasState> {
     final Size? contSize = contentSize;
     Size? viewportSize = canvasSize;
     if (contSize == null || viewportSize == null) return;
-    viewportSize = viewportSize * 0.5; // Add some padding around the content
+    viewportSize = viewportSize * 0.6; // Add some padding around the content
     final double scaleX = viewportSize.width / contSize.width;
     final double scaleY = viewportSize.height / contSize.height;
     final double scale = scaleX < scaleY ? scaleX : scaleY;
