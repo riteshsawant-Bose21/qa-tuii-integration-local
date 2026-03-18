@@ -47,6 +47,10 @@
                             "value": [
                                 "xlr-pal/gpio_PWR_SW1"
                             ]
+                        },
+                        {
+                            "name": "php_led",
+                            "value": "PWM4"
                         }
                     ]
                 }

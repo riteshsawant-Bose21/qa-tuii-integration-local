@@ -94,6 +94,11 @@
                     "default_value": ""
                 },
                 {
+                    "name": "php_led",
+                    "value_type": "string",
+                    "default_value": "PWM4"
+                },
+                {
                     "name": "num_user_gpio",
                     "value_type": "integer",
                     "default_value": 1,
