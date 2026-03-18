@@ -1593,9 +1593,7 @@ FusionArrowPopup(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 Text(
-                  selectedGenders.isEmpty
-                      ? "Select"
-                      : selectedGenders.join(", "),
+                  selectedGenders.isEmpty ? "Select" : selectedGenders.join(", "),
                 ),
                 const Icon(Icons.arrow_drop_down),
               ],
@@ -2023,7 +2021,7 @@ FusionVerticalResizableWidget(
           preview: const FusionFlatContainer(
             width: 150,
             height: 50,
-            semanticId: "default_Container",
+            semanticsId: "default_Container",
             child: Text("Hello Fusion"),
           ),
 
@@ -2042,7 +2040,7 @@ const FusionFlatContainer(
           preview: FusionFlatContainer(
             width: 150,
             height: 50,
-            semanticId: "coloured",
+            semanticsId: "coloured",
             color: context.colorScheme.elevation5,
             child: const Center(
               child: Text("Coloured"),
@@ -2069,7 +2067,7 @@ FusionFlatContainer(
           preview: FusionFlatContainer(
             width: 150,
             height: 50,
-            semanticId: "coloured",
+            semanticsId: "coloured",
             borderColor: context.colorScheme.elevation6,
             child: const Center(
               child: Text("Border"),
@@ -2106,8 +2104,7 @@ FusionFlatContainer(
                 context,
                 type: DialogType.success,
                 title: "Modal Title Text",
-                description:
-                    "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
+                description: "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
                 copyText: "COPY TEXT",
                 contactEmail: "info@boseprofessional.com",
                 primaryButtonText: "Primary Button",
@@ -2142,8 +2139,7 @@ FusionFlatContainer(
                 semanticId: 'widget_details',
                 type: DialogType.success,
                 title: "Modal Title Text",
-                description:
-                    "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
+                description: "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
                 copyText: "COPY TEXT",
                 contactEmail: "info@boseprofessional.com",
                 primaryButtonText: "Primary Button",
@@ -2176,8 +2172,7 @@ FusionFlatContainer(
             semanticId: 'widget_details',
             type: DialogType.success,
             title: "Modal Title Text",
-            description:
-                "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
+            description: "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
             copyText: "COPY TEXT",
             contactEmail: "info@boseprofessional.com",
             primaryButtonText: "Primary Button",
@@ -2209,8 +2204,7 @@ FusionFlatContainer(
             type: DialogType.success,
             devicetype: DeviceType.mobile,
             title: "Modal Title Text",
-            description:
-                "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
+            description: "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
             copyText: "COPY TEXT",
             contactEmail: "info@boseprofessional.com",
             primaryButtonText: "Primary Button",
@@ -2244,8 +2238,7 @@ FusionFlatContainer(
             semanticId: 'widget_details',
             type: DialogType.failure,
             title: "Modal Title Text",
-            description:
-                "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
+            description: "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
             copyText: "COPY TEXT",
             contactEmail: "info@boseprofessional.com",
             primaryButtonText: "Primary Button",
@@ -2279,8 +2272,7 @@ FusionFlatContainer(
             semanticId: 'widget_details',
             type: DialogType.confirmation,
             title: "Modal Title Text",
-            description:
-                "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
+            description: "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
             copyText: "COPY TEXT",
             contactEmail: "info@boseprofessional.com",
             primaryButtonText: "Primary Button",
@@ -2317,8 +2309,7 @@ FusionFlatContainer(
             type: DialogType.warning,
             semanticId: 'widget_details',
             title: "Modal Title Text",
-            description:
-                "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
+            description: "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
             copyText: "COPY TEXT",
             contactEmail: "info@boseprofessional.com",
             primaryButtonText: "Primary Button",
@@ -3372,9 +3363,9 @@ FusionSwitch(
       children: <Widget>[
         _buildWithCopy(
           context: context,
-          preview: const FusionSvgIcon(
+          preview: FusionIcon.svg(
             semanticId: "default_without_icon",
-            icon: AssetSvg.expandUp,
+            AssetSvg.expandUp,
             size: 40,
           ),
 
@@ -3388,9 +3379,9 @@ const FusionSvgIcon(
         ),
         _buildWithCopy(
           context: context,
-          preview: FusionSvgIcon(
+          preview: FusionIcon.svg(
             semanticId: "with_icon",
-            icon: AssetSvg.broadcast,
+            AssetSvg.broadcast,
             color: context.colorScheme.green,
             size: 40,
           ),

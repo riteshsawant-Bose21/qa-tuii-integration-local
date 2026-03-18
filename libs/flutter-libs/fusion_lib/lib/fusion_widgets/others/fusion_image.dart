@@ -168,20 +168,17 @@ class FusionImage extends StatelessWidget {
         loadingBuilder: (context, child, progress) {
           if (progress == null) return child;
           return placeholder ??
-              SemanticHelper.container(
+              SemanticHelper.image(
                 testId: SemanticHelper.createTestId(
-                  SemanticTypes.container,
-                  "fusion_image${semanticId}",
+                  SemanticTypes.icon,
+                  "fusion_image_${semanticId}",
                 ),
                 child: SizedBox(
                   width: 24,
                   height: 24,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    value: progress.expectedTotalBytes != null
-                        ? progress.cumulativeBytesLoaded /
-                              (progress.expectedTotalBytes ?? 1)
-                        : null,
+                    value: progress.expectedTotalBytes != null ? progress.cumulativeBytesLoaded / (progress.expectedTotalBytes ?? 1) : null,
                   ),
                 ),
               );
@@ -195,32 +192,44 @@ class FusionImage extends StatelessWidget {
       );
     } else if (file != null) {
       /// File image
-      image = Image.file(
-        file!,
-        width: width,
-        height: height,
-        fit: fit,
-        errorBuilder: (context, error, stackTrace) {
-          if (errorBuilder != null) {
-            return errorBuilder!(context, error, stackTrace);
-          }
-          return Icon(Icons.broken_image, size: height, color: Colors.grey);
-        },
+      image = SemanticHelper.image(
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.icon,
+          "fusion_image_${semanticId}",
+        ),
+        child: Image.file(
+          file!,
+          width: width,
+          height: height,
+          fit: fit,
+          errorBuilder: (context, error, stackTrace) {
+            if (errorBuilder != null) {
+              return errorBuilder!(context, error, stackTrace);
+            }
+            return Icon(Icons.broken_image, size: height, color: Colors.grey);
+          },
+        ),
       );
     } else if (asset != null) {
       /// Asset image
-      image = Image.asset(
-        asset!,
-        width: width,
-        height: height,
-        fit: fit,
-        color: assetColor,
-        errorBuilder: (context, error, stackTrace) {
-          if (errorBuilder != null) {
-            return errorBuilder!(context, error, stackTrace);
-          }
-          return Icon(Icons.broken_image, size: height, color: Colors.grey);
-        },
+      image = SemanticHelper.image(
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.icon,
+          "fusion_image_${semanticId}",
+        ),
+        child: Image.asset(
+          asset!,
+          width: width,
+          height: height,
+          fit: fit,
+          color: assetColor,
+          errorBuilder: (context, error, stackTrace) {
+            if (errorBuilder != null) {
+              return errorBuilder!(context, error, stackTrace);
+            }
+            return Icon(Icons.broken_image, size: height, color: Colors.grey);
+          },
+        ),
       );
     } else {
       // Nothing provided

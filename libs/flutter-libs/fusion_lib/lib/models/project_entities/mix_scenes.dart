@@ -11,6 +11,17 @@ enum SignalType {
 
   const SignalType(this.displayName);
   final String displayName;
+
+  static SignalType? fromJson(String? value) {
+    switch (value?.toLowerCase()) {
+      case 'mono':
+        return SignalType.mono;
+      case 'stereo':
+        return SignalType.stereo;
+      default:
+        return null;
+    }
+  }
 }
 
 // ============================================================================

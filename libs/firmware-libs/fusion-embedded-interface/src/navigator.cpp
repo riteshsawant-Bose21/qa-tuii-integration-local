@@ -193,9 +193,9 @@ bool Navigator::try_list_value(const std::string &list_name, int index, T &value
         if (n == index)
         {
             // Check for int
-            if constexpr (std::is_same_v<T, int>)
+            if constexpr (std::is_same_v<T, int_fast32_t>)
             {
-                auto opt_value = a.second.get_value_optional<int>();
+                auto opt_value = a.second.get_value_optional<int_fast32_t>();
                 if (opt_value)
                 {
                     value = *opt_value;
@@ -209,7 +209,7 @@ bool Navigator::try_list_value(const std::string &list_name, int index, T &value
                 if (opt_value)
                 {
                     // Ensure the value isn't an integer disguised as a string
-                    auto int_check = a.second.get_value_optional<int>();
+                    auto int_check = a.second.get_value_optional<int_fast32_t>();
                     if (int_check)
                     {
                         return false;

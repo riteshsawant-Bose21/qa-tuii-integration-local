@@ -82,6 +82,7 @@ dependencies:
 
   universal_platform: ^1.1.0
   desktop_drop: ^0.7.0
+  pdfrx: ^1.0.94
 
   fusion_lib:
     path: ../../../../libs/flutter-libs/fusion_lib
@@ -129,6 +130,7 @@ flutter:
     - .env
     - assets/
     - assets/images/
+    - assets/icons/building_page/
     - assets/images/speakers/
     - assets/images/products/
     - assets/images/floor_plans/
@@ -140,6 +142,7 @@ flutter:
     - assets/icons/wiring_ports/
     - assets/icons/scheduler/
     - assets/icons/gpio/
+    - assets/icons/canvas_cursor/
     # - packages/fusion_lib/lib/assets/
     - assets/svg/
     - assets/images/commission/

@@ -515,7 +515,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
               // Update existing listening area
               final ListeningArea areaToUpdate = widget.listeningAreas.firstWhere((area) => area.id == widget.selectedListeningAreaId);
               final ListeningArea updatedArea = areaToUpdate.copyWith(
-                vertices: List<Offset>.of(_current),
+                vertices: List<FusionCanvasPoint>.of(_current.map((e) => FusionCanvasPoint(position: e))),
                 isDrawn: true,
               );
               widget.onUpdateListeningArea(updatedArea);
@@ -523,7 +523,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
               // Add new listening area
               final ListeningArea newArea = ListeningArea(
                 name: "Area ${widget.listeningAreas.length + 1}",
-                vertices: List<Offset>.of(_current),
+                vertices: List<FusionCanvasPoint>.of(_current.map((e) => FusionCanvasPoint(position: e))),
                 isDrawn: true,
               );
               // final List<HardwareComponent> hardwareForArea = _getHardwareComponentsInListeningAreas(newArea);
@@ -576,7 +576,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
       if (e.buttons == kPrimaryMouseButton) {
         for (int i = 0; i < widget.listeningAreas.length; i++) {
           final ListeningArea area = widget.listeningAreas[i];
-          final List<ui.Offset> p = area.vertices;
+          final List<ui.Offset> p = area.vertices.map((FusionCanvasPoint v) => v.position).toList();
           final ui.Path poly = Path()..addPolygon(p, true);
           if (poly.contains(worldPos)) {
             // Add/remove area from selection
@@ -600,7 +600,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
     // POLY‐VERTEX DRAG - only allow in acoustics mode
     if (e.buttons == kPrimaryMouseButton && widget.isAcousticsMode) {
       for (int i = widget.listeningAreas.length - 1; i >= 0; i--) {
-        final List<ui.Offset> poly = widget.listeningAreas[i].vertices;
+        final List<ui.Offset> poly = widget.listeningAreas[i].vertices.map((FusionCanvasPoint v) => v.position).toList();
         for (int j = 0; j < poly.length; j++) {
           if ((worldPos - poly[j]).distance < 10.0 / _zoomScale) {
             widget.onSelectedListeningAreaIdChanged(widget.listeningAreas[i].id);
@@ -619,7 +619,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
     // POLY DRAG - only allow in acoustics mode
     if (e.buttons == kPrimaryMouseButton) {
       for (int i = widget.listeningAreas.length - 1; i >= 0; i--) {
-        final List<ui.Offset> poly = widget.listeningAreas[i].vertices;
+        final List<ui.Offset> poly = widget.listeningAreas[i].vertices.map((FusionCanvasPoint v) => v.position).toList();
         final ui.Path path = Path()..addPolygon(poly, true);
         if (path.contains(worldPos)) {
           widget.onSelectedListeningAreaIdChanged(widget.listeningAreas[i].id);
@@ -681,7 +681,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
     // LISTENING AREA CLICK-TO-SELECT (system mode - identification only)
     if (e.buttons == kPrimaryMouseButton && !widget.isAcousticsMode) {
       for (int i = widget.listeningAreas.length - 1; i >= 0; i--) {
-        final List<ui.Offset> poly = widget.listeningAreas[i].vertices;
+        final List<ui.Offset> poly = widget.listeningAreas[i].vertices.map((FusionCanvasPoint v) => v.position).toList();
         final ui.Path path = Path()..addPolygon(poly, true);
         if (path.contains(worldPos)) {
           widget.onSelectedListeningAreaIdChanged(widget.listeningAreas[i].id);
@@ -760,7 +760,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
       }
       final ListeningArea cs = widget.listeningAreas[_dragIndex!];
       setState(() {
-        cs.vertices[_dragVertexIndex!] = worldPos;
+        cs.vertices[_dragVertexIndex!] = FusionCanvasPoint(position: worldPos);
       });
       // widget.onUpdateListeningArea(cs);
       return;
@@ -773,7 +773,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
       }
       final ui.Offset delta = worldPos - _dragStartWorld!;
       final ListeningArea cs = widget.listeningAreas[_dragIndex!];
-      final ListeningArea updated = cs.copyWith(vertices: _dragOriginal!.map((ui.Offset pt) => pt + delta).toList());
+      final ListeningArea updated = cs.copyWith(vertices: _dragOriginal!.map((ui.Offset pt) => FusionCanvasPoint(position: pt + delta)).toList());
       setState(() {
         widget.listeningAreas[_dragIndex!] = updated;
       });
@@ -858,7 +858,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
       final ListeningArea originalArea = originalListeningAreaList.firstWhere((area) => area.id == cs.id);
       setState(() {
         _isListeningAreaDragging = false;
-        if (!FusionUtils.areVerticesEqualIgnoringOrder(cs.vertices, originalArea.vertices)) {
+        if (!FusionUtils.areVerticesEqualIgnoringOrder(cs.vertices.map((v) => v.position).toList(), originalArea.vertices.map((v) => v.position).toList())) {
           widget.onUpdateListeningArea(cs);
           widget.onTapListeningArea(cs);
           widget.onComponentTransformed(cs);
@@ -889,7 +889,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
 
   void _fitToViewport() {
     final List<Offset> all = <Offset>[
-      for (ListeningArea s in widget.listeningAreas) ...s.vertices,
+      for (ListeningArea s in widget.listeningAreas) ...s.vertices.map((FusionCanvasPoint v) => v.position),
       ..._computedCorners,
     ];
     if (all.isEmpty) return;
@@ -949,7 +949,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
 
   ListeningArea? _findListeningAreaAt(Offset worldPos) {
     for (final ListeningArea area in widget.listeningAreas) {
-      final Path poly = Path()..addPolygon(area.vertices, true);
+      final Path poly = Path()..addPolygon(area.vertices.map((FusionCanvasPoint v) => v.position).toList(), true);
       if (poly.contains(worldPos)) return area;
     }
     return null;
@@ -958,7 +958,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
   List<HardwareComponent> _getHardwareComponentsInListeningAreas(ListeningArea area) {
     final result = <HardwareComponent>[];
     for (final hw in widget.hardwareComponents) {
-      if (_isPointInsidePolygon(hw.pos!, area.vertices)) {
+      if (_isPointInsidePolygon(hw.pos!, area.vertices.map((FusionCanvasPoint v) => v.position).toList())) {
         result.add(hw);
       }
     }
