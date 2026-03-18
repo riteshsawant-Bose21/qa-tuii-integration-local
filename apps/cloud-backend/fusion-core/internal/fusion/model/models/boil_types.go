@@ -68,6 +68,7 @@ func AllClaimStatusEnum() []string {
 const (
 	CommandStatusEnumUNPUBLISHED string = "UNPUBLISHED"
 	CommandStatusEnumPUBLISHED   string = "PUBLISHED"
+	CommandStatusEnumRECIEVED    string = "RECIEVED"
 	CommandStatusEnumSUCCESS     string = "SUCCESS"
 	CommandStatusEnumFAILURE     string = "FAILURE"
 )
@@ -76,6 +77,7 @@ func AllCommandStatusEnum() []string {
 	return []string{
 		CommandStatusEnumUNPUBLISHED,
 		CommandStatusEnumPUBLISHED,
+		CommandStatusEnumRECIEVED,
 		CommandStatusEnumSUCCESS,
 		CommandStatusEnumFAILURE,
 	}

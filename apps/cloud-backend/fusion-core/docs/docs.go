@@ -132,6 +132,63 @@ const docTemplate = `{
                 }
             }
         },
+        "/devices/bulk": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create multiple devices in a single request. Each device is processed independently; partial failures are reported per-device.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Bulk create devices",
+                "parameters": [
+                    {
+                        "description": "List of devices to create",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.BulkDeviceCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "207": {
+                        "description": "Multi-status - results for each device",
+                        "schema": {
+                            "$ref": "#/definitions/types.BulkDeviceCreateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/devices/commands/": {
             "post": {
                 "security": [
@@ -271,7 +328,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Device ID",
+                        "description": "Serial number of the device",
                         "name": "device_id",
                         "in": "path",
                         "required": true
@@ -338,7 +395,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Device ID",
+                        "description": "Serial number of the device",
                         "name": "device_id",
                         "in": "path",
                         "required": true
@@ -408,7 +465,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Device ID",
+                        "description": "Serial number of the device",
                         "name": "device_id",
                         "in": "path",
                         "required": true
@@ -460,7 +517,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Device ID",
+                        "description": "Serial number of the device",
                         "name": "device_id",
                         "in": "path",
                         "required": true
@@ -2145,6 +2202,52 @@ const docTemplate = `{
                 }
             }
         },
+        "types.BulkDeviceCreateRequest": {
+            "type": "object",
+            "required": [
+                "devices"
+            ],
+            "properties": {
+                "devices": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/types.DeviceCreateRequest"
+                    }
+                }
+            }
+        },
+        "types.BulkDeviceCreateResponse": {
+            "type": "object",
+            "properties": {
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.BulkDeviceCreateResult"
+                    }
+                }
+            }
+        },
+        "types.BulkDeviceCreateResult": {
+            "type": "object",
+            "properties": {
+                "certificate": {
+                    "type": "string"
+                },
+                "device_id": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "types.CommandRequest": {
             "type": "object",
             "required": [
@@ -2177,16 +2280,33 @@ const docTemplate = `{
         "types.CommandStatusResponse": {
             "type": "object",
             "properties": {
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.CommandStatusResult"
+                    }
+                }
+            }
+        },
+        "types.CommandStatusResult": {
+            "type": "object",
+            "properties": {
                 "command_id": {
                     "type": "string"
                 },
                 "command_name": {
                     "type": "string"
                 },
+                "device_id": {
+                    "type": "string"
+                },
                 "issued_at": {
                     "type": "string"
                 },
                 "status": {
+                    "type": "string"
+                },
+                "updated_at": {
                     "type": "string"
                 }
             }
@@ -2276,8 +2396,8 @@ const docTemplate = `{
         "types.DeviceCreateRequest": {
             "type": "object",
             "required": [
+                "client_device_id",
                 "csr",
-                "device_id",
                 "device_location",
                 "device_name",
                 "device_zone",
@@ -2288,10 +2408,10 @@ const docTemplate = `{
                 "serial_number"
             ],
             "properties": {
-                "csr": {
+                "client_device_id": {
                     "type": "string"
                 },
-                "device_id": {
+                "csr": {
                     "type": "string"
                 },
                 "device_location": {
@@ -2352,7 +2472,13 @@ const docTemplate = `{
         },
         "types.DeviceUpdateRequest": {
             "type": "object",
+            "required": [
+                "client_device_id"
+            ],
             "properties": {
+                "client_device_id": {
+                    "type": "string"
+                },
                 "device_location": {
                     "type": "string"
                 },

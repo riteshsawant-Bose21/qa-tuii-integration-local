@@ -57,6 +57,14 @@ func (m *MockDeviceService) CreateDevice(ctx context.Context, request *types.Dev
 	return args.Get(0).(*types.DeviceCreateResponse), args.Error(1)
 }
 
+func (m *MockDeviceService) BulkCreateDevices(ctx context.Context, request *types.BulkDeviceCreateRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (*types.BulkDeviceCreateResponse, error) {
+	args := m.Called(ctx, request, user, logger)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.BulkDeviceCreateResponse), args.Error(1)
+}
+
 func (m *MockDeviceService) UpdateDevice(ctx context.Context, deviceID string, request *types.DeviceUpdateRequest, user types.UserAuthorizationResponse, logger *zap.Logger) error {
 	args := m.Called(ctx, deviceID, request, user, logger)
 	return args.Error(0)
@@ -180,7 +188,7 @@ func setupDeviceTestWithoutUserAuth() *gin.Engine {
 
 func createDeviceRequest() *types.DeviceCreateRequest {
 	return &types.DeviceCreateRequest{
-		DeviceID:        testDeviceIDConst,
+		ClientDeviceID:  testDeviceIDConst,
 		DeviceName:      testDeviceNameConst,
 		ModelName:       testModelNameConst,
 		FirmwareVersion: testFirmwareVerConst,
@@ -256,8 +264,8 @@ func TestCreateDevice(t *testing.T) {
 		r, _ := setupDeviceTest()
 
 		req := &types.DeviceCreateRequest{
-			DeviceID:   testDeviceIDConst,
-			DeviceName: testDeviceNameConst,
+			ClientDeviceID: testDeviceIDConst,
+			DeviceName:     testDeviceNameConst,
 			// CSR is required but missing
 		}
 
@@ -381,7 +389,8 @@ func TestUpdateDevice(t *testing.T) {
 		r, mockSvc := setupDeviceTest()
 
 		updateReq := &types.DeviceUpdateRequest{
-			DeviceName: "Updated Device Name",
+			ClientDeviceID: testDeviceIDConst,
+			DeviceName:     "Updated Device Name",
 		}
 
 		mockSvc.On("UpdateDevice", mock.Anything, testDeviceIDConst, updateReq, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
@@ -414,7 +423,8 @@ func TestUpdateDevice(t *testing.T) {
 		r, mockSvc := setupDeviceTest()
 
 		updateReq := &types.DeviceUpdateRequest{
-			DeviceName: "Updated Device Name",
+			ClientDeviceID: testDeviceIDConst,
+			DeviceName:     "Updated Device Name",
 		}
 
 		mockSvc.On("UpdateDevice", mock.Anything, testDeviceIDConst, updateReq, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
@@ -435,7 +445,8 @@ func TestUpdateDevice(t *testing.T) {
 		r, mockSvc := setupDeviceTest()
 
 		updateReq := &types.DeviceUpdateRequest{
-			ProjectID: "new-project-id",
+			ClientDeviceID: testDeviceIDConst,
+			ProjectID:      "new-project-id",
 		}
 
 		mockSvc.On("UpdateDevice", mock.Anything, testDeviceIDConst, updateReq, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
@@ -456,7 +467,8 @@ func TestUpdateDevice(t *testing.T) {
 		r, mockSvc := setupDeviceTest()
 
 		updateReq := &types.DeviceUpdateRequest{
-			DeviceName: "Updated Device Name",
+			ClientDeviceID: testDeviceIDConst,
+			DeviceName:     "Updated Device Name",
 		}
 
 		mockSvc.On("UpdateDevice", mock.Anything, testDeviceIDConst, updateReq, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
@@ -477,7 +489,8 @@ func TestUpdateDevice(t *testing.T) {
 		r, mockSvc := setupDeviceTest()
 
 		updateReq := &types.DeviceUpdateRequest{
-			DeviceName: "Updated Device Name",
+			ClientDeviceID: testDeviceIDConst,
+			DeviceName:     "Updated Device Name",
 		}
 
 		mockSvc.On("UpdateDevice", mock.Anything, testDeviceIDConst, updateReq, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
@@ -1174,10 +1187,14 @@ func TestGetCommandStatus(t *testing.T) {
 		r, mockSvc := setupDeviceTest()
 
 		expectedResponse := &types.CommandStatusResponse{
-			CommandID:   testCommandIDConst,
-			CommandName: "REBOOT",
-			Status:      "COMPLETED",
-			IssuedAt:    "2024-01-15T10:00:00Z",
+			Results: []types.CommandStatusResult{
+				{
+					CommandID:   testCommandIDConst,
+					CommandName: "REBOOT",
+					Status:      "COMPLETED",
+					IssuedAt:    "2024-01-15T10:00:00Z",
+				},
+			},
 		}
 
 		mockSvc.On("GetCommandStatus", mock.Anything, testCommandIDConst, mock.AnythingOfType("*zap.Logger")).
@@ -1193,9 +1210,9 @@ func TestGetCommandStatus(t *testing.T) {
 		var response types.CommandStatusResponse
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
-		assert.Equal(t, testCommandIDConst, response.CommandID)
-		assert.Equal(t, "REBOOT", response.CommandName)
-		assert.Equal(t, "COMPLETED", response.Status)
+		assert.Equal(t, testCommandIDConst, response.Results[0].CommandID)
+		assert.Equal(t, "REBOOT", response.Results[0].CommandName)
+		assert.Equal(t, "COMPLETED", response.Results[0].Status)
 		mockSvc.AssertExpectations(t)
 	})
 

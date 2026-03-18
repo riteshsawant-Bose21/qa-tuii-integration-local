@@ -107,6 +107,41 @@ func (h *DeviceHandler) CreateDevice(ctx *gin.Context) {
 	response.Created(ctx, res)
 }
 
+// BulkCreateDevices creates multiple devices in a single request.
+// @Summary Bulk create devices
+// @Description Create multiple devices in a single request. Each device is processed independently; partial failures are reported per-device.
+// @Tags devices
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body types.BulkDeviceCreateRequest true "List of devices to create"
+// @Success 207 {object} types.BulkDeviceCreateResponse "Multi-status - results for each device"
+// @Failure 400 {object} types.ErrorResponse "Bad request - Invalid payload"
+// @Failure 401 {object} types.ErrorResponse "Unauthorized - User not authorized"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
+// @Router /devices/bulk [post]
+func (h *DeviceHandler) BulkCreateDevices(ctx *gin.Context) {
+	logger, user, ok := h.getLoggerAndUser(ctx)
+	if !ok {
+		return
+	}
+
+	var req types.BulkDeviceCreateRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		logger.Error(errMsgInvalidRequestPayload, zap.Error(err))
+		response.BadRequest(ctx, err.Error())
+		return
+	}
+
+	res, err := h.device.BulkCreateDevices(ctx, &req, *user, logger)
+	if err != nil {
+		h.handleDeviceError(ctx, err, logger, "bulk-create")
+		return
+	}
+
+	response.MultiStatus(ctx, res)
+}
+
 // UpdateDevice updates an existing device.
 // @Summary Update a device
 // @Description Update device details (non-static fields only)
@@ -114,7 +149,7 @@ func (h *DeviceHandler) CreateDevice(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param device_id path string true "Device ID"
+// @Param device_id path string true "Serial number of the device"
 // @Param body body types.DeviceUpdateRequest true "Device update details"
 // @Success 204 "Successfully updated device"
 // @Failure 400 {object} types.ErrorResponse "Bad request - Invalid payload"
@@ -156,7 +191,7 @@ func (h *DeviceHandler) UpdateDevice(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param device_id path string true "Device ID"
+// @Param device_id path string true "Serial number of the device"
 // @Success 204 "Successfully reset device"
 // @Failure 401 {object} types.ErrorResponse "Unauthorized - User not authorized to reset this device"
 // @Failure 404 {object} types.ErrorResponse "Device not found"
@@ -189,7 +224,7 @@ func (h *DeviceHandler) ResetDevice(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param device_id path string true "Device ID"
+// @Param device_id path string true "Serial number of the device"
 // @Param body body types.DeviceClaimRequest true "Claim details"
 // @Success 201 {object} types.DeviceClaimResponse "Successfully claimed device"
 // @Failure 400 {object} types.ErrorResponse "Bad request - Invalid payload or device already claimed"
@@ -232,7 +267,7 @@ func (h *DeviceHandler) ClaimDevice(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param device_id path string true "Device ID"
+// @Param device_id path string true "Serial number of the device"
 // @Param body body types.DeviceRotateCertRequest true "Certificate rotation details"
 // @Success 200 {object} types.DeviceRotateCertResponse "Successfully rotated certificate"
 // @Failure 400 {object} types.ErrorResponse "Bad request - Invalid payload"

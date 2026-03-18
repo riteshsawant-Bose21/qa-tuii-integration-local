@@ -96,9 +96,9 @@ func (m *mockDBService) Reset(ctx context.Context, device models.Device, tx mode
 	return args.Error(0)
 }
 
-func (m *mockDBService) InsertCommand(ctx context.Context, projectID string, request *types.CommandRequest, logger *zap.Logger) (string, error) {
-	args := m.Called(ctx, projectID, request, logger)
-	return args.String(0), args.Error(1)
+func (m *mockDBService) InsertCommand(ctx context.Context, projectID, commandID string, request *types.CommandRequest, logger *zap.Logger) error {
+	args := m.Called(ctx, projectID, commandID, request, logger)
+	return args.Error(0)
 }
 
 func (m *mockDBService) UpdateCommandStatus(ctx context.Context, commandID, status string, logger *zap.Logger) error {
@@ -106,12 +106,12 @@ func (m *mockDBService) UpdateCommandStatus(ctx context.Context, commandID, stat
 	return args.Error(0)
 }
 
-func (m *mockDBService) GetCommandStatus(ctx context.Context, commandID string, logger *zap.Logger) (*models.DeviceCommandHistory, error) {
+func (m *mockDBService) GetCommandStatus(ctx context.Context, commandID string, logger *zap.Logger) (*models.DeviceCommandHistorySlice, error) {
 	args := m.Called(ctx, commandID, logger)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*models.DeviceCommandHistory), args.Error(1)
+	return args.Get(0).(*models.DeviceCommandHistorySlice), args.Error(1)
 }
 
 // ---------------------------------------------------------------------------
@@ -161,7 +161,7 @@ func (m *mockIoTService) AttachPolicyToCertificate(ctx context.Context, policyNa
 	return args.Error(0)
 }
 
-func (m *mockIoTService) DetatchCertificateFromThing(ctx context.Context, thingName string, certificateArn string, logger *zap.Logger) error {
+func (m *mockIoTService) DetachCertificateFromThing(ctx context.Context, thingName string, certificateArn string, logger *zap.Logger) error {
 	args := m.Called(ctx, thingName, certificateArn, logger)
 	return args.Error(0)
 }
@@ -171,7 +171,7 @@ func (m *mockIoTService) SetCertificateInactive(ctx context.Context, certificate
 	return args.Error(0)
 }
 
-func (m *mockIoTService) DetatchPolicyFromCertificate(ctx context.Context, policyName string, certificateArn string, logger *zap.Logger) error {
+func (m *mockIoTService) DetachPolicyFromCertificate(ctx context.Context, policyName string, certificateArn string, logger *zap.Logger) error {
 	args := m.Called(ctx, policyName, certificateArn, logger)
 	return args.Error(0)
 }
@@ -226,7 +226,7 @@ func createTestUserAuth() types.UserAuthorizationResponse {
 
 func createTestRequest() *types.DeviceCreateRequest {
 	return &types.DeviceCreateRequest{
-		DeviceID:        testDeviceID,
+		ClientDeviceID:  testDeviceID,
 		DeviceName:      testDeviceName,
 		ModelName:       testModelName,
 		FirmwareVersion: testFirmwareVer,
@@ -253,7 +253,7 @@ func createTestProject() *models.Project {
 func createUnclaimedDevice() *models.Device {
 	return &models.Device{
 		ID:             testDeviceUUID,
-		DeviceID:       testDeviceID,
+		ClientDeviceID: testDeviceID,
 		SerialNumber:   testSerialNumber,
 		ModelName:      testModelName,
 		ThingName:      testDeviceID,
@@ -270,7 +270,7 @@ func createUnclaimedDevice() *models.Device {
 func createClaimedDevice() *models.Device {
 	return &models.Device{
 		ID:             testDeviceUUID,
-		DeviceID:       testDeviceID,
+		ClientDeviceID: testDeviceID,
 		SerialNumber:   testSerialNumber,
 		ModelName:      testModelName,
 		ThingName:      testDeviceID,
@@ -307,7 +307,7 @@ func TestCreateDevice(t *testing.T) {
 		defer dbWithTx.Close()
 
 		// Device doesn't exist
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, nil)
+		mockDB.On("GetDeviceByID", ctx, testSerialNumber, mock.Anything).Return(nil, nil)
 		mockProject.On("GetProjectByID", ctx, testProjectID, mock.Anything).Return(project, nil)
 		mockDB.On("GetDB", ctx).Return(dbWithTx)
 
@@ -317,8 +317,8 @@ func TestCreateDevice(t *testing.T) {
 		certArn := testCertArn
 		mockIoT.On("CreateCertificateFromCsr", ctx, &req.CSR, mock.Anything).
 			Return(&certPem, &certID, &certArn, nil)
-		mockIoT.On("RegisterThing", ctx, testDeviceID, mock.Anything).Return(nil)
-		mockIoT.On("AttachCertificateToThing", ctx, testDeviceID, certArn, mock.Anything).Return(nil)
+		mockIoT.On("RegisterThing", ctx, testSerialNumber, mock.Anything).Return(nil)
+		mockIoT.On("AttachCertificateToThing", ctx, testSerialNumber, certArn, mock.Anything).Return(nil)
 		mockIoT.On("AttachPolicyToCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).Return(nil)
 
 		// Transaction expectations
@@ -352,7 +352,7 @@ func TestCreateDevice(t *testing.T) {
 		defer dbWithTx.Close()
 
 		// Device exists but is unclaimed
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(device, nil)
+		mockDB.On("GetDeviceByID", ctx, testSerialNumber, mock.Anything).Return(device, nil)
 		mockProject.On("GetProjectByID", ctx, testProjectID, mock.Anything).Return(project, nil)
 		mockDB.On("GetDB", ctx).Return(dbWithTx)
 
@@ -362,7 +362,7 @@ func TestCreateDevice(t *testing.T) {
 		certArn := testCertArn
 		mockIoT.On("CreateCertificateFromCsr", ctx, &req.CSR, mock.Anything).
 			Return(&certPem, &certID, &certArn, nil)
-		mockIoT.On("AttachCertificateToThing", ctx, testDeviceID, certArn, mock.Anything).Return(nil)
+		mockIoT.On("AttachCertificateToThing", ctx, testSerialNumber, certArn, mock.Anything).Return(nil)
 		mockIoT.On("AttachPolicyToCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).Return(nil)
 
 		// Transaction - ClaimDevice for existing unclaimed device
@@ -393,7 +393,7 @@ func TestCreateDevice(t *testing.T) {
 		device := createClaimedDevice()
 
 		// Device exists and is already claimed
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(device, nil)
+		mockDB.On("GetDeviceByID", ctx, testSerialNumber, mock.Anything).Return(device, nil)
 		mockProject.On("GetProjectByID", ctx, testProjectID, mock.Anything).Return(project, nil)
 
 		resp, err := service.CreateDevice(ctx, req, user, logger)
@@ -415,7 +415,7 @@ func TestCreateDevice(t *testing.T) {
 		user := createTestUserAuth()
 		req := createTestRequest()
 
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, nil)
+		mockDB.On("GetDeviceByID", ctx, testSerialNumber, mock.Anything).Return(nil, nil)
 		mockProject.On("GetProjectByID", ctx, testProjectID, mock.Anything).Return(nil, nil)
 
 		resp, err := service.CreateDevice(ctx, req, user, logger)
@@ -444,7 +444,7 @@ func TestCreateDevice(t *testing.T) {
 			PrimaryOwnerAccountID: "other-account-id",
 		}
 
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, nil)
+		mockDB.On("GetDeviceByID", ctx, testSerialNumber, mock.Anything).Return(nil, nil)
 		mockProject.On("GetProjectByID", ctx, testProjectID, mock.Anything).Return(project, nil)
 
 		resp, err := service.CreateDevice(ctx, req, user, logger)
@@ -466,7 +466,7 @@ func TestCreateDevice(t *testing.T) {
 		user := createTestUserAuth()
 		req := createTestRequest()
 
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, errors.New("database error"))
+		mockDB.On("GetDeviceByID", ctx, testSerialNumber, mock.Anything).Return(nil, errors.New("database error"))
 
 		resp, err := service.CreateDevice(ctx, req, user, logger)
 
@@ -486,7 +486,7 @@ func TestCreateDevice(t *testing.T) {
 		user := createTestUserAuth()
 		req := createTestRequest()
 
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, nil)
+		mockDB.On("GetDeviceByID", ctx, testSerialNumber, mock.Anything).Return(nil, nil)
 		mockProject.On("GetProjectByID", ctx, testProjectID, mock.Anything).Return(nil, errors.New("database error"))
 
 		resp, err := service.CreateDevice(ctx, req, user, logger)
@@ -508,13 +508,13 @@ func TestCreateDevice(t *testing.T) {
 		req := createTestRequest()
 		project := createTestProject()
 
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, nil)
+		mockDB.On("GetDeviceByID", ctx, testSerialNumber, mock.Anything).Return(nil, nil)
 		mockProject.On("GetProjectByID", ctx, testProjectID, mock.Anything).Return(project, nil)
-		mockIoT.On("RegisterThing", ctx, testDeviceID, mock.Anything).Return(nil)
+		mockIoT.On("RegisterThing", ctx, testSerialNumber, mock.Anything).Return(nil)
 		mockIoT.On("CreateCertificateFromCsr", ctx, &req.CSR, mock.Anything).
 			Return(nil, nil, nil, errors.New("IoT error"))
 		// Cleanup since thing was registered but cert creation failed
-		mockIoT.On("DeleteThing", ctx, testDeviceID, mock.Anything).Return(nil)
+		mockIoT.On("DeleteThing", ctx, testSerialNumber, mock.Anything).Return(nil)
 
 		resp, err := service.CreateDevice(ctx, req, user, logger)
 
@@ -536,10 +536,10 @@ func TestCreateDevice(t *testing.T) {
 		req := createTestRequest()
 		project := createTestProject()
 
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, nil)
+		mockDB.On("GetDeviceByID", ctx, testSerialNumber, mock.Anything).Return(nil, nil)
 		mockProject.On("GetProjectByID", ctx, testProjectID, mock.Anything).Return(project, nil)
 		// RegisterThing is called before CreateCertificateFromCsr when device doesn't exist
-		mockIoT.On("RegisterThing", ctx, testDeviceID, mock.Anything).Return(errors.New("IoT error"))
+		mockIoT.On("RegisterThing", ctx, testSerialNumber, mock.Anything).Return(errors.New("IoT error"))
 
 		resp, err := service.CreateDevice(ctx, req, user, logger)
 
@@ -561,20 +561,20 @@ func TestCreateDevice(t *testing.T) {
 		req := createTestRequest()
 		project := createTestProject()
 
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, nil)
+		mockDB.On("GetDeviceByID", ctx, testSerialNumber, mock.Anything).Return(nil, nil)
 		mockProject.On("GetProjectByID", ctx, testProjectID, mock.Anything).Return(project, nil)
 
 		certPem := testCertPem
 		certID := testCertID
 		certArn := testCertArn
-		mockIoT.On("RegisterThing", ctx, testDeviceID, mock.Anything).Return(nil)
+		mockIoT.On("RegisterThing", ctx, testSerialNumber, mock.Anything).Return(nil)
 		mockIoT.On("CreateCertificateFromCsr", ctx, &req.CSR, mock.Anything).
 			Return(&certPem, &certID, &certArn, nil)
-		mockIoT.On("AttachCertificateToThing", ctx, testDeviceID, certArn, mock.Anything).
+		mockIoT.On("AttachCertificateToThing", ctx, testSerialNumber, certArn, mock.Anything).
 			Return(errors.New("IoT error"))
 		// Cleanup: SetCertificateInactive and DeleteThing (since thing was registered)
 		mockIoT.On("SetCertificateInactive", ctx, certID, mock.Anything).Return(nil)
-		mockIoT.On("DeleteThing", ctx, testDeviceID, mock.Anything).Return(nil)
+		mockIoT.On("DeleteThing", ctx, testSerialNumber, mock.Anything).Return(nil)
 
 		resp, err := service.CreateDevice(ctx, req, user, logger)
 
@@ -596,23 +596,23 @@ func TestCreateDevice(t *testing.T) {
 		req := createTestRequest()
 		project := createTestProject()
 
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, nil)
+		mockDB.On("GetDeviceByID", ctx, testSerialNumber, mock.Anything).Return(nil, nil)
 		mockProject.On("GetProjectByID", ctx, testProjectID, mock.Anything).Return(project, nil)
 
 		certPem := testCertPem
 		certID := testCertID
 		certArn := testCertArn
-		mockIoT.On("RegisterThing", ctx, testDeviceID, mock.Anything).Return(nil)
+		mockIoT.On("RegisterThing", ctx, testSerialNumber, mock.Anything).Return(nil)
 		mockIoT.On("CreateCertificateFromCsr", ctx, &req.CSR, mock.Anything).
 			Return(&certPem, &certID, &certArn, nil)
-		mockIoT.On("AttachCertificateToThing", ctx, testDeviceID, certArn, mock.Anything).Return(nil)
+		mockIoT.On("AttachCertificateToThing", ctx, testSerialNumber, certArn, mock.Anything).Return(nil)
 		mockIoT.On("AttachPolicyToCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).
 			Return(errors.New("IoT error"))
 		// cleanupIoTResources is called on failure
 		mockIoT.On("SetCertificateInactive", ctx, certID, mock.Anything).Return(nil)
-		mockIoT.On("DetatchCertificateFromThing", ctx, testDeviceID, certArn, mock.Anything).Return(nil)
-		mockIoT.On("DetatchPolicyFromCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).Return(nil)
-		mockIoT.On("DeleteThing", ctx, testDeviceID, mock.Anything).Return(nil)
+		mockIoT.On("DetachCertificateFromThing", ctx, testSerialNumber, certArn, mock.Anything).Return(nil)
+		mockIoT.On("DetachPolicyFromCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).Return(nil)
+		mockIoT.On("DeleteThing", ctx, testSerialNumber, mock.Anything).Return(nil)
 
 		resp, err := service.CreateDevice(ctx, req, user, logger)
 
@@ -637,17 +637,17 @@ func TestCreateDevice(t *testing.T) {
 		dbWithTx, sqlMock := newMockDBWithTransactions(t)
 		defer dbWithTx.Close()
 
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, nil)
+		mockDB.On("GetDeviceByID", ctx, testSerialNumber, mock.Anything).Return(nil, nil)
 		mockProject.On("GetProjectByID", ctx, testProjectID, mock.Anything).Return(project, nil)
 		mockDB.On("GetDB", ctx).Return(dbWithTx)
 
 		certPem := testCertPem
 		certID := testCertID
 		certArn := testCertArn
-		mockIoT.On("RegisterThing", ctx, testDeviceID, mock.Anything).Return(nil)
+		mockIoT.On("RegisterThing", ctx, testSerialNumber, mock.Anything).Return(nil)
 		mockIoT.On("CreateCertificateFromCsr", ctx, &req.CSR, mock.Anything).
 			Return(&certPem, &certID, &certArn, nil)
-		mockIoT.On("AttachCertificateToThing", ctx, testDeviceID, certArn, mock.Anything).Return(nil)
+		mockIoT.On("AttachCertificateToThing", ctx, testSerialNumber, certArn, mock.Anything).Return(nil)
 		mockIoT.On("AttachPolicyToCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).Return(nil)
 
 		// Transaction begin fails
@@ -655,9 +655,9 @@ func TestCreateDevice(t *testing.T) {
 
 		// cleanupIoTResources is called when transaction fails
 		mockIoT.On("SetCertificateInactive", ctx, certID, mock.Anything).Return(nil)
-		mockIoT.On("DetatchCertificateFromThing", ctx, testDeviceID, certArn, mock.Anything).Return(nil)
-		mockIoT.On("DetatchPolicyFromCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).Return(nil)
-		mockIoT.On("DeleteThing", ctx, testDeviceID, mock.Anything).Return(nil)
+		mockIoT.On("DetachCertificateFromThing", ctx, testSerialNumber, certArn, mock.Anything).Return(nil)
+		mockIoT.On("DetachPolicyFromCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).Return(nil)
+		mockIoT.On("DeleteThing", ctx, testSerialNumber, mock.Anything).Return(nil)
 
 		resp, err := service.CreateDevice(ctx, req, user, logger)
 
@@ -683,17 +683,17 @@ func TestCreateDevice(t *testing.T) {
 		dbWithTx, sqlMock := newMockDBWithTransactions(t)
 		defer dbWithTx.Close()
 
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, nil)
+		mockDB.On("GetDeviceByID", ctx, testSerialNumber, mock.Anything).Return(nil, nil)
 		mockProject.On("GetProjectByID", ctx, testProjectID, mock.Anything).Return(project, nil)
 		mockDB.On("GetDB", ctx).Return(dbWithTx)
 
 		certPem := testCertPem
 		certID := testCertID
 		certArn := testCertArn
-		mockIoT.On("RegisterThing", ctx, testDeviceID, mock.Anything).Return(nil)
+		mockIoT.On("RegisterThing", ctx, testSerialNumber, mock.Anything).Return(nil)
 		mockIoT.On("CreateCertificateFromCsr", ctx, &req.CSR, mock.Anything).
 			Return(&certPem, &certID, &certArn, nil)
-		mockIoT.On("AttachCertificateToThing", ctx, testDeviceID, certArn, mock.Anything).Return(nil)
+		mockIoT.On("AttachCertificateToThing", ctx, testSerialNumber, certArn, mock.Anything).Return(nil)
 		mockIoT.On("AttachPolicyToCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).Return(nil)
 
 		sqlMock.ExpectBegin()
@@ -703,9 +703,9 @@ func TestCreateDevice(t *testing.T) {
 
 		// cleanupIoTResources is called after transaction fails
 		mockIoT.On("SetCertificateInactive", ctx, certID, mock.Anything).Return(nil)
-		mockIoT.On("DetatchCertificateFromThing", ctx, testDeviceID, certArn, mock.Anything).Return(nil)
-		mockIoT.On("DetatchPolicyFromCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).Return(nil)
-		mockIoT.On("DeleteThing", ctx, testDeviceID, mock.Anything).Return(nil)
+		mockIoT.On("DetachCertificateFromThing", ctx, testSerialNumber, certArn, mock.Anything).Return(nil)
+		mockIoT.On("DetachPolicyFromCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).Return(nil)
+		mockIoT.On("DeleteThing", ctx, testSerialNumber, mock.Anything).Return(nil)
 
 		resp, err := service.CreateDevice(ctx, req, user, logger)
 
@@ -730,17 +730,17 @@ func TestCreateDevice(t *testing.T) {
 		dbWithTx, sqlMock := newMockDBWithTransactions(t)
 		defer dbWithTx.Close()
 
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, nil)
+		mockDB.On("GetDeviceByID", ctx, testSerialNumber, mock.Anything).Return(nil, nil)
 		mockProject.On("GetProjectByID", ctx, testProjectID, mock.Anything).Return(project, nil)
 		mockDB.On("GetDB", ctx).Return(dbWithTx)
 
 		certPem := testCertPem
 		certID := testCertID
 		certArn := testCertArn
-		mockIoT.On("RegisterThing", ctx, testDeviceID, mock.Anything).Return(nil)
+		mockIoT.On("RegisterThing", ctx, testSerialNumber, mock.Anything).Return(nil)
 		mockIoT.On("CreateCertificateFromCsr", ctx, &req.CSR, mock.Anything).
 			Return(&certPem, &certID, &certArn, nil)
-		mockIoT.On("AttachCertificateToThing", ctx, testDeviceID, certArn, mock.Anything).Return(nil)
+		mockIoT.On("AttachCertificateToThing", ctx, testSerialNumber, certArn, mock.Anything).Return(nil)
 		mockIoT.On("AttachPolicyToCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).Return(nil)
 
 		sqlMock.ExpectBegin()
@@ -749,9 +749,9 @@ func TestCreateDevice(t *testing.T) {
 
 		// cleanupIoTResources is called after commit fails
 		mockIoT.On("SetCertificateInactive", ctx, certID, mock.Anything).Return(nil)
-		mockIoT.On("DetatchCertificateFromThing", ctx, testDeviceID, certArn, mock.Anything).Return(nil)
-		mockIoT.On("DetatchPolicyFromCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).Return(nil)
-		mockIoT.On("DeleteThing", ctx, testDeviceID, mock.Anything).Return(nil)
+		mockIoT.On("DetachCertificateFromThing", ctx, testSerialNumber, certArn, mock.Anything).Return(nil)
+		mockIoT.On("DetachPolicyFromCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).Return(nil)
+		mockIoT.On("DeleteThing", ctx, testSerialNumber, mock.Anything).Return(nil)
 
 		resp, err := service.CreateDevice(ctx, req, user, logger)
 
@@ -858,10 +858,10 @@ func TestUpdateDevice(t *testing.T) {
 
 		// Device owned by different account
 		device := &models.Device{
-			ID:          testDeviceUUID,
-			DeviceID:    testDeviceID,
-			ClaimStatus: "CLAIMED",
-			ClaimedBy:   null.NewString("other-account-id", true),
+			ID:             testDeviceUUID,
+			ClientDeviceID: testDeviceID,
+			ClaimStatus:    "CLAIMED",
+			ClaimedBy:      null.NewString("other-account-id", true),
 		}
 
 		updateReq := &types.DeviceUpdateRequest{
@@ -1212,8 +1212,8 @@ func TestRotateCertificate(t *testing.T) {
 
 		// IoT operations - revoke old cert
 		mockIoT.On("SetCertificateInactive", ctx, testCertID, mock.Anything).Return(nil)
-		mockIoT.On("DetatchCertificateFromThing", ctx, testDeviceID, testCertArn, mock.Anything).Return(nil)
-		mockIoT.On("DetatchPolicyFromCertificate", ctx, "testdevicepolicy", testCertArn, mock.Anything).Return(nil)
+		mockIoT.On("DetachCertificateFromThing", ctx, testDeviceID, testCertArn, mock.Anything).Return(nil)
+		mockIoT.On("DetachPolicyFromCertificate", ctx, "testdevicepolicy", testCertArn, mock.Anything).Return(nil)
 
 		mockDB.On("GetDB", ctx).Return(dbWithTx)
 		sqlMock.ExpectBegin()
@@ -1291,7 +1291,7 @@ func TestRotateCertificate(t *testing.T) {
 		// Device owned by different account
 		device := &models.Device{
 			ID:             testDeviceUUID,
-			DeviceID:       testDeviceID,
+			ClientDeviceID: testDeviceID,
 			SerialNumber:   testSerialNumber,
 			ModelName:      testModelName,
 			ThingName:      testDeviceID,
@@ -1371,8 +1371,8 @@ func TestResetDevice(t *testing.T) {
 
 		// IoT revocation operations
 		mockIoT.On("SetCertificateInactive", ctx, testCertID, mock.Anything).Return(nil)
-		mockIoT.On("DetatchCertificateFromThing", ctx, testDeviceID, testCertArn, mock.Anything).Return(nil)
-		mockIoT.On("DetatchPolicyFromCertificate", ctx, "testdevicepolicy", testCertArn, mock.Anything).Return(nil)
+		mockIoT.On("DetachCertificateFromThing", ctx, testDeviceID, testCertArn, mock.Anything).Return(nil)
+		mockIoT.On("DetachPolicyFromCertificate", ctx, "testdevicepolicy", testCertArn, mock.Anything).Return(nil)
 
 		mockDB.On("GetDB", ctx).Return(dbWithTx)
 
@@ -1466,7 +1466,7 @@ func TestResetDevice(t *testing.T) {
 		mockIoT.AssertExpectations(t)
 	})
 
-	t.Run("returns error when DetatchCertificateFromThing fails", func(t *testing.T) {
+	t.Run("returns error when DetachCertificateFromThing fails", func(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
@@ -1479,7 +1479,7 @@ func TestResetDevice(t *testing.T) {
 
 		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(device, nil)
 		mockIoT.On("SetCertificateInactive", ctx, testCertID, mock.Anything).Return(nil)
-		mockIoT.On("DetatchCertificateFromThing", ctx, testDeviceID, testCertArn, mock.Anything).
+		mockIoT.On("DetachCertificateFromThing", ctx, testDeviceID, testCertArn, mock.Anything).
 			Return(errors.New("IoT error"))
 
 		err := service.ResetDevice(ctx, testDeviceID, user, logger)
@@ -1489,7 +1489,7 @@ func TestResetDevice(t *testing.T) {
 		mockIoT.AssertExpectations(t)
 	})
 
-	t.Run("returns error when DetatchPolicyFromCertificate fails", func(t *testing.T) {
+	t.Run("returns error when DetachPolicyFromCertificate fails", func(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
@@ -1502,8 +1502,8 @@ func TestResetDevice(t *testing.T) {
 
 		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(device, nil)
 		mockIoT.On("SetCertificateInactive", ctx, testCertID, mock.Anything).Return(nil)
-		mockIoT.On("DetatchCertificateFromThing", ctx, testDeviceID, testCertArn, mock.Anything).Return(nil)
-		mockIoT.On("DetatchPolicyFromCertificate", ctx, "testdevicepolicy", testCertArn, mock.Anything).
+		mockIoT.On("DetachCertificateFromThing", ctx, testDeviceID, testCertArn, mock.Anything).Return(nil)
+		mockIoT.On("DetachPolicyFromCertificate", ctx, "testdevicepolicy", testCertArn, mock.Anything).
 			Return(errors.New("IoT error"))
 
 		err := service.ResetDevice(ctx, testDeviceID, user, logger)
@@ -1529,8 +1529,8 @@ func TestResetDevice(t *testing.T) {
 
 		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(device, nil)
 		mockIoT.On("SetCertificateInactive", ctx, testCertID, mock.Anything).Return(nil)
-		mockIoT.On("DetatchCertificateFromThing", ctx, testDeviceID, testCertArn, mock.Anything).Return(nil)
-		mockIoT.On("DetatchPolicyFromCertificate", ctx, "testdevicepolicy", testCertArn, mock.Anything).Return(nil)
+		mockIoT.On("DetachCertificateFromThing", ctx, testDeviceID, testCertArn, mock.Anything).Return(nil)
+		mockIoT.On("DetachPolicyFromCertificate", ctx, "testdevicepolicy", testCertArn, mock.Anything).Return(nil)
 		mockDB.On("GetDB", ctx).Return(dbWithTx)
 
 		sqlMock.ExpectBegin().WillReturnError(errors.New("connection error"))
@@ -1559,8 +1559,8 @@ func TestResetDevice(t *testing.T) {
 
 		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(device, nil)
 		mockIoT.On("SetCertificateInactive", ctx, testCertID, mock.Anything).Return(nil)
-		mockIoT.On("DetatchCertificateFromThing", ctx, testDeviceID, testCertArn, mock.Anything).Return(nil)
-		mockIoT.On("DetatchPolicyFromCertificate", ctx, "testdevicepolicy", testCertArn, mock.Anything).Return(nil)
+		mockIoT.On("DetachCertificateFromThing", ctx, testDeviceID, testCertArn, mock.Anything).Return(nil)
+		mockIoT.On("DetachPolicyFromCertificate", ctx, "testdevicepolicy", testCertArn, mock.Anything).Return(nil)
 		mockDB.On("GetDB", ctx).Return(dbWithTx)
 
 		sqlMock.ExpectBegin()
@@ -1591,8 +1591,8 @@ func TestResetDevice(t *testing.T) {
 
 		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(device, nil)
 		mockIoT.On("SetCertificateInactive", ctx, testCertID, mock.Anything).Return(nil)
-		mockIoT.On("DetatchCertificateFromThing", ctx, testDeviceID, testCertArn, mock.Anything).Return(nil)
-		mockIoT.On("DetatchPolicyFromCertificate", ctx, "testdevicepolicy", testCertArn, mock.Anything).Return(nil)
+		mockIoT.On("DetachCertificateFromThing", ctx, testDeviceID, testCertArn, mock.Anything).Return(nil)
+		mockIoT.On("DetachPolicyFromCertificate", ctx, "testdevicepolicy", testCertArn, mock.Anything).Return(nil)
 		mockDB.On("GetDB", ctx).Return(dbWithTx)
 
 		sqlMock.ExpectBegin()
@@ -1656,6 +1656,9 @@ func TestCommand(t *testing.T) {
 
 		service := NewService(mockDB, mockProject, mockIoT, createTestConfig())
 
+		dbWithTx, sqlMock := newMockDBWithTransactions(t)
+		defer dbWithTx.Close()
+
 		req := &types.CommandRequest{
 			Command:   types.CommandRestart,
 			ProjectID: testProjectID,
@@ -1664,16 +1667,19 @@ func TestCommand(t *testing.T) {
 
 		mockProject.On("GetProjectByID", ctx, testProjectID, mock.AnythingOfType("*zap.Logger")).
 			Return(createTestProject(), nil)
-		mockDB.On("InsertCommand", ctx, testProjectID, req, mock.AnythingOfType("*zap.Logger")).
-			Return(testCommandID, nil)
+		mockDB.On("GetDB", ctx).Return(dbWithTx)
+		sqlMock.ExpectBegin()
+		mockDB.On("InsertCommand", ctx, testProjectID, mock.AnythingOfType("string"), req, mock.AnythingOfType("*zap.Logger")).
+			Return(nil)
+		sqlMock.ExpectCommit()
 		mockIoT.On("Publish", ctx, "cluster/"+testProjectID+"/command", mock.Anything, mock.AnythingOfType("*zap.Logger")).
 			Return(nil)
-		mockDB.On("UpdateCommandStatus", ctx, testCommandID, "PUBLISHED", mock.AnythingOfType("*zap.Logger")).
+		mockDB.On("UpdateCommandStatus", ctx, mock.AnythingOfType("string"), "PUBLISHED", mock.AnythingOfType("*zap.Logger")).
 			Return(nil)
 
 		commandID, err := service.Command(ctx, req, user, logger)
 		assert.NoError(t, err)
-		assert.Equal(t, testCommandID, commandID)
+		assert.NotEmpty(t, commandID) // UUID is generated internally
 		mockProject.AssertExpectations(t)
 		mockDB.AssertExpectations(t)
 		mockIoT.AssertExpectations(t)
@@ -1737,6 +1743,9 @@ func TestCommand(t *testing.T) {
 
 		service := NewService(mockDB, mockProject, mockIoT, createTestConfig())
 
+		dbWithTx, sqlMock := newMockDBWithTransactions(t)
+		defer dbWithTx.Close()
+
 		req := &types.CommandRequest{
 			Command:   types.CommandRestart,
 			ProjectID: testProjectID,
@@ -1744,8 +1753,11 @@ func TestCommand(t *testing.T) {
 
 		mockProject.On("GetProjectByID", ctx, testProjectID, mock.AnythingOfType("*zap.Logger")).
 			Return(createTestProject(), nil)
-		mockDB.On("InsertCommand", ctx, testProjectID, req, mock.AnythingOfType("*zap.Logger")).
-			Return("", errors.New("database error"))
+		mockDB.On("GetDB", ctx).Return(dbWithTx)
+		sqlMock.ExpectBegin()
+		mockDB.On("InsertCommand", ctx, testProjectID, mock.AnythingOfType("string"), req, mock.AnythingOfType("*zap.Logger")).
+			Return(errors.New("database error"))
+		sqlMock.ExpectRollback()
 
 		commandID, err := service.Command(ctx, req, user, logger)
 		assert.Error(t, err)
@@ -1763,6 +1775,9 @@ func TestCommand(t *testing.T) {
 
 		service := NewService(mockDB, mockProject, mockIoT, createTestConfig())
 
+		dbWithTx, sqlMock := newMockDBWithTransactions(t)
+		defer dbWithTx.Close()
+
 		req := &types.CommandRequest{
 			Command:   types.CommandRestart,
 			ProjectID: testProjectID,
@@ -1770,8 +1785,11 @@ func TestCommand(t *testing.T) {
 
 		mockProject.On("GetProjectByID", ctx, testProjectID, mock.AnythingOfType("*zap.Logger")).
 			Return(createTestProject(), nil)
-		mockDB.On("InsertCommand", ctx, testProjectID, req, mock.AnythingOfType("*zap.Logger")).
-			Return(testCommandID, nil)
+		mockDB.On("GetDB", ctx).Return(dbWithTx)
+		sqlMock.ExpectBegin()
+		mockDB.On("InsertCommand", ctx, testProjectID, mock.AnythingOfType("string"), req, mock.AnythingOfType("*zap.Logger")).
+			Return(nil)
+		sqlMock.ExpectCommit()
 		mockIoT.On("Publish", ctx, "cluster/"+testProjectID+"/command", mock.Anything, mock.AnythingOfType("*zap.Logger")).
 			Return(errors.New("publish error"))
 
@@ -1808,23 +1826,28 @@ func TestGetCommandStatus(t *testing.T) {
 		service := NewService(mockDB, mockProject, mockIoT, createTestConfig())
 
 		issuedAt := time.Now()
-		command := &models.DeviceCommandHistory{
-			ID:          testCommandID,
-			ProjectID:   testProjectID,
-			CommandName: "REBOOT",
-			Status:      "COMPLETED",
-			IssuedAt:    issuedAt,
+		commands := models.DeviceCommandHistorySlice{
+			&models.DeviceCommandHistory{
+				ID:          "db-generated-id",
+				CommandID:   testCommandID,
+				ProjectID:   testProjectID,
+				DeviceID:    testDeviceID,
+				CommandName: "REBOOT",
+				Status:      "COMPLETED",
+				IssuedAt:    issuedAt,
+				UpdatedAt:   issuedAt,
+			},
 		}
 
 		mockDB.On("GetCommandStatus", ctx, testCommandID, mock.AnythingOfType("*zap.Logger")).
-			Return(command, nil)
+			Return(&commands, nil)
 
 		result, err := service.GetCommandStatus(ctx, testCommandID, logger)
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, testCommandID, result.CommandID)
-		assert.Equal(t, "REBOOT", result.CommandName)
-		assert.Equal(t, "COMPLETED", result.Status)
+		assert.Equal(t, testCommandID, result.Results[0].CommandID)
+		assert.Equal(t, "REBOOT", result.Results[0].CommandName)
+		assert.Equal(t, "COMPLETED", result.Results[0].Status)
 		mockDB.AssertExpectations(t)
 	})
 

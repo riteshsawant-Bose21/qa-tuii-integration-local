@@ -233,12 +233,14 @@ CREATE TYPE claim_status_enum AS ENUM (
     'CLAIMED'
 );
 
+
 CREATE TABLE device (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- Globally unique device identity
-    device_id VARCHAR(100) UNIQUE NOT NULL, -- Unique device identifier
+    serial_number VARCHAR(100) UNIQUE NOT NULL, -- Manufacturer serial number
+
+    client_device_id VARCHAR(100) NOT NULL, -- device identifier set by frontend
     name VARCHAR(255), -- User-friendly device name
 
-    serial_number VARCHAR(100) UNIQUE NOT NULL, -- Manufacturer serial number
     model_name VARCHAR(100) NOT NULL, -- Model identifier
     thing_name VARCHAR(255) UNIQUE NOT NULL, -- AWS Thing name
     mac_address VARCHAR(20) UNIQUE, -- MAC address for network identification
@@ -293,10 +295,14 @@ CREATE TYPE command_status_enum AS ENUM (
 
 CREATE TABLE device_command_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    command_id VARCHAR(255) NOT NULL,
     project_id UUID REFERENCES project(id) NOT NULL,
-    device_id VARCHAR(100) NOT NULL,
+    device_id UUID REFERENCES device(id) NOT NULL,
     command_name VARCHAR(255) NOT NULL,
     status command_status_enum NOT NULL DEFAULT 'PUBLISHED',
     issued_at TIMESTAMP NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
+    CONSTRAINT unique_command_per_device UNIQUE (command_id, device_id)
 );

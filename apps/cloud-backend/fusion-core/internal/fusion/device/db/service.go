@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"time"
 
@@ -37,10 +36,10 @@ func (s *Service) GetDB(_ context.Context) model.DBWithTransactions {
 // Query Operations
 // ---------------------------------------------------------------------------
 
-// GetDeviceByID retrieves a device by its device_id field.
+// GetDeviceByID retrieves a device by its serial_number field.
 // Returns nil, nil if the device is not found.
 func (s *Service) GetDeviceByID(ctx context.Context, deviceID string, logger *zap.Logger) (*models.Device, error) {
-	device, err := models.Devices(models.DeviceWhere.DeviceID.EQ(deviceID)).One(ctx, s.db)
+	device, err := models.Devices(models.DeviceWhere.SerialNumber.EQ(deviceID)).One(ctx, s.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -117,11 +116,11 @@ func (s *Service) decommissionCurrentProject(ctx context.Context, deviceUUID, pr
 func (s *Service) Insert(ctx context.Context, req *types.DeviceCreateRequest, accountID string, cert types.CertificateInfo, tx model.DBTxExecutor, logger *zap.Logger) error {
 	// Create device record
 	device := models.Device{
-		DeviceID:        req.DeviceID,
+		ClientDeviceID:  req.ClientDeviceID,
 		SerialNumber:    req.SerialNumber,
 		Name:            null.NewString(req.DeviceName, req.DeviceName != ""),
 		ModelName:       req.ModelName,
-		ThingName:       req.DeviceID,
+		ThingName:       req.SerialNumber,
 		MacAddress:      null.NewString(req.MacAddress, req.MacAddress != ""),
 		IsPrimary:       null.NewBool(req.IsPrimary, true),
 		CertificateID:   null.NewString(cert.ID, cert.ID != ""),
@@ -135,7 +134,7 @@ func (s *Service) Insert(ctx context.Context, req *types.DeviceCreateRequest, ac
 	}
 
 	if err := device.Insert(ctx, tx, boil.Infer()); err != nil {
-		logger.Error("Failed to insert device", zap.String("deviceID", req.DeviceID), zap.Error(err))
+		logger.Error("Failed to insert device", zap.String("deviceID", req.SerialNumber), zap.Error(err))
 		return err
 	}
 
@@ -167,7 +166,7 @@ func (s *Service) ClaimDevice(ctx context.Context, device models.Device, account
 	device.Name = null.NewString(req.DeviceName, req.DeviceName != "")
 
 	if _, err := device.Update(ctx, tx, boil.Infer()); err != nil {
-		logger.Error("Failed to claim device", zap.String("deviceID", device.DeviceID), zap.Error(err))
+		logger.Error("Failed to claim device", zap.String("serialNumber", device.SerialNumber), zap.Error(err))
 		return err
 	}
 
@@ -211,7 +210,7 @@ func (s *Service) Update(ctx context.Context, device models.Device, req *types.D
 	}
 
 	if _, err := device.Update(ctx, tx, boil.Infer()); err != nil {
-		logger.Error("Failed to update device", zap.String("deviceID", device.DeviceID), zap.Error(err))
+		logger.Error("Failed to update device", zap.String("serialNumber", device.SerialNumber), zap.Error(err))
 		return err
 	}
 
@@ -272,7 +271,7 @@ func (s *Service) Reset(ctx context.Context, device models.Device, tx model.DBTx
 	device.FirmwareVersion = ""
 
 	if _, err = device.Update(ctx, tx, boil.Infer()); err != nil {
-		logger.Error("Failed to reset device", zap.String("deviceID", device.DeviceID), zap.Error(err))
+		logger.Error("Failed to reset device", zap.String("serialNumber", device.SerialNumber), zap.Error(err))
 		return err
 	}
 
@@ -289,7 +288,7 @@ func (s *Service) Claim(ctx context.Context, device models.Device, accountID str
 	device.ClaimStatus = "CLAIMED"
 
 	if _, err := device.Update(ctx, tx, boil.Infer()); err != nil {
-		logger.Error("Failed to claim device", zap.String("deviceID", device.DeviceID), zap.Error(err))
+		logger.Error("Failed to claim device", zap.String("serialNumber", device.SerialNumber), zap.Error(err))
 		return err
 	}
 
@@ -312,7 +311,7 @@ func (s *Service) UpdateCertificate(ctx context.Context, device models.Device, c
 	device.CertificateArn = null.NewString(cert.Arn, cert.Arn != "")
 
 	if _, err := device.Update(ctx, tx, boil.Infer()); err != nil {
-		logger.Error("Failed to update device certificate", zap.String("deviceID", device.DeviceID), zap.Error(err))
+		logger.Error("Failed to update device certificate", zap.String("serialNumber", device.SerialNumber), zap.Error(err))
 		return err
 	}
 
@@ -320,45 +319,56 @@ func (s *Service) UpdateCertificate(ctx context.Context, device models.Device, c
 }
 
 // InsertCommand inserts a new command into the device command history and publishes it to the device cluster topic.
-// Returns the ID of the inserted command record.
-func (s *Service) InsertCommand(ctx context.Context, projectID string, request *types.CommandRequest, logger *zap.Logger) (string, error) {
+func (s *Service) InsertCommand(ctx context.Context, projectID, commandID string, request *types.CommandRequest, logger *zap.Logger) error {
 
-	// Marshal command request to JSON
-	payload, err := json.Marshal(request)
-	if err != nil {
-		logger.Error("Failed to marshal command request", zap.Error(err))
-		return "", err
+	if len(request.DeviceIDs) == 0 {
+		command := models.DeviceCommandHistory{
+			CommandID:   commandID,
+			ProjectID:   projectID,
+			CommandName: string(request.Command),
+			Status:      "UNPUBLISHED",
+			IssuedAt:    time.Now(),
+		}
+
+		if err := command.Insert(ctx, s.db, boil.Infer()); err != nil {
+			logger.Error("Failed to insert command", zap.Error(err))
+			return err
+		}
 	}
 
-	// Insert command into database
-	command := models.DeviceCommandHistory{
-		ProjectID:      projectID,
-		CommandName:    string(request.Command),
-		CommandPayload: null.JSON{JSON: payload, Valid: true},
-		Status:         "UNPUBLISHED",
-		IssuedAt:       time.Now(),
-	}
+	for _, deviceID := range request.DeviceIDs {
+		// Insert command into database
+		command := models.DeviceCommandHistory{
+			CommandID:   commandID,
+			ProjectID:   projectID,
+			DeviceID:    deviceID,
+			CommandName: string(request.Command),
+			Status:      "UNPUBLISHED",
+			IssuedAt:    time.Now(),
+		}
 
-	if err := command.Insert(ctx, s.db, boil.Infer()); err != nil {
-		logger.Error("Failed to insert command", zap.Error(err))
-		return "", err
+		if err := command.Insert(ctx, s.db, boil.Infer()); err != nil {
+			logger.Error("Failed to insert command", zap.Error(err))
+			return err
+		}
 	}
-
-	return command.ID, nil
+	return nil
 }
 
 // UpdateCommandStatus updates the status of a command in the device command history.
 func (s *Service) UpdateCommandStatus(ctx context.Context, commandID string, status string, logger *zap.Logger) error {
-	command, err := models.DeviceCommandHistories(models.DeviceCommandHistoryWhere.ID.EQ(commandID)).One(ctx, s.db)
+	commands, err := models.DeviceCommandHistories(models.DeviceCommandHistoryWhere.CommandID.EQ(commandID)).All(ctx, s.db)
 	if err != nil {
 		logger.Error("Failed to get command history", zap.String("commandID", commandID), zap.Error(err))
 		return err
 	}
 
-	command.Status = status
-	if _, err := command.Update(ctx, s.db, boil.Infer()); err != nil {
-		logger.Error("Failed to update command status", zap.String("commandID", commandID), zap.Error(err))
-		return err
+	for _, command := range commands {
+		command.Status = status
+		if _, err := command.Update(ctx, s.db, boil.Infer()); err != nil {
+			logger.Error("Failed to update command status", zap.String("commandID", commandID), zap.Error(err))
+			return err
+		}
 	}
 
 	return nil
@@ -366,8 +376,8 @@ func (s *Service) UpdateCommandStatus(ctx context.Context, commandID string, sta
 
 // GetCommandStatus retrieves the status of a command by its ID.
 // Returns nil, nil if the command is not found.
-func (s *Service) GetCommandStatus(ctx context.Context, commandID string, logger *zap.Logger) (*models.DeviceCommandHistory, error) {
-	command, err := models.DeviceCommandHistories(models.DeviceCommandHistoryWhere.ID.EQ(commandID)).One(ctx, s.db)
+func (s *Service) GetCommandStatus(ctx context.Context, commandID string, logger *zap.Logger) (*models.DeviceCommandHistorySlice, error) {
+	commands, err := models.DeviceCommandHistories(models.DeviceCommandHistoryWhere.CommandID.EQ(commandID)).All(ctx, s.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -375,5 +385,5 @@ func (s *Service) GetCommandStatus(ctx context.Context, commandID string, logger
 		logger.Error("Failed to get command status", zap.String("commandID", commandID), zap.Error(err))
 		return nil, err
 	}
-	return command, nil
+	return &commands, nil
 }

@@ -30,6 +30,7 @@ const (
 	testCertID          = "cert-id-123"
 	testCertArn         = "arn:aws:iot:cert/123"
 	testNewProjectID    = "project-456"
+	testCommandID       = "cmd-uuid-123"
 )
 
 func setupTestDB(t *testing.T) (*sql.DB, sqlmock.Sqlmock, *Service) {
@@ -96,7 +97,7 @@ func TestGetDeviceByID(t *testing.T) {
 
 	t.Run("successfully retrieves device by ID", func(t *testing.T) {
 		rows := sqlmock.NewRows([]string{
-			"id", "device_id", "name", "serial_number", "model_name", "thing_name",
+			"id", "client_device_id", "name", "serial_number", "model_name", "thing_name",
 			"mac_address", "is_primary", "certificate_id", "certificate_arn",
 			"claim_status", "claimed_by", "project_id", "firmware_version",
 			"device_zone", "device_location", "created_at", "updated_at",
@@ -107,20 +108,20 @@ func TestGetDeviceByID(t *testing.T) {
 			testDeviceZone, testDeviceLocation, time.Now(), time.Now(),
 		)
 
-		mock.ExpectQuery(`SELECT "device"\.\* FROM "device" WHERE \("device"\."device_id" = \$1\) LIMIT 1`).
-			WithArgs(testDeviceID).
+		mock.ExpectQuery(`SELECT "device"\.\* FROM "device" WHERE \("device"\."serial_number" = \$1\) LIMIT 1`).
+			WithArgs(testSerialNumber).
 			WillReturnRows(rows)
 
-		device, err := service.GetDeviceByID(ctx, testDeviceID, logger.JobSyncLog())
+		device, err := service.GetDeviceByID(ctx, testSerialNumber, logger.JobSyncLog())
 		assert.NoError(t, err)
 		assert.NotNil(t, device)
-		assert.Equal(t, testDeviceID, device.DeviceID)
+		assert.Equal(t, testSerialNumber, device.SerialNumber)
 		assert.Equal(t, testDeviceUUID, device.ID)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
 	t.Run("returns nil when device not found", func(t *testing.T) {
-		mock.ExpectQuery(`SELECT "device"\.\* FROM "device" WHERE \("device"\."device_id" = \$1\) LIMIT 1`).
+		mock.ExpectQuery(`SELECT "device"\.\* FROM "device" WHERE \("device"\."serial_number" = \$1\) LIMIT 1`).
 			WithArgs("non-existent").
 			WillReturnError(sql.ErrNoRows)
 
@@ -131,7 +132,7 @@ func TestGetDeviceByID(t *testing.T) {
 	})
 
 	t.Run("returns error on database error", func(t *testing.T) {
-		mock.ExpectQuery(`SELECT "device"\.\* FROM "device" WHERE \("device"\."device_id" = \$1\) LIMIT 1`).
+		mock.ExpectQuery(`SELECT "device"\.\* FROM "device" WHERE \("device"\."serial_number" = \$1\) LIMIT 1`).
 			WithArgs(testDeviceID).
 			WillReturnError(assert.AnError)
 
@@ -151,7 +152,7 @@ func TestInsert(t *testing.T) {
 
 	createTestRequest := func() *types.DeviceCreateRequest {
 		return &types.DeviceCreateRequest{
-			DeviceID:        testDeviceID,
+			ClientDeviceID:  testDeviceID,
 			DeviceName:      testDeviceName,
 			ModelName:       testModelName,
 			FirmwareVersion: testFirmwareVersion,
@@ -280,7 +281,7 @@ func TestInsert(t *testing.T) {
 
 		logger := getTestLogger(t)
 		req := &types.DeviceCreateRequest{
-			DeviceID:        testDeviceID,
+			ClientDeviceID:  testDeviceID,
 			DeviceName:      "",
 			ModelName:       testModelName,
 			FirmwareVersion: testFirmwareVersion,
@@ -330,7 +331,7 @@ func TestClaimDevice(t *testing.T) {
 	createTestDevice := func() models.Device {
 		return models.Device{
 			ID:             testDeviceUUID,
-			DeviceID:       testDeviceID,
+			ClientDeviceID: testDeviceID,
 			Name:           null.NewString("", false),
 			SerialNumber:   testSerialNumber,
 			ModelName:      testModelName,
@@ -349,7 +350,7 @@ func TestClaimDevice(t *testing.T) {
 
 	createTestRequest := func() *types.DeviceCreateRequest {
 		return &types.DeviceCreateRequest{
-			DeviceID:        testDeviceID,
+			ClientDeviceID:  testDeviceID,
 			DeviceName:      testDeviceName,
 			ModelName:       testModelName,
 			FirmwareVersion: testFirmwareVersion,
@@ -483,7 +484,7 @@ func TestUpdate(t *testing.T) {
 	createClaimedDevice := func() models.Device {
 		return models.Device{
 			ID:              testDeviceUUID,
-			DeviceID:        testDeviceID,
+			ClientDeviceID:  testDeviceID,
 			Name:            null.NewString(testDeviceName, true),
 			SerialNumber:    testSerialNumber,
 			ModelName:       testModelName,
@@ -763,7 +764,7 @@ func TestReset(t *testing.T) {
 	createClaimedDevice := func() models.Device {
 		return models.Device{
 			ID:              testDeviceUUID,
-			DeviceID:        testDeviceID,
+			ClientDeviceID:  testDeviceID,
 			Name:            null.NewString(testDeviceName, true),
 			SerialNumber:    testSerialNumber,
 			ModelName:       testModelName,
@@ -976,14 +977,12 @@ func TestInsertCommand(t *testing.T) {
 			DeviceIDs: []string{testDeviceID},
 		}
 
-		commandID := "cmd-uuid-123"
-		returnRows := sqlmock.NewRows([]string{"id"}).AddRow(commandID)
+		returnRows := sqlmock.NewRows([]string{"id"}).AddRow("db-generated-uuid")
 		mock.ExpectQuery(`INSERT INTO "device_command_history"`).
 			WillReturnRows(returnRows)
 
-		id, err := service.InsertCommand(ctx, testProjectID, req, logger.JobSyncLog())
+		err := service.InsertCommand(ctx, testProjectID, testCommandID, req, logger.JobSyncLog())
 		assert.NoError(t, err)
-		assert.Equal(t, commandID, id)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
@@ -997,14 +996,13 @@ func TestInsertCommand(t *testing.T) {
 			ProjectID: testProjectID,
 		}
 
-		commandID := "cmd-uuid-456"
-		returnRows := sqlmock.NewRows([]string{"id"}).AddRow(commandID)
+		// Empty device IDs now inserts a single command row without device_id
+		returnRows := sqlmock.NewRows([]string{"id"}).AddRow("db-generated-uuid")
 		mock.ExpectQuery(`INSERT INTO "device_command_history"`).
 			WillReturnRows(returnRows)
 
-		id, err := service.InsertCommand(ctx, testProjectID, req, logger.JobSyncLog())
+		err := service.InsertCommand(ctx, testProjectID, testCommandID, req, logger.JobSyncLog())
 		assert.NoError(t, err)
-		assert.Equal(t, commandID, id)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
@@ -1016,14 +1014,14 @@ func TestInsertCommand(t *testing.T) {
 		req := &types.CommandRequest{
 			Command:   types.CommandRestart,
 			ProjectID: testProjectID,
+			DeviceIDs: []string{testDeviceID},
 		}
 
 		mock.ExpectQuery(`INSERT INTO "device_command_history"`).
 			WillReturnError(assert.AnError)
 
-		id, err := service.InsertCommand(ctx, testProjectID, req, logger.JobSyncLog())
+		err := service.InsertCommand(ctx, testProjectID, testCommandID, req, logger.JobSyncLog())
 		assert.Error(t, err)
-		assert.Empty(t, id)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 }
@@ -1040,22 +1038,21 @@ func TestUpdateCommandStatus(t *testing.T) {
 		defer db.Close()
 
 		logger := getTestLogger(t)
-		commandID := "cmd-uuid-123"
 
 		rows := sqlmock.NewRows([]string{
-			"id", "project_id", "command_name", "command_payload", "status", "issued_at", "created_at", "updated_at",
+			"id", "command_id", "project_id", "device_id", "command_name", "status", "issued_at", "created_at", "updated_at",
 		}).AddRow(
-			commandID, testProjectID, "REBOOT", []byte(`{"command":"REBOOT","project_id":"project-123"}`),
+			"db-id-1", testCommandID, testProjectID, testDeviceID, "REBOOT",
 			"UNPUBLISHED", time.Now(), time.Now(), time.Now(),
 		)
-		mock.ExpectQuery(`SELECT "device_command_history"\.\* FROM "device_command_history" WHERE \("device_command_history"\."id" = \$1\) LIMIT 1`).
-			WithArgs(commandID).
+		mock.ExpectQuery(`SELECT "device_command_history"\.\* FROM "device_command_history" WHERE \("device_command_history"\."command_id" = \$1\)`).
+			WithArgs(testCommandID).
 			WillReturnRows(rows)
 
 		mock.ExpectExec(`UPDATE "device_command_history"`).
 			WillReturnResult(sqlmock.NewResult(1, 1))
 
-		err := service.UpdateCommandStatus(ctx, commandID, "PUBLISHED", logger.JobSyncLog())
+		err := service.UpdateCommandStatus(ctx, testCommandID, "PUBLISHED", logger.JobSyncLog())
 		assert.NoError(t, err)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
@@ -1065,13 +1062,13 @@ func TestUpdateCommandStatus(t *testing.T) {
 		defer db.Close()
 
 		logger := getTestLogger(t)
-		commandID := "non-existent"
+		nonExistentID := "non-existent"
 
-		mock.ExpectQuery(`SELECT "device_command_history"\.\* FROM "device_command_history" WHERE \("device_command_history"\."id" = \$1\) LIMIT 1`).
-			WithArgs(commandID).
+		mock.ExpectQuery(`SELECT "device_command_history"\.\* FROM "device_command_history" WHERE \("device_command_history"\."command_id" = \$1\)`).
+			WithArgs(nonExistentID).
 			WillReturnError(sql.ErrNoRows)
 
-		err := service.UpdateCommandStatus(ctx, commandID, "PUBLISHED", logger.JobSyncLog())
+		err := service.UpdateCommandStatus(ctx, nonExistentID, "PUBLISHED", logger.JobSyncLog())
 		assert.Error(t, err)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
@@ -1081,22 +1078,21 @@ func TestUpdateCommandStatus(t *testing.T) {
 		defer db.Close()
 
 		logger := getTestLogger(t)
-		commandID := "cmd-uuid-123"
 
 		rows := sqlmock.NewRows([]string{
-			"id", "project_id", "command_name", "command_payload", "status", "issued_at", "created_at", "updated_at",
+			"id", "command_id", "project_id", "device_id", "command_name", "status", "issued_at", "created_at", "updated_at",
 		}).AddRow(
-			commandID, testProjectID, "REBOOT", []byte(`{"command":"REBOOT","project_id":"project-123"}`),
+			"db-id-1", testCommandID, testProjectID, testDeviceID, "REBOOT",
 			"UNPUBLISHED", time.Now(), time.Now(), time.Now(),
 		)
-		mock.ExpectQuery(`SELECT "device_command_history"\.\* FROM "device_command_history" WHERE \("device_command_history"\."id" = \$1\) LIMIT 1`).
-			WithArgs(commandID).
+		mock.ExpectQuery(`SELECT "device_command_history"\.\* FROM "device_command_history" WHERE \("device_command_history"\."command_id" = \$1\)`).
+			WithArgs(testCommandID).
 			WillReturnRows(rows)
 
 		mock.ExpectExec(`UPDATE "device_command_history"`).
 			WillReturnError(assert.AnError)
 
-		err := service.UpdateCommandStatus(ctx, commandID, "PUBLISHED", logger.JobSyncLog())
+		err := service.UpdateCommandStatus(ctx, testCommandID, "PUBLISHED", logger.JobSyncLog())
 		assert.Error(t, err)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
@@ -1114,25 +1110,27 @@ func TestGetCommandStatus(t *testing.T) {
 		defer db.Close()
 
 		logger := getTestLogger(t)
-		commandID := "cmd-uuid-123"
 		issuedAt := time.Now()
 
 		rows := sqlmock.NewRows([]string{
-			"id", "project_id", "command_name", "command_payload", "status", "issued_at", "created_at", "updated_at",
+			"id", "command_id", "project_id", "device_id", "command_name", "status", "issued_at", "created_at", "updated_at",
 		}).AddRow(
-			commandID, testProjectID, "REBOOT", []byte(`{"command":"REBOOT","project_id":"project-123"}`),
+			"db-id-1", testCommandID, testProjectID, testDeviceID, "REBOOT",
 			"COMPLETED", issuedAt, time.Now(), time.Now(),
 		)
-		mock.ExpectQuery(`SELECT "device_command_history"\.\* FROM "device_command_history" WHERE \("device_command_history"\."id" = \$1\) LIMIT 1`).
-			WithArgs(commandID).
+		mock.ExpectQuery(`SELECT "device_command_history"\.\* FROM "device_command_history" WHERE \("device_command_history"\."command_id" = \$1\)`).
+			WithArgs(testCommandID).
 			WillReturnRows(rows)
 
-		command, err := service.GetCommandStatus(ctx, commandID, logger.JobSyncLog())
+		commands, err := service.GetCommandStatus(ctx, testCommandID, logger.JobSyncLog())
+
 		assert.NoError(t, err)
-		assert.NotNil(t, command)
-		assert.Equal(t, commandID, command.ID)
-		assert.Equal(t, "REBOOT", command.CommandName)
-		assert.Equal(t, "COMPLETED", command.Status)
+		assert.NotNil(t, commands)
+		assert.Len(t, *commands, 1)
+		cmd := (*commands)[0]
+		assert.Equal(t, testCommandID, cmd.CommandID)
+		assert.Equal(t, "REBOOT", cmd.CommandName)
+		assert.Equal(t, "COMPLETED", cmd.Status)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
@@ -1141,13 +1139,13 @@ func TestGetCommandStatus(t *testing.T) {
 		defer db.Close()
 
 		logger := getTestLogger(t)
-		commandID := "non-existent"
+		nonExistentID := "non-existent"
 
-		mock.ExpectQuery(`SELECT "device_command_history"\.\* FROM "device_command_history" WHERE \("device_command_history"\."id" = \$1\) LIMIT 1`).
-			WithArgs(commandID).
+		mock.ExpectQuery(`SELECT "device_command_history"\.\* FROM "device_command_history" WHERE \("device_command_history"\."command_id" = \$1\)`).
+			WithArgs(nonExistentID).
 			WillReturnError(sql.ErrNoRows)
 
-		command, err := service.GetCommandStatus(ctx, commandID, logger.JobSyncLog())
+		command, err := service.GetCommandStatus(ctx, nonExistentID, logger.JobSyncLog())
 		assert.NoError(t, err)
 		assert.Nil(t, command)
 		assert.NoError(t, mock.ExpectationsWereMet())
@@ -1158,13 +1156,12 @@ func TestGetCommandStatus(t *testing.T) {
 		defer db.Close()
 
 		logger := getTestLogger(t)
-		commandID := "cmd-uuid-123"
 
-		mock.ExpectQuery(`SELECT "device_command_history"\.\* FROM "device_command_history" WHERE \("device_command_history"\."id" = \$1\) LIMIT 1`).
-			WithArgs(commandID).
+		mock.ExpectQuery(`SELECT "device_command_history"\.\* FROM "device_command_history" WHERE \("device_command_history"\."command_id" = \$1\)`).
+			WithArgs(testCommandID).
 			WillReturnError(assert.AnError)
 
-		command, err := service.GetCommandStatus(ctx, commandID, logger.JobSyncLog())
+		command, err := service.GetCommandStatus(ctx, testCommandID, logger.JobSyncLog())
 		assert.Error(t, err)
 		assert.Nil(t, command)
 		assert.NoError(t, mock.ExpectationsWereMet())

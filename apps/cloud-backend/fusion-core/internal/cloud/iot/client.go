@@ -19,9 +19,9 @@ type IoT interface {
 	DeleteThing(ctx context.Context, thingName string, logger *zap.Logger) error
 	AttachCertificateToThing(ctx context.Context, thingName string, certificateArn string, logger *zap.Logger) error
 	AttachPolicyToCertificate(ctx context.Context, policyName string, certificateArn string, logger *zap.Logger) error
-	DetatchCertificateFromThing(ctx context.Context, thingName string, certificateArn string, logger *zap.Logger) error
+	DetachCertificateFromThing(ctx context.Context, thingName string, certificateArn string, logger *zap.Logger) error
 	SetCertificateInactive(ctx context.Context, certificateId string, logger *zap.Logger) error
-	DetatchPolicyFromCertificate(ctx context.Context, policyName string, certificateArn string, logger *zap.Logger) error
+	DetachPolicyFromCertificate(ctx context.Context, policyName string, certificateArn string, logger *zap.Logger) error
 	Publish(ctx context.Context, topic string, payload []byte, logger *zap.Logger) error
 }
 
@@ -137,8 +137,8 @@ func (c IoTClient) AttachPolicyToCertificate(ctx context.Context, policyName str
 	return nil
 }
 
-// DetatchCertificateFromThing detaches a certificate from a thing in AWS IoT.
-func (c IoTClient) DetatchCertificateFromThing(ctx context.Context, thingName string, certificateArn string, logger *zap.Logger) error {
+// DetachCertificateFromThing detaches a certificate from a thing in AWS IoT.
+func (c IoTClient) DetachCertificateFromThing(ctx context.Context, thingName string, certificateArn string, logger *zap.Logger) error {
 	input := &iot.DetachThingPrincipalInput{
 		Principal: &certificateArn,
 		ThingName: &thingName,
@@ -169,8 +169,8 @@ func (c IoTClient) SetCertificateInactive(ctx context.Context, certificateId str
 	return nil
 }
 
-// DetatchPolicyFromCertificate detaches a policy from a certificate in AWS IoT.
-func (c IoTClient) DetatchPolicyFromCertificate(ctx context.Context, policyName string, certificateArn string, logger *zap.Logger) error {
+// DetachPolicyFromCertificate detaches a policy from a certificate in AWS IoT.
+func (c IoTClient) DetachPolicyFromCertificate(ctx context.Context, policyName string, certificateArn string, logger *zap.Logger) error {
 	input := &iot.DetachPolicyInput{
 		PolicyName: &policyName,
 		Target:     &certificateArn,

@@ -109,16 +109,13 @@ var DeviceOwnershipHistoryWhere = struct {
 // DeviceOwnershipHistoryRels is where relationship names are stored.
 var DeviceOwnershipHistoryRels = struct {
 	Account string
-	Device  string
 }{
 	Account: "Account",
-	Device:  "Device",
 }
 
 // deviceOwnershipHistoryR is where relationships are stored.
 type deviceOwnershipHistoryR struct {
 	Account *Account `boil:"Account" json:"Account" toml:"Account" yaml:"Account"`
-	Device  *Device  `boil:"Device" json:"Device" toml:"Device" yaml:"Device"`
 }
 
 // NewStruct creates a new relationship struct
@@ -140,22 +137,6 @@ func (r *deviceOwnershipHistoryR) GetAccount() *Account {
 	}
 
 	return r.Account
-}
-
-func (o *DeviceOwnershipHistory) GetDevice() *Device {
-	if o == nil {
-		return nil
-	}
-
-	return o.R.GetDevice()
-}
-
-func (r *deviceOwnershipHistoryR) GetDevice() *Device {
-	if r == nil {
-		return nil
-	}
-
-	return r.Device
 }
 
 // deviceOwnershipHistoryL is where Load methods for each relationship are stored.
@@ -485,17 +466,6 @@ func (o *DeviceOwnershipHistory) Account(mods ...qm.QueryMod) accountQuery {
 	return Accounts(queryMods...)
 }
 
-// Device pointed to by the foreign key.
-func (o *DeviceOwnershipHistory) Device(mods ...qm.QueryMod) deviceQuery {
-	queryMods := []qm.QueryMod{
-		qm.Where("\"id\" = ?", o.DeviceID),
-	}
-
-	queryMods = append(queryMods, mods...)
-
-	return Devices(queryMods...)
-}
-
 // LoadAccount allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for an N-1 relationship.
 func (deviceOwnershipHistoryL) LoadAccount(ctx context.Context, e boil.ContextExecutor, singular bool, maybeDeviceOwnershipHistory interface{}, mods queries.Applicator) error {
@@ -616,126 +586,6 @@ func (deviceOwnershipHistoryL) LoadAccount(ctx context.Context, e boil.ContextEx
 	return nil
 }
 
-// LoadDevice allows an eager lookup of values, cached into the
-// loaded structs of the objects. This is for an N-1 relationship.
-func (deviceOwnershipHistoryL) LoadDevice(ctx context.Context, e boil.ContextExecutor, singular bool, maybeDeviceOwnershipHistory interface{}, mods queries.Applicator) error {
-	var slice []*DeviceOwnershipHistory
-	var object *DeviceOwnershipHistory
-
-	if singular {
-		var ok bool
-		object, ok = maybeDeviceOwnershipHistory.(*DeviceOwnershipHistory)
-		if !ok {
-			object = new(DeviceOwnershipHistory)
-			ok = queries.SetFromEmbeddedStruct(&object, &maybeDeviceOwnershipHistory)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeDeviceOwnershipHistory))
-			}
-		}
-	} else {
-		s, ok := maybeDeviceOwnershipHistory.(*[]*DeviceOwnershipHistory)
-		if ok {
-			slice = *s
-		} else {
-			ok = queries.SetFromEmbeddedStruct(&slice, maybeDeviceOwnershipHistory)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeDeviceOwnershipHistory))
-			}
-		}
-	}
-
-	args := make(map[interface{}]struct{})
-	if singular {
-		if object.R == nil {
-			object.R = &deviceOwnershipHistoryR{}
-		}
-		args[object.DeviceID] = struct{}{}
-
-	} else {
-		for _, obj := range slice {
-			if obj.R == nil {
-				obj.R = &deviceOwnershipHistoryR{}
-			}
-
-			args[obj.DeviceID] = struct{}{}
-
-		}
-	}
-
-	if len(args) == 0 {
-		return nil
-	}
-
-	argsSlice := make([]interface{}, len(args))
-	i := 0
-	for arg := range args {
-		argsSlice[i] = arg
-		i++
-	}
-
-	query := NewQuery(
-		qm.From(`device`),
-		qm.WhereIn(`device.id in ?`, argsSlice...),
-	)
-	if mods != nil {
-		mods.Apply(query)
-	}
-
-	results, err := query.QueryContext(ctx, e)
-	if err != nil {
-		return errors.Wrap(err, "failed to eager load Device")
-	}
-
-	var resultSlice []*Device
-	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice Device")
-	}
-
-	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for device")
-	}
-	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for device")
-	}
-
-	if len(deviceAfterSelectHooks) != 0 {
-		for _, obj := range resultSlice {
-			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
-				return err
-			}
-		}
-	}
-
-	if len(resultSlice) == 0 {
-		return nil
-	}
-
-	if singular {
-		foreign := resultSlice[0]
-		object.R.Device = foreign
-		if foreign.R == nil {
-			foreign.R = &deviceR{}
-		}
-		foreign.R.DeviceOwnershipHistories = append(foreign.R.DeviceOwnershipHistories, object)
-		return nil
-	}
-
-	for _, local := range slice {
-		for _, foreign := range resultSlice {
-			if local.DeviceID == foreign.ID {
-				local.R.Device = foreign
-				if foreign.R == nil {
-					foreign.R = &deviceR{}
-				}
-				foreign.R.DeviceOwnershipHistories = append(foreign.R.DeviceOwnershipHistories, local)
-				break
-			}
-		}
-	}
-
-	return nil
-}
-
 // SetAccount of the deviceOwnershipHistory to the related item.
 // Sets o.R.Account to related.
 // Adds o to related.R.DeviceOwnershipHistories.
@@ -774,53 +624,6 @@ func (o *DeviceOwnershipHistory) SetAccount(ctx context.Context, exec boil.Conte
 
 	if related.R == nil {
 		related.R = &accountR{
-			DeviceOwnershipHistories: DeviceOwnershipHistorySlice{o},
-		}
-	} else {
-		related.R.DeviceOwnershipHistories = append(related.R.DeviceOwnershipHistories, o)
-	}
-
-	return nil
-}
-
-// SetDevice of the deviceOwnershipHistory to the related item.
-// Sets o.R.Device to related.
-// Adds o to related.R.DeviceOwnershipHistories.
-func (o *DeviceOwnershipHistory) SetDevice(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Device) error {
-	var err error
-	if insert {
-		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
-			return errors.Wrap(err, "failed to insert into foreign table")
-		}
-	}
-
-	updateQuery := fmt.Sprintf(
-		"UPDATE \"device_ownership_history\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 1, []string{"device_id"}),
-		strmangle.WhereClause("\"", "\"", 2, deviceOwnershipHistoryPrimaryKeyColumns),
-	)
-	values := []interface{}{related.ID, o.ID}
-
-	if boil.IsDebug(ctx) {
-		writer := boil.DebugWriterFrom(ctx)
-		fmt.Fprintln(writer, updateQuery)
-		fmt.Fprintln(writer, values)
-	}
-	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
-		return errors.Wrap(err, "failed to update local table")
-	}
-
-	o.DeviceID = related.ID
-	if o.R == nil {
-		o.R = &deviceOwnershipHistoryR{
-			Device: related,
-		}
-	} else {
-		o.R.Device = related
-	}
-
-	if related.R == nil {
-		related.R = &deviceR{
 			DeviceOwnershipHistories: DeviceOwnershipHistorySlice{o},
 		}
 	} else {

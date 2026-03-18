@@ -36,6 +36,15 @@ func (m *MockDeviceService) CreateDevice(ctx context.Context, request *types.Dev
 	return args.Get(0).(*types.DeviceCreateResponse), args.Error(1)
 }
 
+// BulkCreateDevices mocks bulk device creation.
+func (m *MockDeviceService) BulkCreateDevices(ctx context.Context, request *types.BulkDeviceCreateRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (*types.BulkDeviceCreateResponse, error) {
+	args := m.Called(ctx, request, user, logger)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.BulkDeviceCreateResponse), args.Error(1)
+}
+
 // UpdateDevice mocks device update.
 func (m *MockDeviceService) UpdateDevice(ctx context.Context, deviceID string, request *types.DeviceUpdateRequest, user types.UserAuthorizationResponse, logger *zap.Logger) error {
 	args := m.Called(ctx, deviceID, request, user, logger)
@@ -154,7 +163,7 @@ func (suite *DeviceIntegrationTestSuite) setupRouter() {
 // createDeviceRequest returns a valid device create request.
 func (suite *DeviceIntegrationTestSuite) createDeviceRequest() types.DeviceCreateRequest {
 	return types.DeviceCreateRequest{
-		DeviceID:        uuid.New().String(),
+		ClientDeviceID:  uuid.New().String(),
 		DeviceName:      "Test Device",
 		ModelName:       "Fusion-Mini",
 		FirmwareVersion: "1.0.0",
@@ -177,7 +186,7 @@ func (suite *DeviceIntegrationTestSuite) TestCreateDevice() {
 		}
 
 		suite.mockDeviceSVC.On("CreateDevice", mock.Anything, mock.MatchedBy(func(r *types.DeviceCreateRequest) bool {
-			return r.DeviceID == req.DeviceID && r.DeviceName == req.DeviceName
+			return r.ClientDeviceID == req.ClientDeviceID && r.DeviceName == req.DeviceName
 		}), mock.Anything, mock.Anything).Return(expectedResponse, nil).Once()
 
 		w, err := suite.MakeRequest("POST", "/api/v1/devices", req)
@@ -238,6 +247,7 @@ func (suite *DeviceIntegrationTestSuite) TestUpdateDevice() {
 
 	suite.T().Run("should update device successfully", func(t *testing.T) {
 		updateReq := &types.DeviceUpdateRequest{
+			ClientDeviceID:  deviceID,
 			DeviceName:      "Updated Device Name",
 			FirmwareVersion: "2.0.0",
 			DeviceZone:      "Zone B",
@@ -270,7 +280,8 @@ func (suite *DeviceIntegrationTestSuite) TestUpdateDevice() {
 	suite.T().Run("should fail when device not found", func(t *testing.T) {
 		nonExistentID := uuid.New().String()
 		updateReq := &types.DeviceUpdateRequest{
-			DeviceName: "Updated Name",
+			ClientDeviceID: nonExistentID,
+			DeviceName:     "Updated Name",
 		}
 
 		suite.mockDeviceSVC.On("UpdateDevice", mock.Anything, nonExistentID, mock.Anything, mock.Anything, mock.Anything).
@@ -285,7 +296,8 @@ func (suite *DeviceIntegrationTestSuite) TestUpdateDevice() {
 
 	suite.T().Run("should fail when unauthorized", func(t *testing.T) {
 		updateReq := &types.DeviceUpdateRequest{
-			DeviceName: "Updated Name",
+			ClientDeviceID: deviceID,
+			DeviceName:     "Updated Name",
 		}
 
 		suite.mockDeviceSVC.On("UpdateDevice", mock.Anything, deviceID, mock.Anything, mock.Anything, mock.Anything).
@@ -574,10 +586,14 @@ func (suite *DeviceIntegrationTestSuite) TestGetCommandStatus() {
 
 	suite.T().Run("should get command status successfully", func(t *testing.T) {
 		expectedResponse := &types.CommandStatusResponse{
-			CommandID:   commandID,
-			CommandName: "REBOOT",
-			Status:      "COMPLETED",
-			IssuedAt:    "2024-01-15T10:00:00Z",
+			Results: []types.CommandStatusResult{
+				{
+					CommandID:   commandID,
+					CommandName: "REBOOT",
+					Status:      "COMPLETED",
+					IssuedAt:    "2024-01-15T10:00:00Z",
+				},
+			},
 		}
 
 		suite.mockDeviceSVC.On("GetCommandStatus", mock.Anything, commandID, mock.Anything).
@@ -592,9 +608,9 @@ func (suite *DeviceIntegrationTestSuite) TestGetCommandStatus() {
 		err = json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
 
-		assert.Equal(t, commandID, response.CommandID)
-		assert.Equal(t, "REBOOT", response.CommandName)
-		assert.Equal(t, "COMPLETED", response.Status)
+		assert.Equal(t, commandID, response.Results[0].CommandID)
+		assert.Equal(t, "REBOOT", response.Results[0].CommandName)
+		assert.Equal(t, "COMPLETED", response.Results[0].Status)
 		suite.mockDeviceSVC.AssertExpectations(t)
 	})
 

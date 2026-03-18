@@ -94,38 +94,19 @@ var DeviceProjectHistoryWhere = struct {
 
 // DeviceProjectHistoryRels is where relationship names are stored.
 var DeviceProjectHistoryRels = struct {
-	Device  string
 	Project string
 }{
-	Device:  "Device",
 	Project: "Project",
 }
 
 // deviceProjectHistoryR is where relationships are stored.
 type deviceProjectHistoryR struct {
-	Device  *Device  `boil:"Device" json:"Device" toml:"Device" yaml:"Device"`
 	Project *Project `boil:"Project" json:"Project" toml:"Project" yaml:"Project"`
 }
 
 // NewStruct creates a new relationship struct
 func (*deviceProjectHistoryR) NewStruct() *deviceProjectHistoryR {
 	return &deviceProjectHistoryR{}
-}
-
-func (o *DeviceProjectHistory) GetDevice() *Device {
-	if o == nil {
-		return nil
-	}
-
-	return o.R.GetDevice()
-}
-
-func (r *deviceProjectHistoryR) GetDevice() *Device {
-	if r == nil {
-		return nil
-	}
-
-	return r.Device
 }
 
 func (o *DeviceProjectHistory) GetProject() *Project {
@@ -460,17 +441,6 @@ func (q deviceProjectHistoryQuery) Exists(ctx context.Context, exec boil.Context
 	return count > 0, nil
 }
 
-// Device pointed to by the foreign key.
-func (o *DeviceProjectHistory) Device(mods ...qm.QueryMod) deviceQuery {
-	queryMods := []qm.QueryMod{
-		qm.Where("\"id\" = ?", o.DeviceID),
-	}
-
-	queryMods = append(queryMods, mods...)
-
-	return Devices(queryMods...)
-}
-
 // Project pointed to by the foreign key.
 func (o *DeviceProjectHistory) Project(mods ...qm.QueryMod) projectQuery {
 	queryMods := []qm.QueryMod{
@@ -480,126 +450,6 @@ func (o *DeviceProjectHistory) Project(mods ...qm.QueryMod) projectQuery {
 	queryMods = append(queryMods, mods...)
 
 	return Projects(queryMods...)
-}
-
-// LoadDevice allows an eager lookup of values, cached into the
-// loaded structs of the objects. This is for an N-1 relationship.
-func (deviceProjectHistoryL) LoadDevice(ctx context.Context, e boil.ContextExecutor, singular bool, maybeDeviceProjectHistory interface{}, mods queries.Applicator) error {
-	var slice []*DeviceProjectHistory
-	var object *DeviceProjectHistory
-
-	if singular {
-		var ok bool
-		object, ok = maybeDeviceProjectHistory.(*DeviceProjectHistory)
-		if !ok {
-			object = new(DeviceProjectHistory)
-			ok = queries.SetFromEmbeddedStruct(&object, &maybeDeviceProjectHistory)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeDeviceProjectHistory))
-			}
-		}
-	} else {
-		s, ok := maybeDeviceProjectHistory.(*[]*DeviceProjectHistory)
-		if ok {
-			slice = *s
-		} else {
-			ok = queries.SetFromEmbeddedStruct(&slice, maybeDeviceProjectHistory)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeDeviceProjectHistory))
-			}
-		}
-	}
-
-	args := make(map[interface{}]struct{})
-	if singular {
-		if object.R == nil {
-			object.R = &deviceProjectHistoryR{}
-		}
-		args[object.DeviceID] = struct{}{}
-
-	} else {
-		for _, obj := range slice {
-			if obj.R == nil {
-				obj.R = &deviceProjectHistoryR{}
-			}
-
-			args[obj.DeviceID] = struct{}{}
-
-		}
-	}
-
-	if len(args) == 0 {
-		return nil
-	}
-
-	argsSlice := make([]interface{}, len(args))
-	i := 0
-	for arg := range args {
-		argsSlice[i] = arg
-		i++
-	}
-
-	query := NewQuery(
-		qm.From(`device`),
-		qm.WhereIn(`device.id in ?`, argsSlice...),
-	)
-	if mods != nil {
-		mods.Apply(query)
-	}
-
-	results, err := query.QueryContext(ctx, e)
-	if err != nil {
-		return errors.Wrap(err, "failed to eager load Device")
-	}
-
-	var resultSlice []*Device
-	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice Device")
-	}
-
-	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for device")
-	}
-	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for device")
-	}
-
-	if len(deviceAfterSelectHooks) != 0 {
-		for _, obj := range resultSlice {
-			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
-				return err
-			}
-		}
-	}
-
-	if len(resultSlice) == 0 {
-		return nil
-	}
-
-	if singular {
-		foreign := resultSlice[0]
-		object.R.Device = foreign
-		if foreign.R == nil {
-			foreign.R = &deviceR{}
-		}
-		foreign.R.DeviceProjectHistories = append(foreign.R.DeviceProjectHistories, object)
-		return nil
-	}
-
-	for _, local := range slice {
-		for _, foreign := range resultSlice {
-			if local.DeviceID == foreign.ID {
-				local.R.Device = foreign
-				if foreign.R == nil {
-					foreign.R = &deviceR{}
-				}
-				foreign.R.DeviceProjectHistories = append(foreign.R.DeviceProjectHistories, local)
-				break
-			}
-		}
-	}
-
-	return nil
 }
 
 // LoadProject allows an eager lookup of values, cached into the
@@ -717,53 +567,6 @@ func (deviceProjectHistoryL) LoadProject(ctx context.Context, e boil.ContextExec
 				break
 			}
 		}
-	}
-
-	return nil
-}
-
-// SetDevice of the deviceProjectHistory to the related item.
-// Sets o.R.Device to related.
-// Adds o to related.R.DeviceProjectHistories.
-func (o *DeviceProjectHistory) SetDevice(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Device) error {
-	var err error
-	if insert {
-		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
-			return errors.Wrap(err, "failed to insert into foreign table")
-		}
-	}
-
-	updateQuery := fmt.Sprintf(
-		"UPDATE \"device_project_history\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 1, []string{"device_id"}),
-		strmangle.WhereClause("\"", "\"", 2, deviceProjectHistoryPrimaryKeyColumns),
-	)
-	values := []interface{}{related.ID, o.ID}
-
-	if boil.IsDebug(ctx) {
-		writer := boil.DebugWriterFrom(ctx)
-		fmt.Fprintln(writer, updateQuery)
-		fmt.Fprintln(writer, values)
-	}
-	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
-		return errors.Wrap(err, "failed to update local table")
-	}
-
-	o.DeviceID = related.ID
-	if o.R == nil {
-		o.R = &deviceProjectHistoryR{
-			Device: related,
-		}
-	} else {
-		o.R.Device = related
-	}
-
-	if related.R == nil {
-		related.R = &deviceR{
-			DeviceProjectHistories: DeviceProjectHistorySlice{o},
-		}
-	} else {
-		related.R.DeviceProjectHistories = append(related.R.DeviceProjectHistories, o)
 	}
 
 	return nil

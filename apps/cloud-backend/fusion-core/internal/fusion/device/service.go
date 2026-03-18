@@ -31,7 +31,7 @@ type DatabaseService interface {
 
 	// Query operations
 	GetDeviceByID(ctx context.Context, deviceID string, logger *zap.Logger) (*models.Device, error)
-	GetCommandStatus(ctx context.Context, commandID string, logger *zap.Logger) (*models.DeviceCommandHistory, error)
+	GetCommandStatus(ctx context.Context, commandID string, logger *zap.Logger) (*models.DeviceCommandHistorySlice, error)
 
 	// Write operations (all require transaction)
 	Insert(ctx context.Context, req *types.DeviceCreateRequest, accountID string, cert types.CertificateInfo, tx model.DBTxExecutor, logger *zap.Logger) error
@@ -40,7 +40,7 @@ type DatabaseService interface {
 	Update(ctx context.Context, device models.Device, req *types.DeviceUpdateRequest, tx model.DBTxExecutor, logger *zap.Logger) error
 	UpdateCertificate(ctx context.Context, device models.Device, cert types.CertificateInfo, tx model.DBTxExecutor, logger *zap.Logger) error
 	Reset(ctx context.Context, device models.Device, tx model.DBTxExecutor, logger *zap.Logger) error
-	InsertCommand(ctx context.Context, projectID string, request *types.CommandRequest, logger *zap.Logger) (string, error)
+	InsertCommand(ctx context.Context, projectID, commandID string, request *types.CommandRequest, logger *zap.Logger) error
 	UpdateCommandStatus(ctx context.Context, commandID, status string, logger *zap.Logger) error
 }
 

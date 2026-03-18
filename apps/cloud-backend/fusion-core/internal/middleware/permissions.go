@@ -97,6 +97,8 @@ func SetupDevicePermissions(acc *AccessControlConfig) {
 
 	// Device CREATE endpoint - require write permission
 	acc.RegisterPermission("POST", basePath, DeviceCreate, PermissionWrite, "Create new device")
+	// Device BULK CREATE endpoint - require write permission
+	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceBulkCreate), DeviceCreate, PermissionWrite, "Bulk create devices")
 	// Device UPDATE endpoint - require write permission
 	acc.RegisterPermission("PATCH", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceByID), DeviceUpdate, PermissionWrite, "Update device")
 	// Device RESET endpoint - require write permission

@@ -25,6 +25,11 @@ func Created(c *gin.Context, data any) {
 	SendJSON(c, http.StatusCreated, data)
 }
 
+// MultiStatus sends a 207 Multi-Status response
+func MultiStatus(c *gin.Context, data any) {
+	SendJSON(c, http.StatusMultiStatus, data)
+}
+
 // NoContent sends a 204 No Content response
 func NoContent(c *gin.Context) {
 	c.Status(http.StatusNoContent)

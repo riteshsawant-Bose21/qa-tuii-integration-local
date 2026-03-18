@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
@@ -24,96 +23,86 @@ import (
 
 // DeviceCommandHistory is an object representing the database table.
 type DeviceCommandHistory struct {
-	ID             string    `boil:"id" json:"id" toml:"id" yaml:"id"`
-	ProjectID      string    `boil:"project_id" json:"project_id" toml:"project_id" yaml:"project_id"`
-	CommandName    string    `boil:"command_name" json:"command_name" toml:"command_name" yaml:"command_name"`
-	CommandPayload null.JSON `boil:"command_payload" json:"command_payload,omitempty" toml:"command_payload" yaml:"command_payload,omitempty"`
-	Status         string    `boil:"status" json:"status" toml:"status" yaml:"status"`
-	IssuedAt       time.Time `boil:"issued_at" json:"issued_at" toml:"issued_at" yaml:"issued_at"`
-	CreatedAt      time.Time `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	ID          string    `boil:"id" json:"id" toml:"id" yaml:"id"`
+	CommandID   string    `boil:"command_id" json:"command_id" toml:"command_id" yaml:"command_id"`
+	ProjectID   string    `boil:"project_id" json:"project_id" toml:"project_id" yaml:"project_id"`
+	DeviceID    string    `boil:"device_id" json:"device_id" toml:"device_id" yaml:"device_id"`
+	CommandName string    `boil:"command_name" json:"command_name" toml:"command_name" yaml:"command_name"`
+	Status      string    `boil:"status" json:"status" toml:"status" yaml:"status"`
+	IssuedAt    time.Time `boil:"issued_at" json:"issued_at" toml:"issued_at" yaml:"issued_at"`
+	CreatedAt   time.Time `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	UpdatedAt   time.Time `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 
 	R *deviceCommandHistoryR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L deviceCommandHistoryL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var DeviceCommandHistoryColumns = struct {
-	ID             string
-	ProjectID      string
-	CommandName    string
-	CommandPayload string
-	Status         string
-	IssuedAt       string
-	CreatedAt      string
+	ID          string
+	CommandID   string
+	ProjectID   string
+	DeviceID    string
+	CommandName string
+	Status      string
+	IssuedAt    string
+	CreatedAt   string
+	UpdatedAt   string
 }{
-	ID:             "id",
-	ProjectID:      "project_id",
-	CommandName:    "command_name",
-	CommandPayload: "command_payload",
-	Status:         "status",
-	IssuedAt:       "issued_at",
-	CreatedAt:      "created_at",
+	ID:          "id",
+	CommandID:   "command_id",
+	ProjectID:   "project_id",
+	DeviceID:    "device_id",
+	CommandName: "command_name",
+	Status:      "status",
+	IssuedAt:    "issued_at",
+	CreatedAt:   "created_at",
+	UpdatedAt:   "updated_at",
 }
 
 var DeviceCommandHistoryTableColumns = struct {
-	ID             string
-	ProjectID      string
-	CommandName    string
-	CommandPayload string
-	Status         string
-	IssuedAt       string
-	CreatedAt      string
+	ID          string
+	CommandID   string
+	ProjectID   string
+	DeviceID    string
+	CommandName string
+	Status      string
+	IssuedAt    string
+	CreatedAt   string
+	UpdatedAt   string
 }{
-	ID:             "device_command_history.id",
-	ProjectID:      "device_command_history.project_id",
-	CommandName:    "device_command_history.command_name",
-	CommandPayload: "device_command_history.command_payload",
-	Status:         "device_command_history.status",
-	IssuedAt:       "device_command_history.issued_at",
-	CreatedAt:      "device_command_history.created_at",
+	ID:          "device_command_history.id",
+	CommandID:   "device_command_history.command_id",
+	ProjectID:   "device_command_history.project_id",
+	DeviceID:    "device_command_history.device_id",
+	CommandName: "device_command_history.command_name",
+	Status:      "device_command_history.status",
+	IssuedAt:    "device_command_history.issued_at",
+	CreatedAt:   "device_command_history.created_at",
+	UpdatedAt:   "device_command_history.updated_at",
 }
 
 // Generated where
 
-type whereHelpernull_JSON struct{ field string }
-
-func (w whereHelpernull_JSON) EQ(x null.JSON) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, false, x)
-}
-func (w whereHelpernull_JSON) NEQ(x null.JSON) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, true, x)
-}
-func (w whereHelpernull_JSON) LT(x null.JSON) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpernull_JSON) LTE(x null.JSON) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelpernull_JSON) GT(x null.JSON) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpernull_JSON) GTE(x null.JSON) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
-
-func (w whereHelpernull_JSON) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
-func (w whereHelpernull_JSON) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
-
 var DeviceCommandHistoryWhere = struct {
-	ID             whereHelperstring
-	ProjectID      whereHelperstring
-	CommandName    whereHelperstring
-	CommandPayload whereHelpernull_JSON
-	Status         whereHelperstring
-	IssuedAt       whereHelpertime_Time
-	CreatedAt      whereHelpertime_Time
+	ID          whereHelperstring
+	CommandID   whereHelperstring
+	ProjectID   whereHelperstring
+	DeviceID    whereHelperstring
+	CommandName whereHelperstring
+	Status      whereHelperstring
+	IssuedAt    whereHelpertime_Time
+	CreatedAt   whereHelpertime_Time
+	UpdatedAt   whereHelpertime_Time
 }{
-	ID:             whereHelperstring{field: "\"device_command_history\".\"id\""},
-	ProjectID:      whereHelperstring{field: "\"device_command_history\".\"project_id\""},
-	CommandName:    whereHelperstring{field: "\"device_command_history\".\"command_name\""},
-	CommandPayload: whereHelpernull_JSON{field: "\"device_command_history\".\"command_payload\""},
-	Status:         whereHelperstring{field: "\"device_command_history\".\"status\""},
-	IssuedAt:       whereHelpertime_Time{field: "\"device_command_history\".\"issued_at\""},
-	CreatedAt:      whereHelpertime_Time{field: "\"device_command_history\".\"created_at\""},
+	ID:          whereHelperstring{field: "\"device_command_history\".\"id\""},
+	CommandID:   whereHelperstring{field: "\"device_command_history\".\"command_id\""},
+	ProjectID:   whereHelperstring{field: "\"device_command_history\".\"project_id\""},
+	DeviceID:    whereHelperstring{field: "\"device_command_history\".\"device_id\""},
+	CommandName: whereHelperstring{field: "\"device_command_history\".\"command_name\""},
+	Status:      whereHelperstring{field: "\"device_command_history\".\"status\""},
+	IssuedAt:    whereHelpertime_Time{field: "\"device_command_history\".\"issued_at\""},
+	CreatedAt:   whereHelpertime_Time{field: "\"device_command_history\".\"created_at\""},
+	UpdatedAt:   whereHelpertime_Time{field: "\"device_command_history\".\"updated_at\""},
 }
 
 // DeviceCommandHistoryRels is where relationship names are stored.
@@ -153,9 +142,9 @@ func (r *deviceCommandHistoryR) GetProject() *Project {
 type deviceCommandHistoryL struct{}
 
 var (
-	deviceCommandHistoryAllColumns            = []string{"id", "project_id", "command_name", "command_payload", "status", "issued_at", "created_at"}
-	deviceCommandHistoryColumnsWithoutDefault = []string{"project_id", "command_name", "issued_at"}
-	deviceCommandHistoryColumnsWithDefault    = []string{"id", "command_payload", "status", "created_at"}
+	deviceCommandHistoryAllColumns            = []string{"id", "command_id", "project_id", "device_id", "command_name", "status", "issued_at", "created_at", "updated_at"}
+	deviceCommandHistoryColumnsWithoutDefault = []string{"command_id", "project_id", "device_id", "command_name", "issued_at"}
+	deviceCommandHistoryColumnsWithDefault    = []string{"id", "status", "created_at", "updated_at"}
 	deviceCommandHistoryPrimaryKeyColumns     = []string{"id"}
 	deviceCommandHistoryGeneratedColumns      = []string{}
 )
@@ -698,6 +687,9 @@ func (o *DeviceCommandHistory) Insert(ctx context.Context, exec boil.ContextExec
 		if o.CreatedAt.IsZero() {
 			o.CreatedAt = currTime
 		}
+		if o.UpdatedAt.IsZero() {
+			o.UpdatedAt = currTime
+		}
 	}
 
 	if err := o.doBeforeInsertHooks(ctx, exec); err != nil {
@@ -774,6 +766,12 @@ func (o *DeviceCommandHistory) Insert(ctx context.Context, exec boil.ContextExec
 // See boil.Columns.UpdateColumnSet documentation to understand column list inference for updates.
 // Update does not automatically update the record in case of default values. Use .Reload() to refresh the records.
 func (o *DeviceCommandHistory) Update(ctx context.Context, exec boil.ContextExecutor, columns boil.Columns) (int64, error) {
+	if !boil.TimestampsAreSkipped(ctx) {
+		currTime := time.Now().In(boil.GetLocation())
+
+		o.UpdatedAt = currTime
+	}
+
 	var err error
 	if err = o.doBeforeUpdateHooks(ctx, exec); err != nil {
 		return 0, err
@@ -910,6 +908,7 @@ func (o *DeviceCommandHistory) Upsert(ctx context.Context, exec boil.ContextExec
 		if o.CreatedAt.IsZero() {
 			o.CreatedAt = currTime
 		}
+		o.UpdatedAt = currTime
 	}
 
 	if err := o.doBeforeUpsertHooks(ctx, exec); err != nil {

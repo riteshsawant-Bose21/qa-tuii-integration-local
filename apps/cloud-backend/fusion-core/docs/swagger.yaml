@@ -65,6 +65,36 @@ definitions:
     required:
     - currency
     type: object
+  types.BulkDeviceCreateRequest:
+    properties:
+      devices:
+        items:
+          $ref: '#/definitions/types.DeviceCreateRequest'
+        minItems: 1
+        type: array
+    required:
+    - devices
+    type: object
+  types.BulkDeviceCreateResponse:
+    properties:
+      results:
+        items:
+          $ref: '#/definitions/types.BulkDeviceCreateResult'
+        type: array
+    type: object
+  types.BulkDeviceCreateResult:
+    properties:
+      certificate:
+        type: string
+      device_id:
+        type: string
+      error:
+        type: string
+      project_id:
+        type: string
+      success:
+        type: boolean
+    type: object
   types.CommandRequest:
     properties:
       command:
@@ -86,13 +116,24 @@ definitions:
     type: object
   types.CommandStatusResponse:
     properties:
+      results:
+        items:
+          $ref: '#/definitions/types.CommandStatusResult'
+        type: array
+    type: object
+  types.CommandStatusResult:
+    properties:
       command_id:
         type: string
       command_name:
         type: string
+      device_id:
+        type: string
       issued_at:
         type: string
       status:
+        type: string
+      updated_at:
         type: string
     type: object
   types.CommandType:
@@ -156,9 +197,9 @@ definitions:
     type: object
   types.DeviceCreateRequest:
     properties:
-      csr:
+      client_device_id:
         type: string
-      device_id:
+      csr:
         type: string
       device_location:
         type: string
@@ -179,8 +220,8 @@ definitions:
       serial_number:
         type: string
     required:
+    - client_device_id
     - csr
-    - device_id
     - device_location
     - device_name
     - device_zone
@@ -209,6 +250,8 @@ definitions:
     type: object
   types.DeviceUpdateRequest:
     properties:
+      client_device_id:
+        type: string
       device_location:
         type: string
       device_name:
@@ -221,6 +264,8 @@ definitions:
         type: boolean
       project_id:
         type: string
+    required:
+    - client_device_id
     type: object
   types.EnvironmentType:
     enum:
@@ -959,7 +1004,7 @@ paths:
       - application/json
       description: Update device details (non-static fields only)
       parameters:
-      - description: Device ID
+      - description: Serial number of the device
         in: path
         name: device_id
         required: true
@@ -1002,7 +1047,7 @@ paths:
       - application/json
       description: Claim an unclaimed device for a user and project
       parameters:
-      - description: Device ID
+      - description: Serial number of the device
         in: path
         name: device_id
         required: true
@@ -1047,7 +1092,7 @@ paths:
       - application/json
       description: Reset a device to factory settings
       parameters:
-      - description: Device ID
+      - description: Serial number of the device
         in: path
         name: device_id
         required: true
@@ -1081,7 +1126,7 @@ paths:
       description: Creates a new certificate, attaches it to the device, and marks
         the old certificate as inactive
       parameters:
-      - description: Device ID
+      - description: Serial number of the device
         in: path
         name: device_id
         required: true
@@ -1118,6 +1163,43 @@ paths:
       security:
       - BearerAuth: []
       summary: Rotate device certificate
+      tags:
+      - devices
+  /devices/bulk:
+    post:
+      consumes:
+      - application/json
+      description: Create multiple devices in a single request. Each device is processed
+        independently; partial failures are reported per-device.
+      parameters:
+      - description: List of devices to create
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.BulkDeviceCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "207":
+          description: Multi-status - results for each device
+          schema:
+            $ref: '#/definitions/types.BulkDeviceCreateResponse'
+        "400":
+          description: Bad request - Invalid payload
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: Unauthorized - User not authorized
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Bulk create devices
       tags:
       - devices
   /devices/commands/:

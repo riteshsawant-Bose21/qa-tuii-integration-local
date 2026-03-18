@@ -10,6 +10,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -74,13 +75,13 @@ func (s *Service) cleanupIoTResources(ctx context.Context, deviceID, certID, cer
 			zap.Error(err))
 	}
 
-	if err := s.iotService.DetatchCertificateFromThing(ctx, deviceID, certArn, logger); err != nil {
+	if err := s.iotService.DetachCertificateFromThing(ctx, deviceID, certArn, logger); err != nil {
 		logger.Warn("Failed to cleanup: detach certificate from thing",
 			zap.String("deviceID", deviceID),
 			zap.Error(err))
 	}
 
-	if err := s.iotService.DetatchPolicyFromCertificate(ctx, iotPolicyName, certArn, logger); err != nil {
+	if err := s.iotService.DetachPolicyFromCertificate(ctx, iotPolicyName, certArn, logger); err != nil {
 		logger.Warn("Failed to cleanup: detach policy from certificate",
 			zap.String("certificateArn", certArn),
 			zap.Error(err))
@@ -104,13 +105,13 @@ func (s *Service) revokeOldCertificate(ctx context.Context, deviceID, certID, ce
 			zap.Error(err))
 	}
 
-	if err := s.iotService.DetatchCertificateFromThing(ctx, deviceID, certArn, logger); err != nil {
+	if err := s.iotService.DetachCertificateFromThing(ctx, deviceID, certArn, logger); err != nil {
 		logger.Warn("Failed to detach old certificate from thing (non-critical)",
 			zap.String("deviceID", deviceID),
 			zap.Error(err))
 	}
 
-	if err := s.iotService.DetatchPolicyFromCertificate(ctx, iotPolicyName, certArn, logger); err != nil {
+	if err := s.iotService.DetachPolicyFromCertificate(ctx, iotPolicyName, certArn, logger); err != nil {
 		logger.Warn("Failed to detach policy from old certificate (non-critical)",
 			zap.String("certificateArn", certArn),
 			zap.Error(err))
@@ -171,7 +172,7 @@ func (s *Service) setupDeviceCertificate(ctx context.Context, deviceID string, c
 // CreateDevice registers a new device or claims an existing unclaimed device.
 func (s *Service) CreateDevice(ctx context.Context, request *types.DeviceCreateRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (*types.DeviceCreateResponse, error) {
 	// Check if device already exists
-	device, err := s.dbService.GetDeviceByID(ctx, request.DeviceID, logger)
+	device, err := s.dbService.GetDeviceByID(ctx, request.SerialNumber, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +180,7 @@ func (s *Service) CreateDevice(ctx context.Context, request *types.DeviceCreateR
 	// Check if device is already claimed
 	if device != nil && device.ClaimStatus == "CLAIMED" {
 		logger.Error("Device already claimed, reset to reclaim",
-			zap.String("deviceID", request.DeviceID))
+			zap.String("deviceID", request.SerialNumber))
 		return nil, errors.New(errorutil.ErrMsgDeviceAlreadyExists)
 	}
 
@@ -191,7 +192,7 @@ func (s *Service) CreateDevice(ctx context.Context, request *types.DeviceCreateR
 	// Register new thing in IoT if device doesn't exist
 	deleteThingOnFailure := false
 	if device == nil {
-		if err := s.iotService.RegisterThing(ctx, request.DeviceID, logger); err != nil {
+		if err := s.iotService.RegisterThing(ctx, request.SerialNumber, logger); err != nil {
 			logger.Error("Failed to register thing", zap.Error(err))
 			return nil, err
 		}
@@ -199,7 +200,7 @@ func (s *Service) CreateDevice(ctx context.Context, request *types.DeviceCreateR
 	}
 
 	// Setup certificate (creates, attaches to thing, attaches policy)
-	certPem, cert, err := s.setupDeviceCertificate(ctx, request.DeviceID, &request.CSR, deleteThingOnFailure, logger)
+	certPem, cert, err := s.setupDeviceCertificate(ctx, request.SerialNumber, &request.CSR, deleteThingOnFailure, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -213,12 +214,43 @@ func (s *Service) CreateDevice(ctx context.Context, request *types.DeviceCreateR
 	})
 	if err != nil {
 		logger.Warn("Database transaction failed, cleaning up IoT resources",
-			zap.String("deviceID", request.DeviceID))
-		s.cleanupIoTResources(ctx, request.DeviceID, cert.ID, cert.Arn, deleteThingOnFailure, logger)
+			zap.String("deviceID", request.SerialNumber))
+		s.cleanupIoTResources(ctx, request.SerialNumber, cert.ID, cert.Arn, deleteThingOnFailure, logger)
 		return nil, err
 	}
 
 	return &types.DeviceCreateResponse{Certificate: *certPem}, nil
+}
+
+// BulkCreateDevices creates multiple devices in a single request.
+// Each device is processed independently; partial failures are captured per-device.
+func (s *Service) BulkCreateDevices(ctx context.Context, request *types.BulkDeviceCreateRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (*types.BulkDeviceCreateResponse, error) {
+	results := make([]types.BulkDeviceCreateResult, 0, len(request.Devices))
+
+	for i := range request.Devices {
+		deviceReq := &request.Devices[i]
+
+		res, err := s.CreateDevice(ctx, deviceReq, user, logger)
+		if err != nil {
+			errMsg := err.Error()
+			results = append(results, types.BulkDeviceCreateResult{
+				DeviceID:  deviceReq.SerialNumber,
+				ProjectID: deviceReq.ProjectID,
+				Success:   false,
+				Error:     &errMsg,
+			})
+			continue
+		}
+
+		results = append(results, types.BulkDeviceCreateResult{
+			DeviceID:    deviceReq.SerialNumber,
+			ProjectID:   deviceReq.ProjectID,
+			Certificate: &res.Certificate,
+			Success:     true,
+		})
+	}
+
+	return &types.BulkDeviceCreateResponse{Results: results}, nil
 }
 
 // UpdateDevice modifies mutable fields of an existing device.
@@ -284,11 +316,11 @@ func (s *Service) ResetDevice(ctx context.Context, deviceID string, user types.U
 			zap.Error(err))
 		return err
 	}
-	if err := s.iotService.DetatchCertificateFromThing(ctx, deviceID, device.CertificateArn.String, logger); err != nil {
+	if err := s.iotService.DetachCertificateFromThing(ctx, deviceID, device.CertificateArn.String, logger); err != nil {
 		logger.Error("Failed to detach certificate from thing", zap.Error(err))
 		return err
 	}
-	if err := s.iotService.DetatchPolicyFromCertificate(ctx, iotPolicyName, device.CertificateArn.String, logger); err != nil {
+	if err := s.iotService.DetachPolicyFromCertificate(ctx, iotPolicyName, device.CertificateArn.String, logger); err != nil {
 		logger.Error("Failed to detach policy from certificate", zap.Error(err))
 		return err
 	}
@@ -396,11 +428,20 @@ func (s *Service) Command(ctx context.Context, request *types.CommandRequest, us
 	if _, err := s.validateProjectAccess(ctx, request.ProjectID, user.Account.ID, logger); err != nil {
 		return "", err
 	}
+	commandID := uuid.New().String()
 
-	id, insertErr := s.dbService.InsertCommand(ctx, request.ProjectID, request, logger)
-	if insertErr != nil {
-		logger.Error("Failed to insert command into database", zap.Error(insertErr))
-		return "", fmt.Errorf("failed to insert command into database: %w", insertErr)
+	err := s.withTransaction(ctx, logger, func(tx model.DBTxExecutor) error {
+
+		insertErr := s.dbService.InsertCommand(ctx, request.ProjectID, commandID, request, logger)
+		if insertErr != nil {
+			logger.Error("Failed to insert command into database", zap.Error(insertErr))
+			return fmt.Errorf("failed to insert command into database: %w", insertErr)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return "", err
 	}
 
 	deviceCommand := struct {
@@ -408,7 +449,7 @@ func (s *Service) Command(ctx context.Context, request *types.CommandRequest, us
 		ID      string               `json:"id"`
 	}{
 		Command: *request,
-		ID:      id, // ID can be set by the device if needed
+		ID:      commandID, // ID can be set by the device if needed
 	}
 
 	requestBytes, err := json.Marshal(deviceCommand)
@@ -423,31 +464,38 @@ func (s *Service) Command(ctx context.Context, request *types.CommandRequest, us
 		return "", fmt.Errorf("failed to publish command: %w", err)
 	}
 
-	err = s.dbService.UpdateCommandStatus(ctx, id, "PUBLISHED", logger)
+	err = s.dbService.UpdateCommandStatus(ctx, commandID, "PUBLISHED", logger)
 
 	if err != nil {
 		logger.Error("Failed to publish command", zap.Error(err))
 		return "", fmt.Errorf("failed to publish command: %w", err)
 	}
 
-	return id, nil
+	return commandID, nil
 }
 
 // GetCommandStatus retrieves the status of a command by its ID.
 func (s *Service) GetCommandStatus(ctx context.Context, commandID string, logger *zap.Logger) (*types.CommandStatusResponse, error) {
-	command, err := s.dbService.GetCommandStatus(ctx, commandID, logger)
+	commands, err := s.dbService.GetCommandStatus(ctx, commandID, logger)
 	if err != nil {
 		return nil, err
 	}
-	if command == nil {
+	if commands == nil || len(*commands) == 0 {
 		logger.Error("Command not found", zap.String("commandID", commandID))
 		return nil, errors.New(errorutil.ErrMsgCommandNotFound)
 	}
 
-	return &types.CommandStatusResponse{
-		CommandID:   command.ID,
-		CommandName: command.CommandName,
-		Status:      command.Status,
-		IssuedAt:    command.IssuedAt.Format("2006-01-02T15:04:05Z07:00"),
-	}, nil
+	var results []types.CommandStatusResult
+	for _, command := range *commands {
+		results = append(results, types.CommandStatusResult{
+			CommandID:   command.CommandID,
+			CommandName: command.CommandName,
+			DeviceID:    command.DeviceID,
+			Status:      command.Status,
+			IssuedAt:    command.IssuedAt.Format("2006-01-02T15:04:05Z07:00"),
+			UpdatedAt:   command.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		})
+	}
+
+	return &types.CommandStatusResponse{Results: results}, nil
 }

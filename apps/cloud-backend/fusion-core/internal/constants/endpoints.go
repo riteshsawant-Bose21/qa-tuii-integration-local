@@ -68,6 +68,8 @@ const (
 
 	// EndpointDevices is the base endpoint for device operations.
 	EndpointDevices = "/devices"
+	// EndpointDeviceBulkCreate is the endpoint for bulk creating devices.
+	EndpointDeviceBulkCreate = "/bulk"
 	// EndpointDeviceByID is the endpoint for operations on a specific device.
 	EndpointDeviceByID = "/:device_id"
 	// EndpointDeviceReset is the endpoint for resetting a device.
