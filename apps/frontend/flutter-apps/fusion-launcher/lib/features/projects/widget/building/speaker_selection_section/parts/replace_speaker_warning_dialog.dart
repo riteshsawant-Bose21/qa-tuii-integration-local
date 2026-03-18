@@ -68,6 +68,7 @@ class ReplaceSpeakersWarningDialog extends StatelessWidget {
             const SizedBox(height: 12),
 
             FusionAppText(
+              semanticId: "warning_message",
               text:
                   "The listening area '$listeningAreaName' currently has \"$existingSpeakerName\" speakers. Adding a different speaker will remove the existing ones and add \"$currentSpeakerName\".",
 

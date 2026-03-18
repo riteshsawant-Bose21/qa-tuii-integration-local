@@ -128,12 +128,7 @@ class AddSourcePopup extends StatelessWidget {
                                 label: "Type",
                                 value: state.selectedSourceSectionType,
                                 options: SourceSectionType.values,
-                                labelBuilder: (SourceSectionType option) {
-                                  return FusionAppText(
-                                    text: option.displayName,
-                                    style: Theme.of(context).textTheme.labelMedium,
-                                  );
-                                },
+                                labelBuilder: (SourceSectionType option) => option.displayName,
                                 onOptionSelected: (
                                   int value,
                                   SourceSectionType option,
@@ -266,16 +261,7 @@ class AddSourcePopup extends StatelessWidget {
                                     label: "Location",
                                     value: state.selectedListeningArea,
                                     options: listeningAreas,
-                                    labelBuilder: (ListeningArea option) {
-                                      return FusionAppText(
-                                        text: option.name,
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.labelSmall?.copyWith(
-                                          color: Theme.of(context).colorScheme.onSurface.withAlpha(100),
-                                        ),
-                                      );
-                                    },
+                                    labelBuilder: (ListeningArea option) => option.name,
                                     valueBuilder: (ListeningArea option) {
                                       final String? floorName =
                                           serviceLocator<ProjectViewModel>()
@@ -466,12 +452,7 @@ class AddSourcePopup extends StatelessWidget {
                               label: "Connection",
                               value: state.selectedConnectionType,
                               options: state.selectedSourceSectionType.connectionTypes,
-                              labelBuilder: (SourceConnectionType option) {
-                                return FusionAppText(
-                                  text: option.displayName,
-                                  style: Theme.of(context).textTheme.labelMedium,
-                                );
-                              },
+                              labelBuilder: (SourceConnectionType option) => option.displayName,
                               onOptionSelected: (
                                 int value,
                                 SourceConnectionType option,
