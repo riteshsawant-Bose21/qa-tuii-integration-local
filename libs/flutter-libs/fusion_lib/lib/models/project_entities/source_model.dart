@@ -20,6 +20,27 @@ enum SourceConnectionType {
   final String displayName;
 }
 
+extension SourceConnectionTypeExtension on SourceConnectionType {
+  String get connectionType {
+    switch (this) {
+      case SourceConnectionType.analogInput:
+        return 'analog';
+      case SourceConnectionType.aes67input:
+        return 'aes67';
+      case SourceConnectionType.bluetooth:
+        return 'analog';
+      case SourceConnectionType.usb:
+        return 'analog';
+      case SourceConnectionType.audioJack:
+        return 'analog';
+      case SourceConnectionType.xlr:
+        return 'analog';
+      case SourceConnectionType.hdmi:
+        return 'analog';
+    }
+  }
+}
+
 class Source extends HardwareComponent {
   /// Type of the source
   final SourceType type;
