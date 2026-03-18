@@ -17,7 +17,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -tags lambda.norpc -ldflags="
 ##################
 FROM --platform=linux/arm64 public.ecr.aws/lambda/provided:al2023-arm64
 
-COPY --from=builder /app/bootstrap ${LAMBDA_TASK_ROOT}/bootstrap
+COPY --from=builder /app/bootstrap ${LAMBDA_RUNTIME_DIR}/bootstrap
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 CMD ["bootstrap"]
