@@ -1,6 +1,7 @@
 #pragma once
 
 #include <bosepro/navigator.h>
+#include <bosepro/telemetry_version.h>
 
 #include <string>
 #include <vector>
@@ -82,6 +83,22 @@ public:
     ///
     /// @return  The string value of "packet_id"
     const std::string get_packet_id() const;
+
+    /// Get the integer protocol version from "protocol_version".
+    int get_protocol_version() const;
+
+    /// Get the integer schema version from "schema_version".
+    int get_schema_version() const;
+
+    /// Try to get the integer protocol version from "protocol_version".
+    bool try_get_protocol_version(int &value) const;
+
+    /// Try to get the integer schema version from "schema_version".
+    bool try_get_schema_version(int &value) const;
+
+    /// Check whether the message parameters contain supported telemetry
+    /// protocol/schema versions using the current `N` / `N-1` policy.
+    bool has_supported_telemetry_versions() const;
 
 
     /// Get the "block_name" array.
