@@ -29,8 +29,8 @@ int process_pub_register_req(bosepro::telemetryManager& telm_mgr,
                              bosepro::HandlerContext& /*unused*/)
 {
     std::vector<int_fast32_t> shm_size;
-    int protocol_version = 0;
-    int schema_version = 0;
+    int_fast32_t protocol_version = 0;
+    int_fast32_t schema_version = 0;
     int ret_val = 0;
 
     // Get Sub name
@@ -221,8 +221,8 @@ int process_update_meters_rsp(bosepro::telemetryManager& telm_mgr,
 {
     int ret_val = 0;
     std::string ok_nok;
-    int protocol_version = 0;
-    int schema_version = 0;
+    int_fast32_t protocol_version = 0;
+    int_fast32_t schema_version = 0;
     enum eMeterCategory meter_type;
 
     // Get Sub name
