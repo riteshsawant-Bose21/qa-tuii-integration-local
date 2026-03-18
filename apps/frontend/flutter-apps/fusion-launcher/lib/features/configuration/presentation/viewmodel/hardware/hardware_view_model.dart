@@ -417,12 +417,12 @@ extension HardwareViewModel on ProjectViewModel {
 
       if (nonPlacedSpeakers.length == 1) {
         // Last speaker placed
-        setShouldPlaceNonPlacedSpeakers(false);
+        // setShouldPlaceNonPlacedSpeakers(false);
         updateProject();
       }
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add selected product as hardware: $e");
-      setShouldPlaceNonPlacedSpeakers(false);
+      // setShouldPlaceNonPlacedSpeakers(false);
     }
   }
 

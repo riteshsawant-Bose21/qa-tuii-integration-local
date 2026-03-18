@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/projects/viewmodel/building_page_state.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/service_locator.dart';
+import '../../../viewmodel/building_page_viewmodel.dart';
 import 'parts/select_speaker_popup.dart';
 
 class SpeakerSelectionWidget extends StatefulWidget {
@@ -27,7 +29,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
             final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
             final ListeningArea? currentSelectedListeningAreaId = projectViewModel.getCurrentSelectedListeningArea();
 
-            if (currentSelectedListeningAreaId == null || projectViewModel.currentToolbarMode == ToolbarMode.system) {
+            if (currentSelectedListeningAreaId == null || context.watch<BuildingPageViewModel>().state.toolbarMode == ToolbarMode.system) {
               return const SizedBox.shrink();
             }
 
@@ -116,7 +118,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
 
                         if (allSpeaekers.isEmpty) return const SizedBox.shrink();
 
-                        final bool shouldPlaceNonPlacedSpeakers = projectViewModel.shouldPlaceNonPlacedSpeakers;
+                        final bool shouldPlaceNonPlacedSpeakers = context.watch<BuildingPageViewModel>().state.toolState is SpeakerPlacementState;
 
                         return Flexible(
                           child: SingleChildScrollView(
@@ -165,7 +167,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                   GestureDetector(
                                     onTap: () {
                                       if (nonPlacedSpeakers.isNotEmpty) {
-                                        projectViewModel.setShouldPlaceNonPlacedSpeakers(!projectViewModel.shouldPlaceNonPlacedSpeakers);
+                                        context.read<BuildingPageViewModel>().setShouldPlaceNonPlacedSpeakers(!shouldPlaceNonPlacedSpeakers);
                                       }
                                     },
                                     child: Container(

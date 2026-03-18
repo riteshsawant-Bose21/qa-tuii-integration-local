@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-class BuildingPageDronDown<T> extends StatefulWidget {
+class BuildingPageDropDown<T> extends StatefulWidget {
   final T? value;
   final String? hintText;
   final List<T> items;
@@ -9,7 +9,7 @@ class BuildingPageDronDown<T> extends StatefulWidget {
   final Widget Function(T option) labelBuilder;
   final Widget Function(T option)? valueBuilder;
 
-  const BuildingPageDronDown({
+  const BuildingPageDropDown({
     super.key,
     this.value,
     this.hintText,
@@ -20,10 +20,10 @@ class BuildingPageDronDown<T> extends StatefulWidget {
   });
 
   @override
-  State<BuildingPageDronDown<T>> createState() => _BuildingPageDronDownState<T>();
+  State<BuildingPageDropDown<T>> createState() => _BuildingPageDropDownState<T>();
 }
 
-class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
+class _BuildingPageDropDownState<T> extends State<BuildingPageDropDown<T>> {
   bool isFocused = false;
   late FocusNode _focusNode;
 

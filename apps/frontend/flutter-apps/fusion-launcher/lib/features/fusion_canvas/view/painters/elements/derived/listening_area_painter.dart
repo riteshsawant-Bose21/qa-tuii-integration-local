@@ -3,12 +3,14 @@ import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.d
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/select_tool_state.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../fusion_canvas_painter.dart';
-import 'fusion_rect_painter.dart';
+import '../../fusion_canvas_painter.dart';
+import '../fusion_rect_painter.dart';
+import '../mixin/fusion_canvas_interactable_mixin.dart';
 
 class ListeningAreaPainter extends FusionPolygonPainter {
   final ListeningArea listeningArea;
-  ListeningAreaPainter({required this.listeningArea})
+  final bool isShowingSpl;
+  ListeningAreaPainter({required this.listeningArea, this.isShowingSpl = false})
     : super(
         polygon: FusionCanvasPolygon(points: listeningArea.vertices, id: listeningArea.id),
       );
@@ -24,6 +26,24 @@ class ListeningAreaPainter extends FusionPolygonPainter {
   @override
   String toString() {
     return 'ListeningAreaPainter(name: ${listeningArea.name}, vertices: ${listeningArea.vertices.length})';
+  }
+
+  @override
+  Set<FusionCanvasLayerInteraction> get possibleInteractions => const <FusionCanvasLayerInteraction>{
+    FusionCanvasLayerInteraction.select,
+  };
+
+  @override
+  Set<FusionCanvasLayerInteraction>? possibleInteractionsForElement(
+    FusionCanvasElement element,
+  ) {
+    if (element is FusionCanvasPoint || element is FusionCanvasLine) {
+      return const <FusionCanvasLayerInteraction>{
+        FusionCanvasLayerInteraction.select,
+        FusionCanvasLayerInteraction.drag,
+      };
+    }
+    return null;
   }
 
   Color getColor(FusionCanvasPainter painter) => painter.context.colorScheme.elevation4;
@@ -63,7 +83,8 @@ class ListeningAreaPainter extends FusionPolygonPainter {
   }
 
   @override
-  Paint getFillPaint(FusionCanvasPainter painter, bool isHovered) {
+  Paint? getFillPaint(FusionCanvasPainter painter, bool isHovered) {
+    if (isShowingSpl) return null;
     final Color color = getColor(painter);
     final bool selected = _isSelected(painter);
     return Paint()

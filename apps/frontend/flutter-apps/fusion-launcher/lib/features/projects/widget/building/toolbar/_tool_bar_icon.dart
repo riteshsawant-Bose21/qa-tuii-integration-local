@@ -8,10 +8,10 @@ class _ToolBarIcon extends StatelessWidget {
     required this.isSelected,
     required this.onTap,
   });
-  final IconData icon;
+  final String icon;
   final String label;
   final bool isSelected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) {
     return InkWell(
@@ -20,9 +20,13 @@ class _ToolBarIcon extends StatelessWidget {
         toolTip: label,
         semanticsId: "canvas_tool_${label.toLowerCase()}",
         color: isSelected ? context.colorScheme.elevation3 : Colors.transparent,
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 12),
         borderColor: Colors.transparent,
-        child: Icon(icon),
+        child: FusionImage.asset(
+          "assets/icons/building_page/$icon",
+          width: 24,
+          assetColor: context.colorScheme.primaryWhite,
+        ),
       ),
     );
   }

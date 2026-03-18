@@ -260,7 +260,7 @@ class __CreateNewListeningAreaWidgetState extends State<_CreateNewListeningAreaW
                       width: 1,
                     ),
                   ),
-                  child: BuildingPageDronDown<FloorModel>(
+                  child: BuildingPageDropDown<FloorModel>(
                     value: _selectedFloor,
                     items: serviceLocator<ProjectViewModel>().getAllFloors(),
                     onSelect: (FloorModel selectedValue) {

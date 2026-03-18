@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/utils/broadcast_controllers.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
-import 'package:fusion_lib/models/response_callback.dart';
-import 'package:uuid/uuid.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../../../core/constants.dart';
 import '../../../../../core/service_locator.dart';
@@ -198,7 +195,7 @@ class _DSPDeviceCardState extends State<DSPDeviceCard> with SingleTickerProvider
     // cloudRedirectUrl =
     //     "embed/projects/${serviceLocator<ProjectViewModel>().value.cloudId}?openDeviceDialog=true&deviceId=${widget.device.cloudId!}&token=${serviceLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.accessToken)}";
     // Navigate to cloud view
-    projectTabBroadcastController.add(cloudTableIndex);
+    // projectTabBroadcastController.add(cloudTableIndex);
   }
 
   Widget _buildStatusIndicator() {
