@@ -32,6 +32,15 @@ abstract class FusionPolygonPainter extends FusionBasePainter with FusionCanvasI
     }
   }
 
+  @override
+  Rect getBounds(FusionCanvasPainter painter) {
+    path = getPolygonPath(polygon, painter);
+    if (path != null) {
+      return path!.getBounds();
+    }
+    return Rect.zero;
+  }
+
   Path? getPath(FusionCanvasPainter painter) {
     return getPolygonPath(polygon, painter);
   }

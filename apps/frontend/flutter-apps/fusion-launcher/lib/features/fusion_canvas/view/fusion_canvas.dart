@@ -117,6 +117,8 @@ class FusionCanvas extends StatelessWidget {
                                 LineCenterHandlePainter(),
                               ],
                             );
+
+                            context.read<FusionCanvasStateViewModel>().updateContentSize(elements, fusionCanvasPainter);
                             return BlocListener<FusionCanvasInputViewModel, FusionCanvasInputState>(
                               listener: (
                                 BuildContext context,

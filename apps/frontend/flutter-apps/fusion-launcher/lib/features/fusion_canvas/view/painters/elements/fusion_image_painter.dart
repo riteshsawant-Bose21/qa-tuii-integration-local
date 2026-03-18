@@ -30,6 +30,11 @@ class FusionImagePainter extends FusionBasePainter {
   }
 
   @override
+  Rect getBounds(FusionCanvasPainter painter) {
+    return getRect();
+  }
+
+  @override
   bool shouldRepaint(covariant FusionBasePainter oldDelegate) {
     return true;
   }

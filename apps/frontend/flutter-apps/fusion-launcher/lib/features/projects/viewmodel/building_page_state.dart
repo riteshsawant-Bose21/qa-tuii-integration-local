@@ -173,3 +173,5 @@ class SpeakerPlacementState extends BuildingPageToolState {
   @override
   int get hashCode => Object.hash(selectedListeningAreaId, selectedSpeakerId);
 }
+
+class AddSourceState extends BuildingPageToolState {}
