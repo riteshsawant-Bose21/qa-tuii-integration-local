@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/constant_enums.dart';
-import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/select_listening_area.dart';
+import 'package:fusion_launcher/features/speaker_selection_popup/views/widgets/constant_enums.dart';
+import 'package:fusion_launcher/features/speaker_selection_popup/views/widgets/select_listening_area.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/text_field.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/models/speaker_product.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../view_model/add_speaker_view_model.dart';
-import '../view_model/product_query_view_model.dart';
+import '../../viewmodel/add_speaker_view_model.dart';
+import '../../viewmodel/product_query_view_model.dart';
 
 class SpeakerListeningAreaProperties extends StatefulWidget {
   const SpeakerListeningAreaProperties({super.key});

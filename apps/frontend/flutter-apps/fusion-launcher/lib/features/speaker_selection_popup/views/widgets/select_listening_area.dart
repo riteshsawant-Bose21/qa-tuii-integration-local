@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/add_speaker_view_model.dart';
+import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/add_speaker_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../../../../core/service_locator.dart';
-import '../../../../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../../widgets/drop_down.dart';
+import '../../../../core/service_locator.dart';
+import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../../projects/widget/building/widgets/drop_down.dart';
 
 class SelectListeningArea extends StatelessWidget {
   final SpeakerSelectionViewModel speakerSelectionViewModel;

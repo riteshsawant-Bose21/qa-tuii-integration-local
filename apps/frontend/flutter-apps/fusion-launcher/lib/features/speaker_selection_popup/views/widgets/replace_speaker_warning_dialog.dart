@@ -3,7 +3,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../../../home/presentation/widgets/project_card.dart';
+import '../../../home/presentation/widgets/project_card.dart';
 
 class ReplaceSpeakersWarningDialog extends StatelessWidget {
   final String listeningAreaName, existingSpeakerName, currentSpeakerName;

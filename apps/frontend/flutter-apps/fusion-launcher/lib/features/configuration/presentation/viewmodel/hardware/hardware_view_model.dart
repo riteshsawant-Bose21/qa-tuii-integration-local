@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/models/products_data.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
+import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'package:fusion_lib/fusion_algorithms/ceiling_pendant_speakers_autolayout/ceiling_pendant_speakers_autolayout.dart' as ceiling_algo;
 import 'package:fusion_lib/fusion_algorithms/surface_speakers_autolayout/surface_speakers_autolayout.dart' as surface_algo;
 import 'package:fusion_lib/fusion_lib.dart';

@@ -7,7 +7,7 @@ import 'package:fusion_lib/fusion_widgets/fusion_widgets.dart';
 import 'package:fusion_lib/product_data/product_data.dart';
 import 'package:fusion_lib/product_data/products.dart';
 
-import '../../../../../../core/service_locator.dart';
+import '../../../core/service_locator.dart';
 
 /// ViewModel to query product data from the Products API
 /// This ViewModel called from the ProjectWorkArea widget
