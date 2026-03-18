@@ -58,11 +58,11 @@ extension ProcessingBlockManager on ProjectManager {
     return projectService!.getProcessingBlock(processingBlockId);
   }
 
-  List<ProcessingBlockModel> getProcessingBlockFor(String parentId) {
+  List<ProcessingBlockModel> getProcessingBlockFor({required String parentId, bool includeUserBlocks = false}) {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    return projectService!.getProcessingBlockFor(parentId);
+    return projectService!.getProcessingBlockFor(parentId: parentId, includeUserBlocks: includeUserBlocks);
   }
 
   void reOrderProcessingBlocks(String parentId, int oldIndex, int newIndex) {

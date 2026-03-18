@@ -123,8 +123,8 @@ private:
     std::map<std::string, Module *> block_map; // Map of block names to Module pointers
 
     int_fast32_t cpu_affinity; // CPU affinity for the task
-    uint32_t period_ms;    // Period in milliseconds
-    uint32_t period_ns;    // Period in nanoseconds
+    int_fast32_t period_ms;    // Period in milliseconds
+    int_fast32_t period_ns;    // Period in nanoseconds
     std::atomic<bool> stop_flag;
 
     std::thread task_thread;       // Periodic task thread

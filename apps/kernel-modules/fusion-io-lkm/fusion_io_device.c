@@ -15,9 +15,233 @@
 #include "fusion-io-sysfs.h"
 
 static struct fusion_io_base_drvdata *bd_drvdata;
+static int endpoint_get_i2c_client(struct endpoint *ep);
+
+static int tca9535_store_gpio(struct endpoint *tca9535, u16 new_value, u16 mask)
+{
+    int ret;
+    u16 old_value;
+
+    ret = i2c_smbus_read_word_data(tca9535->i2c_client, TCA9535_REG_OUTPUT_PORT0);
+    if (ret < 0)
+        return ret;
+
+    old_value = (u16)ret;
+    old_value &= ~mask;
+
+    for (int i = 0; i < 16; ++i) {
+        if (new_value == 0 || (mask & 0x0001))
+            break;
+
+        mask >>= 1;
+        new_value <<= 1;
+    }
+
+    new_value |= old_value;
+
+    return i2c_smbus_write_word_data(tca9535->i2c_client,
+                                     TCA9535_REG_OUTPUT_PORT0,
+                                     new_value);
+}
+
+static int tcal6408_store_gpio(struct endpoint *tcal6408, u8 new_value, u8 mask)
+{
+    int ret;
+    u8 old_value;
+
+    ret = i2c_smbus_read_byte_data(tcal6408->i2c_client, TCAL6408_REG_OUTPUT_PORT);
+    if (ret < 0)
+        return ret;
+
+    old_value = (u8)ret;
+    old_value &= ~mask;
+
+    for (int i = 0; i < 8; ++i) {
+        if (new_value == 0 || (mask & 0x01))
+            break;
+
+        mask >>= 1;
+        new_value <<= 1;
+    }
+
+    new_value |= old_value;
+
+    return i2c_smbus_write_byte_data(tcal6408->i2c_client,
+                                     TCAL6408_REG_OUTPUT_PORT,
+                                     new_value);
+}
+
+static struct endpoint_gpio *find_gpio_by_name(const char *gpio_name)
+{
+    struct base_device *bd = bd_drvdata->fusion_device;
+    struct io_card *ic;
+    struct endpoint *ep;
+
+    if (!gpio_name || !gpio_name[0])
+        return NULL;
+
+    for (int i = 0; i < bd->num_gpios; ++i) {
+        if (!strcmp(bd->gpios[i].name, gpio_name))
+            return &bd->gpios[i];
+    }
+
+    for (int i = 0; i < bd->num_eps; ++i) {
+        ep = &bd->endpoints[i];
+        for (int j = 0; j < ep->num_gpios; ++j) {
+            if (!strcmp(ep->gpios[j].name, gpio_name))
+                return &ep->gpios[j];
+        }
+    }
+
+    for (int i = 0; i < bd->num_ics; ++i) {
+        ic = &bd->io_cards[i];
+
+        for (int j = 0; j < ic->num_gpios; ++j) {
+            if (!strcmp(ic->gpios[j].name, gpio_name))
+                return &ic->gpios[j];
+        }
+
+        for (int j = 0; j < ic->num_eps; ++j) {
+            ep = &ic->endpoints[j];
+
+            for (int k = 0; k < ep->num_gpios; ++k) {
+                if (!strcmp(ep->gpios[k].name, gpio_name))
+                    return &ep->gpios[k];
+            }
+        }
+    }
+
+    return NULL;
+}
+
+static int set_gpio_value(struct endpoint_gpio *ep_gpio, u16 new_value)
+{
+    struct endpoint_gpio *target_gpio;
+    struct endpoint *ep;
+    u16 mask;
+
+    if (!ep_gpio)
+        return -EINVAL;
+
+    if (ep_gpio->type == EP_GPIO_TYPE_PHYS) {
+        if (!ep_gpio->desc)
+            return -EINVAL;
+
+        gpiod_set_value(ep_gpio->desc, new_value ? 1 : 0);
+        return 0;
+    }
+
+    target_gpio = ep_gpio->linked_gpio ? ep_gpio->linked_gpio : ep_gpio;
+    ep = target_gpio->parent_endpoint;
+    if (!ep || target_gpio->num == 0)
+        return -EINVAL;
+
+    mask = (u16)BIT(target_gpio->num - 1);
+
+    if (!ep->i2c_client) {
+        int ret = endpoint_get_i2c_client(ep);
+        if (ret)
+            return ret;
+    }
+
+    switch (ep->type) {
+    case EP_TYPE_IOEXP_TCA9535:
+        return tca9535_store_gpio(ep, new_value ? 1 : 0, mask);
+    case EP_TYPE_IOEXP_TCAL6408:
+        return tcal6408_store_gpio(ep, new_value ? 1 : 0, (u8)mask);
+    default:
+        return -EINVAL;
+    }
+}
+
+static int handle_uv_mute_policy(struct endpoint_gpio *irq_gpio)
+{
+    struct base_device *bd = bd_drvdata->fusion_device;
+    int value;
+
+    if (!bd->uv_mute_sw.enabled || irq_gpio != bd->uv_mute_sw.uv_warn_gpio)
+        return -ENOENT;
+
+    if (!bd->uv_mute_sw.dac_mute_gpio)
+        return -EINVAL;
+
+    value = gpiod_get_value(irq_gpio->desc);
+    if (value < 0)
+        return value;
+
+    if (value == 0)
+        return set_gpio_value(bd->uv_mute_sw.dac_mute_gpio, 0);
+
+    return 0;
+}
+
+static int resolve_base_device_policies(void)
+{
+    struct base_device *bd = bd_drvdata->fusion_device;
+
+    if (!bd->uv_mute_sw.enabled)
+        return 0;
+
+    bd->uv_mute_sw.uv_warn_gpio = find_gpio_by_name(bd->uv_mute_sw.uv_warn_gpio_name);
+    bd->uv_mute_sw.dac_mute_gpio = find_gpio_by_name(bd->uv_mute_sw.dac_mute_gpio_name);
+
+    if (!bd->uv_mute_sw.uv_warn_gpio || !bd->uv_mute_sw.dac_mute_gpio) {
+        dev_err(&bd_drvdata->pdev->dev,
+                "Failed to resolve uv_mute_sw policy gpios uv_warn=%s dac_mute=%s\n",
+                bd->uv_mute_sw.uv_warn_gpio_name,
+                bd->uv_mute_sw.dac_mute_gpio_name);
+        return -EINVAL;
+    }
+
+    return 0;
+}
+
+static int endpoint_get_root_i2c_adapter(struct endpoint *ep,
+                                         struct i2c_adapter **i2c_adapter,
+                                         bool *put_adapter)
+{
+    if (!ep || !i2c_adapter || !put_adapter)
+        return -EINVAL;
+
+    *put_adapter = false;
+
+    if (!ep->use_i2c_bus_override || ep->i2c_bus == I2C_ADAPTER) {
+        *i2c_adapter = bd_drvdata->i2c_adapter;
+        return *i2c_adapter ? 0 : -EPROBE_DEFER;
+    }
+
+    if (bd_drvdata->mux_parent_adapter &&
+        bd_drvdata->mux_parent_adapter->nr == ep->i2c_bus) {
+        *i2c_adapter = bd_drvdata->mux_parent_adapter;
+        return 0;
+    }
+
+    *i2c_adapter = i2c_get_adapter(ep->i2c_bus);
+    if (!*i2c_adapter)
+        return -EPROBE_DEFER;
+
+    *put_adapter = true;
+    return 0;
+}
+
+static int endpoint_resolve_i2c_adapter(struct endpoint *ep,
+                                        struct i2c_adapter **i2c_adapter,
+                                        bool *put_adapter)
+{
+    if (bd_drvdata->muxc != NULL && ep->parent_io_card && ep->parent_io_card->sw_port != 0) {
+        if (ep->parent_io_card->sw_port > bd_drvdata->muxc->num_adapters)
+            return -EINVAL;
+
+        *i2c_adapter = bd_drvdata->muxc->adapter[ep->parent_io_card->sw_port - 1];
+        *put_adapter = false;
+        return 0;
+    }
+
+    return endpoint_get_root_i2c_adapter(ep, i2c_adapter, put_adapter);
+}
 
 // need x_select_chan for all i2c switches
-static int tca9544_select_chan(struct i2c_mux_core *muxc, u32 chan_id) 
+static int tca9544_select_chan(struct i2c_mux_core *muxc, u32 chan_id)
 {
     struct endpoint *ep = muxc->priv;
     int ret;
@@ -41,10 +265,11 @@ static int tca9544_select_chan(struct i2c_mux_core *muxc, u32 chan_id)
 }
 
 // for i2c switches, we create sub-adapters for each switch channel
-static int configure_i2c_mux_adapters(struct endpoint *ep) 
-{    
+static int configure_i2c_mux_adapters(struct endpoint *ep)
+{
     int (*select)(struct i2c_mux_core *, u32);
-    
+    struct i2c_adapter *i2c_adapter;
+    bool put_adapter;
     int num_adapters = 0;
     int ret;
 
@@ -58,11 +283,24 @@ static int configure_i2c_mux_adapters(struct endpoint *ep)
             return -EINVAL;
     }
 
-    bd_drvdata->muxc = i2c_mux_alloc(bd_drvdata->i2c_adapter, &bd_drvdata->pdev->dev,          
+    ret = endpoint_get_root_i2c_adapter(ep, &i2c_adapter, &put_adapter);
+    if (ret)
+        return ret;
+
+    bd_drvdata->muxc = i2c_mux_alloc(i2c_adapter, &bd_drvdata->pdev->dev,
                                      num_adapters, 0, I2C_MUX_LOCKED, select, NULL);
 
-    if (!bd_drvdata->muxc)
+    if (!bd_drvdata->muxc) {
+        if (put_adapter)
+            i2c_put_adapter(i2c_adapter);
         return -ENOMEM;
+    }
+
+    if (put_adapter) {
+        if (bd_drvdata->mux_parent_adapter)
+            i2c_put_adapter(bd_drvdata->mux_parent_adapter);
+        bd_drvdata->mux_parent_adapter = i2c_adapter;
+    }
 
     bd_drvdata->muxc->priv = ep;
 
@@ -83,20 +321,19 @@ static int endpoint_get_i2c_client(struct endpoint *ep)
     struct i2c_board_info i2c_info;
     struct i2c_client *client;
     struct i2c_adapter *i2c_adapter;
+    bool put_adapter;
     int ret, tries, delay_ms;
     int id = -ENXIO;
-    u8 probe_reg = 0x00; 
+    u8 probe_reg = 0x00;
 
     if (!ep->i2c_addr) {
         dev_err(&bd_drvdata->pdev->dev, "Endpoint %s missing i2c addr\n", ep->name);
         return -EINVAL;
     }
 
-    if (bd_drvdata->muxc != NULL && ep->parent_io_card && ep->parent_io_card->sw_port != 0) {
-        i2c_adapter = bd_drvdata->muxc->adapter[ep->parent_io_card->sw_port - 1];
-    } else {
-        i2c_adapter = bd_drvdata->i2c_adapter;
-    }
+    ret = endpoint_resolve_i2c_adapter(ep, &i2c_adapter, &put_adapter);
+    if (ret)
+        return ret;
 
     memset(&i2c_info, 0, sizeof(i2c_info));
     strscpy(i2c_info.type, ep->name, sizeof(i2c_info.type));
@@ -106,10 +343,15 @@ static int endpoint_get_i2c_client(struct endpoint *ep)
     client = i2c_new_client_device(i2c_adapter, &i2c_info);
     if (IS_ERR(client)) {
         ret = PTR_ERR(client);
+        if (put_adapter)
+            i2c_put_adapter(i2c_adapter);
         dev_err(&bd_drvdata->pdev->dev, "Failed new_client %s@0x%02x: %d\n",
                 ep->name, ep->i2c_addr, ret);
         return ret;
     }
+
+    if (put_adapter)
+        i2c_put_adapter(i2c_adapter);
 
     // add any EPs that don't have register addressing here...
     switch (ep->type) {
@@ -153,6 +395,18 @@ static int endpoint_get_i2c_client(struct endpoint *ep)
 
     i2c_unregister_device(client);
     return (id < 0) ? id : -EIO;
+}
+
+static void maybe_release_endpoint_i2c_client(struct endpoint *ep)
+{
+    if (!ep || !ep->i2c_client)
+        return;
+
+    if (!ep->use_i2c_bus_override)
+        return;
+
+    i2c_unregister_device(ep->i2c_client);
+    ep->i2c_client = NULL;
 }
 
 // custom configuration callbacks (only for those who need one)
@@ -343,6 +597,7 @@ static int run_config_sequence(struct config_sequence_cmd *cmds, u8 num_cmds)
 
 delay:
         msleep(cmd->seq_delay_ms);
+        maybe_release_endpoint_i2c_client(ep);
     }
 
     return 0;
@@ -659,14 +914,17 @@ static irqreturn_t gpio_irq_thread(int irq, void *data)
     struct endpoint_gpio *irq_gpio = data;
     int ret;
 
-    if (!irq_gpio->linked_gpio) {
-        return IRQ_NONE;
-    }
+    if (!irq_gpio->linked_gpio)
+        ret = handle_uv_mute_policy(irq_gpio);
+    else
+        ret = handle_irq(irq_gpio->linked_gpio);
 
-    ret = handle_irq(irq_gpio->linked_gpio);
+    if (ret == -ENOENT)
+        return IRQ_NONE;
+
     if (ret)
         printk(KERN_ERR "gpio_irq_thread: failed for gpio %s\n", irq_gpio->name);
-    
+
     return IRQ_HANDLED;
 }
 
@@ -700,13 +958,25 @@ static int configure_gpio_interrupt(struct endpoint_gpio *ep_gpio)
 static void clear_and_enable_interrupts(void) {
     struct base_device *bd = bd_drvdata->fusion_device;
     struct endpoint_gpio *gpio;
+    int ret;
 
     for (int i = 0; i < bd->num_gpios; ++i) {
         gpio = &bd->gpios[i];
-        if (gpio->is_irq && gpio->linked_gpio) {
+        if (!gpio->is_irq)
+            continue;
+
+        if (gpio->linked_gpio)
             handle_irq(gpio->linked_gpio);
-            enable_irq(gpio->irq_num);
+        else {
+            ret = handle_uv_mute_policy(gpio);
+            if (ret && ret != -ENOENT)
+                dev_err(&bd_drvdata->pdev->dev,
+                        "Failed to apply base gpio IRQ policy for %s: %d\n",
+                        gpio->name, ret);
         }
+
+        if (gpio->irq_num > 0)
+            enable_irq(gpio->irq_num);
     }
 }
 
@@ -1389,6 +1659,9 @@ static void fusion_io_remove(struct platform_device *pdev)
     if(bd_drvdata->muxc) {
         i2c_mux_del_adapters(bd_drvdata->muxc);
     }
+    if (bd_drvdata->mux_parent_adapter) {
+        i2c_put_adapter(bd_drvdata->mux_parent_adapter);
+    }
     if(bd_drvdata->i2c_adapter) {
         i2c_put_adapter(bd_drvdata->i2c_adapter);
     }
@@ -1610,6 +1883,10 @@ static int fusion_io_probe(struct platform_device *pdev)
         dev_err(&pdev->dev, "Error running post cfg sequence!\n");
         goto error;
     }
+
+    ret = resolve_base_device_policies();
+    if (ret)
+        goto error;
 
     clear_and_enable_interrupts();
 

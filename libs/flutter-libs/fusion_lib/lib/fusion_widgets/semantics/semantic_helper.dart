@@ -55,6 +55,7 @@ class SemanticHelper {
     String? label,
   }) {
     return Semantics(
+      container: true,
       identifier: testId,
       image: true,
       explicitChildNodes: explicitChildNodes,

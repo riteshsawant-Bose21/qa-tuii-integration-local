@@ -49,6 +49,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
   @override
   Widget build(BuildContext context) {
     final double borderRadius = 14;
+    final int maxCharLength = 25;
 
     return BlocProvider<CreateNewProjectViewmodel>(
       create: (_) => CreateNewProjectViewmodel(isEditMode: widget.isEditMode),
@@ -134,6 +135,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                               autofocus: true,
                                               label: "Project file name *",
                                               hintText: "Project Name",
+                                              maxLength: maxCharLength,
                                               validator: (String? value) {
                                                 if (value?.isEmpty ?? true) return "Project name cannot be empty";
                                                 return null;
@@ -152,6 +154,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                               controllerValue: state.metadata.fileVersion,
                                               label: "File version",
                                               hintText: "Version Number",
+                                              maxLength: maxCharLength,
                                               onChanged: (String value) {
                                                 createNewProjectViewmodel.updateMetaData(
                                                   state.metadata.copyWith(
@@ -186,6 +189,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                               controllerValue: state.metadata.authorName,
                                               label: "Author name",
                                               hintText: "Full Name",
+                                              maxLength: maxCharLength,
                                               onChanged: (String value) {
                                                 createNewProjectViewmodel.updateMetaData(
                                                   state.metadata.copyWith(
@@ -200,6 +204,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                               controllerValue: state.metadata.organisationName,
                                               label: "Organisation *",
                                               hintText: "Organisation name",
+                                              maxLength: maxCharLength,
                                               validator: (String? value) {
                                                 if (value?.isEmpty ?? true) return "Organisation cannot be empty";
                                                 return null;
@@ -258,7 +263,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                                       //  Organisation DETAILS SECTION
                                                       // ===============================
                                                       FusionAppText(
-                                                        text: "Organisation DETAILS",
+                                                        text: "ORGANISATION DETAILS",
                                                         maxLine: 2,
                                                         style: context.textTheme.bodySmall?.copyWith(
                                                           fontWeight: FontWeight.bold,
@@ -292,6 +297,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                                               controllerValue: state.metadata.state,
                                                               label: "Project state",
                                                               hintText: "State",
+                                                              maxLength: maxCharLength,
                                                               onChanged: (
                                                                 String value,
                                                               ) {
@@ -333,6 +339,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                                               controllerValue: state.metadata.primaryBuildingName,
                                                               label: "Primary Building Name",
                                                               hintText: "Primary Building Name",
+                                                              maxLength: maxCharLength,
                                                               onChanged: (
                                                                 String value,
                                                               ) {
@@ -390,6 +397,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                                               controllerValue: state.metadata.budget,
                                                               label: "Target Budget",
                                                               hintText: "Budget",
+                                                              maxLength: maxCharLength,
                                                               inputFormatters: <TextInputFormatter>[
                                                                 FilteringTextInputFormatter.allow(
                                                                   RegExp(

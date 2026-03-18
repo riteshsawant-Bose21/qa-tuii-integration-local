@@ -30,11 +30,9 @@ class SelectListeningArea extends StatelessWidget {
           value: speakerSelectionViewModel,
           child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
             builder: (BuildContext context, ProjectViewModelState state) {
-              final SpeakerSelectionViewModel speakerSelectionViewModel =
-                  context.watch<SpeakerSelectionViewModel>();
+              final SpeakerSelectionViewModel speakerSelectionViewModel = context.watch<SpeakerSelectionViewModel>();
 
-              final List<ListeningArea> listeningAreas =
-                  speakerSelectionViewModel.getListeningAreas();
+              final List<ListeningArea> listeningAreas = speakerSelectionViewModel.getListeningAreas();
 
               return SingleChildScrollView(
                 physics: const ClampingScrollPhysics(),
@@ -45,9 +43,7 @@ class SelectListeningArea extends StatelessWidget {
                       (ListeningArea area) {
                         return GestureDetector(
                           onTap: () {
-                            context
-                                .read<SpeakerSelectionViewModel>()
-                                .setListeningAreaForDropDown(area);
+                            context.read<SpeakerSelectionViewModel>().setListeningAreaForDropDown(area);
                             Navigator.of(context).pop();
                           },
                           child: MouseRegion(
@@ -62,10 +58,9 @@ class SelectListeningArea extends StatelessWidget {
                                     ),
                                     child: FusionAppText(
                                       text: area.name,
-                                      style: context.textTheme.bodySmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                      style: context.textTheme.bodySmall?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -78,9 +73,7 @@ class SelectListeningArea extends StatelessWidget {
                     const Divider(thickness: 0.5, height: 0),
                     _CreateNewListeningAreaWidget(
                       onListeningAreaCreated: (ListeningArea area) {
-                        context
-                            .read<SpeakerSelectionViewModel>()
-                            .setListeningAreaForDropDown(area);
+                        context.read<SpeakerSelectionViewModel>().setListeningAreaForDropDown(area);
                         Navigator.of(context).pop();
                       },
                     ),
@@ -95,8 +88,7 @@ class SelectListeningArea extends StatelessWidget {
         value: speakerSelectionViewModel,
         child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState state) {
-            final SpeakerSelectionViewModel speakerSelectionViewModel =
-                context.watch<SpeakerSelectionViewModel>();
+            final SpeakerSelectionViewModel speakerSelectionViewModel = context.watch<SpeakerSelectionViewModel>();
 
             return Container(
               padding: const EdgeInsets.all(12),
@@ -106,13 +98,9 @@ class SelectListeningArea extends StatelessWidget {
                   Expanded(
                     child: Builder(
                       builder: (BuildContext context) {
-                        if (speakerSelectionViewModel.selectedListeningArea !=
-                            null) {
+                        if (speakerSelectionViewModel.selectedListeningArea != null) {
                           return FusionAppText(
-                            text:
-                                speakerSelectionViewModel
-                                    .selectedListeningArea!
-                                    .name,
+                            text: speakerSelectionViewModel.selectedListeningArea!.name,
                             style: Theme.of(context).textTheme.bodySmall,
                           );
                         }
@@ -153,22 +141,18 @@ class _CreateNewListeningAreaWidget extends StatefulWidget {
   const _CreateNewListeningAreaWidget({required this.onListeningAreaCreated});
 
   @override
-  State<_CreateNewListeningAreaWidget> createState() =>
-      __CreateNewListeningAreaWidgetState();
+  State<_CreateNewListeningAreaWidget> createState() => __CreateNewListeningAreaWidgetState();
 }
 
-class __CreateNewListeningAreaWidgetState
-    extends State<_CreateNewListeningAreaWidget> {
-  final TextEditingController listeningAreaNameController =
-      TextEditingController();
+class __CreateNewListeningAreaWidgetState extends State<_CreateNewListeningAreaWidget> {
+  final TextEditingController listeningAreaNameController = TextEditingController();
   bool _isExpanded = false;
   FloorModel? _selectedFloor;
 
   final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
 
   void _addNewLocationToFloor() {
-    if (listeningAreaNameController.text.trim().isEmpty ||
-        _selectedFloor == null) {
+    if (listeningAreaNameController.text.trim().isEmpty || _selectedFloor == null) {
       FusionToast.error(
         context,
         message: "Please enter location name and select a floor",
@@ -181,17 +165,11 @@ class __CreateNewListeningAreaWidgetState
 
     final ListeningArea newListeningArea = ListeningArea(
       name: locationName,
-      vertices: <FusionCanvasPoint>[
-        FusionCanvasPoint(position: const Offset(0, 0)),
-        FusionCanvasPoint(position: const Offset(100, 0)),
-        FusionCanvasPoint(position: const Offset(100, 100)),
-        FusionCanvasPoint(position: const Offset(0, 100)),
-      ],
+      vertices: <FusionCanvasPoint>[],
     );
 
     final String? zoneId = context.read<SpeakerSelectionViewModel>().zoneId;
-    final String? subZoneId =
-        context.read<SpeakerSelectionViewModel>().subZoneId;
+    final String? subZoneId = context.read<SpeakerSelectionViewModel>().subZoneId;
     serviceLocator<ProjectViewModel>().addListeningArea(
       area: newListeningArea,
       floorId: floorId,
@@ -247,9 +225,7 @@ class __CreateNewListeningAreaWidgetState
                   ),
                 ),
                 Icon(
-                  _isExpanded
-                      ? Icons.keyboard_arrow_up
-                      : Icons.keyboard_arrow_down,
+                  _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                   size: 20,
                   color: Colors.grey[600],
                 ),
@@ -284,7 +260,7 @@ class __CreateNewListeningAreaWidgetState
                       width: 1,
                     ),
                   ),
-                  child: BuildingPageDronDown<FloorModel>(
+                  child: BuildingPageDropDown<FloorModel>(
                     value: _selectedFloor,
                     items: serviceLocator<ProjectViewModel>().getAllFloors(),
                     onSelect: (FloorModel selectedValue) {

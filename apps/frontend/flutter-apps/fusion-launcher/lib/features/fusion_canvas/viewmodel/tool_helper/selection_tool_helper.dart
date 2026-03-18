@@ -3,9 +3,11 @@ import 'dart:ui';
 import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/drag_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/select_tool_state.dart';
+import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canvas_painter.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../state/fusion_canvas_input_state.dart';
+import '../../view/painters/elements/mixin/fusion_canvas_interactable_mixin.dart';
 import '../fusion_canvas_tool_viewmodel.dart';
 
 class SelectionToolHelper {
@@ -43,7 +45,7 @@ class SelectionToolHelper {
   ) {
     final String? hoveredPainterId = context.hoverState.hoveredPainterId;
 
-    if (hoveredPainterId != null) {
+    if (hoveredPainterId != null && context.hoverState.supportsInteraction(FusionCanvasLayerInteraction.drag)) {
       // User tapped on an element - prepare for potential drag
       final List<FusionCanvasElement> elements =
           context.hoverState.hoveredElement != null ? <FusionCanvasElement>[context.hoverState.hoveredElement!] : <FusionCanvasElement>[];
@@ -69,8 +71,17 @@ class SelectionToolHelper {
 
     // If we have selected layers, drag the first one
     if (currentState.selectedLayerIds.isNotEmpty && inputState.button == FusionMouseButton.left) {
+      final FusionCanvasInteractionTarget? dragTarget = context.resolveInteractionTargetAt(
+        inputState.startPosition,
+        FusionCanvasLayerInteraction.drag,
+      );
+      final String? dragTargetLayerId = dragTarget?.painter.id;
+      if (dragTargetLayerId == null || !currentState.isLayerSelected(dragTargetLayerId)) {
+        return currentState;
+      }
+
       return LayerDraggingState(
-        layerId: currentState.selectedLayerIds.first,
+        layerId: dragTargetLayerId,
         delta: delta,
       );
     }
@@ -87,6 +98,9 @@ class SelectionToolHelper {
     final String? hoveredElementId = context.hoverState.hoveredElement?.id;
 
     if (hoveredPainterId != null) {
+      if (!context.hoverState.supportsInteraction(FusionCanvasLayerInteraction.select)) {
+        return currentState;
+      }
       // Clicked on a layer - select it
       return IdleSelectToolState(
         selectedLayerIds: <String>{hoveredPainterId},

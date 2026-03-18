@@ -1,13 +1,5 @@
 import 'package:flutter/material.dart';
 
-enum SpeakerSelectionMode {
-  select("Select"),
-  suggest("Suggest");
-
-  const SpeakerSelectionMode(this.displayName);
-  final String displayName;
-}
-
 enum SpeakerColor {
   black("Black", Colors.black),
   white("White", Colors.white);
@@ -38,29 +30,31 @@ enum SpeakerSortOption {
 }
 
 enum ListeningHeightOption {
-  sitting("Sitting"),
-  standing("Standing"),
+  sitting("Seated (1.1m)"),
+  standing("Standing (1.7m)"),
   custom("Custom");
 
   const ListeningHeightOption(this.displayName);
   final String displayName;
 
+  static double maxListeningHeight = 2.4; // in meters
+
   static double? getValue(ListeningHeightOption option) {
     switch (option) {
       case ListeningHeightOption.sitting:
-        return 3.0;
+        return 1.1;
       case ListeningHeightOption.standing:
-        return 6.0;
+        return 1.7;
       case ListeningHeightOption.custom:
-        return 1.0;
+        return null;
     }
   }
 
   static ListeningHeightOption getOptionByValue(double height) {
     switch (height) {
-      case 3.0:
+      case 1.1:
         return ListeningHeightOption.sitting;
-      case 6.0:
+      case 1.7:
         return ListeningHeightOption.standing;
       default:
         return ListeningHeightOption.custom;

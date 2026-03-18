@@ -1,4 +1,5 @@
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/canvas/fusion_canvas_point.dart';
 
 import '../fusion_tool_state.dart';
 
@@ -23,7 +24,6 @@ class ClosedPenToolState extends DrawingPenToolState {
 extension PenToolStateExtension on PenToolState {
   PenToolState addPoint(FusionCanvasPoint point) {
     if (this is ClosedPenToolState) {
-
       return DrawingPenToolState(points: <FusionCanvasPoint>[point]);
     }
     final List<FusionCanvasPoint> existingPoints = this is DrawingPenToolState ? (this as DrawingPenToolState).points : <FusionCanvasPoint>[];

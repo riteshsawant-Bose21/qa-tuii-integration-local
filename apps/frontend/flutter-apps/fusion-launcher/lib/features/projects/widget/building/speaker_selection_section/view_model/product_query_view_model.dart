@@ -59,9 +59,7 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
 
   late String localProductDirPath;
 
-  bool get hasCloudAccess {
-    return serviceLocator<SessionViewModel>().hasCloudAccess();
-  }
+  bool get hasCloudAccess => serviceLocator<SessionViewModel>().hasCloudAccess();
 
   Future<void> loadProducts({int attempt = 1, bool refresh = false}) async {
     try {
