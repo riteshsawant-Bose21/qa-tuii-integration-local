@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/models/algorithm/algorithm_metadata.dart';
 import 'package:fusion_launcher/core/service_locator.dart';

@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import '../surface_speakers_autolayout/surface_speakers_autolayout.dart';
+
 /// Room shape type for ceiling/pendant speaker placement
 enum RoomType {
   /// Rectangular room with standard width x length
@@ -299,16 +301,16 @@ class Room {
 }
 
 /// Coverage preference options as defined in document
-enum CoveragePreference {
-  edgeToEdge(1.0, "minimum/value-oriented arrangement"),
-  minimumOverlap(0.7, "optimal layout"),  
-  centerToCenter(0.5, "significant interference");
+// enum CoveragePreference {
+//   edgeToEdge(1.0, "minimum/value-oriented arrangement"),
+//   minimumOverlap(0.7, "optimal layout"),  
+//   centerToCenter(0.5, "significant interference");
   
-  const CoveragePreference(this.overlapMultiplier, this.description);
+//   const CoveragePreference(this.overlapMultiplier, this.description);
   
-  final double overlapMultiplier;
-  final String description;
-}
+//   final double overlapMultiplier;
+//   final String description;
+// }
 
 /// Layout pattern options
 enum LayoutPattern {

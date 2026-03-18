@@ -801,6 +801,7 @@ class BorderedTextfield extends StatefulWidget {
   final String? controllerValue;
   final String label, hintText;
   final int minLines, maxLines;
+  final int? maxLength;
   final bool isEnabled, isObscured;
   final FormFieldValidator<String>? validator;
   final String? sementicFieldId;
@@ -815,6 +816,7 @@ class BorderedTextfield extends StatefulWidget {
     required this.hintText,
     this.minLines = 1,
     this.maxLines = 1,
+    this.maxLength,
     this.isEnabled = true,
     this.isObscured = false,
     this.validator,
@@ -917,6 +919,7 @@ class _BorderedTextfieldState extends State<BorderedTextfield> {
             mouseCursor: widget.isEnabled ? null : SystemMouseCursors.forbidden,
             cursorColor: context.colorScheme.textPrimary,
             cursorWidth: 1,
+            maxLength: widget.maxLength,
             decoration: InputDecoration(
               hintText: widget.hintText,
               hintStyle: context.textTheme.labelLarge?.copyWith(
@@ -930,6 +933,7 @@ class _BorderedTextfieldState extends State<BorderedTextfield> {
               fillColor: Colors.transparent,
               contentPadding: const EdgeInsets.all(14),
               suffixIcon: widget.isObscured ? obsecuredWidget : null,
+              counterText: '',
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(borderRadius),
                 borderSide: BorderSide(color: context.colorScheme.errorText),
