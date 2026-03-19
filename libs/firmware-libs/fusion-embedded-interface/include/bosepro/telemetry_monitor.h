@@ -21,7 +21,6 @@
 
 namespace bosepro {
 
-
 class TelemetryMonitor {
 public:
     /// Constructor for singleton pattern--initialization in "initialize" method
@@ -617,6 +616,7 @@ private:
         }
 
         if (rsp.get_message_name() == "pub_register_rsp" && 
+            rsp.has_supported_telemetry_versions() &&
             rsp.get_parameters().get_value() == "OK" && 
             rsp.get_packet_id() == req.get_packet_id())
         {
@@ -677,6 +677,12 @@ private:
     /// @param req  The meters_update_req TelemetryMessage from the manager
     void update_meters(TelemetryMessage &req)
     {
+        if (!req.has_supported_telemetry_versions())
+        {
+            SPDLOG_ERROR("Rejecting update_meters_req with incompatible telemetry version");
+            return;
+        }
+
         std::string period_type = req.get_parameters().get_period_type();
 
         int region_index = period_type == "HI"  ? 0 :

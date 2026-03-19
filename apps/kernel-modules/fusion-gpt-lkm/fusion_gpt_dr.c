@@ -185,7 +185,7 @@ struct fusion_gpt
 
 	u32 last32;
 	u64 hi;
-	seqlock_t ticks_sl;
+	seqcount_t ticks_sl;
 
 	const struct fusion_gpt_client_ops *ops;
 	void *ops_ctx;
@@ -310,9 +310,9 @@ static u64 gpt_read_ticks64(struct fusion_gpt *g)
 {
 	unsigned seq; u32 lo; u64 hi;
 	do {
-		seq = read_seqbegin(&g->ticks_sl);
+		seq = read_seqcount_begin(&g->ticks_sl);
 		hi = g->hi; lo = g->last32;
-	} while (read_seqretry(&g->ticks_sl, seq));
+	} while (read_seqcount_retry(&g->ticks_sl, seq));
 	return (hi | lo);
 }
 
@@ -760,15 +760,14 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
   static DEFINE_RATELIMIT_STATE(_rs, HZ, 1);
 	if (!sr) return IRQ_NONE;
 
-
-		/* extend 64-bit ticks on any event */
-	write_seqlock(&g->ticks_sl);
+	/* extend 64-bit ticks on any event */
+	write_seqcount_begin(&g->ticks_sl);
 	{
 		u32 cnt = rdl(g, GPT_CNT);
 		if (cnt < g->last32) g->hi += 1ULL << 32;
 		g->last32 = cnt;
 	}
-	write_sequnlock(&g->ticks_sl);
+	write_seqcount_end(&g->ticks_sl);
 
 	/* If compare was programmed behind CNT, pull it forward so OF1 keeps firing */
 	if (!(sr & SR_OF1) && (s32)(g->next_ocr1 - g->last32) <= 0)
@@ -1337,7 +1336,7 @@ static int gpt_start(struct fusion_gpt *g)
 	g->frac = 0;
 	g->last32 = rdl(g, GPT_CNT);
 	g->hi = 0;
-	seqlock_init(&g->ticks_sl);
+	seqcount_init(&g->ticks_sl);
 
 	raw_spin_lock_init(&g->pps_lock);
 	gpt_reset_timing_state_locked(g);

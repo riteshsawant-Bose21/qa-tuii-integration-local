@@ -12,6 +12,42 @@
 
 namespace bosepro {
 
+struct SharedMemoryDataHeader {
+    static constexpr uint32_t MAGIC = 0x4253484d; // "BSHM"
+    static constexpr uint16_t PROTOCOL_VERSION = 1;
+    static constexpr uint16_t SCHEMA_VERSION = 1;
+
+    uint32_t magic;
+    uint16_t protocolVersion;
+    uint16_t schemaVersion;
+    std::size_t payloadBytes;
+    std::size_t payloadBlockCount;
+};
+
+struct SharedMemoryPayloadHeader {
+    static constexpr uint32_t MAGIC = 0x42504159; // "BPAY"
+    static constexpr uint16_t PROTOCOL_VERSION = 1;
+    static constexpr uint16_t SCHEMA_VERSION = 1;
+
+    uint32_t magic;
+    uint16_t protocolVersion;
+    uint16_t schemaVersion;
+    char type[WriteBlock::TYPE_SIZE];
+    std::size_t payloadBytes;
+};
+
+struct SharedMemoryBlobHeader {
+    static constexpr uint32_t MAGIC = 0x42424c42; // "BBLB"
+    static constexpr uint16_t PROTOCOL_VERSION = 1;
+    static constexpr uint16_t SCHEMA_VERSION = 1;
+
+    uint32_t magic;
+    uint16_t protocolVersion;
+    uint16_t schemaVersion;
+    char contentType[WriteBlock::TYPE_SIZE];
+    std::size_t payloadBytes;
+};
+
 /**
  * @class NamedSharedMemory
  * Provides an interface for creating, writing to, reading from, and managing
@@ -22,6 +58,9 @@ class NamedSharedMemory {
 
 public:
     static constexpr std::size_t META_DATA_SHM_LENGTH = Metadata::META_DATA_MAX_SIZE + sizeof(pthread_mutex_t);
+    static constexpr std::size_t DATA_HEADER_LENGTH = sizeof(SharedMemoryDataHeader);
+    static constexpr std::size_t PAYLOAD_HEADER_LENGTH = sizeof(SharedMemoryPayloadHeader);
+    static constexpr std::size_t BLOB_HEADER_LENGTH = sizeof(SharedMemoryBlobHeader);
 
 
     NamedSharedMemory(const char* name, std::size_t size, bool create = true);
@@ -112,6 +151,21 @@ public:
     void printWriteBlocksValues() const;
 
 private:
+    void initializeDataHeader();
+    SharedMemoryDataHeader readDataHeader() const;
+    void writePayloadBytesToDataHeader(std::size_t payloadBytes);
+    void writePayloadHeader(std::size_t storageOffset, std::size_t payloadBytes, const std::string& type);
+    SharedMemoryPayloadHeader readPayloadHeader(std::size_t storageOffset) const;
+    void initializeBlobHeader();
+    SharedMemoryBlobHeader readBlobHeader() const;
+    bool tryReadBlobHeader(SharedMemoryBlobHeader& header) const;
+    void writeBlobPayloadBytes(std::size_t payloadBytes);
+    std::size_t calculateStoredBytes(const SharedMemoryDataHeader& dataHeader) const;
+    std::size_t copyStructuredPayloadsToBuffer(void* buffer, std::size_t bufferSize,
+                                               const SharedMemoryDataHeader& dataHeader) const;
+    std::size_t copyBlobPayloadToBuffer(void* buffer, std::size_t bufferSize,
+                                        const SharedMemoryDataHeader& dataHeader) const;
+
     Metadata metaData;
     boost::interprocess::shared_memory_object shm_; // Boost shared memory object
     boost::interprocess::mapped_region region_;     // Boost mapped region for accessing memory
@@ -123,6 +177,7 @@ private:
                                    //
     std::atomic<bool> isReaderObject; // NamedSharedMemory can have personality of producer or consumer at a given time, not both
     bool ownsSharedResources_;
+    std::size_t physicalBytesWritten_;
 };
 
 }
