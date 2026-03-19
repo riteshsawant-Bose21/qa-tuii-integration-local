@@ -16,7 +16,7 @@ const (
 	NotifyOpAudioSync    NotifyOp = "audio_sync"
 	NotifyOpConfigUpdate NotifyOp = "config_update"
 	NotifyOpDeviceUpdate NotifyOp = "device_update"
-//NotifyOpGetDeviceInformation    NotifyOp = "get_device_information"
+	//NotifyOpGetDeviceInformation    NotifyOp = "get_device_information"
 	NotifyOpNoop         NotifyOp = "no_op"
 	NotifyOpSnapActivate NotifyOp = "snapshot_activate"
 	NotifyOpSnapCreate   NotifyOp = "snapshot_create"
@@ -117,7 +117,7 @@ func (msg *NotifyMessage) IsPublic() bool {
 		msg.Operation == NotifyOpSnapActivate ||
 		msg.Operation == NotifyOpAck ||
 		msg.Operation == NotifyOpVIPStatus ||
-		msg.Operation == NotifyOpDeviceInformationUpdate
+		msg.Operation == NotifyOpDeviceUpdate
 }
 
 func WithAudioRemove(update *AudioRemoveUpdate) func(*NotifyMessage) {
@@ -156,8 +156,8 @@ func WithTask(task *Task) func(*NotifyMessage) {
 // 	}
 // }
 
-// func WithDeviceInfo(info *DeviceInfo) func(*NotifyMessage) {
-// 	return func(m *NotifyMessage) {
-// 		m.DeviceInfo = info
-// 	}
-// }
+func WithDeviceInfo(info *DeviceInfo) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.DeviceInfo = info
+	}
+}

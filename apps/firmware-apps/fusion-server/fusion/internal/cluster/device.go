@@ -159,15 +159,19 @@ func (c *Cluster) broadcastDeviceUpdate(deviceData *api.DeviceInfo) {
 		return
 	}
 
-	notifyMsg := api.NewNotifyMessage(api.NotifyOpDeviceUpdate, c.delegate.appConfig.NodeName, func(m *api.NotifyMessage) {
-		m.DeviceInfo = deviceData
-	})
+	notifyMsg := api.NewNotifyMessage(
+		api.NotifyOpDeviceUpdate,
+		c.delegate.appConfig.NodeName,
+		api.WithDeviceInfo(deviceData))
 
 	if err := c.delegate.hub.BroadcastToNodes(notifyMsg); err != nil {
 		logging.GetLogger().Error("Failed to broadcast device update for device %s: %v", deviceData.Id, err)
 	} else {
 		logging.GetLogger().Info("[DeviceUpdate] Broadcasted device update for device %s via gossip", deviceData.Id)
 	}
+
+	c.delegate.hub.BroadcastToObservers(notifyMsg)
+
 }
 
 func (c *Cluster) applyPatch(patch *api.DevicePatch, storedInfo *api.DevicePatch) {
@@ -241,14 +245,4 @@ func (c *Cluster) refreshDeviceDefaultsIfRequired() {
 	if err := c.delegate.persistence.SetDeviceInfo(stored); err != nil {
 		logging.GetLogger().Error("Unable to save device defaults: %v", err)
 	}
-}
-
-func (c *Cluster) sendDeviceInfoUpdateNotification(update *api.DeviceInfo) {
-
-	msg := api.NewNotifyMessage(
-		api.NotifyOpDeviceInformationUpdate,
-		c.Memberlist.LocalNode().Name,
-		api.WithDeviceInfo(update),
-	)
-	c.delegate.hub.BroadcastToObservers(msg)
 }

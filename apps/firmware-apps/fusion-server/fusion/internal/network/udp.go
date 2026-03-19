@@ -177,7 +177,7 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 		return nil
 	}
 
-	if msg.Operation == api.NotifyOpDeviceInformationUpdate {
+	if msg.Operation == api.NotifyOpDeviceUpdate {
 		if msg.ID == "" {
 			msg.ID = ulid.Make().String()
 		}
