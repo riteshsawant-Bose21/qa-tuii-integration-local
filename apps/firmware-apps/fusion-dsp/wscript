@@ -114,6 +114,7 @@ def configure(conf):
     conf.env.append_value('LIBPATH', [conf.path.abspath() + '/../../../libs/firmware-libs/fusion-embedded-interface/build'])
 
 def build(bld):
+    bld(export_includes=['../../../libs/firmware-libs/fusion-embedded-interface/include', './external/doctest', './include'], name='common-include')
     bld(export_includes=['../fusion-server/tools', './external/doctest', './include'], name='common-include')
 
     excludes = []
