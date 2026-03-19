@@ -22,7 +22,10 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 		Status string         `json:"status"`
 		Data   map[string]any `json:"data"`
 	}
-
+	type getDeviceInfoResponse struct {
+		Status     string           `json:"status"`
+		DeviceInfo []api.DeviceInfo `json:"deviceInfo"`
+	}
 	var msg struct {
 		Action  api.NotifyOp    `json:"action"`
 		Payload json.RawMessage `json:"payload,omitempty"`
@@ -65,22 +68,18 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 			Message: "Update applied successfully",
 		}, nil
 
-	// 			return map[string]any{
-	// 		"status":            "success",
-	// 		"message":           "Update applied successfully",
-	// 		api.FusionOperation: api.NotifyOpValueSet,
-	// 	}, nil
-	// case api.NotifyOpGetDeviceInformation:
-	// 	info, err := h.HandleGetDeviceInfo()
-	// 	if err != nil {
-	// 		logger.Error("HandleUDPMessage GetDeviceInfo error: %v", err)
-	// 		return nil, fmt.Errorf("failed to get device info: %w", err)
-	// 	}
+	case api.NotifyOpGetDeviceInformation:
+		info, err := h.getDevicesList()
+		if err != nil {
+			logger.Error("HandleUDPMessage GetDeviceInfo error: %v", err)
+			return nil, fmt.Errorf("failed to get device info: %w", err)
+		}
 
-	// 	return map[string]any{
-	// 		"status":            "success",
-	// 		"deviceInfo":        info,
-	// 		api.FusionOperation: api.NotifyOpGetDeviceInformation,
+		return getDeviceInfoResponse{
+			Status:     "success",
+			DeviceInfo: info,
+		}, nil
+
 	default:
 		logger.Warn("HandleUDPMessage unknown action: %s", msg.Action)
 		return nil, fmt.Errorf("unknown action: %s", msg.Action)
