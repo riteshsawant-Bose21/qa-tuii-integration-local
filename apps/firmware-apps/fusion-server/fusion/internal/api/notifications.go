@@ -42,7 +42,6 @@ type NotifyMessage struct {
 	DeviceInfo        *DeviceInfo
 	SnapshotOperation *SnapshotOperation
 	Task              *Task
-	VersionUpdate     *VersionUpdate
 }
 
 func NewNotifyMessage(op NotifyOp, node string, builder func(*NotifyMessage)) *NotifyMessage {
@@ -145,11 +144,5 @@ func WithSnapshotOperation(operation *SnapshotOperation) func(*NotifyMessage) {
 func WithTask(task *Task) func(*NotifyMessage) {
 	return func(m *NotifyMessage) {
 		m.Task = task
-	}
-}
-
-func WithVersionUpdate(update *VersionUpdate) func(*NotifyMessage) {
-	return func(m *NotifyMessage) {
-		m.VersionUpdate = update
 	}
 }

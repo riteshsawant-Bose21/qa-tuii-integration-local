@@ -9,6 +9,7 @@ import (
 	"fusion/internal/pubsub"
 	"fusion/internal/utils"
 	"fusion/internal/version"
+	"net/http"
 	"reflect"
 	"sync"
 
@@ -20,15 +21,16 @@ type Handler struct {
 	appConfig        *api.AppConfig
 	clusterTransport transport.ClusterInterface
 
-	persistence    *persistence.Persistence
-	StateManager   *persistence.StateManager
-	hub            *pubsub.Hub
-	endpoints      []string
+	persistence  *persistence.Persistence
+	StateManager *persistence.StateManager
+	hub          *pubsub.Hub
+	endpoints    []string
 
 	sessions     map[string]*SAPSession
 	sessionsLock sync.RWMutex
 
 	controllerManager controllers.ControllerManagerInterface
+	httpClient        *http.Client
 }
 
 type serverInfoResponse struct {
@@ -57,6 +59,7 @@ func NewHandler(
 		hub:               hub,
 		controllerManager: controllerManager,
 		sessions:          make(map[string]*SAPSession),
+		httpClient:        &http.Client{Timeout: api.HTTPTimeout},
 	}
 }
 
