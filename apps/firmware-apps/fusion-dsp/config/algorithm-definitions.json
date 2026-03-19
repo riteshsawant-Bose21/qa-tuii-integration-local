@@ -1,5 +1,5 @@
 {
-    "version": "0.1.14",
+    "version": "0.1.15",
     "algorithms": [
         {
             "name": "alsa_in",
@@ -16,6 +16,11 @@
                     "default_value": 0,
                     "minimum_value": 0,
                     "maximum_value": 96000
+                },
+                {
+                    "name": "use_asrc",
+                    "value_type": "bool",
+                    "default_value": true
                 },
                 {
                     "name": "period_size",
@@ -71,6 +76,11 @@
                     "value_type": "string",
                     "default_value": "",
                     "maximum_length": 256
+                },
+                {
+                    "name": "use_asrc",
+                    "value_type": "bool",
+                    "default_value": true
                 },
                 {
                     "name": "period_size",
