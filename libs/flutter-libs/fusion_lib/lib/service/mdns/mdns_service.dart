@@ -19,23 +19,28 @@ class MdnsService {
     // 2. Query for PTR records (The pointers to the services)
     final query = ResourceRecordQuery.serverPointer(serviceType);
 
-    await for (final PtrResourceRecord ptr in _client!.lookup<PtrResourceRecord>(query)) {
+    await for (final PtrResourceRecord ptr
+        in _client!.lookup<PtrResourceRecord>(query)) {
       // 3. For every PTR found, lookup the SRV (Port/Target) and IP
       // Note: We scan specifically for the name found in the PTR record
       final srvQuery = ResourceRecordQuery.service(ptr.domainName);
-      final ipQuery = ResourceRecordQuery.addressIPv4(ptr.domainName); // or IPv6
+      final ipQuery = ResourceRecordQuery.addressIPv4(
+        ptr.domainName,
+      ); // or IPv6
 
       // We need to bundle these lookups together
       SrvResourceRecord? srvRecord;
       IPAddressResourceRecord? ipRecord;
 
       // Fetch SRV
-      await for (final SrvResourceRecord srv in _client!.lookup<SrvResourceRecord>(srvQuery)) {
+      await for (final SrvResourceRecord srv
+          in _client!.lookup<SrvResourceRecord>(srvQuery)) {
         srvRecord = srv;
       }
 
       // Fetch IP
-      await for (final IPAddressResourceRecord ip in _client!.lookup<IPAddressResourceRecord>(ipQuery)) {
+      await for (final IPAddressResourceRecord ip
+          in _client!.lookup<IPAddressResourceRecord>(ipQuery)) {
         ipRecord = ip;
       }
 

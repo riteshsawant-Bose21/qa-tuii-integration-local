@@ -44,6 +44,35 @@ void handle_update(const std::string &update_setting)
     SPDLOG_INFO("server update: {}", update_setting);
 }
 
+static void handle_amp_control_update(const std::string &path,
+                                      const Json::Value &old_val,
+                                      const Json::Value &new_val)
+{
+    (void)path;
+
+    if (old_val == new_val) {
+        return;
+    }
+
+    if (!new_val.isObject() || !new_val.isMember("endpoint") || !new_val.isMember("payload") ||
+        !new_val["endpoint"].isString() || !new_val["payload"].isString()) {
+        Json::StreamWriterBuilder writer;
+        writer["indentation"] = "";
+        SPDLOG_WARN("Ignoring amp_control update at {} with unexpected payload {}",
+                    path, Json::writeString(writer, new_val));
+        return;
+    }
+
+    Json::Value message_json;
+    message_json["target"] = "amp_control";
+    message_json["name"] = new_val["endpoint"].asString();
+    message_json["value"] = new_val["payload"].asString();
+
+    Json::StreamWriterBuilder writer;
+    writer["indentation"] = "";
+    handle_update(Json::writeString(writer, message_json));
+}
+
 
 static void handle_device_id(const std::string &new_device_id)
 {
@@ -261,6 +290,12 @@ int main(int argc, char *argv[])
         client->watch("audio_streams", handle_streams);
         client->watchPattern("settings.fw.*.*[*]", handle_parameter);
         client->watchPattern("settings.fw.*.*", handle_parameter);
+
+        client->watch("settings.firmware.amp_control",
+                  [](const std::string &path, const Json::Value &old_val,
+                     const Json::Value &new_val) {
+                      handle_amp_control_update(path, old_val, new_val);
+                  });
     }
 
     // if we boot up on empty config, no need to start up telemetry

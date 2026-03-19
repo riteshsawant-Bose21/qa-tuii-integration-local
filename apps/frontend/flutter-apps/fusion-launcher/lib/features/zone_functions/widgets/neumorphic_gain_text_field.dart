@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show TextInputFormatter, FilteringTextInputFormatter;
+import 'package:flutter/services.dart'
+    show TextInputFormatter, FilteringTextInputFormatter;
 import 'package:fusion_lib/fusion_lib.dart';
 
 class NeumorphicGainTextField extends StatefulWidget {
@@ -14,9 +15,11 @@ class NeumorphicGainTextField extends StatefulWidget {
   final bool enabled;
   final bool showCursor;
   final Color? backgroundColor;
+  final String semanticId;
 
   const NeumorphicGainTextField({
     super.key,
+    required this.semanticId,
     required this.maxGain,
     required this.minGain,
     this.onSubmitted,
@@ -31,7 +34,8 @@ class NeumorphicGainTextField extends StatefulWidget {
   });
 
   @override
-  State<NeumorphicGainTextField> createState() => _NeumorphicGainTextFieldState();
+  State<NeumorphicGainTextField> createState() =>
+      _NeumorphicGainTextFieldState();
 }
 
 class _NeumorphicGainTextFieldState extends State<NeumorphicGainTextField> {
@@ -43,7 +47,8 @@ class _NeumorphicGainTextFieldState extends State<NeumorphicGainTextField> {
   @override
   void initState() {
     super.initState();
-    if (widget.controllerValue != null) controller.text = widget.controllerValue!.toString();
+    if (widget.controllerValue != null)
+      controller.text = widget.controllerValue!.toString();
     _focusNode = FocusNode();
     _focusNode.addListener(() {
       setState(() {
@@ -81,7 +86,11 @@ class _NeumorphicGainTextFieldState extends State<NeumorphicGainTextField> {
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.formControl(
-      testId: SemanticHelper.createTestId(SemanticTypes.formControl, "neumorphic_gain_text_field"),
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.formControl,
+        "neumorphic_gain_text_field",
+      ),
+      label: controller.text,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(widget.borderRadius),
         child: FusionContainer(
@@ -98,8 +107,13 @@ class _NeumorphicGainTextFieldState extends State<NeumorphicGainTextField> {
             textAlign: TextAlign.center,
             focusNode: _focusNode,
             style: Theme.of(context).textTheme.labelLarge,
-            mouseCursor: widget.enabled ? SystemMouseCursors.text : SystemMouseCursors.forbidden,
-            inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}$'))],
+            mouseCursor:
+                widget.enabled
+                    ? SystemMouseCursors.text
+                    : SystemMouseCursors.forbidden,
+            inputFormatters: <TextInputFormatter>[
+              FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}$')),
+            ],
             decoration: InputDecoration(
               border: InputBorder.none,
               hintText: "0",
@@ -110,20 +124,32 @@ class _NeumorphicGainTextFieldState extends State<NeumorphicGainTextField> {
               enabledBorder: InputBorder.none,
               errorBorder: InputBorder.none,
               disabledBorder: InputBorder.none,
-              hintStyle: Theme.of(context).textTheme.labelLarge?.copyWith(color: context.colorScheme.greyLight),
-              contentPadding: const EdgeInsets.all(0).copyWith(right: hasValue && widget.showDbSuffix ? 6 : 0),
+              hintStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: context.colorScheme.greyLight,
+              ),
+              contentPadding: const EdgeInsets.all(
+                0,
+              ).copyWith(right: hasValue && widget.showDbSuffix ? 6 : 0),
             ),
             onSubmitted: (String value) {
               final double? gain = double.tryParse(value);
 
               if (gain != null) {
                 if (gain > widget.maxGain) {
-                  if (widget.controllerValue != null) controller.text = widget.controllerValue.toString();
+                  if (widget.controllerValue != null)
+                    controller.text = widget.controllerValue.toString();
 
-                  return FusionToast.error(context, message: "Gain cannot be greater than ${widget.maxGain}db");
+                  return FusionToast.error(
+                    context,
+                    message: "Gain cannot be greater than ${widget.maxGain}db",
+                  );
                 } else if (gain < widget.minGain) {
-                  if (widget.controllerValue != null) controller.text = widget.controllerValue.toString();
-                  return FusionToast.error(context, message: "Gain cannot be less than ${widget.minGain}db");
+                  if (widget.controllerValue != null)
+                    controller.text = widget.controllerValue.toString();
+                  return FusionToast.error(
+                    context,
+                    message: "Gain cannot be less than ${widget.minGain}db",
+                  );
                 } else {
                   widget.onSubmitted?.call(gain);
                 }
@@ -173,7 +199,8 @@ class _UnitNumberTextFieldState extends State<UnitNumberTextField> {
   @override
   void initState() {
     super.initState();
-    if (widget.controllerValue != null) controller.text = widget.controllerValue!.toString();
+    if (widget.controllerValue != null)
+      controller.text = widget.controllerValue!.toString();
     _focusNode = FocusNode();
     _focusNode.addListener(() {
       setState(() {
@@ -211,7 +238,10 @@ class _UnitNumberTextFieldState extends State<UnitNumberTextField> {
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.formControl(
-      testId: SemanticHelper.createTestId(SemanticTypes.formControl, "unit_text_field"),
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.formControl,
+        "unit_text_field",
+      ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(widget.borderRadius),
         child: FusionContainer(
@@ -223,12 +253,17 @@ class _UnitNumberTextFieldState extends State<UnitNumberTextField> {
           borderRadius: widget.borderRadius,
           child: TextField(
             enabled: widget.enabled,
-            mouseCursor: widget.enabled ? SystemMouseCursors.text : SystemMouseCursors.forbidden,
+            mouseCursor:
+                widget.enabled
+                    ? SystemMouseCursors.text
+                    : SystemMouseCursors.forbidden,
             controller: controller,
             textAlign: TextAlign.center,
             focusNode: _focusNode,
             style: Theme.of(context).textTheme.labelLarge,
-            inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}$'))],
+            inputFormatters: <TextInputFormatter>[
+              FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}$')),
+            ],
             decoration: InputDecoration(
               border: InputBorder.none,
               hintText: "0",
@@ -239,20 +274,34 @@ class _UnitNumberTextFieldState extends State<UnitNumberTextField> {
               enabledBorder: InputBorder.none,
               errorBorder: InputBorder.none,
               disabledBorder: InputBorder.none,
-              hintStyle: Theme.of(context).textTheme.labelLarge?.copyWith(color: context.colorScheme.greyLight),
-              contentPadding: const EdgeInsets.all(0).copyWith(right: hasValue ? 6 : 0),
+              hintStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: context.colorScheme.greyLight,
+              ),
+              contentPadding: const EdgeInsets.all(
+                0,
+              ).copyWith(right: hasValue ? 6 : 0),
             ),
             onSubmitted: (String value) {
               final double? gain = double.tryParse(value);
 
               if (gain != null) {
                 if (widget.max != null && gain > widget.max!) {
-                  if (widget.controllerValue != null) controller.text = widget.controllerValue.toString();
+                  if (widget.controllerValue != null)
+                    controller.text = widget.controllerValue.toString();
 
-                  return FusionToast.error(context, message: "Value cannot be greater than ${widget.max}${widget.unit}");
+                  return FusionToast.error(
+                    context,
+                    message:
+                        "Value cannot be greater than ${widget.max}${widget.unit}",
+                  );
                 } else if (widget.min != null && gain < widget.min!) {
-                  if (widget.controllerValue != null) controller.text = widget.controllerValue.toString();
-                  return FusionToast.error(context, message: "Value cannot be less than ${widget.min}${widget.unit}");
+                  if (widget.controllerValue != null)
+                    controller.text = widget.controllerValue.toString();
+                  return FusionToast.error(
+                    context,
+                    message:
+                        "Value cannot be less than ${widget.min}${widget.unit}",
+                  );
                 } else {
                   widget.onSubmitted?.call(gain);
                 }

@@ -11,23 +11,23 @@ import (
 type NotifyOp string
 
 const (
-	NotifyOpAck                     NotifyOp = "ack"
-	NotifyOpAudioRemove             NotifyOp = "audio_remove"
-	NotifyOpAudioSync               NotifyOp = "audio_sync"
-	NotifyOpConfigUpdate            NotifyOp = "config_update"
-	NotifyOpNoop                    NotifyOp = "no_op"
-	NotifyOpSnapActivate            NotifyOp = "snapshot_activate"
-	NotifyOpSnapCreate              NotifyOp = "snapshot_create"
-	NotifyOpSnapDelete              NotifyOp = "snapshot_delete"
-	NotifyOpSnapSave                NotifyOp = "snapshot_save"
-	NotifyOpTaskCreate              NotifyOp = "task_create"
-	NotifyOpTaskDelete              NotifyOp = "task_delete"
-	NotifyOpTaskUpdate              NotifyOp = "task_update"
-	NotifyOpVIPStatus               NotifyOp = "vip_status"
-	NotifyOpValueGet                NotifyOp = "get"
-	NotifyOpValueSet                NotifyOp = "set"
-	NotifyOpDeviceInformationUpdate NotifyOp = "device_information_update"
-	NotifyOpGetDeviceInformation    NotifyOp = "get_device_information"
+	NotifyOpAck          NotifyOp = "ack"
+	NotifyOpAudioRemove  NotifyOp = "audio_remove"
+	NotifyOpAudioSync    NotifyOp = "audio_sync"
+	NotifyOpConfigUpdate NotifyOp = "config_update"
+	NotifyOpDeviceUpdate NotifyOp = "device_update"
+//NotifyOpGetDeviceInformation    NotifyOp = "get_device_information"
+	NotifyOpNoop         NotifyOp = "no_op"
+	NotifyOpSnapActivate NotifyOp = "snapshot_activate"
+	NotifyOpSnapCreate   NotifyOp = "snapshot_create"
+	NotifyOpSnapDelete   NotifyOp = "snapshot_delete"
+	NotifyOpSnapSave     NotifyOp = "snapshot_save"
+	NotifyOpTaskCreate   NotifyOp = "task_create"
+	NotifyOpTaskDelete   NotifyOp = "task_delete"
+	NotifyOpTaskUpdate   NotifyOp = "task_update"
+	NotifyOpVIPStatus    NotifyOp = "vip_status"
+	NotifyOpValueGet     NotifyOp = "get"
+	NotifyOpValueSet     NotifyOp = "set"
 )
 
 // NotifyMessage holds information about a cross-node message
@@ -40,10 +40,10 @@ type NotifyMessage struct {
 	AudioSync         *AudioSyncUpdate
 	ConfigUpdate      *ConfigUpdate
 	ConfigValue       *ConfigValue
+	DeviceInfo        *DeviceInfo
 	SnapshotOperation *SnapshotOperation
 	Task              *Task
-	VersionUpdate     *VersionUpdate
-	DeviceInfo        *DeviceInfo
+	// VersionUpdate     *VersionUpdate
 }
 
 func NewNotifyMessage(op NotifyOp, node string, builder func(*NotifyMessage)) *NotifyMessage {
@@ -150,14 +150,14 @@ func WithTask(task *Task) func(*NotifyMessage) {
 	}
 }
 
-func WithVersionUpdate(update *VersionUpdate) func(*NotifyMessage) {
-	return func(m *NotifyMessage) {
-		m.VersionUpdate = update
-	}
-}
+// func WithVersionUpdate(update *VersionUpdate) func(*NotifyMessage) {
+// 	return func(m *NotifyMessage) {
+// 		m.VersionUpdate = update
+// 	}
+// }
 
-func WithDeviceInfo(info *DeviceInfo) func(*NotifyMessage) {
-	return func(m *NotifyMessage) {
-		m.DeviceInfo = info
-	}
-}
+// func WithDeviceInfo(info *DeviceInfo) func(*NotifyMessage) {
+// 	return func(m *NotifyMessage) {
+// 		m.DeviceInfo = info
+// 	}
+// }

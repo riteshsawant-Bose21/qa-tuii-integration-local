@@ -9,7 +9,6 @@
 #include <linux/of_irq.h>
 #include <linux/io.h>
 #include <linux/interrupt.h>
-#include <linux/irq_work.h>
 #include <linux/spinlock.h>
 #include <linux/math64.h>
 #include <linux/seqlock.h>
@@ -60,11 +59,9 @@ struct fusion_gpt
 	u32 next_ocr1;
 	u8  frac;
 
-	struct irq_work tick_iw;
-
 	u32 last32;
 	u64 hi;
-	seqlock_t ticks_sl;
+	seqcount_t ticks_sl;
 
 	const struct fusion_gpt_client_ops *ops;
 	void *ops_ctx;
@@ -108,15 +105,14 @@ static u64 gpt_read_ticks64(struct fusion_gpt *g)
 {
 	unsigned seq; u32 lo; u64 hi;
 	do {
-		seq = read_seqbegin(&g->ticks_sl);
+		seq = read_seqcount_begin(&g->ticks_sl);
 		hi = g->hi; lo = g->last32;
-	} while (read_seqretry(&g->ticks_sl, seq));
+	} while (read_seqcount_retry(&g->ticks_sl, seq));
 	return (hi | lo);
 }
 
-static void gpt_tick_iw(struct irq_work *iw)
+static inline void gpt_tick_direct(struct fusion_gpt *g)
 {
-	struct fusion_gpt *g = container_of(iw, struct fusion_gpt, tick_iw);
 	const struct fusion_gpt_client_ops *ops = READ_ONCE(g->ops);
 	if (ops && ops->tick)
 		ops->tick(g->ops_ctx, gpt_read_ticks64(g));
@@ -183,9 +179,6 @@ void fusion_gpt_unregister_client(void)
 	/* Make readers see NULL first */
 	WRITE_ONCE(g->ops, NULL);
 	smp_mb(); /* publish NULL before we flush */
-
-	/* Ensure any queued work that might have captured a non-NULL ops is done */
-	irq_work_sync(&g->tick_iw);
 
 	if (g->ops_owner)
 		module_put(g->ops_owner);
@@ -327,13 +320,13 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 	if (!sr) return IRQ_NONE;
 
 	/* extend 64-bit ticks on any event */
-	write_seqlock(&g->ticks_sl);
+	write_seqcount_begin(&g->ticks_sl);
 	{
 		u32 cnt = rdl(g, GPT_CNT);
 		if (cnt < g->last32) g->hi += 1ULL << 32;
 		g->last32 = cnt;
 	}
-	write_sequnlock(&g->ticks_sl);
+	write_seqcount_end(&g->ticks_sl);
 
 	/* If compare was programmed behind CNT, pull it forward so OF1 keeps firing */
 	if (!(sr & SR_OF1) && (s32)(g->next_ocr1 - g->last32) <= 0)
@@ -455,8 +448,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 			if (clr) wrl(g, clr, GPT_SR);
 
 			/* Still notify the client for this tick */
-			if (READ_ONCE(g->ops))
-				irq_work_queue(&g->tick_iw);
+			gpt_tick_direct(g);
 
 			return IRQ_HANDLED;                         /* skip normal schedule this time */
 		}
@@ -464,8 +456,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 		/* Normal path once aligned (or if no epoch yet) */
 		gpt_program_next_compare(g);
 		clr |= SR_OF1;
-		if (READ_ONCE(g->ops))
-			irq_work_queue(&g->tick_iw);
+		gpt_tick_direct(g);
 	}
 
 	if (clr) wrl(g, clr, GPT_SR);
@@ -488,7 +479,7 @@ static int gpt_start(struct fusion_gpt *g)
 	g->frac = 0;
 	g->last32 = rdl(g, GPT_CNT);
 	g->hi = 0;
-	seqlock_init(&g->ticks_sl);
+	seqcount_init(&g->ticks_sl);
 
 	raw_spin_lock_init(&g->pps_lock);
 	g->pps_seq = 0;
@@ -553,7 +544,7 @@ static int gpt_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, g);
-	init_irq_work(&g->tick_iw, gpt_tick_iw);
+	
 	mutex_init(&g->ops_lock);
 
 	ret = devm_request_irq(&pdev->dev, g->irq, gpt_irq, IRQF_NO_THREAD,

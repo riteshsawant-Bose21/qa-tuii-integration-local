@@ -388,9 +388,7 @@ func (s *UDPServer) retryPending() {
 		pb.lastSent = now
 
 		addrs := make(map[string]*net.UDPAddr, len(pb.awaiting))
-		for k, v := range pb.awaiting {
-			addrs[k] = v
-		}
+		maps.Copy(addrs, pb.awaiting)
 		retries = append(retries, retryItem{id: id, payload: pb.payload, addrs: addrs})
 	}
 	s.pendingMu.Unlock()
