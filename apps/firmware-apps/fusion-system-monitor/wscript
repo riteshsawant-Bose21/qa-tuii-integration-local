@@ -99,8 +99,7 @@ def configure(conf):
     conf.check_cfg(package='dbus-1', uselib_store='DBUS', args='--cflags --libs', mandatory=True)
 
 def build(bld):
-    bld(export_includes=['../../../libs/firmware-libs/fusion-embedded-interface/include', './external/doctest', './include'], name='common-include')
-    bld(export_includes=['../fusion-server/tools', './external/doctest', './include'], name='common-include')
+    bld(export_includes=['../fusion-server/tools', '../../../libs/firmware-libs/fusion-embedded-interface/include', './external/doctest', './include'], name='common-include')
 
     excludes = []
     if bld.env['IS_MACOS']:
