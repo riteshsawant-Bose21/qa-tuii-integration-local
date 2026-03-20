@@ -6,7 +6,6 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/of_address.h>
-#include <linux/of_platform.h>
 #include <linux/of_irq.h>
 #include <linux/io.h>
 #include <linux/interrupt.h>
@@ -1320,41 +1319,6 @@ static int si5351b_write_gain(struct fusion_gpt *g, u32 gain)
 
     return ret;
 }
-
-static int gpt_wait_for_fusion_io(struct platform_device *pdev)
-{
-	struct device_node *supplier_np;
-	struct platform_device *supplier_pdev;
-	int ret = 0;
-
-	supplier_np = of_parse_phandle(pdev->dev.of_node, "bosepro,fusion-io", 0);
-	if (!supplier_np) {
-		dev_info(&pdev->dev, "no bosepro,fusion-io phandle, skipping fusion-io probe wait\n");
-		return 0;
-	}
-
-	dev_info(&pdev->dev, "found bosepro,fusion-io phandle, waiting for fusion-io probe\n");
-
-	supplier_pdev = of_find_device_by_node(supplier_np);
-	of_node_put(supplier_np);
-	if (!supplier_pdev)
-		return dev_err_probe(&pdev->dev, -EPROBE_DEFER,
-				     "fusion-io device not registered yet\n");
-
-	if (!device_is_bound(&supplier_pdev->dev)) {
-		ret = dev_err_probe(&pdev->dev, -EPROBE_DEFER,
-				    "waiting for fusion-io probe to complete\n");
-		goto out_put_supplier;
-	}
-
-	if (!device_link_add(&pdev->dev, &supplier_pdev->dev,
-			     DL_FLAG_AUTOREMOVE_CONSUMER))
-		dev_warn(&pdev->dev, "failed to create fusion-io device link\n");
-
-out_put_supplier:
-	put_device(&supplier_pdev->dev);
-	return ret;
-}
 static int gpt_start(struct fusion_gpt *g)
 {
 	u32 cr;
@@ -1399,10 +1363,6 @@ static int gpt_probe(struct platform_device *pdev)
 	g = devm_kzalloc(&pdev->dev, sizeof(*g), GFP_KERNEL);
 	if (!g)
 		return -ENOMEM;
-
-	ret = gpt_wait_for_fusion_io(pdev);
-	if (ret)
-		return ret;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	g->base = devm_ioremap_resource(&pdev->dev, res);
