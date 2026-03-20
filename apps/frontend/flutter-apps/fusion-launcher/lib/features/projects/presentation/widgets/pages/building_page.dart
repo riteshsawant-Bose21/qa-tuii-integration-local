@@ -83,6 +83,7 @@ class BuildingPage extends StatelessWidget {
                   leftPanel: Padding(
                     padding: EdgeInsets.only(top: appBarHeight, bottom: 20),
                     child: FusionFlatContainer(
+                      semanticsId: 'building_left_side_panel',
                       padding: const EdgeInsets.all(0),
                       child: SizedBox(
                         height: context.screenHeight - appBarHeight - 20,
