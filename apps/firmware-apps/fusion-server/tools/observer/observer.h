@@ -926,7 +926,7 @@ private:
   void requestInitialDeviceInfo(const sockaddr_in &serverAddr)
   {
     Json::Value message;
-    message["action"] = "get_device_information";
+    message["action"] = "get_local_device_information";
     Json::StreamWriterBuilder writerBuilder;
     std::string jsonStr = Json::writeString(writerBuilder, message);
     ssize_t sent = sendto(udpSocket_.get(), jsonStr.c_str(), jsonStr.length(),
@@ -1024,13 +1024,27 @@ private:
     {
       if (!update.isMember("_fusion_epoch"))
       {
-        SPDLOG_WARN("Ignoring update without epoch");
+        SPDLOG_WARN("Ignoring update without epoch. Keys present: [{}]. Full JSON: {}",
+                    [&]{
+                      std::string keys;
+                      for (const auto &k : update.getMemberNames())
+                        keys += k + ", ";
+                      return keys;
+                    }(),
+                    update.toStyledString());
         return;
       }
 
       if (!update.isMember("_fusion_version"))
       {
-        SPDLOG_WARN("Ignoring update without version");
+        SPDLOG_WARN("Ignoring update without version. Keys present: [{}]. Full JSON: {}",
+                    [&]{
+                      std::string keys;
+                      for (const auto &k : update.getMemberNames())
+                        keys += k + ", ";
+                      return keys;
+                    }(),
+                    update.toStyledString());
         return;
       }
 
@@ -1148,19 +1162,22 @@ private:
             // This is to get the device information
             // Called only at the start or failure to get initial state
             // Once we have the device information, we can request the initial state
-            if (op == "get_device_information")
+            if (op == "get_local_device_information")
             {
-              if (response.isMember("deviceInfo"))
+              if (response.isMember("payload"))
               {
-                handleDeviceUpdate(response["deviceInfo"]);
+                handleDeviceUpdate(response["payload"]);
                 requestInitialState(serverAddr_);
                 continue;
               }
             }
             else if (op == "get") // request originated from us.
             {
-              receivedInitialState_ = true;
-              handleUpdateMessage(response["data"], false);
+              if (response.isMember("payload"))
+              {
+                receivedInitialState_ = true;
+                handleUpdateMessage(response["payload"], false);
+              }
               continue;
             }
             else if (op == "config_update") // request originated from server
@@ -1168,7 +1185,7 @@ private:
               handleUpdateMessage(response, true);
               continue;
             }
-            else if (op == "device_information_update") // request originated from server
+            else if (op == "device_update") // request originated from server
             {
               handleDeviceUpdate(response);
               continue;
@@ -1180,7 +1197,8 @@ private:
           }
           else
           {
-            SPDLOG_INFO("Processing update message");
+            SPDLOG_INFO("Processing update message (no _fusion_op). Raw JSON: {}",
+                        response.toStyledString());
             handleUpdateMessage(response);
           }
         }
