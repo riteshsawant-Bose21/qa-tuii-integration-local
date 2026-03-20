@@ -30,7 +30,9 @@ import 'package:fusion_app/features/landing/presentation/pages/settings/profile_
 import 'package:fusion_app/features/profile/presentation/preferences_screen.dart';
 import 'package:fusion_app/features/project/presentation/project_screen.dart';
 import 'package:fusion_app/features/scanner/qr_scanner.dart';
+import 'package:fusion_app/features/snapshots/presentation/snapshot_group_screen.dart';
 import 'package:fusion_app/features/wall_controllers/presentation/wall_controllers_screen.dart';
+import 'package:fusion_app/features/zones/presentation/zone_volume_control.dart';
 import 'package:fusion_app/features/zones/presentation/zones_screen.dart';
 
 import '../../features/project/presentation/building/project_work_area_screen.dart';
@@ -49,6 +51,8 @@ class Routes {
   static const String notificationPage = '/mobileNotificationPage';
   static const String eventPage = '/eventPage';
   static const String controlPalPage = '/controlPalPage';
+  static const String snapshotGroupPage = '/snapshotGroupPage';
+  static const String zoneVolumeControlPage = '/zoneVolumeControlPage';
   static const String wallControllerPage = '/wallControllerPage';
   static const String messagePlayerViewPage = '/messagePlayerViewPage';
   static const String messagePlayerPlayingPage = '/messagePlayerPlayingPage';
@@ -136,6 +140,30 @@ class Routes {
           builder: (BuildContext context) =>  ControlPalScreen(),
           settings: const RouteSettings(name: controlPalPage),
         );
+
+    /// Snapshot Group Page
+      case snapshotGroupPage:
+        return CupertinoPageRoute<void>(
+          builder: (BuildContext context) =>  SnapshotGroupScreen(),
+          settings: const RouteSettings(name: snapshotGroupPage),
+        );
+
+
+      /// Zone Volume Controller Page
+      case zoneVolumeControlPage:
+        Map<String,dynamic> data = routeSettings.arguments as Map<String,dynamic>;
+        return CupertinoPageRoute<void>(
+          builder: (BuildContext context) =>  ZoneVolumeControl(
+            sourceId: data['sourceId'],
+            zoneIndex: data['zoneIndex'],
+            zones: data['zones'],
+            onNext: data['onNext'],
+            onPrevious: data['onPrevious'],
+            onVolumeChanged: data['onVolumeChanged'],),
+          settings: const RouteSettings(name: zoneVolumeControlPage),
+        );
+
+
 
 
     /// Updates Page

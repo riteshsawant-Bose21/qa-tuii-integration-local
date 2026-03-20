@@ -4,6 +4,7 @@ import 'package:fusion_app/features/message_player/presentation/message_player_a
 import 'package:fusion_app/features/shared/presentation/widgets/common/app_bar/app_bar.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/app_bar/bottom_app_bar.dart';
 import 'package:fusion_app/features/snapshots/presentation/snapshots_screen.dart';
+import 'package:fusion_app/features/zones/presentation/controller_zone.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import '../models/control_pal_model.dart' show BottomNavItemModel;
 
@@ -79,7 +80,7 @@ class _ControlPalScreenState<T> extends State<ControlPalScreen> {
   Widget _buildTabContent() {
     switch (_selectedTab.value) {
       case ControlPalTab.zones:
-        return  Container();
+        return  ControllerZones();
       case ControlPalTab.snapshots:
         return   SnapshotsScreen();
       case ControlPalTab.events:

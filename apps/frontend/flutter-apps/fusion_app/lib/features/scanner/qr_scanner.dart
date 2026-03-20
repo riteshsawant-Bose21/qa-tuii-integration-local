@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:fusion_app/core/router/routes.dart';
+import 'package:fusion_app/core/utils/qr_data_parser.dart';
 import 'package:fusion_app/features/scanner/widgets/scan_instruction.dart';
 import 'package:fusion_app/features/scanner/widgets/scanner_painter.dart';
 import 'package:fusion_app/features/scanner/widgets/wifi_banner.dart';
@@ -28,6 +29,8 @@ class _QrScannerScreenState extends State<QrScannerScreen>  with WidgetsBindingO
   );
   bool showErrorState = true;
   StreamSubscription<Object?>? _subscription;
+  bool _isScanned = false;
+  bool _isTorchOn = false;
 
   @override
   void initState() {
@@ -94,6 +97,18 @@ class _QrScannerScreenState extends State<QrScannerScreen>  with WidgetsBindingO
     );
   }
 
+  void _handleScan(String qrData) {
+    if (_isScanned) return;
+
+    setState(() {
+      _isScanned = true;
+    });
+
+    // Stop camera
+    controller.stop();
+    final details = QRConnectionParser.parse(qrData);
+  }
+
   Widget scannerView(){
     return Stack(
       children: [
@@ -101,10 +116,15 @@ class _QrScannerScreenState extends State<QrScannerScreen>  with WidgetsBindingO
         /// Camera
         MobileScanner(
           controller: controller,
-          onDetect: (BarcodeCapture barcode) {
-            final String? code = barcode.barcodes.first.rawValue;
-            if (code != null) {
-              debugPrint(code);
+          onDetect: (capture) {
+            if (_isScanned) return;
+
+            final List<Barcode> barcodes = capture.barcodes;
+            for (final barcode in barcodes) {
+              if (barcode.rawValue != null) {
+                _handleScan(barcode.rawValue!);
+                break;
+              }
             }
           },
         ),

@@ -113,12 +113,12 @@ class DeviceCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(device.title,
-                  style:context.textTheme.b3SemiBold!.copyWith(
+                  style:context.textTheme.b3SemiBold.copyWith(
                     fontWeight: FontWeight.w600,
                     color: context.colorScheme.textPrimary,
                   ),),
               Text(device.subtitle,
-                  style:Theme.of(context).textTheme.l1Regular!.copyWith(
+                  style:Theme.of(context).textTheme.l1Regular.copyWith(
                     fontWeight: FontWeight.w400,
                     color: context.colorScheme.textSecondary,
                   )),
@@ -132,7 +132,7 @@ class DeviceCard extends StatelessWidget {
                 ),
                 child:  Text(
                   "EQUIPMENT LOCATION",
-                  style: Theme.of(context).textTheme.l2SemiBold!.copyWith(
+                  style: Theme.of(context).textTheme.l2SemiBold.copyWith(
                     fontWeight: FontWeight.w600,
                     fontSize: 10,
                     color: context.colorScheme.textBody,
@@ -205,7 +205,12 @@ class DeviceCard extends StatelessWidget {
                   borderRadius: 8,
                   child: Container(
                       margin: EdgeInsets.all(4),
-                      child: Icon(Icons.sync, color: context.colorScheme.iconWhite))),
+                      child: Icon(
+                          Icons.sync,
+                          color: context.colorScheme.iconWhite
+                      )
+                  )
+              ),
             ),
             SizedBox(width: 8),
 
@@ -297,7 +302,7 @@ class DeviceCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title,
-              style:Theme.of(context).textTheme.l2SemiBold!.copyWith(
+              style:Theme.of(context).textTheme.l2SemiBold.copyWith(
                 fontWeight: FontWeight.w600,
                 color: context.colorScheme.textBody,
               )),
@@ -307,7 +312,7 @@ class DeviceCard extends StatelessWidget {
                       Icon(icon,color:color,),
                       SizedBox(width: 8),
                       Text(value,
-                      style: Theme.of(context).textTheme.b3Medium!.copyWith(
+                      style: Theme.of(context).textTheme.b3Medium.copyWith(
                         fontWeight: FontWeight.w500,
                         color: context.colorScheme.textPrimary,
                       ),),

@@ -19,15 +19,15 @@ class SnapshotSelectionCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: isSelected
               ? context.colorScheme.elevation2
               : Colors.transparent,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: context.colorScheme.elevation2,
+            color: context.colorScheme.strokeLight,
           ),
         ),
         child: Row(
@@ -40,17 +40,17 @@ class SnapshotSelectionCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: Theme.of(context).textTheme.titleSmall!.copyWith(
-                      fontWeight: FontWeight.w600,
+                    style: Theme.of(context).textTheme.b3Medium!.copyWith(
+                      fontWeight: FontWeight.w500,
                       color: context.colorScheme.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     label,
-                    style: Theme.of(context).textTheme.titleSmall!.copyWith(
+                    style: Theme.of(context).textTheme.l1Regular!.copyWith(
                       fontWeight: FontWeight.w400,
-                      color: context.colorScheme.textSecondary,
+                      color: context.colorScheme.textBody,
                     ),
                   ),
                 ],
@@ -58,31 +58,23 @@ class SnapshotSelectionCard extends StatelessWidget {
             ),
 
             /// Radio / Check
-            isSelected
-                ? Container(
-              width: 32,
-              height: 32,
+           Container(
+              width: 20,
+              height: 20,
               decoration: BoxDecoration(
-                color: context.colorScheme.zone1Fill,
+                color: isSelected ?  context.colorScheme.primary : Colors.transparent,
                 shape: BoxShape.circle,
+                border: isSelected ? null : Border.all(
+                  color: context.colorScheme.iconDefault,
+                  width: 1.5,
+                ),
               ),
               child: Icon(
                 Icons.check,
                 color: context.colorScheme.primaryBlack,
-                size: 18,
+                size: 12,
               ),
             )
-                : Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: context.colorScheme.textSecondary,
-                  width: 2,
-                ),
-              ),
-            ),
           ],
         ),
       ),

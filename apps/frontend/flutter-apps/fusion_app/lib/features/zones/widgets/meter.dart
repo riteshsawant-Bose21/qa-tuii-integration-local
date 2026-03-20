@@ -98,8 +98,6 @@ class _AudioMeterContainerState extends State<AudioMeterContainer> {
   }
 }
 
-// --- The Custom Audio Meter Widget (Unchanged logic, slimmer visual) ---
-
 class AudioMeterWidget extends StatefulWidget {
   final double currentValue;
   final double minDb;

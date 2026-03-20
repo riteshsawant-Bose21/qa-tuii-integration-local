@@ -41,7 +41,7 @@ class ZonePanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ZoneHeader(title: title, color: headerColor,onTap: (){
-            onTap!(1);
+            onTap(1);
           },expanded: expanded,),
 
           SizedBox(height: 12,),
@@ -56,7 +56,7 @@ class ZonePanel extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: GestureDetector(
                 onTap: (){
-                  onTap!(2);
+                  onTap(2);
                 },
                 child: Text(
                   showCircuits ? 'Hide Circuits' : 'View Circuits',
