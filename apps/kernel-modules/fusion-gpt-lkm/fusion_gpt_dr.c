@@ -218,7 +218,9 @@ struct fusion_gpt
   struct work_struct dac_work;
   struct i2c_client *dac_client;
   u16 current_dac_value;
-  long latest_freq_error;    /* The most recent frequency delta */
+	  long latest_freq_error;    /* The most recent frequency delta */
+	  s64 cumulative_error_ticks_total;
+	  s64 cumulative_error_ticks_locked;
 
   /* PI loop */
   long error_integrator;
@@ -283,6 +285,8 @@ static void gpt_reset_timing_state_locked(struct fusion_gpt *g)
 	g->pending_future_anchor = false;
 	g->pending_future_phc_ns = 0;
 	g->latest_freq_error = 0;
+	g->cumulative_error_ticks_total = 0;
+	g->cumulative_error_ticks_locked = 0;
 	g->error_integrator = 0;
 	g->sq_err_sum = 0;
 	g->err_count = 0;
@@ -811,10 +815,11 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
       raw_spin_lock(&g->pps_lock);
       had_prev = g->pps_valid;
 
-      if (g->pps_valid) {
-          u64 diff = cap64 - g->pps_icr1_last64;
-          long freq_error = (long)diff - 10000000L;
-          long phase_error = 0;
+	      if (g->pps_valid) {
+	          u64 diff = cap64 - g->pps_icr1_last64;
+	          long freq_error = (long)diff - 10000000L;
+	          long phase_error = 0;
+	          bool was_ready = READ_ONCE(g->discipline_ready);
           
           /* Accumulate squared error for RMS jitter */
           g->sq_err_sum += (s64)freq_error * (s64)freq_error;
@@ -1016,21 +1021,27 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
                long rem = ticks_from_start % 10000000l;
                if (rem > 5000000) phase_error = rem - 10000000l;
                else phase_error = rem;
-          }
-          g->latest_freq_error = freq_error;
-          gpt_update_discipline_ready(g, freq_error);
+	          }
+	          g->latest_freq_error = freq_error;
+	          g->cumulative_error_ticks_total += freq_error;
+	          gpt_update_discipline_ready(g, freq_error);
+	          if (was_ready || READ_ONCE(g->discipline_ready))
+	              g->cumulative_error_ticks_locked += freq_error;
 
-          u32 rms_jitter = 0;
-          if (g->err_count > 0) {
-              rms_jitter = int_sqrt(g->sq_err_sum / g->err_count);
+	          u32 rms_jitter = 0;
+	          if (g->err_count > 0) {
+	              rms_jitter = int_sqrt(g->sq_err_sum / g->err_count);
           }
 
-          if (__ratelimit(&_rs)) {
-              pr_alert("fusion_gpt: [PPS] diff=%llu ticks, err=%ld ticks, rms=%u ticks | [48K] off=%ldns | DAC=%d\n",
-                       diff, freq_error, rms_jitter, if2_offset_ns, g->dac_target);
-              
-              g->sq_err_sum = 0;
-              g->err_count = 0;
+	          if (__ratelimit(&_rs)) {
+	              pr_alert("fusion_gpt: [PPS] diff=%llu ticks, err=%ld ticks, rms=%u ticks, cum=%lld ticks, cum_lock=%lld ticks | [48K] off=%ldns | DAC=%d\n",
+	                       diff, freq_error, rms_jitter,
+	                       (long long)g->cumulative_error_ticks_total,
+	                       (long long)g->cumulative_error_ticks_locked,
+	                       if2_offset_ns, g->dac_target);
+	              
+	              g->sq_err_sum = 0;
+	              g->err_count = 0;
           }
       }
 		prev_cap64 = g->pps_icr1_last64;
@@ -1357,7 +1368,7 @@ static int gpt_probe(struct platform_device *pdev)
 		I2C_BOARD_INFO("mcp4725", DEFAULT_DAC_I2C_ADDR),
 	};
 	struct i2c_board_info si_info = {
-		I2C_BOARD_INFO("si5351b", DEFAULT_SI5351B_I2C_ADDR),
+		I2C_BOARD_INFO("fusion-si5351b", DEFAULT_SI5351B_I2C_ADDR),
 	};
 
 	g = devm_kzalloc(&pdev->dev, sizeof(*g), GFP_KERNEL);
@@ -1515,4 +1526,4 @@ module_platform_driver(drv);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Bose Pro");
 MODULE_DESCRIPTION("GPT1 SHIM EXPORTING 1/3MS TICKS");
-MODULE_VERSION("1.0.1-surface-calc");
+MODULE_VERSION("1.0.1-cumulative-error");
