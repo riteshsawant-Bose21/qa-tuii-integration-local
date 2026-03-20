@@ -183,7 +183,9 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                     labelBuilder: (String option) => option,
                                     options: ListeningHeightOption.values.map((ListeningHeightOption e) => e.displayName).toList(),
                                     onOptionSelected: (int selectedIndex, String newValue) {
-                                      final ListeningHeightOption? selectedOption = ListeningHeightOption.values.firstWhereOrNull((ListeningHeightOption e) => e.displayName == newValue);
+                                      final ListeningHeightOption? selectedOption = ListeningHeightOption.values.firstWhereOrNull(
+                                        (ListeningHeightOption e) => e.displayName == newValue,
+                                      );
                                       if (selectedOption != null) {
                                         speakerSelectionViewModel.setListenerHeight(selectedOption);
                                       }
@@ -629,6 +631,16 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
             },
             matchChildWidth: false,
             items: options,
+            itemBuilder: (BuildContext context, T option) {
+              if (valueBuilder != null) {
+                return valueBuilder!(option);
+              } else {
+                return FusionAppText(
+                  text: labelBuilder(option),
+                  style: context.textTheme.bodySmall,
+                );
+              }
+            },
             child: FusionContainer(
               borderRadius: 8,
               raised: true,
@@ -640,14 +652,14 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
                     Expanded(
                       child: Builder(
                         builder: (BuildContext context) {
-                          if (valueBuilder != null) {
+                          if (valueBuilder != null && value != null) {
                             return valueBuilder!(value as T);
                           } else {
                             return FusionAppText(
                               text: value != null ? labelBuilder(value as T) : "Select",
                               maxLine: 1,
                               style: context.textTheme.bodySmall?.copyWith(
-                                color: value != null ? context.colorScheme.onSurface : context.colorScheme.onSurface.withOpacity(0.6),
+                                color: value != null ? context.colorScheme.textPrimary : context.colorScheme.elevation4,
                               ),
                             );
                           }

@@ -79,7 +79,7 @@ extension DroInputMapperService on ProjectService {
           id: source.id,
           name: source.name,
           serverLocation: locationName,
-          ioType: source.connectionType != SourceConnectionType.aes67input ? "analog" : "aes67",
+          ioType: source.connectionType.connectionType,
           ioProperties: IoProperties(
             channels: 1,
           ),

@@ -120,10 +120,7 @@ class AddSourcePopup extends StatelessWidget {
                             // ),
                             // const SizedBox(height: 28),
                             SemanticHelper.container(
-                              testId: SemanticHelper.createTestId(
-                                SemanticTypes.container,
-                                "add_source_section_type",
-                              ),
+                              testId: SemanticHelper.createTestId(SemanticTypes.container, "add_source_section_type"),
                               child: BuildRowPropertyWidget<SourceSectionType>(
                                 label: "Type",
                                 value: state.selectedSourceSectionType,
@@ -167,20 +164,10 @@ class AddSourcePopup extends StatelessWidget {
                                               value: selectedItem,
                                               hintText: "Select source",
                                               items: state.selectedSourceSectionType.items,
-                                              onSelect: (SourceData newValue) {
-                                                addSourceViewModel.updateSource(
-                                                  index,
-                                                  newValue,
-                                                );
-                                              },
-                                              labelBuilder: (
-                                                SourceData option,
-                                              ) {
+                                              onSelect: (SourceData newValue) => addSourceViewModel.updateSource(index, newValue),
+                                              labelBuilder: (SourceData option) {
                                                 return SemanticHelper.container(
-                                                  testId: SemanticHelper.createTestId(
-                                                    SemanticTypes.container,
-                                                    "add_source_section_item_label_$index",
-                                                  ),
+                                                  testId: SemanticHelper.createTestId(SemanticTypes.container, "add_source_section_item_label_$index"),
                                                   child: Padding(
                                                     padding: const EdgeInsets.symmetric(
                                                       horizontal: 8,
@@ -263,50 +250,29 @@ class AddSourcePopup extends StatelessWidget {
                                     options: listeningAreas,
                                     labelBuilder: (ListeningArea option) => option.name,
                                     valueBuilder: (ListeningArea option) {
-                                      final String? floorName =
-                                          serviceLocator<ProjectViewModel>()
-                                              .getFloorForListeningArea(
-                                                areaId: option.id,
-                                              )
-                                              ?.name;
+                                      final String? floorName = serviceLocator<ProjectViewModel>().getFloorForListeningArea(areaId: option.id)?.name;
 
                                       String? zoneName;
-                                      zoneName =
-                                          serviceLocator<ProjectViewModel>()
-                                              .getSubZoneForListeningArea(
-                                                areaId: option.id,
-                                              )
-                                              ?.name;
-                                      zoneName ??=
-                                          serviceLocator<ProjectViewModel>()
-                                              .getZonesForListeningArea(
-                                                areaId: option.id,
-                                              )
-                                              ?.name;
+                                      zoneName = serviceLocator<ProjectViewModel>().getSubZoneForListeningArea(areaId: option.id)?.name;
+                                      zoneName ??= serviceLocator<ProjectViewModel>().getZonesForListeningArea(areaId: option.id)?.name;
 
                                       return SemanticHelper.container(
-                                        testId: SemanticHelper.createTestId(
-                                          SemanticTypes.container,
-                                          "add_source_section_listening_area_dropdown_value",
-                                        ),
+                                        testId: SemanticHelper.createTestId(SemanticTypes.container, "add_source_section_listening_area_dropdown_value"),
                                         child: Row(
                                           children: <Widget>[
                                             Expanded(
                                               child: FusionAppText(
                                                 text: "$floorName / ${option.name}",
-                                                style:
-                                                    Theme.of(
-                                                      context,
-                                                    ).textTheme.labelMedium,
+                                                maxLine: 1,
+                                                style: Theme.of(context).textTheme.labelMedium,
                                               ),
                                             ),
                                             const SizedBox(width: 5),
                                             // floor name/zone name/subszone name
                                             FusionAppText(
                                               text: zoneName ?? 'No zone',
-                                              style: Theme.of(
-                                                context,
-                                              ).textTheme.labelSmall?.copyWith(
+                                              maxLine: 1,
+                                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                                 color: Theme.of(context).colorScheme.onSurface.withAlpha(100),
                                               ),
                                             ),
@@ -314,13 +280,8 @@ class AddSourcePopup extends StatelessWidget {
                                         ),
                                       );
                                     },
-                                    onOptionSelected: (
-                                      int value,
-                                      ListeningArea option,
-                                    ) {
-                                      addSourceViewModel.setSelectedListeningArea(
-                                        option,
-                                      );
+                                    onOptionSelected: (int value, ListeningArea option) {
+                                      addSourceViewModel.setSelectedListeningArea(option);
                                     },
                                   ),
                                 ),
