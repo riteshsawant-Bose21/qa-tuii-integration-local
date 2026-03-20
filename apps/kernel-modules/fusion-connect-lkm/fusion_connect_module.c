@@ -9,7 +9,7 @@ static char *eth_iface = FUSION_CN_DEFAULT_IFACE;
 module_param_named(iface, eth_iface, charp, 0444);
 MODULE_PARM_DESC(iface, "Network interface name used by Fusion Connect");
 
-static bool debug;
+static bool debug = false;
 module_param_named(debug, debug, bool, 0444);
 MODULE_PARM_DESC(debug, "Enable Fusion Connect debug logging");
 
