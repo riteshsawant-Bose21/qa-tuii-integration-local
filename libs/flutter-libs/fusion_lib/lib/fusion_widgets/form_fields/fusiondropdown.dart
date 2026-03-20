@@ -16,8 +16,8 @@ class FusionNeumorphicDropdown<T> extends StatefulWidget {
     this.height = 40,
     this.popupWidth,
     this.matchChildWidth = true,
-
     this.borderRadius,
+    this.child,
   });
 
   final String? displayValue;
@@ -34,6 +34,7 @@ class FusionNeumorphicDropdown<T> extends StatefulWidget {
 
   final Widget Function(BuildContext, T)? itemBuilder;
   final Widget Function(BuildContext, T, bool isSelected)? itemBuilderWithSelection;
+  final Widget? child;
 
   @override
   State<FusionNeumorphicDropdown<T>> createState() => _FusionNeumorphicDropdownState<T>();
@@ -75,17 +76,12 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
   }
 
   String _getDisplayText(bool isEmpty) {
-    /// Priority 1: external override (like selected file name)
     if (widget.displayValue != null && widget.displayValue!.isNotEmpty) {
       return widget.displayValue!;
     }
-
-    /// Priority 2: normal dropdown value
     if (!isEmpty) {
       return _getLabel(_selectedValue as T);
     }
-
-    /// Priority 3: hint
     return widget.hintText;
   }
 
@@ -101,7 +97,6 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
       matchChildWidth: widget.matchChildWidth,
       itemBuilder: (context, item) {
         final bool isSelected = item == _selectedValue;
-
         if (widget.itemBuilderWithSelection != null) {
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -118,7 +113,7 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
             width: widget.width,
             height: widget.height,
             decoration: BoxDecoration(
-              color: isSelected ? context.colorScheme.primary.withOpacity(0.08) : Colors.transparent,
+              color: isSelected ? context.colorScheme.primary.withAlpha(100) : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Padding(
@@ -135,53 +130,45 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
           ),
         );
       },
-
-      /// FIELD UI (UNCHANGED)
-      child: Container(
-        key: ValueKey(_selectedValue ?? widget.displayValue),
-        width: widget.width,
-        height: widget.height,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: context.colorScheme.elevation1,
-          borderRadius: widget.borderRadius ?? BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: context.colorScheme.elevation2,
-              blurRadius: 1,
-              offset: const Offset(-2, -3),
+      child:
+          widget.child ??
+          Container(
+            key: ValueKey(_selectedValue ?? widget.displayValue),
+            width: widget.width,
+            height: widget.height,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: context.colorScheme.elevation1,
+              borderRadius: widget.borderRadius ?? BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(color: context.colorScheme.elevation2, blurRadius: 1, offset: const Offset(-2, -3)),
+                BoxShadow(color: context.colorScheme.black, blurRadius: 1, offset: const Offset(2, 3)),
+              ],
             ),
-            BoxShadow(
-              color: context.colorScheme.black,
-              blurRadius: 1,
-              offset: const Offset(2, 3),
-            ),
-          ],
-        ),
-        child: Center(
-          child: Row(
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(5.0),
-                  child: FusionAppText(
-                    maxLine: 1,
-                    text: _getDisplayText(isEmpty),
-                    style: context.textTheme.bodyMedium?.copyWith(
-                      color: isEmpty ? context.colorScheme.onSurface.withOpacity(0.8) : context.colorScheme.onSurface,
+            child: Center(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(5.0),
+                      child: FusionAppText(
+                        maxLine: 1,
+                        text: _getDisplayText(isEmpty),
+                        style: context.textTheme.bodyMedium?.copyWith(
+                          color: isEmpty ? context.colorScheme.onSurface.withAlpha(100) : context.colorScheme.onSurface,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  FusionIcon.icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 22,
+                    color: context.colorScheme.onSurface.withAlpha(200),
+                  ),
+                ],
               ),
-              Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: 22,
-                color: context.colorScheme.onSurface.withOpacity(0.6),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
     );
   }
 }

@@ -784,11 +784,11 @@ class _DropdownField extends StatelessWidget {
               style: context.textTheme.l1Medium,
             ),
           ),
-          FusionPopupMenu<int>(
-            semanticsId: '${label}_dropdown',
+          FusionNeumorphicDropdown<int>(
+            // semanticsId: '${label}_dropdown',
             items: items,
-            popupOffset: const Offset(0, 6),
-            onSelected: onChanged,
+            // popupOffset: const Offset(0, 6),
+            onChanged: onChanged,
             matchChildWidth: true,
             itemBuilder: (BuildContext context, int item) {
               final bool isSelected = item == value;

@@ -1305,16 +1305,14 @@ FusionDropDown<String>(
         _buildWithCopy(
           context: context,
           preview: FusionNeumorphicDropdown<String>(
-            items: const <String>["Apple", "Banana", "Mango", "Orange"],
-            value: selectedFruit,
-            hintText: "Select fruit",
-            itemLabelBuilder: (String item) => item,
-            onChanged: (String value) {
-              setState(() {
-                selectedFruit = value;
-              });
-              print(selectedFruit);
+            hintText: 'Select Audio File',
+            width: 400,
+            items: const <String>['op1', 'op2', 'op3'],
+            onChanged: (String option) {
+              print(option);
             },
+            displayValue: 'Select Audio File',
+            // child: _buildTrigger(context, audioFileName),
           ),
           code: '''
 FusionDropDown<String>(
@@ -1365,9 +1363,7 @@ FusionDropDown<String>(
             semanticId: "iconbased",
             items: <String>["Edit", "Delete", "Share"],
             selectedIndex: 0,
-
             trigger: const Icon(Icons.more_vert),
-
             itemBuilder: (BuildContext context, String item, bool isSelected) {
               return Text(item);
             },

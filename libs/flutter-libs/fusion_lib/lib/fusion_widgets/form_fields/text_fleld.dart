@@ -230,7 +230,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.6),
+                                color: context.colorScheme.black.withAlpha(800),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),
@@ -256,7 +256,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                                       borderRadius: BorderRadius.circular(8),
                                       borderSide: BorderSide.none,
                                     ),
-                                    prefixIcon: Icon(
+                                    prefixIcon: FusionIcon.icon(
                                       Icons.search,
                                       color: this.context.colorScheme.textPlaceholder,
                                       size: 20,
@@ -282,10 +282,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                                             padding: const EdgeInsets.all(16.0),
                                             child: Text(
                                               'No country found',
-                                              style: TextStyle(
-                                                color: this.context.colorScheme.textPlaceholder,
-                                                fontSize: 14,
-                                              ),
+                                              style: context.textTheme.b3Regular.withColor(context.colorScheme.textPlaceholder),
                                             ),
                                           ),
                                         )
@@ -308,34 +305,26 @@ class _CustomTextFieldState extends State<CustomTextField> {
                                                 });
                                                 _removeDropdown();
                                               },
-                                              hoverColor: Colors.white.withOpacity(0.06),
+                                              hoverColor: context.colorScheme.white.withAlpha(300),
                                               child: Container(
                                                 padding: const EdgeInsets.symmetric(
                                                   horizontal: 12,
                                                   vertical: 10,
                                                 ),
                                                 decoration: BoxDecoration(
-                                                  color: isSelected ? this.context.colorScheme.elevation3.withOpacity(0.3) : Colors.transparent,
+                                                  color: isSelected ? this.context.colorScheme.elevation3.withAlpha(500) : Colors.transparent,
                                                 ),
                                                 child: Row(
                                                   children: [
                                                     Expanded(
                                                       child: Text(
                                                         country['name']!,
-                                                        style: TextStyle(
-                                                          color: this.context.colorScheme.textPrimary,
-                                                          fontSize: 14,
-                                                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                                        ),
+                                                        style: context.textTheme.b3Regular.withColor(context.colorScheme.textPrimary),
                                                       ),
                                                     ),
                                                     Text(
                                                       country['code']!,
-                                                      style: TextStyle(
-                                                        color: this.context.colorScheme.textPrimary,
-                                                        fontSize: 14,
-                                                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                                      ),
+                                                      style: context.textTheme.b3Regular.withColor(context.colorScheme.textPrimary),
                                                     ),
                                                   ],
                                                 ),
@@ -511,7 +500,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
     return SemanticHelper.textInput(
       testId: SemanticHelper.createTestId(
         SemanticTypes.textInput,
-        "textfield_${widget.semanticId ?? ""}",
+        "textfield_${widget.semanticId}",
       ),
       enabled: widget.enabled,
       focused: isFocused(_getFieldState()),
@@ -526,13 +515,12 @@ class _CustomTextFieldState extends State<CustomTextField> {
               children: [
                 FusionAppText(
                   text: widget.label ?? '',
-                  style: TextStyle(
-                    color: widget.hasErrorText
+                  style: context.textTheme.l1Medium.withColor(
+                    widget.hasErrorText
                         ? context.colorScheme.errorText
                         : widget.fieldState == FusionFieldState.blocked
                         ? context.colorScheme.textDisabled
                         : context.colorScheme.primaryWhite,
-                    fontSize: 13,
                   ),
                 ),
                 SizedBox(
@@ -596,19 +584,18 @@ class _CustomTextFieldState extends State<CustomTextField> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              _selectedCountryCode,
-                              style: TextStyle(
-                                color: widget.fieldState == FusionFieldState.blocked
+                            FusionAppText(
+                              text: _selectedCountryCode,
+                              style: context.textTheme.b3Regular.withColor(
+                                widget.fieldState == FusionFieldState.blocked
                                     ? context.colorScheme.textDisabled
                                     : widget.fieldState == FusionFieldState.blockedFilled
                                     ? context.colorScheme.textBody
                                     : context.colorScheme.textPrimary,
-                                fontSize: 14,
                               ),
                             ),
                             const SizedBox(width: 4),
-                            Icon(
+                            FusionIcon.icon(
                               Icons.arrow_drop_down,
                               size: 20,
                               color: widget.fieldState == FusionFieldState.blocked || widget.fieldState == FusionFieldState.blockedFilled
@@ -671,12 +658,10 @@ class _CustomTextFieldState extends State<CustomTextField> {
                                   LengthLimitingTextInputFormatter(10),
                                 ]
                               : null,
-
-                          style: TextStyle(
-                            color: widget.fieldState == FusionFieldState.blocked || widget.fieldState == FusionFieldState.blockedFilled
+                          style: context.textTheme.b3Regular.withColor(
+                            widget.fieldState == FusionFieldState.blocked || widget.fieldState == FusionFieldState.blockedFilled
                                 ? context.colorScheme.textDisabled
                                 : context.colorScheme.primaryWhite,
-                            fontSize: 14,
                           ),
 
                           decoration: InputDecoration(
@@ -686,9 +671,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                             focusedBorder: InputBorder.none,
 
                             hintText: widget.hint,
-                            hintStyle: TextStyle(
-                              color: context.colorScheme.textPlaceholder,
-                            ),
+                            hintStyle: context.textTheme.b3Regular.withColor(context.colorScheme.textPlaceholder),
                             filled: false,
                             isDense: true,
                           ),
@@ -707,8 +690,8 @@ class _CustomTextFieldState extends State<CustomTextField> {
                         text: widget.buttonText,
                         width: 100,
                         color: context.colorScheme.elevation1,
-                        textStyle: TextStyle(
-                          color: context.colorScheme.textPrimary,
+                        textStyle: context.textTheme.l1Medium.withColor(
+                          context.colorScheme.textPrimary,
                         ),
                       ),
                     ],
@@ -735,27 +718,24 @@ class _CustomTextFieldState extends State<CustomTextField> {
           if (widget.hasHelperText)
             Text(
               widget.helperText,
-              style: TextStyle(
-                fontSize: 12,
-                color: context.colorScheme.textPrimary,
+              style: context.textTheme.l1Regular.withColor(
+                context.colorScheme.textPrimary,
               ),
             ),
 
           if (widget.hasErrorText)
             Text(
               widget.errorText,
-              style: TextStyle(
-                color: context.colorScheme.errorText,
-                fontSize: 12,
+              style: context.textTheme.l1Regular.withColor(
+                context.colorScheme.errorText,
               ),
             ),
 
           if (widget.hasSuccessText)
             Text(
               widget.successText,
-              style: TextStyle(
-                color: context.colorScheme.successText,
-                fontSize: 12,
+              style: context.textTheme.l1Regular.withColor(
+                context.colorScheme.successText,
               ),
             ),
         ],
