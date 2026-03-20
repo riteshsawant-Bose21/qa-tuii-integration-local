@@ -411,10 +411,6 @@ static int fusion_cn_timer_init(struct fusion_cn_manager *mgr)
 
     ret = fusion_gpt_register_client(&fusion_cn_gpt_ops, mgr, THIS_MODULE);
     if (ret) {
-        if (ret == -ENODEV) {
-            pr_info("fusion_cn: GPT not ready yet, deferring probe\n");
-            return -EPROBE_DEFER;
-        }
         pr_err("fusion_cn: GPT register failed: %d\n", ret);
         return ret;
     }
