@@ -68,6 +68,7 @@ class CustomTextField extends StatefulWidget {
   final double height;
 
   final int charlimit;
+  final InputDecoration? decoration;
 
   const CustomTextField({
     super.key,
@@ -102,6 +103,7 @@ class CustomTextField extends StatefulWidget {
     this.variant = FusionFieldVariant.outline,
     this.onSubmit,
     this.charlimit = 50,
+    this.decoration,
   });
 
   @override

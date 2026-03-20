@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/events/configation_events_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
@@ -38,6 +39,7 @@ class EventActionRowHeader extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
                   FusionAppText(
+                    semanticId: FusionTestKeys.instance.eventtriggeractionstxt,
                     text: "Actions",
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
@@ -53,7 +55,7 @@ class EventActionRowHeader extends StatelessWidget {
                         if (selectedEventId == null) return;
                         actionsViewModel.addAction();
                       },
-                      child: const Icon(Icons.add, size: 16),
+                      child: FusionIcon.icon(semanticId: FusionTestKeys.instance.eventtriggeractionsicon, Icons.add, size: 16),
                     ),
                   ),
                 ],
@@ -84,6 +86,7 @@ class EventActionRowHeader extends StatelessWidget {
                     true: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: FusionAppText(
+                        semanticId: FusionTestKeys.instance.eventtriggeractionstoogletxt1,
                         text: left.name,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontSize: 13,
@@ -94,6 +97,7 @@ class EventActionRowHeader extends StatelessWidget {
                     false: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: FusionAppText(
+                        semanticId: FusionTestKeys.instance.eventtriggeractionstoogletxt2,
                         text: right.name,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontSize: 13,
@@ -137,10 +141,19 @@ class EventActionRowHeader extends StatelessWidget {
                 spacing: screenWidth * 0.01,
                 children: <Widget>[
                   SizedBox(width: screenWidth * 0.01),
-                  const _HeaderCell(text: "Action Type"),
-                  const _HeaderCell(text: "Action Item"),
-                  const _HeaderCell(text: "Param / Action"),
-                  const _HeaderCell(text: "Value"),
+                  _HeaderCell(semanticId: FusionTestKeys.instance.eventtriggeractiontype, text: "Action Type"),
+                  _HeaderCell(
+                    text: "Action Item",
+                    semanticId: FusionTestKeys.instance.eventtriggeractionitem,
+                  ),
+                  _HeaderCell(
+                    text: "Param / Action",
+                    semanticId: FusionTestKeys.instance.eventtriggeractionparm,
+                  ),
+                  _HeaderCell(
+                    text: "Value",
+                    semanticId: FusionTestKeys.instance.eventtriggeractionvalue,
+                  ),
                   SizedBox(width: screenWidth * 0.046),
                 ],
               ),
@@ -155,12 +168,14 @@ class EventActionRowHeader extends StatelessWidget {
 /// Header cell widget
 class _HeaderCell extends StatelessWidget {
   final String text;
-  const _HeaderCell({required this.text});
+  final String semanticId;
+  const _HeaderCell({required this.text, required this.semanticId});
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: FusionAppText(
+        semanticId: semanticId,
         text: text,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
           fontWeight: FontWeight.w600,
