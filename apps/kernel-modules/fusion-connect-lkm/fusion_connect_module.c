@@ -5,12 +5,12 @@
 
 #define FUSION_CN_DEFAULT_IFACE "lan1"
 
-static char *fusion_cn_iface = FUSION_CN_DEFAULT_IFACE;
-module_param_named(iface, fusion_cn_iface, charp, 0444);
+static char *eth_iface = FUSION_CN_DEFAULT_IFACE;
+module_param_named(iface, eth_iface, charp, 0444);
 MODULE_PARM_DESC(iface, "Network interface name used by Fusion Connect");
 
-static bool fusion_cn_debug;
-module_param_named(debug, fusion_cn_debug, bool, 0444);
+static bool debug;
+module_param_named(debug, debug, bool, 0444);
 MODULE_PARM_DESC(debug, "Enable Fusion Connect debug logging");
 
 static struct fusion_cn_manager fusion_cn_mgr;
@@ -19,9 +19,9 @@ static int __init fusion_cn_init(void)
 {
     int ret;
 
-    strscpy(fusion_cn_mgr.netfilter.iface_name, fusion_cn_iface, IFNAMSIZ);
-    fusion_cn_mgr.debug = fusion_cn_debug;
-    fusion_cn_mgr.rtp.debug = fusion_cn_debug;
+    strscpy(fusion_cn_mgr.netfilter.iface_name, eth_iface, IFNAMSIZ);
+    fusion_cn_mgr.debug = debug;
+    fusion_cn_mgr.rtp.debug = debug;
 
     ret = fusion_cn_mgr_init(&fusion_cn_mgr);
     if (ret)
