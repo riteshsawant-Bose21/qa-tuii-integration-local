@@ -81,6 +81,12 @@ type FirmwareSyncUpdate struct {
 	SourceIP  string    `json:"source_ip"`
 }
 
+// VersionUpdate represents version information to sync across nodes
+type VersionUpdate struct {
+	Version Version `json:"version"`
+	NodeID  string  `json:"node_id"`
+}
+
 // ConfigUpdate represents a full or partial snapshot of state for a top-level key.
 //
 //   - ConfigUpdate is a replication primitive used by memberlist to achieve

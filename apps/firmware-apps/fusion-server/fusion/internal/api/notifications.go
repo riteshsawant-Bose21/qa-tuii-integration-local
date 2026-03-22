@@ -44,6 +44,7 @@ type NotifyMessage struct {
 	FirmwareUpdate    *FirmwareSyncUpdate
 	SnapshotOperation *SnapshotOperation
 	Task              *Task
+	VersionUpdate     *VersionUpdate
 }
 
 func NewNotifyMessage(op NotifyOp, node string, builder func(*NotifyMessage)) *NotifyMessage {
