@@ -144,6 +144,13 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 			return fmt.Errorf("DeviceInfo required for operation")
 		}
 
+	case api.NotifyOpFirmwareAvailable:
+		if message.FirmwareUpdate == nil {
+			return fmt.Errorf("FirmwareUpdate required for firmware available operation")
+		}
+		logger.Info("[Hub] Broadcasting firmware availability: %s (%d bytes) from %s",
+			message.FirmwareUpdate.Filename, message.FirmwareUpdate.SizeBytes, message.FirmwareUpdate.SourceIP)
+
 	default:
 		return fmt.Errorf("unknown operation type: %s", message.Operation)
 	}
@@ -178,8 +185,9 @@ func (h *Hub) broadcastToNodes(message []byte) {
 	}
 
 	localName := h.transport.LocalNode().Name
+	members := h.transport.MemberListMembers()
 
-	for _, node := range h.transport.MemberListMembers() {
+	for _, node := range members {
 		if node.Name == localName {
 			continue
 		}

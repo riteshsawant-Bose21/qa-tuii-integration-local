@@ -4,6 +4,7 @@ import "time"
 
 const (
 	FirmwareUnknown = "Unknown"
+	FirmwareOTAPath = "/mnt/ota"
 
 	FusionEpoch     = "_fusion_epoch"
 	FusionVersion   = "_fusion_version"

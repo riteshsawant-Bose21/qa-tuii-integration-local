@@ -71,6 +71,16 @@ type AudioSyncUpdate struct {
 	URL      string        `json:"url"`
 }
 
+// FirmwareSyncUpdate carries the metadata for a firmware bundle that is
+// available for followers to pull from the VIP node.
+type FirmwareSyncUpdate struct {
+	Filename  string    `json:"filename"`
+	Checksum  string    `json:"checksum"`
+	SizeBytes int64     `json:"size_bytes"`
+	Uploaded  time.Time `json:"uploaded"`
+	SourceIP  string    `json:"source_ip"`
+}
+
 // ConfigUpdate represents a full or partial snapshot of state for a top-level key.
 //
 //   - ConfigUpdate is a replication primitive used by memberlist to achieve

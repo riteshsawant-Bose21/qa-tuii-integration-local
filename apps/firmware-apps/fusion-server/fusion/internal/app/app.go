@@ -241,6 +241,11 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.PAVAScheduleEndpoint, app.TaskManager.ListScheduledMessages)
 	app.registerPublicPOST(routes.PAVAScheduleEndpoint, app.TaskManager.CreateScheduleMessageTask)
 	app.registerPublicPATCH(routes.PAVAScheduleIDEndpoint, app.TaskManager.UpdateScheduleMessageTask)
+
+	// Firmware
+	app.registerPublicPOST(routes.FirmwareUploadEndpoint, app.ConnectionHandler.HandleFirmwareUpload)
+	app.registerPublicGET(routes.FirmwareDownloadEndpoint, app.ConnectionHandler.HandleFirmwareDownload)
+
 	app.registerPublicPUT(routes.PAVAMessageTriggerEndpoint, app.TaskManager.TriggerMessage)
 	// app.registerPublicGET(routes.PAVAZonesEndpoint, app.Server.ListZones)
 	// app.registerPublicGET(routes.PAVAZoneStatusEndpoint, app.Server.GetZoneStatus)

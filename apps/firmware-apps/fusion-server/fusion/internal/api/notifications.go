@@ -11,22 +11,23 @@ import (
 type NotifyOp string
 
 const (
-	NotifyOpAck          NotifyOp = "ack"
-	NotifyOpAudioRemove  NotifyOp = "audio_remove"
-	NotifyOpAudioSync    NotifyOp = "audio_sync"
-	NotifyOpConfigUpdate NotifyOp = "config_update"
-	NotifyOpDeviceUpdate NotifyOp = "device_update"
-	NotifyOpNoop         NotifyOp = "no_op"
-	NotifyOpSnapActivate NotifyOp = "snapshot_activate"
-	NotifyOpSnapCreate   NotifyOp = "snapshot_create"
-	NotifyOpSnapDelete   NotifyOp = "snapshot_delete"
-	NotifyOpSnapSave     NotifyOp = "snapshot_save"
-	NotifyOpTaskCreate   NotifyOp = "task_create"
-	NotifyOpTaskDelete   NotifyOp = "task_delete"
-	NotifyOpTaskUpdate   NotifyOp = "task_update"
-	NotifyOpVIPStatus    NotifyOp = "vip_status"
-	NotifyOpValueGet     NotifyOp = "get"
-	NotifyOpValueSet     NotifyOp = "set"
+	NotifyOpAck               NotifyOp = "ack"
+	NotifyOpAudioRemove       NotifyOp = "audio_remove"
+	NotifyOpAudioSync         NotifyOp = "audio_sync"
+	NotifyOpConfigUpdate      NotifyOp = "config_update"
+	NotifyOpDeviceUpdate      NotifyOp = "device_update"
+	NotifyOpNoop              NotifyOp = "no_op"
+	NotifyOpSnapActivate      NotifyOp = "snapshot_activate"
+	NotifyOpSnapCreate        NotifyOp = "snapshot_create"
+	NotifyOpSnapDelete        NotifyOp = "snapshot_delete"
+	NotifyOpSnapSave          NotifyOp = "snapshot_save"
+	NotifyOpTaskCreate        NotifyOp = "task_create"
+	NotifyOpTaskDelete        NotifyOp = "task_delete"
+	NotifyOpTaskUpdate        NotifyOp = "task_update"
+	NotifyOpFirmwareAvailable NotifyOp = "firmware_available"
+	NotifyOpVIPStatus         NotifyOp = "vip_status"
+	NotifyOpValueGet          NotifyOp = "get"
+	NotifyOpValueSet          NotifyOp = "set"
 )
 
 // NotifyMessage holds information about a cross-node message
@@ -40,6 +41,7 @@ type NotifyMessage struct {
 	ConfigUpdate      *ConfigUpdate
 	ConfigValue       *ConfigValue
 	DeviceInfo        *DeviceInfo
+	FirmwareUpdate    *FirmwareSyncUpdate
 	SnapshotOperation *SnapshotOperation
 	Task              *Task
 }
@@ -144,5 +146,17 @@ func WithSnapshotOperation(operation *SnapshotOperation) func(*NotifyMessage) {
 func WithTask(task *Task) func(*NotifyMessage) {
 	return func(m *NotifyMessage) {
 		m.Task = task
+	}
+}
+
+func WithFirmwareUpdate(update *FirmwareSyncUpdate) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.FirmwareUpdate = update
+	}
+}
+
+func WithVersionUpdate(update *VersionUpdate) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.VersionUpdate = update
 	}
 }

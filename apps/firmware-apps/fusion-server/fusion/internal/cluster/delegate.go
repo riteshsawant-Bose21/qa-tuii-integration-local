@@ -7,6 +7,8 @@ import (
 	"fusion/internal/pubsub"
 	"fusion/internal/tasks"
 	"math"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -249,6 +251,9 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 	case api.NotifyOpDeviceUpdate:
 		d.handleDeviceUpdate(&message)
 
+	case api.NotifyOpFirmwareAvailable:
+		d.handleFirmwareAvailable(&message)
+
 	default:
 		logger.Error("Unknown message type: %q", message.Operation)
 	}
@@ -271,6 +276,46 @@ func (d *ClusterDelegate) handleDeviceUpdate(message *api.NotifyMessage) {
 		message.Node, message.DeviceInfo.Id)
 
 	d.hub.BroadcastToObservers(message)
+}
+
+// handleFirmwareAvailable processes firmware availability notifications from any node
+func (d *ClusterDelegate) handleFirmwareAvailable(message *api.NotifyMessage) {
+	logger := logging.GetLogger()
+
+	logger.Info("[FirmwareAvailable] Processing firmware notification from %s", message.Node)
+	logger.Info("[FirmwareAvailable] Local node: %s, Message from: %s", d.appConfig.NodeName, message.Node)
+
+	if message.FirmwareUpdate == nil {
+		logger.Error("FirmwareAvailable message with nil payload from %s", message.Node)
+		return
+	}
+
+	// Skip self-originated messages (uploader already has the file)
+	if d.appConfig.NodeName == message.Node {
+		logger.Info("[FirmwareAvailable] Ignoring self-originated firmware notification from %s", message.Node)
+		return
+	}
+
+	// Check if we already have this file
+	finalPath := filepath.Join(api.FirmwareOTAPath, message.FirmwareUpdate.Filename)
+	if _, err := os.Stat(finalPath); err == nil {
+		logger.Info("[FirmwareAvailable] File %s already exists locally, skipping download", message.FirmwareUpdate.Filename)
+		return
+	}
+
+	// Trigger firmware sync in background
+	go func() {
+		logger.Info("[FirmwareSync] Starting background sync for %s from %s",
+			message.FirmwareUpdate.Filename, message.FirmwareUpdate.SourceIP)
+
+		if err := d.persistence.SyncFirmwareFile(message.FirmwareUpdate); err != nil {
+			logger.Error("[FirmwareSync] Failed to sync %s from %s: %v",
+				message.FirmwareUpdate.Filename, message.FirmwareUpdate.SourceIP, err)
+		} else {
+			logger.Info("[FirmwareSync] Successfully synced %s from %s",
+				message.FirmwareUpdate.Filename, message.FirmwareUpdate.SourceIP)
+		}
+	}()
 }
 
 func (d *ClusterDelegate) LocalState(join bool) []byte {
