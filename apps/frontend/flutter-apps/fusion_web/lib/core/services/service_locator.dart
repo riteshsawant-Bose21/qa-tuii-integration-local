@@ -51,11 +51,9 @@ class ServiceLocator {
     if (_projectsViewModel == null) {
       final remoteDataSource = ProjectsRemoteDataSource(apiService: apiService);
 
-      final localDataSource = ProjectsLocalDataSource();
-
       final repository = ProjectsRepositoryImpl(
         remoteDataSource: remoteDataSource,
-        localDataSource: localDataSource,
+        // localDataSource: localDataSource,
       );
 
       _projectsViewModel = ProjectsViewModel(repository: repository);
@@ -74,11 +72,9 @@ class ServiceLocator {
   ProjectsRepositoryImpl get projectsRepository {
     if (_projectsRepository == null) {
       final remoteDataSource = ProjectsRemoteDataSource(apiService: apiService);
-      final localDataSource = ProjectsLocalDataSource();
 
       _projectsRepository = ProjectsRepositoryImpl(
         remoteDataSource: remoteDataSource,
-        localDataSource: localDataSource,
       );
     }
     return _projectsRepository!;

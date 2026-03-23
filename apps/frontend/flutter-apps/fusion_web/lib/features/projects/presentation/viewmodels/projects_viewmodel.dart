@@ -1,146 +1,32 @@
-// import 'package:fusion_web/core/presentation/base_viewmodel.dart';
-// import 'package:fusion_web/features/projects/data/models/project_model.dart';
-// import 'package:fusion_web/features/projects/data/repositories/projects_repository.dart';
-
-// class ProjectsViewModel extends BaseViewModel<List<ProjectModel>> {
-//   final ProjectsRepository repository;
-
-//   ProjectsViewModel({required this.repository});
-
-//   final List<ProjectModel> _projects = [];
-
-//   ProjectModel? _selectedProject;
-//   final String _searchQuery = '';
-
-//   ProjectModel? get selectedProject => _selectedProject;
-//   String get searchQuery => _searchQuery;
-
-//   // Future<void> loadProjects({String? searchQuery}) async {
-//   //   try {
-//   //     setLoading();
-//   //     final projects = searchQuery != null && searchQuery.isNotEmpty
-//   //         ? await repository.searchProjects(searchQuery)
-//   //         : await repository.getProjects();
-
-//   //     setLoaded(projects);
-//   //   } catch (e) {
-//   //     setError('Failed to load projects: ${e.toString()}');
-//   //   }
-//   // }
-//   //
-//   Future<void> loadProjects() async {
-//     try {
-//       setLoading();
-
-//       final projects = await repository.getProjects();
-
-//       _projects.clear();
-//       _projects.addAll(projects);
-
-//       setLoaded(projects);
-//     } catch (e) {
-//       setError('Failed to load projects: ${e.toString()}');
-//     }
-//   }
-
-//   Future<void> searchProjects(String query) async {
-//     if (query.isEmpty) {
-//       setLoaded(_projects);
-//       return;
-//     }
-
-//     final filtered = _projects.where((project) {
-//       return project.name.toLowerCase().contains(query.toLowerCase());
-//     }).toList();
-
-//     setLoaded(filtered);
-//   }
-
-//   Future<void> getProject(String id) async {
-//     // try {
-//     //   setLoading();
-
-//     //   final project = await repository.getProjectById(id);
-
-//     //   setLoaded(project);
-//     // } catch (e) {
-//     //   setError('Failed to load project');
-//     // }
-//   }
-
-// Future<void> deleteProject(String id) async {
-//   try {
-//     await repository.deleteProject(id);
-
-//     _projects.removeWhere((p) => p.id == id);
-
-//     setLoaded(_projects);
-//   } catch (e) {
-//     setError('Failed to delete project');
-//   }
-// }
-
-// Future<void> archiveProject(String id) async {
-//   try {
-//     await repository.archiveProject(id);
-
-//     _projects.removeWhere((p) => p.id == id);
-
-//     setLoaded(_projects);
-//   } catch (e) {
-//     setError(e.toString());
-//   }
-// }
-
-//   void initialize() {
-//     loadProjects();
-//   }
-
-//   void selectProject(ProjectModel project) {
-//     // _selectedProject = project;
-//     // notifyListeners();
-//   }
-
-//   void clearSearch() {
-//     setLoaded(_projects);
-//   }
-// }
-
+import 'dart:async';
 import 'package:fusion_web/core/presentation/base_viewmodel.dart';
+import 'package:fusion_web/core/presentation/search_delegate_mixin.dart';
 import 'package:fusion_web/features/projects/data/models/project_model.dart';
 import 'package:fusion_web/features/projects/data/repositories/projects_repository.dart';
 
-class ProjectsViewModel extends BaseViewModel<List<ProjectModel>> {
+class ProjectsViewModel extends BaseViewModel<List<ProjectModel>>
+    with SearchDelegateMixin<ProjectModel> {
   final ProjectsRepository repository;
+  Timer? _debounce;
 
   ProjectsViewModel({required this.repository});
 
-  List<ProjectModel> _allProjects = [];
+  // ================= STATE =================
   String _searchQuery = '';
-  String _region = 'All';
-  String _status = 'All';
-  // List<ProjectModel> _projects = [];
-  // List<ProjectModel> _filteredProjects = [];
-  // ProjectModel? _selectedProject;
-  // String _searchQuery = '';
+  String region = 'All';
+  String status = 'All';
+  bool isGridView = false;
 
-  // List<ProjectModel> get projects {
-  //   if (_filteredProjects.isNotEmpty) {
-  //     return _filteredProjects;
-  //   }
-  //   return _projects;
-  // }
-
-  // ProjectModel? get selectedProject => _selectedProject;
-  // String get searchQuery => _searchQuery;
-
-  Future<void> loadProjects() async {
+  // ================= MAIN METHOD =================
+  Future<void> applyFilters({bool showLoader = true}) async {
     try {
-      setLoading();
+      if (showLoader) setLoading();
 
-      final projects = await repository.getProjects();
-
-      _allProjects = projects;
+      final projects = await repository.getProjectsFiltered(
+        search: _searchQuery,
+        region: region == 'All' ? null : region,
+        status: status == 'All' ? null : status,
+      );
 
       setLoaded(projects);
     } catch (e) {
@@ -148,83 +34,87 @@ class ProjectsViewModel extends BaseViewModel<List<ProjectModel>> {
     }
   }
 
-  Future<void> searchProjects(String query) async {
-    _searchQuery = query;
+  // ================= UPDATE METHODS =================
 
-    _applyFilters();
+  void updateSearch(String value) {
+    _searchQuery = value;
+
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      applyFilters(showLoader: false);
+    });
   }
 
-  Future<void> filterProjects({String? region, String? status}) async {
-    if (region != null) _region = region;
-    if (status != null) _status = status;
-
-    _applyFilters();
+  void updateRegion(String value) {
+    region = value;
+    applyFilters();
   }
 
-  Future<void> getProject(String id) async {
-    // try {
-    //   setLoading();
-
-    //   final project = await repository.getProjectById(id);
-
-    //   setLoaded(project);
-    // } catch (e) {
-    //   setError('Failed to load project');
-    // }
+  void updateStatus(String value) {
+    status = value;
+    applyFilters();
   }
+
+  void clearFilters() {
+    _searchQuery = '';
+    region = 'All';
+    status = 'All';
+
+    applyFilters();
+  }
+
+  // ================= ACTIONS =================
 
   Future<void> deleteProject(String id) async {
     try {
       await repository.deleteProject(id);
-
-      loadProjects();
+      await applyFilters(showLoader: false);
     } catch (e) {
       setError('Failed to delete project');
     }
   }
 
   Future<void> archiveProject(String id) async {
-    setLoading();
     try {
+      setLoading();
       await repository.archiveProject(id);
-      loadProjects();
+      await applyFilters(showLoader: false);
     } catch (e) {
       setError(e.toString());
     }
   }
 
+  // ================= VIEW TOGGLE =================
+
+  void toggleView(bool isGrid) {
+    isGridView = isGrid;
+
+    if (state is LoadedState<List<ProjectModel>>) {
+      setLoaded((state as LoadedState<List<ProjectModel>>).data);
+    }
+  }
+
+  // ================= INIT =================
+
   void initialize() {
-    loadProjects();
+    applyFilters();
   }
 
-  void selectProject(ProjectModel project) {
-    // _selectedProject = project;
-    // notifyListeners();
+  // ================= SEARCH DELEGATE =================
+
+  @override
+  Future<List<ProjectModel>> search(String? query) async {
+    _searchQuery = query ?? '';
+    await applyFilters(showLoader: false);
+
+    return (state as LoadedState<List<ProjectModel>>).data;
   }
 
-  void clearSearch() {
-    loadProjects();
-    // _searchQuery = '';
-    // _filteredProjects = [];
-    // notifyListeners();
+  // ================= OPTIONAL =================
+
+  bool get hasActiveFilters {
+    return _searchQuery.isNotEmpty ||
+        region != 'All' ||
+        status != 'All';
   }
-
-  void _applyFilters() {
-  final filtered = _allProjects.where((p) {
-    final searchMatch =
-        _searchQuery.isEmpty ||
-        p.name.toLowerCase().contains(_searchQuery.toLowerCase());
-
-    final regionMatch =
-        _region == 'All' || p.region == _region;
-
-    final statusMatch =
-        _status == 'All' || p.status == _status;
-
-    return searchMatch && regionMatch && statusMatch;
-  }).toList();
-
-  setLoaded(filtered);
 }
-}
-

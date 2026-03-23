@@ -15,10 +15,10 @@ import 'package:fusion_web/features/devices/data/datasources/device_datasource.d
 import 'package:fusion_web/features/devices/data/models/devices_model.dart';
 import 'package:fusion_web/features/devices/data/repositories/devices_repository_impl.dart';
 import 'package:fusion_web/features/devices/presentation/viewmodels/devices_viewmodel.dart';
-import 'package:fusion_web/features/devices/presentation/widgets/device_page_widgets/common_device_section.dart';
-import 'package:fusion_web/features/devices/presentation/widgets/device_page_widgets/device_filters.dart';
-import 'package:fusion_web/features/devices/presentation/widgets/device_page_widgets/device_grid_view.dart';
-import 'package:fusion_web/features/devices/presentation/widgets/device_page_widgets/devices_list_view.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/devices_page_widgets/common_device_section.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/devices_page_widgets/device_filters.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/devices_page_widgets/device_grid_view.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/devices_page_widgets/devices_list_view.dart';
 
 import '../viewmodels/project_detail_viewmodel.dart';
 
@@ -26,7 +26,6 @@ enum DetailTab { incidents, devices, activity }
 
 class ProjectDetailPage extends StatefulWidget {
   final String projectId;
-  
 
   const ProjectDetailPage({super.key, required this.projectId});
 
@@ -77,7 +76,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
               body: Center(child: CircularProgressIndicator()),
             );
           }
-          
+
           if (state is ErrorState) {
             return Scaffold(
               body: Center(
@@ -107,355 +106,403 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
               ? 0
               : ((p.criticalDevices / totalDevices) * 100).round();
           final viewModel = ServiceLocator().projectsViewModel;
-          return Container(
-            color: const Color(0xFFF7F7F7),
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  /// BACK
-                  TextButton.icon(
-                    onPressed: () => context.go(AppConstants.projectsRoute),
-                    icon: const Icon(
-                      Icons.arrow_back,
-                      size: 18,
-                      color: Colors.black,
-                    ),
-                    label: Text(
-                      "Back to Projects",
-                      style: GoogleFonts.montserrat(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+          return BlocProvider(
+            create: (_) =>
+                DevicesViewModel(DevicesRepositoryImpl(DeviceDatasource()))
+                  ..selectedProjectId = p.id
+                  ..loadDevices(),
+
+            child: Container(
+              color: const Color(0xFFF7F7F7),
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    /// BACK
+                    TextButton.icon(
+                      onPressed: () => context.go(AppConstants.projectsRoute),
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        size: 18,
                         color: Colors.black,
                       ),
-                    ),
-                    style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.resolveWith((
-                        states,
-                      ) {
-                        if (states.contains(WidgetState.hovered)) {
-                          return Colors.grey[200]; // hover background
-                        }
-                        return Colors.transparent;
-                      }),
-                      padding: WidgetStateProperty.all(
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      label: Text(
+                        "Back to Projects",
+                        style: GoogleFonts.montserrat(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black,
+                        ),
                       ),
-                      shape: WidgetStateProperty.all(
-                        RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
+                      style: ButtonStyle(
+                        backgroundColor: WidgetStateProperty.resolveWith((
+                          states,
+                        ) {
+                          if (states.contains(WidgetState.hovered)) {
+                            return Colors.grey[200]; // hover background
+                          }
+                          return Colors.transparent;
+                        }),
+                        padding: WidgetStateProperty.all(
+                          const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                        ),
+                        shape: WidgetStateProperty.all(
+                          RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
                         ),
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                  /// HEADER
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    p.name,
-                                    style: GoogleFonts.montserrat(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.w700,
+                    /// HEADER
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      p.name,
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
                                   ),
+                                  const SizedBox(width: 12),
+                                  _smallPill(p.status),
+                                  const SizedBox(width: 8),
+                                  _smallPill("installation"),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                p.description,
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 15,
+                                  color: Colors.grey[600],
                                 ),
-                                const SizedBox(width: 12),
-                                _smallPill(p.status),
-                                const SizedBox(width: 8),
-                                _smallPill("installation"),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        ProjectActionsMenu(
+                          onInvite: () => ProjectActionsHandler.invite(
+                            context: context,
+                            project: p,
+                            viewModel: viewModel,
+                          ),
+                          onArchive: () async {
+                            final archived =
+                                await ProjectActionsHandler.archive(
+                                  context: context,
+                                  project: p,
+                                  viewModel: viewModel,
+                                );
+
+                            if (archived && mounted) {
+                              context.go(AppConstants.projectsRoute);
+                            }
+                          },
+                          onDelete: () async {
+                            final deleted = await ProjectActionsHandler.delete(
+                              context: context,
+                              project: p,
+                              viewModel: viewModel,
+                            );
+
+                            if (deleted && mounted) {
+                              context.go(AppConstants.projectsRoute);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    /// DETAILS + SUMMARY
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        /// LEFT CARD
+                        Expanded(
+                          flex: 3,
+                          child: _card(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _cardTitle("Project Details"),
+                                const SizedBox(height: 24),
+                                _detail("Customer", p.clientName),
+                                const Divider(height: 32),
+                                _detail("Region", p.region),
+                                const Divider(height: 32),
+                                _detail(
+                                  "Last Updated",
+                                  _formatDate(p.lastUpdated),
+                                ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              p.description,
-                              style: GoogleFonts.montserrat(
-                                fontSize: 15,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      ProjectActionsMenu(
-                        onInvite: () => ProjectActionsHandler.invite(
-                          context: context,
-                          project: p,
-                          viewModel: viewModel,
-                        ),
-                        onArchive: () async {
-                          final archived = await ProjectActionsHandler.archive(
-                            context: context,
-                            project: p,
-                            viewModel: viewModel,
-                          );
-
-                          if (archived && mounted) {
-                            context.go(AppConstants.projectsRoute);
-                          }
-                        },
-                        onDelete: () async {
-                          final deleted = await ProjectActionsHandler.delete(
-                            context: context,
-                            project: p,
-                            viewModel: viewModel,
-                          );
-
-                          if (deleted && mounted) {
-                            context.go(AppConstants.projectsRoute);
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  /// DETAILS + SUMMARY
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      /// LEFT CARD
-                      Expanded(
-                        flex: 3,
-                        child: _card(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _cardTitle("Project Details"),
-                              const SizedBox(height: 24),
-                              _detail("Customer", p.clientName),
-                              const Divider(height: 32),
-                              _detail("Region", p.region),
-                              const Divider(height: 32),
-                              _detail(
-                                "Last Updated",
-                                _formatDate(p.lastUpdated),
-                              ),
-                            ],
                           ),
                         ),
-                      ),
 
-                      const SizedBox(width: 24),
+                        const SizedBox(width: 24),
 
-                      /// RIGHT CARD
-                      Expanded(
-                        flex: 7,
-                        child: _card(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _cardTitle("Project Summary"),
-                              const SizedBox(height: 24),
+                        /// RIGHT CARD
+                        Expanded(
+                          flex: 7,
+                          child: _card(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _cardTitle("Project Summary"),
+                                const SizedBox(height: 24),
 
-                              Row(
-                                children: [
-                                  _statBox("Total Devices", "$totalDevices"),
-                                  const SizedBox(width: 16),
-                                  _statBox("Open Incidents", "${p.incidents}"),
-                                ],
-                              ),
-
-                              const SizedBox(height: 24),
-
-                              Text(
-                                "Device Health Status",
-                                style: GoogleFonts.montserrat(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
+                                Row(
+                                  children: [
+                                    _statBox("Total Devices", "$totalDevices"),
+                                    const SizedBox(width: 16),
+                                    _statBox(
+                                      "Open Incidents",
+                                      "${p.incidents}",
+                                    ),
+                                  ],
                                 ),
-                              ),
 
-                              const SizedBox(height: 16),
+                                const SizedBox(height: 24),
 
-                              Row(
-                                children: [
-                                  _healthTile(
-                                    "Healthy",
-                                    p.healthyDevices,
-                                    healthyPct,
-                                    Colors.green,
+                                Text(
+                                  "Device Health Status",
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                  const SizedBox(width: 12),
-                                  _healthTile(
-                                    "Warning",
-                                    p.warningDevices,
-                                    warningPct,
-                                    Colors.orange,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  _healthTile(
-                                    "Critical",
-                                    p.criticalDevices,
-                                    criticalPct,
-                                    Colors.red,
-                                  ),
-                                ],
-                              ),
-                            ],
+                                ),
+
+                                const SizedBox(height: 16),
+
+                                Row(
+                                  children: [
+                                    _healthTile(
+                                      "Healthy",
+                                      p.healthyDevices,
+                                      healthyPct,
+                                      Colors.green,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    _healthTile(
+                                      "Warning",
+                                      p.warningDevices,
+                                      warningPct,
+                                      Colors.orange,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    _healthTile(
+                                      "Critical",
+                                      p.criticalDevices,
+                                      criticalPct,
+                                      Colors.red,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
 
-                  const SizedBox(height: 32),
+                    const SizedBox(height: 32),
 
-                  /// TABS
-                  Row(
-                    children: [
-                      _tabButton(
-                        "Incidents (${p.incidents})",
-                        DetailTab.incidents,
-                      ),
-                      const SizedBox(width: 8),
-                      _tabButton("Devices (0)", DetailTab.devices),
-                      const SizedBox(width: 8),
-                      _tabButton("Activity (0)", DetailTab.activity),
-                    ],
-                  ),
+                    /// TABS
+                    BlocBuilder<DevicesViewModel, BaseState<DevicesModel>>(
+                      builder: (context, deviceState) {
+                        int deviceCount = 0;
 
-                  const SizedBox(height: 24),
+                        if (deviceState is LoadedState<DevicesModel>) {
+                          deviceCount = deviceState.data.devices.length;
+                        }
 
-                  if (_selectedTab == DetailTab.incidents)
-                    p.incidents == 0
-                        ? EmptyStateWidget(
-                            title: "No Incidents Found",
-                            description:
-                                "There are currently no reported incidents.",
-                            icon: Icons.report_problem_outlined,
-                          )
-                        : const SizedBox(),
+                        return Row(
+                          children: [
+                            _tabButton(
+                              "Incidents (${p.incidents})",
+                              DetailTab.incidents,
+                            ),
+                            const SizedBox(width: 8),
+                            _tabButton(
+                              "Devices ($deviceCount)", //dynamic
+                              DetailTab.devices,
+                            ),
+                            const SizedBox(width: 8),
+                            _tabButton("Activity (0)", DetailTab.activity),
+                          ],
+                        );
+                      },
+                    ),
 
-                  if (_selectedTab == DetailTab.devices)
-                    BlocProvider(
-                      create: (_) =>
-                          DevicesViewModel(
-                              DevicesRepositoryImpl(DeviceDatasource()),
+                    const SizedBox(height: 24),
+
+                    if (_selectedTab == DetailTab.incidents)
+                      p.incidents == 0
+                          ? EmptyStateWidget(
+                              title: "No Incidents Found",
+                              description:
+                                  "There are currently no reported incidents.",
+                              icon: Icons.report_problem_outlined,
                             )
-                            ..selectedProjectId = p.id
-                            ..loadDevices(),
+                          : const SizedBox(),
 
-                      child: Builder(
-                        builder: (context) {
-                          final viewModel = context.watch<DevicesViewModel>();
+                    if (_selectedTab == DetailTab.devices)
+                      BlocProvider(
+                        create: (_) =>
+                            DevicesViewModel(
+                                DevicesRepositoryImpl(DeviceDatasource()),
+                              )
+                              ..selectedProjectId = p.id
+                              ..loadDevices(),
 
-                          return BlocBuilder<
-                            DevicesViewModel,
-                            BaseState<DevicesModel>
-                          >(
-                            builder: (context, state) {
-                              if (state is LoadingState) {
-                                return const Center(
-                                  child: CircularProgressIndicator(),
-                                );
-                              }
+                        child: Builder(
+                          builder: (context) {
+                            final viewModel = context.watch<DevicesViewModel>();
 
-                              if (state is LoadedState<DevicesModel>) {
-                                final devices = state.data.devices;
-
-                                /// 0 devices case
-                                if (devices.isEmpty) {
-                                  return EmptyStateWidget(
-                                    title: "No Devices Found",
-                                    description:
-                                        "Devices will appear here once added to this project.",
-                                    icon: Icons.devices_outlined,
-                                    buttonText: "Add Device",
-                                    onButtonPressed: () {
-                                      // open modal later
-                                    },
+                            return BlocBuilder<
+                              DevicesViewModel,
+                              BaseState<DevicesModel>
+                            >(
+                              builder: (context, state) {
+                                if (state is LoadingState) {
+                                  return const Center(
+                                    child: CircularProgressIndicator(),
                                   );
                                 }
 
-                                /// Devices Ui - Header, list and grid view
-                                return CommonDeviceSection(
-                                
-                                  filters: DeviceFilters(
-                                    searchController: TextEditingController(),
+                                if (state is LoadedState<DevicesModel>) {
+                                  final devices = state.data.devices;
 
-                                    onSearchChanged: viewModel.updateSearch,
-                                    onClearFilters: viewModel.clearFilters,
-                                    showClearFilters:
-                                        viewModel.hasActiveFilters,
+                                  /// 0 devices case
+                                  if (devices.isEmpty) {
+                                    return EmptyStateWidget(
+                                      title: "No Devices Found",
+                                      description:
+                                          "Devices will appear here once added to this project.",
+                                      icon: Icons.devices_outlined,
+                                      buttonText: "Add Device",
+                                      onButtonPressed: () {
+                                        // open modal later
+                                      },
+                                    );
+                                  }
 
-                                    selectedStatus: viewModel.selectedStatus,
-                                    selectedProjects: viewModel.selectedProject,
-                                    selectedModels: viewModel.selectedModel,
-                                    selectedCategory:
-                                        viewModel.selectedCategory,
-                                    selectedTypes: viewModel.selectedType,
-                                    isGridView: viewModel.isGridView,
+                                  /// Devices Ui - Header, list and grid view
+                                  return CommonDeviceSection(
+                                    filters: DeviceFilters(
+                                      searchController: TextEditingController(),
 
-                                    onStatusChanged: (v) =>
-                                        viewModel.updateStatus(v!),
-                                    onProjectChanged: (v) =>
-                                        viewModel.updateProject(v!),
-                                    onModelChanged: (v) =>
-                                        viewModel.updateModel(v!),
-                                    onTypeChanged: (v) =>
-                                        viewModel.updateType(v!),
-                                    onCategoryChanged: (v) =>
-                                        viewModel.updateCategory(v!),
+                                      onSearchChanged: viewModel.updateSearch,
+                                      onClearFilters: viewModel.clearFilters,
+                                      showClearFilters:
+                                          viewModel.hasActiveFilters,
 
-                                    onGridTap: () => viewModel.toggleGrid(true),
-                                    onListTap: () =>
-                                        viewModel.toggleGrid(false),
+                                      selectedStatus: viewModel.selectedStatus,
+                                      selectedProjects:
+                                          viewModel.selectedProject,
+                                      selectedModels: viewModel.selectedModel,
+                                      selectedCategory:
+                                          viewModel.selectedCategory,
+                                      selectedTypes: viewModel.selectedType,
+                                      isGridView: viewModel.isGridView,
 
-                                    statusItems: const [
-                                      "All Status",
-                                      "Healthy",
-                                      "Critical",
-                                      "Inactive",
-                                    ],
-                                    modelItems: const ["All Models"],
-                                    typeItems: const ["All Types"],
-                                    projectItems: const ["All Projects"],
-                                    categoryItems: const [
-                                      "Name",
-                                      "Model",
-                                      "Status",
-                                      "Last Seen",
-                                    ],
-                                  ),
+                                      onStatusChanged: (v) =>
+                                          viewModel.updateStatus(v!),
+                                      onProjectChanged: (v) =>
+                                          viewModel.updateProject(v!),
+                                      onModelChanged: (v) =>
+                                          viewModel.updateModel(v!),
+                                      onTypeChanged: (v) =>
+                                          viewModel.updateType(v!),
+                                      onCategoryChanged: (v) =>
+                                          viewModel.updateCategory(v!),
 
-                                  content: viewModel.isGridView
-                                      ? DevicesGridView(devices: devices)
-                                      : DevicesListView(devices: devices),
-                                );
-                              }
+                                      onGridTap: () =>
+                                          viewModel.toggleGrid(true),
+                                      onListTap: () =>
+                                          viewModel.toggleGrid(false),
 
-                              if (state is ErrorState<DevicesModel>) {
-                                return Center(child: Text(state.message));
-                              }
+                                      statusItems: const [
+                                        "All Status",
+                                        "Healthy",
+                                        "Critical",
+                                        "Inactive",
+                                      ],
+                                      modelItems: const [
+                                        "All Models",
+                                        "EdgeMax EM90",
+                                        "PowerMatch PM8500N",
+                                        "ControlSpace EX-1280C",
+                                        "FreeSpace FS4SE",
+                                        "ControlSpace EX-440C",
+                                      ],
+                                      typeItems: const [
+                                        "All Types",
+                                        "Speaker",
+                                        "Amplifier",
+                                        "Controller",
+                                        "Processor",
+                                      ],
+                                      projectItems: const [
+                                        "All Projects",
+                                        "Metro University Campus Audio",
+                                        "Skyline Downtown Conference Center",
+                                        "Skyline Resort & Spa",
+                                        "Grand Plaza Convention Hall",
+                                        "TechHub Innovation Center",
+                                      ],
+                                      categoryItems: const [
+                                        "Name",
+                                        "Model",
+                                        "Status",
+                                        "Last Seen",
+                                      ],
+                                    ),
 
-                              return const SizedBox();
-                            },
-                          );
-                        },
+                                    content: viewModel.isGridView
+                                        ? DevicesGridView(devices: devices)
+                                        : DevicesListView(devices: devices),
+                                  );
+                                }
+
+                                if (state is ErrorState<DevicesModel>) {
+                                  return Center(child: Text(state.message));
+                                }
+
+                                return const SizedBox();
+                              },
+                            );
+                          },
+                        ),
                       ),
-                    ),
 
-                  if (_selectedTab == DetailTab.activity)
-                    EmptyStateWidget(
-                      title: "No Activity Yet",
-                      description: "Recent activity will appear here.",
-                      icon: Icons.timeline_outlined,
-                    ),
-                ],
+                    if (_selectedTab == DetailTab.activity)
+                      EmptyStateWidget(
+                        title: "No Activity Yet",
+                        description: "Recent activity will appear here.",
+                        icon: Icons.timeline_outlined,
+                      ),
+                  ],
+                ),
               ),
             ),
           );

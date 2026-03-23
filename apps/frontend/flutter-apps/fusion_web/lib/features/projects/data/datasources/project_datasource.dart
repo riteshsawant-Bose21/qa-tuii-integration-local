@@ -7,7 +7,7 @@ abstract class ProjectsDataSource {
   Future<ProjectModel> getProjectById(String id);
   Future<void> archiveProject(String id);
   Future<void> deleteProject(String id);
-  Future<List<ProjectModel>> searchProjects(String query);
+  Future<List<ProjectModel>> searchProjects(String query); 
 
   Future<List<UserModel>> getOrganisationUsers();
 

@@ -7,9 +7,12 @@ abstract class ProjectsRepository {
   Future<ProjectModel> getProjectById(String id);
   Future<void> deleteProject(String id);
   Future<void> archiveProject(String id);
-  Future<List<ProjectModel>> searchProjects(String query);
-  Future<List<ProjectModel>> filterProjects({String? region, String? status});
-  //fetchign all users and adding user to project
+  Future<List<ProjectModel>> getProjectsFiltered({
+  String? search,
+  String? region,
+  String? status,
+});
+  //fetching all users and adding user to project
   Future<List<UserModel>> getOrganisationUsers();
   Future<void> addUserToProject({
     required String projectId,

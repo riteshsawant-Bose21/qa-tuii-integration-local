@@ -28,14 +28,13 @@ class CommonDeviceSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           /// Title
-          Text(
-            "$title ($count)",
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
+          if (title != null && count != null)
+            Text(
+              "$title ($count)",
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
-          ),
 
+          if (title != null && count != null) const SizedBox(height: 16),
           const SizedBox(height: 16),
 
           ///Filters

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_web/features/devices/presentation/widgets/device_page_widgets/stat_card.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/devices_page_widgets/stat_card.dart';
 
 class DevicesOverview extends StatelessWidget {
   final int total;

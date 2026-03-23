@@ -5,11 +5,9 @@ import 'package:fusion_web/features/users/data/models/user_model.dart';
 
 class ProjectsRepositoryImpl implements ProjectsRepository {
   final ProjectsRemoteDataSource remoteDataSource;
-  final ProjectsLocalDataSource localDataSource;
 
-  const ProjectsRepositoryImpl({
+  ProjectsRepositoryImpl({
     required this.remoteDataSource,
-    required this.localDataSource,
   });
 
   // =========================
@@ -19,25 +17,25 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
   Future<List<ProjectModel>> getProjects() async {
     try {
       final remoteData = await remoteDataSource.getProjects();
-      localDataSource.cacheProjects(remoteData);
       return remoteData;
     } catch (e) {
-      // Try local cache if remote fails
-      return await localDataSource.getProjects();
+      rethrow; // do NOT fallback to empty local cache
     }
   }
 
   // =========================
   // GET PROJECT BY ID
   // =========================
+
   // @override
   // Future<ProjectModel> getProjectById(String id) async {
   //   try {
   //     return await remoteDataSource.getProjectById(id);
   //   } catch (e) {
-  //     return await localDataSource.getProjectById(id);
+  //     rethrow;
   //   }
   // }
+
   @override
   Future<ProjectModel> getProjectById(String id) async {
     try {
@@ -56,7 +54,6 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
   @override
   Future<void> deleteProject(String id) async {
     await remoteDataSource.deleteProject(id);
-    await localDataSource.deleteProject(id);
   }
 
   // =========================
@@ -65,28 +62,44 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
   @override
   Future<void> archiveProject(String id) async {
     await remoteDataSource.archiveProject(id);
-    await localDataSource.archiveProject(id);
   }
 
   // =========================
-  // SEARCH PROJECTS
+  // FILTER PROJECTS
   // =========================
   @override
-  Future<List<ProjectModel>> searchProjects(String query) async {
-    return await remoteDataSource.searchProjects(query);
+  Future<List<ProjectModel>> getProjectsFiltered({
+    String? search,
+    String? region,
+    String? status,
+  }) async {
+    final projects = await remoteDataSource.getProjects(); // always fresh
+
+    return projects.where((p) {
+      final searchMatch =
+          search == null ||
+          search.isEmpty ||
+          p.name.toLowerCase().contains(search.toLowerCase());
+
+      final regionMatch =
+          region == null || region == 'All' || p.region == region;
+
+      final statusMatch =
+          status == null || status == 'All' || p.status == status;
+
+      return searchMatch && regionMatch && statusMatch;
+    }).toList();
   }
 
+
   // =========================
-  // GET ORGANISATION USERS
+  // USERS
   // =========================
   @override
   Future<List<UserModel>> getOrganisationUsers() async {
     return await remoteDataSource.getOrganisationUsers();
   }
 
-  // =========================
-  // ADD USER TO PROJECT
-  // =========================
   @override
   Future<void> addUserToProject({
     required String projectId,
@@ -97,26 +110,4 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
       userEmail: userEmail,
     );
   }
-
-  // =========================
-  // FILTER PROJECTS  
-  // =========================
-  @override
-Future<List<ProjectModel>> filterProjects({
-  String? region,
-  String? status,
-}) async {
-  try {
-    return await remoteDataSource.filterProjects(
-      region: region,
-      status: status,
-    );
-  } catch (e) {
-    return await localDataSource.filterProjects(
-      region: region,
-      status: status,
-    );
-  }
-}
-  
 }
