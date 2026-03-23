@@ -518,6 +518,8 @@ TelemetryMessage TelemetryMonitor::recv_message()
 
     buf[recv_len] = '\0';
 
+    SPDLOG_DEBUG("Received message: \n\n{}", buf);
+
     std::stringstream ss(buf);
     TelemetryMessage message(ss);
 
