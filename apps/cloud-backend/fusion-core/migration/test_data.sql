@@ -72,7 +72,10 @@ INSERT INTO feature (id, name, description) VALUES
   (21,'device.create','Can create a new device'),
   (22,'device.update','Can update device details'),
   (23,'device.delete','Can reset/delete a device');
-
+  (24,'device.claim','Can claim a device to a project/account'),
+  (25,'device.rotate_cert','Can rotate device certificate for security'),
+  (26,'device.command','Can send commands to devices'),
+  (27,'device.command_status','Can view status of commands sent to devices');
 
 INSERT INTO feature_permission (id, feature_id, account_type_role_id, access_level_id, created_at) VALUES
   -- project_file.create
@@ -90,7 +93,15 @@ INSERT INTO feature_permission (id, feature_id, account_type_role_id, access_lev
   -- configuration.view
   (67,7,1,3,now()),(68,7,2,3,now()),(69,7,3,3,now()),(70,7,4,3,now()),(71,7,5,3,now()),(72,7,6,3,now()),(73,7,7,3,now()),(74,7,8,3,now()),(75,7,9,2,now()),(76,7,10,2,now()),(77,7,11,1,now()),
   -- commissioning.view
-  (78,8,1,3,now()),(79,8,2,3,now()),(80,8,3,3,now()),(81,8,4,3,now()),(82,8,5,3,now()),(83,8,6,3,now()),(84,8,7,3,now()),(85,8,8,3,now()),(86,8,9,2,now()),(87,8,10,2,now()),(88,8,11,1,now());
+  (78,8,1,3,now()),(79,8,2,3,now()),(80,8,3,3,now()),(81,8,4,3,now()),(82,8,5,3,now()),(83,8,6,3,now()),(84,8,7,3,now()),(85,8,8,3,now()),(86,8,9,2,now()),(87,8,10,2,now()),(88,8,11,1,now()),
+  -- device.claim
+  (89,9,1,3,now()),(90,9,2,3,now()),(91,9,3,3,now()),(92,9,4,3,now()),(93,9,5,3,now()),(94,9,6,3,now()),(95,9,7,3,now()),(96,9,8,3,now()),(97,9,9,2,now()),(98,9,10,2,now()),(99,9,11,1,now()),
+  -- device.rotate_cert
+  (100,10,1,3,now()),(101,10,2,3,now()),(102,10,3,3,now()),(103,10,4,3,now()),(104,10,5,3,now()),(105,10,6,3,now()),(106,10,7,3,now()),(107,10,8,3,now()),(108,10,9,2,now()),(109,10,10,2,now()),(110,10,11,1,now()),
+  -- device.command
+  (111,11,1,3,now()),(112,11,2,3,now()),(113,11,3,3,now()),(114,11,4,3,now()),(115,11,5,3,now()),(116,11,6,3,now()),(117,11,7,3,now()),(118,11,8,3,now()),(119,11,9,2,now()),(120,11,10,2,now()),(121,11,11,1,now()),
+  -- device.command_status
+  (122,12,1,3,now()),(123,12,2,3,now()),(124,12,3,3,now()),(125,12,4,3,now()),(126,12,5,3,now()),(127,12,6,3,now()),(128,12,7,3,now()),(129,12,8,3,now()),(130,12,9,2,now()),(131,12,10,2,now()),(132,12,11,1,now());
 
 -- Insert app_user data (mapping to account_type_role IDs and uuid accounts)
 INSERT INTO app_user (id, email, full_name, account_type_role_id, account_id, created_at, updated_at) VALUES
@@ -159,6 +170,10 @@ INSERT INTO feature_permission (id, feature_id, account_type_role_id, access_lev
   (121,20,9,3,now()), -- device.create
   (122,21,9,3,now()), -- device.update
   (123,22,9,3,now()); -- device.delete
+  (124,23,9,3,now()); -- device.claim
+  (125,24,9,3,now()); -- device.rotate_cert
+  (126,25,9,3,now()); -- device.command
+  (127,26,9,3,now()); -- device.command_status
 
 -- Advance sequence to latest id
 SELECT setval('feature_permission_id_seq',123,true);
