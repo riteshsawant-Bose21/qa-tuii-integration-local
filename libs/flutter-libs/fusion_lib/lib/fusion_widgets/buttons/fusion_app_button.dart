@@ -577,24 +577,19 @@ class _FusionAppButtonState extends State<FusionAppButton> {
       color = context.colorScheme.textDisabled;
     }
     if (widget.style == FusionAppButtonStyle.link) {
-      return TextStyle(
-        fontWeight: FontWeight.w600,
-        color: () {
-          if (_isDisabled)
-            return context.colorScheme.textDisabled;
-          else if (_isPressed || _isActive)
-            return context.colorScheme.textPrimary;
-          else if (_isHovered)
-            return context.colorScheme.textBody;
-          else
-            context.colorScheme.textPrimary;
-        }(),
+      return context.textTheme.b2SemiBold.withColor(
+        _isDisabled
+            ? context.colorScheme.textDisabled
+            : _isPressed || _isActive
+            ? context.colorScheme.textPrimary
+            : _isHovered
+            ? context.colorScheme.textBody
+            : color,
       );
     }
     if (widget.style == FusionAppButtonStyle.tertiary) {
-      return TextStyle(
-        fontWeight: FontWeight.w600,
-        color: _isDisabled
+      return context.textTheme.b2SemiBold.withColor(
+        _isDisabled
             ? context.colorScheme.textDisabled
             : _isPressed || _isActive
             ? context.colorScheme.textPrimary
@@ -605,15 +600,13 @@ class _FusionAppButtonState extends State<FusionAppButton> {
     }
 
     if (widget.style == FusionAppButtonStyle.brand) {
-      return TextStyle(
-        fontWeight: FontWeight.w600,
-        color: _isDisabled ? context.colorScheme.GreenThemeDisabledText : context.colorScheme.primaryWhite,
+      return context.textTheme.b2SemiBold.withColor(
+        _isDisabled ? context.colorScheme.GreenThemeDisabledText : context.colorScheme.primaryWhite,
       );
     }
 
-    return TextStyle(
-      fontWeight: FontWeight.w600,
-      color: color,
+    return context.textTheme.b2SemiBold.withColor(
+      color,
     );
   }
 }
