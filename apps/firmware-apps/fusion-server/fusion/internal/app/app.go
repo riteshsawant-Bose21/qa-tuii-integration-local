@@ -178,16 +178,16 @@ func (app *App) registerPrivateGET(route string, handler http.HandlerFunc) {
 	routes.RegisterPrivateGET(app.privateRouter, route, handler)
 }
 
-func (app *App) registerPrivateDELETE(route string, handler http.HandlerFunc) {
-	routes.RegisterPrivateDELETE(app.privateRouter, route, handler)
-}
-
 func (app *App) registerPrivatePATCH(route string, handler http.HandlerFunc) {
 	routes.RegisterPrivatePATCH(app.privateRouter, route, handler)
 }
 
 func (app *App) registerPrivatePOST(route string, handler http.HandlerFunc) {
 	routes.RegisterPrivatePOST(app.privateRouter, route, handler)
+}
+
+func (app *App) registerPrivateDELETE(route string, handler http.HandlerFunc) {
+	routes.RegisterPrivateDELETE(app.privateRouter, route, handler)
 }
 
 func (app *App) setupPublicRoutes() {

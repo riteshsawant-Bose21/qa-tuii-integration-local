@@ -109,9 +109,6 @@ const (
 	// Private
 	//
 
-	CommandsEndpoint   = "/commands"
-	CommandsIDEndpoint = CommandsEndpoint + "/{id}"
-
 	DataEndpoint  = "/data"
 	StateEndpoint = "/state"
 )
@@ -132,12 +129,12 @@ func RegisterPrivatePOST(router *mux.Router, pattern string, handler http.Handle
 	RegisterPrivateEndpoint(router, "POST", pattern, handler)
 }
 
-func RegisterPrivateDELETE(router *mux.Router, pattern string, handler http.HandlerFunc) {
-	RegisterPrivateEndpoint(router, "DELETE", pattern, handler)
-}
-
 func RegisterPublicEndpoint(router *mux.Router, method string, pattern string, handler http.HandlerFunc) {
 	RegisterEndpoint(router, method, pattern, handler, true)
+}
+
+func RegisterPrivateDELETE(router *mux.Router, pattern string, handler http.HandlerFunc) {
+	RegisterPrivateEndpoint(router, "DELETE", pattern, handler)
 }
 
 func RegisterPublicDELETE(router *mux.Router, pattern string, handler http.HandlerFunc) {

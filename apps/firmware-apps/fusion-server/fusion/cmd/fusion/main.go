@@ -40,7 +40,6 @@ func parseFlags() *api.AppConfig {
 	local := flag.Bool("local", false, "Run in local-only mode (no clustering)")
 	verbose := flag.Bool("verbose", false, "Enable verbose logging")
 	profile := flag.Bool("profile", false, "Enable profile dump")
-
 	flag.Parse()
 
 	// Read environment overrides
