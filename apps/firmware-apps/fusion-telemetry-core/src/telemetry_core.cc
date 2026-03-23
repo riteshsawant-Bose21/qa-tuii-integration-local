@@ -183,33 +183,16 @@ static void handle_parameter(const std::string &path,
     }
 
     std::vector<PathComponent> path_parts = JsonMonitor::splitPath(path);
-    std::string rx_message = "{\"message_name\":\"" +
-                    path_parts[2].key +
-                    "\",\"packet_id\":12345678,\"parameters\":{\"name\":\"observer\",\"" +
-                    path_parts[3].key +
-                    "\":";
 
-    if (new_value.isArray())
-    {
-        rx_message += "[";
-        for (uint32_t idx=0; idx < new_value.size()-1; idx++)
-        {
-            rx_message += new_value[idx].asString();
-            rx_message += ",";
-        }
-        rx_message += new_value[new_value.size()-1].asString();
-        rx_message += "]";
-    }
-    else if (new_value.isInt())
-    {
-        rx_message += new_value.asString();
-    }
-    else
-    {
-        // String
-        rx_message += "\"" + new_value.asString() + "\"";
-    }
-    rx_message += "}}";
+    Json::Value message_json;
+    message_json["message_name"] = path_parts[2].key;
+    message_json["packet_id"] = 12345678;
+    message_json["parameters"]["name"] = "observer";
+    message_json["parameters"][path_parts[3].key] = new_value;
+
+    Json::StreamWriterBuilder writer;
+    writer["indentation"] = "";
+    std::string rx_message = Json::writeString(writer, message_json);
 
     handle_update(rx_message);
 }
