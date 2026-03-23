@@ -257,18 +257,28 @@ static void handle_parameter(const std::string &path,
 
     std::vector<PathComponent> path_parts = JsonMonitor::splitPath(path);
 
-    std::string message = "{ \"target\": \"" + path_parts[2].key + "\""
-        + ", \"name\": \"" + path_parts[3].key + "\""
-        + ((path_parts.size() > 4 && path_parts[4].isArrayAccess)
-                ? ", \"index\": ["
-                + std::to_string(path_parts[4].arrayIndex + 1)
-                + ((path_parts.size() > 5 && path_parts[5].isArrayAccess)
-                    ? ", "
-                    + std::to_string(path_parts[5].arrayIndex + 1) + "]"
-                    : "]")
-                : "")
-        + ", \"value\": " + (new_value.isString() ? "\"" : "")
-        + new_value.asString() + (new_value.isString() ? "\"" : "") + " }";
+    Json::Value message_json; 
+    message_json["target"] = path_parts[2].key;
+    message_json["name"] = path_parts[3].key;
+
+    if (path_parts.size() > 4 && path_parts[4].isArrayAccess)
+    {
+        Json::Value index_array(Json::arrayValue);
+        index_array.append(static_cast<Json::Int>(path_parts[4].arrayIndex + 1));
+        
+        if (path_parts.size() > 5 && path_parts[5].isArrayAccess)
+        {
+            index_array.append(static_cast<Json::Int>(path_parts[5].arrayIndex + 1));
+        }
+        
+        message_json["index"] = index_array;
+    }
+
+    message_json["value"] = new_value;
+
+    Json::StreamWriterBuilder writer;
+    writer["indentation"] = "";
+    std::string message = Json::writeString(writer, message_json);
 
     handle_update(message);
 }
