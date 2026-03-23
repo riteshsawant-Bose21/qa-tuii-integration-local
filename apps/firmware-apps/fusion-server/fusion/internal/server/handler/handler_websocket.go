@@ -10,7 +10,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// WebSocket topic constants to avoid hardcoding
+// WebSocket error message constants to avoid hardcoding
 const (
 	ErrInvalidPayload = "Invalid data payload"
 )
@@ -176,6 +176,11 @@ func (h *Handler) handlePatchConfigurationWithNotification(request *api.WebSocke
 		return createErrorResponse(&request.ID, api.WSCodeInvalidPayload, ErrInvalidPayload), nil
 	}
 
+	// Explicitly reject nil patch data (JSON null) since patch_config expects an object
+	if patchData == nil {
+		return createErrorResponse(&request.ID, api.WSCodeInvalidPayload, "Patch data cannot be null - expected object"), nil
+	}
+
 	diff, err := h.HandleHTTPPatch(patchData)
 	if err != nil {
 		return createErrorResponse(&request.ID, api.WSCodeUpdateFailed, fmt.Sprintf("Failed to patch configuration: %v", err)), nil
@@ -185,7 +190,12 @@ func (h *Handler) handlePatchConfigurationWithNotification(request *api.WebSocke
 		return createSuccessResponse(&request.ID, api.WSMsgTypePatchConfiguration, api.WSCodeOK, "No configuration changes applied", nil), nil
 	}
 
-	return createSuccessResponse(&request.ID, api.WSMsgTypePatchConfiguration, api.WSCodeUpdated, "Configuration patched successfully", diff), nil
+	// Wrap diff in updates field to match REST API pattern
+	responseData := map[string]any{
+		"updates": diff,
+	}
+
+	return createSuccessResponse(&request.ID, api.WSMsgTypePatchConfiguration, api.WSCodeUpdated, "Configuration patched successfully", responseData), nil
 }
 
 // handleUnsubscribeConfig unsubscribes client from config update events
