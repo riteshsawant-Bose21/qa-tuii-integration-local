@@ -7,7 +7,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
     required this.items,
     required this.onSelected,
     this.itemBuilder,
-    this.popoupwidth,
+    this.popoupwidth = 100,
     this.itemLabels,
     this.matchChildWidth = true,
     required this.child,

@@ -597,6 +597,7 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
   final void Function(int selectedIndex, T value) onOptionSelected;
   final String Function(T option) labelBuilder;
   final Widget Function(T option)? valueBuilder;
+  final String hint;
 
   const BuildRowPropertyWidget({
     super.key,
@@ -606,6 +607,7 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
     required this.onOptionSelected,
     required this.labelBuilder,
     this.valueBuilder,
+    this.hint = "Select",
   });
 
   @override
@@ -623,9 +625,11 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: FusionPopupMenu<T>(
-            tooltip: "",
-            onSelected: (T newValue) {
+          child: FusionNeumorphicDropdown<T>(
+            // tooltip: "",
+            // popupOffset: const Offset(1, -2),
+            popupWidth: 150,
+            onChanged: (T newValue) {
               final int selectedIndex = options.indexOf(newValue);
               onOptionSelected(selectedIndex, newValue);
             },
@@ -656,10 +660,10 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
                             return valueBuilder!(value as T);
                           } else {
                             return FusionAppText(
-                              text: value != null ? labelBuilder(value as T) : "Select",
+                              text: value != null ? labelBuilder(value as T) : hint,
                               maxLine: 1,
                               style: context.textTheme.bodySmall?.copyWith(
-                                color: value != null ? context.colorScheme.textPrimary : context.colorScheme.elevation4,
+                                color: value != null ? context.colorScheme.textPrimary : context.colorScheme.textPlaceholder,
                               ),
                             );
                           }
@@ -677,6 +681,62 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
               ),
             ),
           ),
+          // child: FusionPopupMenu<T>(
+          //   tooltip: "",
+          //   popupOffset: const Offset(1, -2),
+          //   popoupwidth: 150,
+          //   onSelected: (T newValue) {
+          //     final int selectedIndex = options.indexOf(newValue);
+          //     onOptionSelected(selectedIndex, newValue);
+          //   },
+          //   matchChildWidth: false,
+          //   items: options,
+          //   itemBuilder: (BuildContext context, T option) {
+          //     if (valueBuilder != null) {
+          //       return valueBuilder!(option);
+          //     } else {
+          //       return FusionAppText(
+          //         text: labelBuilder(option),
+          //         style: context.textTheme.bodySmall,
+          //       );
+          //     }
+          //   },
+          //   child: FusionContainer(
+          //     borderRadius: 8,
+          //     raised: true,
+          //     child: Padding(
+          //       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          //       child: Row(
+          //         mainAxisSize: MainAxisSize.min,
+          //         children: <Widget>[
+          //           Expanded(
+          //             child: Builder(
+          //               builder: (BuildContext context) {
+          //                 if (valueBuilder != null && value != null) {
+          //                   return valueBuilder!(value as T);
+          //                 } else {
+          //                   return FusionAppText(
+          //                     text: value != null ? labelBuilder(value as T) : "Select",
+          //                     maxLine: 1,
+          //                     style: context.textTheme.bodySmall?.copyWith(
+          //                       color: value != null ? context.colorScheme.textPrimary : context.colorScheme.elevation4,
+          //                     ),
+          //                   );
+          //                 }
+          //               },
+          //             ),
+          //           ),
+          //           const SizedBox(width: 2),
+          //           Icon(
+          //             LucideIcons.chevronDown200,
+          //             color: context.colorScheme.textPrimary,
+          //             size: 16,
+          //           ),
+          //         ],
+          //       ),
+          //     ),
+          //   ),
+          // ),
         ),
       ],
     );

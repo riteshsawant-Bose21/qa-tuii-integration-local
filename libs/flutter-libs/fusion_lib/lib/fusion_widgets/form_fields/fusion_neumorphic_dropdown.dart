@@ -123,7 +123,7 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
               child: FusionAppText(
                 text: _getLabel(item),
                 style: context.textTheme.bodyMedium?.copyWith(
-                  color: isSelected ? context.colorScheme.primary : context.colorScheme.onSurface,
+                  color: isSelected ? context.colorScheme.primary : context.colorScheme.textPlaceholder,
                 ),
               ),
             ),

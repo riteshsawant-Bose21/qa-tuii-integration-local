@@ -7,6 +7,7 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/properties_and_filter_section.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/drop_down.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_widgets/form_fields/fusion_custom_textfield.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../view_model/add_source_viewmodel.dart';
@@ -119,8 +120,8 @@ class AddSourcePopup extends StatelessWidget {
                             //   onChanged: addSourceViewModel.setSourceOption,
                             // ),
                             // const SizedBox(height: 28),
-                            SemanticHelper.container(
-                              testId: SemanticHelper.createTestId(SemanticTypes.container, "add_source_section_type"),
+                            SemanticHelper.dropdown(
+                              testId: SemanticHelper.createTestId(SemanticTypes.dropdown, "add_source_section_type"),
                               child: BuildRowPropertyWidget<SourceSectionType>(
                                 label: "Type",
                                 value: state.selectedSourceSectionType,
@@ -185,6 +186,7 @@ class AddSourcePopup extends StatelessWidget {
                                                         ),
                                                         Flexible(
                                                           child: FusionAppText(
+                                                            maxLine: 1,
                                                             text: option.name,
                                                             style:
                                                                 Theme.of(
@@ -323,6 +325,10 @@ class AddSourcePopup extends StatelessWidget {
                                                   horizontal: 8,
                                                 ),
                                                 decoration: BoxDecoration(
+                                                  boxShadow: <BoxShadow>[
+                                                    BoxShadow(color: context.colorScheme.elevation2, blurRadius: 1, offset: const Offset(-2, -3)),
+                                                    BoxShadow(color: context.colorScheme.black, blurRadius: 1, offset: const Offset(2, 3)),
+                                                  ],
                                                   color: context.colorScheme.surface,
                                                   borderRadius: BorderRadius.circular(8),
                                                 ),
@@ -444,15 +450,27 @@ class AddSourcePopup extends StatelessWidget {
                                       SemanticTypes.container,
                                       "add_source_section_name_input",
                                     ),
-                                    child: PropertyTextField(
-                                      onChanged: (String value) => addSourceViewModel.setSelectedSourceName(value),
-                                      maxLength: 24,
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        vertical: 12,
-                                        horizontal: 10,
-                                      ),
-                                      hintText: 'Enter name',
+                                    child: FusionCustomTextField(
+                                      height: 30,
+                                      borderRadius: 8,
+                                      variant: FusionFieldVariant.neumorphic,
+                                      semanticId: '',
+                                      hint: 'Enter name',
+                                      controller: TextEditingController(),
+                                      charlimit: 24,
+                                      onSubmit: (String value) {
+                                        addSourceViewModel.setSelectedSourceName(value);
+                                      },
                                     ),
+                                    // PropertyTextField(
+                                    //   onChanged: (String value) => addSourceViewModel.setSelectedSourceName(value),
+                                    //   maxLength: 24,
+                                    //   contentPadding: const EdgeInsets.symmetric(
+                                    //     vertical: 12,
+                                    //     horizontal: 10,
+                                    //   ),
+                                    //   hintText: 'Enter name',
+                                    // ),
                                   ),
                                 ),
                               ],

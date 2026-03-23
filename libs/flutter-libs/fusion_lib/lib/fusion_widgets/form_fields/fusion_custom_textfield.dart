@@ -24,7 +24,7 @@ enum FusionFieldVariant {
 
 /// ---------------- WIDGET ----------------
 
-class CustomTextField extends StatefulWidget {
+class FusionCustomTextField extends StatefulWidget {
   final String? label;
   final String hint;
   final TextEditingController controller;
@@ -70,7 +70,9 @@ class CustomTextField extends StatefulWidget {
   final int charlimit;
   final InputDecoration? decoration;
 
-  const CustomTextField({
+  final double borderRadius;
+
+  const FusionCustomTextField({
     super.key,
     this.width = 400,
     this.height = 52,
@@ -104,15 +106,16 @@ class CustomTextField extends StatefulWidget {
     this.onSubmit,
     this.charlimit = 50,
     this.decoration,
+    this.borderRadius = 12,
   });
 
   @override
-  State<CustomTextField> createState() => _CustomTextFieldState();
+  State<FusionCustomTextField> createState() => _FusionCustomTextFieldState();
 }
 
 /// ---------------- STATE ----------------
 
-class _CustomTextFieldState extends State<CustomTextField> {
+class _FusionCustomTextFieldState extends State<FusionCustomTextField> {
   final LayerLink _layerLink = LayerLink();
   OverlayEntry? _dropdownOverlay;
 
@@ -173,7 +176,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
     _dropdownOverlay = null;
   }
 
-  // Add this list at the top of your _CustomTextFieldState class
+  // Add this list at the top of your _FusionCustomTextFieldState class
 
   String _selectedCountryCode = '+91';
 
@@ -226,7 +229,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                           ),
                           decoration: BoxDecoration(
                             color: const Color(0xFF1C1C1C),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(widget.borderRadius),
                             border: Border.all(
                               color: this.context.colorScheme.elevation3,
                             ),
@@ -673,7 +676,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                             focusedBorder: InputBorder.none,
 
                             hintText: widget.hint,
-                            hintStyle: context.textTheme.b3Regular.withColor(context.colorScheme.textPlaceholder),
+                            hintStyle: context.textTheme.bodySmall?.withColor(context.colorScheme.textPlaceholder),
                             filled: false,
                             isDense: true,
                           ),

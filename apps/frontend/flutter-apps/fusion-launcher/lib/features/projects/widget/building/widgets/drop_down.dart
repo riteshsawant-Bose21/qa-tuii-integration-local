@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class BuildingPageDropDown<T> extends StatefulWidget {
   final T? value;
@@ -48,136 +49,167 @@ class _BuildingPageDropDownState<T> extends State<BuildingPageDropDown<T>> {
   Widget build(BuildContext context) {
     final GlobalKey<State<StatefulWidget>> childKey = GlobalKey();
 
-    return Container(
-      key: childKey,
-      height: 32,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation1,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: context.colorScheme.strokeLight, width: 1),
-      ),
-      child: FusionPopupMenu<T>(
-        // color: context.colorScheme.elevation2,
-        // shadowColor: Colors.transparent,
-        // position: PopupMenuPosition.under,
-        tooltip: '',
-        // shape: RoundedRectangleBorder(
-        //   borderRadius: BorderRadius.circular(8),
-        //   side: BorderSide(color: context.colorScheme.strokeLight, width: 1),
-        // ),
-        // offset: const Offset(0, 10),
-        // padding: EdgeInsets.zero,
-        // menuPadding: EdgeInsets.zero,
-        // clipBehavior: Clip.none,
-        items: widget.items,
-        onSelected: widget.onSelect,
-        popupOffset: const Offset(0, 10),
-        itemBuilder: (BuildContext context, T option) => widget.valueBuilder != null ? widget.valueBuilder!(option) : widget.labelBuilder(option),
-        // itemBuilder: (BuildContext context) {
-        //   return <PopupMenuEntry<String>>[
-        //     PopupMenuItem<String>(
-        //       enabled: false,
-        //       height: 50,
-        //       padding: const EdgeInsets.all(8).copyWith(right: 0),
-        //       child: Builder(
-        //         builder: (BuildContext context) {
-        //           if (widget.items.isEmpty) {
-        //             return Padding(
-        //               padding: const EdgeInsets.all(8.0),
-        //               child: FusionAppText(
-        //                 text: "Empty items",
-        //                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-        //                   color: context.colorScheme.onSurface.withValues(alpha: 0.5),
-        //                 ),
-        //               ),
-        //             );
-        //           }
+    return FusionNeumorphicDropdown<T>(
+      // color: context.colorScheme.elevation2,
+      // shadowColor: Colors.transparent,
+      // position: PopupMenuPosition.under,
+      // tooltip: '',
+      // shape: RoundedRectangleBorder(
+      //   borderRadius: BorderRadius.circular(8),
+      //   side: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+      // ),
+      // offset: const Offset(0, 10),
+      // padding: EdgeInsets.zero,
+      // menuPadding: EdgeInsets.zero,
+      // clipBehavior: Clip.none,
+      items: widget.items,
+      onChanged: widget.onSelect,
+      // popupOffset: const Offset(0, 10),
+      itemBuilder: (BuildContext context, T option) => widget.valueBuilder != null ? widget.valueBuilder!(option) : widget.labelBuilder(option),
+      // itemBuilder: (BuildContext context) {
+      //   return <PopupMenuEntry<String>>[
+      //     PopupMenuItem<String>(
+      //       enabled: false,
+      //       height: 50,
+      //       padding: const EdgeInsets.all(8).copyWith(right: 0),
+      //       child: Builder(
+      //         builder: (BuildContext context) {
+      //           if (widget.items.isEmpty) {
+      //             return Padding(
+      //               padding: const EdgeInsets.all(8.0),
+      //               child: FusionAppText(
+      //                 text: "Empty items",
+      //                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
+      //                   color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+      //                 ),
+      //               ),
+      //             );
+      //           }
 
-        //           return SizedBox(
-        //             width: (childKey.currentContext?.findRenderObject() as RenderBox?)?.size.width, // Match trigger width
-        //             child: Column(
-        //               crossAxisAlignment: CrossAxisAlignment.start,
-        //               mainAxisSize: MainAxisSize.min,
-        //               children: <Widget>[
-        //                 ...widget.items.map(
-        //                   (T value) => MouseRegion(
-        //                     cursor: SystemMouseCursors.click,
-        //                     child: GestureDetector(
-        //                       onTap: () {
-        //                         widget.onSelect(value);
-        //                         Navigator.of(context).pop();
-        //                       },
-        //                       behavior: HitTestBehavior.translucent,
-        //                       child: Container(
-        //                         width: double.infinity,
-        //                         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-        //                         child: widget.valueBuilder != null ? widget.valueBuilder!(value) : widget.labelBuilder(value),
-        //                       ),
-        //                     ),
-        //                   ),
-        //                 ),
-        //               ],
-        //             ),
-        //           );
-        //         },
-        //       ),
-        //     ),
-        //   ];
-        // },
-        child: SemanticHelper.container(
-          testId: SemanticHelper.createTestId(
-            SemanticTypes.container,
-            "multi_section_dropdown_${widget.hintText}",
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 4.0,
-            ).copyWith(right: 8),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: Builder(
-                      builder: (BuildContext context) {
-                        if (widget.value != null) {
-                          return widget.labelBuilder(widget.value as T);
-                        } else {
-                          return FusionAppText(
-                            text: widget.hintText ?? 'Select',
-                            maxLine: 1,
-                            style: Theme.of(
-                              context,
-                            ).textTheme.labelLarge?.copyWith(
-                              color: context.colorScheme.onSurface.withValues(
-                                alpha: widget.value == null ? 0.5 : 1.0,
-                              ),
-                              fontWeight: FontWeight.normal,
-                              fontSize: 12,
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                  ),
+      //           return SizedBox(
+      //             width: (childKey.currentContext?.findRenderObject() as RenderBox?)?.size.width, // Match trigger width
+      //             child: Column(
+      //               crossAxisAlignment: CrossAxisAlignment.start,
+      //               mainAxisSize: MainAxisSize.min,
+      //               children: <Widget>[
+      //                 ...widget.items.map(
+      //                   (T value) => MouseRegion(
+      //                     cursor: SystemMouseCursors.click,
+      //                     child: GestureDetector(
+      //                       onTap: () {
+      //                         widget.onSelect(value);
+      //                         Navigator.of(context).pop();
+      //                       },
+      //                       behavior: HitTestBehavior.translucent,
+      //                       child: Container(
+      //                         width: double.infinity,
+      //                         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      //                         child: widget.valueBuilder != null ? widget.valueBuilder!(value) : widget.labelBuilder(value),
+      //                       ),
+      //                     ),
+      //                   ),
+      //                 ),
+      //               ],
+      //             ),
+      //           );
+      //         },
+      //       ),
+      //     ),
+      //   ];
+      // },
+      child: FusionContainer(
+        borderRadius: 8,
+        raised: true,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Expanded(
+                child: Builder(
+                  builder: (BuildContext context) {
+                    if (widget.value != null) {
+                      return widget.labelBuilder(widget.value as T);
+                    } else {
+                      return FusionAppText(
+                        text: widget.hintText ?? 'Select',
+                        maxLine: 1,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.labelLarge?.copyWith(
+                          color: context.colorScheme.onSurface.withValues(
+                            alpha: widget.value == null ? 0.5 : 1.0,
+                          ),
+                          fontWeight: FontWeight.normal,
+                          fontSize: 12,
+                        ),
+                      );
+                    }
+                  },
                 ),
-                SemanticHelper.container(
-                  testId: SemanticHelper.createTestId(
-                    SemanticTypes.container,
-                    "multi_section_dropdown_${widget.hintText}_arrow",
-                  ),
-                  child: Icon(
-                    Icons.keyboard_arrow_down,
-                    color: Colors.grey[600],
-                    size: 16,
-                  ),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 2),
+              Icon(
+                LucideIcons.chevronDown200,
+                color: context.colorScheme.textPrimary,
+                size: 16,
+              ),
+            ],
           ),
         ),
       ),
+      // child: SemanticHelper.container(
+      //   testId: SemanticHelper.createTestId(
+      //     SemanticTypes.container,
+      //     "multi_section_dropdown_${widget.hintText}",
+      //   ),
+      //   child: Padding(
+      //     padding: const EdgeInsets.symmetric(
+      //       horizontal: 4.0,
+      //     ).copyWith(right: 8),
+      //     child: Row(
+      //       children: <Widget>[
+      //         Expanded(
+      //           child: Padding(
+      //             padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      //             child: Builder(
+      //               builder: (BuildContext context) {
+      //                 if (widget.value != null) {
+      //                   return widget.labelBuilder(widget.value as T);
+      //                 } else {
+      //                   return FusionAppText(
+      //                     text: widget.hintText ?? 'Select',
+      //                     maxLine: 1,
+      //                     style: Theme.of(
+      //                       context,
+      //                     ).textTheme.labelLarge?.copyWith(
+      //                       color: context.colorScheme.onSurface.withValues(
+      //                         alpha: widget.value == null ? 0.5 : 1.0,
+      //                       ),
+      //                       fontWeight: FontWeight.normal,
+      //                       fontSize: 12,
+      //                     ),
+      //                   );
+      //                 }
+      //               },
+      //             ),
+      //           ),
+      //         ),
+      //         SemanticHelper.container(
+      //           testId: SemanticHelper.createTestId(
+      //             SemanticTypes.container,
+      //             "multi_section_dropdown_${widget.hintText}_arrow",
+      //           ),
+      //           child: Icon(
+      //             Icons.keyboard_arrow_down,
+      //             color: Colors.grey[600],
+      //             size: 16,
+      //           ),
+      //         ),
+      //       ],
+      //     ),
+      //   ),
+      // ),
     );
   }
 }
