@@ -102,17 +102,17 @@
         {
             "target": "player",
             "name": "play_message",
-            "value": "{ \"filename\": \"file1.wav\", \"priority\": 50, \"zones\": [\"lobby\", \"atrium\"] }"
+            "value": "{ \"path\": \"file1.wav\", \"priority\": 50, \"zones\": [\"lobby\", \"atrium\"] }"
         },
         {
             "target": "player",
             "name": "play_message",
-            "value": "{ \"filename\": \"file2.wav\", \"priority\": 50, \"zones\": [\"patio\", \"bar\"] }"
+            "value": "{ \"path\": \"file2.wav\", \"priority\": 50, \"zones\": [\"patio\", \"bar\"] }"
         },
         {
             "target": "player",
             "name": "play_message",
-            "value": "{ \"filename\": \"file3.wav\", \"priority\": 100 }"
+            "value": "{ \"path\": \"file3.wav\", \"priority\": 100 }"
         }
     ],
     "task_connections": [
