@@ -243,6 +243,7 @@ func (s *Service) Reset(ctx context.Context, device models.Device, tx model.DBTx
 	ownerHistory, err := models.DeviceOwnershipHistories(
 		models.DeviceOwnershipHistoryWhere.DeviceID.EQ(device.ID),
 		models.DeviceOwnershipHistoryWhere.AccountID.EQ(device.ClaimedBy.String),
+		models.DeviceOwnershipHistoryWhere.ReleasedAt.IsNull(),
 	).One(ctx, tx)
 	if err != nil {
 		logger.Error("Failed to get device ownership history", zap.Error(err))
@@ -261,7 +262,7 @@ func (s *Service) Reset(ctx context.Context, device models.Device, tx model.DBTx
 	}
 
 	// Clear device claim data
-	device.ClaimStatus = "UNCLAIMED"
+	device.ClaimStatus = models.ClaimStatusEnumUNCLAIMED
 	device.ClaimedBy = null.NewString("", false)
 	device.ProjectID = null.NewString("", false)
 	device.CertificateID = null.NewString("", false)
@@ -285,7 +286,7 @@ func (s *Service) Claim(ctx context.Context, device models.Device, accountID str
 	device.ClaimedBy = null.NewString(accountID, accountID != "")
 	device.CertificateID = null.NewString(cert.ID, cert.ID != "")
 	device.CertificateArn = null.NewString(cert.Arn, cert.Arn != "")
-	device.ClaimStatus = "CLAIMED"
+	device.ClaimStatus = models.ClaimStatusEnumCLAIMED
 
 	if _, err := device.Update(ctx, tx, boil.Infer()); err != nil {
 		logger.Error("Failed to claim device", zap.String("serialNumber", device.SerialNumber), zap.Error(err))
@@ -326,7 +327,7 @@ func (s *Service) InsertCommand(ctx context.Context, projectID, commandID string
 			CommandID:   commandID,
 			ProjectID:   projectID,
 			CommandName: string(request.Command),
-			Status:      "UNPUBLISHED",
+			Status:      models.CommandStatusEnumUNPUBLISHED,
 			IssuedAt:    time.Now(),
 		}
 
@@ -343,7 +344,7 @@ func (s *Service) InsertCommand(ctx context.Context, projectID, commandID string
 			ProjectID:   projectID,
 			DeviceID:    deviceID,
 			CommandName: string(request.Command),
-			Status:      "UNPUBLISHED",
+			Status:      models.CommandStatusEnumUNPUBLISHED,
 			IssuedAt:    time.Now(),
 		}
 

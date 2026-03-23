@@ -60,7 +60,7 @@ CREATE TABLE device_project_history (
 CREATE TYPE command_status_enum AS ENUM (
     'UNPUBLISHED',
     'PUBLISHED',
-    'RECIEVED',
+    'RECEIVED',
     'SUCCESS',
     'FAILURE'
 );

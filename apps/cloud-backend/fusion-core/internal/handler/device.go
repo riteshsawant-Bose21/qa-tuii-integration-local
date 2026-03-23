@@ -78,6 +78,7 @@ func (h *DeviceHandler) handleDeviceError(ctx *gin.Context, err error, logger *z
 // @Tags devices
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param body body types.DeviceCreateRequest true "Device details"
 // @Success 201 {object} types.DeviceCreateResponse "Successfully created device"
 // @Failure 400 {object} types.ErrorResponse "Bad request - Invalid payload or device already exists"

@@ -14,6 +14,7 @@ type CloudConfig struct {
 	Region          string
 	IoTEndpoint     string
 	IoTCommandTopic string
+	IoTDevicePolicy string
 }
 
 // Cloud retrieves the cloud configuration from the store.
@@ -43,9 +44,14 @@ func (s *Service) Cloud() (*CloudConfig, error) {
 		return nil, fmt.Errorf("failed to get IoT endpoint: %w", err)
 	}
 
-	iotCommandTopic,  err := s.store.ReqString(environment.IOT.CommandTopic)
+	iotCommandTopic, err := s.store.ReqString(environment.IOT.CommandTopic)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get IoT command topic: %w", err)
+	}
+
+	iotDevicePolicy, err := s.store.ReqString(environment.IOT.DevicePolicy)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get IoT device policy: %w", err)
 	}
 
 	return &CloudConfig{
@@ -55,5 +61,6 @@ func (s *Service) Cloud() (*CloudConfig, error) {
 		Region:          region,
 		IoTEndpoint:     iotEndpoint,
 		IoTCommandTopic: iotCommandTopic,
+		IoTDevicePolicy: iotDevicePolicy,
 	}, nil
 }

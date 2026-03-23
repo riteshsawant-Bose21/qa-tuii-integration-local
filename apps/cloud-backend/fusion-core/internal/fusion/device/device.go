@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
@@ -13,9 +14,6 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
-
-// Policy name for IoT device certificates
-const iotPolicyName = "testdevicepolicy"
 
 // ---------------------------------------------------------------------------
 // Helper Functions
@@ -81,7 +79,7 @@ func (s *Service) cleanupIoTResources(ctx context.Context, deviceID, certID, cer
 			zap.Error(err))
 	}
 
-	if err := s.iotService.DetachPolicyFromCertificate(ctx, iotPolicyName, certArn, logger); err != nil {
+	if err := s.iotService.DetachPolicyFromCertificate(ctx, s.cfg.IoTDevicePolicy, certArn, logger); err != nil {
 		logger.Warn("Failed to cleanup: detach policy from certificate",
 			zap.String("certificateArn", certArn),
 			zap.Error(err))
@@ -111,7 +109,7 @@ func (s *Service) revokeOldCertificate(ctx context.Context, deviceID, certID, ce
 			zap.Error(err))
 	}
 
-	if err := s.iotService.DetachPolicyFromCertificate(ctx, iotPolicyName, certArn, logger); err != nil {
+	if err := s.iotService.DetachPolicyFromCertificate(ctx, s.cfg.IoTDevicePolicy, certArn, logger); err != nil {
 		logger.Warn("Failed to detach policy from old certificate (non-critical)",
 			zap.String("certificateArn", certArn),
 			zap.Error(err))
@@ -155,7 +153,7 @@ func (s *Service) setupDeviceCertificate(ctx context.Context, deviceID string, c
 		return nil, types.CertificateInfo{}, err
 	}
 
-	if err := s.iotService.AttachPolicyToCertificate(ctx, iotPolicyName, *certArn, logger); err != nil {
+	if err := s.iotService.AttachPolicyToCertificate(ctx, s.cfg.IoTDevicePolicy, *certArn, logger); err != nil {
 		logger.Error("Failed to attach policy to certificate", zap.Error(err))
 		// Cert is attached to thing - full cleanup needed
 		s.cleanupIoTResources(ctx, deviceID, *certID, *certArn, deleteThingOnFailure, logger)
@@ -178,7 +176,7 @@ func (s *Service) CreateDevice(ctx context.Context, request *types.DeviceCreateR
 	}
 
 	// Check if device is already claimed
-	if device != nil && device.ClaimStatus == "CLAIMED" {
+	if device != nil && device.ClaimStatus == models.ClaimStatusEnumCLAIMED {
 		logger.Error("Device already claimed, reset to reclaim",
 			zap.String("deviceID", request.SerialNumber))
 		return nil, errors.New(errorutil.ErrMsgDeviceAlreadyExists)
@@ -295,7 +293,7 @@ func (s *Service) ResetDevice(ctx context.Context, deviceID string, user types.U
 		return errors.New(errorutil.ErrMsgDeviceNotFound)
 	}
 
-	if device.ClaimStatus != "CLAIMED" {
+	if device.ClaimStatus != models.ClaimStatusEnumCLAIMED {
 		logger.Info("Device is not claimed, nothing to reset",
 			zap.String("deviceID", deviceID))
 		return nil
@@ -320,7 +318,7 @@ func (s *Service) ResetDevice(ctx context.Context, deviceID string, user types.U
 		logger.Error("Failed to detach certificate from thing", zap.Error(err))
 		return err
 	}
-	if err := s.iotService.DetachPolicyFromCertificate(ctx, iotPolicyName, device.CertificateArn.String, logger); err != nil {
+	if err := s.iotService.DetachPolicyFromCertificate(ctx, s.cfg.IoTDevicePolicy, device.CertificateArn.String, logger); err != nil {
 		logger.Error("Failed to detach policy from certificate", zap.Error(err))
 		return err
 	}
@@ -341,7 +339,7 @@ func (s *Service) ClaimDevice(ctx context.Context, deviceID string, request *typ
 		return nil, errors.New(errorutil.ErrMsgDeviceNotFound)
 	}
 
-	if device.ClaimStatus == "CLAIMED" {
+	if device.ClaimStatus == models.ClaimStatusEnumCLAIMED {
 		logger.Error("Device is already claimed",
 			zap.String("deviceID", deviceID))
 		return nil, errors.New(errorutil.ErrMsgDeviceAlreadyClaimed)
@@ -381,7 +379,7 @@ func (s *Service) RotateCertificate(ctx context.Context, deviceID string, reques
 		return nil, errors.New(errorutil.ErrMsgDeviceNotFound)
 	}
 
-	if device.ClaimStatus != "CLAIMED" {
+	if device.ClaimStatus != models.ClaimStatusEnumCLAIMED {
 		logger.Error("Device is not claimed, cannot rotate certificate",
 			zap.String("deviceID", deviceID))
 		return nil, errors.New(errorutil.ErrMsgDeviceNotClaimed)
@@ -458,13 +456,15 @@ func (s *Service) Command(ctx context.Context, request *types.CommandRequest, us
 		return "", fmt.Errorf("failed to marshal command request: %w", err)
 	}
 
-	err = s.iotService.Publish(ctx, fmt.Sprintf("cluster/%s/command", request.ProjectID), requestBytes, logger)
+	topic := strings.Replace(s.cfg.IoTCommandTopic, "{projectID}", request.ProjectID, -1)
+
+	err = s.iotService.Publish(ctx, topic, requestBytes, logger)
 	if err != nil {
 		logger.Error("Failed to publish command", zap.Error(err))
 		return "", fmt.Errorf("failed to publish command: %w", err)
 	}
 
-	err = s.dbService.UpdateCommandStatus(ctx, commandID, "PUBLISHED", logger)
+	err = s.dbService.UpdateCommandStatus(ctx, commandID, models.CommandStatusEnumPUBLISHED, logger)
 
 	if err != nil {
 		logger.Error("Failed to publish command", zap.Error(err))

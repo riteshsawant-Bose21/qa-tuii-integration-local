@@ -16,11 +16,13 @@ const (
 	ProjectSync   = "project.sync"
 
 	// Device permissions
-	DeviceCreate     = "device.create"
-	DeviceUpdate     = "device.update"
-	DeviceDelete     = "device.delete"
-	DeviceClaim      = "device.claim"
-	DeviceRotateCert = "device.rotate_cert"
+	DeviceCreate        = "device.create"
+	DeviceUpdate        = "device.update"
+	DeviceDelete        = "device.delete"
+	DeviceClaim         = "device.claim"
+	DeviceRotateCert    = "device.rotate_cert"
+	DeviceCommand       = "device.command"
+	DeviceCommandStatus = "device.command_status"
 
 	// User management permissions
 	UserRead   = "user.read"
@@ -104,14 +106,14 @@ func SetupDevicePermissions(acc *AccessControlConfig) {
 	// Device UPDATE endpoint - require write permission
 	acc.RegisterPermission("PATCH", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceByID), DeviceUpdate, PermissionWrite, "Update device")
 	// Device RESET endpoint - require write permission
-	acc.RegisterPermission("DELETE", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceReset), DeviceUpdate, PermissionWrite, "Reset device")
+	acc.RegisterPermission("DELETE", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceReset), DeviceDelete, PermissionWrite, "Reset device")
 	// Device CLAIM endpoint - require write permission
-	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceClaim), DeviceUpdate, PermissionWrite, "Claim device")
+	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceClaim), DeviceClaim, PermissionWrite, "Claim device")
 	// Device ROTATE-CERT endpoint - require write permission
-	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceRotateCert), DeviceUpdate, PermissionWrite, "Rotate device certificate")
+	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceRotateCert), DeviceRotateCert, PermissionWrite, "Rotate device certificate")
 
-	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceCommand), DeviceUpdate, PermissionWrite, "Send command to device")
-	acc.RegisterPermission("GET", fmt.Sprintf("%s%s", basePath, constants.EndpointCommandStatus), DeviceUpdate, PermissionRead, "Get command status")
+	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceCommand), DeviceCommand, PermissionWrite, "Send command to device")
+	acc.RegisterPermission("GET", fmt.Sprintf("%s%s", basePath, constants.EndpointCommandStatus), DeviceCommandStatus, PermissionRead, "Get command status")
 }
 
 // SetupCommonPermissions configures common permission patterns
