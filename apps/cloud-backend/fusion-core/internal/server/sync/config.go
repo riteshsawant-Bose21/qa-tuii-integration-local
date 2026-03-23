@@ -11,7 +11,7 @@ type SyncConfig struct {
 	Postgres   *config.Postgres
 	Server     *config.Server
 	Validation *config.Validation
-	Cloud         *config.CloudConfig
+	Cloud      *config.CloudConfig
 	Processing *config.Processing
 }
 
