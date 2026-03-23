@@ -98,7 +98,11 @@ definitions:
   types.CommandRequest:
     properties:
       command:
-        $ref: '#/definitions/types.CommandType'
+        allOf:
+        - $ref: '#/definitions/types.CommandType'
+        enum:
+        - REBOOT
+        example: REBOOT
       device_ids:
         items:
           type: string
@@ -139,11 +143,9 @@ definitions:
   types.CommandType:
     enum:
     - REBOOT
-    - STANDBY
     type: string
     x-enum-varnames:
     - CommandRestart
-    - CommandStandby
   types.CreateRoleRequest:
     properties:
       description:
@@ -264,8 +266,6 @@ definitions:
         type: boolean
       project_id:
         type: string
-    required:
-    - client_device_id
     type: object
   types.EnvironmentType:
     enum:

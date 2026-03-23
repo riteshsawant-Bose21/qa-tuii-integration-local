@@ -2309,7 +2309,15 @@ const docTemplate = `{
             ],
             "properties": {
                 "command": {
-                    "$ref": "#/definitions/types.CommandType"
+                    "enum": [
+                        "REBOOT"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.CommandType"
+                        }
+                    ],
+                    "example": "REBOOT"
                 },
                 "device_ids": {
                     "type": "array",
@@ -2367,12 +2375,10 @@ const docTemplate = `{
         "types.CommandType": {
             "type": "string",
             "enum": [
-                "REBOOT",
-                "STANDBY"
+                "REBOOT"
             ],
             "x-enum-varnames": [
-                "CommandRestart",
-                "CommandStandby"
+                "CommandRestart"
             ]
         },
         "types.CreateRoleRequest": {
@@ -2525,9 +2531,6 @@ const docTemplate = `{
         },
         "types.DeviceUpdateRequest": {
             "type": "object",
-            "required": [
-                "client_device_id"
-            ],
             "properties": {
                 "client_device_id": {
                     "type": "string"
