@@ -114,7 +114,7 @@ func (c *testableIoTClient) AttachPolicyToCertificate(ctx context.Context, polic
 	return nil
 }
 
-func (c *testableIoTClient) DetchCertificateFromThing(ctx context.Context, thingName string, certificateArn string, logger *zap.Logger) error {
+func (c *testableIoTClient) DetachCertificateFromThing(ctx context.Context, thingName string, certificateArn string, logger *zap.Logger) error {
 	input := &iot.DetachThingPrincipalInput{
 		Principal: &certificateArn,
 		ThingName: &thingName,
@@ -144,7 +144,7 @@ func (c *testableIoTClient) SetCertificateInactive(ctx context.Context, certific
 	return nil
 }
 
-func (c *testableIoTClient) DetchPolicyFromCertificate(ctx context.Context, policyName string, certificateArn string, logger *zap.Logger) error {
+func (c *testableIoTClient) DetachPolicyFromCertificate(ctx context.Context, policyName string, certificateArn string, logger *zap.Logger) error {
 	input := &iot.DetachPolicyInput{
 		PolicyName: &policyName,
 		Target:     &certificateArn,
@@ -329,7 +329,7 @@ func TestAttachPolicyToCertificate_Error(t *testing.T) {
 	assert.Equal(t, expectedErr, err)
 }
 
-func TestDetchCertificateFromThing_Success(t *testing.T) {
+func TestDetachCertificateFromThing_Success(t *testing.T) {
 	logger := zap.NewNop()
 	ctx := context.Background()
 
@@ -342,12 +342,12 @@ func TestDetchCertificateFromThing_Success(t *testing.T) {
 	}
 
 	client := &testableIoTClient{mock: mockClient}
-	err := client.DetchCertificateFromThing(ctx, testThingName, testCertificateArn, logger)
+	err := client.DetachCertificateFromThing(ctx, testThingName, testCertificateArn, logger)
 
 	assert.NoError(t, err)
 }
 
-func TestDetchCertificateFromThing_Error(t *testing.T) {
+func TestDetachCertificateFromThing_Error(t *testing.T) {
 	logger := zap.NewNop()
 	ctx := context.Background()
 	expectedErr := errors.New("AWS IoT error: certificate not attached to thing")
@@ -359,7 +359,7 @@ func TestDetchCertificateFromThing_Error(t *testing.T) {
 	}
 
 	client := &testableIoTClient{mock: mockClient}
-	err := client.DetchCertificateFromThing(ctx, testThingName, testCertificateArn, logger)
+	err := client.DetachCertificateFromThing(ctx, testThingName, testCertificateArn, logger)
 
 	assert.Error(t, err)
 	assert.Equal(t, expectedErr, err)
@@ -401,7 +401,7 @@ func TestSetCertificateInactive_Error(t *testing.T) {
 	assert.Equal(t, expectedErr, err)
 }
 
-func TestDetchPolicyFromCertificate_Success(t *testing.T) {
+func TestDetachPolicyFromCertificate_Success(t *testing.T) {
 	logger := zap.NewNop()
 	ctx := context.Background()
 
@@ -414,12 +414,12 @@ func TestDetchPolicyFromCertificate_Success(t *testing.T) {
 	}
 
 	client := &testableIoTClient{mock: mockClient}
-	err := client.DetchPolicyFromCertificate(ctx, testPolicyName, testCertificateArn, logger)
+	err := client.DetachPolicyFromCertificate(ctx, testPolicyName, testCertificateArn, logger)
 
 	assert.NoError(t, err)
 }
 
-func TestDetchPolicyFromCertificate_Error(t *testing.T) {
+func TestDetachPolicyFromCertificate_Error(t *testing.T) {
 	logger := zap.NewNop()
 	ctx := context.Background()
 	expectedErr := errors.New("AWS IoT error: policy not attached to certificate")
@@ -431,7 +431,7 @@ func TestDetchPolicyFromCertificate_Error(t *testing.T) {
 	}
 
 	client := &testableIoTClient{mock: mockClient}
-	err := client.DetchPolicyFromCertificate(ctx, testPolicyName, testCertificateArn, logger)
+	err := client.DetachPolicyFromCertificate(ctx, testPolicyName, testCertificateArn, logger)
 
 	assert.Error(t, err)
 	assert.Equal(t, expectedErr, err)

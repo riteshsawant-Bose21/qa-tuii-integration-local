@@ -38,6 +38,7 @@ var (
 	IOT = types.EnvironmentIoTVariables{
 		Endpoint: "IOT_ENDPOINT",
 		CommandTopic: "IOT_COMMAND_TOPIC",
+		DevicePolicy: "IOT_DEVICE_POLICY",
 	}
 
 	Auth0 = types.EnvironmentAuth0Variables{
