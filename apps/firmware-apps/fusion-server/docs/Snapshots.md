@@ -1,8 +1,10 @@
-# Fusion Snapshot System
+# Fusion Time Machine System
 
-The Fusion cluster includes a distributed snapshot system that provides a
+> **Note:** The legacy `/snapshots` API has been renamed to `/time-machine`. The underlying behaviour is unchanged; only the endpoint paths and handler names have been updated.
+
+The Fusion cluster includes a distributed time machine system that provides a
 strongly consistent, restore-based mechanism for managing configuration and
-state across all nodes. Snapshots act as authoritative state images that can be
+state across all nodes. Time machine entries act as authoritative state images that can be
 created, stored, activated, and synchronized across the cluster.
 
 This document explains:
@@ -41,28 +43,28 @@ Each node stores snapshots locally. Snapshot names are user-defined (e.g.
 
 ## Snapshot Lifecycle
 
-### 1. Create snapshot
+### 1. Create time machine entry
 
 ```
-POST /snapshots/<name>
+POST /time-machine/<name>
 ```
 
-- Creates a snapshot locally on the node.
+- Creates a time machine entry locally on the node.
 - Broadcasts `NotifyOpSnapCreate(name)` to the cluster.
 - Memberlist gossip eventually delivers the create event to all nodes.
-- Each node creates the same snapshot locally.
+- Each node creates the same entry locally.
 
-Snapshot creation is *eventually consistent*.
+Time machine creation is *eventually consistent*.
 
 ---
 
-### 2. Activate snapshot
+### 2. Activate time machine entry
 
 ```
-POST /snapshots/activate/<name>
+POST /time-machine/activate/<name>
 ```
 
-Snapshot activation is **authoritative**.
+Time machine activation is **authoritative**.
 
 Activation performs:
 
@@ -89,17 +91,17 @@ All other nodes:
 
 ---
 
-### 3. Delete snapshot
+### 3. Delete time machine entry
 
 ```
-DELETE /snapshots/<name>
+DELETE /time-machine/<name>
 ```
 
-- Deletes snapshot from local BoltDB
+- Deletes entry from local BoltDB
 - Broadcasts `NotifyOpSnapDelete`
-- All nodes delete the snapshot locally
+- All nodes delete the entry locally
 
-The `"default"` snapshot cannot be deleted.
+The `"default"` entry cannot be deleted.
 
 ---
 
@@ -217,12 +219,12 @@ Snapshot activation uses this mechanism to ensure consistent cluster-wide restor
 
 ## REST API Summary
 
-### Snapshot Management
+### Time Machine Management
 ```
-POST   /snapshots/<name>           (create)
-GET    /snapshots                  (list)
-POST   /snapshots/activate/<name>  (activate)
-DELETE /snapshots/<name>           (delete)
+POST   /time-machine/<name>           (create)
+GET    /time-machine                  (list)
+POST   /time-machine/activate/<name>  (activate)
+DELETE /time-machine/<name>           (delete)
 ```
 
 ### State Management

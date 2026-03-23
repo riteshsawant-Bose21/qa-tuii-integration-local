@@ -5,8 +5,8 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/routes"
 	"io"
 	"net/http"
@@ -32,10 +32,10 @@ const (
 	snapAdminServerAddr = snapServerAddress + ":" + snapServerAdminPort
 
 	// Core endpoints
-	snapshotsURL        = snapServerAddr + routes.SnapshotsEndpoint
-	snapshotByNameURL   = snapServerAddr + routes.SnapshotsNameEndpoint
-	snapshotActivateURL = snapServerAddr + routes.SnapshotsActivateEndpoint
-	snapshotUpdateURL   = snapServerAddr + routes.SnapshotsUpdateEndpoint
+	snapshotsURL        = snapServerAddr + routes.TimeMachineEndpoint
+	snapshotByNameURL   = snapServerAddr + routes.TimeMachineNameEndpoint
+	snapshotActivateURL = snapServerAddr + routes.TimeMachineActivateEndpoint
+	snapshotUpdateURL   = snapServerAddr + routes.TimeMachineUpdateEndpoint
 	valueURL            = snapServerAddr + routes.ValueEndpoint
 )
 
@@ -281,7 +281,7 @@ func snapshotExistsOnAllNodes(t *testing.T, name string) bool {
 		return false
 	}
 	for _, addr := range nodes {
-		resp, err := http.Get(fmt.Sprintf("%s%s", addr, routes.SnapshotsEndpoint))
+		resp, err := http.Get(fmt.Sprintf("%s%s", addr, routes.TimeMachineEndpoint))
 		if err != nil {
 			return false
 		}
@@ -305,7 +305,7 @@ func snapshotRemovedOnAllNodes(t *testing.T, name string) bool {
 		return false
 	}
 	for _, addr := range nodes {
-		resp, err := http.Get(fmt.Sprintf("%s%s", addr, routes.SnapshotsEndpoint))
+		resp, err := http.Get(fmt.Sprintf("%s%s", addr, routes.TimeMachineEndpoint))
 		if err != nil {
 			return false
 		}
@@ -777,7 +777,7 @@ func logPerNodeSnapshotStatus(t *testing.T, snapshotName string) {
 	t.Logf("---- Snapshot propagation debug for %q ----", snapshotName)
 
 	for _, addr := range nodes {
-		url := fmt.Sprintf("%s/snapshots", addr)
+		url := fmt.Sprintf("%s/time-machine", addr)
 		resp, err := http.Get(url)
 		if err != nil {
 			t.Logf("[%s] ERROR: %v", addr, err)

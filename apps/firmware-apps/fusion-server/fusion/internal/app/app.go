@@ -236,14 +236,14 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.SessionsEndpoint, app.Server.GetSessions)
 	app.registerPublicGET(routes.SessionsIdEndpoint, app.Server.GetSession)
 
-	// Snapshots
-	app.registerPublicPOST(routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
-	app.registerPublicPOST(routes.SnapshotsUpdateEndpoint, app.Server.SaveSnapshot)
-	app.registerPublicPOST(routes.SnapshotsNameEndpoint, app.Server.CreateSnapshot)
-	app.registerPublicGET(routes.SnapshotsEndpoint, app.Server.ListSnapshots)
-	app.registerPublicGET(routes.SnapshotsActiveEndpoint, app.Server.GetActiveSnapshotName)
-	app.registerPublicGET(routes.SnapshotsNameEndpoint, app.Server.GetSnapshot)
-	app.registerPublicDELETE(routes.SnapshotsNameEndpoint, app.Server.DeleteSnapshot)
+	// Time Machine
+	app.registerPublicPOST(routes.TimeMachineActivateEndpoint, app.Server.ActivateTimeMachine)
+	app.registerPublicPOST(routes.TimeMachineUpdateEndpoint, app.Server.SaveTimeMachine)
+	app.registerPublicPOST(routes.TimeMachineNameEndpoint, app.Server.CreateTimeMachine)
+	app.registerPublicGET(routes.TimeMachineEndpoint, app.Server.ListTimeMachines)
+	app.registerPublicGET(routes.TimeMachineActiveEndpoint, app.Server.GetActiveTimeMachineName)
+	app.registerPublicGET(routes.TimeMachineNameEndpoint, app.Server.GetTimeMachine)
+	app.registerPublicDELETE(routes.TimeMachineNameEndpoint, app.Server.DeleteTimeMachine)
 
 	// Tasks
 	app.registerPublicGET(routes.TasksHistoryEndpoint, app.TaskManager.GetHistory)

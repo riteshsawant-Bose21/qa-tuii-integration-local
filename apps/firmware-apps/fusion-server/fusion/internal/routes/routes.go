@@ -81,12 +81,12 @@ const (
 	SessionsEndpoint   = "/sessions"
 	SessionsIdEndpoint = SessionsEndpoint + "/{id}"
 
-	SnapshotsEndpoint         = "/snapshots"
-	SnapshotsMetaEndpoint     = SnapshotsEndpoint + "/meta"
-	SnapshotsActiveEndpoint   = SnapshotsMetaEndpoint + "/active"
-	SnapshotsNameEndpoint     = SnapshotsEndpoint + "/{name}"
-	SnapshotsActivateEndpoint = SnapshotsEndpoint + "/activate/{name}"
-	SnapshotsUpdateEndpoint   = SnapshotsEndpoint + "/update/{name}"
+	TimeMachineEndpoint         = "/time-machine"
+	TimeMachineMetaEndpoint     = TimeMachineEndpoint + "/meta"
+	TimeMachineActiveEndpoint   = TimeMachineMetaEndpoint + "/active"
+	TimeMachineNameEndpoint     = TimeMachineEndpoint + "/{name}"
+	TimeMachineActivateEndpoint = TimeMachineEndpoint + "/activate/{name}"
+	TimeMachineUpdateEndpoint   = TimeMachineEndpoint + "/update/{name}"
 
 	TasksEndpoint          = "/tasks"
 	TasksHistoryEndpoint   = TasksEndpoint + "/history"
