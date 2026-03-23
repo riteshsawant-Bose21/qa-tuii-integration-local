@@ -244,12 +244,6 @@ type StatusMessage struct {
 	VIP string `json:"vip"`
 }
 
-// VersionUpdate contains the version update type and data
-type VersionUpdate struct {
-	Type    string          `json:"type"`
-	Payload json.RawMessage `json:"payload"`
-}
-
 type ControllerTCPMessage struct {
 	Action  string          `json:"action"`
 	Payload json.RawMessage `json:"payload"`
