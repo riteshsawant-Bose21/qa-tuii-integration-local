@@ -798,6 +798,7 @@ public:
   UDPValueMonitor(const std::string &serverIP, int port)
       : jsonMonitor_(Json::objectValue)
   {
+    
     // Enable trace logging for debugging (dont push this to git).
     // spdlog::set_level(spdlog::level::trace);
 

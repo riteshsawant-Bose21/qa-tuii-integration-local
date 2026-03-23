@@ -87,6 +87,7 @@ def configure(conf):
     if conf.env['IS_MACOS']:
         conf.env.append_value('INCLUDES', ['/opt/homebrew/include'])
         conf.env.append_value('LIBPATH', ['/opt/homebrew/lib'])
+        conf.env.append_value('FRAMEWORK', ['AudioUnit', 'CoreAudio', 'CoreServices'])
         conf.env.append_value('CXXFLAGS', '-DUSE_MAC_THREADS')
 
         # This is needed because of warnings in Boost property trees.
@@ -101,13 +102,15 @@ def configure(conf):
             # or define BOOST_BIND_GLOBAL_PLACEHOLDERS to retain the current behavior.’
             conf.env.append_value('CXXFLAGS', '-DBOOST_BIND_GLOBAL_PLACEHOLDERS')
 
+    conf.env.append_value('LIBPATH', [conf.path.abspath() + '/../fusion-embedded-interface/build'])
+
 
 def build(bld):
-    bld(export_includes=['./include'], name='common-include')
+    bld(export_includes=['./include', '../fusion-embedded-interface/include'], name='common-include')
 
-    libs = ['fmt']
+    libs = ['fmt', 'jack', 'fusion_embedded_interface']
 
-    bld.shlib(target='fusion_embedded_interface',
+    bld.shlib(target='fusion_embedded_framework',
               source=bld.path.ant_glob(['src/*.cpp', 'src/*.c']),
               use=['common-include', 'fmt'],
               lib=libs,

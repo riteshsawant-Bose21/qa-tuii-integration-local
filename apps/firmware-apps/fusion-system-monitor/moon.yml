@@ -13,4 +13,4 @@ tasks:
     command: "chmod"
     args: ["+x", "moon-build.sh", "Jenkins/SetVersionProperty.sh"]
     deps:
-      - fusion-embedded-interface:build-embedded-interface-shared-library
+      - fusion-embedded-framework:build-embedded-framework

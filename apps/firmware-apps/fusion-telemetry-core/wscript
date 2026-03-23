@@ -59,6 +59,9 @@ def configure(conf):
     conf.env.append_value('CXXFLAGS', ['-DSPDLOG_FMT_EXTERNAL'])
     conf.env.append_value('CXXFLAGS', ['-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE'])
 
+    # This greatly reduces binary size.  Comment out to include symbols for gdb.
+    conf.env.append_value('LDFLAGS', ['-Wl,-s'])
+
     if conf.env['IS_MACOS']:
         conf.env.append_unique('INCLUDES', [
             '/opt/homebrew/include',
