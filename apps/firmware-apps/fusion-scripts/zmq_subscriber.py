@@ -15,26 +15,39 @@ source with draft features enabled.
 
 Run these exact commands in your terminal/virtual environment:
 
-1. Uninstall the default pre-compiled wheel:
+0. (Recommended) Create and activate a virtual environment:
+    $ python3 -m venv .venv
+    $ source .venv/bin/activate
+
+1. Install pyzmq first (if needed):
+    $ pip install --upgrade pip
+    $ pip install pyzmq
+
+2. Uninstall the default pre-compiled wheel:
    $ pip uninstall -y pyzmq
    
-2. Ensure CMake is installed (required for C++ compilation):
+3. Ensure CMake is installed (required for C++ compilation):
    $ pip install cmake
    
-3. Recompile pyzmq with Draft APIs explicitly enabled:
+4. Recompile pyzmq with Draft APIs explicitly enabled:
    $ export ZMQ_PREFIX=bundled
    $ export ZMQ_DRAFT_API=1
    $ pip install --no-binary=pyzmq pyzmq
+
+Run with default IP:
+    $ python3 zmq_subscriber.py
+
+Run with a custom IP:
+    $ python3 zmq_subscriber.py 10.1.123.202
 """
 
 import zmq
 import json
 import sys
 
-def run_subscriber():
+def run_subscriber(ip_address="10.1.123.202"):
     endpoints = [
-        "ws://10.1.123.202:5678", 
-        "ws://10.1.123.203:5678"
+        f"ws://{ip_address}:5678"
     ]
 
     # Initialize ZMQ context and socket
@@ -79,4 +92,5 @@ def run_subscriber():
         context.term()
 
 if __name__ == "__main__":
-    run_subscriber()
+    ip_address = sys.argv[1] if len(sys.argv) > 1 else "10.1.123.202"
+    run_subscriber(ip_address)
