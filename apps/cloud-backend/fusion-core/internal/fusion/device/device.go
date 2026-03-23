@@ -456,7 +456,7 @@ func (s *Service) Command(ctx context.Context, request *types.CommandRequest, us
 		return "", fmt.Errorf("failed to marshal command request: %w", err)
 	}
 
-	topic := strings.Replace(s.cfg.IoTCommandTopic, "{projectID}", request.ProjectID, -1)
+	topic := strings.ReplaceAll(s.cfg.IoTCommandTopic, "{projectID}", request.ProjectID)
 
 	err = s.iotService.Publish(ctx, topic, requestBytes, logger)
 	if err != nil {
@@ -467,8 +467,8 @@ func (s *Service) Command(ctx context.Context, request *types.CommandRequest, us
 	err = s.dbService.UpdateCommandStatus(ctx, commandID, models.CommandStatusEnumPUBLISHED, logger)
 
 	if err != nil {
-		logger.Error("Failed to publish command", zap.Error(err))
-		return "", fmt.Errorf("failed to publish command: %w", err)
+		logger.Error("Failed to update command status", zap.Error(err))
+		return "", fmt.Errorf("failed to update command status: %w", err)
 	}
 
 	return commandID, nil
