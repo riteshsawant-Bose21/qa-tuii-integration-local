@@ -501,16 +501,14 @@ bool TelemetryMonitor::send_message(TelemetryMessage &message)
 }
 
 
-TelemetryMessage TelemetryMonitor::recv_message()
+TelemetryMessage recv_message()
 {
-    char buf[256];
-    ssize_t recv_len = recvfrom(telemetry_fd, buf, sizeof(buf) - 1, 0, nullptr,
-                                nullptr);
-
+    char buf[4096];
+    ssize_t recv_len = recvfrom(telemetry_fd, buf, sizeof(buf) - 1, 0,
+                                nullptr, nullptr);
     if (recv_len < 0)
     {
-        SPDLOG_ERROR("Failed to receive response from telemetry manager: {}",
-                     strerror(errno));
+        SPDLOG_ERROR("Failed to receive response from telemetry manager: {}", strerror(errno));
         ++error;
         TelemetryMessage message("");
         return message;
@@ -518,12 +516,34 @@ TelemetryMessage TelemetryMonitor::recv_message()
 
     buf[recv_len] = '\0';
 
-    SPDLOG_DEBUG("Received message: \n\n{}", buf);
+    if (recv_len >= (ssize_t)(sizeof(buf) - 1))
+    {
+        SPDLOG_ERROR("Telemetry message may be truncated at {} bytes", recv_len);
+        ++error;
+        TelemetryMessage message("");
+        return message;
+    }
 
     std::stringstream ss(buf);
-    TelemetryMessage message(ss);
-
-    return message;
+    try
+    {
+        TelemetryMessage message(ss);
+        return message;
+    }
+    catch (const boost::property_tree::json_parser::json_parser_error& e)
+    {
+        SPDLOG_ERROR("Failed to parse telemetry manager JSON: {}", e.what());
+        ++error;
+        TelemetryMessage message("");
+        return message;
+    }
+    catch (const std::exception& e)
+    {
+        SPDLOG_ERROR("Failed to decode telemetry manager message: {}", e.what());
+        ++error;
+        TelemetryMessage message("");
+        return message;
+    }
 }
 
 
