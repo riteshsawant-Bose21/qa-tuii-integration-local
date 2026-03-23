@@ -802,7 +802,7 @@ func TestReset(t *testing.T) {
 			1, testDeviceUUID, testAccountID, testCertID, testCertArn,
 			time.Now(), nil, time.Now(), time.Now(),
 		)
-		mock.ExpectQuery(`SELECT "device_ownership_history"\.\* FROM "device_ownership_history" WHERE \("device_ownership_history"\."device_id" = \$1\) AND \("device_ownership_history"\."account_id" = \$2\) LIMIT 1`).
+		mock.ExpectQuery(`SELECT "device_ownership_history"\.\* FROM "device_ownership_history" WHERE \("device_ownership_history"\."device_id" = \$1\) AND \("device_ownership_history"\."account_id" = \$2\) AND \("device_ownership_history"\."released_at" is null\) LIMIT 1`).
 			WithArgs(testDeviceUUID, testAccountID).
 			WillReturnRows(ownerHistoryRows)
 
@@ -840,7 +840,7 @@ func TestReset(t *testing.T) {
 		tx, err := db.BeginTx(ctx, nil)
 		require.NoError(t, err)
 
-		mock.ExpectQuery(`SELECT "device_ownership_history"\.\* FROM "device_ownership_history" WHERE \("device_ownership_history"\."device_id" = \$1\) AND \("device_ownership_history"\."account_id" = \$2\) LIMIT 1`).
+		mock.ExpectQuery(`SELECT "device_ownership_history"\.\* FROM "device_ownership_history" WHERE \("device_ownership_history"\."device_id" = \$1\) AND \("device_ownership_history"\."account_id" = \$2\) AND \("device_ownership_history"\."released_at" is null\) LIMIT 1`).
 			WithArgs(testDeviceUUID, testAccountID).
 			WillReturnError(sql.ErrNoRows)
 
@@ -867,7 +867,7 @@ func TestReset(t *testing.T) {
 			1, testDeviceUUID, testAccountID, testCertID, testCertArn,
 			time.Now(), nil, time.Now(), time.Now(),
 		)
-		mock.ExpectQuery(`SELECT "device_ownership_history"\.\* FROM "device_ownership_history" WHERE \("device_ownership_history"\."device_id" = \$1\) AND \("device_ownership_history"\."account_id" = \$2\) LIMIT 1`).
+		mock.ExpectQuery(`SELECT "device_ownership_history"\.\* FROM "device_ownership_history" WHERE \("device_ownership_history"\."device_id" = \$1\) AND \("device_ownership_history"\."account_id" = \$2\) AND \("device_ownership_history"\."released_at" is null\) LIMIT 1`).
 			WithArgs(testDeviceUUID, testAccountID).
 			WillReturnRows(ownerHistoryRows)
 
@@ -897,7 +897,7 @@ func TestReset(t *testing.T) {
 			1, testDeviceUUID, testAccountID, testCertID, testCertArn,
 			time.Now(), nil, time.Now(), time.Now(),
 		)
-		mock.ExpectQuery(`SELECT "device_ownership_history"\.\* FROM "device_ownership_history" WHERE \("device_ownership_history"\."device_id" = \$1\) AND \("device_ownership_history"\."account_id" = \$2\) LIMIT 1`).
+		mock.ExpectQuery(`SELECT "device_ownership_history"\.\* FROM "device_ownership_history" WHERE \("device_ownership_history"\."device_id" = \$1\) AND \("device_ownership_history"\."account_id" = \$2\) AND \("device_ownership_history"\."released_at" is null\) LIMIT 1`).
 			WithArgs(testDeviceUUID, testAccountID).
 			WillReturnRows(ownerHistoryRows)
 
@@ -931,7 +931,7 @@ func TestReset(t *testing.T) {
 			1, testDeviceUUID, testAccountID, testCertID, testCertArn,
 			time.Now(), nil, time.Now(), time.Now(),
 		)
-		mock.ExpectQuery(`SELECT "device_ownership_history"\.\* FROM "device_ownership_history" WHERE \("device_ownership_history"\."device_id" = \$1\) AND \("device_ownership_history"\."account_id" = \$2\) LIMIT 1`).
+		mock.ExpectQuery(`SELECT "device_ownership_history"\.\* FROM "device_ownership_history" WHERE \("device_ownership_history"\."device_id" = \$1\) AND \("device_ownership_history"\."account_id" = \$2\) AND \("device_ownership_history"\."released_at" is null\) LIMIT 1`).
 			WithArgs(testDeviceUUID, testAccountID).
 			WillReturnRows(ownerHistoryRows)
 

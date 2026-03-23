@@ -296,6 +296,7 @@ func TestCreateDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -319,7 +320,7 @@ func TestCreateDevice(t *testing.T) {
 			Return(&certPem, &certID, &certArn, nil)
 		mockIoT.On("RegisterThing", ctx, testSerialNumber, mock.Anything).Return(nil)
 		mockIoT.On("AttachCertificateToThing", ctx, testSerialNumber, certArn, mock.Anything).Return(nil)
-		mockIoT.On("AttachPolicyToCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).Return(nil)
+		mockIoT.On("AttachPolicyToCertificate", ctx, cfg.IoTDevicePolicy, certArn, mock.Anything).Return(nil)
 
 		// Transaction expectations
 		sqlMock.ExpectBegin()
@@ -340,6 +341,7 @@ func TestCreateDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -363,7 +365,7 @@ func TestCreateDevice(t *testing.T) {
 		mockIoT.On("CreateCertificateFromCsr", ctx, &req.CSR, mock.Anything).
 			Return(&certPem, &certID, &certArn, nil)
 		mockIoT.On("AttachCertificateToThing", ctx, testSerialNumber, certArn, mock.Anything).Return(nil)
-		mockIoT.On("AttachPolicyToCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).Return(nil)
+		mockIoT.On("AttachPolicyToCertificate", ctx, cfg.IoTDevicePolicy, certArn, mock.Anything).Return(nil)
 
 		// Transaction - ClaimDevice for existing unclaimed device
 		sqlMock.ExpectBegin()
@@ -384,6 +386,7 @@ func TestCreateDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -409,6 +412,7 @@ func TestCreateDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -431,6 +435,7 @@ func TestCreateDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -460,6 +465,7 @@ func TestCreateDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -480,6 +486,7 @@ func TestCreateDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -501,6 +508,7 @@ func TestCreateDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -589,6 +597,7 @@ func TestCreateDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -606,12 +615,12 @@ func TestCreateDevice(t *testing.T) {
 		mockIoT.On("CreateCertificateFromCsr", ctx, &req.CSR, mock.Anything).
 			Return(&certPem, &certID, &certArn, nil)
 		mockIoT.On("AttachCertificateToThing", ctx, testSerialNumber, certArn, mock.Anything).Return(nil)
-		mockIoT.On("AttachPolicyToCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).
+		mockIoT.On("AttachPolicyToCertificate", ctx, cfg.IoTDevicePolicy, certArn, mock.Anything).
 			Return(errors.New("IoT error"))
 		// cleanupIoTResources is called on failure
 		mockIoT.On("SetCertificateInactive", ctx, certID, mock.Anything).Return(nil)
 		mockIoT.On("DetachCertificateFromThing", ctx, testSerialNumber, certArn, mock.Anything).Return(nil)
-		mockIoT.On("DetachPolicyFromCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).Return(nil)
+		mockIoT.On("DetachPolicyFromCertificate", ctx, cfg.IoTDevicePolicy, certArn, mock.Anything).Return(nil)
 		mockIoT.On("DeleteThing", ctx, testSerialNumber, mock.Anything).Return(nil)
 
 		resp, err := service.CreateDevice(ctx, req, user, logger)
@@ -627,6 +636,7 @@ func TestCreateDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -648,7 +658,7 @@ func TestCreateDevice(t *testing.T) {
 		mockIoT.On("CreateCertificateFromCsr", ctx, &req.CSR, mock.Anything).
 			Return(&certPem, &certID, &certArn, nil)
 		mockIoT.On("AttachCertificateToThing", ctx, testSerialNumber, certArn, mock.Anything).Return(nil)
-		mockIoT.On("AttachPolicyToCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).Return(nil)
+		mockIoT.On("AttachPolicyToCertificate", ctx, cfg.IoTDevicePolicy, certArn, mock.Anything).Return(nil)
 
 		// Transaction begin fails
 		sqlMock.ExpectBegin().WillReturnError(errors.New("connection error"))
@@ -656,7 +666,7 @@ func TestCreateDevice(t *testing.T) {
 		// cleanupIoTResources is called when transaction fails
 		mockIoT.On("SetCertificateInactive", ctx, certID, mock.Anything).Return(nil)
 		mockIoT.On("DetachCertificateFromThing", ctx, testSerialNumber, certArn, mock.Anything).Return(nil)
-		mockIoT.On("DetachPolicyFromCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).Return(nil)
+		mockIoT.On("DetachPolicyFromCertificate", ctx, cfg.IoTDevicePolicy, certArn, mock.Anything).Return(nil)
 		mockIoT.On("DeleteThing", ctx, testSerialNumber, mock.Anything).Return(nil)
 
 		resp, err := service.CreateDevice(ctx, req, user, logger)
@@ -673,6 +683,7 @@ func TestCreateDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -704,7 +715,7 @@ func TestCreateDevice(t *testing.T) {
 		// cleanupIoTResources is called after transaction fails
 		mockIoT.On("SetCertificateInactive", ctx, certID, mock.Anything).Return(nil)
 		mockIoT.On("DetachCertificateFromThing", ctx, testSerialNumber, certArn, mock.Anything).Return(nil)
-		mockIoT.On("DetachPolicyFromCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).Return(nil)
+		mockIoT.On("DetachPolicyFromCertificate", ctx, cfg.IoTDevicePolicy, certArn, mock.Anything).Return(nil)
 		mockIoT.On("DeleteThing", ctx, testSerialNumber, mock.Anything).Return(nil)
 
 		resp, err := service.CreateDevice(ctx, req, user, logger)
@@ -720,6 +731,7 @@ func TestCreateDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -741,7 +753,7 @@ func TestCreateDevice(t *testing.T) {
 		mockIoT.On("CreateCertificateFromCsr", ctx, &req.CSR, mock.Anything).
 			Return(&certPem, &certID, &certArn, nil)
 		mockIoT.On("AttachCertificateToThing", ctx, testSerialNumber, certArn, mock.Anything).Return(nil)
-		mockIoT.On("AttachPolicyToCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).Return(nil)
+		mockIoT.On("AttachPolicyToCertificate", ctx, cfg.IoTDevicePolicy, certArn, mock.Anything).Return(nil)
 
 		sqlMock.ExpectBegin()
 		mockDB.On("Insert", ctx, req, testAccountID, types.CertificateInfo{ID: certID, Arn: certArn}, mock.AnythingOfType("*sql.Tx"), mock.Anything).Return(nil)
@@ -750,7 +762,7 @@ func TestCreateDevice(t *testing.T) {
 		// cleanupIoTResources is called after commit fails
 		mockIoT.On("SetCertificateInactive", ctx, certID, mock.Anything).Return(nil)
 		mockIoT.On("DetachCertificateFromThing", ctx, testSerialNumber, certArn, mock.Anything).Return(nil)
-		mockIoT.On("DetachPolicyFromCertificate", ctx, "testdevicepolicy", certArn, mock.Anything).Return(nil)
+		mockIoT.On("DetachPolicyFromCertificate", ctx, cfg.IoTDevicePolicy, certArn, mock.Anything).Return(nil)
 		mockIoT.On("DeleteThing", ctx, testSerialNumber, mock.Anything).Return(nil)
 
 		resp, err := service.CreateDevice(ctx, req, user, logger)
@@ -984,6 +996,7 @@ func TestClaimDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -1031,6 +1044,7 @@ func TestClaimDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -1056,6 +1070,7 @@ func TestClaimDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -1082,6 +1097,7 @@ func TestClaimDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -1110,6 +1126,7 @@ func TestClaimDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -1147,6 +1164,7 @@ func TestClaimDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -1186,6 +1204,7 @@ func TestRotateCertificate(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -1234,6 +1253,7 @@ func TestRotateCertificate(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -1258,6 +1278,7 @@ func TestRotateCertificate(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -1283,6 +1304,7 @@ func TestRotateCertificate(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -1323,6 +1345,7 @@ func TestRotateCertificate(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -1358,6 +1381,7 @@ func TestResetDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -1392,6 +1416,7 @@ func TestResetDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -1413,6 +1438,7 @@ func TestResetDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -1432,6 +1458,7 @@ func TestResetDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -1450,6 +1477,7 @@ func TestResetDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -1471,6 +1499,7 @@ func TestResetDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -1494,6 +1523,7 @@ func TestResetDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -1518,6 +1548,7 @@ func TestResetDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -1548,6 +1579,7 @@ func TestResetDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -1580,6 +1612,7 @@ func TestResetDevice(t *testing.T) {
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
 		cfg := config.CloudConfig{}
+		cfg.IoTDevicePolicy = "testdevicepolicy"
 		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
@@ -1643,7 +1676,8 @@ func TestCommand(t *testing.T) {
 		return config.CloudConfig{
 			Region:          "us-east-1",
 			IoTEndpoint:     "test-endpoint.iot.us-east-1.amazonaws.com",
-			IoTCommandTopic: "cluster/%s/command",
+			IoTCommandTopic: "cluster/{project_id}/command",
+			IoTDevicePolicy: "testdevicepolicy",
 		}
 	}
 
@@ -1672,7 +1706,7 @@ func TestCommand(t *testing.T) {
 		mockDB.On("InsertCommand", ctx, testProjectID, mock.AnythingOfType("string"), req, mock.AnythingOfType("*zap.Logger")).
 			Return(nil)
 		sqlMock.ExpectCommit()
-		mockIoT.On("Publish", ctx, "cluster/"+testProjectID+"/command", mock.Anything, mock.AnythingOfType("*zap.Logger")).
+		mockIoT.On("Publish", ctx, "cluster/{project_id}/command", mock.Anything, mock.AnythingOfType("*zap.Logger")).
 			Return(nil)
 		mockDB.On("UpdateCommandStatus", ctx, mock.AnythingOfType("string"), "PUBLISHED", mock.AnythingOfType("*zap.Logger")).
 			Return(nil)
@@ -1790,7 +1824,7 @@ func TestCommand(t *testing.T) {
 		mockDB.On("InsertCommand", ctx, testProjectID, mock.AnythingOfType("string"), req, mock.AnythingOfType("*zap.Logger")).
 			Return(nil)
 		sqlMock.ExpectCommit()
-		mockIoT.On("Publish", ctx, "cluster/"+testProjectID+"/command", mock.Anything, mock.AnythingOfType("*zap.Logger")).
+		mockIoT.On("Publish", ctx, "cluster/{project_id}/command", mock.Anything, mock.AnythingOfType("*zap.Logger")).
 			Return(errors.New("publish error"))
 
 		commandID, err := service.Command(ctx, req, user, logger)

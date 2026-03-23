@@ -71,7 +71,7 @@ INSERT INTO feature (id, name, description) VALUES
   (20,'product.read','Can view product catalog and details'),
   (21,'device.create','Can create a new device'),
   (22,'device.update','Can update device details'),
-  (23,'device.delete','Can reset/delete a device');
+  (23,'device.delete','Can reset/delete a device'),
   (24,'device.claim','Can claim a device to a project/account'),
   (25,'device.rotate_cert','Can rotate device certificate for security'),
   (26,'device.command','Can send commands to devices'),
@@ -152,28 +152,6 @@ SELECT setval('account_type_role_id_seq',11,true);
 SELECT setval('feature_id_seq',22,true);
 SELECT setval('feature_permission_id_seq',88,true);
 SELECT setval('project_user_id_seq',8,true);
-
--- Grant full project feature access to account_type_role_id 9 (End User Admin)
--- Existing create permission updated above; now insert remaining project features (IDs 9-19)
-INSERT INTO feature_permission (id, feature_id, account_type_role_id, access_level_id, created_at) VALUES
-  (89,9,9,3,now()),   -- project.read
-  (90,10,9,3,now()),  -- project.update
-  (91,11,9,3,now()),  -- project.delete
-  (92,12,9,3,now()),  -- project.archive
-  (93,13,9,3,now()),  -- project.unarchive
-  (94,14,9,3,now()),  -- project.lock
-  (95,15,9,3,now()),  -- project.unlock
-  (96,16,9,3,now()),  -- project.start (star)
-  (97,17,9,3,now()),  -- project.unstar
-  (98,18,9,3,now()),  -- project.assign_user
-  (99,19,9,3,now()), -- project.remove_user
-  (121,20,9,3,now()), -- device.create
-  (122,21,9,3,now()), -- device.update
-  (123,22,9,3,now()); -- device.delete
-  (124,23,9,3,now()); -- device.claim
-  (125,24,9,3,now()); -- device.rotate_cert
-  (126,25,9,3,now()); -- device.command
-  (127,26,9,3,now()); -- device.command_status
 
 -- Advance sequence to latest id
 SELECT setval('feature_permission_id_seq',123,true);
