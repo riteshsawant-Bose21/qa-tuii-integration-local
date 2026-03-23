@@ -479,8 +479,34 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                                     ),
 
                                     content: viewModel.isGridView
-                                        ? DevicesGridView(devices: devices)
-                                        : DevicesListView(devices: devices),
+                                        ? DevicesGridView(
+                                            devices: devices,
+                                            onDeviceTap: (device) {
+                                              context.go(
+                                                '/projects/${p.id}/devices/${device.deviceId}',
+                                                extra: device,
+                                              );
+                                            },
+                                          )
+                                        : DevicesListView(
+                                            devices: devices,
+                                            onDeviceTap: (device) {
+                                              context.go(
+                                                '/projects/${p.id}/devices/${device.deviceId}',
+                                                extra: device,
+                                              );
+
+                                              // context.push(
+                                              //   // 'device_detail',
+                                              //   // pathParameters: {
+                                              //   //   "id": p.id,
+                                              //   //   "deviceId": device.deviceId,
+                                              //   // },
+                                              //   '/devices/${device.deviceId}',
+                                              //   extra: device,
+                                              // );
+                                            },
+                                          ),
                                   );
                                 }
 

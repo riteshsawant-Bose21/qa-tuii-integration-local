@@ -5,8 +5,13 @@ import '../../../data/models/devices_model.dart';
 
 class DevicesGridView extends StatelessWidget {
   final List<Device> devices;
+  final Function(Device) onDeviceTap;
 
-  const DevicesGridView({super.key, required this.devices});
+  const DevicesGridView({
+    super.key,
+    required this.devices,
+    required this.onDeviceTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -28,12 +33,7 @@ class DevicesGridView extends StatelessWidget {
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
             hoverColor: Colors.grey[100],
-            onTap: () {
-              DeviceActionsHandler.viewDetails(
-                context: context,
-                device: device,
-              );
-            },
+            onTap: () => onDeviceTap(device),
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -87,10 +87,7 @@ class DevicesGridView extends StatelessWidget {
                                 onSelected: (value) {
                                   switch (value) {
                                     case "view":
-                                      DeviceActionsHandler.viewDetails(
-                                        context: context,
-                                        device: device,
-                                      );
+                                      onDeviceTap(device);
                                       break;
                                   }
                                 },
@@ -105,7 +102,6 @@ class DevicesGridView extends StatelessWidget {
                                       ],
                                     ),
                                   ),
-
                                 ],
                               ),
                             ],

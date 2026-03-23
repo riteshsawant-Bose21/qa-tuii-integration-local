@@ -12,22 +12,15 @@ class ProjectsFilters extends StatelessWidget {
     final vm = context.watch<ProjectsViewModel>();
 
     return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
+
       child: Row(
         children: [
+
           Expanded(
             flex: 2,
             child: TextFormField(
               onChanged: vm.updateSearch,
-              decoration: _inputDecoration(
-                'Search projects...',
-                Icons.search,
-              ),
+              decoration: _inputDecoration('Search projects...', Icons.search),
             ),
           ),
 
@@ -56,15 +49,15 @@ class ProjectsFilters extends StatelessWidget {
           Row(
             children: [
               ViewToggleButton(
-                icon: Icons.grid_view_rounded,
-                isSelected: vm.isGridView,
-                onTap: () => vm.toggleView(true),
-              ),
-              const SizedBox(width: 8),
-              ViewToggleButton(
                 icon: Icons.view_list_rounded,
                 isSelected: !vm.isGridView,
                 onTap: () => vm.toggleView(false),
+              ),
+              const SizedBox(width: 8),
+              ViewToggleButton(
+                icon: Icons.grid_view_rounded,
+                isSelected: vm.isGridView,
+                onTap: () => vm.toggleView(true),
               ),
             ],
           ),
@@ -79,9 +72,7 @@ class ProjectsFilters extends StatelessWidget {
       prefixIcon: Icon(icon, color: Colors.grey[400]),
       filled: true,
       fillColor: Colors.grey[50],
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
     );
   }
 }

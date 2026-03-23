@@ -139,7 +139,7 @@ class ProjectRow extends StatelessWidget {
 
               /// UPDATED
              SizedBox(
-            width: 70,
+            width: 65,
                 child: Text(
                   _formatDate(project.lastUpdated),
                   style: GoogleFonts.montserrat(

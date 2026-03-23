@@ -34,7 +34,9 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
           children: [
             /// BACK BUTTON
             TextButton.icon(
-              onPressed: () => context.go(AppConstants.devicesRoute),
+              onPressed: () {
+                context.pop();
+              },
               icon: const Icon(Icons.arrow_back, size: 18, color: Colors.black),
               label: Text(
                 "Back to Devices",
@@ -139,7 +141,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
               DeviceOverviewTab(device: widget.device),
 
             if (_selectedTab == DeviceDetailTab.incidents)
-              DeviceIncidentsTab(incidents: widget.device.incidents,),
+              DeviceIncidentsTab(incidents: widget.device.incidents),
 
             if (_selectedTab == DeviceDetailTab.activity)
               const DeviceActivityTab(),
@@ -234,4 +236,3 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
     );
   }
 }
-

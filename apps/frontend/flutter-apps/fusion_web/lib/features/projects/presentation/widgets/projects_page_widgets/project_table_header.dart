@@ -79,7 +79,7 @@ class ProjectTableHeader extends StatelessWidget {
 
           /// UPDATED
          SizedBox(
-            width: 70,
+            width: 65,
             child: Text(
               "Updated",
               style: TextStyle(fontWeight: FontWeight.w600),

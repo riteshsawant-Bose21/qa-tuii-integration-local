@@ -13,8 +13,6 @@ class AppConstants {
   static const String deviceDetailBaseRoute = '/devices';
   static const String deviceDetailRoute = '/devices/detail';
 
-
-
   // App Info
   static const String appName = 'Fusion Web';
   static const String version = '1.0.0';

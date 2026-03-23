@@ -67,30 +67,47 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: AppConstants.projectsRoute,
           builder: (_, __) => const ProjectsPage(),
-        ),
+          routes: [
+            GoRoute(
+              path: ':id',
+              builder: (context, state) {
+                final id = state.pathParameters['id']!;
+                return ProjectDetailPage(projectId: id);
+              },
+              routes: [
+                GoRoute(
+                  path: AppConstants.devicesRoute + "/:deviceId",
+                  builder: (context, state) {
+                    final id = state.pathParameters['deviceId']!;
+                    final device = state.extra as Device;
 
-        GoRoute(
-          path: '${AppConstants.projectsRoute}/:id',
-          builder: (context, state) {
-            final id = state.pathParameters['id']!;
-            return ProjectDetailPage(projectId: id);
-          },
+                    return DeviceDetailPage(device: device);
+                  },
+                ),
+              ],
+            ),
+
+          ],
         ),
 
         GoRoute(
           path: AppConstants.devicesRoute,
           builder: (_, __) => const DevicesPage(),
+          routes: [
+            GoRoute(
+              name: 'device_detail',
+              path: ':deviceId',
+              builder: (context, state) {
+                final id = state.pathParameters['deviceId']!;
+                final device = state.extra as Device;
+
+                return DeviceDetailPage(device: device);
+              },
+              routes: [],
+            ),
+          ],
         ),
 
-        //Device page update
-        GoRoute(
-          path: '${AppConstants.devicesRoute}/:deviceId',
-          builder: (context, state) {
-            final device = state.extra as Device;
-
-            return DeviceDetailPage(device: device);
-          },
-        ),
 
         GoRoute(
           path: AppConstants.usersRoute,
@@ -110,13 +127,6 @@ final GoRouter appRouter = GoRouter(
     ),
   ],
 );
-
-// DashboardTabs _getInitialTab(String path) {
-//   if (path.startsWith(AppConstants.projectsRoute)) {
-//     return DashboardTabs.projects;
-//   }
-//   return DashboardTabs.dashboard;
-// }
 
 DashboardTabs _getInitialTab(String path) {
   if (path.startsWith(AppConstants.projectsRoute)) {

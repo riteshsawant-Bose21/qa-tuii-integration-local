@@ -10,13 +10,10 @@ import 'package:fusion_web/features/projects/presentation/viewmodels/projects_vi
 import 'package:fusion_web/features/projects/data/models/project_model.dart';
 import 'package:fusion_web/core/services/service_locator.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
-//Ui widgets 
+//Ui widgets
 import 'package:fusion_web/features/projects/presentation/widgets/projects_page_widgets/project_filters.dart';
 import 'package:fusion_web/features/projects/presentation/widgets/projects_page_widgets/project_grid_view.dart';
 import 'package:fusion_web/features/projects/presentation/widgets/projects_page_widgets/project_list_view.dart';
-
-
-
 
 class ProjectsPage extends StatefulWidget {
   const ProjectsPage({super.key});
@@ -34,7 +31,6 @@ class _ProjectsPageState extends State<ProjectsPage> {
 
     _viewModel.initialize();
   }
-
 
   void _navigateToDetail(ProjectModel project) {
     context.go('${AppConstants.projectsRoute}/${project.id}');
@@ -55,9 +51,32 @@ class _ProjectsPageState extends State<ProjectsPage> {
                 children: [
                   _buildHeader(),
                   const SizedBox(height: 24),
-                  const ProjectsFilters(),
-                  const SizedBox(height: 24),
-                  Expanded(child: _buildContent(context, state)),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 12),
+                          const ProjectsFilters(),
+                          const SizedBox(height: 24),
+
+                          Expanded(child: _buildContent(context, state)),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               );
             },

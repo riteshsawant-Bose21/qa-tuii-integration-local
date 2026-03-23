@@ -7,8 +7,14 @@ import '../../../data/models/devices_model.dart';
 class DeviceRow extends StatelessWidget {
   final Device device;
   final bool isLast;
+  final Function(Device) onTap;
 
-  const DeviceRow({super.key, required this.device, this.isLast = false});
+  const DeviceRow({
+    super.key,
+    required this.device,
+    required this.onTap,
+    this.isLast = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -16,9 +22,7 @@ class DeviceRow extends StatelessWidget {
       color: Colors.white,
       child: InkWell(
         hoverColor: Colors.grey[100],
-        onTap: () {
-          DeviceActionsHandler.viewDetails(context: context, device: device);
-        },
+        onTap: () => onTap(device),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
           decoration: BoxDecoration(
@@ -141,13 +145,8 @@ class DeviceRow extends StatelessWidget {
                 child: PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert),
                   onSelected: (value) {
-                    switch (value) {
-                      case "view":
-                        DeviceActionsHandler.viewDetails(
-                          context: context,
-                          device: device,
-                        );
-                        break;
+                    if (value == "view") {
+                      onTap(device);
                     }
                   },
                   itemBuilder: (context) => const [

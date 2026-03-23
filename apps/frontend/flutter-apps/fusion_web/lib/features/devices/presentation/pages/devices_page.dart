@@ -11,6 +11,7 @@ import 'package:fusion_web/features/devices/presentation/widgets/devices_page_wi
 import 'package:fusion_web/features/devices/presentation/widgets/devices_page_widgets/devices_list_view.dart';
 import 'package:fusion_web/core/presentation/base_viewmodel.dart';
 import 'package:fusion_web/features/devices/data/models/devices_model.dart';
+import 'package:go_router/go_router.dart';
 
 class DevicesPage extends StatefulWidget {
   const DevicesPage({super.key});
@@ -141,8 +142,24 @@ class _DevicesView extends StatelessWidget {
                     ),
 
                     content: viewModel.isGridView
-                        ? DevicesGridView(devices: stats.devices)
-                        : DevicesListView(devices: stats.devices),
+                        ? DevicesGridView(
+                            devices: stats.devices,
+                            onDeviceTap: (device) {
+                              GoRouter.of(context).go(
+                                '/devices/${device.deviceId}',
+                                extra: device,
+                              );
+                            },
+                          )
+                        : DevicesListView(
+                            devices: stats.devices,
+                            onDeviceTap: (device) {
+                              GoRouter.of(context).go(
+                                '/devices/${device.deviceId}',
+                                extra: device,
+                              );
+                            },
+                          ),
                   ),
                   // const SizedBox(height: 24),
                 ],
