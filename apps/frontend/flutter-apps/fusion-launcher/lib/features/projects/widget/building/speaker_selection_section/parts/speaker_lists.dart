@@ -25,31 +25,6 @@ class ProductQuerySpeakerList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        SemanticHelper.formControl(
-          testId: SemanticHelper.createTestId(
-            SemanticTypes.textInput,
-            "speaker_search_input",
-          ),
-          child: NeumorphicDarkTextField(
-            controller: searchController,
-            prefix: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: Icon(
-                LucideIcons.search200,
-                color: Colors.grey[500],
-              ),
-            ),
-            borderRadius: 8,
-            contentPadding: const EdgeInsets.all(10),
-            hintText: "Search devices...",
-            hintStyle: context.textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.normal,
-            ),
-            onChanged: (String value) => speakerSelectionViewModel.setSearchQuery(value),
-          ),
-        ),
-        const SizedBox(height: 10),
-
         // ── SELECTED SPEAKER SUMMARY CARD ──
         Expanded(
           child: Container(
@@ -144,8 +119,8 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                                     ),
                                                   ),
                                                 ),
-                                                const SizedBox(width: 4),
-                                                Icon(LucideIcons.info200, size: 12, color: context.colorScheme.onSurface),
+                                                // const SizedBox(width: 4),
+                                                // Icon(LucideIcons.info200, size: 12, color: context.colorScheme.onSurface),
                                               ],
                                             ),
                                             FusionAppText(
@@ -233,8 +208,8 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                             ),
                                           ),
                                         ),
-                                        const SizedBox(width: 4),
-                                        Icon(LucideIcons.info200, size: 12, color: context.colorScheme.onSurface),
+                                        // const SizedBox(width: 4),
+                                        // Icon(LucideIcons.info200, size: 12, color: context.colorScheme.onSurface),
                                       ],
                                     ),
                                     FusionAppText(
@@ -338,8 +313,8 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                                       ),
                                                     ),
                                                   ),
-                                                  const SizedBox(width: 4),
-                                                  Icon(LucideIcons.info200, size: 12, color: context.colorScheme.onSurface),
+                                                  // const SizedBox(width: 4),
+                                                  // Icon(LucideIcons.info200, size: 12, color: context.colorScheme.onSurface),
                                                 ],
                                               ),
                                               FusionAppText(
@@ -423,6 +398,30 @@ class ProductQuerySpeakerList extends StatelessWidget {
               },
             );
           },
+        ),
+        const SizedBox(height: 10),
+        SemanticHelper.formControl(
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.textInput,
+            "speaker_search_input",
+          ),
+          child: NeumorphicDarkTextField(
+            controller: searchController,
+            prefix: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Icon(
+                LucideIcons.search200,
+                color: Colors.grey[500],
+              ),
+            ),
+            borderRadius: 8,
+            contentPadding: const EdgeInsets.all(10),
+            hintText: "Search devices...",
+            hintStyle: context.textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.normal,
+            ),
+            onChanged: (String value) => speakerSelectionViewModel.setSearchQuery(value),
+          ),
         ),
 
         const SizedBox(height: 10),
@@ -737,23 +736,23 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                                                   text: product.modelName,
                                                                   style: context.textTheme.labelSmall?.copyWith(
                                                                     fontWeight: FontWeight.bold,
-                                                                    color: context.colorScheme.onSurface,
+                                                                    color: context.colorScheme.textPrimary,
                                                                   ),
                                                                 ),
                                                               ),
-                                                              const SizedBox(width: 4),
-                                                              Icon(
-                                                                LucideIcons.info200,
-                                                                size: 12,
-                                                                color: context.colorScheme.onSurface,
-                                                              ),
+                                                              // const SizedBox(width: 4),
+                                                              // Icon(
+                                                              //   LucideIcons.info200,
+                                                              //   size: 12,
+                                                              //   color: context.colorScheme.textPrimary,
+                                                              // ),
                                                             ],
                                                           ),
                                                           FusionAppText(
                                                             text: '\$$productPrice',
                                                             style: context.textTheme.bodySmall?.copyWith(
                                                               fontWeight: FontWeight.normal,
-                                                              color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+                                                              color: context.colorScheme.textPrimary,
                                                             ),
                                                           ),
                                                           const SizedBox(height: 4),
@@ -803,8 +802,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                                           child: Icon(
                                                             isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
                                                             size: 20,
-                                                            color:
-                                                                isSelected ? context.colorScheme.primary : context.colorScheme.onSurface.withValues(alpha: 0.5),
+                                                            color: isSelected ? context.colorScheme.primaryColor : context.colorScheme.elevation5,
                                                           ),
                                                         ),
                                                       ),
@@ -815,7 +813,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                                 FusionAppText(
                                                   text: spiText,
                                                   style: context.textTheme.labelSmall?.copyWith(
-                                                    color: context.colorScheme.onSurface.withValues(alpha: 0.4),
+                                                    color: context.colorScheme.elevation5,
                                                     fontSize: 9,
                                                   ),
                                                 ),
