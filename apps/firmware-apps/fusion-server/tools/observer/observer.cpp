@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
                 << " <server_ip> <port> <path1> [path2 ...]\n";
       std::cerr << "Example: " << argv[0]
                 << " 127.0.0.1 7947 settings.audio.peq1.* "
-                   "settings.audio.peq2.* --verbose\n";
+                   "settings.audio.peq2.*\n";
       return 1;
     }
 

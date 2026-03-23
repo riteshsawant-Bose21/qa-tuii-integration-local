@@ -798,7 +798,8 @@ public:
   UDPValueMonitor(const std::string &serverIP, int port)
       : jsonMonitor_(Json::objectValue)
   {
-    spdlog::set_level(spdlog::level::trace);
+    // Enable trace logging for debugging (dont push this to git).
+    // spdlog::set_level(spdlog::level::trace);
 
     SPDLOG_TRACE("Initializing UDPValueMonitor to {}:{}", serverIP, port);
 
@@ -938,7 +939,6 @@ private:
                   std::string(strerror(errno)));
       receivedInitialState_ = false;
     }
-    // receivedInitialState_ = false; // ask nate, he put the condition here instead of above
   }
 
   void requestInitialState(const sockaddr_in &serverAddr)
