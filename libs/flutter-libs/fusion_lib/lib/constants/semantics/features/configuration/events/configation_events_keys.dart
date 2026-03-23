@@ -56,5 +56,5 @@ extension ConfigationEventsKeys on FusionTestKeys {
   String get eventsactionparm => "event_action_parm";
   String get eventsactionvalue => "event_action_value";
   String get eventsactiondelete => "event_action_delete_icon";
-  String get eventsactionduplicate => "event_action_duplicate_icon";
+  String get eventsactionduplicate  => "event_action_duplicate_icon";
 }

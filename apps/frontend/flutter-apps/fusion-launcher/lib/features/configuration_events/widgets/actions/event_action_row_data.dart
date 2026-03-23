@@ -275,38 +275,34 @@ class _EventActionRowContent extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
-          SemanticHelper.button(
-            testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.eventsactiondelete}_$index"),
-            child: GestureDetector(
-              onTap: () {
-                cubit.deleteAction(actionId: action.id);
-                FusionToast.success(context, message: "Action deleted successfully");
-              },
-              child: FusionImage.asset(
-                Assets.deleteIcon,
-                width: 20,
-                height: 20,
-                assetColor: context.colorScheme.iconWhite,
-                fit: BoxFit.contain,
-              ),
+          GestureDetector(
+            onTap: () {
+              cubit.deleteAction(actionId: action.id);
+              FusionToast.success(context, message: "Action deleted successfully");
+            },
+            child: FusionImage.asset(
+              semanticId: "${FusionTestKeys.instance.eventsactiondelete}_$index",
+              Assets.deleteIcon,
+              width: 20,
+              height: 20,
+              assetColor: context.colorScheme.iconWhite,
+              fit: BoxFit.contain,
             ),
           ),
           const SizedBox(width: 6),
-          SemanticHelper.button(
-            testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.eventsactionduplicate}_$index"),
-            child: GestureDetector(
-              onTap: () {
-                cubit.duplicateAction(actionId: action.id);
-                FusionToast.success(context, message: "Action duplicated successfully");
-              },
-              child: FusionImage.asset(
-                Assets.duplicateIcon,
-                width: 20,
-                height: 20,
-                assetColor: context.colorScheme.iconWhite,
+          GestureDetector(
+            onTap: () {
+              cubit.duplicateAction(actionId: action.id);
+              FusionToast.success(context, message: "Action duplicated successfully");
+            },
+            child: FusionImage.asset(
+              semanticId: "${FusionTestKeys.instance.eventsactionduplicate}_$index",
+              Assets.duplicateIcon,
+              width: 20,
+              height: 20,
+              assetColor: context.colorScheme.iconWhite,
 
-                fit: BoxFit.contain,
-              ),
+              fit: BoxFit.contain,
             ),
           ),
         ],

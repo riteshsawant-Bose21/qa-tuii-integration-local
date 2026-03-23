@@ -166,7 +166,7 @@ class _SnapshotActionRowContent extends StatelessWidget {
     return Expanded(
       child: SemanticHelper.dropdown(
         testId: SemanticHelper.createTestId(SemanticTypes.dropdown, "${FusionTestKeys.instance.actionlistpanelrowdataitemactionitemdropdown}_$index"),
-        value: selected?.name ?? '',
+        // value: selected?.name ?? '',
         child: FusionDropdown<SceneItemDropdown>(
           value: selected,
           items: itemList,
@@ -201,7 +201,7 @@ class _SnapshotActionRowContent extends StatelessWidget {
     return Expanded(
       child: SemanticHelper.dropdown(
         testId: SemanticHelper.createTestId(SemanticTypes.dropdown, "${FusionTestKeys.instance.actionlistpanelrowdataitemactionparmdropdown}_$index"),
-        value: selected?.label ?? '',
+        // value: selected?.label ?? '',
         child: FusionDropdown<SceneParam>(
           hint: "Select Parameter",
           value: selected,

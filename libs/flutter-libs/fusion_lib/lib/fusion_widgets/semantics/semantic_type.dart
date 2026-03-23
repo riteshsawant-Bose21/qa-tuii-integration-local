@@ -6,6 +6,7 @@ class SemanticTypes {
   static const String textInput = 'tin';
   static const String radio = 'rdo';
   static const String checkbox = 'cbx';
+  static const String slider = 'slider';
 
   // Content types
   static const String text = 'txt';

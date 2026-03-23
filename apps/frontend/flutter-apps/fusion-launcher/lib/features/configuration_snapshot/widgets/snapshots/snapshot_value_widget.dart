@@ -38,11 +38,14 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
           },
           child: Row(
             children: <Widget>[
-              FusionIcon.icon(
-                semanticId: '${FusionTestKeys.instance.actionlistpanelrowdataitemvalueicon}_${widget.index}',
-                isMute ? Icons.volume_off : Icons.volume_up,
-                size: 20,
-                color: context.colorScheme.primaryWhite,
+              SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, '${FusionTestKeys.instance.actionlistpanelrowdataitemvalueicon}_${widget.index}'),
+                label: isMute ? 'volume_off' : 'volume_up',
+                child: FusionIcon.icon(
+                  isMute ? Icons.volume_off : Icons.volume_up,
+                  size: 20,
+                  color: context.colorScheme.primaryWhite,
+                ),
               ),
               const SizedBox(width: 8),
               FusionAppText(
@@ -68,11 +71,12 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
                   trackHeight: 2,
                   thumbColor: context.colorScheme.primaryWhite,
                 ),
-                child: SemanticHelper.container(
+                child: SemanticHelper.slider(
                   testId: SemanticHelper.createTestId(
-                    SemanticTypes.container,
+                    SemanticTypes.slider,
                     '${FusionTestKeys.instance.actionlistpanelrowdataitemvalueslider}_${widget.index}',
                   ),
+                  value: currentValue,
                   child: Slider(
                     value: currentValue,
                     padding: EdgeInsets.zero,
@@ -142,6 +146,7 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
             SemanticTypes.container,
             '${FusionTestKeys.instance.actionlistpanelrowdataitemvaluedropdown}_${widget.index}',
           ),
+          // value: selectedValue!.label,
           child: FusionDropdown<SceneValueDropdown>(
             value: selectedValue,
             items: items,
@@ -166,6 +171,7 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
                 SemanticTypes.textInput,
                 '${FusionTestKeys.instance.actionlistpanelrowdataitemvaluetextinput}_${widget.index}',
               ),
+              value: value.value ?? "",
               child: TextFormField(
                 initialValue: value.value ?? "",
                 decoration: const InputDecoration(

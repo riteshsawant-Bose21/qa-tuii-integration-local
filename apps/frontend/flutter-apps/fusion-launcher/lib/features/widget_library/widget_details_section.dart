@@ -1254,56 +1254,6 @@ FusionDropDown<String>(
         ),
         _buildWithCopy(
           context: context,
-          preview: FusionDropDown<String>(
-            semanticId: "itembased",
-            items: <String>["Small", "Medium", "Large"],
-            selectedIndex: selectedIndex,
-
-            itemBuilder: (BuildContext context, String item, bool isSelected) {
-              return Text(
-                item,
-                style: TextStyle(
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                ),
-              );
-            },
-
-            childBuilder: (BuildContext context, int index, String item) {
-              return Text(item);
-            },
-
-            onSelected: (int index) {
-              setState(() => selectedIndex = index);
-            },
-          ),
-
-          code: '''
-FusionDropDown<String>(
-            semanticId: "itembased",
-            items: <String>["Small", "Medium", "Large"],
-            selectedIndex: selectedIndex,
-
-            itemBuilder: (BuildContext context, String item, bool isSelected) {
-              return Text(
-                item,
-                style: TextStyle(
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                ),
-              );
-            },
-
-            childBuilder: (BuildContext context, int index, String item) {
-              return Text(item);
-            },
-
-            onSelected: (int index) {
-              setState(() => selectedIndex = index);
-            },
-          ),
-''',
-        ),
-        _buildWithCopy(
-          context: context,
           preview: FusionNeumorphicDropdown<String>(
             hintText: 'Select Audio File',
             width: 400,

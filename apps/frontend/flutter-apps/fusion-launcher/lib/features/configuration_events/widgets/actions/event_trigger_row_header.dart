@@ -335,8 +335,8 @@ class _ValueColumn extends StatelessWidget {
     final double minValue = condition.min;
     final double maxValue = condition.max;
 
-    return SemanticHelper.container(
-      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.eventtriggervalueslider),
+    return SemanticHelper.slider(
+      testId: SemanticHelper.createTestId(SemanticTypes.slider, FusionTestKeys.instance.eventtriggervalueslider),
       child: SliderTheme(
         data: SliderTheme.of(context).copyWith(
           rangeThumbShape: const RoundRangeSliderThumbShape(enabledThumbRadius: 6),
@@ -379,8 +379,9 @@ class _ValueColumn extends StatelessWidget {
   ) {
     final double thresholdValue = condition.threshold;
 
-    return SemanticHelper.container(
-      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.eventtriggervaluethresholdslider),
+    return SemanticHelper.slider(
+      testId: SemanticHelper.createTestId(SemanticTypes.slider, FusionTestKeys.instance.eventtriggervaluethresholdslider),
+      value: thresholdValue,
       child: Row(
         children: <Widget>[
           Flexible(
