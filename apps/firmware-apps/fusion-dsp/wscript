@@ -118,11 +118,7 @@ def configure(conf):
     conf.env.append_value('LIBPATH', [conf.path.abspath() + '/../../../libs/firmware-libs/fusion-embedded-framework/build'])
 
 def build(bld):
-<<<<<<< vj/observerFix
-    bld(export_includes=['../fusion-server/tools', '../../../libs/firmware-libs/fusion-embedded-interface/include', './external/doctest', './include'], name='common-include')
-=======
-    bld(export_includes=['../../../libs/firmware-libs/fusion-embedded-interface/include', '../../../libs/firmware-libs/fusion-embedded-framework/include', './external/doctest', './include'], name='common-include')
->>>>>>> develop
+    bld(export_includes=['../fusion-server/tools', '../../../libs/firmware-libs/fusion-embedded-interface/include', '../../../libs/firmware-libs/fusion-embedded-framework/include', './external/doctest', './include'], name='common-include')
 
     excludes = []
     libs = ['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime', 'jsoncpp', 'samplerate', 'curl', 'fusion_embedded_interface', 'fusion_embedded_framework']
