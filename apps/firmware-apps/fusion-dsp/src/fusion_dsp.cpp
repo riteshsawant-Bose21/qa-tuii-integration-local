@@ -233,15 +233,15 @@ static void handle_devices(const std::string & /*path*/,
 {
     if (new_value["id"] == device_id)
     {
-        std::string message = "{ \"target\": \"session\", \"name\": \"destroy_all_audio_tasks\" }";
-        handle_update(message);
+        static const std::string destroy_message = "{ \"target\": \"session\", \"name\": \"destroy_all_audio_tasks\" }";
+        handle_update(destroy_message);
 
         std::ofstream dsp_config("/tmp/dsp_config.json");
         dsp_config << new_value["dsp_static_config"];
         dsp_config.close();
 
-        message = "{ \"target\": \"session\", \"name\": \"create_audio_task\", \"value\": \"/tmp/dsp_config.json\" }";
-        handle_update(message);
+        static const std::string create_message = "{ \"target\": \"session\", \"name\": \"create_audio_task\", \"value\": \"/tmp/dsp_config.json\" }";
+        handle_update(create_message);
     }
 }
 
