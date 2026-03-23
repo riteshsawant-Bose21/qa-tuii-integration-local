@@ -314,6 +314,7 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                                       draggingSnapshotId: widget.draggingSnapshotId,
                                       onRenameSave: (String value, SnapshotsModel newSnapshot) {
                                         _configSnapshotsViewmodel.updateSnapshot(newSnapshot);
+                                        _configSceneSetsViewmodel.syncWithProjectViewModel();
                                       },
                                     );
                                   },

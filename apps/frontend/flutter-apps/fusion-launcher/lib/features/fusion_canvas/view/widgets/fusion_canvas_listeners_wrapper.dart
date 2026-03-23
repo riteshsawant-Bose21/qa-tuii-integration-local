@@ -12,6 +12,7 @@ import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_i
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_tool_viewmodel.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_snap_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/canvas/fusion_canvas_point.dart';
 import 'package:nested/nested.dart';
 
 import '../../state/tools/select_tool_state.dart';
@@ -180,9 +181,9 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
         ),
 
         BlocListener<FusionCanvasToolViewModel, FusionToolState>(
-          listenWhen: (FusionToolState previous, FusionToolState current) {
-            return current is DragToolState || previous is DragToolState;
-          },
+          // listenWhen: (FusionToolState previous, FusionToolState current) {
+          //   return current is DragToolState || previous is DragToolState;
+          // },
           listener: (BuildContext context, FusionToolState state) {
             if (state is LayerDragEndState) {
               toolbarEvents?.onMoveLayer?.call(

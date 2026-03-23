@@ -18,7 +18,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # of the product and file versions while build-number is used as the build suffix.
 # version should be like dev.0.3.0+1
 
-version: 0.4.1+1
+version: 0.5.0+1
 
 environment:
   sdk: ^3.7.2
@@ -130,6 +130,7 @@ flutter:
     - .env
     - assets/
     - assets/images/
+    - assets/icons/building_page/
     - assets/images/speakers/
     - assets/images/products/
     - assets/images/floor_plans/

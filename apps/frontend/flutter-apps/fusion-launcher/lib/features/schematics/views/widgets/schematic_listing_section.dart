@@ -101,12 +101,7 @@ class _SchematicListingSectionState extends State<SchematicListingSection> {
                                       ),
                               child:
                                   (state is SearchingState)
-                                      ? SemanticHelper.formControl(
-                                        testId: SemanticHelper.createTestId(
-                                          SemanticTypes.textInput,
-                                          "section_search_${widget.sectionTitle.toLowerCase()}",
-                                        ),
-                                        child: FusionTextField(
+                                      ? FusionTextField(
                                           semanticFieldId:
                                               'section_search_${widget.sectionTitle.toLowerCase()}',
                                           focusNode: viewModel.focusNode,
@@ -116,8 +111,7 @@ class _SchematicListingSectionState extends State<SchematicListingSection> {
                                           hintText:
                                               widget.searchHint ??
                                               "Search ${widget.sectionTitle.toLowerCase()}",
-                                        ),
-                                      )
+                                        )
                                       : FusionAppText(
                                         text: widget.sectionTitle.toUpperCase(),
                                         maxLine: 1,
@@ -190,11 +184,17 @@ class _SchematicListingSectionState extends State<SchematicListingSection> {
                 ///
                 ///
                 Flexible(
-                  child: ListView(
-                    shrinkWrap: true,
-                    children: <Widget>[
-                      ...widget.sections,
-                    ],
+                  child: SemanticHelper.container(
+                    testId: SemanticHelper.createTestId(
+                      SemanticTypes.container,
+                      "expandable_section_content_container_${widget.sectionTitle.toLowerCase()}",
+                    ),
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: <Widget>[
+                        ...widget.sections,
+                      ],
+                    ),
                   ),
                 ),
               ],

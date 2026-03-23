@@ -5,34 +5,41 @@ class SystemToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final FusionToolState toolState = context.watch<FusionCanvasToolViewModel>().state;
-    return FusionFlatContainer(
-      semanticsId: "system_toolbar",
-      padding: const EdgeInsets.all(5),
-      child: Row(
-        children: <Widget>[
-          _ToolBarIcon(
-            icon: LucideIcons.music,
-            label: "Speaker",
-            isSelected: toolState is PenToolState,
-            onTap: () => context.read<FusionCanvasToolViewModel>().setTool(IdlePenToolState()),
-          ),
-          const SizedBox(width: 8),
-          _ToolBarIcon(
-            icon: LucideIcons.rulerDimensionLine200,
-            label: "Measure",
-            isSelected: toolState is MeasureToolState,
-            onTap: () => context.read<FusionCanvasToolViewModel>().setTool(IdleMeasureToolState()),
-          ),
-          const SizedBox(width: 8),
-          _ToolBarIcon(
-            icon: LucideIcons.pointer,
-            label: "Select",
-            isSelected: toolState is SelectToolState,
-            onTap: () => context.read<FusionCanvasToolViewModel>().setTool(IdleSelectToolState()),
-          ),
-        ],
-      ),
+    return BlocBuilder<BuildingPageViewModel, BuildingPageState>(
+      builder: (BuildContext context, BuildingPageState state) {
+        final BuildingPageToolState toolState = state.toolState;
+        final BuildingPageViewModel buildingPageViewModel = context.read<BuildingPageViewModel>();
+        final List<Widget> children = <Widget>[
+          if (buildingPageViewModel.state.selectedListeningAreaId != null)
+            SemanticHelper.button(
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.button,
+                "add_sources",
+              ),
+              child: const AddSourcePopup(
+                isFromBuildingPage: true,
+                child: _ToolBarIcon(
+                  icon: "source.png",
+                  label: "Add Source",
+                  isSelected: false,
+                  onTap: null,
+                ),
+              ),
+            ),
+          // _ToolBarIcon(
+          //   icon: "fit_to_screen.png",
+          //   label: "Fit to Screen",
+          //   isSelected: false,
+          //   onTap: () {
+          //     context.read<FusionCanvasStateViewModel>().fitToScreen();
+          //   },
+          // ),
+        ];
+        if (children.isEmpty) return const SizedBox();
+        return Row(
+          children: children,
+        );
+      },
     );
   }
 }

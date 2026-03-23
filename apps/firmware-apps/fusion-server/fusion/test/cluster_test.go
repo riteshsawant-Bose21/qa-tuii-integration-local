@@ -11,7 +11,6 @@ import (
 	json "github.com/goccy/go-json"
 
 	"fusion/internal/api"
-	"fusion/internal/persistence"
 	"fusion/internal/routes"
 
 	"github.com/stretchr/testify/assert"
@@ -34,27 +33,30 @@ func helperAdminURL(path string) string {
 // TestUpdateDeviceInfoLocal exercises PATCH /device (UpdateDeviceInfoLocal).
 func TestUpdateDeviceInfoLocal(t *testing.T) {
 
-	base := persistence.DeviceInfo{
-		Id:       "test-device",
-		Location: "RoomB",
-		Name:     "BaseDevice",
+	base := api.DevicePatch{
+		Id:       ptrString("test-device"),
+		Location: ptrString("RoomB"),
+		Name:     ptrString("BaseDevice"),
 	}
 	bytesBase, err := json.Marshal(base)
 	require.NoError(t, err)
 
-	resp, err := http.Post(helperAdminURL(routes.DeviceEndpoint), api.JsonMIMEType, bytes.NewReader(bytesBase))
+	req, err := http.NewRequest(http.MethodPatch, helperAdminURL(routes.DeviceEndpoint), bytes.NewReader(bytesBase))
 	require.NoError(t, err)
-	defer resp.Body.Close()
-	assert.Equal(t, http.StatusNoContent, resp.StatusCode, "Expected 204 No Content when setting base device")
+	req.Header.Set("Content-Type", api.JsonMIMEType)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
 
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode, "Expected 204 No Content when setting base device via PATCH")
 	// Now PATCH /device to change only the Name.
-	patch := persistence.DevicePatch{
+	patch := api.DevicePatch{
 		Name: ptrString("RenamedDevice"),
 	}
 	bytesPatch, err := json.Marshal(patch)
 	require.NoError(t, err)
 
-	req, err := http.NewRequest(http.MethodPatch, helperAdminURL(routes.DeviceEndpoint), bytes.NewReader(bytesPatch))
+	req, err = http.NewRequest(http.MethodPatch, helperAdminURL(routes.DeviceEndpoint), bytes.NewReader(bytesPatch))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", api.JsonMIMEType)
 
@@ -69,17 +71,16 @@ func TestUpdateDeviceInfoLocal(t *testing.T) {
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected 200 OK on GET /device after patch")
 
-	var updated persistence.DeviceInfo
+	var updated api.DeviceInfo
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&updated), "Expected valid JSON after patch")
-	assert.Equal(t, base.Id, updated.Id, "ID should remain unchanged")
+	assert.Equal(t, *base.Id, updated.Id, "ID should remain unchanged")
 	assert.Equal(t, "RenamedDevice", updated.Name, "Name should have been updated")
-	assert.Equal(t, base.Location, updated.Location, "Location should remain unchanged")
-	assert.Equal(t, base.Address, updated.Address, "Address should remain unchanged")
+	assert.Equal(t, *base.Location, updated.Location, "Location should remain unchanged")
 }
 
 // TestUpdateDeviceInfoNotFound attempts PATCH /devices/{id} on a non-existent device.
 func TestUpdateDeviceInfoNotFound(t *testing.T) {
-	patch := persistence.DevicePatch{
+	patch := api.DevicePatch{
 		Name: ptrString("ShouldNotExist"),
 	}
 	bytesPatch, err := json.Marshal(patch)

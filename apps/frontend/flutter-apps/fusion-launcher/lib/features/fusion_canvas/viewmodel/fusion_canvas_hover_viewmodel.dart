@@ -7,6 +7,8 @@ import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canv
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/tool/line_center_handle_painter.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../view/painters/elements/mixin/fusion_canvas_interactable_mixin.dart';
+
 class FusionCanvasHoverViewModel extends Cubit<FusionHoverState> {
   FusionCanvasHoverViewModel() : super(FusionHoverState(hoveredPainterId: null));
 
@@ -36,13 +38,23 @@ class FusionCanvasHoverViewModel extends Cubit<FusionHoverState> {
     if (position == null) {
       emit(FusionHoverState(hoveredPainterId: null));
     } else {
-      final FusionBasePainter? pos = painters.isHit(position);
-      if (pos != null) {
-        final FusionCanvasElement? hoveredElement = pos.isHit(position, painters);
+      final FusionCanvasInteractionTarget? target = painters.getInteractionTargetAt(
+        position,
+        FusionCanvasLayerInteraction.select,
+      );
+      if (target != null) {
+        final FusionCanvasInteractibleMixin pos = target.painter;
+        final FusionCanvasElement hoveredElement = target.element;
         emit(
           FusionHoverState(
             hoveredPainterId: pos.id,
             hoveredElement: hoveredElement,
+            hoveredPainterInteractions: pos.possibleInteractions,
+            // Let the element override its own interactions (e.g. a point
+            // within a non-draggable layer can still be draggable).
+            hoveredElementInteractions: pos.possibleInteractionsForElement(
+              hoveredElement,
+            ),
             isCenterHandleHovered: _isCenterHandleHovered(
               hoveredElement,
               pos,

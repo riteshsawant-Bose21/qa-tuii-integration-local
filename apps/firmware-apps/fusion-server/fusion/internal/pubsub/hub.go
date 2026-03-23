@@ -19,7 +19,7 @@ type Hub struct {
 	broadcasters []Broadcaster
 	stateManager *persistence.StateManager
 	persistence  *persistence.Persistence
-	transport    transport.ClusterTransport
+	transport    transport.ClusterInterface
 }
 
 func NewHub(stateManager *persistence.StateManager, persistence *persistence.Persistence) *Hub {
@@ -31,7 +31,7 @@ func NewHub(stateManager *persistence.StateManager, persistence *persistence.Per
 
 // SetClusterTransport injects the cluster transport (backed by memberlist).
 // This is called once during app wiring after memberlist is constructed.
-func (h *Hub) SetClusterTransport(t transport.ClusterTransport) {
+func (h *Hub) SetClusterTransport(t transport.ClusterInterface) {
 	h.transport = t
 }
 func (h *Hub) Register(b Broadcaster) {
@@ -179,7 +179,7 @@ func (h *Hub) broadcastToNodes(message []byte) {
 
 	localName := h.transport.LocalNode().Name
 
-	for _, node := range h.transport.Members() {
+	for _, node := range h.transport.MemberListMembers() {
 		if node.Name == localName {
 			continue
 		}

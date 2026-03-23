@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/service_locator.dart';
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../../viewmodel/building_page_viewmodel.dart';
 
 class BuildingPlan extends StatefulWidget {
   const BuildingPlan({super.key});
@@ -100,7 +101,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
     _clearFields();
 
     // Set toolbar mode to acoustics mode for new floor.
-    viewModel.setToolbarMode(ToolbarMode.acoustics);
+    context.read<BuildingPageViewModel>().toggleMode(ToolbarMode.acoustics);
   }
 
   /// Delete the selected floor

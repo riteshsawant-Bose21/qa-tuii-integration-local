@@ -134,7 +134,7 @@ private:
 
     std::string task_name;
     int_fast32_t cpu_affinity; // CPU affinity for the task
-    uint32_t period_ms;    // Period in milliseconds
+    int_fast32_t period_ms;    // Period in milliseconds
     uint64_t period_ns;    // Period in nanoseconds
     std::atomic<bool> stop_flag;
 

@@ -15,6 +15,9 @@ class MessageConfigPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<MessagePlayerConfigCubit, MessagePlayerConfigState>(
       builder: (BuildContext context, MessagePlayerConfigState state) {
+        final MessagePlayerConfigCubit messagePlayerConfigCubit = context.read<MessagePlayerConfigCubit>();
+        final MediaFileModel? mediaFile = messagePlayerConfigCubit.getMediaFileForSelectedMessage();
+
         final MessageModel? selectedMessage = state.selectedMessage;
 
         if (selectedMessage == null) {
@@ -33,7 +36,7 @@ class MessageConfigPanel extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              // Message Name
+              /// Message Name
               _MessageNameField(
                 initialValue: selectedMessage.name,
                 onChanged: (String value) {
@@ -43,36 +46,35 @@ class MessageConfigPanel extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              // Audio File
+              /// Audio File
               _AudioFileSection(
                 selectedMessage: selectedMessage,
                 state: state,
               ),
 
-              // Audio Player (only show if audio file is selected)
-              if (context.read<MessagePlayerConfigCubit>().hasMediaAssignedToSelectedMessage()) ...<Widget>[
+              /// Audio Player (only show if audio file is selected)
+              if (messagePlayerConfigCubit.hasMediaAssignedToSelectedMessage() && mediaFile != null) ...<Widget>[
                 const SizedBox(height: 16),
                 _AudioPlayerWidget(state: state),
 
                 const SizedBox(height: 16),
 
-                // Gain Control
+                /// Gain Control
                 _GainControlSection(
                   gain: selectedMessage.gain,
                   onChanged: (double value) {
                     context.read<MessagePlayerConfigCubit>().updateGain(value);
                   },
                 ),
+                const SizedBox(height: 20),
+
+                /// Repeat Settings
+                _RepeatSettingsSection(
+                  repeat: selectedMessage.repeat,
+                  repeatCount: selectedMessage.repeatCount,
+                  intervalSeconds: selectedMessage.repeatIntervalSeconds,
+                ),
               ],
-
-              const SizedBox(height: 20),
-
-              // Repeat Settings
-              _RepeatSettingsSection(
-                repeat: selectedMessage.repeat,
-                repeatCount: selectedMessage.repeatCount,
-                intervalSeconds: selectedMessage.repeatIntervalSeconds,
-              ),
             ],
           ),
         );
@@ -150,8 +152,9 @@ class _MessageNameFieldState extends State<_MessageNameField> {
           ),
         ),
         const SizedBox(height: 8),
-        SizedBox(
-          height: 48,
+        FusionContainer(
+          raised: false,
+          height: 40,
           width: 400,
           child: TextField(
             controller: _controller,
@@ -159,7 +162,7 @@ class _MessageNameFieldState extends State<_MessageNameField> {
             style: context.textTheme.b3Regular,
             onSubmitted: _onSubmitted,
             decoration: InputDecoration(
-              hintText: 'Message Name',
+              hintText: 'Enter message Name',
               hintStyle: context.textTheme.bodySmall?.copyWith(
                 color: context.colorScheme.textPlaceholder,
               ),
@@ -167,15 +170,15 @@ class _MessageNameFieldState extends State<_MessageNameField> {
               filled: true,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: context.colorScheme.strokeLight),
+                borderSide: const BorderSide(color: Colors.transparent),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: context.colorScheme.textLabel),
+                borderSide: const BorderSide(color: Colors.transparent),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: context.colorScheme.textLabel),
+                borderSide: const BorderSide(color: Colors.transparent),
               ),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             ),
@@ -263,8 +266,9 @@ class _AudioFileDropdownState extends State<_AudioFileDropdown> {
         _AudioFileOption.uploadAudioFile,
       ],
       tooltip: 'Audio file options',
+      matchChildWidth: true,
       semanticsId: 'audio_file_options_popup',
-      popupOffset: const Offset(0, 8),
+      popupOffset: const Offset(0, 6),
       onSelected: (_AudioFileOption option) {
         if (option == _AudioFileOption.selectAudioFile) {
           final List<MediaFileModel> audioFiles = cubit.getAvailableAudioFiles();
@@ -414,35 +418,31 @@ class _AudioFileDropdownState extends State<_AudioFileDropdown> {
   }
 
   Widget _buildTrigger(BuildContext context, String? audioFileName) {
-    return Container(
+    return FusionContainer(
+      raised: true,
       width: 400,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation1,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: context.colorScheme.textLabel,
-          width: 1,
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: <Widget>[
-          Expanded(
-            child: FusionAppText(
-              text: audioFileName ?? 'Select Audio File',
-              style: context.textTheme.bodyMedium?.copyWith(
-                color: audioFileName != null ? context.colorScheme.textPrimary : context.colorScheme.textPlaceholder,
+      height: 40,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            Expanded(
+              child: FusionAppText(
+                text: audioFileName ?? 'Select Audio File',
+                style: context.textTheme.bodyMedium?.copyWith(
+                  color: audioFileName != null ? context.colorScheme.textPrimary : context.colorScheme.textSecondary,
+                ),
+                maxLine: 1,
+                textOverflow: TextOverflow.ellipsis,
               ),
-              maxLine: 1,
-              textOverflow: TextOverflow.ellipsis,
             ),
-          ),
-          Icon(
-            Icons.keyboard_arrow_down,
-            color: context.colorScheme.iconDefault,
-          ),
-        ],
+            Icon(
+              Icons.keyboard_arrow_down,
+              color: context.colorScheme.iconDefault,
+            ),
+          ],
+        ),
       ),
     );
   }

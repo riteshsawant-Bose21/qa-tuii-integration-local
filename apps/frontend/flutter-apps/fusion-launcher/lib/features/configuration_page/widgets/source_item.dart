@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/configuration_page/widgets/source_meter.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_chain_view.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_sources.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -12,8 +13,17 @@ class SourceItem extends StatefulWidget {
   final bool isDragging;
   final int index;
   final String? semanticId;
+  final bool? isInControlMode;
 
-  const SourceItem({required this.source, this.sourceSet, this.isDragging = false, required this.index, super.key, this.semanticId});
+  const SourceItem({
+    required this.source,
+    this.sourceSet,
+    this.isDragging = false,
+    required this.index,
+    super.key,
+    this.semanticId,
+    this.isInControlMode,
+  });
 
   @override
   State<SourceItem> createState() => _SourceItemState();
@@ -72,6 +82,11 @@ class _SourceItemState extends State<SourceItem> {
                 fit: BoxFit.contain,
               ),
               const SizedBox(width: 12),
+              if (widget.isInControlMode != null && widget.isInControlMode!) ...<Widget>[
+                SourceMeter(sourceId: widget.source.id),
+
+                const SizedBox(width: 12),
+              ],
 
               Expanded(
                 child: FusionAppText(
@@ -86,7 +101,7 @@ class _SourceItemState extends State<SourceItem> {
               // todo : based on the pagingSourceType show different popup with different configuration options
               /// Show configuration icon only if source has a paging source type
               Visibility(
-                visible: widget.source.pagingSourceType != null,
+                visible: widget.source.pagingSourceType != null && !widget.isDragging,
                 child: InkWell(
                   onTap: () {
                     MessagePlayerConfigDialog.show(
