@@ -500,8 +500,7 @@ bool TelemetryMonitor::send_message(TelemetryMessage &message)
     return true;
 }
 
-
-TelemetryMessage recv_message()
+TelemetryMessage TelemetryMonitor::recv_message()
 {
     char buf[4096];
     ssize_t recv_len = recvfrom(telemetry_fd, buf, sizeof(buf) - 1, 0,
