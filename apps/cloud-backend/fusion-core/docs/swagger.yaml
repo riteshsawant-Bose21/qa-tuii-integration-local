@@ -1000,6 +1000,8 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Create a new device
       tags:
       - devices
@@ -1207,7 +1209,7 @@ paths:
       summary: Bulk create devices
       tags:
       - devices
-  /devices/commands/:
+  /devices/commands:
     post:
       consumes:
       - application/json

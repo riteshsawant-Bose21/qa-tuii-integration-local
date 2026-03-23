@@ -76,6 +76,11 @@ const docTemplate = `{
         },
         "/devices": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Create a new device in the system",
                 "consumes": [
                     "application/json"
@@ -189,7 +194,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/devices/commands/": {
+        "/devices/commands": {
             "post": {
                 "security": [
                     {
