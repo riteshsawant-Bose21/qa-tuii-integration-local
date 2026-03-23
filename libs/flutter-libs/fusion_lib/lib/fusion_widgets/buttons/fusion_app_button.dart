@@ -302,10 +302,14 @@ class _FusionAppButtonState extends State<FusionAppButton> {
                 const SizedBox(width: 6),
 
                 widget.child ??
-                    Flexible(
-                      child: FusionAppText(
-                        text: widget.text!,
-                        style: _textStyle(),
+                    SemanticHelper.button(
+                      testId: 'btn_${(widget.text ?? widget.semanticId).trim().replaceAll(' ', '_').toLowerCase()}',
+                      label: widget.text,
+                      child: Flexible(
+                        child: FusionAppText(
+                          text: widget.text!,
+                          style: _textStyle(),
+                        ),
                       ),
                     ),
 
