@@ -71,7 +71,7 @@ CREATE TABLE device_command_history (
     project_id UUID REFERENCES project(id) NOT NULL,
     device_id VARCHAR(100) NOT NULL,
     command_name VARCHAR(255) NOT NULL,
-    status command_status_enum NOT NULL DEFAULT 'PUBLISHED',
+    status command_status_enum NOT NULL DEFAULT 'UNPUBLISHED',
     issued_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
