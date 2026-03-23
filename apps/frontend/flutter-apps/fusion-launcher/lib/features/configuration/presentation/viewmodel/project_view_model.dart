@@ -112,27 +112,6 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   ProductQueryModel? selectedProductToAdd;
 
-  bool _shouldPlaceNonPlacedSpeakers = false;
-  bool get shouldPlaceNonPlacedSpeakers => _shouldPlaceNonPlacedSpeakers;
-
-  void setShouldPlaceNonPlacedSpeakers(bool shouldPlace) {
-    if (shouldPlace && _isAutoPlacementEnabledForCurrentListeningArea()) shouldPlace = false;
-    if (shouldPlace == _shouldPlaceNonPlacedSpeakers) return;
-    _shouldPlaceNonPlacedSpeakers = shouldPlace;
-    updateProject();
-  }
-
-  bool _isAutoPlacementEnabledForCurrentListeningArea() {
-    final String? areaId = currentSelectedListeningAreaId;
-    if (areaId == null) return false;
-    try {
-      final ListeningArea area = projectManager.getListeningAreaById(areaId);
-      return area.autoPlacement;
-    } catch (_) {
-      return false;
-    }
-  }
-
   /// Global hover and selection state management
   SelectedItem? _selectedDevice;
 
