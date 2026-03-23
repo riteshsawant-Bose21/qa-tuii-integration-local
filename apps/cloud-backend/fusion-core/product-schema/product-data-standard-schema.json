@@ -1,5 +1,5 @@
 {
-  "version": "1.0.3",
+  "version": "1.0.4",
   "date": "23-03-2026",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://boseprofessional.com/schemas/project-data-schema",
@@ -180,10 +180,15 @@
         "frequency_range": {
           "type": "object",
           "title": "Frequency Range",
+          "description": "Frequency Range (−10 dB)",
           "properties": {
             "unit": {
               "type": "string",
               "const": "Hz"
+            },
+            "reference_db": {
+              "type": "number",
+              "const": -10
             },
             "low": {
               "type": "number",
@@ -203,16 +208,28 @@
         },
         "frequency_response": {
           "type": "array",
-          "description": "Frequency response curve data points",
+          "description": "Frequency response curve data points (−3 dB reference)",
           "items": {
-            "$ref": "#/$defs/frequencyResponsePoint"
-          }
-        },
-        "frequency_response_curve": {
-          "type": "array",
-          "description": "Frequency response curve data points",
-          "items": {
-            "$ref": "#/$defs/frequencyResponsePoint"
+            "type": "object",
+            "title": "Frequency Response Point",
+            "properties": {
+              "reference_db": {
+                "type": "number",
+                "const": -3
+              },
+              "frequency_hz": {
+                "type": "number",
+                "minimum": 0
+              },
+              "level_db": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "frequency_hz",
+              "level_db"
+            ],
+            "additionalProperties": false
           }
         },
         "nominal_impedance": {
@@ -227,19 +244,86 @@
             "properties": {
               "frequency_range": {
                 "type": "object",
-                "properties": {
-                  "low": {
-                    "$ref": "#/$defs/valueWithUnit"
+                "oneOf": [
+                  {
+                    "title": "1–4 kHz",
+                    "properties": {
+                      "low": {
+                        "type": "object",
+                        "properties": {
+                          "value": {
+                            "const": 1
+                          },
+                          "unit": {
+                            "const": "kHz"
+                          }
+                        },
+                        "required": [
+                          "value",
+                          "unit"
+                        ]
+                      },
+                      "high": {
+                        "type": "object",
+                        "properties": {
+                          "value": {
+                            "const": 4
+                          },
+                          "unit": {
+                            "const": "kHz"
+                          }
+                        },
+                        "required": [
+                          "value",
+                          "unit"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "low",
+                      "high"
+                    ]
                   },
-                  "high": {
-                    "$ref": "#/$defs/valueWithUnit"
+                  {
+                    "title": "1–10 kHz",
+                    "properties": {
+                      "low": {
+                        "type": "object",
+                        "properties": {
+                          "value": {
+                            "const": 1
+                          },
+                          "unit": {
+                            "const": "kHz"
+                          }
+                        },
+                        "required": [
+                          "value",
+                          "unit"
+                        ]
+                      },
+                      "high": {
+                        "type": "object",
+                        "properties": {
+                          "value": {
+                            "const": 10
+                          },
+                          "unit": {
+                            "const": "kHz"
+                          }
+                        },
+                        "required": [
+                          "value",
+                          "unit"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "low",
+                      "high"
+                    ]
                   }
-                },
-                "required": [
-                  "low",
-                  "high"
-                ],
-                "additionalProperties": false
+                ]
               },
               "type": {
                 "type": "string",
@@ -338,8 +422,7 @@
             "Wall",
             "Ceiling",
             "Pendant",
-            "Surface",
-            "Flush"
+            "Surface"
           ]
         },
         "impedance": {
@@ -545,17 +628,23 @@
       "required": [
         "id",
         "model_family",
+        "type",
         "model_name",
-        "skus",
+        "data_sheet_link",
         "bsf_file_url",
+        "dsp_eq_file_url",
+        "skus",
+        "max_spl",
         "power_handling",
         "sensitivity",
-        "max_spl",
         "frequency_range",
+        "frequency_response",
         "nominal_impedance",
         "coverage",
         "description",
+        "short_description",
         "environment",
+        "dimensions",
         "mount_type",
         "impedance",
         "voltage_taps",
@@ -792,21 +881,6 @@
         "firmware": {
           "$ref": "#/$defs/firmware"
         },
-        "images": {
-          "type": "array",
-          "description": "Product images",
-          "items": {
-            "type": "string",
-            "format": "uri"
-          }
-        },
-        "colors": {
-          "type": "array",
-          "description": "Available colors",
-          "items": {
-            "type": "string"
-          }
-        },
         "dimensions": {
           "type": "array",
           "description": "Product dimensions in different units",
@@ -845,8 +919,10 @@
         "id",
         "model_family",
         "model_name",
+        "data_sheet_link",
         "skus",
         "power_output",
+        "firmware",
         "number_of_inputs_and_outputs",
         "front_panel_image",
         "rear_panel_image"
@@ -896,14 +972,6 @@
         "firmware": {
           "$ref": "#/$defs/firmware"
         },
-        "images": {
-          "type": "array",
-          "description": "Product images",
-          "items": {
-            "type": "string",
-            "format": "uri"
-          }
-        },
         "dsp_architecture": {
           "type": "string",
           "description": "DSP architecture type"
@@ -951,6 +1019,14 @@
             "type": "string"
           }
         },
+        "front_panel_image": {
+          "type": "string",
+          "description": "Path to front panel image"
+        },
+        "rear_panel_image": {
+          "type": "string",
+          "description": "Path to rear panel image"
+        },
         "updated_at": {
           "type": "string",
           "format": "epoch",
@@ -961,8 +1037,12 @@
         "id",
         "model_name",
         "model_family",
+        "data_sheet_link",
         "skus",
-        "number_of_inputs_and_outputs"
+        "number_of_inputs_and_outputs",
+        "firmware",
+        "front_panel_image",
+        "rear_panel_image"
       ],
       "additionalProperties": false
     },
@@ -1059,6 +1139,8 @@
         "model_family",
         "model_name",
         "zone_control_count",
+        "data_sheet_link",
+        "skus",
         "images",
         "control_type",
         "additional_sensors"
@@ -1113,6 +1195,7 @@
         "id",
         "model_family",
         "model_name",
+        "data_sheet_link",
         "skus",
         "number_of_inputs_and_outputs",
         "images"
@@ -1300,24 +1383,6 @@
       "required": [
         "unit",
         "value"
-      ],
-      "additionalProperties": false
-    },
-    "frequencyResponsePoint": {
-      "type": "object",
-      "title": "Frequency Response Point",
-      "properties": {
-        "frequency_hz": {
-          "type": "number",
-          "minimum": 0
-        },
-        "level_db": {
-          "type": "number"
-        }
-      },
-      "required": [
-        "frequency_hz",
-        "level_db"
       ],
       "additionalProperties": false
     },
