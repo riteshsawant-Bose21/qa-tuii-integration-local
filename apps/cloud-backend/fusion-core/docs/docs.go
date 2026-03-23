@@ -2326,6 +2326,14 @@ const docTemplate = `{
                 }
             }
         },
+        "types.GetProjectByIDResponse": {
+            "type": "object",
+            "properties": {
+                "project": {
+                    "$ref": "#/definitions/types.Project"
+                }
+            }
+        },
         "types.LogBundleUpdateStatusPayload": {
             "type": "object",
             "required": [
@@ -2396,11 +2404,6 @@ const docTemplate = `{
                 "version": {
                     "type": "string",
                     "example": "1.2.3"
-        "types.GetProjectByIDResponse": {
-            "type": "object",
-            "properties": {
-                "project": {
-                    "$ref": "#/definitions/types.Project"
                 }
             }
         },

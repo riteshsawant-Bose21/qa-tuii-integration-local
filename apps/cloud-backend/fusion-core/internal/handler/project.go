@@ -6,6 +6,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
+	"go.uber.org/zap"
 
 	response "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/response"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
@@ -185,7 +186,6 @@ func (h *ProjectHandler) GetProjectByID(ctx *gin.Context) {
 
 	response.OK(ctx, res)
 }
-
 
 // UpdateProject updates an existing project.
 // @Summary Update project

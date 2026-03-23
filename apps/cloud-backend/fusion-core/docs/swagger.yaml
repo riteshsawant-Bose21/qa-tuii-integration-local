@@ -236,6 +236,11 @@ definitions:
         example: 3
         type: integer
     type: object
+  types.GetProjectByIDResponse:
+    properties:
+      project:
+        $ref: '#/definitions/types.Project'
+    type: object
   types.LogBundleUpdateStatusPayload:
     properties:
       bundle_version:
@@ -288,10 +293,6 @@ definitions:
     - min_prev_version
     - s3_path
     - version
-  types.GetProjectByIDResponse:
-    properties:
-      project:
-        $ref: '#/definitions/types.Project'
     type: object
   types.OrganizationUsersResponse:
     properties:
