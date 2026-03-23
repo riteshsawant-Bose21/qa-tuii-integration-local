@@ -11,6 +11,7 @@ import (
 type Project interface {
 	CreateProject(ctx context.Context, project *types.ProjectCreateRequest, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.ProjectCreateResponse, error)
 	GetAllProjects(ctx context.Context, queryParams *types.GetAllProjectsParams, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.GetAllProjectsResponse, error)
+	GetProjectById(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error)
 	UpdateProject(ctx context.Context, project *types.ProjectUpdateRequest, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.ProjectUpdateResponse, error)
 	DeleteProject(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) error
 	AssignUserToProject(ctx context.Context, projectID, userEmail string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.UserAssignmentResponse, error)

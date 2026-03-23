@@ -38,6 +38,88 @@ void unlockNoThrow(pthread_mutex_t *mutex) noexcept {
     }
 }
 
+void validateDataHeader(const bosepro::SharedMemoryDataHeader& header,
+                        std::size_t payloadCapacity,
+                        std::size_t expectedPayloadBytes)
+{
+    if (header.magic != bosepro::SharedMemoryDataHeader::MAGIC) {
+        throw std::runtime_error("Invalid shared memory data header magic");
+    }
+    if (header.protocolVersion != bosepro::SharedMemoryDataHeader::PROTOCOL_VERSION) {
+        throw std::runtime_error("Unsupported shared memory data header protocol version");
+    }
+    if (header.schemaVersion != bosepro::SharedMemoryDataHeader::SCHEMA_VERSION) {
+        throw std::runtime_error("Unsupported shared memory data header schema version");
+    }
+    if (header.payloadBytes > payloadCapacity) {
+        throw std::runtime_error("Shared memory data header payload size exceeds capacity");
+    }
+    if (header.payloadBytes != expectedPayloadBytes) {
+        throw std::runtime_error("Shared memory data header payload size mismatch");
+    }
+    if (header.payloadBlockCount > bosepro::Metadata::MAX_WRITE_BLOCKS) {
+        throw std::runtime_error("Shared memory data header block count exceeds supported maximum");
+    }
+}
+
+void validateDataHeaderShape(const bosepro::SharedMemoryDataHeader& header,
+                             std::size_t payloadCapacity)
+{
+    if (header.magic != bosepro::SharedMemoryDataHeader::MAGIC) {
+        throw std::runtime_error("Invalid shared memory data header magic");
+    }
+    if (header.protocolVersion != bosepro::SharedMemoryDataHeader::PROTOCOL_VERSION) {
+        throw std::runtime_error("Unsupported shared memory data header protocol version");
+    }
+    if (header.schemaVersion != bosepro::SharedMemoryDataHeader::SCHEMA_VERSION) {
+        throw std::runtime_error("Unsupported shared memory data header schema version");
+    }
+    if (header.payloadBytes > payloadCapacity) {
+        throw std::runtime_error("Shared memory data header payload size exceeds capacity");
+    }
+    if (header.payloadBlockCount > bosepro::Metadata::MAX_WRITE_BLOCKS) {
+        throw std::runtime_error("Shared memory data header block count exceeds supported maximum");
+    }
+}
+
+void validatePayloadHeader(const bosepro::SharedMemoryPayloadHeader& header,
+                           std::size_t remainingCapacity)
+{
+    if (header.magic != bosepro::SharedMemoryPayloadHeader::MAGIC) {
+        throw std::runtime_error("Invalid shared memory payload header magic");
+    }
+    if (header.protocolVersion != bosepro::SharedMemoryPayloadHeader::PROTOCOL_VERSION) {
+        throw std::runtime_error("Unsupported shared memory payload header protocol version");
+    }
+    if (header.schemaVersion != bosepro::SharedMemoryPayloadHeader::SCHEMA_VERSION) {
+        throw std::runtime_error("Unsupported shared memory payload header schema version");
+    }
+    if (header.payloadBytes > remainingCapacity) {
+        throw std::runtime_error("Shared memory payload header length exceeds capacity");
+    }
+}
+
+void validateBlobHeader(const bosepro::SharedMemoryBlobHeader& header,
+                        std::size_t payloadCapacity,
+                        std::size_t expectedPayloadBytes)
+{
+    if (header.magic != bosepro::SharedMemoryBlobHeader::MAGIC) {
+        throw std::runtime_error("Invalid shared memory blob header magic");
+    }
+    if (header.protocolVersion != bosepro::SharedMemoryBlobHeader::PROTOCOL_VERSION) {
+        throw std::runtime_error("Unsupported shared memory blob header protocol version");
+    }
+    if (header.schemaVersion != bosepro::SharedMemoryBlobHeader::SCHEMA_VERSION) {
+        throw std::runtime_error("Unsupported shared memory blob header schema version");
+    }
+    if (header.payloadBytes > payloadCapacity) {
+        throw std::runtime_error("Shared memory blob header payload size exceeds capacity");
+    }
+    if (header.payloadBytes != expectedPayloadBytes) {
+        throw std::runtime_error("Shared memory blob header payload size mismatch");
+    }
+}
+
 } // namespace
 
 /**
@@ -45,7 +127,7 @@ void unlockNoThrow(pthread_mutex_t *mutex) noexcept {
  * Initializes shared memory and metadata regions.
  */
 bosepro::NamedSharedMemory::NamedSharedMemory(const char* name, std::size_t size, bool create)
-    : sharedMutex_(nullptr), isReaderObject(false), ownsSharedResources_(create) {
+    : sharedMutex_(nullptr), isReaderObject(false), ownsSharedResources_(create), physicalBytesWritten_(0) {
 
     if (std::strlen(name) >= Metadata::NAME_MAX_LENGTH) {
         throw std::runtime_error("1. Shared memory name exceeds maximum length");
@@ -58,7 +140,7 @@ bosepro::NamedSharedMemory::NamedSharedMemory(const char* name, std::size_t size
         // Create or open the main shared memory region
         if (create) {
             shm_ = shared_memory_object(create_only, name, read_write);
-            shm_.truncate(size);
+            shm_.truncate(size + DATA_HEADER_LENGTH + (Metadata::MAX_WRITE_BLOCKS * PAYLOAD_HEADER_LENGTH));
         } else {
             shm_ = shared_memory_object(open_only, name, read_write);
         }
@@ -107,7 +189,7 @@ bosepro::NamedSharedMemory::NamedSharedMemory(const char* name, std::size_t size
  * Constructor for opening shared memory that has already been created
 */
 bosepro::NamedSharedMemory::NamedSharedMemory(const char* name)
-        : sharedMutex_(nullptr), isReaderObject(true), ownsSharedResources_(false) {
+        : sharedMutex_(nullptr), isReaderObject(true), ownsSharedResources_(false), physicalBytesWritten_(0) {
 
     if (std::strlen(name) >= Metadata::NAME_MAX_LENGTH) {
         throw std::runtime_error("2. Shared memory name exceeds maximum length");
@@ -132,6 +214,7 @@ bosepro::NamedSharedMemory::NamedSharedMemory(const char* name)
 
         // Synchronize the meta data
         readMetaDataFromSharedMemory();
+        physicalBytesWritten_ = calculateStoredBytes(readDataHeader());
     } catch (const boost::interprocess::interprocess_exception& e) {
         throw std::runtime_error("Failed to open shared memory: " + std::string(e.what()));
     }
@@ -176,12 +259,19 @@ void bosepro::NamedSharedMemory::write(const void* data, std::size_t size, const
             throw std::runtime_error("Exceeded maximum number of WriteBlock elements");
         }
 
-        void* writePointer = static_cast<char*>(region_.get_address()) + metaData.totalBytesWritten;
+        if (physicalBytesWritten_ + PAYLOAD_HEADER_LENGTH + size > region_.get_size() - DATA_HEADER_LENGTH) {
+            throw std::runtime_error("Structured payload exceeds shared memory storage capacity");
+        }
+
+        writePayloadHeader(physicalBytesWritten_, size, type);
+        void* writePointer = static_cast<char*>(region_.get_address()) +
+                             DATA_HEADER_LENGTH + physicalBytesWritten_ + PAYLOAD_HEADER_LENGTH;
         std::memcpy(writePointer, data, size);
 
 
-        metaData.writeBlocks.push_back({type.c_str(), size, metaData.totalBytesWritten});
+        metaData.writeBlocks.push_back({type.c_str(), size, physicalBytesWritten_ + PAYLOAD_HEADER_LENGTH});
         metaData.totalBytesWritten += size;
+        physicalBytesWritten_ += PAYLOAD_HEADER_LENGTH + size;
 
     } catch (...) {
         unlockNoThrow(sharedMutex_);
@@ -205,9 +295,19 @@ void bosepro::NamedSharedMemory::lightWeightWrite(const void* data, std::size_t 
             throw std::runtime_error("Data size exceeds shared memory capacity");
         }
 
-        void* writePointer = static_cast<char*>(region_.get_address()) + metaData.totalBytesWritten;
+        if (physicalBytesWritten_ == 0) {
+            initializeBlobHeader();
+            physicalBytesWritten_ = BLOB_HEADER_LENGTH;
+        }
+
+        if (physicalBytesWritten_ + size > region_.get_size() - DATA_HEADER_LENGTH) {
+            throw std::runtime_error("Data size exceeds shared memory storage capacity");
+        }
+
+        void* writePointer = static_cast<char*>(region_.get_address()) + DATA_HEADER_LENGTH + physicalBytesWritten_;
         std::memcpy(writePointer, data, size);
         metaData.totalBytesWritten += size;
+        physicalBytesWritten_ += size;
     } catch (...) {
         unlockNoThrow(sharedMutex_);
         throw;
@@ -228,11 +328,12 @@ std::size_t bosepro::NamedSharedMemory::read(void* buffer, std::size_t bufferSiz
         }
         char* metadata = static_cast<char*>(metadataRegion_.get_address()) + sizeof(pthread_mutex_t);
         metaData.deserializeTotalBytesWritten(metadata, Metadata::META_DATA_MAX_SIZE);
-        retVal = getTotalBytesWritten();
-        if (bufferSize < retVal) {
-            throw std::runtime_error("Requested read size exceeds max buffer size");
+        const auto dataHeader = readDataHeader();
+        if (dataHeader.payloadBlockCount == 0) {
+            retVal = copyBlobPayloadToBuffer(buffer, bufferSize, dataHeader);
+        } else {
+            retVal = copyStructuredPayloadsToBuffer(buffer, bufferSize, dataHeader);
         }
-        std::memcpy(buffer, region_.get_address(), retVal);
 
 
     } catch (...) {
@@ -256,11 +357,12 @@ std::size_t bosepro::NamedSharedMemory::readFullStateFromSharedMemory(void* buff
         }
         char* metadata = static_cast<char*>(metadataRegion_.get_address()) + sizeof(pthread_mutex_t);
         metaData.deserialize(metadata, Metadata::META_DATA_MAX_SIZE);
-        retVal = getTotalBytesWritten();
-        if (bufferSize < retVal) {
-            throw std::runtime_error("In readFullStateFromSharedMemory, Requested read size exceeds max buffer size");
+        const auto dataHeader = readDataHeader();
+        if (dataHeader.payloadBlockCount == 0) {
+            retVal = copyBlobPayloadToBuffer(buffer, bufferSize, dataHeader);
+        } else {
+            retVal = copyStructuredPayloadsToBuffer(buffer, bufferSize, dataHeader);
         }
-        std::memcpy(buffer, region_.get_address(), retVal);
 
 
     } catch (...) {
@@ -285,6 +387,10 @@ void bosepro::NamedSharedMemory::writeMetaDataToSharedMemory() {
 
         //Serialize Meta data to SHM
         metaData.serialize(metadata, Metadata::META_DATA_MAX_SIZE);
+        writePayloadBytesToDataHeader(metaData.totalBytesWritten);
+        if (metaData.writeBlocks.empty() && physicalBytesWritten_ >= BLOB_HEADER_LENGTH) {
+            writeBlobPayloadBytes(metaData.totalBytesWritten);
+        }
     } catch (...) {
         unlockNoThrow(sharedMutex_);
         throw;
@@ -343,6 +449,10 @@ void bosepro::NamedSharedMemory::writeNumberBytesToSharedMemory() {
         }
         char* metadata = static_cast<char*>(metadataRegion_.get_address()) + sizeof(pthread_mutex_t);
         metaData.updateTotalBytesWrittenInBuffer(metadata, Metadata::META_DATA_MAX_SIZE);
+        writePayloadBytesToDataHeader(metaData.totalBytesWritten);
+        if (metaData.writeBlocks.empty() && physicalBytesWritten_ >= BLOB_HEADER_LENGTH) {
+            writeBlobPayloadBytes(metaData.totalBytesWritten);
+        }
 
     } catch (...) {
         unlockNoThrow(sharedMutex_);
@@ -359,7 +469,9 @@ void bosepro::NamedSharedMemory::resetWritePointer() {
     try {
         metaData.totalBytesWritten = 0;
         metaData.writeBlocks.clear();
-        std::memset(region_.get_address(), 0, metaData.size);
+        physicalBytesWritten_ = 0;
+        std::memset(region_.get_address(), 0, region_.get_size());
+        initializeDataHeader();
         char* metadata = static_cast<char*>(metadataRegion_.get_address()) + sizeof(pthread_mutex_t);
         metaData.serialize(metadata, Metadata::META_DATA_MAX_SIZE);
     } catch (...) {
@@ -378,6 +490,8 @@ void bosepro::NamedSharedMemory::softResetWritePointer() {
 
     metaData.totalBytesWritten = 0;
     metaData.writeBlocks.clear();
+    physicalBytesWritten_ = 0;
+    initializeDataHeader();
 }
 
 /**
@@ -408,13 +522,174 @@ const std::vector<bosepro::WriteBlock>& bosepro::NamedSharedMemory::getWriteBloc
     return metaData.writeBlocks;
 }
 
+void bosepro::NamedSharedMemory::initializeDataHeader() {
+    SharedMemoryDataHeader header{
+        SharedMemoryDataHeader::MAGIC,
+        SharedMemoryDataHeader::PROTOCOL_VERSION,
+        SharedMemoryDataHeader::SCHEMA_VERSION,
+        0,
+        0,
+    };
+    std::memcpy(region_.get_address(), &header, sizeof(header));
+}
+
+void bosepro::NamedSharedMemory::initializeBlobHeader() {
+    SharedMemoryBlobHeader header{
+        SharedMemoryBlobHeader::MAGIC,
+        SharedMemoryBlobHeader::PROTOCOL_VERSION,
+        SharedMemoryBlobHeader::SCHEMA_VERSION,
+        {},
+        0,
+    };
+    std::strncpy(header.contentType, "json", WriteBlock::TYPE_SIZE - 1);
+    header.contentType[WriteBlock::TYPE_SIZE - 1] = '\0';
+    std::memcpy(static_cast<char*>(region_.get_address()) + DATA_HEADER_LENGTH, &header, sizeof(header));
+}
+
+void bosepro::NamedSharedMemory::writePayloadBytesToDataHeader(std::size_t payloadBytes) {
+    SharedMemoryDataHeader header{};
+    std::memcpy(&header, region_.get_address(), sizeof(header));
+    validateDataHeaderShape(header, metaData.size);
+    header.payloadBytes = payloadBytes;
+    std::memcpy(region_.get_address(), &header, sizeof(header));
+}
+
+void bosepro::NamedSharedMemory::writeBlobPayloadBytes(std::size_t payloadBytes) {
+    SharedMemoryBlobHeader header{};
+    std::memcpy(&header, static_cast<char*>(region_.get_address()) + DATA_HEADER_LENGTH, sizeof(header));
+    validateBlobHeader(header, metaData.size, header.payloadBytes);
+    header.payloadBytes = payloadBytes;
+    std::memcpy(static_cast<char*>(region_.get_address()) + DATA_HEADER_LENGTH, &header, sizeof(header));
+}
+
+void bosepro::NamedSharedMemory::writePayloadHeader(std::size_t storageOffset, std::size_t payloadBytes,
+                                                    const std::string& type) {
+    SharedMemoryPayloadHeader payloadHeader{
+        SharedMemoryPayloadHeader::MAGIC,
+        SharedMemoryPayloadHeader::PROTOCOL_VERSION,
+        SharedMemoryPayloadHeader::SCHEMA_VERSION,
+        {},
+        payloadBytes,
+    };
+    std::strncpy(payloadHeader.type, type.c_str(), WriteBlock::TYPE_SIZE - 1);
+    payloadHeader.type[WriteBlock::TYPE_SIZE - 1] = '\0';
+
+    std::memcpy(static_cast<char*>(region_.get_address()) + DATA_HEADER_LENGTH + storageOffset,
+                &payloadHeader, sizeof(payloadHeader));
+
+    SharedMemoryDataHeader header{};
+    std::memcpy(&header, region_.get_address(), sizeof(header));
+    validateDataHeaderShape(header, metaData.size);
+    header.payloadBlockCount += 1;
+    std::memcpy(region_.get_address(), &header, sizeof(header));
+}
+
+bosepro::SharedMemoryPayloadHeader bosepro::NamedSharedMemory::readPayloadHeader(std::size_t storageOffset) const {
+    SharedMemoryPayloadHeader header{};
+    std::memcpy(&header, static_cast<const char*>(region_.get_address()) + DATA_HEADER_LENGTH + storageOffset,
+                sizeof(header));
+    validatePayloadHeader(header, metaData.size);
+    return header;
+}
+
+std::size_t bosepro::NamedSharedMemory::calculateStoredBytes(const SharedMemoryDataHeader& dataHeader) const {
+    if (dataHeader.payloadBlockCount == 0) {
+        SharedMemoryBlobHeader blobHeader{};
+        if (tryReadBlobHeader(blobHeader)) {
+            validateBlobHeader(blobHeader, metaData.size, dataHeader.payloadBytes);
+            return BLOB_HEADER_LENGTH + blobHeader.payloadBytes;
+        }
+        return dataHeader.payloadBytes;
+    }
+
+    std::size_t storageOffset = 0;
+    std::size_t copiedBytes = 0;
+    for (std::size_t i = 0; i < dataHeader.payloadBlockCount; ++i) {
+        const auto payloadHeader = readPayloadHeader(storageOffset);
+        storageOffset += PAYLOAD_HEADER_LENGTH + payloadHeader.payloadBytes;
+        copiedBytes += payloadHeader.payloadBytes;
+    }
+
+    if (copiedBytes != dataHeader.payloadBytes) {
+        throw std::runtime_error("Structured shared memory payload bytes mismatch");
+    }
+
+    return storageOffset;
+}
+
+std::size_t bosepro::NamedSharedMemory::copyBlobPayloadToBuffer(
+    void* buffer, std::size_t bufferSize, const SharedMemoryDataHeader& dataHeader) const {
+    SharedMemoryBlobHeader blobHeader{};
+    if (!tryReadBlobHeader(blobHeader)) {
+        if (bufferSize < dataHeader.payloadBytes) {
+            throw std::runtime_error("Requested read size exceeds max buffer size");
+        }
+        std::memcpy(buffer, static_cast<char*>(region_.get_address()) + DATA_HEADER_LENGTH, dataHeader.payloadBytes);
+        return dataHeader.payloadBytes;
+    }
+
+    validateBlobHeader(blobHeader, metaData.size, dataHeader.payloadBytes);
+    if (bufferSize < blobHeader.payloadBytes) {
+        throw std::runtime_error("Requested read size exceeds max buffer size");
+    }
+    std::memcpy(buffer,
+                static_cast<const char*>(region_.get_address()) + DATA_HEADER_LENGTH + BLOB_HEADER_LENGTH,
+                blobHeader.payloadBytes);
+    return blobHeader.payloadBytes;
+}
+
+std::size_t bosepro::NamedSharedMemory::copyStructuredPayloadsToBuffer(
+    void* buffer, std::size_t bufferSize, const SharedMemoryDataHeader& dataHeader) const {
+    if (bufferSize < dataHeader.payloadBytes) {
+        throw std::runtime_error("Requested read size exceeds max buffer size");
+    }
+
+    std::size_t storageOffset = 0;
+    std::size_t copiedBytes = 0;
+    auto* out = static_cast<char*>(buffer);
+
+    for (std::size_t i = 0; i < dataHeader.payloadBlockCount; ++i) {
+        const auto payloadHeader = readPayloadHeader(storageOffset);
+        const auto* payloadAddress = static_cast<const char*>(region_.get_address()) +
+                                     DATA_HEADER_LENGTH + storageOffset + PAYLOAD_HEADER_LENGTH;
+        std::memcpy(out + copiedBytes, payloadAddress, payloadHeader.payloadBytes);
+        storageOffset += PAYLOAD_HEADER_LENGTH + payloadHeader.payloadBytes;
+        copiedBytes += payloadHeader.payloadBytes;
+    }
+
+    if (copiedBytes != dataHeader.payloadBytes) {
+        throw std::runtime_error("Structured shared memory payload bytes mismatch");
+    }
+
+    return copiedBytes;
+}
+
+bosepro::SharedMemoryDataHeader bosepro::NamedSharedMemory::readDataHeader() const {
+    SharedMemoryDataHeader header{};
+    std::memcpy(&header, region_.get_address(), sizeof(header));
+    validateDataHeader(header, metaData.size, metaData.totalBytesWritten);
+    return header;
+}
+
+bosepro::SharedMemoryBlobHeader bosepro::NamedSharedMemory::readBlobHeader() const {
+    SharedMemoryBlobHeader header{};
+    std::memcpy(&header, static_cast<const char*>(region_.get_address()) + DATA_HEADER_LENGTH, sizeof(header));
+    validateBlobHeader(header, metaData.size, metaData.totalBytesWritten);
+    return header;
+}
+
+bool bosepro::NamedSharedMemory::tryReadBlobHeader(SharedMemoryBlobHeader& header) const {
+    std::memcpy(&header, static_cast<const char*>(region_.get_address()) + DATA_HEADER_LENGTH, sizeof(header));
+    return header.magic == SharedMemoryBlobHeader::MAGIC;
+}
+
 
 /**
  * Prints the value pointed to by each element of the writeBlocks vector.
  * The type of each value is interpreted based on WriteBlock::type.
  */
 void bosepro::NamedSharedMemory::printWriteBlocksValues() const {
-    const char* baseAddress = static_cast<char*>(region_.get_address());
+    const char* baseAddress = static_cast<char*>(region_.get_address()) + DATA_HEADER_LENGTH;
 
     for (const auto& block : metaData.writeBlocks) {
         const char* valueAddress = baseAddress + block.offset;

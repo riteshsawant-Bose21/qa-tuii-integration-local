@@ -118,12 +118,17 @@ def build(bld):
         bld.program(
             target='telemetry_core_tests',
             source=[
+                'src/telemetry_msg_handler.cc',
+                'src/telemetry_manager.cc',
+                'src/telemetry_utils.cc',
                 'tests/main.cc',
                 'tests/named_shared_memory_test.cc',
                 'tests/named_shared_memory_manager_test.cc',
+                'tests/telemetry_msg_handler_test.cc',
             ],
             use=['default-include'],
-            uselib=['GTEST', 'fusion_embedded_interface'],
+            uselib=['GTEST'],
+            lib=['fusion_embedded_interface', 'fmt', 'zmq'],
         )
 
 def test(ctx):
