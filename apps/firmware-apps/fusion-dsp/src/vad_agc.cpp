@@ -1,6 +1,7 @@
 
 #include <bosepro/algorithm.h>
 #include <bosepro/audio_task.h>
+#include <bosepro/conversion.h>
 
 #include <cmath>
 #include <cstdint>
