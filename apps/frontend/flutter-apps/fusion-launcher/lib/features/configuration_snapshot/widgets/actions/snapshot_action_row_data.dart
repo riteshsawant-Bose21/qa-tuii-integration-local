@@ -127,6 +127,8 @@ class _SnapshotActionRowContent extends StatelessWidget {
   }
 
   Widget _buildActionTypeDropdown(BuildContext context, ConfigSnapshotActionsViewModel cubit) {
+    final String selectedActionTypeLabel = action.actionType?.displayName ?? "Select Action Type";
+
     return Expanded(
       child: SemanticHelper.dropdown(
         testId: SemanticHelper.createTestId(SemanticTypes.dropdown, '${FusionTestKeys.instance.actionlistpanelrowdataitemactiontypdropdown}_$index'),
@@ -162,6 +164,7 @@ class _SnapshotActionRowContent extends StatelessWidget {
             : itemList.isEmpty
             ? "No items available"
             : "Select Action Item";
+    final String selectedItemLabel = selected?.name ?? hint;
 
     return Expanded(
       child: SemanticHelper.dropdown(
@@ -197,6 +200,7 @@ class _SnapshotActionRowContent extends StatelessWidget {
               .where((SceneParam p) => p.label == action.param!.label && p.type == action.param!.type && p.associatedId == action.param!.associatedId)
               .firstOrNull;
     }
+    final String selectedParamLabel = selected?.label ?? "Select Parameter";
 
     return Expanded(
       child: SemanticHelper.dropdown(
@@ -220,6 +224,18 @@ class _SnapshotActionRowContent extends StatelessWidget {
   Widget _buildValueWidget(BuildContext context, ConfigSnapshotActionsViewModel cubit) {
     if (action.param == null) return const Expanded(child: SizedBox.shrink());
 
+    final String baseValueLabel = action.value?.label ?? action.param!.label;
+    String selectedValueText = action.value?.value?.toString() ?? '';
+    if (action.value?.valueType == SceneParamValueType.dropdownSingle && selectedValueText.isNotEmpty) {
+      final SceneValueDropdown? matchedItem =
+          cubit
+              .getSceneValueDropdownItems(action.id)
+              .where((SceneValueDropdown item) => item.value == selectedValueText || item.label == selectedValueText)
+              .firstOrNull;
+      selectedValueText = matchedItem?.label ?? selectedValueText;
+    }
+    final String selectedValueLabel = selectedValueText.isNotEmpty ? selectedValueText : baseValueLabel;
+
     return Expanded(
       child: SemanticHelper.button(
         testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.actionlistpanelrowdataitemvalue}_$index"),
@@ -230,7 +246,7 @@ class _SnapshotActionRowContent extends StatelessWidget {
               action.value ??
               SceneValue(
                 value: null,
-                label: action.param!.label,
+                label: selectedValueLabel,
                 valueType: action.param!.valueType,
               ),
           onChanged: (SceneValue val) {
