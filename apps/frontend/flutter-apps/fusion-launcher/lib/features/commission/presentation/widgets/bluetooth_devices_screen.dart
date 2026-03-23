@@ -52,8 +52,11 @@ class _BluetoothDevicesScreenState extends State<BluetoothDevicesScreen> {
 
   // Getter to check if the form is valid
   bool get _isFormValid {
-    final bool hasText = _ssidController.text.isNotEmpty && _passwordController.text.isNotEmpty;
-    final bool hasDevice = widget.devices.any((BluetoothDevice d) => d.isSelected);
+    final bool hasText =
+        _ssidController.text.isNotEmpty && _passwordController.text.isNotEmpty;
+    final bool hasDevice = widget.devices.any(
+      (BluetoothDevice d) => d.isSelected,
+    );
     return hasText && hasDevice;
   }
 
@@ -96,6 +99,7 @@ class _BluetoothDevicesScreenState extends State<BluetoothDevicesScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               FusionSecondaryButton(
+                semanticId: 'blutooth_devices_go_back_button',
                 text: 'Go back',
                 onPressed: widget.onGoBack,
                 height: 35,
@@ -108,6 +112,8 @@ class _BluetoothDevicesScreenState extends State<BluetoothDevicesScreen> {
                 child: SizedBox(
                   width: 300,
                   child: FusionNeumorphicButton(
+                    semanticId: 'send_wifi_credentials_button',
+                    height: 35,
                     text: 'Send Wifi credentials',
                     // Disable tap if form is invalid
                     onTap: _isFormValid ? _sendCredentials : () {},
@@ -225,7 +231,10 @@ class _BluetoothDevicesScreenState extends State<BluetoothDevicesScreen> {
               color: context.colorScheme.textPrimary,
               fontSize: 14,
             ),
-            icon: Icon(Icons.keyboard_arrow_down, color: context.colorScheme.iconDefault),
+            icon: Icon(
+              Icons.keyboard_arrow_down,
+              color: context.colorScheme.iconDefault,
+            ),
             decoration: InputDecoration(
               filled: true,
               fillColor: context.colorScheme.elevation2,
@@ -316,7 +325,9 @@ class _BluetoothDevicesScreenState extends State<BluetoothDevicesScreen> {
               ),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _passwordVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  _passwordVisible
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
                   color: context.colorScheme.iconDefault,
                   size: 20,
                 ),
@@ -403,7 +414,10 @@ class _BluetoothDevicesScreenState extends State<BluetoothDevicesScreen> {
                 });
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: context.colorScheme.elevation2,
                   borderRadius: BorderRadius.circular(8),
@@ -431,7 +445,10 @@ class _BluetoothDevicesScreenState extends State<BluetoothDevicesScreen> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: device.isSelected ? context.colorScheme.primaryColor : context.colorScheme.strokeDark,
+                          color:
+                              device.isSelected
+                                  ? context.colorScheme.primaryColor
+                                  : context.colorScheme.strokeDark,
                           width: 1.5,
                         ),
                         // Transparent center unless you want it filled
@@ -461,7 +478,8 @@ class _BluetoothDevicesScreenState extends State<BluetoothDevicesScreen> {
 
           // Container 2: Identify Button (Separate Container)
           Container(
-            height: 40, // Approx matching height of the left container (14font + 16top + 16bottom + borders)
+            height:
+                40, // Approx matching height of the left container (14font + 16top + 16bottom + borders)
             width: 40,
             decoration: BoxDecoration(
               color: context.colorScheme.elevation2,
@@ -487,10 +505,15 @@ class _BluetoothDevicesScreenState extends State<BluetoothDevicesScreen> {
   }
 
   void _sendCredentials() async {
-    final List<BluetoothDevice> selectedDevices = widget.devices.where((BluetoothDevice? d) => d?.isSelected ?? false).toList();
+    final List<BluetoothDevice> selectedDevices =
+        widget.devices
+            .where((BluetoothDevice? d) => d?.isSelected ?? false)
+            .toList();
 
     // Safety check (redundant if button is disabled properly, but good practice)
-    if (selectedDevices.isEmpty || _ssidController.text.isEmpty || _passwordController.text.isEmpty) {
+    if (selectedDevices.isEmpty ||
+        _ssidController.text.isEmpty ||
+        _passwordController.text.isEmpty) {
       return;
     }
 

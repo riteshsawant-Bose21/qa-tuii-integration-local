@@ -39,6 +39,8 @@ This call will be made over the Dart-to-Bluetooth HTTP bridge.
 The `:vip` parameter will be the desired new VIP, e.g., `192.168.2.100`.
 
 - The VIP will be validated and propagated across all Fusion devices.
+- On success, this endpoint returns `202 Accepted` because VIP reload/ownership transition is asynchronous and may temporarily interrupt the current connection.
+- Client behavior: after `202`, reconnect using the new VIP and perform the next API call there; a successful connection/call confirms the VIP transition.
 - If called over HTTP, the URL would be:
 
       http://dhcp_address:8080/devices/vip/:vip

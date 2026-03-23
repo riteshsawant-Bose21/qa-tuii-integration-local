@@ -39,6 +39,9 @@ class FusionTextField extends StatelessWidget {
   /// Callback for when the text changes.
   final ValueChanged<String>? onChanged;
 
+  // Callback for when the field is submitted (e.g., pressing "Enter").
+  final ValueChanged<String>? onSubmitted;
+
   /// Whether the field is enabled or read-only.
   final bool enabled;
 
@@ -74,8 +77,11 @@ class FusionTextField extends StatelessWidget {
   final bool autofocus;
 
   final Color? color;
-  final String? semanticFieldId;
+  final String semanticFieldId;
 
+  final EdgeInsetsGeometry? contentPadding;
+  final double? height;
+  final double? width;
 
   const FusionTextField({
     super.key,
@@ -84,6 +90,7 @@ class FusionTextField extends StatelessWidget {
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
     this.onChanged,
+    this.onSubmitted,
     this.enabled = true,
     this.prefixIcon,
     this.suffixIcon,
@@ -97,7 +104,10 @@ class FusionTextField extends StatelessWidget {
     this.inputFormatters,
     this.autofocus = false,
     this.color,
-    this.semanticFieldId,
+    required this.semanticFieldId,
+    this.contentPadding,
+    this.height,
+    this.width,
   });
 
   @override
@@ -114,30 +124,40 @@ class FusionTextField extends StatelessWidget {
       prefixIcon: prefixIcon,
       suffixIcon: suffixIcon,
       counterText: '',
-      fillColor: color?? theme.colorScheme.elevation1,
+      fillColor: color ?? theme.colorScheme.elevation1,
       filled: true,
-      border: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
-      enabledBorder: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
-      focusedBorder: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+      border: border ?? InputBorder.none,
+      enabledBorder: border ?? InputBorder.none,
+      focusedBorder: border ?? InputBorder.none,
       isDense: true,
-      contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      contentPadding:
+          contentPadding ??
+          const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
     );
 
     return SemanticHelper.formControl(
-      testId: SemanticHelper.createTestId(SemanticTypes.textInput, semanticFieldId ?? "fusion_text_field"),
-      child: TextField(
-        maxLength: maxLength,
-        controller: controller,
-        focusNode: focusNode,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        onChanged: onChanged,
-        enabled: enabled,
-        autofocus: autofocus,
-        style: style ?? theme.textTheme.bodySmall,
-        textAlign: textAlign,
-        inputFormatters: inputFormatters,
-        decoration: decoration ?? defaultDecoration,
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.textInput,
+        semanticFieldId ?? "fusion_text_field",
+      ),
+      child: SizedBox(
+        height: height,
+        width: width,
+        child: TextField(
+          maxLength: maxLength,
+          controller: controller,
+          focusNode: focusNode,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          onChanged: onChanged,
+          onSubmitted: onSubmitted,
+          enabled: enabled,
+          autofocus: autofocus,
+          style: style ?? theme.textTheme.bodySmall,
+          textAlign: textAlign,
+          inputFormatters: inputFormatters,
+          decoration: decoration ?? defaultDecoration,
+        ),
       ),
     );
   }

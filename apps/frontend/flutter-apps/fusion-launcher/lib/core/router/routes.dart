@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
 import '../../features/authentication/launcher_sign_in_page.dart';
+import '../../features/devices/presentation/pages/device_details_page.dart';
 import '../../features/home/presentation/pages/launcher_home_page.dart';
 import '../../features/projects/presentation/project_work_area.dart';
 
@@ -9,6 +10,7 @@ class Routes {
   static const String launcherHomePage = '/launcherHomePage';
   static const String projectPage = '/projectPage';
   static const String mylibraryPage = '/mylibraryPage';
+  static const String deviceDetails = '/deviceDetails';
 
   static Route<dynamic> onGenerateRoute(RouteSettings routeSettings) {
     switch (routeSettings.name) {
@@ -40,6 +42,17 @@ class Routes {
         return CupertinoPageRoute<void>(
           builder: (BuildContext context) => const LauncherSignInPage(),
           settings: const RouteSettings(name: mylibraryPage),
+        );
+
+      /// Device Details Page
+      case deviceDetails:
+        final String deviceId = routeSettings.arguments as String;
+        return CupertinoPageRoute<void>(
+          builder:
+              (BuildContext context) => DeviceDetailsPage(
+                deviceId: deviceId,
+              ),
+          settings: const RouteSettings(name: deviceDetails),
         );
 
       default:

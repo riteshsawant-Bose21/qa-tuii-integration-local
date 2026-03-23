@@ -75,7 +75,9 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
     '24U',
   ];
 
-  final GlobalKey<PopupMenuButtonState<SourceData>> sourcesPopupMenuButtonStateGlobalKey = GlobalKey<PopupMenuButtonState<SourceData>>();
+  final GlobalKey<PopupMenuButtonState<SourceData>>
+  sourcesPopupMenuButtonStateGlobalKey =
+      GlobalKey<PopupMenuButtonState<SourceData>>();
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +86,12 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
         borderRadius: BorderRadius.circular(60.0),
         boxShadow: <BoxShadow>[
           // Main drop shadow
-          BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 12.0, offset: const Offset(0, 4), spreadRadius: 0),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 12.0,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
         ],
       ),
       child: ClipRRect(
@@ -98,9 +105,14 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
             ),
             padding: const EdgeInsets.all(4),
             child: BlocListener<ProjectViewModel, ProjectViewModelState>(
-              listenWhen: (ProjectViewModelState previous, ProjectViewModelState current) => current is ToolbarModeChanged,
+              listenWhen:
+                  (
+                    ProjectViewModelState previous,
+                    ProjectViewModelState current,
+                  ) => current is ToolbarModeChanged,
               listener: (BuildContext context, ProjectViewModelState state) {
-                if (state is ToolbarModeChanged && state.mode == ToolbarMode.system) {
+                if (state is ToolbarModeChanged &&
+                    state.mode == ToolbarMode.system) {
                   // Force SPL off when mode changes to system
                   widget.onSplDisabled();
                 }
@@ -120,7 +132,10 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
                         curve: Curves.easeInOutCubic,
                         child: AnimatedSwitcher(
                           duration: const Duration(milliseconds: 300),
-                          transitionBuilder: (Widget child, Animation<double> animation) {
+                          transitionBuilder: (
+                            Widget child,
+                            Animation<double> animation,
+                          ) {
                             return SlideTransition(
                               position: Tween<Offset>(
                                 begin: const Offset(0.0, 0.5),
@@ -128,13 +143,21 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
                               ).animate(
                                 CurvedAnimation(
                                   parent: animation,
-                                  curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
+                                  curve: const Interval(
+                                    0.2,
+                                    1.0,
+                                    curve: Curves.easeOutCubic,
+                                  ),
                                 ),
                               ),
                               child: FadeTransition(
                                 opacity: CurvedAnimation(
                                   parent: animation,
-                                  curve: const Interval(0.0, 0.8, curve: Curves.easeInOutCubic),
+                                  curve: const Interval(
+                                    0.0,
+                                    0.8,
+                                    curve: Curves.easeInOutCubic,
+                                  ),
                                 ),
                                 child: child,
                               ),
@@ -155,7 +178,8 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   }
 
   Widget _buildModeSwitch() {
-    final ToolbarMode currentMode = serviceLocator<ProjectViewModel>().currentToolbarMode;
+    final ToolbarMode currentMode =
+        serviceLocator<ProjectViewModel>().currentToolbarMode;
 
     return Container(
       decoration: BoxDecoration(
@@ -167,10 +191,13 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           GuideShowcaseWrapper(
+            semanticId: 'building_toolbar_acoustics_mode',
             step: GuideShowCaseSteps.acousticMode,
             onHighlightedSpotTap: (TapDownDetails details) {
               _switchMode(ToolbarMode.acoustics);
-              serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.acousticMode);
+              serviceLocator<GuideShowCaseController>().completeStep(
+                GuideShowCaseSteps.acousticMode,
+              );
             },
             child: _buildModeTab(
               context: context,
@@ -183,10 +210,13 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
             ),
           ),
           GuideShowcaseWrapper(
+            semanticId: 'building_toolbar_system_mode',
             step: GuideShowCaseSteps.systemMode,
             onHighlightedSpotTap: (TapDownDetails details) {
               _switchMode(ToolbarMode.system);
-              serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.systemMode);
+              serviceLocator<GuideShowCaseController>().completeStep(
+                GuideShowCaseSteps.systemMode,
+              );
             },
             child: _buildModeTab(
               context: context,
@@ -219,9 +249,19 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
           curve: Curves.easeInOutCubic,
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
           decoration: BoxDecoration(
-            color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
+            color:
+                isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
             borderRadius: BorderRadius.circular(60.0),
-            boxShadow: isSelected ? <BoxShadow>[BoxShadow(color: color.withValues(alpha: 0.15), blurRadius: 3, offset: const Offset(0, 1))] : null,
+            boxShadow:
+                isSelected
+                    ? <BoxShadow>[
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.15),
+                        blurRadius: 3,
+                        offset: const Offset(0, 1),
+                      ),
+                    ]
+                    : null,
           ),
           child: FusionAppText(
             text: label,
@@ -246,6 +286,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
     final Color color = selectedColor ?? Colors.green;
 
     return SemanticHelper.button(
+      isSelected: isSelected,
       testId: SemanticHelper.createTestId(SemanticTypes.button, tooltip),
       child: Tooltip(
         message: tooltip,
@@ -256,10 +297,16 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 1.0),
             decoration: BoxDecoration(
-              color: isSelected ? color.withValues(alpha: 0.15) : Colors.transparent,
+              color:
+                  isSelected
+                      ? color.withValues(alpha: 0.15)
+                      : Colors.transparent,
               borderRadius: BorderRadius.circular(6.0),
               border: Border.all(
-                color: isSelected ? color.withValues(alpha: 0.3) : Colors.transparent,
+                color:
+                    isSelected
+                        ? color.withValues(alpha: 0.3)
+                        : Colors.transparent,
                 width: 1,
               ),
             ),
@@ -270,7 +317,10 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
                       child: Icon(
                         icon,
                         size: 18.0,
-                        color: isSelected ? _getDarkerShade(color) : Colors.black54,
+                        color:
+                            isSelected
+                                ? _getDarkerShade(color)
+                                : Colors.black54,
                       ),
                     )
                     : Padding(
@@ -288,23 +338,31 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   }
 
   Widget _buildModeSpecificTools() {
-    final ToolbarMode currentMode = serviceLocator<ProjectViewModel>().currentToolbarMode;
+    final ToolbarMode currentMode =
+        serviceLocator<ProjectViewModel>().currentToolbarMode;
 
     return Row(
       key: ValueKey<ToolbarMode>(currentMode),
       mainAxisSize: MainAxisSize.min,
-      children: currentMode == ToolbarMode.acoustics ? _buildAcousticsTools() : _buildSystemTools(),
+      children:
+          currentMode == ToolbarMode.acoustics
+              ? _buildAcousticsTools()
+              : _buildSystemTools(),
     );
   }
 
   List<Widget> _buildAcousticsTools() {
-    final int currentDeviceIndex = serviceLocator<ProjectViewModel>().currentDeviceTypeIndex;
+    final int currentDeviceIndex =
+        serviceLocator<ProjectViewModel>().currentDeviceTypeIndex;
 
     return <Widget>[
       // if (serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode)
       GuideShowcaseWrapper(
+        semanticId: 'building_toolbar_draw_mode',
         step: GuideShowCaseSteps.drawListeningArea,
-        onHighlightedSpotTap: (TapDownDetails details) => _onAcousticsToolSelected(_AcousticsToolType.draw),
+        onHighlightedSpotTap:
+            (TapDownDetails details) =>
+                _onAcousticsToolSelected(_AcousticsToolType.draw),
         child: _buildToolItem(
           icon: Icons.polyline,
           "Draw Listening Area",
@@ -339,8 +397,11 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   }
 
   List<Widget> _buildSystemTools() {
-    final int currentDeviceIndex = serviceLocator<ProjectViewModel>().currentDeviceTypeIndex;
-    final bool isListeningAreaSelected = serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId != null;
+    final int currentDeviceIndex =
+        serviceLocator<ProjectViewModel>().currentDeviceTypeIndex;
+    final bool isListeningAreaSelected =
+        serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId !=
+        null;
 
     return <Widget>[
       if (isListeningAreaSelected) ...<Widget>[
@@ -399,21 +460,31 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
 
   Widget _buildSourcesToolWithMenu({required bool isSelected}) {
     return GuideShowcaseWrapper(
+      semanticId: 'building_toolbar_sources_mode',
       step: GuideShowCaseSteps.systemModeTabs,
       onHighlightedSpotTap: (TapDownDetails value) {
         sourcesPopupMenuButtonStateGlobalKey.currentState?.showButtonMenu();
       },
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "add_sources"),
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.button,
+          "add_sources",
+        ),
         child: AddSourcePopup(
           isFromBuildingPage: true,
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 1.0),
             decoration: BoxDecoration(
-              color: isSelected ? Colors.green.withValues(alpha: 0.15) : Colors.transparent,
+              color:
+                  isSelected
+                      ? Colors.green.withValues(alpha: 0.15)
+                      : Colors.transparent,
               borderRadius: BorderRadius.circular(6.0),
               border: Border.all(
-                color: isSelected ? Colors.green.withValues(alpha: 0.3) : Colors.transparent,
+                color:
+                    isSelected
+                        ? Colors.green.withValues(alpha: 0.3)
+                        : Colors.transparent,
                 width: 1,
               ),
             ),
@@ -424,7 +495,10 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
                 child: Icon(
                   Icons.mic,
                   size: 18.0,
-                  color: isSelected ? _getDarkerShade(Colors.green) : Colors.black54,
+                  color:
+                      isSelected
+                          ? _getDarkerShade(Colors.green)
+                          : Colors.black54,
                 ),
               ),
             ),
@@ -440,7 +514,9 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
       child: PopupMenuButton<DeviceItemModel>(
         onSelected: (DeviceItemModel selectedItem) {
           // Set device type index first
-          serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(6); // Rack index
+          serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
+            6,
+          ); // Rack index
 
           // Create product and set for addition
           final ProductQueryModel product = ProductQueryModel(
@@ -463,7 +539,11 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
               enabled: false,
               child: FusionAppText(
                 text: 'RACK OPTIONS',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                  fontSize: 11,
+                ),
               ),
             ),
             ..._rackOptions.map(
@@ -492,10 +572,16 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 1.0),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.green.withValues(alpha: 0.15) : Colors.transparent,
+            color:
+                isSelected
+                    ? Colors.green.withValues(alpha: 0.15)
+                    : Colors.transparent,
             borderRadius: BorderRadius.circular(6.0),
             border: Border.all(
-              color: isSelected ? Colors.green.withValues(alpha: 0.3) : Colors.transparent,
+              color:
+                  isSelected
+                      ? Colors.green.withValues(alpha: 0.3)
+                      : Colors.transparent,
               width: 1,
             ),
           ),
@@ -506,7 +592,8 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
               child: Icon(
                 Icons.dns_outlined,
                 size: 18.0,
-                color: isSelected ? _getDarkerShade(Colors.green) : Colors.black54,
+                color:
+                    isSelected ? _getDarkerShade(Colors.green) : Colors.black54,
               ),
             ),
           ),
@@ -526,7 +613,8 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   }
 
   void _onAcousticsToolSelected(_AcousticsToolType toolType) {
-    final int currentDeviceIndex = serviceLocator<ProjectViewModel>().currentDeviceTypeIndex;
+    final int currentDeviceIndex =
+        serviceLocator<ProjectViewModel>().currentDeviceTypeIndex;
 
     switch (toolType) {
       case _AcousticsToolType.draw:
@@ -566,7 +654,9 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
           widget.onProductSelected();
         }
 
-        serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.selectSpeakersTool);
+        serviceLocator<GuideShowCaseController>().completeStep(
+          GuideShowCaseSteps.selectSpeakersTool,
+        );
         break;
 
       case _AcousticsToolType.spl:
@@ -590,7 +680,8 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   }
 
   void _switchMode(ToolbarMode newMode) {
-    final ToolbarMode currentMode = serviceLocator<ProjectViewModel>().currentToolbarMode;
+    final ToolbarMode currentMode =
+        serviceLocator<ProjectViewModel>().currentToolbarMode;
 
     if (currentMode != newMode) {
       // Deselect any currently selected hardware component or listening area when switching modes

@@ -5,14 +5,9 @@ class _PeqOutMeter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation2,
-        borderRadius: BorderRadius.horizontal(
-          right: Radius.circular(context.mediumRadius),
-        ),
-      ),
-      padding: const EdgeInsets.all(8),
+    return PBSection(
+      semanticId: 'peq_out_meter',
+      type: PBSectionType.right,
       child: Column(
         spacing: 10,
         children: <Widget>[
@@ -34,6 +29,7 @@ class _PeqOutMeter extends StatelessWidget {
           ),
           const Expanded(
             child: VerticalMeter(
+              semanticId: 'peq_out_meter_vertical_meter',
               value: -60,
               min: -60,
               max: 0,

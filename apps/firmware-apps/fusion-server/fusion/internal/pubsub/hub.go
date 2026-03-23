@@ -3,9 +3,9 @@ package pubsub
 import (
 	"encoding/json"
 	"fmt"
+	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/cluster/transport"
-	"fusion-services-core/logging"
 	"fusion/internal/persistence"
 )
 
@@ -19,7 +19,7 @@ type Hub struct {
 	broadcasters []Broadcaster
 	stateManager *persistence.StateManager
 	persistence  *persistence.Persistence
-	transport    transport.ClusterTransport
+	transport    transport.ClusterInterface
 }
 
 func NewHub(stateManager *persistence.StateManager, persistence *persistence.Persistence) *Hub {
@@ -31,7 +31,7 @@ func NewHub(stateManager *persistence.StateManager, persistence *persistence.Per
 
 // SetClusterTransport injects the cluster transport (backed by memberlist).
 // This is called once during app wiring after memberlist is constructed.
-func (h *Hub) SetClusterTransport(t transport.ClusterTransport) {
+func (h *Hub) SetClusterTransport(t transport.ClusterInterface) {
 	h.transport = t
 }
 func (h *Hub) Register(b Broadcaster) {
@@ -139,6 +139,11 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 			return fmt.Errorf("error deleting snapshot: %v", err)
 		}
 
+	case api.NotifyOpDeviceUpdate:
+		if message.DeviceInfo == nil {
+			return fmt.Errorf("DeviceInfo required for operation")
+		}
+
 	default:
 		return fmt.Errorf("unknown operation type: %s", message.Operation)
 	}
@@ -174,7 +179,7 @@ func (h *Hub) broadcastToNodes(message []byte) {
 
 	localName := h.transport.LocalNode().Name
 
-	for _, node := range h.transport.Members() {
+	for _, node := range h.transport.MemberListMembers() {
 		if node.Name == localName {
 			continue
 		}

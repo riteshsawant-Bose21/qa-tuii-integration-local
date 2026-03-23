@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/strings/fusion_strings.dart';
 
-import '../constants/test_keys.dart';
 import '../di/service_locator.dart';
 import '../fusion_widgets/buttons/fusion_text_button.dart';
 
@@ -28,14 +27,19 @@ class FloorPlanCalibrationDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.container(
-      testId: SemanticHelper.createTestId(SemanticTypes.container, "floor_plan_calibration_dialog"),
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "floor_plan_calibration_dialog",
+      ),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
           boxShadow: <BoxShadow>[
             BoxShadow(
-              color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.18),
+              color: Theme.of(
+                context,
+              ).colorScheme.shadow.withValues(alpha: 0.18),
               blurRadius: 28,
               offset: const Offset(0, 16),
             ),
@@ -47,7 +51,10 @@ class FloorPlanCalibrationDialog extends StatelessWidget {
             title: title,
             onClose: onCancel,
             child: SemanticHelper.container(
-              testId: SemanticHelper.createTestId(SemanticTypes.container, "floor_plan_calibrator"),
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.container,
+                "floor_plan_calibrator",
+              ),
               child: FloorPlanCalibrator(
                 floorPlanImage: floorPlanImage,
                 onCalibrationComplete: onCalibrationComplete,
@@ -80,13 +87,22 @@ class _FloorPlanShell extends StatelessWidget {
       children: <Widget>[
         // Title bar
         SemanticHelper.container(
-          testId: SemanticHelper.createTestId(SemanticTypes.container, "floor_plan_calibrator_title_bar"),
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.container,
+            "floor_plan_calibrator_title_bar",
+          ),
           child: Container(
             height: 40,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
-              border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3))),
+              border: Border(
+                bottom: BorderSide(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.outline.withValues(alpha: 0.3),
+                ),
+              ),
             ),
             child: Row(
               children: <Widget>[
@@ -99,7 +115,10 @@ class _FloorPlanShell extends StatelessWidget {
                 ),
                 const Spacer(),
                 SemanticHelper.button(
-                  testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.closeX),
+                  testId: SemanticHelper.createTestId(
+                    SemanticTypes.button,
+                    FusionTestKeys.closeX,
+                  ),
                   child: IconButton(
                     tooltip: 'Close',
                     icon: Icon(
@@ -153,7 +172,9 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
   _CropHandle _activeHandle = _CropHandle.none;
 
   // --- UI/controls ---
-  final TextEditingController _distanceController = TextEditingController(text: '5.00');
+  final TextEditingController _distanceController = TextEditingController(
+    text: '5.00',
+  );
   MeasurementUnit _selectedUnit = MeasurementUnit.feet;
   _ToolMode _mode = _ToolMode.measure;
 
@@ -181,7 +202,10 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     return Offset(r.left + n.dx * r.width, r.top + n.dy * r.height);
   }
 
-  Offset _normalizedToImagePx(Offset n) => Offset(n.dx * widget.floorPlanImage.width, n.dy * widget.floorPlanImage.height);
+  Offset _normalizedToImagePx(Offset n) => Offset(
+    n.dx * widget.floorPlanImage.width,
+    n.dy * widget.floorPlanImage.height,
+  );
 
   // ---------- measure interactions ----------
   void _onMeasureTapDown(TapDownDetails d) {
@@ -202,7 +226,9 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
         _endPointDisplay = d.localPosition;
         _isDrawing = false;
       });
-      fusionLibLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.showFloorPickCalibration);
+      fusionLibLocator<GuideShowCaseController>().completeStep(
+        GuideShowCaseSteps.showFloorPickCalibration,
+      );
     }
   }
 
@@ -413,7 +439,10 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     );
 
     // If crop rect is the full image, return the original
-    if (clampedRect.left <= 0 && clampedRect.top <= 0 && clampedRect.right >= image.width && clampedRect.bottom >= image.height) {
+    if (clampedRect.left <= 0 &&
+        clampedRect.top <= 0 &&
+        clampedRect.right >= image.width &&
+        clampedRect.bottom >= image.height) {
       return image;
     }
 
@@ -442,7 +471,9 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
   }
 
   void _completeCalibration() async {
-    if (_startPointNormalized == null || _endPointNormalized == null || _distanceController.text.trim().isEmpty) {
+    if (_startPointNormalized == null ||
+        _endPointNormalized == null ||
+        _distanceController.text.trim().isEmpty) {
       return;
     }
 
@@ -469,7 +500,9 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     widget.onCalibrationComplete(data);
 
     // ignore: use_build_context_synchronously
-    fusionLibLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmFloorCalibrated);
+    fusionLibLocator<GuideShowCaseController>().completeStep(
+      GuideShowCaseSteps.confirmFloorCalibrated,
+    );
   }
 
   final GlobalKey _customPaintKey = GlobalKey();
@@ -477,7 +510,8 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
   // ---------- build ----------
   @override
   Widget build(BuildContext context) {
-    final imageInvalid = widget.floorPlanImage.width <= 0 || widget.floorPlanImage.height <= 0;
+    final imageInvalid =
+        widget.floorPlanImage.width <= 0 || widget.floorPlanImage.height <= 0;
 
     if (imageInvalid) {
       return Center(
@@ -486,7 +520,9 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
           children: <Widget>[
             Icon(
               Icons.error_outline,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.6),
               size: 48,
             ),
             const SizedBox(height: 12),
@@ -499,13 +535,17 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
             ),
             const SizedBox(height: 6),
             FusionAppText(
-              text: 'Image dimensions: ${widget.floorPlanImage.width}×${widget.floorPlanImage.height}',
+              text:
+                  'Image dimensions: ${widget.floorPlanImage.width}×${widget.floorPlanImage.height}',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 16),
             FusionOutlinedButton(
+              accessLabel: 'floor_plan_calibration_cancel',
               label: 'Close',
               onTap: () => widget.onCancel?.call(),
             ),
@@ -522,7 +562,13 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3))),
+            border: Border(
+              bottom: BorderSide(
+                color: Theme.of(
+                  context,
+                ).colorScheme.outline.withValues(alpha: 0.3),
+              ),
+            ),
           ),
           child: Row(
             children: <Widget>[
@@ -560,39 +606,55 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
               FusionAppText(
                 text: 'Distance',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.8),
                 ),
               ),
               const SizedBox(width: 8),
               SizedBox(
                 width: 96,
                 child: SemanticHelper.formControl(
-                  testId: SemanticHelper.createTestId(SemanticTypes.textInput, FusionTestKeys.calibrationDistance),
+                  testId: SemanticHelper.createTestId(
+                    SemanticTypes.textInput,
+                    FusionTestKeys.calibrationDistance,
+                  ),
                   child: TextField(
                     controller: _distanceController,
                     textAlign: TextAlign.right,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
                     decoration: InputDecoration(
                       isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 10,
+                      ),
                       hintText: '1.00',
                       hintStyle: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                       fillColor: context.colorScheme.elevation1,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(6),
                         borderSide: BorderSide(
-                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.outline.withValues(alpha: 0.5),
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(6),
                         borderSide: BorderSide(
-                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.outline.withValues(alpha: 0.5),
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
@@ -612,31 +674,43 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
               FusionAppText(
                 text: 'Units',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.8),
                 ),
               ),
               const SizedBox(width: 8),
               SizedBox(
                 width: 140,
                 child: FusionDropdownButtonFormField(
-                  value: '${_selectedUnit.displayName} (${_selectedUnit.symbol})',
+                  value:
+                      '${_selectedUnit.displayName} (${_selectedUnit.symbol})',
                   semanticKey: FusionTestKeys.calibrationUnit,
-                  options: MeasurementUnit.values.map((u) => '${u.displayName} (${u.symbol})').toList(),
+                  options: MeasurementUnit.values
+                      .map((u) => '${u.displayName} (${u.symbol})')
+                      .toList(),
                   isDense: true,
                   decoration: InputDecoration(
                     fillColor: context.colorScheme.elevation1,
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 10,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(6),
                       borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.outline.withValues(alpha: 0.5),
                       ),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(6),
                       borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.outline.withValues(alpha: 0.5),
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
@@ -674,12 +748,18 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
               color: Theme.of(context).colorScheme.surfaceContainerLow,
             ),
             child: MouseRegion(
-              cursor: _mode == _ToolMode.measure ? SystemMouseCursors.precise : SystemMouseCursors.resizeUpLeftDownRight,
+              cursor: _mode == _ToolMode.measure
+                  ? SystemMouseCursors.precise
+                  : SystemMouseCursors.resizeUpLeftDownRight,
               onHover: _mode == _ToolMode.measure ? _onMeasureHover : null,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTapDown: _mode == _ToolMode.measure ? _onMeasureTapDown : null,
-                onPanUpdate: _mode == _ToolMode.measure ? _onMeasurePanUpdate : _onCropPanUpdate,
+                onTapDown: _mode == _ToolMode.measure
+                    ? _onMeasureTapDown
+                    : null,
+                onPanUpdate: _mode == _ToolMode.measure
+                    ? _onMeasurePanUpdate
+                    : _onCropPanUpdate,
                 onPanStart: _mode == _ToolMode.crop ? _onCropPanStart : null,
                 onPanEnd: (d) {
                   if (_mode == _ToolMode.crop) _onCropPanEnd(d);
@@ -688,13 +768,18 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                   }
                 },
                 child: GuideShowcaseWrapper(
+                  semanticId: 'floor_plan_calibrator',
                   step: GuideShowCaseSteps.showFloorPickCalibration,
                   onHighlightedSpotTap: (TapDownDetails details) {
                     if (_mode == _ToolMode.measure) {
                       // Get the exact RenderBox of the CustomPaint
-                      final RenderBox? renderBox = _customPaintKey.currentContext?.findRenderObject() as RenderBox?;
+                      final RenderBox? renderBox =
+                          _customPaintKey.currentContext?.findRenderObject()
+                              as RenderBox?;
                       if (renderBox != null) {
-                        final Offset localPosition = renderBox.globalToLocal(details.globalPosition);
+                        final Offset localPosition = renderBox.globalToLocal(
+                          details.globalPosition,
+                        );
 
                         // Create new TapDownDetails with local position
                         final TapDownDetails localDetails = TapDownDetails(
@@ -709,7 +794,10 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                   },
                   child: Center(
                     child: SemanticHelper.container(
-                      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.floorCalibrationCanvas),
+                      testId: SemanticHelper.createTestId(
+                        SemanticTypes.container,
+                        FusionTestKeys.floorCalibrationCanvas,
+                      ),
                       child: CustomPaint(
                         key: _customPaintKey,
                         painter: FloorPlanCalibrationPainter(
@@ -724,10 +812,14 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                             _imageRect = r;
                             // keep display points in sync if image rect changes
                             if (_startPointNormalized != null) {
-                              _startPointDisplay = _normalizedToScreen(_startPointNormalized!);
+                              _startPointDisplay = _normalizedToScreen(
+                                _startPointNormalized!,
+                              );
                             }
                             if (_endPointNormalized != null) {
-                              _endPointDisplay = _normalizedToScreen(_endPointNormalized!);
+                              _endPointDisplay = _normalizedToScreen(
+                                _endPointNormalized!,
+                              );
                             }
                           },
                         ),
@@ -747,13 +839,20 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
           padding: EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3))),
+            border: Border(
+              top: BorderSide(
+                color: Theme.of(
+                  context,
+                ).colorScheme.outline.withValues(alpha: 0.3),
+              ),
+            ),
           ),
           child: Row(
             children: <Widget>[
               // Optional quick actions on the left
               if (_startPointNormalized != null || _endPointNormalized != null)
                 FusionTextButton(
+                  accessLabel: 'floor_plan_calibration_clear',
                   label: 'Clear Line',
                   width: 120,
                   onTap: () {
@@ -762,6 +861,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                 ),
               const Spacer(),
               FusionOutlinedButton(
+                accessLabel: 'floor_plan_calibration_cancel',
                 width: 120,
                 height: 36,
                 label: FusionStrings.cancelButton,
@@ -771,20 +871,28 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
               ),
               const SizedBox(width: 8),
               GuideShowcaseWrapper(
+                semanticId: 'floor_plan_calibrator_confirm',
                 step: GuideShowCaseSteps.confirmFloorCalibrated,
                 onHighlightedSpotTap: (TapDownDetails details) {
-                  if (_startPointNormalized != null && _endPointNormalized != null && _distanceController.text.trim().isNotEmpty) {
+                  if (_startPointNormalized != null &&
+                      _endPointNormalized != null &&
+                      _distanceController.text.trim().isNotEmpty) {
                     _completeCalibration();
                   }
                 },
                 child: FusionButton(
+                  accessLabel: 'floor_plan_calibration_complete',
                   label: FusionStrings.confirmButton,
                   width: 120,
                   height: 36,
                   activeBackgroundColor: context.colorScheme.primaryColor,
                   onTap: () {
-                    log("$_startPointNormalized   $_endPointNormalized && ${_distanceController.text.trim().isNotEmpty}");
-                    if (_startPointNormalized != null && _endPointNormalized != null && _distanceController.text.trim().isNotEmpty) {
+                    log(
+                      "$_startPointNormalized   $_endPointNormalized && ${_distanceController.text.trim().isNotEmpty}",
+                    );
+                    if (_startPointNormalized != null &&
+                        _endPointNormalized != null &&
+                        _distanceController.text.trim().isNotEmpty) {
                       _completeCalibration();
                     }
                   },
@@ -826,16 +934,22 @@ class _ToolbarIcon extends StatelessWidget {
             width: 28,
             height: 28,
             decoration: BoxDecoration(
-              color: active ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.surface,
+              color: active
+                  ? Theme.of(context).colorScheme.onSurface
+                  : Theme.of(context).colorScheme.surface,
               border: Border.all(
-                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
+                color: Theme.of(
+                  context,
+                ).colorScheme.outline.withValues(alpha: 0.4),
               ),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Icon(
               icon,
               size: 16,
-              color: active ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.onSurface,
+              color: active
+                  ? Theme.of(context).colorScheme.surface
+                  : Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ),
@@ -920,7 +1034,11 @@ class FloorPlanCalibrationPainter extends CustomPainter {
       // darken outside
       final Path outside = Path()..addRect(Offset.zero & size);
       final Path hole = Path()..addRect(crop);
-      final Path overlay = Path.combine(PathOperation.difference, outside, hole);
+      final Path overlay = Path.combine(
+        PathOperation.difference,
+        outside,
+        hole,
+      );
       canvas.drawPath(
         overlay,
         Paint()..color = Colors.black.withValues(alpha: 0.25),
@@ -990,7 +1108,9 @@ class FloorPlanCalibrationPainter extends CustomPainter {
 
       // label (black rounded pill)
       final mid = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
-      final String label = distanceText.isNotEmpty ? '$distanceText ${unit.symbol}' : '1 ${unit.symbol}';
+      final String label = distanceText.isNotEmpty
+          ? '$distanceText ${unit.symbol}'
+          : '1 ${unit.symbol}';
 
       final tp = TextPainter(
         text: TextSpan(
@@ -1005,7 +1125,10 @@ class FloorPlanCalibrationPainter extends CustomPainter {
       )..layout();
 
       const double pad = 6;
-      final Offset labPos = Offset(mid.dx - tp.width / 2, mid.dy - 28 - tp.height / 2);
+      final Offset labPos = Offset(
+        mid.dx - tp.width / 2,
+        mid.dy - 28 - tp.height / 2,
+      );
       final RRect bg = RRect.fromRectAndRadius(
         Rect.fromLTWH(
           labPos.dx - pad,
@@ -1016,7 +1139,10 @@ class FloorPlanCalibrationPainter extends CustomPainter {
         const Radius.circular(4),
       );
 
-      canvas.drawRRect(bg, Paint()..color = Colors.black.withValues(alpha: 0.8));
+      canvas.drawRRect(
+        bg,
+        Paint()..color = Colors.black.withValues(alpha: 0.8),
+      );
       tp.paint(canvas, labPos);
     }
   }
@@ -1033,7 +1159,10 @@ class FloorPlanCalibrationPainter extends CustomPainter {
     final uy = dir.dy / d;
 
     // rotate (-angle) and (+angle)
-    Offset rot(double a) => Offset(ux * math.cos(a) - uy * math.sin(a), ux * math.sin(a) + uy * math.cos(a));
+    Offset rot(double a) => Offset(
+      ux * math.cos(a) - uy * math.sin(a),
+      ux * math.sin(a) + uy * math.cos(a),
+    );
 
     final a1 = from + rot(angle) * len;
     final a2 = from + rot(-angle) * len;
@@ -1078,23 +1207,31 @@ class CalibrationData {
     if (realWorldDistance.isNaN || realWorldDistance <= 0) {
       throw ArgumentError('Invalid real world distance: $realWorldDistance');
     }
-    if (imageSize.width.isNaN || imageSize.height.isNaN || imageSize.width <= 0 || imageSize.height <= 0) {
+    if (imageSize.width.isNaN ||
+        imageSize.height.isNaN ||
+        imageSize.width <= 0 ||
+        imageSize.height <= 0) {
       throw ArgumentError('Invalid image size: $imageSize');
     }
   }
 
   double get pixelDistance => (endPoint - startPoint).distance;
 
-  double get pixelsPerUnit => pixelDistance > 0 && realWorldDistance > 0 ? pixelDistance / realWorldDistance : 0;
+  double get pixelsPerUnit => pixelDistance > 0 && realWorldDistance > 0
+      ? pixelDistance / realWorldDistance
+      : 0;
 
-  double get unitsPerPixel => pixelDistance > 0 && realWorldDistance > 0 ? realWorldDistance / pixelDistance : 0;
+  double get unitsPerPixel => pixelDistance > 0 && realWorldDistance > 0
+      ? realWorldDistance / pixelDistance
+      : 0;
 
   double pixelsToUnits(double px) => unitsPerPixel > 0 ? px * unitsPerPixel : 0;
 
   double unitsToPixels(double u) => pixelsPerUnit > 0 ? u * pixelsPerUnit : 0;
 
   @override
-  String toString() => 'CalibrationData($realWorldDistance ${unit.symbol} = ${pixelDistance.toStringAsFixed(1)} px)';
+  String toString() =>
+      'CalibrationData($realWorldDistance ${unit.symbol} = ${pixelDistance.toStringAsFixed(1)} px)';
 }
 
 enum MeasurementUnit {
@@ -1110,9 +1247,21 @@ enum MeasurementUnit {
 
   static MeasurementUnit? fromString(String value) {
     try {
+      return MeasurementUnit.values.firstWhere(
+        (MeasurementUnit element) => element.name == value,
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static MeasurementUnit? fromJson(String value) {
+    try {
       return MeasurementUnit.values.firstWhere((MeasurementUnit element) => element.name == value);
     } catch (e) {
       return null;
     }
   }
+
+  String toJson() => name;
 }

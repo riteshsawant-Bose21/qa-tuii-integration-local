@@ -8,6 +8,7 @@
 #include <iostream>
 #include <json/json.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <regex>
 #include <sstream>
 #include <string>
@@ -647,10 +648,10 @@ private:
       while (running) {
 
           if (poll(&obsPollFd, 1, 1000) >= 0) {
-              if (obsPollFd.revents && POLLIN)
+              if (obsPollFd.revents & POLLIN)
               {
                   const ssize_t received =
-                      recvfrom(sockfd, buffer, BUFFER_SIZE, 0,
+                      recvfrom(sockfd, buffer, BUFFER_SIZE - 1, 0,
                               (struct sockaddr *)&senderAddr, &senderLen);
 
                   if (received > 0) {

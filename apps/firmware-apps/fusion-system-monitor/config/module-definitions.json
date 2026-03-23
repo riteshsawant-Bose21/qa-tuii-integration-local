@@ -1,7 +1,7 @@
 {
     "modules": [
         {
-            "name": "cpu_usage",
+            "name": "system_info",
             "telemetry": [
                 { 
                     "name": "cpu", 
@@ -16,12 +16,7 @@
                     "value_type": "bool", 
                     "telemetry_type": "event",
                     "period_type": "N/A"
-                }
-            ]
-        },
-        {
-            "name": "space_usage",
-            "telemetry": [
+                },
                 { 
                     "name": "ram", 
                     "value_type": "float", 
@@ -63,6 +58,14 @@
                     "value_type": "bool", 
                     "telemetry_type": "event",
                     "period_type": "N/A"
+                },
+                {
+                    "name": "temperature",
+                    "value_type": "float",
+                    "minimum_value": -40.0,
+                    "maximum_value": 150.0,
+                    "telemetry_type": "meter",
+                    "period_type": "MED"
                 }
             ]
         },
@@ -94,6 +97,11 @@
                     "default_value": ""
                 },
                 {
+                    "name": "php_led",
+                    "value_type": "string",
+                    "default_value": ""
+                },
+                {
                     "name": "num_user_gpio",
                     "value_type": "integer",
                     "default_value": 1,
@@ -104,6 +112,16 @@
                     "name": "user_gpio_ctrl_paths",
                     "value_type": "string",
                     "default_value": ""
+                },
+                {
+                    "name": "system_mute_path",
+                    "value_type": "string",
+                    "default_value": ""
+                },
+                {
+                    "name": "system_unmute_time",
+                    "value_type": "integer",
+                    "default_value": 0
                 }
             ],
             "parameters": [
@@ -169,24 +187,19 @@
                     "default_value": "/dev/ttymxc2"
                 },
                 {
-                    "name": "num_amps",
+                    "name": "fw_file",
+                    "value_type": "string",
+                    "default_value": ""
+                },
+                {
+                    "name": "nrst_gpio_num",
                     "value_type": "integer",
-                    "default_value": 4
+                    "default_value": "255"
                 },
                 {
-                    "name": "reset_pin",
-                    "value_type": "string",
-                    "default_value": ""
-                },
-                {
-                    "name": "mute_pin",
-                    "value_type": "string",
-                    "default_value": ""
-                },
-                {
-                    "name": "boot_pin",
-                    "value_type": "string",
-                    "default_value": ""
+                    "name": "boot0_gpio_num",
+                    "value_type": "integer",
+                    "default_value": "255"
                 }
             ],
             "parameters": [
@@ -206,6 +219,9 @@
                     "default_value": ""
                 }
             ]
+        },
+        {
+            "name": "bt_control"
         }
     ]
 }

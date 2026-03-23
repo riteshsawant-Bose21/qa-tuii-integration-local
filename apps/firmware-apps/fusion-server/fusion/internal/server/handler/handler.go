@@ -3,21 +3,24 @@ package handler
 import (
 	"fmt"
 	"fusion/internal/api"
+	"fusion/internal/cluster/transport"
 	"fusion/internal/controllers"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/utils"
 	"fusion/internal/version"
+	"net/http"
 	"reflect"
 	"sync"
 
 	"github.com/hashicorp/memberlist"
 )
 
-// Handler is the container for server implimentations.
+// Handler is the container for server implementations.
 type Handler struct {
-	appConfig    *api.AppConfig
-	memberlist   *memberlist.Memberlist
+	appConfig        *api.AppConfig
+	clusterTransport transport.ClusterInterface
+
 	persistence  *persistence.Persistence
 	StateManager *persistence.StateManager
 	hub          *pubsub.Hub
@@ -27,11 +30,22 @@ type Handler struct {
 	sessionsLock sync.RWMutex
 
 	controllerManager controllers.ControllerManagerInterface
+	httpClient        *http.Client
+}
+
+type serverInfoResponse struct {
+	Name        string   `json:"name"`
+	Version     string   `json:"version"`
+	Commit      string   `json:"commit"`
+	BuildTime   string   `json:"build_time"`
+	NodeID      string   `json:"node_id"`
+	Endpoints   []string `json:"endpoints"`
+	ClusterSize int      `json:"cluster_size"`
 }
 
 func NewHandler(
 	appConfig *api.AppConfig,
-	memberlist *memberlist.Memberlist,
+	clusterTransport transport.ClusterInterface,
 	persistence *persistence.Persistence,
 	stateManager *persistence.StateManager,
 	hub *pubsub.Hub,
@@ -39,12 +53,13 @@ func NewHandler(
 ) *Handler {
 	return &Handler{
 		appConfig:         appConfig,
-		memberlist:        memberlist,
+		clusterTransport:  clusterTransport,
 		persistence:       persistence,
 		StateManager:      stateManager,
 		hub:               hub,
 		controllerManager: controllerManager,
 		sessions:          make(map[string]*SAPSession),
+		httpClient:        &http.Client{Timeout: api.HTTPTimeout},
 	}
 }
 
@@ -52,30 +67,33 @@ func (h *Handler) SetEndpoints(endpoints []string) {
 	h.endpoints = endpoints
 }
 
-func (h *Handler) SetMemberlist(memberlist *memberlist.Memberlist) {
-	h.memberlist = memberlist
+func (h *Handler) GetInitialState() (map[string]any, error) {
+	data := h.StateManager.GetStateMap()
+	return data, nil
 }
 
-func (h *Handler) GetInitialState() (WebSocketResponse, error) {
-	data := h.StateManager.GetStateMap()
-	return WebSocketResponse{
-		Type: "initial_state",
-		Data: data,
-	}, nil
+func (h *Handler) SetClusterTransport(clusterTransport transport.ClusterInterface) {
+	h.clusterTransport = clusterTransport
 }
 
 func (h *Handler) HandleHTTPGet(key string) (any, error) {
+	type keyLookupResponse struct {
+		Exists bool `json:"exists"`
+		Value  any  `json:"value,omitempty"`
+		Error  any  `json:"error,omitempty"`
+	}
+
 	if key != "" {
 		value, exists := h.StateManager.Get(key)
 		if !exists {
-			return map[string]any{
-				"exists": false,
-				"error":  "key not found",
+			return keyLookupResponse{
+				Exists: false,
+				Error:  "key not found",
 			}, nil
 		}
-		return map[string]any{
-			"exists": true,
-			"value":  value,
+		return keyLookupResponse{
+			Exists: true,
+			Value:  value,
 		}, nil
 	}
 
@@ -85,18 +103,28 @@ func (h *Handler) HandleHTTPGet(key string) (any, error) {
 
 // HandleHTTPSet replaces the entire configuration state with the new data.
 func (h *Handler) HandleHTTPSet(update map[string]any) (any, error) {
+	type setResponse struct {
+		Status  string         `json:"status"`
+		Updates map[string]any `json:"updates"`
+	}
 
 	existing := h.StateManager.GetStateMap()
 
 	if reflect.DeepEqual(existing, update) {
-		return map[string]any{"status": "noop", "updates": nil}, nil
+		return setResponse{
+			Status:  "noop",
+			Updates: nil,
+		}, nil
 	}
 
 	if err := h.handleConfigUpdate(update, true); err != nil {
 		return nil, err
 	}
 
-	return map[string]any{"status": "success", "updates": update}, nil
+	return setResponse{
+		Status:  "success",
+		Updates: update,
+	}, nil
 }
 
 // HandleHTTPPatch updates only the specified fields.
@@ -137,17 +165,18 @@ func (h *Handler) HandleClearAllData() error {
 }
 
 func (h *Handler) GetMembers() []*memberlist.Node {
-	return h.memberlist.Members()
+	return h.clusterTransport.MemberListMembers()
 }
 
-func (h *Handler) GetServerInfo() (map[string]any, error) {
-	info := map[string]any{
-		"name":       "Fusion Server",
-		"version":    version.Version,
-		"commit":     version.Commit,
-		"build_time": version.BuildTime, "node_id": h.memberlist.LocalNode().Name,
-		"endpoints":    h.endpoints,
-		"cluster_size": len(h.memberlist.Members()),
+func (h *Handler) GetServerInfo() (any, error) {
+	info := serverInfoResponse{
+		Name:        "Fusion Server",
+		Version:     version.Version,
+		Commit:      version.Commit,
+		BuildTime:   version.BuildTime,
+		NodeID:      h.clusterTransport.LocalNode().Name,
+		Endpoints:   h.endpoints,
+		ClusterSize: len(h.clusterTransport.MemberListMembers()),
 	}
 
 	return info, nil
@@ -180,7 +209,7 @@ func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
 
 	message := api.NewNotifyMessage(
 		api.NotifyOpConfigUpdate,
-		h.memberlist.LocalNode().Name,
+		h.clusterTransport.LocalNode().Name,
 		api.WithConfigUpdate(configUpdate),
 	)
 

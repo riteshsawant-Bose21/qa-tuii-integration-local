@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fusion_launcher/features/processing_block/view/common/neumorphic_container.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_utils/deserialization_util.dart';
 
 import '../../dto/pb_item.dart';
@@ -8,33 +9,53 @@ import '../../dto/pb_item_param.dart';
 import '../../view/item_widget_builder.dart';
 
 class PBButton extends StatelessWidget {
-  const PBButton({super.key, required this.item, this.handler});
+  const PBButton({
+    super.key,
+    required this.item,
+    this.handler,
+    required this.semanticId,
+  });
   final PBItem item;
+  final String semanticId;
   final PBWidgetValueHandler? handler;
   @override
   Widget build(BuildContext context) {
-    final PBButtonParam data = (handler?.resolveForItem(item) ?? item.param) as PBButtonParam;
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final double mw = constraints.maxHeight;
-        final bool value = DeserializationUtil.boolDeserializer.deserialize(handler?.getValue(item)) ?? false;
-        return InkWell(
-          onTap: () {
-            handler?.onValueChanged(item, !value);
-          },
-          borderRadius: BorderRadius.circular(20),
-          child: NeumorphicContainer(
-            inner: value,
-            child: Center(
-              child: SvgPicture.asset(
-                value ? data.enableValueIcon ?? "assets/svg/volume.svg" : data.disabledValueIcon ?? "assets/svg/volume.svg",
-                height: mw * 0.5,
-                color: value ? Colors.black : Colors.grey,
+    final PBButtonParam data =
+        (handler?.resolveForItem(item) ?? item.param) as PBButtonParam;
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "pb_button_$semanticId",
+      ),
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final double mw = constraints.maxHeight;
+          final bool value =
+              DeserializationUtil.boolDeserializer.deserialize(
+                handler?.getValue(item),
+              ) ??
+              false;
+          return InkWell(
+            onTap: () {
+              handler?.onValueChanged(item, !value);
+            },
+            borderRadius: BorderRadius.circular(20),
+            child: NeumorphicContainer(
+              semanticId: "pb_button_layout",
+              inner: value,
+              child: Center(
+                child: SvgPicture.asset(
+                  value
+                      ? data.enableValueIcon ?? "assets/svg/volume.svg"
+                      : data.disabledValueIcon ?? "assets/svg/volume.svg",
+                  height: mw * 0.5,
+                  color: value ? Colors.black : Colors.grey,
+                ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

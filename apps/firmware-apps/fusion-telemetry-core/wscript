@@ -1,7 +1,10 @@
 import sys
+import os
+import subprocess
 from os import environ
 
 from waflib import Options
+from waflib import Errors
 
 APPNAME = 'telemetry_core'
 VERSION = environ.get('VERSION', 'LOCAL')
@@ -57,8 +60,20 @@ def configure(conf):
     conf.env.append_value('CXXFLAGS', ['-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE'])
 
     if conf.env['IS_MACOS']:
-        conf.env.append_value('INCLUDES', ['/opt/homebrew/include'])
-        conf.env.append_value('LIBPATH', ['/opt/homebrew/lib'])
+        conf.env.append_unique('INCLUDES', [
+            '/opt/homebrew/include',
+            '/usr/local/include',
+            '/opt/homebrew/opt/cppzmq/include',
+            '/usr/local/opt/cppzmq/include',
+            '/opt/homebrew/opt/zeromq/include',
+            '/usr/local/opt/zeromq/include',
+        ])
+        conf.env.append_unique('LIBPATH', [
+            '/opt/homebrew/lib',
+            '/usr/local/lib',
+            '/opt/homebrew/opt/zeromq/lib',
+            '/usr/local/opt/zeromq/lib',
+        ])
         conf.env.append_value('CXXFLAGS', '-DUSE_MAC_THREADS')
 
         # This is needed because of warnings in Boost property trees.
@@ -73,11 +88,56 @@ def configure(conf):
             # or define BOOST_BIND_GLOBAL_PLACEHOLDERS to retain the current behavior.’
             conf.env.append_value('CXXFLAGS', '-DBOOST_BIND_GLOBAL_PLACEHOLDERS')
 
+    # Fail early with a clear error when ZeroMQ C++ headers are unavailable.
+    conf.check_cxx(header_name='zmq.h', mandatory=True)
+    conf.check_cxx(header_name='zmq.hpp', mandatory=True)
+
+    conf.env.HAVE_GTEST = False
+    if not conf.env['is_cross_compile']:
+        conf.check_cfg(package='gtest', args='--cflags --libs',
+                       uselib_store='GTEST', mandatory=False)
+        if conf.env.LIB_GTEST:
+            conf.env.HAVE_GTEST = True
+
+    conf.env.append_value('LIBPATH', [conf.path.abspath() + '/../../../libs/firmware-libs/fusion-embedded-interface/build'])
+
 def build(bld):
-    bld(export_includes=['./include', './include/bosepro'], name='default-include')
+    bld(export_includes=['../../../libs/firmware-libs/fusion-embedded-interface/include', './include', './include/bosepro'], name='default-include')
+
+    libs = ['boost_program_options', 'fmt', 'jsoncpp', 'zmq', 'fusion_embedded_interface']
+    if not bld.env['IS_MACOS']:
+        libs.append('spdlog')
 
     bld.program(target=APPNAME,
                 source=bld.path.ant_glob(['src/*.cc']),
                 use=['default-include'],
                 # Note: pthread or mac-threads is determined above.
-                lib=['boost_program_options', 'spdlog', 'fmt', 'jsoncpp', 'zmq'])
+                lib=libs)
+
+    if bld.env.HAVE_GTEST:
+        bld.program(
+            target='telemetry_core_tests',
+            source=[
+                'src/telemetry_msg_handler.cc',
+                'src/telemetry_manager.cc',
+                'src/telemetry_utils.cc',
+                'tests/main.cc',
+                'tests/named_shared_memory_test.cc',
+                'tests/named_shared_memory_manager_test.cc',
+                'tests/telemetry_msg_handler_test.cc',
+            ],
+            use=['default-include'],
+            uselib=['GTEST'],
+            lib=['fusion_embedded_interface', 'fmt', 'zmq'],
+        )
+
+def test(ctx):
+    test_binary = os.path.join(ctx.path.abspath(), out, 'telemetry_core_tests')
+    if not os.path.exists(test_binary):
+        raise Errors.WafError(
+            f"Test binary not found at {test_binary}. Run './waf configure && ./waf' first."
+        )
+
+    result = subprocess.run([test_binary, '--gtest_color=yes'], check=False)
+    if result.returncode != 0:
+        raise Errors.WafError(f"Tests failed with exit code {result.returncode}")

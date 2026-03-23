@@ -121,6 +121,16 @@ See **Local.md** for detailed local debugging instructions.
 
 # Running a Distributed Cluster (Multipass)
 
+Make sure the build folder is empty, then run:
+
+Build: 
+
+```bash
+./build-fusion-server
+```
+
+This will create the `fusion-server_linux_arm64` binary inside the build folder.
+
 Launch:
 
 ```bash
@@ -204,20 +214,6 @@ BLE service identifiers for mobile provisioning:
 
 Used by the `fusion-setup` Flutter app to scan, connect, and bridge REST operations.
 
-# Binary Updates
-
-Upload:
-
-```bash
-curl -X POST   -F "binary=@build/fusion-server_linux_arm64"   -F "checksum=$(shasum -a 256 build/fusion-server_linux_arm64 | cut -d ' ' -f 1)"   http://192.168.2.100:8080/version
-```
-
-Rollback:
-
-```
-POST /version
-```
-
 # Metrics & Monitoring
 
 - `GET /metrics`
@@ -257,3 +253,22 @@ Run a subset:
 ./scripts/multipass/run-tests --snapshot
 ```
 
+# Troubleshooting macOS [ Tahoe ] and Multipass Issues
+
+## SSH Connection Failed: "No route to host"
+
+If you encounter the following error when setting up multipass instances:
+
+```
+Copying fusion-server binary...
+ssh connection failed: 'Failed to connect: No route to host'
+✗ Failed to copy fusion-server binary
+✗ Failed to setup instance fusion1
+```
+
+**Fix**: Enable "Local Network" permissions under Privacy & Security settings for both Multipass and VS Code in macOS System Preferences.
+Run UDP chaos mesh test:
+
+```bash
+./scripts/multipass/run-tests --udp-chaos
+```

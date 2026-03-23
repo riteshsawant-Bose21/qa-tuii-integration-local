@@ -1,6 +1,79 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+/// A neumorphic-style button for the Fusion design system.
+///
+/// The [NeumorphicButton] provides a soft, raised surface effect
+/// inspired by neumorphism principles. It visually responds to
+/// press interactions and supports disabled states.
+///
+/// This button is ideal for subtle, tactile UI interactions
+/// where depth and elevation feedback are important.
+///
+/// ### Features
+/// - Neumorphic raised and pressed visual effect
+/// - Press animation using touch feedback
+/// - Disabled state with reduced opacity
+/// - Customizable size and border radius
+/// - Supports text or custom child widgets
+/// - Theme-aware text styling
+/// - Semantic accessibility support
+///
+/// ### Example usage:
+/// ```dart
+/// NeumorphicButton(
+///   text: 'Login',
+///   onTap: () {
+///     // Handle login
+///   },
+///
+///   width: 200,
+///   height: 45,
+///
+///   borderRadius: 14,
+///
+///   isActive: true,
+///
+///   textStyle: const TextStyle(
+///     fontSize: 16,
+///     fontWeight: FontWeight.w600,
+///   ),
+/// )
+/// ```
+///
+/// ### Example: Custom Child
+/// ```dart
+/// NeumorphicButton(
+///   onTap: () {},
+///   width: 180,
+///   height: 40,
+///
+///   child: Row(
+///     mainAxisAlignment: MainAxisAlignment.center,
+///     children: const [
+///       Icon(Icons.favorite, size: 18),
+///       SizedBox(width: 6),
+///       Text('Like'),
+///     ],
+///   ),
+/// )
+/// ```
+///
+/// ### Example: Disabled State
+/// ```dart
+/// NeumorphicButton(
+///   text: 'Submit',
+///   onTap: () {},
+///   isActive: false,
+/// )
+/// ```
+///
+/// ### Notes
+/// - Either [text] or [child] must be provided.
+/// - When [isActive] is false, touch events are disabled.
+/// - The button shows reduced opacity in disabled mode.
+/// - Neumorphic elevation is removed when disabled.
+/// - Uses [FusionContainer] for consistent design language.
 class FusionNeumorphicButton extends StatefulWidget {
   final String? text;
   final double? width;
@@ -10,17 +83,25 @@ class FusionNeumorphicButton extends StatefulWidget {
   final TextStyle? textStyle;
   final Widget? child;
   final Color? color;
+  final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? margin;
+  final bool enabled;
+  final String semanticId;
 
   const FusionNeumorphicButton({
     super.key,
     this.text,
     this.width,
-    this.height = 35,
+    this.height,
     required this.onTap,
     this.borderRadius = 12,
     this.textStyle,
     this.child,
     this.color,
+    this.padding,
+    this.margin,
+    this.enabled = true,
+    required this.semanticId,
   });
 
   @override
@@ -35,11 +116,19 @@ class _FusionNeumorphicButtonState extends State<FusionNeumorphicButton> {
     assert(widget.text != null || widget.child != null);
 
     return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(SemanticTypes.button, "neumorphic_button_${widget.text}"),
+      isEnabled: widget.enabled,
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.button,
+        "neumorphic_button_${widget.semanticId}",
+      ),
       child: GestureDetector(
-        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapDown: (_) {
+          if (!widget.enabled) return;
+          setState(() => _isPressed = true);
+        },
         onTapCancel: () => setState(() => _isPressed = false),
         onTapUp: (_) {
+          if (!widget.enabled) return;
           setState(() => _isPressed = false);
           widget.onTap();
         },
@@ -53,11 +142,13 @@ class _FusionNeumorphicButtonState extends State<FusionNeumorphicButton> {
             height: widget.height,
             alignment: Alignment.center,
             color: widget.color,
+            padding: widget.padding,
+            margin: widget.margin,
             child:
                 widget.child ??
                 FusionAppText(
                   text: widget.text!,
-                  style: widget.textStyle ?? Theme.of(context).textTheme.bodyMedium,
+                  style: widget.textStyle ?? context.textTheme.bodyMedium,
                 ),
           ),
         ),

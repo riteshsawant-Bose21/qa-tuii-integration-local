@@ -150,13 +150,6 @@ start_remote_service() {
     fi
 }
 
-# Function to show service logs
-show_logs() {
-    local remote=$1
-    print_status "Showing recent service logs from $remote..."
-    ssh "$remote" "journalctl -u $SERVICE_NAME --no-pager -l -n 20"
-}
-
 # Main deployment function
 deploy() {
     local remote=$1
@@ -191,22 +184,15 @@ deploy() {
     
     echo
     print_success "Deployment completed successfully!"
-    echo
-    
-    # Ask if user wants to see logs
-    read -p "Would you like to see recent service logs? [y/N]: " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        show_logs "$remote"
-    fi
 }
 
 # Script usage
 usage() {
-    echo "Usage: $0 <remote-host>"
+    echo "Usage: $0 [options] <remote-host> [remote-host ...]"
     echo
     echo "Examples:"
     echo "  $0 root@192.168.1.3"
+    echo "  $0 root@192.168.1.3 root@192.168.1.4"
     echo
     echo "Options:"
     echo "  -h, --help    Show this help message"
@@ -214,7 +200,7 @@ usage() {
 }
 
 # Parse command line arguments
-SHOW_LOGS_AFTER=false
+REMOTE_HOSTS=()
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -222,37 +208,42 @@ while [[ $# -gt 0 ]]; do
             usage
             exit 0
             ;;
-        -l|--logs)
-            SHOW_LOGS_AFTER=true
-            shift
-            ;;
         -*)
             print_error "Unknown option: $1"
             usage
             exit 1
             ;;
         *)
-            REMOTE_HOST="$1"
+            REMOTE_HOSTS+=("$1")
             shift
             ;;
     esac
 done
 
-# Check if remote host is provided
-if [ -z "$REMOTE_HOST" ]; then
-    print_error "Remote host not specified"
+# Check if at least one remote host is provided
+if [ ${#REMOTE_HOSTS[@]} -eq 0 ]; then
+    print_error "At least one remote host must be specified"
     usage
     exit 1
 fi
 
 # Confirm deployment
-echo -e "${YELLOW}Warning: This will stop the service, rebuild, and deploy to $REMOTE_HOST${NC}"
-read -p "Continue? [y/N]: " -n 1 -r
+echo -e "${YELLOW}Warning: This will stop the service, rebuild, and deploy to:${NC}"
+for host in "${REMOTE_HOSTS[@]}"; do
+    echo "  - $host"
+done
+read -p "Do you want to deploy to the above hosts? [y/N]: " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     print_status "Deployment cancelled"
     exit 0
 fi
 
-# Run deployment
-deploy "$REMOTE_HOST"
+# Run deployment for each target
+for host in "${REMOTE_HOSTS[@]}"; do
+    echo
+    echo "######################################"
+    print_status "Deploying to $host"
+    echo "######################################"
+    deploy "$host"
+done

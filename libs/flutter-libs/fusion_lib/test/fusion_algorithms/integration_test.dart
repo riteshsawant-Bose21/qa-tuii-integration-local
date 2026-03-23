@@ -82,7 +82,7 @@ void main() {
       expect(SpeakerCatalog.getAllSpeakers(), isNotEmpty);
 
       // Test that amplifier data is available
-      expect(AmpCatalog.models, isNotEmpty);
+      expect(AmplifierCatalog.getAllAmplifiers(), isNotEmpty);
 
       // Test that device data is available
       expect(DeviceCatalog.getAllDevices(), isNotEmpty);

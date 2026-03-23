@@ -98,7 +98,10 @@ Future<String?> showShareDownloadPopup(BuildContext context) async {
 
                       // Divider
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
                         child: Container(
                           height: 0.5,
                           color: Colors.black.withOpacity(0.1),
@@ -216,9 +219,10 @@ Future<bool> downloadFilesLocally(
 }) async {
   try {
     // Let user pick a directory to save files
-    final String? selectedDirectory = await FilePicker.platform.getDirectoryPath(
-      dialogTitle: 'Select Download Location',
-    );
+    final String? selectedDirectory = await FilePicker.platform
+        .getDirectoryPath(
+          dialogTitle: 'Select Download Location',
+        );
 
     if (selectedDirectory == null) {
       // User cancelled
@@ -228,9 +232,12 @@ Future<bool> downloadFilesLocally(
     final Directory downloadDir = Directory(selectedDirectory);
 
     // Create a timestamped folder for this export
-    final String timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
+    final String timestamp =
+        DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
     final String exportFolderName = 'fusion_export_$timestamp';
-    final Directory exportDir = Directory(p.join(downloadDir.path, exportFolderName));
+    final Directory exportDir = Directory(
+      p.join(downloadDir.path, exportFolderName),
+    );
 
     await exportDir.create(recursive: true);
 
@@ -401,7 +408,8 @@ Future<void> handleExportLogs(BuildContext context) async {
     File? projectFile;
 
     // Get project file for download option
-    projectFile = await serviceLocator<ProjectViewModel>().getCurrentProjectFile();
+    projectFile =
+        await serviceLocator<ProjectViewModel>().getCurrentProjectFile();
     if (projectFile != null) {
       logsList.add(FusionUtils.generateXFile(projectFile));
     }
@@ -420,7 +428,8 @@ Future<void> handleExportLogs(BuildContext context) async {
       // Download locally - choose your preferred method:
 
       // Option 1: Download as separate files in a folder
-      if (context.mounted) await downloadFilesLocally(context, logsList, projectFile: projectFile);
+      if (context.mounted)
+        await downloadFilesLocally(context, logsList, projectFile: projectFile);
 
       // Option 2: Download as a single ZIP file
       // await downloadAsZip(context, logsList, projectFile: projectFile);
@@ -453,7 +462,11 @@ class __FeedbackWebViewState extends State<_FeedbackWebView> {
               javaScriptEnabled: true,
               javaScriptCanOpenWindowsAutomatically: true,
             ),
-            onReceivedError: (InAppWebViewController controller, WebResourceRequest request, WebResourceError error) {
+            onReceivedError: (
+              InAppWebViewController controller,
+              WebResourceRequest request,
+              WebResourceError error,
+            ) {
               FusionLogger.log(
                 tag: LogTag.exceptions,
                 message: "Error loading feedback form: ${error.description}",
@@ -577,10 +590,8 @@ class __FeedbackWebViewState extends State<_FeedbackWebView> {
             </script>
         
             <!-- Jira Issue Collector Script -->
-            <script
-              src="https://boseprofessional.atlassian.net/s/d41d8cd98f00b204e9800998ecf8427e-T/ribuf7/b/0/c95134bc67d3a521bb3f4331beb9b804/_/download/batch/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector.js?locale=en-US&collectorId=9740b101"
-              defer
-            ></script>
+            <script type="text/javascript" src="https://boseprofessional.atlassian.net/s/d41d8cd98f00b204e9800998ecf8427e-T/150dpd/b/0/c95134bc67d3a521bb3f4331beb9b804/_/download/batch/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector.js?locale=en-US&collectorId=f4d9fdc5"></script>
+
           </head>
         
           <body></body>

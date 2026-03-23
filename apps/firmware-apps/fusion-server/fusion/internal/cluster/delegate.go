@@ -1,8 +1,8 @@
 package cluster
 
 import (
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/tasks"
@@ -246,6 +246,9 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 			logger.Error("Error updating task: %v", err)
 		}
 
+	case api.NotifyOpDeviceUpdate:
+		d.handleDeviceUpdate(&message)
+
 	default:
 		logger.Error("Unknown message type: %q", message.Operation)
 	}
@@ -253,6 +256,21 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 
 func (d *ClusterDelegate) GetBroadcasts(overhead, limit int) [][]byte {
 	return nil
+}
+
+// handleDeviceUpdate processes device update notifications
+func (d *ClusterDelegate) handleDeviceUpdate(message *api.NotifyMessage) {
+	logger := logging.GetLogger()
+
+	if message.DeviceInfo == nil {
+		logger.Error("DeviceUpdate message with nil payload from %s", message.Node)
+		return
+	}
+
+	logger.Info("[DeviceUpdate] Received device update from %s for device %s",
+		message.Node, message.DeviceInfo.Id)
+
+	d.hub.BroadcastToObservers(message)
 }
 
 func (d *ClusterDelegate) LocalState(join bool) []byte {

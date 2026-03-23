@@ -42,9 +42,11 @@ class MDNSRetryScreen extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           FusionNeumorphicButton(
+            semanticId: 'retry_connection_button',
             text: 'Retry',
             onTap: onRetry,
             width: 0.25 * MediaQuery.of(context).size.width,
+            height: 35,
           ),
           const SizedBox(height: 16),
           Text(
@@ -64,6 +66,7 @@ class MDNSRetryScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           FusionSecondaryButton(
+            semanticId: 'mdns_configure_wireless_button',
             text: 'Configure Wireless Devices',
             onPressed: onConfigureWireless,
             width: 0.25 * MediaQuery.of(context).size.width,

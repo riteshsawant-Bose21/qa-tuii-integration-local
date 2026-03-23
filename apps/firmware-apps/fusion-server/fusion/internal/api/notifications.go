@@ -15,6 +15,7 @@ const (
 	NotifyOpAudioRemove  NotifyOp = "audio_remove"
 	NotifyOpAudioSync    NotifyOp = "audio_sync"
 	NotifyOpConfigUpdate NotifyOp = "config_update"
+	NotifyOpDeviceUpdate NotifyOp = "device_update"
 	NotifyOpNoop         NotifyOp = "no_op"
 	NotifyOpSnapActivate NotifyOp = "snapshot_activate"
 	NotifyOpSnapCreate   NotifyOp = "snapshot_create"
@@ -38,9 +39,9 @@ type NotifyMessage struct {
 	AudioSync         *AudioSyncUpdate
 	ConfigUpdate      *ConfigUpdate
 	ConfigValue       *ConfigValue
+	DeviceInfo        *DeviceInfo
 	SnapshotOperation *SnapshotOperation
 	Task              *Task
-	VersionUpdate     *VersionUpdate
 }
 
 func NewNotifyMessage(op NotifyOp, node string, builder func(*NotifyMessage)) *NotifyMessage {
@@ -143,11 +144,5 @@ func WithSnapshotOperation(operation *SnapshotOperation) func(*NotifyMessage) {
 func WithTask(task *Task) func(*NotifyMessage) {
 	return func(m *NotifyMessage) {
 		m.Task = task
-	}
-}
-
-func WithVersionUpdate(update *VersionUpdate) func(*NotifyMessage) {
-	return func(m *NotifyMessage) {
-		m.VersionUpdate = update
 	}
 }

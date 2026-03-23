@@ -40,6 +40,8 @@ class BluetoothRetryScreen extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           FusionNeumorphicButton(
+            semanticId: 'retry_connection_button',
+            height: 35,
             text: 'Retry connection',
             onTap: onRetry,
             width: 0.25 * MediaQuery.of(context).size.width,

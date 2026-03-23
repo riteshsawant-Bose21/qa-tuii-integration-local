@@ -8,6 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/service_locator.dart';
 import '../../core/utils/fusion_utils.dart';
+import '../processing_block/view/processing_blocks/widgets/disabled_widget_wrapper.dart';
 import '../user_account_setup/presentation/widgets/account_creation_success_popup.dart';
 
 class LauncherSignInPage extends StatelessWidget {
@@ -74,7 +75,10 @@ class _LauncherSignInPageView extends StatelessWidget {
                             'Welcome to\nFusion',
                             style: context.textTheme.displayLarge?.copyWith(
                               fontWeight: FontWeight.bold,
-                              fontSize: headlineFontSize > 120 ? 120 : headlineFontSize,
+                              fontSize:
+                                  headlineFontSize > 120
+                                      ? 120
+                                      : headlineFontSize,
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -82,7 +86,10 @@ class _LauncherSignInPageView extends StatelessWidget {
                             'Sign into your Fusion account on the right and\nget started creating dynamic audio experiences',
                             style: context.textTheme.bodyLarge?.copyWith(
                               color: FusionDarkColorPallette.medium50,
-                              fontSize: subHeadingFontSize > 16 ? 16 : subHeadingFontSize,
+                              fontSize:
+                                  subHeadingFontSize > 16
+                                      ? 16
+                                      : subHeadingFontSize,
                             ),
                           ),
                         ],
@@ -95,7 +102,9 @@ class _LauncherSignInPageView extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: <Widget>[
                           NeumorphicDarkButton(
-                            onTap: () => _handleAuthAction(context, isAuthenticated),
+                            onTap:
+                                () =>
+                                    _handleAuthAction(context, isAuthenticated),
                             height: 60,
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
@@ -106,11 +115,15 @@ class _LauncherSignInPageView extends StatelessWidget {
                                 children: <Widget>[
                                   Expanded(
                                     child: FusionAppText(
-                                      text: isAuthenticated ? 'Log out' : 'Log in',
-                                      style: context.textTheme.labelLarge?.copyWith(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                      text:
+                                          isAuthenticated
+                                              ? 'Log out'
+                                              : 'Log in',
+                                      style: context.textTheme.labelLarge
+                                          ?.copyWith(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                     ),
                                   ),
                                   Container(
@@ -122,7 +135,9 @@ class _LauncherSignInPageView extends StatelessWidget {
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Icon(
-                                      isAuthenticated ? LucideIcons.logOut : LucideIcons.arrowRight,
+                                      isAuthenticated
+                                          ? LucideIcons.logOut
+                                          : LucideIcons.arrowRight,
                                       color: Colors.white,
                                       size: 12,
                                     ),
@@ -138,10 +153,14 @@ class _LauncherSignInPageView extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.only(right: 10.0),
                             child: SemanticHelper.button(
-                              testId: SemanticHelper.createTestId(SemanticTypes.button, "skip_login_button"),
+                              testId: SemanticHelper.createTestId(
+                                SemanticTypes.button,
+                                "skip_login_button",
+                              ),
                               child: TextButton(
                                 onPressed: () {
-                                  serviceLocator<SessionViewModel>().skipLogin();
+                                  serviceLocator<SessionViewModel>()
+                                      .skipLogin();
                                   Navigator.pushNamedAndRemoveUntil(
                                     context,
                                     Routes.launcherHomePage,
@@ -192,7 +211,11 @@ class NeumorphicDarkTextField extends StatelessWidget {
   final Widget? suffix;
   final bool isObscured;
   final double? width;
+  final double? height;
   final EdgeInsetsGeometry? contentPadding;
+  final Color? color;
+  final bool enabled;
+  final TextStyle? textStyle;
 
   const NeumorphicDarkTextField({
     super.key,
@@ -207,48 +230,69 @@ class NeumorphicDarkTextField extends StatelessWidget {
     this.suffix,
     this.isObscured = false,
     this.width,
+    this.height,
     this.contentPadding,
+    this.enabled = true,
+    this.color,
+    this.textStyle,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(2.0),
-      child: FusionContainer(
-        width: width,
-        borderRadius: borderRadius,
-        // margin: const EdgeInsets.all(2),
-        // decoration: BoxDecoration(
-        //   boxShadow: <BoxShadow>[
-        //     const BoxShadow(color: Colors.black54, blurRadius: 1, offset: Offset(-2, -2), blurStyle: BlurStyle.inner),
-        //     const BoxShadow(color: Colors.white12, blurRadius: 1, offset: Offset(2, 2), blurStyle: BlurStyle.inner),
-        //     const BoxShadow(color: FusionDarkColorPallette.dark70, blurRadius: 4, blurStyle: BlurStyle.inner),
-        //   ],
-        //   borderRadius: BorderRadius.circular(borderRadius),
-        // ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(borderRadius),
-          child: TextFormField(
-            controller: controller,
-            onChanged: onChanged,
-            keyboardType: keyboardType,
-            validator: validator,
-            style: context.textTheme.labelLarge,
-            obscureText: isObscured,
-            decoration: InputDecoration(
-              prefixIcon: prefix,
-              prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-              suffixIcon: suffix,
-              suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-              filled: false,
-              isDense: true,
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              hintText: hintText,
-              hoverColor: Colors.transparent,
-              contentPadding: contentPadding ?? const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-              hintStyle: hintStyle ?? context.textTheme.labelLarge?.copyWith(color: Colors.grey),
+      child: DisabledWidgetWrapper(
+        isDisabled: !enabled,
+        child: FusionContainer(
+          width: width,
+          height: height,
+          borderRadius: borderRadius,
+          color: color,
+
+          // margin: const EdgeInsets.all(2),
+          // decoration: BoxDecoration(
+          //   boxShadow: <BoxShadow>[
+          //     const BoxShadow(color: Colors.black54, blurRadius: 1, offset: Offset(-2, -2), blurStyle: BlurStyle.inner),
+          //     const BoxShadow(color: Colors.white12, blurRadius: 1, offset: Offset(2, 2), blurStyle: BlurStyle.inner),
+          //     const BoxShadow(color: FusionDarkColorPallette.dark70, blurRadius: 4, blurStyle: BlurStyle.inner),
+          //   ],
+          //   borderRadius: BorderRadius.circular(borderRadius),
+          // ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(borderRadius),
+            child: TextFormField(
+              controller: controller,
+              onChanged: onChanged,
+              keyboardType: keyboardType,
+              validator: validator,
+              style: textStyle ?? context.textTheme.labelLarge,
+              obscureText: isObscured,
+              enabled: enabled,
+              decoration: InputDecoration(
+                prefixIcon: prefix,
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 0,
+                  minHeight: 0,
+                ),
+                suffixIcon: suffix,
+                suffixIconConstraints: const BoxConstraints(
+                  minWidth: 0,
+                  minHeight: 0,
+                ),
+                filled: false,
+                isDense: true,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                hintText: hintText,
+                hoverColor: Colors.transparent,
+                contentPadding:
+                    contentPadding ??
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                hintStyle:
+                    hintStyle ??
+                    context.textTheme.labelLarge?.copyWith(color: Colors.grey),
+              ),
             ),
           ),
         ),
@@ -292,6 +336,7 @@ class _NeumorphicDarkButtonState extends State<NeumorphicDarkButton> {
     return Padding(
       padding: const EdgeInsets.all(2.0),
       child: FusionNeumorphicButton(
+        semanticId: 'launcher_sign_in_button',
         onTap: widget.onTap ?? () {},
         width: widget.width,
         height: widget.height ?? 44,

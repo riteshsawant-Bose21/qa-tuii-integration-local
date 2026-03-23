@@ -12,14 +12,19 @@ class SemanticHelper {
   static Widget button({
     required String testId,
     required Widget child,
-    bool isActive=true,
+    String? label,
+    bool isEnabled = true,
+    bool isSelected = false,
   }) {
     return Semantics(
       identifier: testId,
       button: true,
       container: true,
-      enabled: isActive,
+      enabled: isEnabled,
+      label: label,
+      selected: isSelected,
       child: child,
+      checked: isSelected,
     );
   }
 
@@ -29,10 +34,29 @@ class SemanticHelper {
     required Widget child,
     bool explicitChildNodes = false,
     String? label,
+    String? value,
+    bool? isChecked,
+  }) {
+    return Semantics(
+      value: value,
+      identifier: testId,
+      container: true,
+      explicitChildNodes: explicitChildNodes,
+      label: label,
+      child: child,
+      checked: isChecked,
+    );
+  }
+
+  static Widget image({
+    required String testId,
+    required Widget child,
+    bool explicitChildNodes = false,
+    String? label,
   }) {
     return Semantics(
       identifier: testId,
-      container: true,
+      image: true,
       explicitChildNodes: explicitChildNodes,
       label: label,
       child: child,
@@ -50,9 +74,40 @@ class SemanticHelper {
     return Semantics(
       container: true,
       identifier: testId,
-      toggled: value,
+      checked: value,
       label: label,
       excludeSemantics: excludeChildSemantics,
+      child: child,
+    );
+  }
+
+  // Radio controls
+  static Widget radio({
+    required String testId,
+    required bool value,
+    required Widget child,
+    String? label,
+    bool excludeChildSemantics = true,
+  }) {
+    return Semantics(
+      container: true,
+      identifier: testId,
+      selected: value,
+      label: label,
+      excludeSemantics: excludeChildSemantics,
+      child: child,
+    );
+  }
+
+  static Widget radioGroup({
+    required String testId,
+    required Widget child,
+    String? label,
+  }) {
+    return Semantics(
+      container: true,
+      identifier: testId,
+      label: label,
       child: child,
     );
   }
@@ -94,13 +149,82 @@ class SemanticHelper {
     required String testId,
     required Widget child,
     String? label,
+    String? value,
   }) {
     return Semantics(
       container: true,
       identifier: testId,
       label: label,
+      value: value,
       readOnly: true,
       child: child,
+    );
+  }
+
+  static Widget textInput({
+    required String testId,
+    required Widget child,
+    String? label,
+    bool? readonly,
+    bool? enabled,
+    bool? focused,
+    String? value,
+    bool? live,
+  }) {
+    return Semantics(
+      identifier: testId,
+      label: label,
+      readOnly: readonly,
+      enabled: enabled,
+      focused: focused,
+      value: value,
+      child: child,
+      liveRegion: live,
+    );
+  }
+
+  static Widget dropdown({
+    required String testId,
+    required Widget child,
+    String? value,
+  }) {
+    return Semantics(
+      button: true,
+      identifier: testId,
+      value: value,
+      child: child,
+    );
+  }
+
+  static Widget popupButton({
+    required String testId,
+    required Widget child,
+    bool? enabled,
+    bool? blur,
+  }) {
+    return Semantics(
+      button: true,
+      identifier: testId,
+      enabled: enabled,
+      child: child,
+      focusable: blur,
+    );
+  }
+
+  static Widget table({
+    required String testId,
+    required Widget child,
+    bool? enabled,
+    bool? blur,
+    String? value,
+  }) {
+    return Semantics(
+      button: true,
+      identifier: testId,
+      enabled: enabled,
+      child: child,
+      value: value,
+      focusable: blur,
     );
   }
 }

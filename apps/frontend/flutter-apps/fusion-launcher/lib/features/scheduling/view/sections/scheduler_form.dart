@@ -2,7 +2,6 @@ import 'package:calendar_date_picker2/calendar_date_picker2.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/schematic_properties.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -49,10 +48,17 @@ class SchedulerForm extends StatelessWidget {
                     const SizedBox(
                       width: 10,
                     ),
-                    FusionAppText(text: initial == null ? "Create Schedule" : "Edit Schedule", style: context.textTheme.bodyMedium),
+                    FusionAppText(
+                      text:
+                          initial == null ? "Create Schedule" : "Edit Schedule",
+                      style: context.textTheme.bodyMedium,
+                    ),
                     const Spacer(),
                     SemanticHelper.button(
-                      testId: SemanticHelper.createTestId(SemanticTypes.button, "scheduler_form_close_button"),
+                      testId: SemanticHelper.createTestId(
+                        SemanticTypes.button,
+                        "scheduler_form_close_button",
+                      ),
                       child: IconButton(
                         icon: const Icon(
                           Icons.close,
@@ -69,7 +75,11 @@ class SchedulerForm extends StatelessWidget {
               ),
               Flexible(
                 child: Consumer<SchedulerFormViewModel>(
-                  builder: (BuildContext context, SchedulerFormViewModel viewModel, Widget? child) {
+                  builder: (
+                    BuildContext context,
+                    SchedulerFormViewModel viewModel,
+                    Widget? child,
+                  ) {
                     return Container(
                       padding: const EdgeInsets.all(15.0),
                       decoration: BoxDecoration(
@@ -79,9 +89,18 @@ class SchedulerForm extends StatelessWidget {
                           bottomRight: Radius.circular(12),
                         ),
                         border: Border(
-                          bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
-                          left: BorderSide(width: 1, color: context.colorScheme.elevation2),
-                          right: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                          bottom: BorderSide(
+                            width: 1,
+                            color: context.colorScheme.elevation2,
+                          ),
+                          left: BorderSide(
+                            width: 1,
+                            color: context.colorScheme.elevation2,
+                          ),
+                          right: BorderSide(
+                            width: 1,
+                            color: context.colorScheme.elevation2,
+                          ),
                         ),
                       ),
 
@@ -96,30 +115,57 @@ class SchedulerForm extends StatelessWidget {
                                 children: <Widget>[
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: <Widget>[
                                         /// Zone Name Field
                                         FusionAppText(
                                           text: "Schedule Name",
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodySmall?.copyWith(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
                                         const SizedBox(height: 8),
                                         FusionTextField(
+                                          semanticFieldId:
+                                              'scheduler_form_name_field',
                                           controller: viewModel.name,
                                           hintText: "Enter schedule name",
                                           decoration: InputDecoration(
-                                            hintStyle: Theme.of(context).inputDecorationTheme.hintStyle,
+                                            hintStyle:
+                                                Theme.of(context)
+                                                    .inputDecorationTheme
+                                                    .hintStyle,
                                             counterText: '',
-                                            fillColor: context.colorScheme.elevation2,
+                                            fillColor:
+                                                context.colorScheme.elevation2,
                                             filled: true,
-                                            border: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
-                                            enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
-                                            focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+                                            border: const OutlineInputBorder(
+                                              borderSide: BorderSide(
+                                                color: Colors.transparent,
+                                              ),
+                                            ),
+                                            enabledBorder:
+                                                const OutlineInputBorder(
+                                                  borderSide: BorderSide(
+                                                    color: Colors.transparent,
+                                                  ),
+                                                ),
+                                            focusedBorder:
+                                                const OutlineInputBorder(
+                                                  borderSide: BorderSide(
+                                                    color: Colors.transparent,
+                                                  ),
+                                                ),
                                             isDense: true,
-                                            contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  vertical: 8,
+                                                  horizontal: 12,
+                                                ),
                                           ),
                                           onChanged: (String value) {},
                                         ),
@@ -136,7 +182,9 @@ class SchedulerForm extends StatelessWidget {
                                 children: <Widget>[
                                   FusionAppText(
                                     text: "Color",
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall?.copyWith(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -147,23 +195,38 @@ class SchedulerForm extends StatelessWidget {
                                   SizedBox(
                                     width: 400,
                                     child: SemanticHelper.container(
-                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "scheduler_form_color_grid"),
+                                      testId: SemanticHelper.createTestId(
+                                        SemanticTypes.container,
+                                        "scheduler_form_color_grid",
+                                      ),
                                       child: GridView.builder(
                                         shrinkWrap: true,
-                                        physics: const NeverScrollableScrollPhysics(),
-                                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                                          maxCrossAxisExtent: 20,
-                                          crossAxisSpacing: 12,
-                                          mainAxisSpacing: 12,
-                                        ),
+                                        physics:
+                                            const NeverScrollableScrollPhysics(),
+                                        gridDelegate:
+                                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                                              maxCrossAxisExtent: 20,
+                                              crossAxisSpacing: 12,
+                                              mainAxisSpacing: 12,
+                                            ),
                                         itemCount: Zone.zoneColors.length,
-                                        itemBuilder: (BuildContext context, int index) {
-                                          final String hexCode = Zone.zoneColors[index];
-                                          final Color color = hexToColor(hexCode);
-                                          final bool isSelected = viewModel.color == hexCode;
+                                        itemBuilder: (
+                                          BuildContext context,
+                                          int index,
+                                        ) {
+                                          final String hexCode =
+                                              Zone.zoneColors[index];
+                                          final Color color = hexToColor(
+                                            hexCode,
+                                          );
+                                          final bool isSelected =
+                                              viewModel.color == hexCode;
 
                                           return SemanticHelper.container(
-                                            testId: SemanticHelper.createTestId(SemanticTypes.container, "scheduler_form_color_option_$index"),
+                                            testId: SemanticHelper.createTestId(
+                                              SemanticTypes.container,
+                                              "scheduler_form_color_option_$index",
+                                            ),
                                             child: GestureDetector(
                                               onTap: () {
                                                 viewModel.color = hexCode;
@@ -171,11 +234,15 @@ class SchedulerForm extends StatelessWidget {
                                               child: Container(
                                                 decoration: BoxDecoration(
                                                   color: color,
-                                                  borderRadius: BorderRadius.circular(4),
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
                                                   border:
                                                       isSelected
                                                           ? Border.all(
-                                                            color: context.colorScheme.primaryBlack,
+                                                            color:
+                                                                context
+                                                                    .colorScheme
+                                                                    .primaryBlack,
                                                             width: 2,
                                                           )
                                                           : null,
@@ -184,17 +251,27 @@ class SchedulerForm extends StatelessWidget {
                                                     isSelected
                                                         ? SemanticHelper.button(
                                                           testId: SemanticHelper.createTestId(
-                                                            SemanticTypes.button,
+                                                            SemanticTypes
+                                                                .button,
                                                             "scheduler_form_color_selected_icon_$index",
                                                           ),
                                                           child: Container(
                                                             decoration: BoxDecoration(
-                                                              color: context.colorScheme.primaryBlack.withOpacity(0.2),
-                                                              borderRadius: BorderRadius.circular(4),
+                                                              color: context
+                                                                  .colorScheme
+                                                                  .primaryBlack
+                                                                  .withOpacity(
+                                                                    0.2,
+                                                                  ),
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    4,
+                                                                  ),
                                                             ),
                                                             child: const Icon(
                                                               Icons.check,
-                                                              color: Colors.white,
+                                                              color:
+                                                                  Colors.white,
                                                               size: 16,
                                                             ),
                                                           ),
@@ -214,7 +291,11 @@ class SchedulerForm extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
 
                                 children: <Widget>[
-                                  FusionAppText(text: "Recurrence", style: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500)),
+                                  FusionAppText(
+                                    text: "Recurrence",
+                                    style: context.textTheme.bodySmall
+                                        ?.copyWith(fontWeight: FontWeight.w500),
+                                  ),
                                   const SizedBox(height: 8),
                                   RadioGroup<RecurrenceType>(
                                     groupValue: viewModel.recurrenceType,
@@ -225,18 +306,33 @@ class SchedulerForm extends StatelessWidget {
                                     },
                                     child: Row(
                                       children: <Widget>[
-                                        for (final RecurrenceType type in RecurrenceType.values)
+                                        for (final RecurrenceType type
+                                            in RecurrenceType.values)
                                           Padding(
-                                            padding: const EdgeInsets.only(right: 12.0),
+                                            padding: const EdgeInsets.only(
+                                              right: 12.0,
+                                            ),
                                             child: Row(
                                               children: <Widget>[
                                                 Radio<RecurrenceType>(
                                                   value: type,
-                                                  fillColor: WidgetStateColor.resolveWith((Set<WidgetState> states) => context.colorScheme.iconWhite),
+                                                  fillColor:
+                                                      WidgetStateColor.resolveWith(
+                                                        (
+                                                          Set<WidgetState>
+                                                          states,
+                                                        ) =>
+                                                            context
+                                                                .colorScheme
+                                                                .iconWhite,
+                                                      ),
                                                 ),
                                                 Text(
                                                   type.label,
-                                                  style: context.textTheme.bodySmall,
+                                                  style:
+                                                      context
+                                                          .textTheme
+                                                          .bodySmall,
                                                 ),
                                               ],
                                             ),
@@ -284,14 +380,18 @@ class SchedulerForm extends StatelessWidget {
                                         return null;
                                       },
                                     ),
-                                    if (viewModel.recurrenceType != RecurrenceType.none) ...<Widget>[
+                                    if (viewModel.recurrenceType !=
+                                        RecurrenceType.none) ...<Widget>[
                                       const SizedBox(width: 12),
                                       _DatePickerField(
                                         validator: (DateTime? value) {
                                           if (viewModel.endDate == null) {
-                                            return "Please select an end date";
+                                            return null;
                                           }
-                                          if (viewModel.startDate != null && viewModel.endDate!.isBefore(viewModel.startDate!)) {
+                                          if (viewModel.startDate != null &&
+                                              viewModel.endDate!.isBefore(
+                                                viewModel.startDate!,
+                                              )) {
                                             return "End date cannot be before start date";
                                           }
                                           return null;
@@ -318,7 +418,8 @@ class SchedulerForm extends StatelessWidget {
                               AnimatedSize(
                                 duration: const Duration(milliseconds: 200),
                                 child: switch (viewModel.recurrenceType) {
-                                  RecurrenceType.weekly => const _WeeklyDaySelection(),
+                                  RecurrenceType.weekly =>
+                                    const _WeeklyDaySelection(),
                                   _ => const SizedBox(),
                                 },
                               ),
@@ -327,7 +428,7 @@ class SchedulerForm extends StatelessWidget {
                                 children: <Widget>[
                                   FusionOutlinedButton(
                                     textStyle: context.textTheme.bodySmall,
-
+                                    accessLabel: 'scheduler_form_cancel_button',
                                     label: "Cancel",
                                     onTap: () {
                                       Navigator.pop(context);
@@ -336,18 +437,32 @@ class SchedulerForm extends StatelessWidget {
                                   const SizedBox(width: 12),
                                   FusionButton(
                                     label: "Done",
+                                    accessLabel: 'scheduler_form_done_button',
                                     isActive: viewModel.canEnableSubmit,
-                                    textStyle: context.textTheme.bodySmall?.copyWith(
-                                      color: viewModel.canEnableSubmit ? context.colorScheme.primaryWhite : context.colorScheme.primaryWhite.withAlpha(120),
-                                    ),
+                                    textStyle: context.textTheme.bodySmall
+                                        ?.copyWith(
+                                          color:
+                                              viewModel.canEnableSubmit
+                                                  ? context
+                                                      .colorScheme
+                                                      .primaryWhite
+                                                  : context
+                                                      .colorScheme
+                                                      .primaryWhite
+                                                      .withAlpha(120),
+                                        ),
                                     onTap: () async {
                                       try {
-                                        final bool value = await viewModel.submit(initial);
+                                        final bool value = await viewModel
+                                            .submit(initial);
                                         if (value) {
                                           Navigator.pop(context);
                                         }
                                       } catch (e) {
-                                        FusionToast.error(context, message: e.toString());
+                                        FusionToast.error(
+                                          context,
+                                          message: e.toString(),
+                                        );
                                       }
                                     },
                                   ),
@@ -370,7 +485,11 @@ class SchedulerForm extends StatelessWidget {
     );
   }
 
-  static Future<void> show(BuildContext context, SchedulerViewmodel viewModel, {ScheduleConfig? initial}) async {
+  static Future<void> show(
+    BuildContext context,
+    SchedulerViewmodel viewModel, {
+    ScheduleConfig? initial,
+  }) async {
     await showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -415,7 +534,10 @@ class _TimePicker extends StatelessWidget {
             children: <Widget>[
               InkWell(
                 onTap: () async {
-                  final TimeOfDay? changed = await showTimePicker(context: context, initialTime: time);
+                  final TimeOfDay? changed = await showTimePicker(
+                    context: context,
+                    initialTime: time,
+                  );
                   if (changed != null && onChanged != null) {
                     onChanged!(changed);
                   }
@@ -424,7 +546,8 @@ class _TimePicker extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 20.0),
                   child: Center(
                     child: FusionAppText(
-                      text: '${(time.hourOfPeriod).toString().padLeft(2, '0')}  :  ${time.minute.toString().padLeft(2, '0')}',
+                      text:
+                          '${(time.hourOfPeriod).toString().padLeft(2, '0')}  :  ${time.minute.toString().padLeft(2, '0')}',
                       style: context.textTheme.labelLarge,
                     ),
                   ),
@@ -448,7 +571,10 @@ class _TimePicker extends StatelessWidget {
                         },
                         child: Container(
                           decoration: BoxDecoration(
-                            color: !isAM ? Colors.transparent : context.colorScheme.primaryBlack,
+                            color:
+                                !isAM
+                                    ? Colors.transparent
+                                    : context.colorScheme.primaryBlack,
                             border: Border(
                               left: BorderSide(color: borderColor),
                               bottom: BorderSide(color: borderColor),
@@ -457,7 +583,9 @@ class _TimePicker extends StatelessWidget {
                           child: Center(
                             child: Text(
                               "AM",
-                              style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.textPrimary),
+                              style: context.textTheme.bodySmall?.copyWith(
+                                color: context.colorScheme.textPrimary,
+                              ),
                             ),
                           ),
                         ),
@@ -476,13 +604,20 @@ class _TimePicker extends StatelessWidget {
                         },
                         child: Container(
                           decoration: BoxDecoration(
-                            border: Border(left: BorderSide(color: borderColor)),
-                            color: !isAM ? context.colorScheme.primaryBlack : Colors.transparent,
+                            border: Border(
+                              left: BorderSide(color: borderColor),
+                            ),
+                            color:
+                                !isAM
+                                    ? context.colorScheme.primaryBlack
+                                    : Colors.transparent,
                           ),
                           child: Center(
                             child: Text(
                               "PM",
-                              style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.textPrimary),
+                              style: context.textTheme.bodySmall?.copyWith(
+                                color: context.colorScheme.textPrimary,
+                              ),
                             ),
                           ),
                         ),
@@ -505,19 +640,30 @@ class _WeeklyDaySelection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<SchedulerFormViewModel>(
-      builder: (BuildContext context, SchedulerFormViewModel viewModel, Widget? child) {
+      builder: (
+        BuildContext context,
+        SchedulerFormViewModel viewModel,
+        Widget? child,
+      ) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
 
           children: <Widget>[
-            FusionAppText(text: "On Days", style: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500)),
+            FusionAppText(
+              text: "On Days",
+              style: context.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
             Row(
               spacing: 6,
               children: <Widget>[
                 for (final RecurrenceDay day in RecurrenceDay.values)
                   Builder(
                     builder: (BuildContext context) {
-                      final bool isSelected = viewModel.recurrenceDays.contains(day);
+                      final bool isSelected = viewModel.recurrenceDays.contains(
+                        day,
+                      );
                       return Column(
                         children: <Widget>[
                           Checkbox(
@@ -529,11 +675,12 @@ class _WeeklyDaySelection extends StatelessWidget {
                                 viewModel.addRecurrenceDay(day);
                               }
                             },
-                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
                             visualDensity: VisualDensity.compact,
-                            side: MaterialStateBorderSide.resolveWith(
+                            side: WidgetStateBorderSide.resolveWith(
                               (Set<WidgetState> states) {
-                                if (states.contains(MaterialState.selected)) {
+                                if (states.contains(WidgetState.selected)) {
                                   return BorderSide(
                                     color: context.colorScheme.elevation4,
                                     width: 1,
@@ -568,7 +715,14 @@ class _WeeklyDaySelection extends StatelessWidget {
 }
 
 class _DatePickerField extends StatelessWidget {
-  const _DatePickerField({super.key, required this.label, this.selectedDate, this.onDateSelected, this.minDate, this.validator});
+  const _DatePickerField({
+    super.key,
+    required this.label,
+    this.selectedDate,
+    this.onDateSelected,
+    this.minDate,
+    this.validator,
+  });
   final String label;
   final DateTime? selectedDate;
   final DateTime? minDate;
@@ -594,7 +748,12 @@ class _DatePickerField extends StatelessWidget {
             Container(
               decoration: BoxDecoration(
                 color: context.colorScheme.elevation1,
-                border: Border.all(color: state.hasError ? Colors.red : context.colorScheme.elevation4),
+                border: Border.all(
+                  color:
+                      state.hasError
+                          ? Colors.red
+                          : context.colorScheme.elevation4,
+                ),
                 borderRadius: BorderRadius.circular(14),
               ),
               clipBehavior: Clip.hardEdge,
@@ -616,8 +775,12 @@ class _DatePickerField extends StatelessWidget {
 
                               selectedDayHighlightColor: Colors.black,
                               daySplashColor: Colors.black12,
-                              firstDate: minDate ?? DateTime.now(), //.subtract(const Duration(hours: 24)),
-                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                              firstDate:
+                                  minDate ??
+                                  DateTime.now(), //.subtract(const Duration(hours: 24)),
+                              lastDate: DateTime.now().add(
+                                const Duration(days: 365),
+                              ),
                             ),
                             displayedMonthDate: selectedDate,
                             value: <DateTime?>[selectedDate],
@@ -643,17 +806,26 @@ class _DatePickerField extends StatelessWidget {
                 child: Container(
                   alignment: Alignment.center,
                   // constraints: const BoxConstraints(maxWidth: 300),
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 12,
+                  ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.center,
                     spacing: 18,
                     children: <Widget>[
                       Text(
-                        selectedDate != null ? DateFormat('dd-MM-yyyy').format(selectedDate!) : "Select Date",
+                        selectedDate != null
+                            ? DateFormat('dd-MM-yyyy').format(selectedDate!)
+                            : "Select Date",
                         style: context.textTheme.bodySmall,
                       ),
-                      Icon(Icons.calendar_month, size: 16, color: context.colorScheme.iconWhite),
+                      Icon(
+                        Icons.calendar_month,
+                        size: 16,
+                        color: context.colorScheme.iconWhite,
+                      ),
                     ],
                   ),
                 ),

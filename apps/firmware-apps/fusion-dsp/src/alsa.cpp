@@ -73,7 +73,7 @@ public:
     void write(const float *buffer, int samples);
 
 
-    /// Called by the deferred_open_Ttask to open the ALSA device if it is not
+    /// Called by the deferred_open_task to open the ALSA device if it is not
     /// immediately available when the block is initialized.
     static void deferred_open(void *obj);
 
@@ -86,6 +86,13 @@ private:
         void (*convert_write)(const float *src, uint8_t *dst,
                               int channels, int samples);
     } AlsaFormat;
+
+    typedef enum {
+        DEVICE_STATE_CLOSED,
+        DEVICE_STATE_IDLE,
+        DEVICE_STATE_STREAMING,
+        DEVICE_STATE_UNKNOWN,
+    } State;
 
     static void convert_read_float_le(const uint8_t *src, float *dst,
                                       int channels, int samples);
@@ -139,7 +146,7 @@ private:
     static std::vector<AlsaFormat> alsa_formats;
     std::string device_name;
     bool is_input;
-    bool is_open = false;
+    State current_state = DEVICE_STATE_CLOSED;
     bosepro::AudioSubtask deferred_open_task;
     static pthread_mutex_t open_mutex;
 
@@ -150,10 +157,21 @@ private:
 
     void open_device();
     void close_device();
+    bool is_open();
     void set_hw_params();
     void set_sw_params();
     int get_device_number(const std::string &name);
 };
+
+
+#define ALSA_DEVICE_SET_STATE(new_state, fmt, ...) \
+    do { \
+        if ((new_state) != current_state) \
+        { \
+            current_state = (new_state); \
+            SPDLOG_DEBUG(fmt, ##__VA_ARGS__); \
+        } \
+    } while (0)
 
 std::vector<AlsaDevice::AlsaFormat> AlsaDevice::alsa_formats = {
         {SND_PCM_FORMAT_FLOAT_LE, 4, convert_read_float_le, convert_write_float_le},
@@ -183,14 +201,16 @@ private:
     bosepro::DspStateMemory<servo::Servo> servo;
     bosepro::DspTempMemory<float []> asrc_in_buf;
     bosepro::DspTempMemory<float []> asrc_out_buf;
+    bool use_asrc;
     int channels;
     int read_samples;
-    int target_depth;
-    int max_depth;
-    int min_depth;
+    int_fast32_t target_depth;
+    int_fast32_t max_depth;
+    int_fast32_t min_depth;
     double min_ratio;
     double max_ratio;
-    static const int_fast32_t MIN_DEPTH = 128;
+    double base_ratio;
+    static const int_fast32_t MIN_DEPTH = 1024;
 
     ALGORITHM_DECLARE(AlsaIn);
 };
@@ -210,14 +230,15 @@ private:
     bosepro::DspStateMemory<servo::Servo> servo;
     bosepro::DspTempMemory<float []> asrc_in_buf;
     bosepro::DspTempMemory<float []> asrc_out_buf;
+    bool use_asrc;
     int channels;
     int max_write_samples;
-    int target_depth;
-    int max_depth;
-    int min_depth;
+    int_fast32_t target_depth;
+    int_fast32_t max_depth;
+    int_fast32_t min_depth;
     double min_ratio;
     double max_ratio;
-    static const int_fast32_t MIN_DEPTH = 128;
+    static const int_fast32_t MIN_DEPTH = 1024;
 
     ALGORITHM_DECLARE(AlsaOut);
 };
@@ -255,7 +276,8 @@ void AlsaDevice::open_device()
     // If the device name starts with "hw:", it's a full device name that we
     // can open immediately.  If it doesn't, it's the name of a fusion connect
     // stream, and we need to look up its device number first.
-    if (device_name.compare(0, 3, "hw:") != 0)
+    if ((device_name.compare(0, 3, "hw:") != 0)
+        && (device_name.compare(0, 9, "bluealsa:") != 0))
     {
         SPDLOG_DEBUG("Getting device number for: {}", device_name);
         int device_number = get_device_number(device_name);
@@ -283,7 +305,6 @@ void AlsaDevice::open_device()
         return;
     }
 
-    SPDLOG_DEBUG("Setting HW/SW params: {}", device_name);
     set_hw_params();
     set_sw_params();
 
@@ -292,10 +313,10 @@ void AlsaDevice::open_device()
     {
         SPDLOG_ERROR("Failed to prepare ALSA device: {}", snd_strerror(error));
     }
-
-    SPDLOG_DEBUG("Opened ALSA device: {}", device_name);
-    is_open = true;
     pthread_mutex_unlock(&open_mutex);
+
+    ALSA_DEVICE_SET_STATE(DEVICE_STATE_STREAMING, "Opened device {}",
+                          device_name.c_str());
 }
 
 
@@ -316,7 +337,8 @@ void AlsaDevice::close_device()
         snd_pcm_sw_params_free(sw_params);
     }
 
-    is_open = false;
+    ALSA_DEVICE_SET_STATE(DEVICE_STATE_CLOSED, "Closed device {}",
+                          device_name.c_str());
 }
 
 
@@ -327,9 +349,15 @@ void AlsaDevice::deferred_open(void *obj)
 }
 
 
+bool AlsaDevice::is_open()
+{
+    return current_state != DEVICE_STATE_CLOSED;
+}
+
+
 int AlsaDevice::get_buffer_depth()
 {
-    if (!is_open)
+    if (!is_open())
     {
         return -1;
     }
@@ -338,8 +366,9 @@ int AlsaDevice::get_buffer_depth()
 
     if (depth < 0)
     {
-        SPDLOG_ERROR("Failed to get ALSA buffer depth: {}",
-                snd_strerror(depth));
+        ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                              "Failed to get {} buffer depth: {}",
+                              device_name.c_str(), snd_strerror(depth));
         return 0;
     }
 
@@ -349,7 +378,7 @@ int AlsaDevice::get_buffer_depth()
 
 int AlsaDevice::adjust_buffer_depth(int samples)
 {
-    if (!is_open)
+    if (!is_open())
     {
         return 0;
     }
@@ -362,15 +391,17 @@ int AlsaDevice::adjust_buffer_depth(int samples)
 
         if (forwarded < 0)
         {
-            SPDLOG_ERROR("Failed to adjust ALSA buffer depth: {}",
-                    snd_strerror(forwarded));
+            ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                                  "Failed to forward {} buffer depth: {}",
+                                  device_name.c_str(), snd_strerror(forwarded));
             return 0;
         }
 
         if (forwarded != -samples)
         {
-            SPDLOG_ERROR("Unexpected number of samples forwarded: {}",
-                    forwarded);
+            ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                                  "Unexpected samples forwarded for {}: {} vs {}",
+                                  device_name.c_str(), forwarded, -samples);
         }
     }
     else
@@ -379,15 +410,17 @@ int AlsaDevice::adjust_buffer_depth(int samples)
 
         if (rewound < 0)
         {
-            SPDLOG_ERROR("Failed to adjust ALSA buffer depth: {}",
-                    snd_strerror(rewound));
+            ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                                  "Failed to rewind {} buffer depth: {}",
+                                  device_name.c_str(), snd_strerror(rewound));
             return 0;
         }
 
         if (rewound != samples)
         {
-            SPDLOG_DEBUG("Unexpected number of samples rewound: {}",
-                    rewound);
+            ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                                  "Unexpected samples rewound for {}: {} vs {}",
+                                  device_name.c_str(), rewound, samples);
         }
     }
 
@@ -397,7 +430,7 @@ int AlsaDevice::adjust_buffer_depth(int samples)
 
 int AlsaDevice::read(float *buffer, int samples)
 {
-    if (!is_open)
+    if (!is_open())
     {
         deferred_open_task.tick();
         std::memset(buffer, 0, samples * channels * sizeof(float));
@@ -406,6 +439,7 @@ int AlsaDevice::read(float *buffer, int samples)
 
     if (samples > max_transfer_size)
     {
+        // If this ever happens, it's a bug, not a problem with the device.
         SPDLOG_ERROR("Requested read size {} exceeds maximum {}",
                      samples, max_transfer_size);
         return 0;
@@ -415,23 +449,28 @@ int AlsaDevice::read(float *buffer, int samples)
 
     if (res < 0)
     {
-        if (res == -EBADFD)
+        if (res == -EBADFD || res == -ENODEV)
         {
-            SPDLOG_INFO("ALSA device is gone, closing");
             close_device();
             std::memset(buffer, 0, samples * channels * sizeof(float));
             return samples;
         }
 
-        SPDLOG_ERROR("Failed to read from ALSA device: {}",
-                snd_strerror(res));
+        ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                              "Unable to read from {}: {}", device_name.c_str(),
+                              snd_strerror(res));
         return 0;
     }
-
-    if (res != samples)
+    else if (res != samples)
     {
-        SPDLOG_ERROR("Unexpected number of samples read: {}",
-                res);
+        ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                              "Unexpected samples read from {}: {} vs {}",
+                              device_name.c_str(), res, samples);
+    }
+    else
+    {
+        ALSA_DEVICE_SET_STATE(DEVICE_STATE_STREAMING,
+                              "Device {} resumed reading", device_name.c_str());
     }
 
     convert_read(sample_buffer.get(), buffer, channels, samples);
@@ -442,7 +481,7 @@ int AlsaDevice::read(float *buffer, int samples)
 
 void AlsaDevice::write(const float *buffer, int samples)
 {
-    if (!is_open)
+    if (!is_open())
     {
         deferred_open_task.tick();
         return;
@@ -450,6 +489,7 @@ void AlsaDevice::write(const float *buffer, int samples)
 
     if (samples > max_transfer_size)
     {
+        // If this ever happens, it's a bug, not a problem with the device.
         SPDLOG_ERROR("Requested write size {} exceeds maximum {}",
                      samples, max_transfer_size);
         return;
@@ -461,17 +501,26 @@ void AlsaDevice::write(const float *buffer, int samples)
 
     if (res < 0)
     {
-        if (res == -EBADFD)
+        if (res == -EBADFD || res == -ENODEV)
         {
-            SPDLOG_INFO("ALSA device is gone, closing");
             close_device();
         }
 
-        SPDLOG_DEBUG("Failed to write to ALSA device: {}", snd_strerror(res));
+        ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                              "Unable to write {}: {}", device_name.c_str(),
+                              snd_strerror(res));
     }
     else if (res != samples)
     {
         SPDLOG_ERROR("Unexpected number of samples written: {}", res);
+        ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                              "Unexpected samples written to {}: {} vs {}",
+                              device_name.c_str(), res, samples);
+    }
+    else
+    {
+        ALSA_DEVICE_SET_STATE(DEVICE_STATE_STREAMING,
+                              "Device {} resumed writing", device_name.c_str());
     }
 }
 
@@ -526,7 +575,7 @@ void AlsaDevice::set_hw_params()
     if (error < 0)
     {
         SPDLOG_ERROR("Failed to set ALSA channels: {}",
-                snd_strerror(error));
+                     snd_strerror(error));
     }
 
     // Set the exact sample rate to use.
@@ -541,6 +590,12 @@ void AlsaDevice::set_hw_params()
     // (enabled by default). It may be useful for allowing 44.1 kHz
     // Bluetooth A2DP inputs, but we may want to disable it and use our
     // own resampler, depending on the quality of the ALSA resampler.
+    error = snd_pcm_hw_params_set_rate_resample(alsa, hw_params, 0);
+    if (error < 0)
+    {
+        SPDLOG_ERROR("Failed to disable ALSA resampling: {}",
+                     snd_strerror(error));
+    }
 
     // `snd_pcm_hw_params_set_export_buffer()` allows the buffer to be
     // accessible from "outside".  It's enabled by default (probably fine).
@@ -1027,48 +1082,81 @@ AlsaIn::AlsaIn(const bosepro::BlockConfiguration &configuration)
 {
     std::string device_name;
     int_fast32_t period_size;
+    int_fast32_t device_sample_rate;
 
+    get_property("use_asrc", use_asrc);
     get_property("device_name", device_name);
     get_property("period_size", period_size);
+    get_property("device_sample_rate", device_sample_rate);
+
+    if (device_sample_rate == 0)
+    {
+        device_sample_rate = get_sample_rate();
+    }
 
     assign_terminal("out", out);
 
     get_terminal_num_channels("out", channels);
 
-    read_samples = get_frame_size() + 1;
-
-    min_depth = std::max(2 * get_frame_size(), MIN_DEPTH);
-    if (min_depth % period_size != 0)
+    if (use_asrc)
     {
-        min_depth += period_size - (min_depth % period_size);
-    }
+        base_ratio = static_cast<double>(get_sample_rate())
+            / device_sample_rate;
 
-    max_depth = std::max(6 * get_frame_size(), 3 * MIN_DEPTH);
-    if (max_depth % period_size != 0)
+        read_samples = static_cast<int>(std::ceil(get_frame_size() / base_ratio))
+            + 1;
+
+        min_depth = std::max(2 * get_frame_size(), MIN_DEPTH);
+        min_depth = std::max(min_depth, 2 * period_size);
+        if (min_depth % period_size != 0)
+        {
+            min_depth += period_size - (min_depth % period_size);
+        }
+
+        max_depth = std::max(6 * get_frame_size(), 3 * MIN_DEPTH);
+        max_depth = std::max(max_depth, 6 * period_size);
+        if (max_depth % period_size != 0)
+        {
+            max_depth += period_size - (max_depth % period_size);
+        }
+
+        target_depth = std::max(4 * get_frame_size(), 2 * MIN_DEPTH);
+        target_depth = std::max(target_depth, 4 * period_size);
+        if (target_depth % period_size != 0)
+        {
+            target_depth += period_size - (target_depth % period_size);
+        }
+    }
+    else
     {
-        max_depth += period_size - (max_depth % period_size);
+        base_ratio = 1.0;
+        read_samples = get_frame_size();
+        min_depth = std::max(get_frame_size(), period_size);
+        max_depth = 3 * min_depth;
+        target_depth = 2 * min_depth;
     }
-
-    target_depth = std::max(4 * get_frame_size(), 2 * MIN_DEPTH);
-    if (target_depth % period_size != 0)
-    {
-        target_depth += period_size - (target_depth % period_size);
-    }
-
 
     // The JND for pitch is about 0.6% (or about 10 cents).  We can limit the
     // ratio to be smaller than this to avoid pitch artifacts, while still
     // allowing the servo to correct for reasonable jitter and clock mismatch.
-    min_ratio = 0.999;
-    max_ratio = 1.001;
+    min_ratio = base_ratio * 0.998;
+    max_ratio = base_ratio * 1.002;
 
-    asrc_in_buf.resize(channels * read_samples);
+    if (use_asrc)
+    {
+        asrc_in_buf.resize(channels * read_samples);
+    }
+
     asrc_out_buf.resize(channels * get_frame_size());
 
-    new (device.get()) AlsaDevice(device_name, channels, get_sample_rate(),
+    new (device.get()) AlsaDevice(device_name, channels, device_sample_rate,
                                   period_size, read_samples, true);
-    new (asrc.get()) asrc::Asrc(channels, get_frame_size(), true);
-    new (servo.get()) servo::Servo();
+
+    if (use_asrc)
+    {
+        new (asrc.get()) asrc::Asrc(channels, get_frame_size(), true);
+        new (servo.get()) servo::Servo();
+    }
 }
 
 
@@ -1085,41 +1173,38 @@ void AlsaIn::process()
 
     // Handle the cases where the buffer depth is way too high or low
     // Perhaps we want to do packet loss concealment here
-    if (depth > max_depth)
+    if (depth > max_depth || depth < min_depth)
     {
-        SPDLOG_DEBUG("Buffer depth too high: {} {}", depth, max_depth);
         depth = device->adjust_buffer_depth(target_depth - depth);
 
-        servo->reset();
+        if (use_asrc)
+        {
+            servo->reset();
+        }
     }
-    else if (depth < min_depth)
+
+    if (use_asrc)
     {
-        SPDLOG_DEBUG("Buffer depth too low: {} {}", depth, min_depth);
-        depth = device->adjust_buffer_depth(target_depth - depth);
+        // Run the servo loop to adjust the sample rate
+        double ratio = 1.0 - servo->update(depth - target_depth);
+        ratio *= base_ratio;
 
-        servo->reset();
+        ratio = (ratio < min_ratio) ? min_ratio : ratio;
+        ratio = (ratio > max_ratio) ? max_ratio : ratio;
+
+        device->read(asrc_in_buf.get(), read_samples);
+
+        // Perform ASRC
+        int consumed = asrc->process(asrc_out_buf.get(), asrc_in_buf.get(),
+                                     read_samples, ratio);
+
+        // Put back any samples we didn't need for ASRC
+        device->adjust_buffer_depth(read_samples - consumed);
     }
-
-    // Run the servo loop to adjust the sample rate
-    double ratio = 1.0 - servo->update(depth - target_depth);
-
-    ratio = (ratio < min_ratio) ? min_ratio : ratio;
-    ratio = (ratio > max_ratio) ? max_ratio : ratio;
-
-    int actually_read = device->read(asrc_in_buf.get(), read_samples);
-
-    if (actually_read < read_samples)
+    else
     {
-        SPDLOG_WARN("Only read {} samples, expected {}", actually_read,
-                    read_samples);
+        device->read(asrc_out_buf.get(), get_frame_size());
     }
-
-    // Perform ASRC
-    int consumed = asrc->process(asrc_out_buf.get(), asrc_in_buf.get(),
-                                 read_samples, ratio);
-
-    // Put back any samples we didn't need for ASRC
-    device->adjust_buffer_depth(read_samples - consumed);
 
     // Deinterleave to the output buffer
     for (int channel = 0; channel < channels; channel++)
@@ -1138,6 +1223,7 @@ AlsaOut::AlsaOut(const bosepro::BlockConfiguration &configuration)
     std::string device_name;
     int_fast32_t period_size;
 
+    get_property("use_asrc", use_asrc);
     get_property("device_name", device_name);
     get_property("period_size", period_size);
 
@@ -1145,40 +1231,57 @@ AlsaOut::AlsaOut(const bosepro::BlockConfiguration &configuration)
 
     get_terminal_num_channels("in", channels);
 
-    max_write_samples = get_frame_size() + 1;
-
-    min_depth = std::max(2 * get_frame_size(), MIN_DEPTH);
-    if (min_depth % period_size != 0)
+    if (use_asrc)
     {
-        min_depth += period_size - (min_depth % period_size);
-    }
+        max_write_samples = get_frame_size() + 1;
 
-    max_depth = std::max(6 * get_frame_size(), 3 * MIN_DEPTH);
-    if (max_depth % period_size != 0)
+        min_depth = std::max(2 * get_frame_size(), MIN_DEPTH);
+        if (min_depth % period_size != 0)
+        {
+            min_depth += period_size - (min_depth % period_size);
+        }
+
+        max_depth = std::max(6 * get_frame_size(), 3 * MIN_DEPTH);
+        if (max_depth % period_size != 0)
+        {
+            max_depth += period_size - (max_depth % period_size);
+        }
+
+        target_depth = std::max(4 * get_frame_size(), 2 * MIN_DEPTH);
+        if (target_depth % period_size != 0)
+        {
+            target_depth += period_size - (target_depth % period_size);
+        }
+    }
+    else
     {
-        max_depth += period_size - (max_depth % period_size);
+        max_write_samples = get_frame_size();
+        min_depth = std::max(get_frame_size(), period_size);
+        max_depth = 3 * min_depth;
+        target_depth = 2 * min_depth;
     }
-
-    target_depth = std::max(4 * get_frame_size(), 2 * MIN_DEPTH);
-    if (target_depth % period_size != 0)
-    {
-        target_depth += period_size - (target_depth % period_size);
-    }
-
 
     // The JND for pitch is about 0.6% (or about 10 cents).  We can limit the
     // ratio to be smaller than this to avoid pitch artifacts, while still
     // allowing the servo to correct for reasonable jitter and clock mismatch.
-    min_ratio = 0.999;
-    max_ratio = 1.001;
+    min_ratio = 0.998;
+    max_ratio = 1.002;
 
     asrc_in_buf.resize(channels * get_frame_size());
-    asrc_out_buf.resize(channels * max_write_samples);
+
+    if (use_asrc)
+    {
+        asrc_out_buf.resize(channels * max_write_samples);
+    }
 
     new (device.get()) AlsaDevice(device_name, channels, get_sample_rate(),
                                   period_size, max_write_samples, false);
-    new (asrc.get()) asrc::Asrc(channels, get_frame_size(), false);
-    new (servo.get()) servo::Servo();
+
+    if (use_asrc)
+    {
+        new (asrc.get()) asrc::Asrc(channels, get_frame_size(), false);
+        new (servo.get()) servo::Servo();
+    }
 }
 
 
@@ -1186,6 +1289,7 @@ void AlsaOut::process()
 {
     // Measure the current buffer depth
     int depth = 64 * 48 - device->get_buffer_depth();
+    double ratio;
 
     if (depth > 64 * 48)
     {
@@ -1197,15 +1301,15 @@ void AlsaOut::process()
     // Perhaps we want to do packet loss concealment here
     if (depth > max_depth)
     {
-        SPDLOG_DEBUG("Buffer depth too high: {} {}", depth, max_depth);
-
         depth = device->adjust_buffer_depth(depth - target_depth);
 
-        servo->reset();
+        if (use_asrc)
+        {
+            servo->reset();
+        }
     }
     else if (depth < min_depth)
     {
-        SPDLOG_WARN("Buffer depth too low: {} {}", depth, min_depth);
         int fill_amount = target_depth - depth;
 
         while (fill_amount > 0)
@@ -1220,14 +1324,20 @@ void AlsaOut::process()
             fill_amount -= max_write_samples;
         }
 
-        servo->reset();
+        if (use_asrc)
+        {
+            servo->reset();
+        }
     }
 
-    // Run the servo loop to adjust the sample rate
-    double ratio = 1.0 - servo->update(depth - target_depth);
+    if (use_asrc)
+    {
+        // Run the servo loop to adjust the sample rate
+        ratio = 1.0 - servo->update(target_depth - depth);
 
-    ratio = (ratio < min_ratio) ? min_ratio : ratio;
-    ratio = (ratio > max_ratio) ? max_ratio : ratio;
+        ratio = (ratio < min_ratio) ? min_ratio : ratio;
+        ratio = (ratio > max_ratio) ? max_ratio : ratio;
+    }
 
     // Interleave into the ASRC buffer
     for (int channel = 0; channel < channels; channel++)
@@ -1238,11 +1348,18 @@ void AlsaOut::process()
         }
     }
 
-    // Perform ASRC
-    int produced = asrc->process(asrc_out_buf.get(), asrc_in_buf.get(),
-                                 max_write_samples, ratio);
+    if (use_asrc)
+    {
+        // Perform ASRC
+        int produced = asrc->process(asrc_out_buf.get(), asrc_in_buf.get(),
+                                     max_write_samples, ratio);
 
-    device->write(asrc_out_buf.get(), produced);
+        device->write(asrc_out_buf.get(), produced);
+    }
+    else
+    {
+        device->write(asrc_in_buf.get(), get_frame_size());
+    }
 }
 
 
