@@ -798,8 +798,6 @@ public:
   UDPValueMonitor(const std::string &serverIP, int port)
       : jsonMonitor_(Json::objectValue)
   {
-    spdlog::set_level(spdlog::level::trace);
-
     SPDLOG_TRACE("Initializing UDPValueMonitor to {}:{}", serverIP, port);
 
     const int sockfd = udpSocket_.get();
