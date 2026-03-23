@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	"bytes"
 	"fmt"
 	"fusion-services-core/vip"
 	"os/exec"
@@ -486,22 +485,15 @@ func (c *Cluster) PostGenericToAdmin(
 func postGenericToAdminLast(
 	c *Cluster,
 	endpoint string,
-	body *[]byte,
 	localFn func() error,
 ) error {
 	for _, addr := range c.getNodeAdminAddresses() {
 		if c.hostIsLocal(addr) {
 			continue
 		}
-
-<<<<<<< HEAD
-		urlStr := getLocalURL(addr, endpoint)
-		resp, err := http.Post(urlStr, "application/json", bytes.NewReader(*body))
-=======
 		// POST to the remote node’s admin endpoint
 		urlStr := utils.GetLocalURL(addr, endpoint)
 		resp, err := http.Post(urlStr, "", nil)
->>>>>>> e33d011b7ef7e7511f3d4602df3f16ba67365476
 		if err != nil {
 			logging.GetLogger().Error("POST to %s failed: %v", urlStr, err)
 			return err

@@ -41,11 +41,6 @@ func parseFlags() *api.AppConfig {
 	verbose := flag.Bool("verbose", false, "Enable verbose logging")
 	profile := flag.Bool("profile", false, "Enable profile dump")
 
-	// IoT Core flags
-	iotEnabled := flag.Bool("iot-enabled", false, "Enable AWS IoT Core metrics publishing")
-	iotEndpoint := flag.String("iot-endpoint", "", "AWS IoT Core endpoint (e.g., xxx-ats.iot.us-east-2.amazonaws.com)")
-	iotTopicPrefix := flag.String("iot-topic-prefix", "cluster/", "Topic prefix for IoT messages")
-	projectID := flag.String("project-id", "", "Project ID to include in IoT topic")
 	flag.Parse()
 
 	// Read environment overrides
@@ -73,23 +68,14 @@ func parseFlags() *api.AppConfig {
 		os.Exit(0)
 	}
 
-	nodeName := createUniqueNodeName(baseName)
-
 	return &api.AppConfig{
-		NodeName: nodeName,
+		NodeName: createUniqueNodeName(baseName),
 		BindAddr: *bindAddr,
 		BindPort: *bindPort,
 		NetIface: *netIface,
 		Local:    *local,
 		Verbose:  *verbose,
 		Profile:  *profile,
-		IoT: &api.IoTConfig{
-			Enabled:     *iotEnabled,
-			Endpoint:    *iotEndpoint,
-			ClientID:    fmt.Sprintf("%s_instance", nodeName),
-			TopicPrefix: *iotTopicPrefix,
-			ProjectID:   *projectID,
-		},
 	}
 }
 

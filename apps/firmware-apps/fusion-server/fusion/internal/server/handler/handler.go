@@ -195,11 +195,6 @@ func (h *Handler) HandleExportData() (any, error) {
 	return h.persistence.ExportData()
 }
 
-// HandleGetCommandStatus retrieves a command by ID and returns it.
-func (h *Handler) HandleGetCommandStatus(id string) (*persistence.Command, error) {
-	return h.persistence.GetCommand(id)
-}
-
 func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
 
 	configUpdate, err := h.StateManager.NewConfigUpdate(data)

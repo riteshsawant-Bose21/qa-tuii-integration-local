@@ -27,7 +27,6 @@ const (
 	bucketAudio     = "audio"
 	bucketDevice    = "device"
 	bucketFusion    = "fusion"
-	bucketCommands  = "commands"
 	bucketSnapshots = "snapshots"
 	bucketTasks     = "tasks"
 
@@ -404,7 +403,6 @@ func (p *Persistence) initializeDatabase() error {
 			tx.Bucket([]byte(bucketFusion)) != nil &&
 			tx.Bucket([]byte(bucketDevice)) != nil &&
 			tx.Bucket([]byte(bucketTasks)) != nil &&
-			tx.Bucket([]byte(bucketCommands)) != nil &&
 			tx.Bucket([]byte(bucketSnapshots)) != nil {
 			return nil
 		}
@@ -415,7 +413,6 @@ func (p *Persistence) initializeDatabase() error {
 			bucketAudio,
 			bucketDevice,
 			bucketFusion,
-			bucketCommands,
 			bucketTasks,
 			bucketSnapshots} {
 			if err := createBucketIfNotExists(tx, bucket); err != nil {

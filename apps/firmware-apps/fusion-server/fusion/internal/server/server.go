@@ -2,7 +2,6 @@ package server
 
 import (
 	stdjson "encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -299,32 +298,6 @@ func (s *FusionServer) GetDatabaseMetadata(w http.ResponseWriter, r *http.Reques
 	// Write the JSON response with metadata.
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	stdjson.NewEncoder(w).Encode(databaseMetadataResponse{Metadata: metadata})
-}
-
-// GetCommandStatus handles HTTP GET requests to retrieve the status of a command by ID.
-func (s *FusionServer) GetCommandStatus(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequireGet(w, r) {
-		return
-	}
-
-	id, err := utils.ExtractId(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	cmd, err := s.handler.HandleGetCommandStatus(id)
-	if err != nil {
-		if errors.Is(err, persistence.ErrNotFound) {
-			http.Error(w, fmt.Sprintf("command %s not found", id), http.StatusNotFound)
-			return
-		}
-		http.Error(w, fmt.Sprintf("error retrieving command: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(cmd)
 }
 
 // ExportData handles HTTP GET requests to export all data.

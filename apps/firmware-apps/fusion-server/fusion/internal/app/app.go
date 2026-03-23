@@ -10,7 +10,6 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/cluster"
 	"fusion/internal/controllers"
-	fusioniot "fusion/internal/iot"
 	"fusion/internal/network"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
@@ -57,7 +56,6 @@ type App struct {
 	SAPServer         *network.SAPServer
 	UDPServer         *network.UDPServer
 	ControllerManager *controllers.ControllerManager
-	IoTManager        *fusioniot.Manager
 	memberlist        *memberlist.Memberlist
 	monitor           *network.Monitor
 	config            *api.AppConfig
@@ -121,7 +119,6 @@ func NewApp(config *api.AppConfig) *App {
 		SAPServer:         sapServer,
 		UDPServer:         udpServer,
 		ControllerManager: controllerManager,
-		IoTManager:        iotManager,
 		memberlist:        memberlist,
 		config:            config,
 		publicRouter:      publicRouter,
@@ -142,9 +139,6 @@ func (app *App) Close() {
 	}
 	if app.ControllerManager != nil {
 		app.ControllerManager.Stop()
-	}
-	if app.IoTManager != nil {
-		app.IoTManager.Stop()
 	}
 	if app.MDNSManager != nil {
 		if err := app.MDNSManager.Close(); err != nil {
@@ -196,10 +190,6 @@ func (app *App) registerPrivatePOST(route string, handler http.HandlerFunc) {
 	routes.RegisterPrivatePOST(app.privateRouter, route, handler)
 }
 
-func (app *App) registerPrivateDELETE(route string, handler http.HandlerFunc) {
-	routes.RegisterPrivateDELETE(app.privateRouter, route, handler)
-}
-
 func (app *App) setupPublicRoutes() {
 
 	// Cluster
@@ -228,8 +218,6 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.DevicesGetCSREndpoint, app.Server.GetCSR)
 	app.registerPublicPOST(routes.DevicesIDCertificateEndpoint, app.Server.SetDeviceCertificate)
 	app.registerPublicDELETE(routes.DevicesIDResetEndpoint, app.Server.ResetDeviceCertificate)
-
-	app.registerPublicDELETE(routes.DevicesIDResetEndpoint, app.Cluster.ResetDevice)
 
 	// Endpoints
 	app.registerPublicGET(routes.EndpointsEndpoint, routes.ListRegisteredEndpoints)
@@ -316,8 +304,6 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivateGET(routes.DevicesGetCSREndpoint, app.Server.GetCSR)
 	app.registerPrivateDELETE(routes.DevicesIDResetEndpoint, app.Server.ResetDeviceCertificate)
 	app.registerPrivatePOST(routes.DevicesIDCertificateEndpoint, app.Server.SetDeviceCertificate)
-
-	app.registerPrivateGET(routes.CommandsIDEndpoint, app.Server.GetCommandStatus)
 
 	app.registerPrivateGET(routes.DataEndpoint, app.Server.ExportData)
 	app.registerPrivatePOST(routes.DataEndpoint, app.Server.ImportData)
@@ -583,18 +569,6 @@ func (app *App) Start(ctx context.Context) {
 	// Start the Controller Manager for TCP wall controllers
 	if err := app.ControllerManager.Start(); err != nil {
 		app.Logger.Error("Failed to start ControllerManager: %v", err)
-	}
-
-	// Mark any pending commands as completed — this node has successfully (re)started
-	if err := app.Persistence.MarkPendingRebootCommandsCompleted(); err != nil {
-		app.Logger.Error("Failed to mark pending reboot commands as completed: %v", err)
-	}
-
-	// Start the IoT manager (handles client, publisher, and subscriber)
-	if app.IoTManager != nil {
-		if err := app.IoTManager.Start(); err != nil {
-			app.Logger.Error("Failed to start IoT manager: %v", err)
-		}
 	}
 
 	wg.Wait()
