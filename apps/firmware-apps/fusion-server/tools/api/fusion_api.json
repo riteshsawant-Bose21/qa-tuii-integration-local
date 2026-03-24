@@ -2166,13 +2166,13 @@
     },
     {
       "type": "folder",
-      "name": "Snapshots",
-      "filename": "Snapshots",
+      "name": "Time Machine",
+      "filename": "Time Machine",
       "seq": 12,
       "examples": [],
       "root": {
         "meta": {
-          "name": "Snapshots",
+          "name": "Time Machine",
           "seq": 12
         }
       },
@@ -2186,7 +2186,7 @@
           "tags": [],
           "examples": [],
           "request": {
-            "url": "{{api_url}}/snapshots/activate/:name",
+            "url": "{{api_url}}/time-machine/activate/:name",
             "method": "POST",
             "headers": [],
             "params": [
@@ -2215,8 +2215,8 @@
         },
         {
           "type": "http",
-          "name": "Create Activate Snapshot Task",
-          "filename": "Create Activate Snapshot Task.bru",
+          "name": "Create Activate Time Machine Task",
+          "filename": "Create Activate Time Machine Task.bru",
           "seq": 7,
           "settings": {},
           "tags": [],
@@ -2258,7 +2258,7 @@
           "tags": [],
           "examples": [],
           "request": {
-            "url": "{{api_url}}/snapshots/:name",
+            "url": "{{api_url}}/time-machine/:name",
             "method": "POST",
             "headers": [],
             "params": [
@@ -2294,7 +2294,7 @@
           "tags": [],
           "examples": [],
           "request": {
-            "url": "{{api_url}}/snapshots/:name",
+            "url": "{{api_url}}/time-machine/:name",
             "method": "DELETE",
             "headers": [],
             "params": [
@@ -2323,14 +2323,14 @@
         },
         {
           "type": "http",
-          "name": "Get Active Snapshot Name",
-          "filename": "Get Active Snapshot Name.bru",
+          "name": "Get Active Time Machine Name",
+          "filename": "Get Active Time Machine Name.bru",
           "seq": 6,
           "settings": {},
           "tags": [],
           "examples": [],
           "request": {
-            "url": "{{api_url}}/snapshots/meta/active",
+            "url": "{{api_url}}/time-machine/meta/active",
             "method": "GET",
             "headers": [],
             "params": [],
@@ -2359,7 +2359,7 @@
           "tags": [],
           "examples": [],
           "request": {
-            "url": "{{api_url}}/snapshots/:name",
+            "url": "{{api_url}}/time-machine/:name",
             "method": "GET",
             "headers": [],
             "params": [
@@ -2395,7 +2395,7 @@
           "tags": [],
           "examples": [],
           "request": {
-            "url": "{{api_url}}/snapshots",
+            "url": "{{api_url}}/time-machine",
             "method": "GET",
             "headers": [],
             "params": [],
@@ -2417,8 +2417,8 @@
         },
         {
           "type": "http",
-          "name": "Update Activate Snapshot Task",
-          "filename": "Update Activate Snapshot Task.bru",
+          "name": "Update Activate Time Machine Task",
+          "filename": "Update Activate Time Machine Task.bru",
           "seq": 8,
           "settings": {},
           "tags": [],
