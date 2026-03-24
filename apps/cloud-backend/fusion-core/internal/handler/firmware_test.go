@@ -519,7 +519,7 @@ func TestCheckForUpdate(t *testing.T) {
 			queryParams: validQueryParams,
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("CheckForUpdate", mock.Anything, mock.AnythingOfType("*types.CheckForUpdateRequest"), mock.AnythingOfType("*zap.Logger")).
+				m.On("CheckForUpdate", mock.Anything, mock.AnythingOfType("*types.FirmwareUpdateRequest"), mock.AnythingOfType("*zap.Logger")).
 					Return(&types.FirmwareUpdateResponse{
 						UpdateAvailable:   true,
 						AppUpdateRequired: false,
@@ -538,7 +538,7 @@ func TestCheckForUpdate(t *testing.T) {
 			},
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("CheckForUpdate", mock.Anything, mock.AnythingOfType("*types.CheckForUpdateRequest"), mock.AnythingOfType("*zap.Logger")).
+				m.On("CheckForUpdate", mock.Anything, mock.AnythingOfType("*types.FirmwareUpdateRequest"), mock.AnythingOfType("*zap.Logger")).
 					Return(&types.FirmwareUpdateResponse{
 						UpdateAvailable:   true,
 						AppUpdateRequired: false,
@@ -553,7 +553,7 @@ func TestCheckForUpdate(t *testing.T) {
 			queryParams: validQueryParams,
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("CheckForUpdate", mock.Anything, mock.AnythingOfType("*types.CheckForUpdateRequest"), mock.AnythingOfType("*zap.Logger")).
+				m.On("CheckForUpdate", mock.Anything, mock.AnythingOfType("*types.FirmwareUpdateRequest"), mock.AnythingOfType("*zap.Logger")).
 					Return(&types.FirmwareUpdateResponse{
 						UpdateAvailable:   false,
 						AppUpdateRequired: false,
@@ -566,7 +566,7 @@ func TestCheckForUpdate(t *testing.T) {
 			queryParams: validQueryParams,
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("CheckForUpdate", mock.Anything, mock.AnythingOfType("*types.CheckForUpdateRequest"), mock.AnythingOfType("*zap.Logger")).
+				m.On("CheckForUpdate", mock.Anything, mock.AnythingOfType("*types.FirmwareUpdateRequest"), mock.AnythingOfType("*zap.Logger")).
 					Return(&types.FirmwareUpdateResponse{
 						UpdateAvailable:      true,
 						AppUpdateRequired:    true,
@@ -598,7 +598,7 @@ func TestCheckForUpdate(t *testing.T) {
 			queryParams: validQueryParams,
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("CheckForUpdate", mock.Anything, mock.AnythingOfType("*types.CheckForUpdateRequest"), mock.AnythingOfType("*zap.Logger")).
+				m.On("CheckForUpdate", mock.Anything, mock.AnythingOfType("*types.FirmwareUpdateRequest"), mock.AnythingOfType("*zap.Logger")).
 					Return(nil, errors.New("database error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
