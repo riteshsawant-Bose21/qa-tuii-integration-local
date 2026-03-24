@@ -28,6 +28,12 @@ func HandleRequestAuthorizer(ctx context.Context, event map[string]interface{}) 
 
 	log.Info("Processing authorization request")
 
+	// Check if initialization failed (e.g., DB connection error)
+	if initErr != nil {
+		log.Error("Lambda initialization failed", initErr)
+		return denyResponse("anonymous", "Service unavailable"), nil
+	}
+
 	// Extract token from headers (case-insensitive)
 	headers, _ := event["headers"].(map[string]interface{})
 	token := ""
