@@ -121,8 +121,8 @@ type accountTypeL struct{}
 
 var (
 	accountTypeAllColumns            = []string{"id", "name", "description"}
-	accountTypeColumnsWithoutDefault = []string{"id", "name"}
-	accountTypeColumnsWithDefault    = []string{"description"}
+	accountTypeColumnsWithoutDefault = []string{"name"}
+	accountTypeColumnsWithDefault    = []string{"id", "description"}
 	accountTypePrimaryKeyColumns     = []string{"id"}
 	accountTypeGeneratedColumns      = []string{}
 )
@@ -672,7 +672,7 @@ func (accountTypeL) LoadAccountTypeRoles(ctx context.Context, e boil.ContextExec
 
 	for _, foreign := range resultSlice {
 		for _, local := range slice {
-			if local.ID == foreign.AccountTypeID {
+			if queries.Equal(local.ID, foreign.AccountTypeID) {
 				local.R.AccountTypeRoles = append(local.R.AccountTypeRoles, foreign)
 				if foreign.R == nil {
 					foreign.R = &accountTypeRoleR{}
@@ -747,7 +747,7 @@ func (o *AccountType) AddAccountTypeRoles(ctx context.Context, exec boil.Context
 	var err error
 	for _, rel := range related {
 		if insert {
-			rel.AccountTypeID = o.ID
+			queries.Assign(&rel.AccountTypeID, o.ID)
 			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
 				return errors.Wrap(err, "failed to insert into foreign table")
 			}
@@ -768,7 +768,7 @@ func (o *AccountType) AddAccountTypeRoles(ctx context.Context, exec boil.Context
 				return errors.Wrap(err, "failed to update foreign table")
 			}
 
-			rel.AccountTypeID = o.ID
+			queries.Assign(&rel.AccountTypeID, o.ID)
 		}
 	}
 
@@ -789,6 +789,80 @@ func (o *AccountType) AddAccountTypeRoles(ctx context.Context, exec boil.Context
 			rel.R.AccountType = o
 		}
 	}
+	return nil
+}
+
+// SetAccountTypeRoles removes all previously related items of the
+// account_type replacing them completely with the passed
+// in related items, optionally inserting them as new records.
+// Sets o.R.AccountType's AccountTypeRoles accordingly.
+// Replaces o.R.AccountTypeRoles with related.
+// Sets related.R.AccountType's AccountTypeRoles accordingly.
+func (o *AccountType) SetAccountTypeRoles(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*AccountTypeRole) error {
+	query := "update \"account_type_role\" set \"account_type_id\" = null where \"account_type_id\" = $1"
+	values := []interface{}{o.ID}
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, query)
+		fmt.Fprintln(writer, values)
+	}
+	_, err := exec.ExecContext(ctx, query, values...)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove relationships before set")
+	}
+
+	if o.R != nil {
+		for _, rel := range o.R.AccountTypeRoles {
+			queries.SetScanner(&rel.AccountTypeID, nil)
+			if rel.R == nil {
+				continue
+			}
+
+			rel.R.AccountType = nil
+		}
+		o.R.AccountTypeRoles = nil
+	}
+
+	return o.AddAccountTypeRoles(ctx, exec, insert, related...)
+}
+
+// RemoveAccountTypeRoles relationships from objects passed in.
+// Removes related items from R.AccountTypeRoles (uses pointer comparison, removal does not keep order)
+// Sets related.R.AccountType.
+func (o *AccountType) RemoveAccountTypeRoles(ctx context.Context, exec boil.ContextExecutor, related ...*AccountTypeRole) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	for _, rel := range related {
+		queries.SetScanner(&rel.AccountTypeID, nil)
+		if rel.R != nil {
+			rel.R.AccountType = nil
+		}
+		if _, err = rel.Update(ctx, exec, boil.Whitelist("account_type_id")); err != nil {
+			return err
+		}
+	}
+	if o.R == nil {
+		return nil
+	}
+
+	for _, rel := range related {
+		for i, ri := range o.R.AccountTypeRoles {
+			if rel != ri {
+				continue
+			}
+
+			ln := len(o.R.AccountTypeRoles)
+			if ln > 1 && i < ln-1 {
+				o.R.AccountTypeRoles[i] = o.R.AccountTypeRoles[ln-1]
+			}
+			o.R.AccountTypeRoles = o.R.AccountTypeRoles[:ln-1]
+			break
+		}
+	}
+
 	return nil
 }
 
