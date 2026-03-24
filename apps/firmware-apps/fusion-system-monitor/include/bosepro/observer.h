@@ -1,3 +1,5 @@
+#pragma once
+
 #include <arpa/inet.h>
 #include <atomic>
 #include <cctype>
@@ -23,7 +25,9 @@
 #include <unordered_map>
 #include <vector>
 #include <pthread.h>
+#ifndef USE_MAC_THREADS
 #include <sched.h>
+#endif
 
 /**
  * @brief Represents a component of a JSON path.
@@ -262,7 +266,7 @@ public:
    * root.
    * @param callback The function to call when the specified path is updated.
    */
-  void watch(const std::string &path, ChangeCallback callback) {
+  void watch(const std::string &path, JsonMonitor::ChangeCallback callback) {
     if (path.empty()) {
       root_watchers_.push_back(callback);
     } else {
@@ -394,11 +398,7 @@ public:
     updateInternalState(path, new_state);
     Json::Value newData = data_;
 
-    // Allow forced notifications for specific paths even if the value didn't change.
-    const bool force_notify =
-        (path.rfind("settings.fw.amp_control", 0) == 0);
-
-    if (!force_notify && oldData == newData) {
+    if (oldData == newData) {
       if (verbose_) {
         log("No change detected for path: " + path);
       }
@@ -705,7 +705,25 @@ public:
     device_id = id;
   }
 
+  void watch(const std::string &path, JsonMonitor::ChangeCallback callback) {
+    const bool hasWildcard = (path.find('*') != std::string::npos);
+    if (hasWildcard) {
+      jsonMonitor_.watchPattern(path, callback);
+    } else {
+      jsonMonitor_.watch(path, callback);
+    }
+
+    if (std::find(targetPaths_.begin(), targetPaths_.end(), path) ==
+        targetPaths_.end()) {
+      targetPaths_.push_back(path);
+    }
+  }
+
 private:
+#ifdef USE_MAC_THREADS
+  void pin_thread(std::thread & /*t*/, const char * /*thread_label*/) const {
+  }
+#else
   void pin_thread(std::thread &t, const char *thread_label) const {
     constexpr int kTelemetryCpu = 0;
     cpu_set_t cpuset;
@@ -716,13 +734,23 @@ private:
       SPDLOG_WARN("Failed to set {} affinity to CPU {}: {}", thread_label, kTelemetryCpu, strerror(rc));
     }
   }
+#endif
 
+#ifdef USE_MAC_THREADS
+  void name_thread(std::thread & /*t*/, const char *name) const {
+    int rc = pthread_setname_np(name);
+    if (rc != 0) {
+      SPDLOG_WARN("Failed to set thread name '{}': {}", name, strerror(rc));
+    }
+  }
+#else
   void name_thread(std::thread &t, const char *name) const {
     int rc = pthread_setname_np(t.native_handle(), name);
     if (rc != 0) {
       SPDLOG_WARN("Failed to set thread name '{}': {}", name, strerror(rc));
     }
   }
+#endif
 
   // Logging helper.
   void log(const std::string &message) const {
@@ -758,7 +786,7 @@ private:
     std::string message;
 
     if (path_parts[0].key == "settings") {
-      if ((old_val != new_val) || (path_parts[2].key == "amp_control")) {
+      if ((old_val != new_val)) {
         message = "{ \"target\": \"" + path_parts[2].key + "\""
             + ", \"name\": \"" + path_parts[3].key + "\""
             + ((path_parts.size() > 4 && path_parts[4].isArrayAccess)

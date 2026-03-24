@@ -14,10 +14,10 @@ void main() {
   print(speakersJson);
   print('\n');
   
-  final amplifiersJson = fusionDevices.getAmplifiers();
-  print('Amplifiers JSON:');
-  print(amplifiersJson);
-  print('\n');
+  // final amplifiersJson = fusionDevices.getAmplifiers();
+  // print('Amplifiers JSON:');
+  // print(amplifiersJson);
+  // print('\n');
   
   final devicesJson = fusionDevices.getDevices();
   print('DSP Devices JSON:');

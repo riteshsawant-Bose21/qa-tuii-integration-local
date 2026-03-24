@@ -124,6 +124,7 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
             child: SizedBox(
               width: 300,
               child: FusionNeumorphicButton(
+                semanticId: 'verify_and_proceed_button',
                 text: 'Verify and proceed',
                 onTap: _verify,
                 height: 35,
@@ -153,6 +154,7 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
         Row(
           children: <Widget>[
             FusionCheckbox(
+              semanticId: 'vip_configuration_auto_select',
               value: _isAutoSelect,
               onChanged: () {
                 final bool newValue = !_isAutoSelect;
@@ -233,7 +235,8 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
           'List of the devices on the Fusion network',
           style: TextStyle(
             color: context.colorScheme.textPrimary,
-            fontSize: 16, // Slightly smaller than main title? Or match 20? Design looks same font size maybe slightly smaller
+            fontSize:
+                16, // Slightly smaller than main title? Or match 20? Design looks same font size maybe slightly smaller
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -273,7 +276,10 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
               child: Opacity(
                 opacity: _isAutoSelect ? 0.5 : 1.0,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: context.colorScheme.elevation2,
                     borderRadius: BorderRadius.circular(8),
@@ -301,10 +307,18 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: isSelected ? context.colorScheme.green : context.colorScheme.strokeDark, // Use green for selected based on screenshot
+                            color:
+                                isSelected
+                                    ? context.colorScheme.green
+                                    : context
+                                        .colorScheme
+                                        .strokeDark, // Use green for selected based on screenshot
                             width: 1.5,
                           ),
-                          color: isSelected ? context.colorScheme.green : Colors.transparent,
+                          color:
+                              isSelected
+                                  ? context.colorScheme.green
+                                  : Colors.transparent,
                         ),
                         child:
                             isSelected

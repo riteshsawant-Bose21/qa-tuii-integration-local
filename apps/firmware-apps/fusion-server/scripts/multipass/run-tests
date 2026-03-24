@@ -7,6 +7,7 @@ function show_help() {
     echo "  --all         Run all tests (default)"
     echo "  --audio       Run only audio tests"
     echo "  --bluetooth   Run only bluetooth tests"
+    echo "  --certs       Run only certificate tests (GetCSR, SetDeviceCertificate, ResetDeviceCertificate)"
     echo "  --cluster     Run only cluster tests"
     echo "  --controllers Run only controller tests"
     echo "  --fusion      Run only fusion tests"     
@@ -38,6 +39,7 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --all)          test_type="all"; shift ;;
         --audio)        test_type="audio"; shift ;;
+        --certs)        test_type="certs"; shift ;;
         --bluetooth)    test_type="bluetooth"; shift ;;
         --cluster)      test_type="cluster"; shift ;;
         --controllers)  test_type="controllers"; shift ;;
@@ -103,6 +105,7 @@ function test_file_for_type() {
     case "$test_type" in
         audio)        echo "audio_test.go" ;;
         bluetooth)    echo "bluetooth_test.go" ;;
+        certs)        echo "cluster_certs_test.go" ;;
         cluster)      echo "cluster_test.go" ;;
         controllers)  echo "controllers_test.go" ;;
         fusion)       echo "fusion_test.go" ;;
@@ -191,6 +194,7 @@ case "$test_type" in
         done
         ;;
 
+    certs)        run_test_file ./cluster_certs_test.go ;;
     audio)        run_test_file ./audio_test.go ;;
     bluetooth)    run_test_file ./bluetooth_test.go ;;
     cluster)      run_test_file ./cluster_test.go ;;

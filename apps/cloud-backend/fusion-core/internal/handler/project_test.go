@@ -39,6 +39,14 @@ func (m *MockProjectService) GetAllProjects(ctx context.Context, queryParams *ty
 	return args.Get(0).(*types.GetAllProjectsResponse), args.Error(1)
 }
 
+func (m *MockProjectService) GetProjectById(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
+	args := m.Called(ctx, projectID, userAuth, logger)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.Project), args.Error(1)
+}
+
 const (
 	projectsEndpoint   = "/projects"
 	projectsPathPrefix = "/projects/"

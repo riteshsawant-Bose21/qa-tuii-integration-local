@@ -114,16 +114,24 @@ type ConfigValue struct {
 
 // DeviceInfo represents device configuration data.
 type DeviceInfo struct {
-	Address         string `json:"address"`
-	Id              string `json:"id"`
-	Location        string `json:"location"`
-	Name            string `json:"name"`
-	ModelName       string `json:"model_name"`
-	MacAddress      string `json:"mac_address"`
-	IsClaimed       bool   `json:"is_claimed"`
-	SerialNumber    string `json:"serial_number"`
-	IsPrimaryNode   bool   `json:"is_primary"`
-	FirmwareVersion string `json:"firmware_version"`
+	Address                  string `json:"address"`
+	Id                       string `json:"id"`
+	Location                 string `json:"location"`
+	Name                     string `json:"name"`
+	ModelName                string `json:"model_name"`
+	MacAddress               string `json:"mac_address"`
+	SerialNumber             string `json:"serial_number"`
+	IsPrimaryNode            bool   `json:"is_primary"`
+	FirmwareVersion          string `json:"firmware_version"`
+	IsDeviceCertificateValid bool   `json:"is_device_certificate_valid"`
+}
+
+// DevicePatch represents patchable device configuration data.
+// When modifying this struct, please ensure to update validateNoDuplication, applyPatch
+type DevicePatch struct {
+	Id       *string `json:"id,omitempty"`
+	Location *string `json:"location,omitempty"`
+	Name     *string `json:"name,omitempty"`
 }
 
 // ControllerInfo represents a generic hardware controller
@@ -234,12 +242,6 @@ type StateEntry struct {
 // StatusMessage contains fusion status information
 type StatusMessage struct {
 	VIP string `json:"vip"`
-}
-
-// VersionUpdate contains the version update type and data
-type VersionUpdate struct {
-	Type    string          `json:"type"`
-	Payload json.RawMessage `json:"payload"`
 }
 
 type ControllerTCPMessage struct {

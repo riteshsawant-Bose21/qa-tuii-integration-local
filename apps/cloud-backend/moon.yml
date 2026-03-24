@@ -6,4 +6,4 @@ tasks:
   build-all:
     deps:
       - "fusion-core:build"
-    description: Build all cloud backend services
+    description: Build all cloud backend services and publish docker images to ECR registry
