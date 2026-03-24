@@ -53,7 +53,7 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget> with 
     super.dispose();
   }
 
-  String recommend() {
+  List<(String, String)> recommend() {
     try {
       // Calculate totals from the analog inputs map
       final int totalAnalogInputs = analogInputs['mics']! + analogInputs['line']! + analogInputs['rca']! + analogInputs['jack35']!;
@@ -62,7 +62,7 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget> with 
 
       // Return empty if no inputs/outputs
       if (totalAnalogInputs == 0 && totalLineOutputs == 0 && totalLoudspeakerOutputs == 0) {
-        return "Configure analog inputs and outputs to get recommendations";
+        return <(String, String)>[("", "Configure analog inputs and outputs to get recommendations")];
       }
 
       // Create analog recommendation input using the new library
@@ -71,24 +71,28 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget> with 
         lineOutputs: totalLineOutputs,
         loudspeakerOutputs: totalLoudspeakerOutputs,
       );
+      final ({List<RecommendedDeviceResult> powerPure, List<RecommendedDeviceResult> powerSmart}) combination = DspDeviceRecommendation().recommendDevices(
+        analogInputs: totalAnalogInputs,
+        analogOutputs: totalLineOutputs + totalLoudspeakerOutputs,
+      );
 
-      // Get device recommendations from the new analog algorithm
-      final List<String> devices =
-          DspDeviceRecommendation()
-              .recommendDevices(
-                analogInputs: totalAnalogInputs,
-                analogOutputs: totalLineOutputs + totalLoudspeakerOutputs,
-              )
-              .map((RecommendedDeviceResult result) => result.device)
-              .toList();
+      // // Get device recommendations from the new analog algorithm
+      // final List<String> devices =
 
-      if (devices.isEmpty) {
-        return "No suitable device configuration found";
-      }
+      //         .map((RecommendedDeviceResult result) => result.device)
+      //         .toList();
 
-      return "Recommend: ${devices.join(' + ')}";
+      // if (devices.isEmpty) {
+      //   return "No suitable device configuration found";
+      // }
+
+      return <(String, String)>[
+        ("Power Pure Combination", combination.powerPure.map((RecommendedDeviceResult result) => result.toString()).join("\n")),
+
+        ("Power Smart Combination", combination.powerSmart.map((RecommendedDeviceResult result) => result.toString()).join("\n")),
+      ];
     } catch (e) {
-      return "Error calculating recommendation: ${e.toString()}";
+      return <(String, String)>[("", "Error generating recommendation: ${e.toString()}")];
     }
   }
 
@@ -291,23 +295,37 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget> with 
                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 16),
+                        for (final (String, String) line in recommend())
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.blue.shade200),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                if (line.$1.isNotEmpty)
+                                  Text(
+                                    line.$1,
+                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                Center(
+                                  child: Text(
+                                    line.$2,
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                    textAlign: TextAlign.left,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
 
                         // Recommendation Result
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.blue.shade200),
-                          ),
-                          child: Text(
-                            recommend(),
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-
                         const SizedBox(height: 20),
 
                         // I/O Summary
