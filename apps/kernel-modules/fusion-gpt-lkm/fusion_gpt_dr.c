@@ -21,6 +21,8 @@
 #include <linux/workqueue.h>
 #include <linux/i2c.h>
 #include <linux/delay.h>
+#include <linux/fs.h>
+#include <linux/slab.h>
 
 #define GPT_CR      0x00
 #define GPT_PR      0x04
@@ -64,6 +66,7 @@
 
 enum cal_state {
 	CAL_IDLE = 0,
+	CAL_CONFIG_CHECK,
 	CAL_PREBAKE_WAIT,
 	CAL_APPLY_POINT,
 	CAL_SETTLE,
@@ -122,6 +125,19 @@ MODULE_PARM_DESC(cal_gain_search_step, "Gain step used in bounded one-shot targe
 static bool cal_use_prebaked = false;
 module_param(cal_use_prebaked, bool, 0644);
 MODULE_PARM_DESC(cal_use_prebaked, "Skip startup probing and use prebaked model coefficients");
+
+#define CAL_CONFIG_PATH_MAX 256
+static char cal_config_path[CAL_CONFIG_PATH_MAX] = "/var/lib/fusion/fusion-gpt-calibration.conf";
+module_param_string(cal_config_path, cal_config_path, sizeof(cal_config_path), 0644);
+MODULE_PARM_DESC(cal_config_path, "Path to persisted prebaked model coefficient file");
+
+static bool cal_config_autoload = true;
+module_param(cal_config_autoload, bool, 0644);
+MODULE_PARM_DESC(cal_config_autoload, "Load prebaked model coefficients from cal_config_path at startup");
+
+static bool cal_config_autosave = true;
+module_param(cal_config_autosave, bool, 0644);
+MODULE_PARM_DESC(cal_config_autosave, "Save fitted model coefficients to cal_config_path after calibration");
 
 static bool cal_pre_valid = false;
 module_param(cal_pre_valid, bool, 0644);
@@ -251,6 +267,7 @@ struct fusion_gpt
   s32 cal_k1_q16;
   s32 cal_k2_q16;
   s32 cal_k3_q16;
+  bool cal_config_checked;
 
   /* Sticky startup-ready flag for downstream GPT clients. */
   bool discipline_ready;
@@ -261,6 +278,84 @@ struct fusion_gpt
 static struct fusion_gpt *gpt_singleton;
 static DEFINE_MUTEX(gpt_singleton_lock);
 static int si5351b_write_gain(struct fusion_gpt *g, u32 gain);
+
+static int cal_load_prebaked_config(s32 *k1_q16, s32 *k2_q16, s32 *k3_q16)
+{
+	struct file *filp;
+	char *buf;
+	loff_t pos = 0;
+	ssize_t nread;
+	unsigned int version = 0;
+	int k1 = 0, k2 = 0, k3 = 0;
+	int parsed;
+	int ret = 0;
+
+	if (!cal_config_path[0])
+		return -ENOENT;
+
+	filp = filp_open(cal_config_path, O_RDONLY, 0);
+	if (IS_ERR(filp))
+		return PTR_ERR(filp);
+
+	buf = kmalloc(PAGE_SIZE, GFP_KERNEL);
+	if (!buf) {
+		ret = -ENOMEM;
+		goto out_close;
+	}
+
+	nread = kernel_read(filp, buf, PAGE_SIZE - 1, &pos);
+	if (nread < 0) {
+		ret = (int)nread;
+		goto out_free;
+	}
+
+	buf[nread] = '\0';
+	parsed = sscanf(buf, "version=%u\nk1_q16=%d\nk2_q16=%d\nk3_q16=%d",
+			&version, &k1, &k2, &k3);
+	if (parsed != 4 || version != 1) {
+		ret = -EINVAL;
+		goto out_free;
+	}
+
+	*k1_q16 = (s32)k1;
+	*k2_q16 = (s32)k2;
+	*k3_q16 = (s32)k3;
+
+out_free:
+	kfree(buf);
+out_close:
+	filp_close(filp, NULL);
+	return ret;
+}
+
+static int cal_save_prebaked_config(s32 k1_q16, s32 k2_q16, s32 k3_q16)
+{
+	struct file *filp;
+	char buf[128];
+	loff_t pos = 0;
+	int len;
+	ssize_t nwritten;
+
+	if (!cal_config_path[0])
+		return -ENOENT;
+
+	len = scnprintf(buf, sizeof(buf),
+			"version=1\nk1_q16=%d\nk2_q16=%d\nk3_q16=%d\n",
+			(int)k1_q16, (int)k2_q16, (int)k3_q16);
+
+	filp = filp_open(cal_config_path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+	if (IS_ERR(filp))
+		return PTR_ERR(filp);
+
+	nwritten = kernel_write(filp, buf, len, &pos);
+	filp_close(filp, NULL);
+	if (nwritten < 0)
+		return (int)nwritten;
+	if (nwritten != len)
+		return -EIO;
+
+	return 0;
+}
 
 static inline u32 rdl(struct fusion_gpt *g, u32 off) { return readl_relaxed(g->base + off); }
 static inline void wrl(struct fusion_gpt *g, u32 v, u32 off) { writel_relaxed(v, g->base + off); }
@@ -307,6 +402,7 @@ static void gpt_reset_timing_state_locked(struct fusion_gpt *g)
 	g->cal_k1_q16 = 0;
 	g->cal_k2_q16 = 0;
 	g->cal_k3_q16 = 0;
+	g->cal_config_checked = false;
 }
 
 /* 64-bit tick synth (read-mostly) */
@@ -830,7 +926,10 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
               g->error_integrator = 0;
               WRITE_ONCE(g->si_gain_pending, false);
 
-              if (cal_use_prebaked && cal_pre_valid) {
+              if (!g->cal_config_checked) {
+                  g->cal_state = CAL_CONFIG_CHECK;
+                  schedule_work(&g->dac_work);
+              } else if (cal_use_prebaked && cal_pre_valid) {
                   g->cal_center_gain = g->si_gain_current;
                   g->cal_center_dac = clamp(g->dac_target, 0, 255);
                   g->cal_err_accum = 0;
@@ -1199,6 +1298,53 @@ static void fusion_dac_work_handler(struct work_struct *work)
     bool gain_pending = READ_ONCE(g->si_gain_pending);
     u32 gain_target = READ_ONCE(g->si_gain_target);
 
+    if (g->cal_state == CAL_CONFIG_CHECK) {
+        s32 k1_q16 = 0, k2_q16 = 0, k3_q16 = 0;
+
+        g->cal_config_checked = true;
+
+        if (cal_config_autoload) {
+            ret = cal_load_prebaked_config(&k1_q16, &k2_q16, &k3_q16);
+            if (ret == 0) {
+                cal_pre_k1_q16 = k1_q16;
+                cal_pre_k2_q16 = k2_q16;
+                cal_pre_k3_q16 = k3_q16;
+                cal_pre_valid = true;
+                cal_use_prebaked = true;
+                pr_info("fusion_gpt: loaded prebaked coefficients from %s k=[%d %d %d]\n",
+                        cal_config_path, cal_pre_k1_q16, cal_pre_k2_q16, cal_pre_k3_q16);
+            } else if (ret != -ENOENT) {
+                pr_warn("fusion_gpt: failed to load prebaked coefficients from %s ret=%d, running live calibration\n",
+                        cal_config_path, ret);
+            }
+        }
+
+        if (cal_use_prebaked && cal_pre_valid) {
+            g->cal_center_gain = g->si_gain_current;
+            g->cal_center_dac = clamp(g->dac_target, 0, 255);
+            g->cal_err_accum = 0;
+            g->cal_err_samples = 0;
+            g->cal_measure_left = max_t(u32, 1, cal_pre_e0_samples);
+            g->cal_settle_left = max_t(u32, 1, cal_pre_e0_max_wait);
+            g->cal_state = CAL_PREBAKE_WAIT;
+            pr_info("fusion_gpt: cal prebaked wait center gain=%u dac=%d k=[%d %d %d] need=%u abs<=%u wait<=%u\n",
+                    g->cal_center_gain, g->cal_center_dac,
+                    cal_pre_k1_q16, cal_pre_k2_q16, cal_pre_k3_q16,
+                    max_t(u32, 1, cal_pre_e0_samples),
+                    cal_pre_e0_abs_max,
+                    max_t(u32, 1, cal_pre_e0_max_wait));
+        } else {
+            cal_prepare_points(g);
+            g->cal_state = CAL_APPLY_POINT;
+            pr_info("fusion_gpt: cal start center gain=%u dac=%d settle=%u measure=%u\n",
+                    g->cal_center_gain, g->cal_center_dac,
+                    max_t(u32, 1, cal_settle_pps),
+                    max_t(u32, 1, cal_measure_pps));
+            schedule_work(&g->dac_work);
+        }
+        return;
+    }
+
     if (g->cal_state == CAL_APPLY_POINT) {
         u32 probe_gain = g->cal_probe_gain[g->cal_probe_idx];
         int probe_dac = g->cal_probe_dac[g->cal_probe_idx];
@@ -1243,6 +1389,26 @@ static void fusion_dac_work_handler(struct work_struct *work)
                     residual, cal_fit_residual_thresh);
             g->cal_state = CAL_FAIL;
             return;
+        }
+
+        cal_pre_k1_q16 = g->cal_k1_q16;
+        cal_pre_k2_q16 = g->cal_k2_q16;
+        cal_pre_k3_q16 = g->cal_k3_q16;
+        cal_pre_valid = true;
+        cal_use_prebaked = true;
+        if (cal_config_autosave) {
+            ret = cal_save_prebaked_config(g->cal_k1_q16, g->cal_k2_q16, g->cal_k3_q16);
+            if (ret < 0) {
+                if (ret == -ENOENT)
+                    pr_warn("fusion_gpt: failed to save prebaked coefficients to %s ret=%d (missing parent directory?)\n",
+                            cal_config_path, ret);
+                else
+                    pr_warn("fusion_gpt: failed to save prebaked coefficients to %s ret=%d\n",
+                            cal_config_path, ret);
+            } else {
+                pr_info("fusion_gpt: saved prebaked coefficients to %s\n",
+                        cal_config_path);
+            }
         }
 
         cal_find_best_target(g, &g->si_gain_target, &g->dac_target);
@@ -1526,4 +1692,4 @@ module_platform_driver(drv);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Bose Pro");
 MODULE_DESCRIPTION("GPT1 SHIM EXPORTING 1/3MS TICKS");
-MODULE_VERSION("1.0.1-cumulative-error");
+MODULE_VERSION("1.0.1-configuration-save");
