@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/configuration_aes67/widgets/configuration_aes67.dart';
 import 'package:fusion_launcher/features/media_files/view/configuration_media_files_pages.dart';
 import 'package:fusion_launcher/features/media_files/viewModel/media_files_view_model.dart';
 import 'package:fusion_launcher/features/projects/presentation/widgets/pages/building_page.dart';
@@ -144,6 +145,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
               create: (_) => MediaFilesViewModel(),
               child: const ConfigurationMediaFilesPage(),
             ),
+            ConfigurationMenuMode.aes67 => const ConfigurationAes67Screen(),
           };
         },
       ),
