@@ -24,7 +24,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fusion_launcher/features/widget_library/models/widget_item.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_widgets/form_fields/text_fleld.dart';
+import 'package:fusion_lib/fusion_widgets/form_fields/fusion_custom_textfield.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_flat_container.dart';
 import 'package:fusion_lib/models/dock_item_config.dart';
 import 'package:fusion_lib/models/fusion_dock_item.dart';
@@ -366,7 +366,7 @@ class _WidgetDetailsSectionState extends State<WidgetDetailsSection> {
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.primary,
           ),
           code: '''
@@ -378,7 +378,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.primary,
           ),
 ''',
@@ -397,7 +397,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.primary,
           ),
           code: '''
@@ -410,7 +410,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.primary,
           ),
 ''',
@@ -428,7 +428,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.secondary,
           ),
           code: '''
@@ -440,7 +440,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.secondary,
           ),
 ''',
@@ -459,7 +459,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.secondary,
           ),
           code: '''
@@ -472,7 +472,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.secondary,
           ),
 ''',
@@ -490,7 +490,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.neumorphic,
           ),
           code: '''
@@ -502,7 +502,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.neumorphic,
           ),
 ''',
@@ -521,7 +521,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.neumorphic,
           ),
           code: '''
@@ -534,7 +534,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.neumorphic,
           ),
 ''',
@@ -553,7 +553,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.brand,
           ),
           code: '''
@@ -565,7 +565,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.brand,
           ),
 ''',
@@ -584,7 +584,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.brand,
           ),
           code: '''
@@ -597,7 +597,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.brand,
           ),
 ''',
@@ -616,7 +616,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.tertiary,
           ),
           code: '''
@@ -628,7 +628,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.tertiary,
           ),
 ''',
@@ -647,7 +647,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.tertiary,
           ),
           code: '''
@@ -660,7 +660,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.tertiary,
           ),
 ''',
@@ -678,7 +678,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.link,
           ),
           code: '''
@@ -690,7 +690,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.link,
           ),
 ''',
@@ -709,7 +709,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.link,
           ),
           code: '''
@@ -722,7 +722,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.link,
           ),
 ''',
@@ -737,7 +737,7 @@ FusionAppButton(
         // ================= DEFAULT (OUTLINE) =================
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             semanticId: "Outline",
             label: "Outline",
             hint: "Value",
@@ -758,7 +758,7 @@ CustomTextField(
         // ================= DEFAULT (NEUMORPHIC) =================
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             semanticId: "Neumorphic",
             label: "Neumorphic",
             hint: "Value",
@@ -778,7 +778,7 @@ CustomTextField(
         // ================= ERROR =================
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             semanticId: "Error",
             label: "Error",
             hint: "Value",
@@ -801,7 +801,7 @@ CustomTextField(
         // ================= BLOCKED =================
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             label: "Blocked",
             semanticId: "Blocked",
             hint: "Value",
@@ -822,7 +822,7 @@ CustomTextField(
         // ================= BLOCKED FILLED =================
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             label: "Blocked Filled",
             semanticId: "Blocked Filled",
             hint: "Value",
@@ -843,7 +843,7 @@ CustomTextField(
         // ================= WITH BUTTON =================
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             semanticId: "With Button",
             label: "With Button",
             hint: "Value",
@@ -872,7 +872,7 @@ CustomTextField(
         // ================= COUNTRY PICKER =================
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             semanticId: "Phone",
             label: "Phone",
             hint: "Mobile Number",
@@ -895,7 +895,7 @@ CustomTextField(
         // ================= PREFIX + SUFFIX =================
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             semanticId: "Icons",
             label: "Icons",
             hint: "Value",
@@ -922,7 +922,7 @@ CustomTextField(
         // ================= INFO + HELPERS =================
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             label: "Info",
             semanticId: "Info",
             hint: "Value",
@@ -953,7 +953,7 @@ CustomTextField(
         // ================= SUCCESS =================
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             label: "Success",
             semanticId: "Success",
             hint: "Value",
@@ -975,7 +975,7 @@ CustomTextField(
 
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             label: "Disabled",
             semanticId: "Disabled",
             hint: "Value",
@@ -996,7 +996,7 @@ CustomTextField(
         ),
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             showLabel: true,
             label: "Label",
             semanticId: "Label",
@@ -1788,14 +1788,22 @@ FusionCheckboxGroup<String>(
           ),
 
           code: '''
-FusionArrowPopup(
-            semanticId: "show_on_load",
-            showOnCreate: true,
-            content: const Text("Tap here to start"),
-            child: ElevatedButton(
-              onPressed: () {},
-              child: const Text("Start"),
-            ),
+FusionCheckboxGroup<String>(
+            semanticId: "vertical",
+            options: <String>["Home", "Work", "School"],
+            selected: selected,
+            labelBuilder: (BuildContext context, String option) {
+              return Row(
+                children: <Widget>[
+                  const Icon(Icons.location_on, size: 14),
+                  const SizedBox(width: 4),
+                  Text(option),
+                ],
+              );
+            },
+            onChanged: (List<String> value) {
+              setState(() => selected = value);
+            },
           ),
 ''',
         ),

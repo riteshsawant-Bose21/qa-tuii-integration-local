@@ -130,8 +130,9 @@ class _SnapshotActionRowContent extends StatelessWidget {
     final String selectedActionTypeLabel = action.actionType?.displayName ?? "Select Action Type";
 
     return Expanded(
-      child: SemanticHelper.dropdown(
-        testId: SemanticHelper.createTestId(SemanticTypes.dropdown, '${FusionTestKeys.instance.actionlistpanelrowdataitemactiontypdropdown}_$index'),
+      child: SemanticHelper.button(
+        testId: SemanticHelper.createTestId(SemanticTypes.button, '${FusionTestKeys.instance.actionlistpanelrowdataitemactiontypdropdown}_$index'),
+        label: selectedActionTypeLabel,
         child: FusionDropdown<SceneActionType>(
           value: action.actionType,
           hint: "Select Action Type",
@@ -167,9 +168,9 @@ class _SnapshotActionRowContent extends StatelessWidget {
     final String selectedItemLabel = selected?.name ?? hint;
 
     return Expanded(
-      child: SemanticHelper.dropdown(
-        testId: SemanticHelper.createTestId(SemanticTypes.dropdown, "${FusionTestKeys.instance.actionlistpanelrowdataitemactionitemdropdown}_$index"),
-        // value: selected?.name ?? '',
+      child: SemanticHelper.button(
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.actionlistpanelrowdataitemactionitemdropdown}_$index"),
+        label: selectedItemLabel,
         child: FusionDropdown<SceneItemDropdown>(
           value: selected,
           items: itemList,
@@ -203,9 +204,9 @@ class _SnapshotActionRowContent extends StatelessWidget {
     final String selectedParamLabel = selected?.label ?? "Select Parameter";
 
     return Expanded(
-      child: SemanticHelper.dropdown(
-        testId: SemanticHelper.createTestId(SemanticTypes.dropdown, "${FusionTestKeys.instance.actionlistpanelrowdataitemactionparmdropdown}_$index"),
-        // value: selected?.label ?? '',
+      child: SemanticHelper.button(
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.actionlistpanelrowdataitemactionparmdropdown}_$index"),
+        label: selectedParamLabel,
         child: FusionDropdown<SceneParam>(
           hint: "Select Parameter",
           value: selected,
@@ -238,7 +239,8 @@ class _SnapshotActionRowContent extends StatelessWidget {
 
     return Expanded(
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.actionlistpanelrowdataitemvalue}_$index"),
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.actionlistpanelrowdataitemvaluedropdown}_$index"),
+        label: selectedValueLabel,
         child: SnapshotValueWidget(
           index: index,
           actionId: action.id,

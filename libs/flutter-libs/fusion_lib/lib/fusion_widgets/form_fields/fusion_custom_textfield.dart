@@ -24,10 +24,10 @@ enum FusionFieldVariant {
 
 /// ---------------- WIDGET ----------------
 
-class CustomTextField extends StatefulWidget {
+class FusionCustomTextField extends StatefulWidget {
   final String? label;
   final String hint;
-  final TextEditingController controller;
+  final TextEditingController? controller;
 
   final bool enabled;
   final bool hasErrorText;
@@ -56,6 +56,7 @@ class CustomTextField extends StatefulWidget {
 
   final VoidCallback? onTap;
   final ValueChanged<String>? onSubmit;
+  final ValueChanged<String>? onChange;
 
   final TextInputType? inputType;
 
@@ -70,7 +71,9 @@ class CustomTextField extends StatefulWidget {
   final int charlimit;
   final InputDecoration? decoration;
 
-  const CustomTextField({
+  final double borderRadius;
+
+  const FusionCustomTextField({
     super.key,
     this.width = 400,
     this.height = 52,
@@ -78,7 +81,7 @@ class CustomTextField extends StatefulWidget {
     this.showRupee = false,
     this.label,
     required this.hint,
-    required this.controller,
+    this.controller,
     this.enabled = true,
     this.hasErrorText = false,
     this.errorText = '',
@@ -102,17 +105,20 @@ class CustomTextField extends StatefulWidget {
     this.fieldState,
     this.variant = FusionFieldVariant.outline,
     this.onSubmit,
+    this.onChange,
     this.charlimit = 50,
     this.decoration,
+    this.borderRadius = 12,
   });
 
   @override
-  State<CustomTextField> createState() => _CustomTextFieldState();
+  State<FusionCustomTextField> createState() => _FusionCustomTextFieldState();
 }
 
 /// ---------------- STATE ----------------
 
-class _CustomTextFieldState extends State<CustomTextField> {
+class _FusionCustomTextFieldState extends State<FusionCustomTextField> {
+  late TextEditingController _internalController;
   final LayerLink _layerLink = LayerLink();
   OverlayEntry? _dropdownOverlay;
 
@@ -135,6 +141,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
   void initState() {
     super.initState();
     _focusNode = FocusNode();
+    _internalController = widget.controller ?? TextEditingController();
     _focusNode.addListener(() {
       if (!_focusNode.hasFocus) {
         _removeDropdown();
@@ -145,7 +152,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
       }
     });
 
-    widget.controller.addListener(() {
+    _internalController.addListener(() {
       if (mounted) setState(() {});
     });
   }
@@ -154,6 +161,9 @@ class _CustomTextFieldState extends State<CustomTextField> {
   void dispose() {
     _focusNode.dispose();
     _removeDropdown();
+    if (widget.controller == null) {
+      _internalController.dispose();
+    }
     super.dispose();
   }
 
@@ -173,7 +183,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
     _dropdownOverlay = null;
   }
 
-  // Add this list at the top of your _CustomTextFieldState class
+  // Add this list at the top of your _FusionCustomTextFieldState class
 
   String _selectedCountryCode = '+91';
 
@@ -226,7 +236,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                           ),
                           decoration: BoxDecoration(
                             color: const Color(0xFF1C1C1C),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(widget.borderRadius),
                             border: Border.all(
                               color: this.context.colorScheme.elevation3,
                             ),
@@ -360,7 +370,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
       return widget.fieldState!;
     }
 
-    final hasText = widget.controller.text.isNotEmpty;
+    final hasText = _internalController.text.isNotEmpty;
 
     if (!widget.enabled && hasText) {
       return FusionFieldState.blockedFilled;
@@ -429,7 +439,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
     if (widget.variant == FusionFieldVariant.neumorphic) {
       return BoxDecoration(
         color: isHoverActive ? context.colorScheme.elevation2 : _fillColor(),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(widget.borderRadius),
         boxShadow: widget.fieldState == FusionFieldState.focused
             ? [
                 BoxShadow(
@@ -458,7 +468,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
 
     return BoxDecoration(
       color: isHoverActive ? context.colorScheme.elevation2 : _fillColor(),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(widget.borderRadius),
       border: Border.all(
         color: isHoverActive ? context.colorScheme.textPrimary : _borderColor(),
         width: 2,
@@ -642,7 +652,8 @@ class _CustomTextFieldState extends State<CustomTextField> {
                         child: TextField(
                           maxLength: widget.charlimit,
                           onSubmitted: widget.onSubmit,
-                          controller: widget.controller,
+                          onChanged: widget.onChange,
+                          controller: _internalController,
                           focusNode: _focusNode,
                           enabled: widget.enabled,
                           readOnly: widget.fieldState == FusionFieldState.blocked ? true : !widget.enabled,
@@ -673,7 +684,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                             focusedBorder: InputBorder.none,
 
                             hintText: widget.hint,
-                            hintStyle: context.textTheme.b3Regular.withColor(context.colorScheme.textPlaceholder),
+                            hintStyle: context.textTheme.bodySmall?.withColor(context.colorScheme.textPlaceholder),
                             filled: false,
                             isDense: true,
                           ),
