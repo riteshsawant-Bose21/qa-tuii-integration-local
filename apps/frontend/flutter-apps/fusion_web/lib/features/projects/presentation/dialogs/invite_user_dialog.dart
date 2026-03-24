@@ -1,226 +1,3 @@
-// import 'package:flutter/material.dart';
-// import 'package:fusion_web/features/projects/data/models/project_model.dart';
-
-// class InviteUserDialog extends StatefulWidget {
-
-//   final ProjectModel project;
-
-//   const InviteUserDialog({
-//     super.key,
-//     required this.project,
-//   });
-
-//   @override
-//   State<InviteUserDialog> createState() => _InviteUserDialogState();
-// }
-
-// class _InviteUserDialogState extends State<InviteUserDialog> {
-//   final _formKey = GlobalKey<FormState>();
-
-//   final List<_InviteRow> _rows = [_InviteRow()];
-
-//   bool _isSubmitting = false;
-
-//   void _addRow() {
-//     setState(() {
-//       _rows.add(_InviteRow());
-//     });
-//   }
-
-//   void _removeRow(int index) {
-//     if (_rows.length == 1) return;
-//     setState(() {
-//       _rows.removeAt(index);
-//     });
-//   }
-
-//   void _submit() async {
-//     if (!_formKey.currentState!.validate()) return;
-
-//     setState(() => _isSubmitting = true);
-
-//     await Future.delayed(const Duration(milliseconds: 500));
-
-//     if (!mounted) return;
-
-//     Navigator.pop(context);
-//   }
-
-//   @override
-//   void dispose() {
-//     for (final row in _rows) {
-//       row.emailController.dispose();
-//     }
-//     super.dispose();
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return AlertDialog(
-//       shape: RoundedRectangleBorder(
-//         borderRadius: BorderRadius.circular(16),
-//       ),
-//       titlePadding: const EdgeInsets.fromLTRB(24, 20, 16, 8),
-//       contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-//       actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-
-//       /// TITLE WITH CLOSE
-//       title: Row(
-//         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//         children: [
-//           const Text(
-//             'Invite Users',
-//             style: TextStyle(fontWeight: FontWeight.w600),
-//           ),
-//           IconButton(
-//             icon: const Icon(Icons.close),
-//             onPressed: () => Navigator.pop(context),
-//           ),
-//         ],
-//       ),
-
-//       content: SizedBox(
-//         width: 560,
-//         child: Form(
-//           key: _formKey,
-//           child: Column(
-//             mainAxisSize: MainAxisSize.min,
-//             children: [
-//               /// Subtitle
-//               const Align(
-//                 alignment: Alignment.centerLeft,
-//                 child: Text(
-//                   'Invite one or more users to this project by entering their email and selecting a role.',
-//                   style: TextStyle(color: Colors.black54),
-//                 ),
-//               ),
-//               const SizedBox(height: 20),
-
-//               /// Dynamic rows
-//               ..._rows.asMap().entries.map((entry) {
-//                 final index = entry.key;
-//                 final row = entry.value;
-
-//                 return Padding(
-//                   padding: const EdgeInsets.only(bottom: 12),
-//                   child: Row(
-//                     children: [
-//                       /// Email
-//                       Expanded(
-//                         flex: 3,
-//                         child: TextFormField(
-//                           controller: row.emailController,
-//                           decoration: const InputDecoration(
-//                             hintText: 'user@example.com',
-//                             filled: true,
-//                             fillColor: Color(0xFFF5F5F5),
-//                             border: OutlineInputBorder(
-//                               borderSide: BorderSide.none,
-//                               borderRadius:
-//                                   BorderRadius.all(Radius.circular(8)),
-//                             ),
-//                           ),
-//                           validator: (value) {
-//                             if (value == null || value.isEmpty) {
-//                               return 'Email required';
-//                             }
-//                             if (!value.contains('@')) {
-//                               return 'Invalid email';
-//                             }
-//                             return null;
-//                           },
-//                         ),
-//                       ),
-//                       const SizedBox(width: 12),
-
-//                       /// Role
-//                       Expanded(
-//                         flex: 2,
-//                         child: DropdownButtonFormField<String>(
-//                           value: row.role,
-//                           decoration: const InputDecoration(
-//                             filled: true,
-//                             fillColor: Color(0xFFF5F5F5),
-//                             border: OutlineInputBorder(
-//                               borderSide: BorderSide.none,
-//                               borderRadius:
-//                                   BorderRadius.all(Radius.circular(8)),
-//                             ),
-//                           ),
-//                           items: const [
-//                             DropdownMenuItem(
-//                                 value: 'Viewer', child: Text('Viewer')),
-//                             DropdownMenuItem(
-//                                 value: 'Editor', child: Text('Editor')),
-//                             DropdownMenuItem(
-//                                 value: 'Admin', child: Text('Admin')),
-//                           ],
-//                           onChanged: (value) {
-//                             setState(() {
-//                               row.role = value!;
-//                             });
-//                           },
-//                         ),
-//                       ),
-//                       const SizedBox(width: 8),
-
-//                       /// Remove button
-//                       IconButton(
-//                         icon: const Icon(Icons.close),
-//                         onPressed: () => _removeRow(index),
-//                       ),
-//                     ],
-//                   ),
-//                 );
-//               }),
-
-//               /// Add another button
-//               OutlinedButton.icon(
-//                 onPressed: _addRow,
-//                 icon: const Icon(Icons.add),
-//                 label: const Text('Add Another User'),
-//                 style: OutlinedButton.styleFrom(
-//                   minimumSize: const Size.fromHeight(44),
-//                 ),
-//               ),
-//             ],
-//           ),
-//         ),
-//       ),
-
-//       /// ACTIONS
-//       actions: [
-//         TextButton(
-//           onPressed: () => Navigator.pop(context),
-//           child: const Text('Cancel'),
-//         ),
-//         ElevatedButton(
-//           onPressed: _isSubmitting ? null : _submit,
-//           style: ElevatedButton.styleFrom(
-//             backgroundColor: Colors.black,
-//             foregroundColor: Colors.white,
-//             padding:
-//                 const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-//           ),
-//           child: _isSubmitting
-//               ? const SizedBox(
-//                   height: 16,
-//                   width: 16,
-//                   child: CircularProgressIndicator(strokeWidth: 2),
-//                 )
-//               : const Text('Send Invites'),
-//         ),
-//       ],
-//     );
-//   }
-// }
-
-// /// Helper model
-// class _InviteRow {
-//   final TextEditingController emailController = TextEditingController();
-//   String role = 'Viewer';
-// }
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_web/features/projects/data/models/project_model.dart';
@@ -238,39 +15,30 @@ class InviteUserDialog extends StatefulWidget {
 }
 
 class _InviteUserDialogState extends State<InviteUserDialog> {
-  final _formKey = GlobalKey<FormState>();
   final List<_InviteRow> _rows = [_InviteRow()];
-
-  void _addRow() {
-    setState(() {
-      _rows.add(_InviteRow());
-    });
-  }
-
-  void _removeRow(int index) {
-    if (_rows.length == 1) return;
-    setState(() {
-      _rows.removeAt(index);
-    });
-  }
-
-  void _submit() {
-    if (!_formKey.currentState!.validate()) return;
-
-    final cubit = context.read<InviteUserCubit>();
-
-    final userEmails = _rows
-        .where((r) => r.selectedUser != null)
-        .map((r) => r.selectedUser!.email)
-        .toList();
-
-    cubit.inviteUsers(projectId: widget.project.id, userEmails: userEmails);
-  }
 
   @override
   void initState() {
     super.initState();
     context.read<InviteUserCubit>().loadUsers();
+  }
+
+  void _submit() {
+    final cubit = context.read<InviteUserCubit>();
+
+    final userEmails = _rows
+        .expand((r) => r.selectedUsers)
+        .map((u) => u.email)
+        .toList();
+
+    if (userEmails.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select at least one user")),
+      );
+      return;
+    }
+
+    cubit.inviteUsers(projectId: widget.project.id, userEmails: userEmails);
   }
 
   @override
@@ -293,224 +61,351 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
       },
       child: AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        titlePadding: const EdgeInsets.fromLTRB(24, 20, 16, 8),
-        contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-
-        /// TITLE
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Invite Users',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ],
-        ),
 
         content: SizedBox(
-          width: 800,
-          child: Form(
-            key: _formKey,
-            child: BlocBuilder<InviteUserCubit, BaseState<List<UserModel>>>(
-              builder: (context, state) {
-                if (state is LoadingState<List<UserModel>>) {
-                  return const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
+          width: 600,
+          height: 420,
+          child: BlocBuilder<InviteUserCubit, BaseState<List<UserModel>>>(
+            builder: (context, state) {
+              if (state is LoadingState<List<UserModel>>) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-                if (state is LoadedState<List<UserModel>>) {
-                  final users = state.data;
+              if (state is LoadedState<List<UserModel>>) {
+                final users = state.data;
 
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Select one or more users to invite.',
-                          style: TextStyle(color: Colors.black54),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      ..._rows.asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final row = entry.value;
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Row(
-                            children: [
-                              /// USER DROPDOWN
-                              Expanded(
-                                flex: 2,
-                                child: DropdownButtonFormField<UserModel>(
-                                  isExpanded: true,
-                                  value: row.selectedUser,
-                                  hint: const Text(
-                                    "Select user email",
-                                    style: TextStyle(color: Colors.black45),
-                                  ),
-                                  icon: const Icon(Icons.keyboard_arrow_down),
-                                  decoration: InputDecoration(
-                                    filled: true,
-                                    fillColor: const Color(0xFFF8F8F8),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 14,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                  ),
-                                  items: users.map((user) {
-                                    return DropdownMenuItem<UserModel>(
-                                      value: user,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            user.name,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            user.email,
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.black54,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  }).toList(),
-                                  selectedItemBuilder: (context) {
-                                    return users.map((user) {
-                                      return Text(
-                                        user.email,
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      );
-                                    }).toList();
-                                  },
-                                  onChanged: (value) {
-                                    setState(() {
-                                      row.selectedUser = value;
-                                    });
-                                  },
-                                  validator: (value) {
-                                    if (value == null) {
-                                      return 'Please select user';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-
-                              /// ROLE
-                              Expanded(
-                                flex: 1,
-                                child: DropdownButtonFormField<String>(
-                                  value: row.role,
-                                  items: const [
-                                    DropdownMenuItem(
-                                      value: 'Admin',
-                                      child: Text('Admin'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'Designer',
-                                      child: Text('Designer'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'Technician',
-                                      child: Text('Technician'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'Contributor',
-                                      child: Text('Contributor'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'Viewer',
-                                      child: Text('Viewer'),
-                                    ),
-                                  ],
-                                  onChanged: (value) {
-                                    setState(() {
-                                      row.role = value!;
-                                    });
-                                  },
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.close),
-                                onPressed: () => _removeRow(index),
-                              ),
-                            ],
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    /// TITLE
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          "Invite Users",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 18,
                           ),
-                        );
-                      }),
-
-                      OutlinedButton.icon(
-                        onPressed: _addRow,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Add Another User'),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(44),
                         ),
-                      ),
-                    ],
-                  );
-                }
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
 
-                if (state is ErrorState<List<UserModel>>) {
-                  return Text(state.message);
-                }
+                    const Text(
+                      "Search and select one or more users to invite to this project.",
+                      style: TextStyle(color: Colors.black54),
+                    ),
 
-                return const SizedBox();
-              },
-            ),
+                    const SizedBox(height: 16),
+
+                    _MultiSelectUserField(
+                      users: users,
+                      selectedUsers: _rows.first.selectedUsers,
+                      onChanged: (updated) {
+                        setState(() {
+                          _rows.first.selectedUsers = updated;
+                        });
+                      },
+                    ),
+
+                    const Spacer(),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("Cancel"),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: _submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text("Send Invite"),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              }
+
+              return const SizedBox();
+            },
           ),
         ),
-
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: _submit,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.black,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Send Invites'),
-          ),
-        ],
       ),
     );
   }
 }
 
-/// Updated helper model
+/// multi-select model
 class _InviteRow {
-  UserModel? selectedUser;
-  String role = 'Viewer';
+  List<UserModel> selectedUsers = [];
+}
+
+/// multi-select
+
+class _MultiSelectUserField extends StatefulWidget {
+  final List<UserModel> users;
+  final List<UserModel> selectedUsers;
+  final Function(List<UserModel>) onChanged;
+
+  const _MultiSelectUserField({
+    required this.users,
+    required this.selectedUsers,
+    required this.onChanged,
+  });
+
+  @override
+  State<_MultiSelectUserField> createState() => _MultiSelectUserFieldState();
+}
+
+class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
+  final TextEditingController _controller = TextEditingController();
+  List<UserModel> filteredUsers = [];
+  bool isOpen = false;
+  int? hoveredIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    filteredUsers = widget.users;
+  }
+
+  void _filter(String query) {
+    setState(() {
+      filteredUsers = widget.users
+          .where(
+            (u) =>
+                u.name.toLowerCase().contains(query.toLowerCase()) ||
+                u.email.toLowerCase().contains(query.toLowerCase()),
+          )
+          .toList();
+    });
+  }
+
+  void _selectUser(UserModel user) {
+    final isSelected = widget.selectedUsers.contains(user);
+
+    List<UserModel> updated;
+
+    if (isSelected) {
+      updated = [...widget.selectedUsers]..remove(user);
+    } else {
+      updated = [...widget.selectedUsers, user];
+    }
+
+    widget.onChanged(updated);
+  }
+
+  void _removeUser(UserModel user) {
+    final updated = [...widget.selectedUsers]..remove(user);
+    widget.onChanged(updated);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: () => setState(() => isOpen = true),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFD1D5DB)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: widget.selectedUsers.isEmpty
+                ? const Text("Select users...")
+                : Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: widget.selectedUsers.map((user) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEDEEF2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(user.name),
+                            const SizedBox(width: 6),
+                            GestureDetector(
+                              onTap: () => _removeUser(user),
+                              child: const Icon(Icons.close, size: 16),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+          ),
+        ),
+
+        if (isOpen)
+          Container(
+            margin: const EdgeInsets.only(top: 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            constraints: const BoxConstraints(maxHeight: 250),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: TextField(
+                    controller: _controller,
+                    decoration: const InputDecoration(
+                      hintText: "Search users...",
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    onChanged: _filter,
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: filteredUsers.length,
+                    itemBuilder: (context, index) {
+                      final user = filteredUsers[index];
+                      final isSelected = widget.selectedUsers.contains(user);
+
+                      return MouseRegion(
+                        onEnter: (_) => setState(() => hoveredIndex = index),
+                        onExit: (_) => setState(() => hoveredIndex = null),
+                        child: GestureDetector(
+                          onTap: () => _selectUser(user),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: hoveredIndex == index
+                                  ? const Color(0xFFF3F4F6)
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: const Color(0xFFE5E7EB),
+                                  child: Text(
+                                    user.name.substring(0, 2).toUpperCase(),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      /// name
+                                      Text(
+                                        user.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+
+                                      const SizedBox(height: 2),
+
+                                      /// email with role
+                                      Row(
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              user.email,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.black,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+
+                                          const SizedBox(width: 6),
+
+                                          /// DOT
+                                          const Text(
+                                            "•",
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                            ),
+                                          ),
+
+                                          const SizedBox(width: 6),
+
+                                          /// role
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              // color: const Color.fromARGB(255, 211, 213, 219),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border: Border.all(
+                                                color: const Color(0xFFD1D5DB),
+                                                width: 1,
+                                              ),
+                                            ),
+                                            child: Text(
+                                              user.role,
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                if (isSelected) const Icon(Icons.check),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
 }
