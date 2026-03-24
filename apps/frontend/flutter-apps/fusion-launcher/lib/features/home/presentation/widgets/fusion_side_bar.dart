@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
@@ -266,6 +267,15 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                       isSelected: widget.selectedTab == DashboardTabs.testLibrady,
                                       onTap: () => widget.onTabChanged?.call(DashboardTabs.testLibrady),
                                     ),
+                                    if (kDebugMode) ...<Widget>[
+                                      _HoverNavItem(
+                                        icon: Icons.account_circle,
+                                        title: DashboardTabs.widgetLibrary.name,
+                                        semanticsId: 'widget_lib',
+                                        isSelected: widget.selectedTab == DashboardTabs.widgetLibrary,
+                                        onTap: () => widget.onTabChanged?.call(DashboardTabs.widgetLibrary),
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),

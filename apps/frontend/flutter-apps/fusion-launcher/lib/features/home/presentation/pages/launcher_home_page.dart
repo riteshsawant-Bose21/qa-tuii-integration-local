@@ -8,6 +8,7 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/service_locator.dart';
+import '../../../widget_library/widget_library.dart';
 import '../widgets/fusion_side_bar.dart';
 import '../widgets/home_tab_content.dart';
 import '../widgets/profile_tab_content.dart';
@@ -20,6 +21,7 @@ enum DashboardTabs {
   settings("Settings"),
   // community("Community"),
   testLibrady("Test Library"),
+  widgetLibrary("Widget Library"),
   savedProjects("Saved Projects");
 
   final String name;
@@ -83,7 +85,6 @@ class _HomePageState extends State<HomePage> {
                     },
                   ),
                 ],
-
                 // ==================================
                 //          Tab Content
                 // ==================================
@@ -132,6 +133,8 @@ class _HomePageState extends State<HomePage> {
                               return const SavedProjectsTabContent();
                             case DashboardTabs.testLibrady:
                               return TestLibraryScreen();
+                            case DashboardTabs.widgetLibrary:
+                              return const WidgetLibrary();
                           }
                         },
                       );

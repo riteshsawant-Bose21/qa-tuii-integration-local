@@ -98,8 +98,8 @@ class _TriggerTypeDropdown extends StatelessWidget {
             maxLine: 1,
           ),
           const SizedBox(height: 8),
-          SemanticHelper.button(
-            testId: SemanticHelper.createTestId(SemanticTypes.button, "event_trigger_type"),
+          SemanticHelper.dropdown(
+            testId: SemanticHelper.createTestId(SemanticTypes.dropdown, FusionTestKeys.instance.eventtriggertype),
             child: FusionDropdown<EventTriggerType>(
               value: selectedEvent.triggerType,
               hint: "Select Trigger Type",
@@ -158,7 +158,7 @@ class _TriggerItemDropdown extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           SemanticHelper.button(
-            testId: SemanticHelper.createTestId(SemanticTypes.button, "event_trigger_item"),
+            testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.instance.eventtriggeritem),
             child: FusionDropdown<EventTriggerItemDropdown>(
               value: currentValue,
               hint: "Select Item",
@@ -205,7 +205,7 @@ class _ActionTypeDropdown extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           SemanticHelper.button(
-            testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_type"),
+            testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.instance.eventtriggeraction),
             child: FusionDropdown<EventActionType>(
               value: selectedEvent.action != null && availableActions.contains(selectedEvent.action) ? selectedEvent.action : null,
               hint: "Select Action",
@@ -256,7 +256,7 @@ class _ConditionDropdown extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           SemanticHelper.button(
-            testId: SemanticHelper.createTestId(SemanticTypes.button, "event_condition_type"),
+            testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.instance.eventtriggercondition),
             child: FusionDropdown<EventConditionType>(
               value:
                   selectedEvent.condition?.conditionType != null && availableConditions.contains(selectedEvent.condition!.conditionType)
@@ -335,36 +335,39 @@ class _ValueColumn extends StatelessWidget {
     final double minValue = condition.min;
     final double maxValue = condition.max;
 
-    return SliderTheme(
-      data: SliderTheme.of(context).copyWith(
-        rangeThumbShape: const RoundRangeSliderThumbShape(enabledThumbRadius: 6),
-        overlayShape: const RoundSliderOverlayShape(overlayRadius: 4),
-        trackHeight: 1,
-        thumbColor: context.colorScheme.primaryWhite,
-      ),
-      child: RangeSlider(
-        values: RangeValues(minValue, maxValue),
-        min: 0,
-        max: 100,
-        activeColor: context.colorScheme.elevation2,
-        inactiveColor: context.colorScheme.primaryWhite,
-        divisions: 100,
-        padding: EdgeInsets.zero,
-        labels: RangeLabels(
-          minValue.toInt().toString(),
-          maxValue.toInt().toString(),
+    return SemanticHelper.slider(
+      testId: SemanticHelper.createTestId(SemanticTypes.slider, FusionTestKeys.instance.eventtriggervalueslider),
+      child: SliderTheme(
+        data: SliderTheme.of(context).copyWith(
+          rangeThumbShape: const RoundRangeSliderThumbShape(enabledThumbRadius: 6),
+          overlayShape: const RoundSliderOverlayShape(overlayRadius: 4),
+          trackHeight: 1,
+          thumbColor: context.colorScheme.primaryWhite,
         ),
-        onChanged: (RangeValues values) {
-          final ValueChangeCondition updatedCondition = condition.copyWith(
-            min: values.start,
-            max: values.end,
-          );
+        child: RangeSlider(
+          values: RangeValues(minValue, maxValue),
+          min: 0,
+          max: 100,
+          activeColor: context.colorScheme.elevation2,
+          inactiveColor: context.colorScheme.primaryWhite,
+          divisions: 100,
+          padding: EdgeInsets.zero,
+          labels: RangeLabels(
+            minValue.toInt().toString(),
+            maxValue.toInt().toString(),
+          ),
+          onChanged: (RangeValues values) {
+            final ValueChangeCondition updatedCondition = condition.copyWith(
+              min: values.start,
+              max: values.end,
+            );
 
-          cubit.updateEventCondition(
-            eventId: eventId,
-            newCondition: updatedCondition,
-          );
-        },
+            cubit.updateEventCondition(
+              eventId: eventId,
+              newCondition: updatedCondition,
+            );
+          },
+        ),
       ),
     );
   }
@@ -376,52 +379,57 @@ class _ValueColumn extends StatelessWidget {
   ) {
     final double thresholdValue = condition.threshold;
 
-    return Row(
-      children: <Widget>[
-        Flexible(
-          child: SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-              overlayShape: const RoundSliderOverlayShape(overlayRadius: 4),
-              trackHeight: 1,
-              thumbColor: Theme.of(context).colorScheme.primaryWhite,
-            ),
-            child: Slider(
-              value: thresholdValue,
-              min: 0,
-              max: 100,
-              divisions: 100,
-              padding: EdgeInsets.zero,
-              label: thresholdValue.toStringAsFixed(0),
-              activeColor: context.colorScheme.elevation2,
-              inactiveColor: context.colorScheme.primaryWhite,
-              onChanged: (double value) {
-                final ThresholdCondition updatedCondition = condition.copyWith(
-                  threshold: value,
-                );
+    return SemanticHelper.slider(
+      testId: SemanticHelper.createTestId(SemanticTypes.slider, FusionTestKeys.instance.eventtriggervaluethresholdslider),
+      value: thresholdValue,
+      child: Row(
+        children: <Widget>[
+          Flexible(
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 4),
+                trackHeight: 1,
+                thumbColor: Theme.of(context).colorScheme.primaryWhite,
+              ),
+              child: Slider(
+                value: thresholdValue,
+                min: 0,
+                max: 100,
+                divisions: 100,
+                padding: EdgeInsets.zero,
+                label: thresholdValue.toStringAsFixed(0),
+                activeColor: context.colorScheme.elevation2,
+                inactiveColor: context.colorScheme.primaryWhite,
+                onChanged: (double value) {
+                  final ThresholdCondition updatedCondition = condition.copyWith(
+                    threshold: value,
+                  );
 
-                cubit.updateEventCondition(
-                  eventId: eventId,
-                  newCondition: updatedCondition,
-                );
-              },
+                  cubit.updateEventCondition(
+                    eventId: eventId,
+                    newCondition: updatedCondition,
+                  );
+                },
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 16),
-        Container(
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
-          decoration: BoxDecoration(
-            color: context.colorScheme.primaryBlack,
-            borderRadius: BorderRadius.circular(2),
+          const SizedBox(width: 16),
+          Container(
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+            decoration: BoxDecoration(
+              color: context.colorScheme.primaryBlack,
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: FusionAppText(
+              semanticId: FusionTestKeys.instance.eventtriggervaluethresholdslidertext,
+              text: thresholdValue.toStringAsFixed(0),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+            ),
           ),
-          child: FusionAppText(
-            text: thresholdValue.toStringAsFixed(0),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

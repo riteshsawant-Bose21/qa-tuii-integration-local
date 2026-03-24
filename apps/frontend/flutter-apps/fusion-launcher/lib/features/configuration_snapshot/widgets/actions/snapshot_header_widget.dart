@@ -119,6 +119,7 @@ class _SnapshotHeaderWidgetState extends State<SnapshotHeaderWidget> {
                 children: <Widget>[
                   if (widget.sceneSetNameName != null) ...<Widget>[
                     FusionAppText(
+                      semanticId: FusionTestKeys.instance.actionlistpanelheaderlabel,
                       text: "${widget.sceneSetNameName} > ",
                       style: context.textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
