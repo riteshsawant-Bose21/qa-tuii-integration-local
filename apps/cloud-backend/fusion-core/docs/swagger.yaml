@@ -249,6 +249,10 @@ definitions:
         items:
           $ref: '#/definitions/types.ProductItemResponse'
         type: array
+      source:
+        items:
+          $ref: '#/definitions/types.SourceItem'
+        type: array
       speaker:
         items:
           $ref: '#/definitions/types.ProductItemResponse'
@@ -507,6 +511,21 @@ definitions:
       speaker:
         $ref: '#/definitions/types.ProductItemResponse'
       version:
+        type: string
+    type: object
+  types.SourceItem:
+    properties:
+      asset_path:
+        type: string
+      connection_type:
+        type: string
+      name:
+        type: string
+      price:
+        type: number
+      product_id:
+        type: string
+      type:
         type: string
     type: object
   types.StatusOkForCreateUserProfile:

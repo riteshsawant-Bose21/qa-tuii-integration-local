@@ -1972,6 +1972,12 @@ const docTemplate = `{
                         "$ref": "#/definitions/types.ProductItemResponse"
                     }
                 },
+                "source": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.SourceItem"
+                    }
+                },
                 "speaker": {
                     "type": "array",
                     "items": {
@@ -2347,6 +2353,29 @@ const docTemplate = `{
                     "$ref": "#/definitions/types.ProductItemResponse"
                 },
                 "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.SourceItem": {
+            "type": "object",
+            "properties": {
+                "asset_path": {
+                    "type": "string"
+                },
+                "connection_type": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "type": {
                     "type": "string"
                 }
             }
