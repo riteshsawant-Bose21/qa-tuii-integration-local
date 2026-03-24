@@ -102,35 +102,6 @@ definitions:
       id:
         type: string
     type: object
-  types.CheckForUpdateResponse:
-    properties:
-      app_update_required:
-        example: false
-        type: boolean
-      bundle_id:
-        example: 72e1e23e-eb51-42c1-9ecb-bd7cf7304b60
-        type: string
-      created_at:
-        type: string
-      manifest_data:
-        additionalProperties: true
-        type: object
-      min_desktop_app_version:
-        example: 1.4.0
-        type: string
-      min_required_prev_version:
-        example: 2.0.0
-        type: string
-      release_notes:
-        example: Bug fixes and performance improvements
-        type: string
-      update_available:
-        example: true
-        type: boolean
-      version:
-        example: 2.5.6
-        type: string
-    type: object
   types.CreateRoleRequest:
     properties:
       description:
@@ -218,6 +189,35 @@ definitions:
         type: integer
       feature_name:
         example: launcher.project.create
+        type: string
+    type: object
+  types.FirmwareUpdateResponse:
+    properties:
+      app_update_required:
+        example: false
+        type: boolean
+      bundle_id:
+        example: 72e1e23e-eb51-42c1-9ecb-bd7cf7304b60
+        type: string
+      created_at:
+        type: string
+      manifest_data:
+        additionalProperties: true
+        type: object
+      min_desktop_app_version:
+        example: 1.4.0
+        type: string
+      min_required_prev_version:
+        example: 2.0.0
+        type: string
+      release_notes:
+        example: Bug fixes and performance improvements
+        type: string
+      update_available:
+        example: true
+        type: boolean
+      version:
+        example: 2.5.6
         type: string
     type: object
   types.GetAllProjectsResponse:
@@ -1124,7 +1124,7 @@ paths:
         "200":
           description: Response varies by scenario - see description above
           schema:
-            $ref: '#/definitions/types.CheckForUpdateResponse'
+            $ref: '#/definitions/types.FirmwareUpdateResponse'
         "400":
           description: Invalid request payload
           schema:

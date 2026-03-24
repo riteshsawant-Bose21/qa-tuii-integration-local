@@ -225,7 +225,7 @@ func (h *FirmwareUpdateHandler) ApproveBundle(c *gin.Context) {
 // @Param current_firmware_version query string true "Current firmware version (semver format)"
 // @Param current_desktop_app_version query string true "Current desktop application version (semver format)"
 // @Param channel query string false "Release channel: 'beta', 'alpha', etc. Omit for stable releases (prerelease IS NULL)"
-// @Success 200 {object} types.CheckForUpdateResponse "Response varies by scenario - see description above"
+// @Success 200 {object} types.FirmwareUpdateResponse "Response varies by scenario - see description above"
 // @Failure 400 {object} types.ErrorResponse "Invalid request payload"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /firmware/updates/check [get]

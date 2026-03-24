@@ -333,7 +333,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Response varies by scenario - see description above",
                         "schema": {
-                            "$ref": "#/definitions/types.CheckForUpdateResponse"
+                            "$ref": "#/definitions/types.FirmwareUpdateResponse"
                         }
                     },
                     "400": {
@@ -2140,46 +2140,6 @@ const docTemplate = `{
                 }
             }
         },
-        "types.CheckForUpdateResponse": {
-            "type": "object",
-            "properties": {
-                "app_update_required": {
-                    "type": "boolean",
-                    "example": false
-                },
-                "bundle_id": {
-                    "type": "string",
-                    "example": "72e1e23e-eb51-42c1-9ecb-bd7cf7304b60"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "manifest_data": {
-                    "type": "object",
-                    "additionalProperties": true
-                },
-                "min_desktop_app_version": {
-                    "type": "string",
-                    "example": "1.4.0"
-                },
-                "min_required_prev_version": {
-                    "type": "string",
-                    "example": "2.0.0"
-                },
-                "release_notes": {
-                    "type": "string",
-                    "example": "Bug fixes and performance improvements"
-                },
-                "update_available": {
-                    "type": "boolean",
-                    "example": true
-                },
-                "version": {
-                    "type": "string",
-                    "example": "2.5.6"
-                }
-            }
-        },
         "types.CreateRoleRequest": {
             "type": "object",
             "required": [
@@ -2300,6 +2260,46 @@ const docTemplate = `{
                 "feature_name": {
                     "type": "string",
                     "example": "launcher.project.create"
+                }
+            }
+        },
+        "types.FirmwareUpdateResponse": {
+            "type": "object",
+            "properties": {
+                "app_update_required": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "bundle_id": {
+                    "type": "string",
+                    "example": "72e1e23e-eb51-42c1-9ecb-bd7cf7304b60"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "manifest_data": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "min_desktop_app_version": {
+                    "type": "string",
+                    "example": "1.4.0"
+                },
+                "min_required_prev_version": {
+                    "type": "string",
+                    "example": "2.0.0"
+                },
+                "release_notes": {
+                    "type": "string",
+                    "example": "Bug fixes and performance improvements"
+                },
+                "update_available": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "version": {
+                    "type": "string",
+                    "example": "2.5.6"
                 }
             }
         },
