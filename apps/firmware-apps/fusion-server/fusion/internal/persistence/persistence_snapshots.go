@@ -92,8 +92,17 @@ func (p *Persistence) ActivateSnapshot(snapshotName string) error {
 // DeleteSnapshot removes the snapshot and restores the default if it was active.
 func (p *Persistence) DeleteSnapshot(snapshotName string) error {
 
+	exists, err := p.keyExists(bucketSnapshots, snapshotName)
+	if err != nil {
+		return fmt.Errorf("failed to delete snapshot '%s': %w", snapshotName, err)
+	}
+	if !exists {
+		logging.GetLogger().Debug("Snapshot delete skipped: snapshot=%s missing", snapshotName)
+		return nil
+	}
+
 	// Perform deletion in a single atomic transaction.
-	err := p.db.Update(func(tx *bbolt.Tx) error {
+	err = p.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketSnapshots))
 		if bucket == nil {
 			return fmt.Errorf("bucket '%s' not found", bucketSnapshots)

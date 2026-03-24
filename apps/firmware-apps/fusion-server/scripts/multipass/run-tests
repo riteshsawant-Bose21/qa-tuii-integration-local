@@ -166,6 +166,16 @@ function run_test_file() {
     fi
 }
 
+# Helper to run a package test with or without -run
+function run_test_package() {
+    local pkg="$1"
+    if [[ -n "$test_name" ]]; then
+        go test -v --race "$pkg" -run "$test_name"
+    else
+        go test -v --race "$pkg"
+    fi
+}
+
 # # Helper for tests without extra args
 # function run_simple_test() {
 #     local file="$1"
@@ -201,12 +211,24 @@ case "$test_type" in
     controllers)  run_test_file ./controllers_test.go ;;
     fusion)       run_test_file ./fusion_test.go ;;
     logger)       run_test_file ./logger_test.go ;;
-    persistence)  run_test_file ./persistence_test.go ;;
+    persistence)
+        run_test_file ./persistence_test.go
+        (
+            cd ../internal/persistence || exit 1
+            run_test_package ./...
+        )
+        ;;
     sap)          run_test_file ./sap_test.go ;;
     scheduler)    run_test_file ./scheduler_test.go ;;
     snapshot)     run_test_file ./snapshot_test.go ;;
     state)        run_test_file ./state_test.go ;;
-    tasks)        run_test_file ./tasks_test.go ;;
+    tasks)
+        run_test_file ./tasks_test.go
+        (
+            cd ../internal/tasks || exit 1
+            run_test_package ./...
+        )
+        ;;
     udp)          run_test_file ./udp_test.go ;;
     udp-chaos)
         export FUSION_UDP_CHAOS_TEST=1

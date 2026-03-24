@@ -22,8 +22,9 @@ import (
 )
 
 const (
-	HistoryPath = "history.json"
-	MaxHistory  = 100
+	HistoryPath          = "history.json"
+	MaxHistory           = 100
+	historyFlushDebounce = 2 * time.Second
 )
 
 var ErrTaskNotFound = errors.New("task not found")
@@ -49,6 +50,8 @@ type TaskManager struct {
 	persistence      *persistence.Persistence
 	hub              *pubsub.Hub
 	running          bool
+	historyDirty     bool
+	historyTimer     *time.Timer
 	taskFuncs        map[string]func()
 	tasks            map[string]*api.Task
 	actionFactories  map[api.TaskType]func(*api.Task) func()
@@ -197,10 +200,7 @@ func (tm *TaskManager) RecordExecution(task *api.Task, status string) {
 	if len(tm.executionHistory) > MaxHistory {
 		tm.executionHistory = tm.executionHistory[len(tm.executionHistory)-MaxHistory:]
 	}
-
-	if err := tm.saveHistory(); err != nil {
-		logging.GetLogger().Error("Error saving history: %v", err)
-	}
+	tm.scheduleHistoryFlushLocked()
 }
 
 // GetExecutionHistory retrieves the execution history.
@@ -248,7 +248,7 @@ func (tm *TaskManager) Start() {
 
 // Stop stops the TaskManager's scheduler.
 func (tm *TaskManager) Stop() {
-
+	tm.flushHistory()
 	tm.cron.Stop()
 	tm.running = false
 }
@@ -335,6 +335,7 @@ func (tm *TaskManager) ClearHistory(w http.ResponseWriter, r *http.Request) {
 
 	tm.mu.Lock()
 	tm.executionHistory = make([]ExecutionRecord, 0)
+	tm.scheduleHistoryFlushLocked()
 	tm.mu.Unlock()
 
 	w.WriteHeader(http.StatusNoContent)
@@ -477,17 +478,7 @@ func (tm *TaskManager) LoadTasks() error {
 	return nil
 }
 
-// saveHistory saves the execution history to a file.
-func (tm *TaskManager) saveHistory() error {
-	data, err := json.MarshalIndent(tm.executionHistory, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(tm.historyFilePath, data, 0644)
-}
-
-// loadHistory loads the execution history from a file.
+// loadHistory loads the persisted failure history from disk.
 func (tm *TaskManager) loadHistory() error {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
@@ -507,6 +498,76 @@ func (tm *TaskManager) loadHistory() error {
 	}
 
 	return json.Unmarshal(data, &tm.executionHistory)
+}
+
+func (tm *TaskManager) scheduleHistoryFlushLocked() {
+	tm.historyDirty = true
+	if tm.historyTimer != nil {
+		tm.historyTimer.Reset(historyFlushDebounce)
+		logging.GetLogger().Debug("[TASKS] History flush rescheduled in %s", historyFlushDebounce)
+		return
+	}
+
+	tm.historyTimer = time.AfterFunc(historyFlushDebounce, tm.flushHistory)
+	logging.GetLogger().Debug("[TASKS] History flush scheduled in %s", historyFlushDebounce)
+}
+
+func (tm *TaskManager) flushHistory() {
+	tm.mu.Lock()
+	if tm.historyTimer != nil {
+		tm.historyTimer.Stop()
+		tm.historyTimer = nil
+	}
+	if !tm.historyDirty {
+		tm.mu.Unlock()
+		return
+	}
+
+	historyCopy := append([]ExecutionRecord(nil), tm.persistedFailureHistoryLocked()...)
+	historyPath := tm.historyFilePath
+	tm.historyDirty = false
+	tm.mu.Unlock()
+
+	data, err := json.MarshalIndent(historyCopy, "", "  ")
+	if err != nil {
+		logging.GetLogger().Error("Error marshaling history: %v", err)
+		tm.markHistoryDirty()
+		return
+	}
+
+	tmpPath := historyPath + ".tmp"
+	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+		logging.GetLogger().Error("Error writing history temp file: %v", err)
+		tm.markHistoryDirty()
+		return
+	}
+	if err := os.Rename(tmpPath, historyPath); err != nil {
+		_ = os.Remove(tmpPath)
+		logging.GetLogger().Error("Error rotating history file: %v", err)
+		tm.markHistoryDirty()
+		return
+	}
+
+	logging.GetLogger().Debug("[TASKS] History flushed to disk")
+}
+
+func (tm *TaskManager) markHistoryDirty() {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+	tm.historyDirty = true
+}
+
+func (tm *TaskManager) persistedFailureHistoryLocked() []ExecutionRecord {
+	failures := make([]ExecutionRecord, 0, len(tm.executionHistory))
+	for _, record := range tm.executionHistory {
+		if record.Status == "failed" {
+			failures = append(failures, record)
+		}
+	}
+	if len(failures) > MaxHistory {
+		failures = failures[len(failures)-MaxHistory:]
+	}
+	return failures
 }
 
 // registerEnabledTasks registers enabled tasks
