@@ -17,6 +17,8 @@ class ItemWidgetBuilder extends StatelessWidget {
 abstract class PBWidgetValueHandler {
   void onValueChanged(PBItem item, dynamic value);
 
+  void addValue(PBItem item, dynamic value);
+
   dynamic getValue(PBItem param);
 
   PBItemParam resolveForItem(PBItem item);

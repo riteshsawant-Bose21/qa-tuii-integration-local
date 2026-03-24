@@ -32,7 +32,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   Future<List<UserModel>> getUsers() async {
     try {
       print('Users API: Calling organization/users endpoint');
-      final response = await _apiService.get('organization/users');
+      final response = await _apiService.get('/organization/users');
 
       // Debug: Print the full response structure
       print('API Response keys: ${response.keys.toList()}');
@@ -72,7 +72,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   @override
   Future<UserModel> getUserById(String id) async {
     try {
-      final response = await _apiService.get('organization/users/$id');
+      final response = await _apiService.get('/organization/users/$id');
       final userData =
           response['data'] as Map<String, dynamic>? ??
           response['user'] as Map<String, dynamic>? ??
@@ -91,7 +91,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   Future<UserModel> createUser(UserModel user) async {
     try {
       final response = await _apiService.post(
-        'organization/users',
+        '/organization/users',
         user.toJson(),
       );
       final userData =
@@ -112,7 +112,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   Future<UserModel> updateUser(UserModel user) async {
     try {
       final response = await _apiService.put(
-        'organization/users/${user.id}',
+        '/organization/users/${user.id}',
         user.toJson(),
       );
       final userData =
@@ -132,7 +132,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   @override
   Future<void> deleteUser(String id) async {
     try {
-      await _apiService.delete('organization/users/$id');
+      await _apiService.delete('/organization/users/$id');
     } catch (e) {
       // Fallback behavior - simulate success for demo
       print('API Error, simulating deletion: $e');
@@ -144,7 +144,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   Future<List<UserModel>> searchUsers(String query) async {
     try {
       final response = await _apiService.get(
-        'organization/users/search?q=${Uri.encodeComponent(query)}',
+        '/organization/users/search?q=${Uri.encodeComponent(query)}',
       );
       final usersJson =
           response['data'] as List<dynamic>? ??
@@ -173,7 +173,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   Future<UserModel> inviteUser(InviteUserParams params) async {
     try {
       final response = await _apiService.post(
-        'organization/users/invite',
+        '/organization/users/invite',
         {
           'email': params.email,
           'name': params.name,
@@ -193,7 +193,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   @override
   Future<void> resendInvite(String userId) async {
     try {
-      await _apiService.post('organization/users/$userId/resend-invite', {});
+      await _apiService.post('/organization/users/$userId/resend-invite', {});
     } catch (e) {
       print('API Error, simulating resend invite: $e');
       await Future.delayed(const Duration(milliseconds: 400));
@@ -204,7 +204,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   Future<UserModel> updateUserRoles(UpdateUserRoleParams params) async {
     try {
       final response = await _apiService.put(
-        'organization/users/${params.userId}/roles',
+        '/organization/users/${params.userId}/roles',
         {'roles': params.roles},
       );
       final userData = response['data'] as Map<String, dynamic>? ?? response;
@@ -219,7 +219,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   Future<UserModel> assignUserToProjects(String userId, List<String> projectIds) async {
     try {
       final response = await _apiService.post(
-        'organization/users/$userId/projects',
+        '/organization/users/$userId/projects',
         {'project_ids': projectIds},
       );
       final userData = response['data'] as Map<String, dynamic>? ?? response;
@@ -233,9 +233,9 @@ class UsersRemoteDataSource implements UsersDataSource {
   @override
   Future<UserModel> removeUserFromProjects(String userId, List<String> projectIds) async {
     try {
-      await _apiService.delete('organization/users/$userId/projects');
+      await _apiService.delete('/organization/users/$userId/projects');
       // For now, fetch the updated user since delete doesn't return data
-      final response = await _apiService.get('organization/users/$userId');
+      final response = await _apiService.get('/organization/users/$userId');
       final userData = response['data'] as Map<String, dynamic>? ?? response;
       return UserModel.fromJson(userData);
     } catch (e) {
@@ -248,7 +248,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   Future<UserModel> activateUser(String userId) async {
     try {
       final response = await _apiService.post(
-        'organization/users/$userId/activate',
+        '/organization/users/$userId/activate',
         {},
       );
       final userData = response['data'] as Map<String, dynamic>? ?? response;
@@ -263,7 +263,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   Future<UserModel> deactivateUser(String userId) async {
     try {
       final response = await _apiService.post(
-        'organization/users/$userId/deactivate',
+        '/organization/users/$userId/deactivate',
         {},
       );
       final userData = response['data'] as Map<String, dynamic>? ?? response;
@@ -293,7 +293,7 @@ class UsersRemoteDataSource implements UsersDataSource {
           .map((e) => '${e.key}=${Uri.encodeComponent(e.value.toString())}')
           .join('&');
 
-      final response = await _apiService.get('organization/users/filter?$queryString');
+      final response = await _apiService.get('/organization/users/filter?$queryString');
       final usersJson = response['data'] as List<dynamic>? ?? response['users'] as List<dynamic>? ?? [];
       
       return usersJson
@@ -308,7 +308,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   @override
   Future<Map<String, int>> getUserMetrics() async {
     try {
-      final response = await _apiService.get('organization/users/metrics');
+      final response = await _apiService.get('/organization/users/metrics');
       final metrics = response['data'] as Map<String, dynamic>? ?? response;
       
       return {

@@ -81,7 +81,7 @@ class FusionTextButton extends StatelessWidget {
   final String? accessIdentifier;
 
   /// Semantic label for screen readers.
-  final String? accessLabel;
+  final String accessLabel;
 
   /// Creates a [FusionTextButton].
   ///
@@ -95,7 +95,7 @@ class FusionTextButton extends StatelessWidget {
     this.borderRadius = 8,
     this.textStyle,
     this.horizontalPadding = 12,
-    this.foregroundColor = const Color(0xFF000000),
+    this.foregroundColor = const Color(0xFFFFFFFF),
     this.backgroundColor = Colors.transparent,
     this.isLoading = false,
     this.isActive = true,
@@ -104,13 +104,17 @@ class FusionTextButton extends StatelessWidget {
     this.showSuffixIcon = false,
     this.suffixIcon,
     this.accessIdentifier,
-    this.accessLabel,
+    required this.accessLabel,
   });
 
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(SemanticTypes.button, accessLabel ?? label),
+      isEnabled: isActive,
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.button,
+        accessLabel ?? label,
+      ),
       child: IgnorePointer(
         ignoring: isLoading || !isActive,
         child: InkWell(
@@ -130,14 +134,21 @@ class FusionTextButton extends StatelessWidget {
                 ? const SizedBox(
                     width: 24,
                     height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.black)),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                    ),
                   )
                 : Row(
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       if (showPrefixIcon && prefixIcon != null) ...[
-                        Icon(prefixIcon, size: 16, color: isActive ? foregroundColor : foregroundColor.withValues(alpha: 0.5)),
+                        Icon(
+                          prefixIcon,
+                          size: 16,
+                          color: isActive ? foregroundColor : foregroundColor.withValues(alpha: 0.5),
+                        ),
                         const SizedBox(width: 8),
                       ],
                       Expanded(
@@ -151,7 +162,11 @@ class FusionTextButton extends StatelessWidget {
                       ),
                       if (showSuffixIcon && suffixIcon != null) ...[
                         const SizedBox(width: 8),
-                        Icon(suffixIcon, size: 16, color: isActive ? foregroundColor : foregroundColor.withValues(alpha: 0.5)),
+                        Icon(
+                          suffixIcon,
+                          size: 16,
+                          color: isActive ? foregroundColor : foregroundColor.withValues(alpha: 0.5),
+                        ),
                       ],
                     ],
                   ),

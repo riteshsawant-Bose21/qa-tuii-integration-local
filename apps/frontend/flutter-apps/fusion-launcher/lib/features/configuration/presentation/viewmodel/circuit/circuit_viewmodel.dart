@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -23,6 +21,7 @@ extension CircuitViewmodel on ProjectViewModel {
       }
       final CircuitModel newCircuit = CircuitModel(
         id: FusionUtils.shortStringUUID(),
+        addedInBuildingPage: hardware.addedFromBuildingPage,
         name: "${hardware.hardwareName} ${count == 0 ? "" : count + 1}",
         speakerSKU: (hardware as Speaker).speakerSKU,
       );
@@ -232,6 +231,7 @@ extension CircuitViewmodel on ProjectViewModel {
     String? circuitName,
     String? subZoneId,
     required String zoneId,
+    required bool isFromBuildingPage,
     bool autoSave = true,
   }) {
     if (autoSave) {
@@ -245,6 +245,8 @@ extension CircuitViewmodel on ProjectViewModel {
 
     final CircuitModel circuitModel = CircuitModel(
       name: circuitName ?? "Circuit ${circuits.length + 1}",
+      speakerSKU: speakerData.sku,
+      addedInBuildingPage: isFromBuildingPage,
     );
     projectManager.addCircuit(circuitModel);
 
@@ -255,11 +257,7 @@ extension CircuitViewmodel on ProjectViewModel {
     }
 
     for (int i = 0; i < speakerCount; i++) {
-      final HardwareComponent newHardware = fromProductQueryModel(
-        speakerData,
-        pos: Offset.zero,
-        locationEntity: locationModel,
-      );
+      final HardwareComponent newHardware = fromProductQueryModel(speakerData, locationEntity: locationModel, isFromBuildingPage: isFromBuildingPage);
       projectManager.addHardware(newHardware);
       projectManager.addHardwareToCircuit(newHardware.id, circuitModel.id);
     }

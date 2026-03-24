@@ -60,16 +60,20 @@ def configure(conf):
     if compiler_has_flag(conf, '-Wtemplate-id-cdtor'):
         # GCC 14.2.0 was giving c++20 warnings about templated ctor/dtor even
         # when we have -std=c++17. So disable the warning.
-        conf.env.append_value('CXXFLAGS', ['-Wno-template-id-cdtor'])
+        if not conf.env['IS_MACOS']:
+            conf.env.append_value('CXXFLAGS', ['-Wno-template-id-cdtor'])
 
     conf.env.append_value('CXXFLAGS', ['-std=c++17'])
     conf.env.append_value('CXXFLAGS', ['-Wall', '-Wextra', '-Werror'])
-    conf.env.append_value('CXXFLAGS', ['-Ofast'])
+    conf.env.append_value('CXXFLAGS', ['-O3', '-ffast-math', '-fno-finite-math-only'])
 
     # spdlog from the Yocto SDK is configured for an external 'fmt' lib.
     conf.env.append_value('CXXFLAGS', ['-DSPDLOG_FMT_EXTERNAL'])
     conf.env.append_value('CXXFLAGS',
                           ['-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG'])
+
+    # This greatly reduces binary size.  Comment out to include symbols for gdb.
+    conf.env.append_value('LDFLAGS', ['-Wl,-s'])
 
     if conf.env['IS_MACOS']:
         conf.env.append_value('INCLUDES', ['/opt/homebrew/include'])
@@ -81,21 +85,36 @@ def configure(conf):
         # This is needed because of warnings in Boost property trees.
         conf.env.append_value('CXXFLAGS',
                            ['-Wno-deprecated-copy-with-user-provided-copy'])
+        conf.env.append_value('CXXFLAGS',
+                           ['-Wno-vla-cxx-extension'])
 
     else:
         conf.env.append_value('LDFLAGS', '-lpthread')
 
-        if conf.env['IS_LINUX']:
-            # NOTE: Doing the old way of boost::bind for now.
-            # /usr/include/boost/bind.hpp:36:1: note: ‘#pragma message: The practice of declaring the Bind placeholders (_1, _2, ...) in the 
-            # global namespace is deprecated. Please use <boost/bind/bind.hpp> + using namespace boost::placeholders, 
-            # or define BOOST_BIND_GLOBAL_PLACEHOLDERS to retain the current behavior.’
-            conf.env.append_value('CXXFLAGS', '-DBOOST_BIND_GLOBAL_PLACEHOLDERS')
+    if conf.env['IS_LINUX']:
+        # NOTE: Doing the old way of boost::bind for now.
+        # /usr/include/boost/bind.hpp:36:1: note: ‘#pragma message: The practice of declaring the Bind placeholders (_1, _2, ...) in the 
+        # global namespace is deprecated. Please use <boost/bind/bind.hpp> + using namespace boost::placeholders, 
+        # or define BOOST_BIND_GLOBAL_PLACEHOLDERS to retain the current behavior.’
+        conf.env.append_value('CXXFLAGS', '-DBOOST_BIND_GLOBAL_PLACEHOLDERS')
+
+    conf.env.append_value('LIBPATH', [conf.path.abspath() + '/../../../libs/firmware-libs/fusion-embedded-interface/build'])
+    conf.env.append_value('LIBPATH', [conf.path.abspath() + '/../../../libs/firmware-libs/fusion-embedded-framework/build'])
+    conf.check_cfg(package='dbus-1', uselib_store='DBUS', args='--cflags --libs', mandatory=True)
 
 def build(bld):
-    bld(export_includes=['./external/doctest', './include'], name='common-include')
+    bld(export_includes=['../../../libs/firmware-libs/fusion-embedded-interface/include', '../../../libs/firmware-libs/fusion-embedded-framework/include', './external/doctest', './include'], name='common-include')
+
+    excludes = []
+    if bld.env['IS_MACOS']:
+        # These implementations depend on Linux-only kernel headers or target
+        # device interfaces and are not buildable for local macOS development.
+        excludes.extend([
+            'src/fusion_connect_client.cpp',
+            'src/bdif_client.cpp',
+        ])
 
     bld.program(target='fusion_system_monitor',
-                source=bld.path.ant_glob(['src/*.cpp', 'src/*.c']),
-                use=['common-include'],
-                lib=['jack', 'fmt', 'sndfile', 'boost_program_options', 'jsoncpp', 'curl'])
+                source=bld.path.ant_glob(['src/*.cpp', 'src/*.c'], excl=excludes),
+                use=['common-include', 'DBUS'],
+                lib=['jack', 'fmt', 'sndfile', 'boost_program_options', 'jsoncpp', 'curl', 'fusion_embedded_interface', 'fusion_embedded_framework'])

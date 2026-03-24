@@ -243,7 +243,7 @@ verify_instance() {
             print_substep "Checking VIP accessibility..."
             
             local response
-            response=$(multipass exec "$instance_name" -- curl -sf http://$VIRTUAL_IP:8080 2>/dev/null)
+            response=$(multipass exec "$instance_name" -- curl -sfS --connect-timeout 2 --max-time 5 http://$VIRTUAL_IP:8080/ 2>/dev/null)
             if [ $? -eq 0 ]; then
                 print_success "VIP is accessible"
                 printf "${CYAN}Server response: ${NC}%s\n" "$response"
@@ -284,12 +284,6 @@ setup_instance() {
         return 1
     fi
     print_success "fusion-server installed successfully"
-    
-    # Set the script used by systemd to launch fusion-server to executable
-    if ! multipass exec "$instance_name" -- sudo chmod 755 /usr/local/bin/fusion-server-start.sh; then
-        print_error "Failed to update fusion-server-start.sh"
-        return 1
-    fi
 
     print_step "Copying bbolt binary..."
     if ! multipass transfer "$HOST_BBOLT_DIR/bbolt-linux-$TARGET_BINARY_ARCH" "$instance_name":/tmp/bbolt; then
@@ -306,6 +300,21 @@ setup_instance() {
         return 1
     fi
     print_success "bbolt installed successfully"
+
+    print_step "Setting up device identity..."
+    local device_id="$instance_name"
+    if ! multipass exec "$instance_name" -- sudo bash -c "
+        mkdir -p /var/lib/device-identity
+        cd /var/lib/device-identity
+        openssl genrsa -out device.key 2048
+        openssl req -new -key device.key -out device.csr -subj '/CN=$device_id/O=BoseProfessional'
+        chmod 600 device.key
+        curl -fSLo AmazonRootCA1.pem https://www.amazontrust.com/repository/AmazonRootCA1.pem
+    "; then
+        print_error "Failed to setup device identity"
+        return 1
+    fi
+    print_success "Device identity created (device-id: $device_id)"
 
     print_step "Configuring keepalived priority..."
     local priority=$((100 - instance_number))

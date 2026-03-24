@@ -10,7 +10,12 @@ import '../view/widgets/widgets.dart';
 
 class PbWidgets {
   final String type;
-  final Widget Function(BuildContext context, PBItem item, PBWidgetValueHandler? handler) builder;
+  final Widget Function(
+    BuildContext context,
+    PBItem item,
+    PBWidgetValueHandler? handler,
+  )
+  builder;
   final PBItemParam Function(Map<dynamic, dynamic> map) paramFactory;
   final PBItemParam Function(Parameter data) fromParameter;
   final PBItemParam Function(Telemetry data) fromTelemetry;
@@ -26,48 +31,94 @@ class PbWidgets {
   static List<PbWidgets> floatWidgets = <PbWidgets>[
     PbWidgets(
       type: 'slider',
-      builder: (BuildContext context, PBItem item, PBWidgetValueHandler? handler) => PBSlider(item: item, handler: handler),
+      builder:
+          (BuildContext context, PBItem item, PBWidgetValueHandler? handler) =>
+              PBSlider(item: item, handler: handler),
       paramFactory: PBSliderParam.fromMap,
-      fromParameter: (Parameter data) => PBSliderParam(label: data.name, min: 0, max: 100),
-      fromTelemetry: (Telemetry data) => PBSliderParam(label: data.name, min: 0, max: 100),
+      fromParameter:
+          (Parameter data) => PBSliderParam(label: data.name, min: 0, max: 100),
+      fromTelemetry:
+          (Telemetry data) => PBSliderParam(label: data.name, min: 0, max: 100),
     ),
     PbWidgets(
       type: 'meter',
-      builder: (BuildContext context, PBItem item, PBWidgetValueHandler? handler) => PBMeter(item: item, handler: handler),
+      builder:
+          (BuildContext context, PBItem item, PBWidgetValueHandler? handler) =>
+              PBMeter(item: item, handler: handler),
       paramFactory: PBMeterParam.fromMap,
-      fromParameter: (Parameter data) => PBMeterParam(label: data.name, max: 100, min: 0),
-      fromTelemetry: (Telemetry data) => PBMeterParam(label: data.name, max: 100, min: 0),
+      fromParameter:
+          (Parameter data) => PBMeterParam(label: data.name, max: 100, min: 0),
+      fromTelemetry:
+          (Telemetry data) => PBMeterParam(label: data.name, max: 100, min: 0),
     ),
     PbWidgets(
       type: 'textfield',
-      builder: (BuildContext context, PBItem item, PBWidgetValueHandler? handler) => PBTextfield(item: item, handler: handler),
+      builder:
+          (BuildContext context, PBItem item, PBWidgetValueHandler? handler) =>
+              PBItemTextfield(
+                item: item,
+                handler: handler,
+              ),
       paramFactory: PBTextfieldParam.fromMap,
-      fromParameter: (Parameter data) => PBTextfieldParam(label: data.name, max: 100, min: 0, unit: "db"),
-      fromTelemetry: (Telemetry data) => PBTextfieldParam(label: data.name, max: 100, min: 0, unit: "db"),
+      fromParameter:
+          (Parameter data) =>
+              PBTextfieldParam(label: data.name, max: 100, min: 0, unit: "db"),
+      fromTelemetry:
+          (Telemetry data) =>
+              PBTextfieldParam(label: data.name, max: 100, min: 0, unit: "db"),
     ),
   ];
 
   static List<PbWidgets> boolWidgets = <PbWidgets>[
     PbWidgets(
       type: 'indicator',
-      builder: (BuildContext context, PBItem item, PBWidgetValueHandler? handler) => PBIndicator(item: item, handler: handler),
+      builder:
+          (BuildContext context, PBItem item, PBWidgetValueHandler? handler) =>
+              PBIndicator(
+                item: item,
+                handler: handler,
+              ),
       paramFactory: PBIndicatorParam.fromMap,
       fromParameter: (Parameter data) => PBIndicatorParam(label: data.name),
       fromTelemetry: (Telemetry data) => PBIndicatorParam(label: data.name),
     ),
     PbWidgets(
       type: 'switch',
-      builder: (BuildContext context, PBItem item, PBWidgetValueHandler? handler) => PBSwitch(item: item, handler: handler),
+      builder:
+          (BuildContext context, PBItem item, PBWidgetValueHandler? handler) =>
+              PBSwitch(item: item, handler: handler),
       paramFactory: PBSwitchParam.fromMap,
-      fromParameter: (Parameter data) => PBSwitchParam(label: data.name, enableValueLabel: 'YES', disabledValueLabel: 'NO'),
-      fromTelemetry: (Telemetry data) => PBSwitchParam(label: data.name, enableValueLabel: 'YES', disabledValueLabel: 'NO'),
+      fromParameter:
+          (Parameter data) => PBSwitchParam(
+            label: data.name,
+            enableValueLabel: 'YES',
+            disabledValueLabel: 'NO',
+          ),
+      fromTelemetry:
+          (Telemetry data) => PBSwitchParam(
+            label: data.name,
+            enableValueLabel: 'YES',
+            disabledValueLabel: 'NO',
+          ),
     ),
     PbWidgets(
       type: 'button',
-      builder: (BuildContext context, PBItem item, PBWidgetValueHandler? handler) => PBButton(item: item, handler: handler),
+      builder:
+          (BuildContext context, PBItem item, PBWidgetValueHandler? handler) =>
+              PBButton(semanticId: 'button', item: item, handler: handler),
       paramFactory: PBButtonParam.fromMap,
-      fromParameter: (Parameter data) => PBButtonParam(label: data.name, enableValueIcon: null, disabledValueIcon: null),
-      fromTelemetry: (Telemetry data) => PBButtonParam(label: data.name, enableValueIcon: null, disabledValueIcon: null),
+      fromParameter:
+          (Parameter data) => PBButtonParam(
+            label: data.name,
+            enableValueIcon: null,
+            disabledValueIcon: null,
+          ),
+      fromTelemetry:
+          (Telemetry data) => PBButtonParam(
+            label: data.name,
+            enableValueIcon: null,
+            disabledValueIcon: null,
+          ),
     ),
   ];
 
@@ -80,7 +131,9 @@ class PbWidgets {
     // ),
     PbWidgets(
       type: 'text',
-      builder: (BuildContext context, PBItem item, PBWidgetValueHandler? handler) => PBText(item: item, handler: handler),
+      builder:
+          (BuildContext context, PBItem item, PBWidgetValueHandler? handler) =>
+              PBText(semanticId: 'text', item: item, handler: handler),
       paramFactory: PBTextParam.fromMap,
       fromParameter: (Parameter data) => PBTextParam(label: data.name),
       fromTelemetry: (Telemetry data) => PBTextParam(label: data.name),
@@ -101,9 +154,17 @@ class PbWidgets {
   static List<PbWidgets> selectWidgets = <PbWidgets>[
     PbWidgets(
       type: 'dropdown',
-      builder: (BuildContext context, PBItem item, PBWidgetValueHandler? handler) => PBDropdown(item: item, handler: handler),
+      builder:
+          (BuildContext context, PBItem item, PBWidgetValueHandler? handler) =>
+              PBItemDropdown(
+                semanticId: 'dropdown',
+                item: item,
+                handler: handler,
+              ),
       paramFactory: PBDropdownParam.fromMap,
-      fromParameter: (Parameter data) => PBDropdownParam(label: data.name, options: <String>[]),
+      fromParameter:
+          (Parameter data) =>
+              PBDropdownParam(label: data.name, options: <String>[]),
       fromTelemetry:
           (Telemetry data) => PBDropdownParam(
             label: data.name,

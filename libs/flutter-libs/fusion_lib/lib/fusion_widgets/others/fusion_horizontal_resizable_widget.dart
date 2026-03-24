@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class FusionHorizontalResizableWidget extends StatefulWidget {
   final Widget child;
   final double initialWidth, minWidth, maxWidth;
   final double handleWidth;
   final bool dragLeft, dragRight;
+  final String? semanticId;
 
   const FusionHorizontalResizableWidget({
     super.key,
     required this.child,
+    this.semanticId,
     this.initialWidth = 200,
     this.minWidth = 100,
     this.maxWidth = 400,
@@ -18,10 +21,12 @@ class FusionHorizontalResizableWidget extends StatefulWidget {
   });
 
   @override
-  HorizontalResizableContainerState createState() => HorizontalResizableContainerState();
+  HorizontalResizableContainerState createState() =>
+      HorizontalResizableContainerState();
 }
 
-class HorizontalResizableContainerState extends State<FusionHorizontalResizableWidget> {
+class HorizontalResizableContainerState
+    extends State<FusionHorizontalResizableWidget> {
   late double _width;
   bool _hoverLeft = false, _hoverRight = false;
   bool _draggingLeft = false, _draggingRight = false;
@@ -35,13 +40,19 @@ class HorizontalResizableContainerState extends State<FusionHorizontalResizableW
   // Move handlers
   void _onDragLeft(DragUpdateDetails details) {
     setState(() {
-      _width = (_width - details.delta.dx).clamp(widget.minWidth, widget.maxWidth);
+      _width = (_width - details.delta.dx).clamp(
+        widget.minWidth,
+        widget.maxWidth,
+      );
     });
   }
 
   void _onDragRight(DragUpdateDetails details) {
     setState(() {
-      _width = (_width + details.delta.dx).clamp(widget.minWidth, widget.maxWidth);
+      _width = (_width + details.delta.dx).clamp(
+        widget.minWidth,
+        widget.maxWidth,
+      );
     });
   }
 
@@ -81,10 +92,11 @@ class HorizontalResizableContainerState extends State<FusionHorizontalResizableW
         Container(
           width: _width,
           decoration: BoxDecoration(
-            border: Border(
-              left: (_hoverLeft || _draggingLeft) ? const BorderSide(color: Colors.blue, width: 2) : const BorderSide(color: Colors.transparent, width: 2),
-              right: (_hoverRight || _draggingRight) ? const BorderSide(color: Colors.blue, width: 2) : const BorderSide(color: Colors.transparent, width: 2),
-            ),
+            borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
+            // border: Border(
+            //   left: (_hoverLeft || _draggingLeft) ? const BorderSide(color: Colors.blue, width: 2) : const BorderSide(color: Colors.transparent, width: 2),
+            //   right: (_hoverRight || _draggingRight) ? const BorderSide(color: Colors.blue, width: 2) : const BorderSide(color: Colors.transparent, width: 2),
+            // ),
           ),
           child: widget.child,
         ),
@@ -98,7 +110,9 @@ class HorizontalResizableContainerState extends State<FusionHorizontalResizableW
             width: widget.handleWidth,
             child: MouseRegion(
               // only show resize cursor on hover (and not while dragging)
-              cursor: (!_draggingLeft && _hoverLeft) ? SystemMouseCursors.resizeLeftRight : SystemMouseCursors.basic,
+              cursor: (!_draggingLeft && _hoverLeft)
+                  ? SystemMouseCursors.resizeLeftRight
+                  : SystemMouseCursors.basic,
               onEnter: (_) {
                 if (!_draggingLeft) setState(() => _hoverLeft = true);
               },
@@ -122,7 +136,9 @@ class HorizontalResizableContainerState extends State<FusionHorizontalResizableW
             right: 0,
             width: widget.handleWidth,
             child: MouseRegion(
-              cursor: (!_draggingRight && _hoverRight) ? SystemMouseCursors.resizeLeftRight : SystemMouseCursors.basic,
+              cursor: (!_draggingRight && _hoverRight)
+                  ? SystemMouseCursors.resizeLeftRight
+                  : SystemMouseCursors.basic,
               onEnter: (_) {
                 if (!_draggingRight) setState(() => _hoverRight = true);
               },

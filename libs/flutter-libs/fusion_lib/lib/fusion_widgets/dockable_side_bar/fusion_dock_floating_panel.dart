@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/fusion_sizes.dart';
 
 import '../../models/dock_item_config.dart';
 import '../../models/fusion_dock_item.dart';
@@ -13,10 +15,12 @@ class FusionFloatingPanel extends StatelessWidget {
   final void Function(double, double) onResize;
   final void Function() onClose;
   final void Function()? onTap; // Add tap callback
-  final void Function()? onDragStart; // Add drag start callback
+  final void Function()? onDragStart;
+  final String semanticId; // Add drag start callback
 
   const FusionFloatingPanel({
     super.key,
+    required this.semanticId,
     required this.item,
     required this.config,
     required this.onDragEnd,
@@ -28,21 +32,35 @@ class FusionFloatingPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap, // Handle tap to bring to front
-      child: Draggable<DockItem>(
-        data: item,
-        onDragStarted: onDragStart, // Handle drag start to bring to front
-        feedback: FloatingWidget(
-          item: item,
-          config: config,
-          onClose: onClose,
-          resizing: false,
-          onResize: (_, __) {}, // No-op for feedback
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.section,
+        'fusion_dock_floating_panel${semanticId}',
+      ),
+      child: GestureDetector(
+        onTap: onTap, // Handle tap to bring to front
+        child: Draggable<DockItem>(
+          data: item,
+          onDragStarted: onDragStart, // Handle drag start to bring to front
+          feedback: FloatingWidget(
+            semanticId: 'fusion_dock_items',
+            item: item,
+            config: config,
+            onClose: onClose,
+            resizing: false,
+            onResize: (_, __) {}, // No-op for feedback
+          ),
+          childWhenDragging: Container(),
+          onDragEnd: onDragEnd,
+          child: FloatingWidget(
+            semanticId: 'fusion_dock',
+            item: item,
+            config: config,
+            resizing: true,
+            onResize: onResize,
+            onClose: onClose,
+          ),
         ),
-        childWhenDragging: Container(),
-        onDragEnd: onDragEnd,
-        child: FloatingWidget(item: item, config: config, resizing: true, onResize: onResize, onClose: onClose),
       ),
     );
   }
@@ -54,56 +72,109 @@ class FloatingWidget extends StatelessWidget {
   final DockItemConfig? config;
   final bool resizing;
   final void Function(double, double) onResize;
+  final String semanticId;
 
-  const FloatingWidget({super.key, required this.item, required this.config, required this.resizing, required this.onResize, required this.onClose});
+  const FloatingWidget({
+    super.key,
+    required this.semanticId,
+    required this.item,
+    required this.config,
+    required this.resizing,
+    required this.onResize,
+    required this.onClose,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      elevation: 2,
-      borderRadius: BorderRadius.circular(6),
-      child: Container(
-        width: item.width,
-        height: item.height,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.white,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: Theme.of(context).colorScheme.dividerColor),
-        ),
-        child: Stack(
-          children: [
-            /// floating header with close button
-            Container(
-              height: 32,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.white,
-                border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: <Widget>[
-                  Expanded(
-                    child: FusionAppText(text: config?.title ?? item.title, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.section,
+        'floating_widget${semanticId}',
+      ),
+      child: Material(
+        elevation: 2,
+        borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
+        child: Container(
+          width: item.width,
+          height: item.height,
+          decoration: BoxDecoration(
+            color: context.colorScheme.elevation1,
+            borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
+            border: Border.all(color: Theme.of(context).colorScheme.elevation2),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
+            child: Stack(
+              children: [
+                /// floating header with close button
+                Container(
+                  height: 32,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: context.colorScheme.elevation1,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Theme.of(context).colorScheme.elevation2,
+                        width: 1,
+                      ),
+                    ),
                   ),
-                  IconButton(icon: const Icon(Icons.close, size: 16), onPressed: onClose, padding: EdgeInsets.zero, constraints: const BoxConstraints()),
-                ],
-              ),
-            ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: <Widget>[
+                      Expanded(
+                        child: FusionAppText(
+                          text: config?.title ?? item.title,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.copyWith(fontSize: 11),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 16),
+                        onPressed: onClose,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
 
-            /// Content area
-            Positioned(
-              top: 32,
-              left: 0,
-              right: 0,
-              bottom: resizing ? 0 : 0,
-              child: SingleChildScrollView(
-                child: config?.dockItemWidget ?? Container(alignment: Alignment.center, child: Text("${item.title} content")),
-              ),
-            ),
+                /// Content area
+                Positioned(
+                  top: 32,
+                  left: 0,
+                  right: 0,
+                  bottom: resizing ? 0 : 0,
+                  child: SingleChildScrollView(
+                    child:
+                        config?.dockItemWidget ??
+                        Container(
+                          padding: EdgeInsets.all(16),
+                          alignment: Alignment.center,
+                          child: FusionAppText(
+                            text: "${item.title} content",
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: context.colorScheme.elevation5,
+                                ),
+                          ),
+                        ),
+                  ),
+                ),
 
-            if (resizing) Positioned(right: 0, bottom: 0, child: FusionResizeHandle(onResize: onResize)),
-          ],
+                if (resizing)
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: FusionResizeHandle(
+                      semanticId: 'fusion_dock_floating',
+                      onResize: onResize,
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );

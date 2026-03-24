@@ -16,9 +16,10 @@ import (
 	"syscall"
 	"time"
 
+	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/app"
-	"fusion/internal/logging"
+	"fusion/internal/utils"
 	"fusion/internal/version"
 )
 
@@ -30,9 +31,12 @@ const (
 // parseFlags parses and validates command-line flags.
 func parseFlags() *api.AppConfig {
 	versionFlag := flag.Bool("version", false, "Show version information")
+	//On the hardware, we no longer pass in the IP address, instead we pass in the interface name
 	bindAddr := flag.String("bind-addr", "0.0.0.0", "Bind address for cluster communication")
 	bindPort := flag.Int("bind-port", 7946, "Bind port for cluster communication (default 7946)")
-	netIface := flag.String("net-iface", "eth0", "Network interface for VRRP monitoring")
+	// The local mode for fusion server was not working so we replaced the default interface to en0 which is the default interface for macOS
+	// For multipass and on the hardware, it will pick the interface name from the fusion-server.service file
+	netIface := flag.String("net-iface", "en0", "Network interface for VRRP monitoring")
 	local := flag.Bool("local", false, "Run in local-only mode (no clustering)")
 	verbose := flag.Bool("verbose", false, "Enable verbose logging")
 	profile := flag.Bool("profile", false, "Enable profile dump")
@@ -42,6 +46,12 @@ func parseFlags() *api.AppConfig {
 	if envVal := os.Getenv("FUSION_NET_IFACE"); envVal != "" {
 		*netIface = envVal
 	}
+
+	localIP, err := utils.GetLocalIPByInterface(*netIface)
+	if err != nil {
+		log.Fatalf("Failed to get local IP: %v", err)
+	}
+	*bindAddr = localIP
 
 	if envVal := os.Getenv("FUSION_PROFILE"); envVal != "" {
 		if envVal == "1" || strings.EqualFold(envVal, "true") {

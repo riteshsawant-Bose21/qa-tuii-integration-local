@@ -1,13 +1,12 @@
 package cluster
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
+	"fusion-services-core/logging"
 	"fusion/internal/api"
-	"fusion/internal/logging"
-	"fusion/internal/persistence"
 	"fusion/internal/routes"
+	"fusion/internal/utils"
 	"io"
 	"log"
 	"net/http"
@@ -17,6 +16,7 @@ import (
 	"time"
 
 	json "github.com/goccy/go-json"
+	hashicorpMemberlist "github.com/hashicorp/memberlist"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -29,26 +29,28 @@ const (
 	pushPullInterval    = 1 * time.Second
 	retryInterval       = 2 * time.Second
 	retryTimes          = 5
-	serialPath          = "/sys/firmware/devicetree/base/serial-number"
-	serialUnknown       = "Unknown"
 	suspicionMult       = 3
 	tcpTimeout          = 10 * time.Second
+
+	// Retry constants for VIP queries for getting members
+	// I have noticed when there are couple of devices which come up
+	// at the same time, there can be a delay in VIP being active on the primary node
+	// and at that time we get ERCONNREFUSED errors.
+	vipMembersInitialBackoff = 1 * time.Second
+	vipMembersMaxBackoff     = 30 * time.Second
+	vipMembersMaxDuration    = 5 * time.Minute
 )
 
-type MemberlistTransport struct {
-	ml *memberlist.Memberlist
+func (c *Cluster) LocalNode() *hashicorpMemberlist.Node {
+	return c.memberlist.LocalNode()
 }
 
-func (t *MemberlistTransport) LocalNode() *memberlist.Node {
-	return t.ml.LocalNode()
+func (c *Cluster) MemberListMembers() []*hashicorpMemberlist.Node {
+	return c.memberlist.Members()
 }
 
-func (t *MemberlistTransport) Members() []*memberlist.Node {
-	return t.ml.Members()
-}
-
-func (t *MemberlistTransport) SendReliable(n *memberlist.Node, msg []byte) error {
-	return t.ml.SendReliable(n, msg)
+func (c *Cluster) SendReliable(node *hashicorpMemberlist.Node, msg []byte) error {
+	return c.memberlist.SendReliable(node, msg)
 }
 
 // CreateMemberlist creates and configures a new memberlist instance
@@ -68,7 +70,12 @@ func CreateMemberlist(appConfig *api.AppConfig, delegate *ClusterDelegate) *memb
 		config.Logger = log.New(io.Discard, "", 0)
 	}
 
+	logger := logging.GetLogger()
+	logger.Info("[GOSSIP] config bind=%s:%d advertise=%s:%d name=%s",
+		config.BindAddr, config.BindPort, config.AdvertiseAddr, config.AdvertisePort, config.Name)
+
 	config.Delegate = delegate
+	config.Events = &ClusterEventDelegate{}
 	config.TCPTimeout = tcpTimeout
 	config.DisableTcpPings = false
 	config.ProbeInterval = probeInterval
@@ -78,8 +85,10 @@ func CreateMemberlist(appConfig *api.AppConfig, delegate *ClusterDelegate) *memb
 
 	list, err := memberlist.Create(config)
 	if err != nil {
-		logging.GetLogger().Fatal("Failed to create memberlist: %v", err)
+		logger.Fatal("Failed to create memberlist: %v", err)
 	}
+	logger.Info("gossip config bind=%s:%d advertise=%s:%d ",
+		config.BindAddr, config.BindPort, config.AdvertiseAddr, config.AdvertisePort)
 
 	return list
 }
@@ -94,6 +103,7 @@ func (c *Cluster) JoinMemberlist() error {
 	}
 
 	logger := logging.GetLogger()
+	logger.Info("[GOSSIP] seeds=%v self=%s:%d", joinAddrs, c.appConfig.BindAddr, c.appConfig.BindPort)
 
 	if len(joinAddrs) == 0 {
 		// This is the first node in the cluster
@@ -105,12 +115,10 @@ func (c *Cluster) JoinMemberlist() error {
 
 	for attempt := range retryTimes {
 		// Try to join the cluster
-		_, err := c.Memberlist.Join(joinAddrs)
+		_, err := c.memberlist.Join(joinAddrs)
 		if err == nil {
-			members := c.Memberlist.Members()
+			members := c.memberlist.Members()
 			logger.Debug("[MEMBERLIST] Successfully joined cluster of size %d", len(members))
-
-			c.updateDeviceInfo()
 
 			if c.appConfig.Verbose {
 				for _, member := range members {
@@ -129,8 +137,8 @@ func (c *Cluster) JoinMemberlist() error {
 	return fmt.Errorf("failed to join cluster after %d attempts: %w", retryTimes, lastErr)
 }
 
-// isMember returns true if the address is a member of the memberlist
-func (c *Cluster) isMember() (bool, error) {
+// IsMember returns true if the address is a member of the memberlist
+func (c *Cluster) IsMember() (bool, error) {
 
 	liveAddrs, err := c.GetLiveNodeAddresses()
 	if err != nil {
@@ -143,34 +151,13 @@ func (c *Cluster) isMember() (bool, error) {
 // GetLiveNodeAddresses returns a list of live node addresses from the VIP
 func (c *Cluster) GetLiveNodeAddresses() ([]string, error) {
 
-	url := fmt.Sprintf("%s%s:%s%s", api.Protocol, c.vip, api.HTTPPort, routes.ClusterMembersEndpoint)
-	resp, err := http.Get(url)
+	members, err := c.getClusterMembersFromVip()
 	if err != nil {
-		if errors.Is(err, syscall.ECONNREFUSED) {
-			// Connection refused likely means the VIP is not up yet (e.g., this node is first to start).
-			return []string{}, nil
-		}
-		return nil, fmt.Errorf("unable to get members from VIP %s: %w", url, err)
+		return nil, err
 	}
-	defer resp.Body.Close()
-
-	logger := logging.GetLogger()
-
-	if resp.StatusCode != http.StatusOK {
-		// Assume the admin API isn't ready yet.
-		logger.Warn("GetLiveNodeAddresses: Admin API unavailable")
-		return []string{}, nil
-	}
-
-	var members []*memberlist.Node
-	if err := json.NewDecoder(resp.Body).Decode(&members); err != nil {
-		logger.Warn("GetLiveNodeAddresses: invalid JSON from %s: %v", url, err)
-		return []string{}, nil
-	}
-
 	if c.appConfig.Verbose {
 		for _, m := range members {
-			logger.Debug("[MEMBERLIST] Found node: %s (%s), state=%v", m.Name, m.Addr.String(), m.State)
+			logging.GetLogger().Debug("[MEMBERLIST] Found node: %s (%s), state=%v", m.Name, m.Addr.String(), m.State)
 		}
 	}
 
@@ -183,6 +170,75 @@ func (c *Cluster) GetLiveNodeAddresses() ([]string, error) {
 	}
 
 	return liveAddrs, nil
+}
+
+func (c *Cluster) getClusterMembersFromVip() ([]*memberlist.Node, error) {
+	vip := c.getCurrentVIP()
+	if vip == "" {
+		logging.GetLogger().Warn("getClusterMembersFromVip: VIP not configured yet")
+		// it could be the VIP is not configured yet
+		// OR
+		// the vip monitor is still stabilizing and hasn't detected the VIP
+
+		//if the VIP monitor is still stabilizing,
+		// it will check if its a member in the handler
+		// for VIP monitor events and trigger a retry to get members
+		return nil, nil
+	}
+
+	logger := logging.GetLogger()
+	url := utils.BuildInternalURL(vip, api.HTTPPort, routes.ClusterMembersEndpoint)
+
+	backoff := vipMembersInitialBackoff
+	startTime := time.Now()
+	attempt := 0
+
+	for {
+		attempt++
+
+		resp, err := c.httpClient.Get(url)
+		if err == nil {
+			if resp.StatusCode == http.StatusOK {
+				var members []*memberlist.Node
+				if err := json.NewDecoder(resp.Body).Decode(&members); err != nil {
+					logger.Warn("getClusterMembersFromVip: invalid JSON from %s: %v", url, err)
+					resp.Body.Close()
+				} else {
+					resp.Body.Close()
+					if attempt > 1 {
+						logger.Info("getClusterMembersFromVip: succeeded after %d attempts", attempt)
+					}
+					return members, nil
+				}
+			} else {
+				logger.Debug("getClusterMembersFromVip: Admin API returned status %d", resp.StatusCode)
+				resp.Body.Close()
+			}
+		} else {
+			if errors.Is(err, syscall.ECONNREFUSED) {
+				logger.Debug("getClusterMembersFromVip: connection refused to VIP %s (attempt %d)", vip, attempt)
+			} else {
+				logger.Debug("getClusterMembersFromVip: request failed: %v (attempt %d)", err, attempt)
+			}
+		}
+
+		// Check if we've exceeded max duration
+		if time.Since(startTime) >= vipMembersMaxDuration {
+			return nil, fmt.Errorf("failed to get members from VIP %s after %v (attempts: %d)", vip, vipMembersMaxDuration, attempt)
+		}
+
+		// Log retry
+		logger.Debug("getClusterMembersFromVip: retrying in %v (attempt %d)", backoff, attempt)
+
+		// Wait with exponential backoff
+		time.Sleep(backoff)
+
+		// Increase backoff exponentially
+		backoff *= 2
+		if backoff > vipMembersMaxBackoff {
+			backoff = vipMembersMaxBackoff
+		}
+	}
 }
 
 // getJoinAddresses returns a list of memberlist member addresses
@@ -202,38 +258,4 @@ func (c *Cluster) getJoinAddresses(bindAddr string) ([]string, error) {
 	}
 
 	return filteredAddrs, nil
-}
-
-// updateDeviceInfo updates the persisted device info
-func (c *Cluster) updateDeviceInfo() {
-
-	var info persistence.DeviceInfo
-	savedInfo, err := c.delegate.persistence.GetDeviceInfo()
-	if err == nil {
-		info = *savedInfo
-	}
-
-	info.Address = c.appConfig.BindAddr
-	if info.Id == "" {
-		info.Id = c.appConfig.NodeName + "_instance"
-	}
-
-	if info.Name == "" {
-		info.Name = c.appConfig.NodeName
-	}
-
-	if info.SerialNumber == "" {
-		data, err := os.ReadFile(serialPath)
-		if err != nil {
-			logging.GetLogger().Warn("%s not found.", serialPath)
-			info.SerialNumber = serialUnknown
-		} else {
-			info.SerialNumber = string(bytes.TrimRight(data, "\x00\n"))
-		}
-	}
-
-	if err := c.delegate.persistence.SetDeviceInfo(&info); err != nil {
-		logging.GetLogger().Error("Unable to update device info: %v", err)
-		return
-	}
 }

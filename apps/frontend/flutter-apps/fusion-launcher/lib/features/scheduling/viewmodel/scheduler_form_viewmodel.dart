@@ -22,7 +22,6 @@ class SchedulerFormViewModel extends ChangeNotifier {
         recurrenceDays.add(RecurrenceDay.values.firstWhere((RecurrenceDay element) => element.value == day));
       }
     }
-
     name.addListener(() {
       notifyListeners();
     });
@@ -90,32 +89,53 @@ class SchedulerFormViewModel extends ChangeNotifier {
     }
   }
 
-  Future<bool> submit() async {
+  Future<bool> submit(ScheduleConfig? initial) async {
     if (!key.currentState!.validate()) {
       return false;
     }
-    viewModel.addSchedule(
-      ScheduleConfig(
-        id: "SCHEDULE_${FusionUtils.shortUUID()}",
-        name: name.text,
-        colorHex: color!,
-        startDate: startDate!,
-        time: DateTime(
-          startDate!.year,
-          startDate!.month,
-          startDate!.day,
-          startTime.hour,
-          startTime.minute,
+    final DateTime? end = recurrenceType == RecurrenceType.none ? startDate! : endDate;
+    if (initial?.id != null) {
+      viewModel.updateSchedule(
+        initial!.copyWith(
+          name: name.text,
+          colorHex: color!,
+          startDate: startDate!,
+          time: DateTime(
+            startDate!.year,
+            startDate!.month,
+            startDate!.day,
+            startTime.hour,
+            startTime.minute,
+          ),
+          endDate: end,
+          recurrence: recurrenceType,
+          weeklyDays: recurrenceDays.map((RecurrenceDay e) => e.value).toList(),
         ),
-        endDate: endDate!,
-        recurrence: recurrenceType,
-        weeklyDays: recurrenceDays.map((RecurrenceDay e) => e.value).toList(),
-      ),
-    );
+      );
+    } else {
+      viewModel.addSchedule(
+        ScheduleConfig(
+          id: "SCHEDULE_${FusionUtils.shortUUID()}",
+          name: name.text,
+          colorHex: color!,
+          startDate: startDate!,
+          time: DateTime(
+            startDate!.year,
+            startDate!.month,
+            startDate!.day,
+            startTime.hour,
+            startTime.minute,
+          ),
+          endDate: end,
+          recurrence: recurrenceType,
+          weeklyDays: recurrenceDays.map((RecurrenceDay e) => e.value).toList(),
+        ),
+      );
+    }
     return true;
   }
 
   bool get canEnableSubmit {
-    return name.text.isNotEmpty && color != null && startDate != null && endDate != null;
+    return name.text.isNotEmpty && color != null && startDate != null; // && endDate != null;
   }
 }

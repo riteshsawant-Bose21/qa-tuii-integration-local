@@ -28,4 +28,24 @@ extension SchedulerManager on ProjectManager {
     }
     return projectService!.getAllSchedules();
   }
+
+  void reOrderSchedule({required String scheduleIdToMove, required String scheduleAtNewIndexId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    Map<String, ScheduleConfig> reorderedList = projectService!.reOrderSchedule(
+      scheduleIdToMove: scheduleIdToMove,
+      scheduleAtNewIndexId: scheduleAtNewIndexId,
+    );
+    projectService = projectService!.copyWith(
+      schedulerConfig: projectService!.schedulerConfig.copyWith(reorderedList),
+    );
+  }
+
+  ScheduleConfig? getScheduleById(String scheduleId) {
+    if (projectService == null) {
+      throw Exception("Project service is not initialized.");
+    }
+    return projectService!.getScheduleById(scheduleId);
+  }
 }

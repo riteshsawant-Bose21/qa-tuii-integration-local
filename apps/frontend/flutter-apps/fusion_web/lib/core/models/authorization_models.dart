@@ -1,40 +1,142 @@
 import 'package:fusion_web/features/auth/domain/entities/user_entity.dart'
     as auth;
 
+/// Permission level enum for better type safety
+enum PermissionLevel {
+  none,
+  read,
+  write;
+
+  static PermissionLevel fromString(String value) {
+    switch (value.toLowerCase()) {
+      case 'read':
+        return PermissionLevel.read;
+      case 'write':
+        return PermissionLevel.write;
+      default:
+        return PermissionLevel.none;
+    }
+  }
+
+  bool get canRead =>
+      this == PermissionLevel.read || this == PermissionLevel.write;
+  bool get canWrite => this == PermissionLevel.write;
+}
+
+/// Updated authorization response to match actual API structure
 class AuthorizationResponse {
-  final UserInfo userInfo;
-  final AccountInfo accountInfo;
-  final RoleInfo roleInfo;
-  final List<String> scopes;
+  final ApiUserInfo user;
+  final ApiAccountInfo account;
+  final ApiRoleInfo role;
+  final Map<String, String> permissions;
 
   AuthorizationResponse({
-    required this.userInfo,
-    required this.accountInfo,
-    required this.roleInfo,
-    required this.scopes,
+    required this.user,
+    required this.account,
+    required this.role,
+    required this.permissions,
   });
 
   factory AuthorizationResponse.fromJson(Map<String, dynamic> json) {
     return AuthorizationResponse(
-      userInfo: UserInfo.fromJson(json['userInfo'] as Map<String, dynamic>),
-      accountInfo: AccountInfo.fromJson(
-        json['accountInfo'] as Map<String, dynamic>,
+      user: ApiUserInfo.fromJson(json['user'] as Map<String, dynamic>),
+      account: ApiAccountInfo.fromJson(json['account'] as Map<String, dynamic>),
+      role: ApiRoleInfo.fromJson(json['role'] as Map<String, dynamic>),
+      permissions: Map<String, String>.from(
+        json['permissions'] as Map<String, dynamic>,
       ),
-      roleInfo: RoleInfo.fromJson(json['roleInfo'] as Map<String, dynamic>),
-      scopes: List<String>.from(json['scopes'] as List),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'userInfo': userInfo.toJson(),
-      'accountInfo': accountInfo.toJson(),
-      'roleInfo': roleInfo.toJson(),
-      'scopes': scopes,
+      'user': user.toJson(),
+      'account': account.toJson(),
+      'role': role.toJson(),
+      'permissions': permissions,
     };
   }
 }
 
+/// API User info structure
+class ApiUserInfo {
+  final String id;
+  final String email;
+
+  ApiUserInfo({required this.id, required this.email});
+
+  factory ApiUserInfo.fromJson(Map<String, dynamic> json) {
+    return ApiUserInfo(
+      id: json['id'] as String,
+      email: json['email'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'id': id, 'email': email};
+  }
+}
+
+/// API Account info structure
+class ApiAccountInfo {
+  final String id;
+  final String name;
+  final String description;
+  final String type;
+
+  ApiAccountInfo({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.type,
+  });
+
+  factory ApiAccountInfo.fromJson(Map<String, dynamic> json) {
+    return ApiAccountInfo(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      description: json['description'] as String,
+      type: json['type'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'id': id, 'name': name, 'description': description, 'type': type};
+  }
+}
+
+/// API Role info structure
+class ApiRoleInfo {
+  final int id;
+  final String roleName;
+
+  ApiRoleInfo({required this.id, required this.roleName});
+
+  factory ApiRoleInfo.fromJson(Map<String, dynamic> json) {
+    return ApiRoleInfo(
+      id: json['id'] as int,
+      roleName: json['role_name'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'id': id, 'role_name': roleName};
+  }
+}
+
+/// Extension to convert AuthorizationResponse to Auth UserEntity for compatibility
+extension AuthorizationResponseExtension on AuthorizationResponse {
+  auth.UserEntity toUserEntity() {
+    return auth.UserEntity(
+      id: user.id,
+      name: user.email.split('@').first, // Extract name from email
+      email: user.email,
+      picture: null, // No avatar in API response
+    );
+  }
+}
+
+// Keep existing classes for backward compatibility
 class UserInfo {
   final String id;
   final String email;
@@ -158,17 +260,5 @@ class RoleInfo {
       'permissions': permissions,
       'level': level,
     };
-  }
-}
-
-// Extension to convert AuthorizationResponse to Auth UserEntity for compatibility
-extension AuthorizationResponseExtension on AuthorizationResponse {
-  auth.UserEntity toUserEntity() {
-    return auth.UserEntity(
-      id: userInfo.id,
-      name: userInfo.name,
-      email: userInfo.email,
-      picture: userInfo.avatar,
-    );
   }
 }

@@ -1,3 +1,5 @@
+import 'package:fusion_lib/models/project_entities/controller.dart';
+
 import '../../fusion_lib.dart';
 
 extension ListeningAreaService on ProjectService {
@@ -98,7 +100,31 @@ extension ListeningAreaService on ProjectService {
     if (!listeningAreas.exists(area.id)) {
       throw Exception('ListeningArea with id ${area.id} does not exist');
     }
+
+    ListeningArea existingArea = listeningAreas.get(area.id)!;
+
     listeningAreas.add(area.id, area);
+
+    //Place all the sources in center of listening area when it is drawn for first time
+    if (!existingArea.isDrawn && area.isDrawn) {
+      final hardwareInArea = relationships.getChildren(RelationshipType.hardwareLocation, area.id);
+      final List<HardwareComponent> allSources = hardwareInArea.map((hwId) => hardware.get(hwId)).whereType<Source>().toList();
+      //update all sources position
+      for (final source in allSources) {
+        final updatedSource = source.copyWith(
+          pos: area.getCenterPositionOfVertices(),
+        );
+        updateHardware(updatedSource);
+      }
+
+      final List<HardwareComponent> allController = hardwareInArea.map((hwId) => hardware.get(hwId)).whereType<FusionController>().toList();
+      for (final controller in allController) {
+        final updatedController = controller.copyWith(
+          pos: area.getCenterPositionOfVertices(),
+        );
+        updateHardware(updatedController);
+      }
+    }
   }
 
   /// Return all ListeningArea objects that belong to the given floorId.
@@ -114,6 +140,26 @@ extension ListeningAreaService on ProjectService {
     final areas = areaIds.map((id) => listeningAreas.get(id)).whereType<ListeningArea>().toList();
 
     return areas;
+  }
+
+  List<ListeningArea> getPendingListeningAreasToDraw(String floorId) {
+    //get all listening areas for floor
+    final allAreas = getListeningAreasForFloor(floorId);
+
+    //filter listening areas which are not drawn yet
+    final pendingAreas = allAreas.where((la) => !la.isDrawn).toList();
+
+    return pendingAreas;
+  }
+
+  List<ListeningArea> getDrawnListeningAreas(String floorId) {
+    //get all listening areas for floor
+    final allAreas = getListeningAreasForFloor(floorId);
+
+    //filter listening areas which are drawn
+    final drawnAreas = allAreas.where((la) => la.isDrawn).toList();
+
+    return drawnAreas;
   }
 
   void addMultipleAreasToAddZone(List<String> allAreasToAdd, String zoneId) {
@@ -210,7 +256,11 @@ extension ListeningAreaService on ProjectService {
             if (hardwareInCurrentArea.isNotEmpty) {
               //From new Circuit form the hardware
               final speaker = hardware.get(hardwareInCurrentArea.first);
-              final newCircuit = CircuitModel(name: (speaker! as Speaker).speakerSKU, speakerSKU: (speaker as Speaker).speakerSKU);
+              final newCircuit = CircuitModel(
+                name: (speaker! as Speaker).speakerSKU,
+                speakerSKU: (speaker as Speaker).speakerSKU,
+                addedInBuildingPage: speaker.addedFromBuildingPage,
+              );
               addCircuit(newCircuit);
               for (final hw in hardwareInCurrentArea) {
                 relationships.unlink(RelationshipType.circuitHardware, circuitForHardware, hw);
@@ -251,7 +301,11 @@ extension ListeningAreaService on ProjectService {
       } else {
         if (hardwareInArea.isNotEmpty) {
           //From new Circuit form the hardware
-          final newCircuit = CircuitModel(name: hardwareInArea.first.speakerSKU, speakerSKU: hardwareInArea.first.speakerSKU);
+          final newCircuit = CircuitModel(
+            name: hardwareInArea.first.speakerSKU,
+            speakerSKU: hardwareInArea.first.speakerSKU,
+            addedInBuildingPage: hardwareInArea.first.addedFromBuildingPage,
+          );
           addCircuit(newCircuit);
           for (final hw in hardwareInArea) {
             relationships.unlink(RelationshipType.circuitHardware, cid, hw.id);
@@ -298,6 +352,7 @@ extension ListeningAreaService on ProjectService {
           final newCircuit = CircuitModel(
             name: hardwareInArea.first.speakerSKU,
             speakerSKU: hardwareInArea.first.speakerSKU,
+            addedInBuildingPage: hardwareInArea.first.addedFromBuildingPage,
           );
           addCircuit(newCircuit);
           for (final hw in hardwareInArea) {

@@ -92,7 +92,8 @@ class FusionToast extends StatefulWidget {
   State<FusionToast> createState() => _FusionToastState();
 }
 
-class _FusionToastState extends State<FusionToast> with SingleTickerProviderStateMixin {
+class _FusionToastState extends State<FusionToast>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -130,11 +131,14 @@ class _FusionToastState extends State<FusionToast> with SingleTickerProviderStat
     _animationController.forward();
 
     // Start fade out animation before removal
-    Future<Null>.delayed(widget.duration - const Duration(milliseconds: 300), () {
-      if (mounted) {
-        _animationController.reverse();
-      }
-    });
+    Future<Null>.delayed(
+      widget.duration - const Duration(milliseconds: 300),
+      () {
+        if (mounted) {
+          _animationController.reverse();
+        }
+      },
+    );
   }
 
   @override
@@ -178,12 +182,19 @@ class _FusionToastState extends State<FusionToast> with SingleTickerProviderStat
                     const SizedBox(width: 8),
                   ],
                   Flexible(
-                    child: FusionAppText(
-                      text: widget.message,
-                      style: TextStyle(
-                        color: widget.textColor ?? Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                    child: SemanticHelper.staticText(
+                      testId: SemanticHelper.createTestId(
+                        SemanticTypes.text,
+                        "toast_msg",
+                      ),
+                      label: widget.message,
+                      child: FusionAppText(
+                        text: widget.message,
+                        style: TextStyle(
+                          color: widget.textColor ?? Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ),

@@ -52,4 +52,26 @@ extension ScheduleViewModel on ProjectViewModel {
       return <ScheduleConfig>[];
     }
   }
+
+  ScheduleConfig? getScheduleById(String scheduleId) {
+    try {
+      return projectManager.getScheduleById(scheduleId);
+    } catch (e) {
+      throwError("Get Schedule By ID Error  ${e.toString()}");
+      return null;
+    }
+  }
+
+  void reOrderSchedules({required String scheduleIdToMove, required String scheduleAtNewIndexId}) {
+    try {
+      recordSnapshot();
+      projectManager.reOrderSchedule(
+        scheduleIdToMove: scheduleIdToMove,
+        scheduleAtNewIndexId: scheduleAtNewIndexId,
+      );
+      saveProject();
+    } catch (e) {
+      throwError("Reorder Schedules Error  ${e.toString()}");
+    }
+  }
 }

@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../models/dock_item_config.dart';
 import '../../models/fusion_dock_item.dart';
-import '../dockable_side_bar/fusion_dock_floating_panel.dart';
-import '../text_views/fusion_app_text.dart';
 
 /// A custom expandable tile widget with drag gesture support for Fusion applications.
 ///
@@ -37,8 +35,10 @@ class FusionExpandableTileWidget extends StatefulWidget {
   final void Function(DockItem, DraggableDetails) onUndock;
   final void Function(DockItem, bool) onExpansionChanged;
   final ExpansibleController? controller;
+  final String? semanticId;
 
   const FusionExpandableTileWidget({
+    this.semanticId,
     super.key,
     required this.item,
     required this.config,
@@ -48,7 +48,8 @@ class FusionExpandableTileWidget extends StatefulWidget {
   });
 
   @override
-  State<FusionExpandableTileWidget> createState() => _FusionExpandableTileWidgetState();
+  State<FusionExpandableTileWidget> createState() =>
+      _FusionExpandableTileWidgetState();
 }
 
 /// State class for [FusionExpandableTileWidget] that manages expansion animation.
@@ -56,7 +57,8 @@ class FusionExpandableTileWidget extends StatefulWidget {
 /// Handles the rotation animation for the trailing icon and manages the
 /// expansion/collapse state of the tile. Uses [SingleTickerProviderStateMixin]
 /// to provide animation controller lifecycle management.
-class _FusionExpandableTileWidgetState extends State<FusionExpandableTileWidget> with SingleTickerProviderStateMixin {
+class _FusionExpandableTileWidgetState extends State<FusionExpandableTileWidget>
+    with SingleTickerProviderStateMixin {
   /// Animation controller for the rotating icon animation.
   ///
   /// Controls the 180-degree rotation animation when expanding/collapsing.
@@ -71,9 +73,15 @@ class _FusionExpandableTileWidgetState extends State<FusionExpandableTileWidget>
   void initState() {
     super.initState();
     // Initialize animation controller with initial state based on expansion
-    _rotationController = AnimationController(duration: const Duration(milliseconds: 200), vsync: this, value: widget.config.initiallyExpanded ? 1.0 : 0.0);
+    _rotationController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+      value: widget.config.initiallyExpanded ? 1.0 : 0.0,
+    );
     // Configure rotation animation to rotate 180 degrees (0.5 turns)
-    _rotationAnimation = Tween<double>(begin: 0.0, end: 0.5).animate(CurvedAnimation(parent: _rotationController, curve: Curves.easeInOut));
+    _rotationAnimation = Tween<double>(begin: 0.0, end: 0.5).animate(
+      CurvedAnimation(parent: _rotationController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -100,49 +108,72 @@ class _FusionExpandableTileWidgetState extends State<FusionExpandableTileWidget>
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
 
-    return Theme(
-      data: theme.copyWith(dividerColor: Colors.transparent),
-      child: Container(
-        decoration: BoxDecoration(
-          color: theme.colorScheme.white,
-          border: Border(bottom: BorderSide(color: theme.colorScheme.dividerColor, width: 1)),
-        ),
-        child: ExpansionTile(
-          key: ValueKey<String>(widget.config.title),
-          minTileHeight: 24,
-          controller: widget.controller,
-          dense: true,
-          tilePadding: const EdgeInsets.only(right: 16, left: 16),
-          trailing: _RotatingIcon(animation: _rotationAnimation, color: theme.colorScheme.fusionTextViewColor),
-          onExpansionChanged: _handleExpansionChanged,
-          iconColor: theme.colorScheme.fusionTextViewColor,
-          collapsedIconColor: theme.colorScheme.fusionTextViewColor,
-          title: Draggable<DockItem>(
-            data: widget.item,
-            feedback: FloatingWidget(
-              item: widget.item,
-              config: widget.config,
-              resizing: false,
-              onClose: () {}, // No-op for feedback
-              onResize: (_, __) {}, // No-op for feedback
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "fusion_expandable_tile_widget${widget.semanticId ?? ""}",
+      ),
+      child: Theme(
+        data: theme.copyWith(dividerColor: Colors.transparent),
+        child: Container(
+          color: theme.colorScheme.elevation1,
+          child: ExpansionTile(
+            key: ValueKey<String>(widget.config.title),
+            minTileHeight: 24,
+            controller: widget.controller,
+            dense: true,
+            tilePadding: const EdgeInsets.only(right: 16, left: 16),
+            trailing: _RotatingIcon(
+              animation: _rotationAnimation,
+              color: theme.colorScheme.textPrimary,
             ),
+            onExpansionChanged: _handleExpansionChanged,
+            iconColor: theme.colorScheme.textPrimary,
+            collapsedIconColor: theme.colorScheme.textPrimary,
+            title: Draggable<DockItem>(
+              data: widget.item,
+              feedback: FloatingWidget(
+                semanticId: 'fusion_expandable_tile_widget_feedback',
+                item: widget.item,
+                config: widget.config,
+                resizing: false,
+                onClose: () {}, // No-op for feedback
+                onResize: (_, __) {}, // No-op for feedback
+              ),
 
-            /// make the original widget semi transparent when dragging
-            childWhenDragging: Opacity(
-              opacity: 0.3,
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 0),
-                child: FusionAppText(text: widget.config.title, style: Theme.of(context).textTheme.labelSmall),
+              /// make the original widget semi transparent when dragging
+              childWhenDragging: Opacity(
+                opacity: 0.3,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 0,
+                    horizontal: 0,
+                  ),
+                  child: FusionAppText(
+                    text: widget.config.title,
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                ),
+              ),
+
+              /// Only allow undocking if config allows it
+              onDragEnd: (details) => widget.config.allowUndock
+                  ? widget.onUndock(widget.item, details)
+                  : null,
+              child: FusionAppText(
+                text: widget.config.title,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontSize: 11),
               ),
             ),
 
-            /// Only allow undocking if config allows it
-            onDragEnd: (details) => widget.config.allowUndock ? widget.onUndock(widget.item, details) : null,
-            child: FusionAppText(text: widget.config.title, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
+            initiallyExpanded: widget.config.initiallyExpanded,
+            children: <Widget>[
+              Divider(height: 1, color: theme.colorScheme.elevation2),
+              widget.config.dockItemWidget,
+            ],
           ),
-
-          initiallyExpanded: widget.config.initiallyExpanded,
-          children: <Widget>[widget.config.dockItemWidget],
         ),
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 typedef HoverCallback<T> = void Function(T? value, int? index);
 
@@ -42,6 +43,8 @@ class HoverDropdownButtonFormField<T> extends StatefulWidget {
   // Builders
   final DropdownButtonBuilder? selectedItemBuilder;
 
+  final String? semanticId;
+
   const HoverDropdownButtonFormField({
     super.key,
     // Core
@@ -82,13 +85,17 @@ class HoverDropdownButtonFormField<T> extends StatefulWidget {
 
     // Builders
     this.selectedItemBuilder,
+
+    this.semanticId,
   });
 
   @override
-  State<HoverDropdownButtonFormField<T>> createState() => _HoverDropdownButtonFormFieldState<T>();
+  State<HoverDropdownButtonFormField<T>> createState() =>
+      _HoverDropdownButtonFormFieldState<T>();
 }
 
-class _HoverDropdownButtonFormFieldState<T> extends State<HoverDropdownButtonFormField<T>> {
+class _HoverDropdownButtonFormFieldState<T>
+    extends State<HoverDropdownButtonFormField<T>> {
   List<DropdownMenuItem<T>> _wrapWithHover(List<DropdownMenuItem<T>>? items) {
     if (items == null) return <DropdownMenuItem<T>>[]; // ← remove `const`
     return List<DropdownMenuItem<T>>.generate(items.length, (i) {
@@ -109,32 +116,39 @@ class _HoverDropdownButtonFormFieldState<T> extends State<HoverDropdownButtonFor
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButtonFormField<T>(
-      value: widget.value,
-      items: _wrapWithHover(widget.items),
-      onChanged: widget.enabled ? widget.onChanged : null,
-      onSaved: widget.onSaved,
-      validator: widget.validator,
-      autovalidateMode: widget.autovalidateMode,
-      decoration: widget.decoration ?? const InputDecoration(),
-      hint: widget.hint,
-      disabledHint: widget.disabledHint,
-      isDense: widget.isDense,
-      isExpanded: widget.isExpanded,
-      itemHeight: widget.itemHeight,
-      alignment: widget.alignment,
-      style: widget.style,
-      icon: widget.icon,
-      iconSize: widget.iconSize,
-      dropdownColor: widget.dropdownColor,
-      elevation: widget.elevation,
-      menuMaxHeight: widget.menuMaxHeight,
-      borderRadius: widget.borderRadius,
-      enableFeedback: widget.enableFeedback,
-      focusNode: widget.focusNode,
-      autofocus: widget.autofocus,
-      onTap: widget.onTap,
-      selectedItemBuilder: widget.selectedItemBuilder,
+    return SemanticHelper.dropdown(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.dropdown,
+        "hover_button${widget.semanticId ?? ''}",
+      ),
+      value: widget.value.toString(),
+      child: DropdownButtonFormField<T>(
+        value: widget.value,
+        items: _wrapWithHover(widget.items),
+        onChanged: widget.enabled ? widget.onChanged : null,
+        onSaved: widget.onSaved,
+        validator: widget.validator,
+        autovalidateMode: widget.autovalidateMode,
+        decoration: widget.decoration ?? const InputDecoration(),
+        hint: widget.hint,
+        disabledHint: widget.disabledHint,
+        isDense: widget.isDense,
+        isExpanded: widget.isExpanded,
+        itemHeight: widget.itemHeight,
+        alignment: widget.alignment,
+        style: widget.style,
+        icon: widget.icon,
+        iconSize: widget.iconSize,
+        dropdownColor: widget.dropdownColor,
+        elevation: widget.elevation,
+        menuMaxHeight: widget.menuMaxHeight,
+        borderRadius: widget.borderRadius,
+        enableFeedback: widget.enableFeedback,
+        focusNode: widget.focusNode,
+        autofocus: widget.autofocus,
+        onTap: widget.onTap,
+        selectedItemBuilder: widget.selectedItemBuilder,
+      ),
     );
   }
 }

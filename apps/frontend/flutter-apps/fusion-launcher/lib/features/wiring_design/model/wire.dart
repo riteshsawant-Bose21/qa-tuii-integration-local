@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'package:fusion_launcher/features/wiring_design/util/wiring_serialization_util.dart';
+import 'package:fusion_lib/fusion_utils/deserialization_util.dart';
 
 import 'canvas_element.dart';
 import 'circuit_port.dart';
@@ -32,10 +32,8 @@ class Wire extends CanvasElement {
 
   @override
   Size get size => Size(
-    (to.absolutePositionWithOffset.dx - from.absolutePositionWithOffset.dx)
-        .abs(),
-    (to.absolutePositionWithOffset.dy - from.absolutePositionWithOffset.dy)
-        .abs(),
+    (to.absolutePositionWithOffset.dx - from.absolutePositionWithOffset.dx).abs(),
+    (to.absolutePositionWithOffset.dy - from.absolutePositionWithOffset.dy).abs(),
   );
 
   @override
@@ -44,21 +42,17 @@ class Wire extends CanvasElement {
       "id": id,
       "from": from.id,
       "to": to.id,
-      'joints':
-          joints
-              .map((Offset e) => <String, double>{"x": e.dx, "y": e.dy})
-              .toList(),
+      'joints': joints.map((Offset e) => <String, double>{"x": e.dx, "y": e.dy}).toList(),
     };
   }
 
   @override
   void restoreFromMap(Map<dynamic, dynamic> map) {
     final List<Offset>? path =
-        WiringSerializationUtil.listDeserializer
+        DeserializationUtil.listDeserializer
             .deserialize(map['joints'])
             ?.map(
-              (dynamic e) =>
-                  WiringSerializationUtil.offsetDeserializer.deserialize(e),
+              (dynamic e) => DeserializationUtil.offsetDeserializer.deserialize(e),
             )
             .where((Offset? e) => e != null)
             .map((Offset? e) => e!)

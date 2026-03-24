@@ -157,6 +157,11 @@ enum endpoint_type {
     EP_TYPE_I2CSW_START       = EP_TYPE_EEPROM_END + 1,
     EP_TYPE_I2CSW_TCA9544     = EP_TYPE_I2CSW_START,
     EP_TYPE_I2CSW_END,
+
+    // clock generators
+    EP_TYPE_CLK_START         = EP_TYPE_I2CSW_END + 1,
+    EP_TYPE_CLK_SI5351B       = EP_TYPE_CLK_START,
+    EP_TYPE_CLK_END,
 };
 
 /* IC register definitions */
@@ -383,7 +388,9 @@ struct endpoint {
     char                    name[MAX_STRING];
     enum endpoint_type      type;
     bool                    export;
+    bool                    use_i2c_bus_override;
     u8                      ioexp_id;
+    u8                      i2c_bus;
     unsigned short          i2c_addr;
 
     u16                     in_ch_bm;
@@ -472,7 +479,12 @@ enum base_device_type {
     BD_TYPE_NONE,
 
     BD_TYPE_FIXED_IO_START = BD_TYPE_NONE + 1,
-    BD_TYPE_FUSION_C0      = BD_TYPE_FIXED_IO_START,
+    BD_TYPE_FUSION_POWERSMART = BD_TYPE_FIXED_IO_START,
+    BD_TYPE_FUSION_C1_EVK,
+    BD_TYPE_FUSION_FM6,
+    BD_TYPE_FUSION_FM8Y,
+    BD_TYPE_FUSION_XLR_PAL,
+    BD_TYPE_FUSION_BLUE_PAL,
     BD_TYPE_FIXED_IO_END,
 
     BD_TYPE_SLOT_IO_START  = BD_TYPE_FIXED_IO_END + 1,
@@ -483,6 +495,14 @@ struct base_device {
     struct id_data          data;
 
     struct config_sequence  cfg_seq;
+
+    struct {
+        bool                enabled;
+        char                uv_warn_gpio_name[MAX_STRING];
+        char                dac_mute_gpio_name[MAX_STRING];
+        struct endpoint_gpio *uv_warn_gpio;
+        struct endpoint_gpio *dac_mute_gpio;
+    } uv_mute_sw;
 
     size_t                  num_eps;
     struct endpoint         *endpoints;
@@ -499,6 +519,7 @@ struct fusion_io_base_drvdata {
     struct platform_device *pdev;
     struct base_device     *fusion_device;
     struct i2c_adapter     *i2c_adapter;
+    struct i2c_adapter     *mux_parent_adapter;
     struct i2c_mux_core    *muxc;
 };
 

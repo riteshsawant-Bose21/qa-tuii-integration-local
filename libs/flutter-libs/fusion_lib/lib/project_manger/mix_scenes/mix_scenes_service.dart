@@ -462,5 +462,11 @@ extension MixScenesService on ProjectService {
       mixScenes: updatedScenes,
     );
     zoneFunctions.add(functionId, updatedFunction);
+
+    final linkedActions = relationships.getParents(RelationshipType.actionValueMapping, sceneId);
+    final copyOfLinkedActions = List<String>.from(linkedActions);
+    for (final actionId in copyOfLinkedActions) {
+      removeSceneAction(actionId);
+    }
   }
 }

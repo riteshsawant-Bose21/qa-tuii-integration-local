@@ -18,6 +18,7 @@
 #include <atomic>
 #include <iostream>
 #include <filesystem>
+#include <fstream>
 
 
 std::atomic<bool> g_running{true};
@@ -41,6 +42,35 @@ void handle_update(const std::string &update_setting)
     SPDLOG_INFO("server update: {}", update_setting);
 }
 
+static void handle_amp_control_update(const std::string &path,
+                                      const Json::Value &old_val,
+                                      const Json::Value &new_val)
+{
+    (void)path;
+
+    if (old_val == new_val) {
+        return;
+    }
+
+    if (!new_val.isObject() || !new_val.isMember("endpoint") || !new_val.isMember("payload") ||
+        !new_val["endpoint"].isString() || !new_val["payload"].isString()) {
+        Json::StreamWriterBuilder writer;
+        writer["indentation"] = "";
+        SPDLOG_WARN("Ignoring amp_control update at {} with unexpected payload {}",
+                    path, Json::writeString(writer, new_val));
+        return;
+    }
+
+    Json::Value message_json;
+    message_json["target"] = "amp_control";
+    message_json["name"] = new_val["endpoint"].asString();
+    message_json["value"] = new_val["payload"].asString();
+
+    Json::StreamWriterBuilder writer;
+    writer["indentation"] = "";
+    handle_update(Json::writeString(writer, message_json));
+}
+
 
 // Boost needs this structure and the corresponding `validate()` function to
 // allow the same option to repeated multiple times and counted (-vv, -qq).
@@ -55,6 +85,52 @@ void validate(boost::any &v, std::vector<std::string> const &, OptionCounter *, 
     else ++boost::any_cast<OptionCounter &>(v).count;
 }
 
+static std::string read_bootargs_device_id()
+{
+    constexpr const char *bootargs_path = "/proc/device-tree/chosen/bootargs";
+    const std::string key = "device_id=";
+
+    std::ifstream file(bootargs_path, std::ios::binary);
+    if (!file.is_open()) {
+        return {};
+    }
+
+    std::string bootargs((std::istreambuf_iterator<char>(file)),
+                         std::istreambuf_iterator<char>());
+
+    const auto pos = bootargs.find(key);
+    if (pos == std::string::npos) {
+        return {};
+    }
+
+    const auto start = pos + key.size();
+    auto end = start;
+    while (end < bootargs.size() && bootargs[end] != ' ' && bootargs[end] != '\0') {
+        ++end;
+    }
+
+    if (end == start) {
+        return {};
+    }
+
+    return bootargs.substr(start, end - start);
+}
+
+static std::string resolve_configuration_path(const std::string &config_dir)
+{
+    namespace fs = std::filesystem;
+    const std::string base_name = "configuration.json";
+    const std::string device_id = read_bootargs_device_id();
+
+    std::string candidate = config_dir + "/";
+    candidate += device_id.empty() ? base_name : device_id + "-" + base_name;
+
+    if (!fs::exists(candidate)) {
+        candidate = config_dir + "/som-" + base_name;
+    }
+
+    return candidate;
+}
 
 int main(int argc, char *argv[])
 {
@@ -72,10 +148,11 @@ int main(int argc, char *argv[])
     OptionCounter quietness;
 
     std::string config_path = "/etc/fusion/system-monitor";
+    std::string default_configuration = resolve_configuration_path(config_path);
 
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
-        ("configuration,c", boost::program_options::value<std::string>()->default_value(config_path + "/configuration.json"), "configuration file")
+        ("configuration,c", boost::program_options::value<std::string>()->default_value(default_configuration), "configuration file")
         ("definitions,d", boost::program_options::value<std::string>()->default_value(config_path + "/module-definitions.json"), "module definition file")
         ("telemetry-messages,m", boost::program_options::value<std::string>()->default_value(config_path + "/telemetry-messages.json"), "telemetry commands file")
         ("telemetry-configuration,p", boost::program_options::value<std::string>()->default_value(config_path + "/telemetry-configuration.json"), "telemetry configuration file")
@@ -118,7 +195,7 @@ int main(int argc, char *argv[])
     }
 
 
-    SPDLOG_INFO("fusion_system_monitor");
+    SPDLOG_INFO("fusion_system_monitor--configuration file: {}", vm["configuration"].as<std::string>());
 
     bosepro::Configuration configuration(vm["configuration"].as<std::string>());
     bosepro::TelemetryConfiguration telem_configuration(vm["telemetry-configuration"].as<std::string>());
@@ -150,14 +227,19 @@ int main(int argc, char *argv[])
     // Path for networked audio streams
     target_paths.push_back("audio_streams");
     // Path for dynamic parameter setttings
-    target_paths.push_back("settings.fw.*.*");
     target_paths.push_back("settings.fw.*.*[*]");
-
+    target_paths.push_back("settings.fw.*.*");
+    
     if (vm.count("serverip"))
     {
         SPDLOG_INFO("server ip {}", vm["serverip"].as<std::string>());
         client = new UDPValueMonitor(vm["serverip"].as<std::string>(), 7947,
                                         target_paths, handle_update);
+        client->watch("settings.firmware.amp_control",
+                      [](const std::string &path, const Json::Value &old_val,
+                         const Json::Value &new_val) {
+                          handle_amp_control_update(path, old_val, new_val);
+                      });
     }
 
     // if we boot up on empty config, no need to start up telemetry

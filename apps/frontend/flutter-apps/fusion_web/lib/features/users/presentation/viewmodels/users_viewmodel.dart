@@ -4,7 +4,7 @@ import 'package:fusion_web/features/users/domain/entities/user_entity.dart';
 import 'package:fusion_web/features/users/domain/repositories/users_repository.dart';
 import 'package:fusion_web/features/users/domain/usecases/users_usecases.dart';
 
-class UsersViewModel extends BaseViewModel {
+class UsersViewModel extends BaseViewModel<List<UserEntity>> {
   final GetUsersUseCase getUsersUseCase;
   final GetUserByIdUseCase getUserByIdUseCase;
   final CreateUserUseCase createUserUseCase;
@@ -21,12 +21,12 @@ class UsersViewModel extends BaseViewModel {
   final FilterUsersUseCase filterUsersUseCase;
   final GetUserMetricsUseCase getUserMetricsUseCase;
 
-  List<UserEntity> _users = [];
+  List<UserEntity> _allUsers = [];
   List<UserEntity> _filteredUsers = [];
   UserEntity? _selectedUser;
   String _searchQuery = '';
   Map<String, int> _metrics = {};
-  
+
   // Filter states
   String? _selectedRole;
   UserStatus? _selectedStatus;
@@ -55,20 +55,20 @@ class UsersViewModel extends BaseViewModel {
     if (_filteredUsers.isNotEmpty) {
       return _filteredUsers;
     }
-    return _users;
+    return _allUsers;
   }
 
   UserEntity? get selectedUser => _selectedUser;
   String get searchQuery => _searchQuery;
   Map<String, int> get metrics => _metrics;
-  
+
   String get errorMessage {
     if (hasError && state is ErrorState) {
       return (state as ErrorState).message;
     }
     return '';
   }
-  
+
   // Getters for filter states
   String? get selectedRole => _selectedRole;
   UserStatus? get selectedStatus => _selectedStatus;
@@ -79,12 +79,12 @@ class UsersViewModel extends BaseViewModel {
     try {
       setLoading();
       final users = await getUsersUseCase(const NoParams());
-      _users = users;
+      _allUsers = users;
       _filteredUsers = [];
       await loadMetrics();
       setLoaded(users);
     } catch (e) {
-      _users = [];
+      _allUsers = [];
       _filteredUsers = [];
       setError('Failed to load users: ${e.toString()}');
     }
@@ -93,7 +93,7 @@ class UsersViewModel extends BaseViewModel {
   Future<void> loadMetrics() async {
     try {
       _metrics = await getUserMetricsUseCase(const NoParams());
-      notifyListeners();
+      // Metrics loaded, current users state is maintained
     } catch (e) {
       print('Failed to load metrics: $e');
     }
@@ -103,24 +103,26 @@ class UsersViewModel extends BaseViewModel {
     _searchQuery = query;
     if (query.isEmpty) {
       _filteredUsers = [];
-      notifyListeners();
+      setLoaded(_allUsers);
       return;
     }
 
     try {
       final results = await searchUsersUseCase(query);
       _filteredUsers = results;
-      notifyListeners();
+      setLoaded(_filteredUsers);
     } catch (e) {
-      _filteredUsers = _users
+      _filteredUsers = _allUsers
           .where(
             (u) =>
                 u.name.toLowerCase().contains(query.toLowerCase()) ||
                 u.email.toLowerCase().contains(query.toLowerCase()) ||
-                u.roles.any((role) => role.toLowerCase().contains(query.toLowerCase())),
+                u.roles.any(
+                  (role) => role.toLowerCase().contains(query.toLowerCase()),
+                ),
           )
           .toList();
-      notifyListeners();
+      setLoaded(_filteredUsers);
     }
   }
 
@@ -147,17 +149,18 @@ class UsersViewModel extends BaseViewModel {
     try {
       final results = await filterUsersUseCase(params);
       _filteredUsers = results;
-      notifyListeners();
+      setLoaded(_filteredUsers);
     } catch (e) {
       // Fallback to local filtering
-      _filteredUsers = _users.where((user) {
+      _filteredUsers = _allUsers.where((user) {
         if (role != null && !user.roles.contains(role)) return false;
         if (status != null && user.status != status) return false;
         if (userType != null && user.userType != userType) return false;
-        if (projectId != null && !user.associatedProjects.contains(projectId)) return false;
+        if (projectId != null && !user.associatedProjects.contains(projectId))
+          return false;
         return true;
       }).toList();
-      notifyListeners();
+      setLoaded(_filteredUsers);
     }
   }
 
@@ -168,7 +171,7 @@ class UsersViewModel extends BaseViewModel {
     _selectedProjectId = null;
     _filteredUsers = [];
     _searchQuery = '';
-    notifyListeners();
+    setLoaded(_allUsers);
   }
 
   Future<void> getUser(String id) async {
@@ -176,7 +179,8 @@ class UsersViewModel extends BaseViewModel {
       setLoading();
       final user = await getUserByIdUseCase(id);
       _selectedUser = user;
-      setLoaded(user);
+      // User selected, maintain current list state
+      setLoaded(users);
     } catch (e) {
       setError('Failed to load user: ${e.toString()}');
     }
@@ -210,7 +214,6 @@ class UsersViewModel extends BaseViewModel {
       );
       await inviteUserUseCase(params);
       await loadUsers();
-      setLoaded(null);
     } catch (e) {
       setError('Failed to invite user: ${e.toString()}');
     }
@@ -260,7 +263,10 @@ class UsersViewModel extends BaseViewModel {
     }
   }
 
-  Future<void> removeFromProjects(String userId, List<String> projectIds) async {
+  Future<void> removeFromProjects(
+    String userId,
+    List<String> projectIds,
+  ) async {
     try {
       setLoading();
       final params = RemoveUserFromProjectsParams(
@@ -310,12 +316,12 @@ class UsersViewModel extends BaseViewModel {
 
   void selectUser(UserEntity user) {
     _selectedUser = user;
-    notifyListeners();
+    // Selected user updated, current list state is maintained
   }
 
   void clearSearch() {
     _searchQuery = '';
     _filteredUsers = [];
-    notifyListeners();
+    setLoaded(_allUsers);
   }
 }

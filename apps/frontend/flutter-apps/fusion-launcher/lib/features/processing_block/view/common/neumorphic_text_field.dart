@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 
 import 'neumorphic_container.dart';
 
@@ -47,22 +49,32 @@ class _NeumorphicTextFieldState extends State<NeumorphicTextField> {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(widget.borderRadius),
-      child: NeumorphicContainer(
-        child: TextField(
-          controller: widget.controller,
-          textAlign: TextAlign.center,
-          focusNode: _focusNode,
-          style: Theme.of(context).textTheme.labelLarge,
-          decoration: InputDecoration(
-            border: InputBorder.none,
-            hintText: widget.hintText,
-            isDense: true,
-            hintStyle: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.grey),
-            contentPadding: const EdgeInsets.all(0),
+    return SemanticHelper.textInput(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.textInput,
+        "neumorphic_text_field",
+      ),
+      label: widget.hintText,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(widget.borderRadius),
+        child: NeumorphicContainer(
+          semanticId: "neumorphic_text_field",
+          child: TextField(
+            controller: widget.controller,
+            textAlign: TextAlign.center,
+            focusNode: _focusNode,
+            style: Theme.of(context).textTheme.labelLarge,
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              hintText: widget.hintText,
+              isDense: true,
+              hintStyle: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(color: Colors.grey),
+              contentPadding: const EdgeInsets.all(0),
+            ),
+            onChanged: widget.onChanged,
           ),
-          onChanged: widget.onChanged,
         ),
       ),
     );
