@@ -1,7 +1,7 @@
 #include "wav_read.h"
 #include "message_player.h"
 
-#include <bosepro/observer.h>
+#include <observer/observer.h>
 
 #include <bosepro/configuration.h>
 #include <bosepro/definition.h>
@@ -20,6 +20,8 @@
 #include <signal.h>
 #include <atomic>
 #include <iostream>
+
+static std::string device_id = "";
 
 void handle_update(const std::string &update_setting);
 
@@ -219,6 +221,69 @@ void handle_update(const std::string &update_setting)
 }
 
 
+static void handle_device_id(const std::string &new_device_id)
+{
+    device_id = new_device_id;
+}
+
+
+static void handle_devices(const std::string & /*path*/,
+                           const Json::Value & /*old_value*/,
+                           const Json::Value &new_value)
+{
+    if (new_value["id"] == device_id)
+    {
+        static const std::string destroy_message = "{ \"target\": \"session\", \"name\": \"destroy_all_audio_tasks\" }";
+        handle_update(destroy_message);
+
+        std::ofstream dsp_config("/tmp/dsp_config.json");
+        dsp_config << new_value["dsp_static_config"];
+        dsp_config.close();
+
+        static const std::string create_message = "{ \"target\": \"session\", \"name\": \"create_audio_task\", \"value\": \"/tmp/dsp_config.json\" }";
+        handle_update(create_message);
+    }
+}
+
+
+static void handle_parameter(const std::string &path,
+                             const Json::Value &old_value,
+                             const Json::Value &new_value)
+{
+    if (old_value == new_value)
+    {
+        return;
+    }
+
+    std::vector<PathComponent> path_parts = JsonMonitor::splitPath(path);
+
+    Json::Value message_json; 
+    message_json["target"] = path_parts[2].key;
+    message_json["name"] = path_parts[3].key;
+
+    if (path_parts.size() > 4 && path_parts[4].isArrayAccess)
+    {
+        Json::Value index_array(Json::arrayValue);
+        index_array.append(static_cast<Json::Int>(path_parts[4].arrayIndex + 1));
+        
+        if (path_parts.size() > 5 && path_parts[5].isArrayAccess)
+        {
+            index_array.append(static_cast<Json::Int>(path_parts[5].arrayIndex + 1));
+        }
+        
+        message_json["index"] = index_array;
+    }
+
+    message_json["value"] = new_value;
+
+    Json::StreamWriterBuilder writer;
+    writer["indentation"] = "";
+    std::string message = Json::writeString(writer, message_json);
+
+    handle_update(message);
+}
+
+
 // Boost needs this structure and the corresponding `validate()` function to
 // allow the same option to repeated multiple times and counted (-vv, -qq).
 struct OptionCounter
@@ -264,7 +329,6 @@ int main(int argc, char *argv[])
         ("telemetry-configuration,p", boost::program_options::value<std::string>()->default_value(config_path + "/telemetry-configuration.json"), "telemetry configuration file")
         ("serverip,s", boost::program_options::value<std::string>(), "IP address of fusion-server")
         ("no-telemetry,n", boost::program_options::bool_switch(&no_telemetry), "disable telemetry")
-        ("device-id,i", boost::program_options::value<std::string>(), "device ID to use")
         ("verbose,v", boost::program_options::value(&verbosity)->zero_tokens(), "make logs more verbose")
         ("quiet,q", boost::program_options::value(&quietness)->zero_tokens(), "make logs more quiet")
         ("help,h", "print this message and exit")
@@ -357,27 +421,17 @@ int main(int argc, char *argv[])
             session.set_seconds_to_run(vm["time"].as<int>());
         }
 
-        std::vector<std::string> target_paths;
-
-        // Path for the static configuration
-        target_paths.push_back("devices[*]");
-        // Path for dynamic parameter setttings with matrix indices
-        target_paths.push_back("settings.audio.*.*[*][*]");
-        // Path for dynamic parameter setttings with vector indices
-        target_paths.push_back("settings.audio.*.*[*]");
-        // Path for dynamic parameter setttings
-        target_paths.push_back("settings.audio.*.*");
-
         if (vm.count("serverip"))
         {
             SPDLOG_INFO("server ip {}", vm["serverip"].as<std::string>());
-            client = new UDPValueMonitor(vm["serverip"].as<std::string>(), 7947,
-                                         target_paths, handle_update);
+            client = new UDPValueMonitor(vm["serverip"].as<std::string>(),
+                                         7947);
 
-            if (vm.count("device-id"))
-            {
-                client->setDeviceID(vm["device-id"].as<std::string>());
-            }
+            client->watchDeviceID(handle_device_id);
+            client->watchPattern("devices[*]", handle_devices);
+            client->watchPattern("settings.audio.*.*[*][*]", handle_parameter);
+            client->watchPattern("settings.audio.*.*[*]", handle_parameter);
+            client->watchPattern("settings.audio.*.*", handle_parameter);
         }
 
         // if we boot up on empty config, no need to start up telemetry
