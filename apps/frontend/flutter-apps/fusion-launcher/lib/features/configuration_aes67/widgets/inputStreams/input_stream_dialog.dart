@@ -165,6 +165,8 @@ class _DialogContent extends StatelessWidget {
                   children: <Widget>[
                     const SizedBox(width: _labelW, child: _FieldLabel(text: 'Channels')),
                     const SizedBox(width: _gapLabel),
+
+                    /// dynamic channel list
                     SizedBox(
                       width: _nameFieldW,
                       child: _DarkDropdown<int>(
@@ -383,7 +385,7 @@ class _SessionTable extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: context.colorScheme.primaryBlack,
+        color: context.colorScheme.elevation2.withAlpha(200),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: context.colorScheme.strokeLight),
       ),
@@ -468,7 +470,7 @@ class _SessionTableRow extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           children: <Widget>[
             // Session ID (bold)
