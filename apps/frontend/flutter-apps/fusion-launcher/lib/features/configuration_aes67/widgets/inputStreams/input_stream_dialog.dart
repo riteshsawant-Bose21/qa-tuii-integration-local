@@ -694,28 +694,6 @@ class _DarkTextFieldState extends State<_DarkTextField> {
       onChange: widget.onChanged,
       height: 35,
       borderRadius: 8,
-      // style: context.textTheme.bodySmall?.copyWith(
-      //   color: context.colorScheme.textPrimary,
-      //   fontWeight: FontWeight.w400,
-      // ),
-      // decoration: InputDecoration(
-      //   isDense: true,
-      //   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      //   filled: true,
-      //   fillColor: context.colorScheme.elevation2,
-      //   border: OutlineInputBorder(
-      //     borderRadius: BorderRadius.circular(8),
-      //     borderSide: BorderSide(color: context.colorScheme.strokeLight),
-      //   ),
-      //   enabledBorder: OutlineInputBorder(
-      //     borderRadius: BorderRadius.circular(8),
-      //     borderSide: BorderSide(color: context.colorScheme.strokeLight),
-      //   ),
-      //   focusedBorder: OutlineInputBorder(
-      //     borderRadius: BorderRadius.circular(8),
-      //     borderSide: BorderSide(color: context.colorScheme.primaryColor),
-      //   ),
-      // ),
     );
   }
 }
@@ -738,49 +716,16 @@ class _DarkDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return
-    // Container(
-    //   decoration: BoxDecoration(
-    //     color: context.colorScheme.elevation2,
-    //     borderRadius: BorderRadius.circular(8),
-    //     border: Border.all(color: context.colorScheme.strokeLight),
-    //   ),
-    //   padding: const EdgeInsets.symmetric(horizontal: 10),
-    //   child:
-    Padding(
+    return Padding(
       padding: const EdgeInsets.only(top: 15.0),
       child: DropdownButtonHideUnderline(
         child: FusionNeumorphicDropdown<T>(
           value: value,
           height: 35,
           borderRadius: BorderRadius.circular(8),
-          // hint: FusionAppText(
-          //   text: hint,
-          //   style: context.textTheme.bodySmall?.copyWith(
-          //     color: context.colorScheme.textSecondary,
-          //   ),
-          // ),
+
           hintText: hint,
-          // isDense: true,
-          // isExpanded: true,
-          // dropdownColor: context.colorScheme.elevation2,
-          // icon: Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: context.colorScheme.textSecondary),
-          // style: context.textTheme.bodySmall?.copyWith(
-          //   color: context.colorScheme.textPrimary,
-          // ),
           items: items,
-          // .map(
-          //   (item) => DropdownMenuItem<T>(
-          //     value: item,
-          //     child: FusionAppText(
-          //       text: labelBuilder(item),
-          //       style: context.textTheme.bodySmall?.copyWith(
-          //         color: context.colorScheme.textPrimary,
-          //       ),
-          //     ),
-          //   ),
-          // )
-          // .toList(),
           itemBuilderWithSelection: (BuildContext context, T item, bool isSelected) {
             return FusionAppText(
               text: labelBuilder(item),
