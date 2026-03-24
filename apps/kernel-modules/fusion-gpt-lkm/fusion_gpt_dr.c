@@ -90,11 +90,11 @@ static u32 cal_dac_delta = 8;
 module_param(cal_dac_delta, uint, 0644);
 MODULE_PARM_DESC(cal_dac_delta, "DAC perturbation for startup probes");
 
-static u32 cal_settle_pps = 1;
+static u32 cal_settle_pps = 2;
 module_param(cal_settle_pps, uint, 0644);
 MODULE_PARM_DESC(cal_settle_pps, "PPS samples to settle after each probe write");
 
-static u32 cal_measure_pps = 2;
+static u32 cal_measure_pps = 4;
 module_param(cal_measure_pps, uint, 0644);
 MODULE_PARM_DESC(cal_measure_pps, "PPS samples to average per probe point");
 
@@ -121,6 +121,22 @@ MODULE_PARM_DESC(cal_max_dac_step, "Maximum absolute DAC jump from startup cente
 static u32 cal_gain_search_step = 1000;
 module_param(cal_gain_search_step, uint, 0644);
 MODULE_PARM_DESC(cal_gain_search_step, "Gain step used in bounded one-shot target search");
+
+static u32 si_gain_start = 70000;
+module_param(si_gain_start, uint, 0644);
+MODULE_PARM_DESC(si_gain_start, "Starting Si5351b gain for startup, calibration center, and inverse-model jump search");
+
+static u32 cal_inverse_gain_step = 10000;
+module_param(cal_inverse_gain_step, uint, 0644);
+MODULE_PARM_DESC(cal_inverse_gain_step, "Absolute gain increment for inverse-model startup solve");
+
+static int cal_jump_dac_min = 30;
+module_param(cal_jump_dac_min, int, 0644);
+MODULE_PARM_DESC(cal_jump_dac_min, "Minimum acceptable DAC value for the one-shot calibration jump");
+
+static int cal_jump_dac_max = 225;
+module_param(cal_jump_dac_max, int, 0644);
+MODULE_PARM_DESC(cal_jump_dac_max, "Maximum acceptable DAC value for the one-shot calibration jump");
 
 static bool cal_use_prebaked = false;
 module_param(cal_use_prebaked, bool, 0644);
@@ -363,6 +379,21 @@ static inline void wrl(struct fusion_gpt *g, u32 v, u32 off) { writel_relaxed(v,
 static inline u64 ceil_div_u64(u64 a, u64 b)
 {
 	return (a + b - 1) / b;
+}
+
+static inline u32 fusion_start_gain_value(void)
+{
+	return clamp_t(u32, si_gain_start, 40000, 250000);
+}
+
+static inline int cal_jump_dac_min_value(void)
+{
+	return clamp_t(int, min_t(int, cal_jump_dac_min, cal_jump_dac_max), 0, 255);
+}
+
+static inline int cal_jump_dac_max_value(void)
+{
+	return clamp_t(int, max_t(int, cal_jump_dac_min, cal_jump_dac_max), 0, 255);
 }
 
 static void gpt_reset_timing_state_locked(struct fusion_gpt *g)
@@ -808,48 +839,67 @@ static bool cal_fit_model(struct fusion_gpt *g, u32 *mean_residual_out)
 	return true;
 }
 
-static void cal_find_best_target(struct fusion_gpt *g, u32 *best_gain, int *best_dac)
+static s64 cal_div_round_closest_s64(s64 num, s64 den)
 {
-	s64 best_cost = S64_MAX;
-	s64 e0 = g->cal_probe_mean[0];
-	u32 g_step = max_t(u32, 1, cal_gain_search_step);
-	u32 gain_span_down = min(cal_max_gain_step, g->cal_center_gain - g->si_gain_min);
-	u32 gain_span_up = min(cal_max_gain_step, g->si_gain_max - g->cal_center_gain);
-	u32 g_min = g->cal_center_gain - gain_span_down;
-	u32 g_max = g->cal_center_gain + gain_span_up;
-	int d_min = max(0, g->cal_center_dac - (int)cal_max_dac_step);
-	int d_max = min(255, g->cal_center_dac + (int)cal_max_dac_step);
-	s64 gain_norm = (s64)max_t(u32, 1, cal_gain_delta) * (s64)max_t(u32, 1, cal_gain_delta);
-	s64 dac_norm = (s64)max_t(u32, 1, cal_dac_delta) * (s64)max_t(u32, 1, cal_dac_delta);
+	s64 q = div_s64(num, den);
+	s64 r = num - q * den;
+	s64 abs_r = (r < 0) ? -r : r;
+	s64 abs_den = (den < 0) ? -den : den;
+
+	if (abs_r * 2 >= abs_den)
+		q += ((num < 0) ^ (den < 0)) ? -1 : 1;
+
+	return q;
+}
+
+static bool cal_find_best_target(struct fusion_gpt *g, u32 *best_gain, int *best_dac)
+{
+	s64 e0_q16 = (s64)g->cal_probe_mean[0] << 16;
 	u32 gv;
-	int dv;
+	u32 gain_step = max_t(u32, 1, cal_inverse_gain_step);
+	u32 gain_start = clamp(max_t(u32, g->si_gain_min, fusion_start_gain_value()),
+			       g->si_gain_min, g->si_gain_max);
 
 	*best_gain = g->cal_center_gain;
 	*best_dac = g->cal_center_dac;
 
-	for (gv = g_min; gv <= g_max; gv += g_step) {
-		for (dv = d_min; dv <= d_max; dv++) {
-			s64 dg = (s64)gv - (s64)g->cal_center_gain;
-			s64 dd = (s64)dv - (s64)g->cal_center_dac;
-			s64 pred_q16 = (e0 << 16) +
-				       (s64)g->cal_k1_q16 * dg +
-				       (s64)g->cal_k2_q16 * dd +
-				       (s64)g->cal_k3_q16 * dg * dd;
-			s64 pred = pred_q16 >> 16;
-			s64 move_cost = (s64)cal_lambda_gain * div_s64(dg * dg, gain_norm) +
-					(s64)cal_lambda_dac * div_s64(dd * dd, dac_norm);
-			s64 cost = pred * pred + move_cost;
+	for (gv = gain_start; gv <= g->si_gain_max; gv += gain_step) {
+		s64 dg = (s64)gv - (s64)g->cal_center_gain;
+		s64 numer = -(e0_q16 + (s64)g->cal_k1_q16 * dg);
+		s64 denom = (s64)g->cal_k2_q16 + (s64)g->cal_k3_q16 * dg;
+		s64 dd;
+		s64 dv;
 
-			if (cost < best_cost) {
-				best_cost = cost;
-				*best_gain = gv;
-				*best_dac = dv;
-			}
+		if (denom == 0) {
+			pr_info("fusion_gpt: cal inverse reject gain=%u dac=undefined denom=0\n",
+				gv);
+			goto next_gain;
 		}
 
-		if (gv > g_max - g_step)
+		dd = cal_div_round_closest_s64(numer, denom);
+		dv = (s64)g->cal_center_dac + dd;
+		if (dv >= cal_jump_dac_min_value() && dv <= cal_jump_dac_max_value()) {
+			*best_gain = gv;
+			*best_dac = (int)dv;
+			pr_info("fusion_gpt: cal inverse target gain=%u dac=%d (center gain=%u dac=%d)\n",
+				*best_gain, *best_dac,
+				g->cal_center_gain, g->cal_center_dac);
+			return true;
+		}
+
+		pr_info("fusion_gpt: cal inverse reject gain=%u dac=%lld (allowed %d..%d)\n",
+			gv, (long long)dv,
+			cal_jump_dac_min_value(),
+			cal_jump_dac_max_value());
+
+next_gain:
+		if (gv > g->si_gain_max - gain_step)
 			break;
 	}
+
+	pr_warn("fusion_gpt: cal inverse solve found no in-range DAC from gain=%u..%u step=%u\n",
+		gain_start, g->si_gain_max, gain_step);
+	return false;
 }
 
 static irqreturn_t gpt_irq(int irq, void *dev_id)
@@ -977,12 +1027,16 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
                       g->cal_k1_q16 = cal_pre_k1_q16;
                       g->cal_k2_q16 = cal_pre_k2_q16;
                       g->cal_k3_q16 = cal_pre_k3_q16;
-                      cal_find_best_target(g, &g->si_gain_target, &g->dac_target);
-                      g->cal_state = CAL_APPLY_JUMP;
-                      pr_info("fusion_gpt: cal prebaked jump start center gain=%u dac=%d e0=%ld k=[%d %d %d]\n",
-                              g->cal_center_gain, g->cal_center_dac, e0,
-                              g->cal_k1_q16, g->cal_k2_q16, g->cal_k3_q16);
-                      schedule_work(&g->dac_work);
+                      if (cal_find_best_target(g, &g->si_gain_target, &g->dac_target)) {
+                          g->cal_state = CAL_APPLY_JUMP;
+                          pr_info("fusion_gpt: cal prebaked jump start center gain=%u dac=%d e0=%ld k=[%d %d %d]\n",
+                                  g->cal_center_gain, g->cal_center_dac, e0,
+                                  g->cal_k1_q16, g->cal_k2_q16, g->cal_k3_q16);
+                          schedule_work(&g->dac_work);
+                      } else {
+                          g->cal_state = CAL_FAIL;
+                          schedule_work(&g->dac_work);
+                      }
                   } else if (g->cal_settle_left == 0) {
                       g->cal_state = CAL_FAIL;
                       pr_warn("fusion_gpt: cal prebaked e0 collection timed out, fallback to PI\n");
@@ -1411,15 +1465,21 @@ static void fusion_dac_work_handler(struct work_struct *work)
             }
         }
 
-        cal_find_best_target(g, &g->si_gain_target, &g->dac_target);
-        g->cal_state = CAL_APPLY_JUMP;
-        schedule_work(&g->dac_work);
+        if (cal_find_best_target(g, &g->si_gain_target, &g->dac_target)) {
+            g->cal_state = CAL_APPLY_JUMP;
+            schedule_work(&g->dac_work);
+        } else {
+            g->cal_state = CAL_FAIL;
+            schedule_work(&g->dac_work);
+        }
         return;
     }
 
     if (g->cal_state == CAL_APPLY_JUMP) {
         u32 jump_gain = clamp(g->si_gain_target, g->si_gain_min, g->si_gain_max);
-        int jump_dac = clamp(g->dac_target, 0, 255);
+        int jump_dac = clamp(g->dac_target,
+                             cal_jump_dac_min_value(),
+                             cal_jump_dac_max_value());
 
         if (jump_gain != g->si_gain_current) {
             ret = si5351b_write_gain(g, jump_gain);
@@ -1587,7 +1647,8 @@ static int gpt_probe(struct platform_device *pdev)
 	g->current_dac_value = 0xFFFF; /* force first write */
 	g->si_gain_min = 40000;
 	g->si_gain_max = 250000;
-	g->si_gain_current = g->si_gain_min;
+	g->si_gain_current = clamp(fusion_start_gain_value(),
+				   g->si_gain_min, g->si_gain_max);
 	g->si_gain_target = g->si_gain_current;
 	g->si_gain_pending = false;
 	INIT_WORK(&g->dac_work, fusion_dac_work_handler);
