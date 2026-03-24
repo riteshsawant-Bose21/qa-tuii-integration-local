@@ -90,7 +90,7 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
     final bool isEmpty = _selectedValue == null;
 
     return FusionPopupMenu<T>(
-      popoupwidth: widget.matchChildWidth ? null : widget.popupWidth,
+      popupwidth: widget.matchChildWidth ? null : widget.popupWidth,
       items: widget.items,
       onSelected: _handleChange,
       popupOffset: const Offset(-1, 6),
