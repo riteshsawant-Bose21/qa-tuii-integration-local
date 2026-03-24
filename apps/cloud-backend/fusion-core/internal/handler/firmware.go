@@ -230,7 +230,7 @@ func (h *FirmwareUpdateHandler) ApproveBundle(c *gin.Context) {
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /firmware/updates/check [get]
 func (h *FirmwareUpdateHandler) CheckForUpdate(c *gin.Context) {
-	var payload types.CheckForUpdateRequest
+	var payload types.FirmwareUpdateRequest
 	logger := log.GetLogger(c)
 
 	if err := c.ShouldBindQuery(&payload); err != nil {

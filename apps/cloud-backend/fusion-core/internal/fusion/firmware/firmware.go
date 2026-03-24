@@ -88,7 +88,7 @@ func (s *Service) ApproveBundle(ctx context.Context, bundleID string, approvedBy
 	return nil
 }
 
-func (s *Service) CheckForUpdate(ctx context.Context, req *types.CheckForUpdateRequest, logger *zap.Logger) (*types.CheckForUpdateResponse, error) {
+func (s *Service) CheckForUpdate(ctx context.Context, req *types.FirmwareUpdateRequest, logger *zap.Logger) (*types.FirmwareUpdateResponse, error) {
 	// 1. Find the latest approved bundle compatible with the current desktop app version
 	compatibleBundle, err := s.dbService.GetLatestCompatibleBundle(ctx, req.CurrentFirmwareVersion, req.CurrentDesktopAppVersion, req.Channel)
 	if err != nil {
@@ -119,7 +119,7 @@ func (s *Service) CheckForUpdate(ctx context.Context, req *types.CheckForUpdateR
 		}
 
 		if !validation.IsVersionGreaterOrEqual(currentAppSemver, minAppSemver) {
-			return &types.CheckForUpdateResponse{
+			return &types.FirmwareUpdateResponse{
 				UpdateAvailable:      true,
 				AppUpdateRequired:    true,
 				MinDesktopAppVersion: latestCompatibleBundle.MinDesktopAppVersion,
@@ -132,14 +132,14 @@ func (s *Service) CheckForUpdate(ctx context.Context, req *types.CheckForUpdateR
 	}
 
 	// 3. If we reach here, no update is available.
-	return &types.CheckForUpdateResponse{
+	return &types.FirmwareUpdateResponse{
 		UpdateAvailable:   false,
 		AppUpdateRequired: false,
 	}, nil
 }
 
-func mapBundleToUpdateResponse(b *models.Bundle) *types.CheckForUpdateResponse {
-	response := &types.CheckForUpdateResponse{
+func mapBundleToUpdateResponse(b *models.Bundle) *types.FirmwareUpdateResponse {
+	response := &types.FirmwareUpdateResponse{
 		UpdateAvailable:      true,
 		AppUpdateRequired:    false,
 		BundleID:             b.ID,

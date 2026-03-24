@@ -44,12 +44,12 @@ func (m *MockFirmwareService) ApproveBundle(ctx context.Context, bundleID string
 	return args.Error(0)
 }
 
-func (m *MockFirmwareService) CheckForUpdate(ctx context.Context, payload *types.CheckForUpdateRequest, logger *zap.Logger) (*types.CheckForUpdateResponse, error) {
+func (m *MockFirmwareService) CheckForUpdate(ctx context.Context, payload *types.FirmwareUpdateRequest, logger *zap.Logger) (*types.FirmwareUpdateResponse, error) {
 	args := m.Called(ctx, payload, logger)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*types.CheckForUpdateResponse), args.Error(1)
+	return args.Get(0).(*types.FirmwareUpdateResponse), args.Error(1)
 }
 
 func (m *MockFirmwareService) GetBundleDownloadURL(ctx context.Context, bundleID string, logger *zap.Logger) (*types.DownloadArtifactResponse, error) {
@@ -520,7 +520,7 @@ func TestCheckForUpdate(t *testing.T) {
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
 				m.On("CheckForUpdate", mock.Anything, mock.AnythingOfType("*types.CheckForUpdateRequest"), mock.AnythingOfType("*zap.Logger")).
-					Return(&types.CheckForUpdateResponse{
+					Return(&types.FirmwareUpdateResponse{
 						UpdateAvailable:   true,
 						AppUpdateRequired: false,
 						BundleID:          "bundle-123",
@@ -539,7 +539,7 @@ func TestCheckForUpdate(t *testing.T) {
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
 				m.On("CheckForUpdate", mock.Anything, mock.AnythingOfType("*types.CheckForUpdateRequest"), mock.AnythingOfType("*zap.Logger")).
-					Return(&types.CheckForUpdateResponse{
+					Return(&types.FirmwareUpdateResponse{
 						UpdateAvailable:   true,
 						AppUpdateRequired: false,
 						BundleID:          "bundle-beta-123",
@@ -554,7 +554,7 @@ func TestCheckForUpdate(t *testing.T) {
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
 				m.On("CheckForUpdate", mock.Anything, mock.AnythingOfType("*types.CheckForUpdateRequest"), mock.AnythingOfType("*zap.Logger")).
-					Return(&types.CheckForUpdateResponse{
+					Return(&types.FirmwareUpdateResponse{
 						UpdateAvailable:   false,
 						AppUpdateRequired: false,
 					}, nil)
@@ -567,7 +567,7 @@ func TestCheckForUpdate(t *testing.T) {
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
 				m.On("CheckForUpdate", mock.Anything, mock.AnythingOfType("*types.CheckForUpdateRequest"), mock.AnythingOfType("*zap.Logger")).
-					Return(&types.CheckForUpdateResponse{
+					Return(&types.FirmwareUpdateResponse{
 						UpdateAvailable:      true,
 						AppUpdateRequired:    true,
 						MinDesktopAppVersion: "3.0.0",

@@ -47,13 +47,13 @@ type DownloadArtifactResponse struct {
 	Checksum    string `json:"checksum"`
 }
 
-type CheckForUpdateRequest struct {
+type FirmwareUpdateRequest struct {
 	CurrentFirmwareVersion   string `form:"current_firmware_version" binding:"required"`
 	CurrentDesktopAppVersion string `form:"current_desktop_app_version" binding:"required"`
 	Channel                  string `form:"channel"` // Optional: "beta", "alpha", etc. Empty or omitted = stable (prerelease is null)
 }
 
-type CheckForUpdateResponse struct {
+type FirmwareUpdateResponse struct {
 	UpdateAvailable      bool                   `json:"update_available" example:"true"`
 	AppUpdateRequired    bool                   `json:"app_update_required" example:"false"`
 	BundleID             string                 `json:"bundle_id,omitempty" example:"72e1e23e-eb51-42c1-9ecb-bd7cf7304b60"`
