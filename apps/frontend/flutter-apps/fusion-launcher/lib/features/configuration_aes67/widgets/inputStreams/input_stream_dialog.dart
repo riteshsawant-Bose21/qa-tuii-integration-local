@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/form_fields/fusion_custom_textfield.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
 import '../../viewModel/input_stream_viewmodel/input_stream_viewmodel.dart';
@@ -112,7 +113,6 @@ class _DialogContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final InputStreamViewmodel cubit = context.read<InputStreamViewmodel>();
     final bool isControl = state.mode == Aes67AppMode.control;
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -132,6 +132,7 @@ class _DialogContent extends StatelessWidget {
                     SizedBox(
                       width: _nameFieldW,
                       child: _DarkTextField(
+                        semanticId: 'name-field',
                         value: state.name,
                         onChanged: cubit.updateName,
                       ),
@@ -276,6 +277,7 @@ class _ChannelGrid extends StatelessWidget {
                   SizedBox(
                     width: dropW,
                     child: _DarkTextField(
+                      semanticId: '',
                       value: channel.label ?? '',
                       onChanged: (String v) => cubit.updateChannelLabel(channel.channelNumber, v),
                     ),
@@ -651,9 +653,10 @@ class _FieldLabel extends StatelessWidget {
 /// Dark rounded text field matching the dialog aesthetic
 class _DarkTextField extends StatefulWidget {
   final String value;
+  final String semanticId;
   final ValueChanged<String> onChanged;
 
-  const _DarkTextField({required this.value, required this.onChanged});
+  const _DarkTextField({required this.value, required this.onChanged, required this.semanticId});
 
   @override
   State<_DarkTextField> createState() => _DarkTextFieldState();
@@ -684,31 +687,35 @@ class _DarkTextFieldState extends State<_DarkTextField> {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return FusionCustomTextField(
+      variant: FusionFieldVariant.neumorphic,
+      semanticId: widget.semanticId,
       controller: _ctrl,
-      onChanged: widget.onChanged,
-      style: context.textTheme.bodySmall?.copyWith(
-        color: context.colorScheme.textPrimary,
-        fontWeight: FontWeight.w400,
-      ),
-      decoration: InputDecoration(
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        filled: true,
-        fillColor: context.colorScheme.elevation2,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: context.colorScheme.strokeLight),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: context.colorScheme.strokeLight),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: context.colorScheme.primaryColor),
-        ),
-      ),
+      onChange: widget.onChanged,
+      height: 35,
+      borderRadius: 8,
+      // style: context.textTheme.bodySmall?.copyWith(
+      //   color: context.colorScheme.textPrimary,
+      //   fontWeight: FontWeight.w400,
+      // ),
+      // decoration: InputDecoration(
+      //   isDense: true,
+      //   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      //   filled: true,
+      //   fillColor: context.colorScheme.elevation2,
+      //   border: OutlineInputBorder(
+      //     borderRadius: BorderRadius.circular(8),
+      //     borderSide: BorderSide(color: context.colorScheme.strokeLight),
+      //   ),
+      //   enabledBorder: OutlineInputBorder(
+      //     borderRadius: BorderRadius.circular(8),
+      //     borderSide: BorderSide(color: context.colorScheme.strokeLight),
+      //   ),
+      //   focusedBorder: OutlineInputBorder(
+      //     borderRadius: BorderRadius.circular(8),
+      //     borderSide: BorderSide(color: context.colorScheme.primaryColor),
+      //   ),
+      // ),
     );
   }
 }
@@ -731,46 +738,61 @@ class _DarkDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation2,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: context.colorScheme.strokeLight),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+    return
+    // Container(
+    //   decoration: BoxDecoration(
+    //     color: context.colorScheme.elevation2,
+    //     borderRadius: BorderRadius.circular(8),
+    //     border: Border.all(color: context.colorScheme.strokeLight),
+    //   ),
+    //   padding: const EdgeInsets.symmetric(horizontal: 10),
+    //   child:
+    Padding(
+      padding: const EdgeInsets.only(top: 15.0),
       child: DropdownButtonHideUnderline(
-        child: DropdownButton<T>(
+        child: FusionNeumorphicDropdown<T>(
           value: value,
-          hint: FusionAppText(
-            text: hint,
-            style: context.textTheme.bodySmall?.copyWith(
-              color: context.colorScheme.textSecondary,
-            ),
-          ),
-          isDense: true,
-          isExpanded: true,
-          dropdownColor: context.colorScheme.elevation2,
-          icon: Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: context.colorScheme.textSecondary),
-          style: context.textTheme.bodySmall?.copyWith(
-            color: context.colorScheme.textPrimary,
-          ),
-          items:
-              items
-                  .map(
-                    (item) => DropdownMenuItem<T>(
-                      value: item,
-                      child: FusionAppText(
-                        text: labelBuilder(item),
-                        style: context.textTheme.bodySmall?.copyWith(
-                          color: context.colorScheme.textPrimary,
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
+          height: 35,
+          borderRadius: BorderRadius.circular(8),
+          // hint: FusionAppText(
+          //   text: hint,
+          //   style: context.textTheme.bodySmall?.copyWith(
+          //     color: context.colorScheme.textSecondary,
+          //   ),
+          // ),
+          hintText: hint,
+          // isDense: true,
+          // isExpanded: true,
+          // dropdownColor: context.colorScheme.elevation2,
+          // icon: Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: context.colorScheme.textSecondary),
+          // style: context.textTheme.bodySmall?.copyWith(
+          //   color: context.colorScheme.textPrimary,
+          // ),
+          items: items,
+          // .map(
+          //   (item) => DropdownMenuItem<T>(
+          //     value: item,
+          //     child: FusionAppText(
+          //       text: labelBuilder(item),
+          //       style: context.textTheme.bodySmall?.copyWith(
+          //         color: context.colorScheme.textPrimary,
+          //       ),
+          //     ),
+          //   ),
+          // )
+          // .toList(),
+          itemBuilderWithSelection: (BuildContext context, T item, bool isSelected) {
+            return FusionAppText(
+              text: labelBuilder(item),
+              style: context.textTheme.bodySmall?.copyWith(
+                color: isSelected ? context.colorScheme.primary : context.colorScheme.textPrimary,
+              ),
+            );
+          },
           onChanged: onChanged,
         ),
       ),
     );
+    // );
   }
 }
