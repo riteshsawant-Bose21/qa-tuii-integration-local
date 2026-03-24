@@ -7,7 +7,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
     required this.items,
     required this.onSelected,
     this.itemBuilder,
-    this.popoupwidth = 100,
+    this.popupwidth,
     this.itemLabels,
     this.matchChildWidth = true,
     required this.child,
@@ -15,7 +15,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
     this.popupOffset = const Offset(10, 10),
     this.semanticsId,
   });
-  final double? popoupwidth;
+  final double? popupwidth;
   final List<T> items;
   final ValueChanged<T> onSelected;
   final Widget Function(BuildContext, T)? itemBuilder;
@@ -47,13 +47,17 @@ class FusionPopupMenu<T> extends StatelessWidget {
           side: BorderSide(color: context.colorScheme.strokeLight, width: 1),
         ),
         color: context.colorScheme.elevation2,
-        constraints: matchChildWidth ? null : BoxConstraints(minWidth: popoupwidth!, maxWidth: popoupwidth!),
+        constraints: matchChildWidth
+            ? null
+            : popupwidth != null
+            ? BoxConstraints(minWidth: popupwidth!, maxWidth: popupwidth!)
+            : null,
         itemBuilder: (context) => List<PopupMenuEntry<T>>.generate(
           items.length,
           (index) {
             final T item = items[index];
             var findRenderObject = (childKey.currentContext?.findRenderObject() as RenderBox?);
-            var width2 = matchChildWidth ? findRenderObject?.size.width : popoupwidth;
+            var width2 = matchChildWidth ? findRenderObject?.size.width : popupwidth;
             return PopupMenuItem<T>(
               value: item,
 
@@ -478,7 +482,7 @@ class _CustomPopupMenuButtonState<T> extends State<CustomPopupMenuButton<T>> {
         menuPadding: widget.menuPadding ?? popupMenuTheme.menuPadding,
         color: widget.color ?? popupMenuTheme.color,
         constraints: finalConstraints,
-        clipBehavior: Clip.antiAlias,
+        clipBehavior: widget.clipBehavior,
         useRootNavigator: widget.useRootNavigator,
         popUpAnimationStyle: widget.popUpAnimationStyle,
         routeSettings: widget.routeSettings,
