@@ -29,6 +29,20 @@ class SemanticHelper {
   }
 
   // Container sections with boundary control
+
+  static Widget slider({
+    required String testId,
+    required Widget child,
+    double? value,
+  }) {
+    return Semantics(
+      identifier: testId,
+      slider: true,
+      value: value.toString(),
+      child: child,
+    );
+  }
+
   static Widget container({
     required String testId,
     required Widget child,

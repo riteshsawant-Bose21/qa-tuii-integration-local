@@ -597,6 +597,7 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
   final void Function(int selectedIndex, T value) onOptionSelected;
   final String Function(T option) labelBuilder;
   final Widget Function(T option)? valueBuilder;
+  final String hint;
 
   const BuildRowPropertyWidget({
     super.key,
@@ -606,6 +607,7 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
     required this.onOptionSelected,
     required this.labelBuilder,
     this.valueBuilder,
+    this.hint = "Select",
   });
 
   @override
@@ -616,16 +618,17 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
         Expanded(
           child: FusionAppText(
             text: label,
-            style: context.textTheme.bodySmall?.copyWith(
+            style: context.textTheme.b3Regular.copyWith(
               color: context.colorScheme.textPrimary,
             ),
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: FusionPopupMenu<T>(
-            tooltip: "",
-            onSelected: (T newValue) {
+          child: FusionNeumorphicDropdown<T>(
+            popupOffset: const Offset(2, 4),
+            popupWidth: 150,
+            onChanged: (T newValue) {
               final int selectedIndex = options.indexOf(newValue);
               onOptionSelected(selectedIndex, newValue);
             },
@@ -656,10 +659,10 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
                             return valueBuilder!(value as T);
                           } else {
                             return FusionAppText(
-                              text: value != null ? labelBuilder(value as T) : "Select",
+                              text: value != null ? labelBuilder(value as T) : hint,
                               maxLine: 1,
                               style: context.textTheme.bodySmall?.copyWith(
-                                color: value != null ? context.colorScheme.textPrimary : context.colorScheme.elevation4,
+                                color: value != null ? context.colorScheme.textPrimary : context.colorScheme.textPlaceholder,
                               ),
                             );
                           }

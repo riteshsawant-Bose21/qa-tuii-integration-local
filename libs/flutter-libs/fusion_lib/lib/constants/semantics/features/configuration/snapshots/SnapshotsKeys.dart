@@ -32,6 +32,7 @@ extension Snapshotskeys on FusionTestKeys {
   String get actionlistpanelemtydesc1 => "action_list_empty_panel_description_1";
   String get actionlistpanelemtydesc2 => "action_list_empty_panel_description_2";
   String get actionlistpanelerror => "action_list_error_panel";
+  String get actionlistpanelerroricon => "action_list_error_panel_icon";
   String get actionlistpanelerrorlabel => "action_list_error_panel_label";
   String get actionlistpanelerrormessage => "action_list_error_panel_message";
   String get actionlistpaneldata => "action_list_data_panel";
@@ -52,7 +53,18 @@ extension Snapshotskeys on FusionTestKeys {
   String get actionlistpanelrowdataitemactiontypdropdown => "action_list_panel_row_data_item_action_dropdown";
   String get actionlistpanelrowdataitemactionitemdropdown => "action_list_panel_row_data_item_dropdown";
   String get actionlistpanelrowdataitemactionparmdropdown => "action_list_panel_row_data_action_parm_dropdown";
+  String get actionlistpanelrowdataitemvalue => "action_list_panel_row_data_value";
+  String get actionlistpanelrowdataitemvalueicon => "action_list_panel_row_data_value_icon";
+  String get actionlistpanelrowdataitemvaluetext => "action_list_panel_row_data_value_text";
+  String get actionlistpanelrowdataitemvaluetextinput => "action_list_panel_row_data_value_text_input";
+  String get actionlistpanelrowdataitemvaluetextinputduration => "action_list_panel_row_data_value_duration_text_input";
+  String get actionlistpanelrowdataitemvalueonoffswitch => "action_list_panel_row_data_value_on_off_switch";
+  String get actionlistpanelrowdataitemvalueenableswitch => "action_list_panel_row_data_value_enable_disable_switch";
+  String get actionlistpanelrowdataitemvalueslider => "action_list_panel_row_data_value_slider";
+  String get actionlistpanelrowdataitemvalueslidertxt => "action_list_panel_row_data_value_slider_text";
+  String get actionlistpanelrowdataitemvalueemty => "action_list_panel_row_data_value_empty";
   String get actionlistpanelrowdataitemvaluedropdown => "action_list_panel_row_data_value_dropdown";
+
   String get actionlistpanelrowdataitemdeleteicon => "action_list_panel_row_data_delete_icon";
   String get actionlistpanelrowdataitemnduplicateicon => "action_list_panel_row_data_duplicate_icon";
 }

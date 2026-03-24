@@ -110,7 +110,7 @@ class ActionList extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              FusionIcon.icon(semanticId: 'action_list_error_icon', Icons.error_outline, size: 48, color: context.colorScheme.error),
+              FusionIcon.icon(semanticId: FusionTestKeys.instance.actionlistpanelerroricon, Icons.error_outline, size: 48, color: context.colorScheme.error),
               const SizedBox(height: 16),
               FusionAppText(
                 semanticId: FusionTestKeys.instance.actionlistpanelerrorlabel,

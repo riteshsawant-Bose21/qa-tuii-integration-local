@@ -242,6 +242,7 @@ class _SnapshotActionRowContent extends StatelessWidget {
         testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.actionlistpanelrowdataitemvaluedropdown}_$index"),
         label: selectedValueLabel,
         child: SnapshotValueWidget(
+          index: index,
           actionId: action.id,
           value:
               action.value ??
