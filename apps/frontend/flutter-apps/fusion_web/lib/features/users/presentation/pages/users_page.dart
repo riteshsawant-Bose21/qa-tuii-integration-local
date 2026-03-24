@@ -110,18 +110,18 @@ class _UsersPageState extends State<UsersPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'User Management',
-                      style: GoogleFonts.montserrat(
+                      'Users',
+                      style: GoogleFonts.inter(
                         fontSize: 32,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black87,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Manage user accounts, roles, and permissions',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 16,
+                      'Manage user lifecycle, invitations, and account-level access',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
                         color: Colors.grey[600],
                       ),
                     ),
@@ -129,20 +129,20 @@ class _UsersPageState extends State<UsersPage> {
                 ),
                 ElevatedButton.icon(
                   onPressed: _showInviteUserDialog,
-                  icon: const Icon(Icons.person_add, size: 20),
+                  icon: const Icon(Icons.person_add_outlined, size: 18),
                   label: Text(
                     'Invite User',
-                    style: GoogleFonts.montserrat(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black87,
+                    backgroundColor: Colors.grey[900],
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 18,
+                      horizontal: 16,
+                      vertical: 10,
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -152,65 +152,38 @@ class _UsersPageState extends State<UsersPage> {
               ],
             ),
 
-            // Metrics Cards
+            // Metrics Cards - Only 3 cards as per Figma
             if (metrics.isNotEmpty) ...[
-              const SizedBox(height: 24),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  return Wrap(
-                    spacing: 16,
-                    runSpacing: 16,
-                    children: [
-                      SizedBox(
-                        width:
-                            (constraints.maxWidth - 64) /
-                            5, // 5 cards with spacing
-                        child: _buildMetricCard(
-                          'Total Users',
-                          metrics['total']?.toString() ?? '0',
-                          Icons.people,
-                          Colors.blue,
-                        ),
-                      ),
-                      SizedBox(
-                        width: (constraints.maxWidth - 64) / 5,
-                        child: _buildMetricCard(
-                          'Active',
-                          metrics['active']?.toString() ?? '0',
-                          Icons.check_circle,
-                          Colors.green,
-                        ),
-                      ),
-                      SizedBox(
-                        width: (constraints.maxWidth - 64) / 5,
-                        child: _buildMetricCard(
-                          'Invited',
-                          metrics['invited']?.toString() ?? '0',
-                          Icons.email,
-                          Colors.orange,
-                        ),
-                      ),
-                      SizedBox(
-                        width: (constraints.maxWidth - 64) / 5,
-                        child: _buildMetricCard(
-                          'Pending',
-                          metrics['pending']?.toString() ?? '0',
-                          Icons.pending,
-                          Colors.amber,
-                        ),
-                      ),
-                      SizedBox(
-                        width: (constraints.maxWidth - 64) / 5,
-                        child: _buildMetricCard(
-                          'Inactive',
-                          metrics['inactive']?.toString() ?? '0',
-                          Icons.block,
-                          Colors.red,
-                        ),
-                      ),
-                    ],
-                  );
-                },
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMetricCard(
+                      'Total Users',
+                      metrics['total']?.toString() ?? '15',
+                      Icons.people_outlined,
+                      Colors.blue,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildMetricCard(
+                      'Active Users',
+                      metrics['active']?.toString() ?? '15',
+                      Icons.person_outline,
+                      Colors.green,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildMetricCard(
+                      'Pending Invitations',
+                      metrics['invited']?.toString() ?? '0',
+                      Icons.schedule_outlined,
+                      Colors.orange,
+                    ),
+                  ),
+                ],
               ),
             ],
           ],
@@ -622,31 +595,10 @@ class _UsersPageState extends State<UsersPage> {
                             color: Colors.black87,
                           ),
                         ),
-                        Row(
-                          children: [
-                            IconButton(
-                              onPressed: () => _viewModel.loadUsers(),
-                              icon: const Icon(Icons.refresh, size: 20),
-                              tooltip: 'Refresh',
-                            ),
-                            const SizedBox(width: 8),
-                            OutlinedButton.icon(
-                              onPressed: () => _showBulkActions(),
-                              icon: const Icon(Icons.group_work, size: 18),
-                              label: Text(
-                                'Bulk Actions',
-                                style: GoogleFonts.montserrat(
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                              ),
-                            ),
-                          ],
+                        IconButton(
+                          onPressed: () => _viewModel.loadUsers(),
+                          icon: const Icon(Icons.refresh, size: 20),
+                          tooltip: 'Refresh',
                         ),
                       ],
                     ),
@@ -1023,30 +975,40 @@ class _UsersPageState extends State<UsersPage> {
     showDialog(
       context: context,
       builder: (context) => InviteUserDialog(
-        onInvite:
-            ({
-              required String email,
-              required String name,
-              required String role,
-              required List<String> projectIds,
-            }) async {
-              await _viewModel.inviteUser(
-                email: email,
-                name: name,
-                roles: [role], // Convert single role to list
-                projectIds: projectIds,
-                userType: UserType
-                    .viewer, // Default user type since it's removed from UI
-              );
+        onInvite: (List<Map<String, String>> invites) async {
+          for (var invite in invites) {
+            await _viewModel.inviteUser(
+              email: invite['email']!,
+              name: _getNameFromEmail(
+                invite['email']!,
+              ), // Extract name from email
+              roles: [invite['role']!], // Convert single role to list
+              projectIds: [], // Empty project list for organization invites
+              userType: UserType.viewer, // Default user type
+            );
+          }
 
-              if (_viewModel.hasError) {
-                _showErrorSnackBar(_viewModel.errorMessage);
-              } else {
-                _showSuccessSnackBar('User invitation sent successfully!');
-              }
-            },
+          if (_viewModel.hasError) {
+            _showErrorSnackBar(_viewModel.errorMessage);
+          } else {
+            final count = invites.length;
+            final message = count == 1
+                ? 'User invitation sent successfully!'
+                : '$count user invitations sent successfully!';
+            _showSuccessSnackBar(message);
+          }
+        },
       ),
     );
+  }
+
+  // Helper function to extract name from email
+  String _getNameFromEmail(String email) {
+    final atIndex = email.indexOf('@');
+    if (atIndex > 0) {
+      return email.substring(0, atIndex);
+    }
+    return email;
   }
 
   void _showUserProfile(UserEntity user) {
@@ -1076,18 +1038,6 @@ class _UsersPageState extends State<UsersPage> {
             _showSuccessSnackBar('User updated successfully!');
           }
         },
-      ),
-    );
-  }
-
-  void _showBulkActions() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Bulk actions feature coming soon!',
-          style: GoogleFonts.montserrat(),
-        ),
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }

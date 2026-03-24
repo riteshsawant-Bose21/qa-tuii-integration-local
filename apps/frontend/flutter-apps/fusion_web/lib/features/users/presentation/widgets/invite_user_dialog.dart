@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+class InviteUserRow {
+  final TextEditingController emailController = TextEditingController();
+  String? selectedRole;
+
+  InviteUserRow();
+
+  void dispose() {
+    emailController.dispose();
+  }
+}
+
 class InviteUserDialog extends StatefulWidget {
-  final Function({
-    required String email,
-    required String name,
-    required String role,
-    required List<String> projectIds,
-  })
-  onInvite;
+  final Function(List<Map<String, String>> invites) onInvite;
 
   const InviteUserDialog({super.key, required this.onInvite});
 
@@ -18,45 +23,56 @@ class InviteUserDialog extends StatefulWidget {
 
 class _InviteUserDialogState extends State<InviteUserDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
+  final List<InviteUserRow> _inviteRows = [InviteUserRow()];
 
-  String? _selectedRole;
-  final List<String> _selectedProjects = [];
-
-  final List<String> _availableRoles = ['Admin', 'Designer', 'Technician'];
-
-  final List<Map<String, String>> _availableProjects = [
-    {'id': 'project-1', 'name': 'Project Alpha'},
-    {'id': 'project-2', 'name': 'Project Beta'},
-    {'id': 'project-3', 'name': 'Project Gamma'},
-    {'id': 'project-4', 'name': 'Project Delta'},
-    {'id': 'project-5', 'name': 'Project Epsilon'},
-  ];
+  final List<String> _availableRoles = ['Designer', 'Admin', 'Technician'];
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
+    for (var row in _inviteRows) {
+      row.dispose();
+    }
     super.dispose();
   }
 
-  void _handleInvite() {
+  void _addAnotherUser() {
+    setState(() {
+      _inviteRows.add(InviteUserRow());
+    });
+  }
+
+  void _removeUser(int index) {
+    if (_inviteRows.length > 1) {
+      setState(() {
+        _inviteRows[index].dispose();
+        _inviteRows.removeAt(index);
+      });
+    }
+  }
+
+  void _handleSendInvites() {
     if (_formKey.currentState!.validate()) {
-      if (_selectedRole == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Please select a role')));
+      List<Map<String, String>> invites = [];
+
+      for (var row in _inviteRows) {
+        if (row.emailController.text.isNotEmpty && row.selectedRole != null) {
+          invites.add({
+            'email': row.emailController.text.trim(),
+            'role': row.selectedRole!,
+          });
+        }
+      }
+
+      if (invites.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please add at least one user to invite'),
+          ),
+        );
         return;
       }
 
-      widget.onInvite(
-        email: _emailController.text.trim(),
-        name: _nameController.text.trim(),
-        role: _selectedRole!,
-        projectIds: _selectedProjects,
-      );
-
+      widget.onInvite(invites);
       Navigator.of(context).pop();
     }
   }
@@ -67,7 +83,7 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         width: 600,
-        constraints: const BoxConstraints(maxHeight: 700),
+        constraints: const BoxConstraints(maxHeight: 500),
         padding: const EdgeInsets.all(32),
         child: Form(
           key: _formKey,
@@ -79,145 +95,210 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Invite New User',
-                    style: GoogleFonts.montserrat(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Invite users to your organization',
+                          style: GoogleFonts.inter(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Add email addresses and assign roles to invite users to your organization.',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  const SizedBox(width: 16),
                   IconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
 
+              // Invite Rows
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Name Field
-                      TextFormField(
-                        controller: _nameController,
-                        decoration: InputDecoration(
-                          labelText: 'Full Name *',
-                          labelStyle: GoogleFonts.montserrat(),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[50],
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter a name';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
+                      ..._inviteRows.asMap().entries.map((entry) {
+                        int index = entry.key;
+                        InviteUserRow row = entry.value;
 
-                      // Email Field
-                      TextFormField(
-                        controller: _emailController,
-                        decoration: InputDecoration(
-                          labelText: 'Email Address *',
-                          labelStyle: GoogleFonts.montserrat(),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[50],
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter an email';
-                          }
-                          if (!RegExp(
-                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                          ).hasMatch(value)) {
-                            return 'Please enter a valid email';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Role Selection Dropdown
-                      DropdownButtonFormField<String>(
-                        initialValue: _selectedRole,
-                        decoration: InputDecoration(
-                          labelText: 'Role *',
-                          labelStyle: GoogleFonts.montserrat(),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[50],
-                          prefixIcon: Icon(Icons.person_outline),
-                        ),
-                        items: _availableRoles.map((role) {
-                          return DropdownMenuItem<String>(
-                            value: role,
-                            child: Text(role, style: GoogleFonts.montserrat()),
-                          );
-                        }).toList(),
-                        onChanged: (String? value) {
-                          setState(() {
-                            _selectedRole = value;
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please select a role';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Projects Section
-                      Text(
-                        'Assign to Projects (Optional)',
-                        style: GoogleFonts.montserrat(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey[300]!),
-                          borderRadius: BorderRadius.circular(8),
-                          color: Colors.grey[50],
-                        ),
-                        child: Column(
-                          children: _availableProjects.map((project) {
-                            final isSelected = _selectedProjects.contains(
-                              project['id'],
-                            );
-                            return CheckboxListTile(
-                              title: Text(
-                                project['name']!,
-                                style: GoogleFonts.montserrat(),
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          child: Row(
+                            children: [
+                              // Email Field
+                              Expanded(
+                                flex: 2,
+                                child: TextFormField(
+                                  controller: row.emailController,
+                                  decoration: InputDecoration(
+                                    hintText: 'name@example.com',
+                                    hintStyle: GoogleFonts.inter(
+                                      color: Colors.grey[500],
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(
+                                        color: Colors.grey[300]!,
+                                      ),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(
+                                        color: Colors.grey[300]!,
+                                      ),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: const BorderSide(
+                                        color: Colors.blue,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Please enter an email';
+                                    }
+                                    if (!RegExp(
+                                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                                    ).hasMatch(value)) {
+                                      return 'Please enter a valid email';
+                                    }
+                                    return null;
+                                  },
+                                ),
                               ),
-                              value: isSelected,
-                              onChanged: (selected) {
-                                setState(() {
-                                  if (selected == true) {
-                                    _selectedProjects.add(project['id']!);
-                                  } else {
-                                    _selectedProjects.remove(project['id']);
-                                  }
-                                });
-                              },
-                              controlAffinity: ListTileControlAffinity.leading,
-                            );
-                          }).toList(),
+                              const SizedBox(width: 16),
+
+                              // Role Dropdown
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  value: row.selectedRole,
+                                  decoration: InputDecoration(
+                                    hintText: 'Select role',
+                                    hintStyle: GoogleFonts.inter(
+                                      color: Colors.grey[500],
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(
+                                        color: Colors.grey[300]!,
+                                      ),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(
+                                        color: Colors.grey[300]!,
+                                      ),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: const BorderSide(
+                                        color: Colors.blue,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                  items: _availableRoles.map((role) {
+                                    return DropdownMenuItem<String>(
+                                      value: role,
+                                      child: Text(
+                                        role,
+                                        style: GoogleFonts.inter(fontSize: 14),
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (String? value) {
+                                    setState(() {
+                                      row.selectedRole = value;
+                                    });
+                                  },
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please select a role';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+
+                              // Remove button (only show if more than 1 row)
+                              if (_inviteRows.length > 1) ...[
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(Icons.close, size: 20),
+                                  onPressed: () => _removeUser(index),
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: Colors.grey[100],
+                                    padding: const EdgeInsets.all(8),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      }).toList(),
+
+                      const SizedBox(height: 16),
+
+                      // Add Another Button
+                      InkWell(
+                        onTap: _addAnotherUser,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Colors.grey[300]!,
+                              style: BorderStyle.solid,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.person_add_outlined,
+                                size: 20,
+                                color: Colors.grey[700],
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Add another',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  color: Colors.grey[700],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -233,29 +314,41 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
                     child: Text(
                       'Cancel',
-                      style: GoogleFonts.montserrat(color: Colors.grey[700]),
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[700],
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   ElevatedButton(
-                    onPressed: _handleInvite,
+                    onPressed: _handleSendInvites,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black87,
+                      backgroundColor: Colors.grey[800],
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 16,
+                        horizontal: 24,
+                        vertical: 12,
                       ),
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                     child: Text(
-                      'Send Invitation',
-                      style: GoogleFonts.montserrat(
-                        fontWeight: FontWeight.w600,
+                      'Send Invites',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
@@ -266,32 +359,5 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
         ),
       ),
     );
-  }
-
-  // Helper methods for role display
-  IconData _getRoleIcon(String role) {
-    switch (role) {
-      case 'Admin':
-        return Icons.admin_panel_settings;
-      case 'Designer':
-        return Icons.design_services;
-      case 'Technician':
-        return Icons.engineering;
-      default:
-        return Icons.person;
-    }
-  }
-
-  Color _getRoleColor(String role) {
-    switch (role) {
-      case 'Admin':
-        return Colors.red[600]!;
-      case 'Designer':
-        return Colors.purple[600]!;
-      case 'Technician':
-        return Colors.blue[600]!;
-      default:
-        return Colors.grey[600]!;
-    }
   }
 }

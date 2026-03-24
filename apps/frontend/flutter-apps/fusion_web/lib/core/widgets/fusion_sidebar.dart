@@ -820,6 +820,12 @@ class FusionSidebar extends StatelessWidget {
                   _buildNavItem(
                     context,
                     viewModel,
+                    Icons.business,
+                    DashboardTabs.organizations,
+                  ),
+                  _buildNavItem(
+                    context,
+                    viewModel,
                     Icons.security,
                     DashboardTabs.roles,
                   ),

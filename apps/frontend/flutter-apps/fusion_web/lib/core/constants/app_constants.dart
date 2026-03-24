@@ -6,11 +6,11 @@ class AppConstants {
   static const String projectsRoute = '/projects';
   static const String usersRoute = '/users';
   static const String devicesRoute = '/devices';
+  static const String organizationsRoute = '/organizations';
   static const String rolesRoute = '/roles';
   static const String settingsRoute = '/settings';
   static const String projectDetailBaseRoute = '/projects/';
   static const String projectDetailRoute = '/projects/detail';
-
 
   // App Info
   static const String appName = 'Fusion Web';

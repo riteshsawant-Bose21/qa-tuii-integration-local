@@ -3,6 +3,10 @@ import 'package:fusion_web/features/auth/presentation/viewmodels/auth_viewmodel.
 import 'package:fusion_web/features/auth/data/datasources/auth0_datasource.dart';
 import 'package:fusion_web/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:fusion_web/features/auth/domain/usecases/auth_usecases.dart';
+import 'package:fusion_web/features/organizations/data/datasources/organizations_datasource.dart';
+import 'package:fusion_web/features/organizations/data/repositories/organizations_repository_impl.dart';
+import 'package:fusion_web/features/organizations/presentation/viewmodels/organizations_viewmodel.dart';
+import 'package:fusion_web/features/organizations/domain/usecases/organizations_usecases.dart';
 import 'package:fusion_web/features/projects/data/datasources/project_datasource.dart';
 import 'package:fusion_web/features/projects/data/repositories/projects_repository_impl.dart';
 import 'package:fusion_web/features/projects/presentation/viewmodels/projects_viewmodel.dart';
@@ -18,11 +22,13 @@ class ServiceLocator {
 
   ApiService? _apiService;
   AuthViewModel? _authViewModel;
+  OrganizationsViewModel? _organizationsViewModel;
   ProjectsViewModel? _projectsViewModel;
   UsersViewModel? _usersViewModel;
 
   // ================= REPOSITORIES =================
   AuthRepositoryImpl? _authRepository;
+  OrganizationsRepositoryImpl? _organizationsRepository;
   ProjectsRepositoryImpl? _projectsRepository;
   UsersRepositoryImpl? _usersRepository;
 
@@ -102,6 +108,44 @@ class ServiceLocator {
     return _usersViewModel!;
   }
 
+  // ================= ORGANIZATIONS VIEWMODEL (SINGLETON) =================
+  OrganizationsViewModel get organizationsViewModel {
+    if (_organizationsViewModel == null) {
+      final remoteDataSource = OrganizationsRemoteDataSource(
+        apiService: apiService,
+      );
+      final localDataSource = OrganizationsLocalDataSource();
+
+      final repository = OrganizationsRepositoryImpl(
+        remoteDataSource: remoteDataSource,
+        localDataSource: localDataSource,
+      );
+
+      _organizationsViewModel = OrganizationsViewModel(
+        getOrganizationsUseCase: GetOrganizationsUseCase(repository),
+        getOrganizationByIdUseCase: GetOrganizationByIdUseCase(repository),
+        createOrganizationUseCase: CreateOrganizationUseCase(repository),
+        updateOrganizationUseCase: UpdateOrganizationUseCase(repository),
+        deleteOrganizationUseCase: DeleteOrganizationUseCase(repository),
+        searchOrganizationsUseCase: SearchOrganizationsUseCase(repository),
+        filterOrganizationsUseCase: FilterOrganizationsUseCase(repository),
+        getOrganizationMetricsUseCase: GetOrganizationMetricsUseCase(
+          repository,
+        ),
+        getOrganizationUsersUseCase: GetOrganizationUsersUseCase(repository),
+        getOrganizationProjectsUseCase: GetOrganizationProjectsUseCase(
+          repository,
+        ),
+        activateOrganizationUseCase: ActivateOrganizationUseCase(repository),
+        deactivateOrganizationUseCase: DeactivateOrganizationUseCase(
+          repository,
+        ),
+      );
+    }
+
+    return _organizationsViewModel!;
+  }
+
   // ================= AUTH REPOSITORY =================
   AuthRepositoryImpl get authRepository {
     _authRepository ??= AuthRepositoryImpl(dataSource: Auth0DataSource());
@@ -136,14 +180,32 @@ class ServiceLocator {
     return _usersRepository!;
   }
 
+  // ================= ORGANIZATIONS REPOSITORY =================
+  OrganizationsRepositoryImpl get organizationsRepository {
+    if (_organizationsRepository == null) {
+      final remoteDataSource = OrganizationsRemoteDataSource(
+        apiService: apiService,
+      );
+      final localDataSource = OrganizationsLocalDataSource();
+
+      _organizationsRepository = OrganizationsRepositoryImpl(
+        remoteDataSource: remoteDataSource,
+        localDataSource: localDataSource,
+      );
+    }
+    return _organizationsRepository!;
+  }
+
   // ================= RESET =================
   void reset() {
     _apiService?.dispose();
     _apiService = null;
     _authViewModel = null;
+    _organizationsViewModel = null;
     _projectsViewModel = null;
     _usersViewModel = null;
     _authRepository = null;
+    _organizationsRepository = null;
     _projectsRepository = null;
     _usersRepository = null;
   }

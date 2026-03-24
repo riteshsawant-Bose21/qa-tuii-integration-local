@@ -5,6 +5,7 @@ import 'package:fusion_web/core/services/service_locator.dart';
 import 'package:fusion_web/core/widgets/fusion_sidebar.dart';
 import 'package:fusion_web/features/dashboard/presentation/pages/partner_dashboard_page.dart';
 import 'package:fusion_web/features/devices/presentation/pages/devices_page.dart';
+import 'package:fusion_web/features/organizations/presentation/pages/organizations_page.dart';
 import 'package:fusion_web/features/projects/presentation/pages/projects_page.dart';
 import 'package:fusion_web/features/roles/presentation/pages/roles_page.dart';
 import 'package:fusion_web/features/settings/presentation/pages/settings_page.dart';
@@ -104,6 +105,8 @@ class _MainLayoutState extends State<MainLayout> {
         return const DevicesPage();
       case DashboardTabs.users:
         return const UsersPage();
+      case DashboardTabs.organizations:
+        return const OrganizationsPage();
       case DashboardTabs.roles:
         return const RolesPage();
       case DashboardTabs.settings:
