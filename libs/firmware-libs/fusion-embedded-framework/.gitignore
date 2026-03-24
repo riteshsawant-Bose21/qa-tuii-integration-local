@@ -1,0 +1,14 @@
+build/
+
+# For projects that use the Waf build system: https://waf.io/
+# Dot-hidden on Unix-like systems
+.vscode
+.waf-*-*/
+.waf3-*-*/
+# Hidden directory on Windows (no dot)
+waf-*-*/
+waf3-*-*/
+# Lockfile
+.lock-waf_*_build
+wafconf/__pycache__
+

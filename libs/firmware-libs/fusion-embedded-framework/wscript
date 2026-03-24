@@ -87,57 +87,33 @@ def configure(conf):
     if conf.env['IS_MACOS']:
         conf.env.append_value('INCLUDES', ['/opt/homebrew/include'])
         conf.env.append_value('LIBPATH', ['/opt/homebrew/lib'])
-        conf.env.append_value('FRAMEWORK',
-                              ['AudioUnit', 'CoreAudio', 'CoreServices'])
+        conf.env.append_value('FRAMEWORK', ['AudioUnit', 'CoreAudio', 'CoreServices'])
         conf.env.append_value('CXXFLAGS', '-DUSE_MAC_THREADS')
 
         # This is needed because of warnings in Boost property trees.
         conf.env.append_value('CXXFLAGS',
                            ['-Wno-deprecated-copy-with-user-provided-copy'])
-        conf.env.append_value('CXXFLAGS',
-                           ['-Wno-vla-cxx-extension'])
 
-        onnx_path = conf.path.abspath() + '/libs/onnxruntime-osx-universal2-1.17.0'
     else:
-        conf.env.append_value('LDFLAGS', '-lpthread')
-
         if conf.env['IS_LINUX']:
             # NOTE: Doing the old way of boost::bind for now.
             # /usr/include/boost/bind.hpp:36:1: note: ‘#pragma message: The practice of declaring the Bind placeholders (_1, _2, ...) in the 
             # global namespace is deprecated. Please use <boost/bind/bind.hpp> + using namespace boost::placeholders, 
             # or define BOOST_BIND_GLOBAL_PLACEHOLDERS to retain the current behavior.’
             conf.env.append_value('CXXFLAGS', '-DBOOST_BIND_GLOBAL_PLACEHOLDERS')
-            onnx_path = conf.path.abspath() + '/libs/onnxruntime-linux-x64-1.17.0'
-        else:
-            onnx_path = conf.path.abspath() + '/libs/onnxruntime-linux-aarch64-1.17.0'
 
-    # add onnxruntime library
-    conf.env.append_value('INCLUDES', [onnx_path+'/include'])
-    conf.env.append_value('LIBPATH', [onnx_path+'/lib'])
-    conf.env.append_value('LIBPATH', [conf.path.abspath() + '/../../../libs/firmware-libs/fusion-embedded-interface/build'])
-    conf.env.append_value('LIBPATH', [conf.path.abspath() + '/../../../libs/firmware-libs/fusion-embedded-framework/build'])
+    conf.env.append_value('LIBPATH', [conf.path.abspath() + '/../fusion-embedded-interface/build'])
+
 
 def build(bld):
-    bld(export_includes=['../../../libs/firmware-libs/fusion-embedded-interface/include', '../../../libs/firmware-libs/fusion-embedded-framework/include', './external/doctest', './include'], name='common-include')
+    bld(export_includes=['./include', '../fusion-embedded-interface/include'], name='common-include')
 
-    excludes = []
-    libs = ['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime', 'jsoncpp', 'samplerate', 'curl', 'fusion_embedded_interface', 'fusion_embedded_framework']
+    libs = ['fmt', 'jack', 'fusion_embedded_interface']
 
-    if bld.env['IS_MACOS']:
-        excludes.append('src/alsa.cpp')
-    else:
-        libs.append('asound')
+    bld.shlib(target='fusion_embedded_framework',
+              source=bld.path.ant_glob(['src/*.cpp', 'src/*.c']),
+              use=['common-include', 'fmt'],
+              lib=libs,
+              export_includes=['./include'])
 
-    bld.program(target='fusion_dsp',
-                source=bld.path.ant_glob(['src/*.cpp', 'src/*.c'],
-                                         excl=excludes),
-                use=['common-include'],
-                lib=libs)
 
-    excludes.append('src/fusion_dsp.cpp')
-
-    bld.program(target='test_dsp',
-                source=bld.path.ant_glob(['src/*.cpp', 'src/*.c', 'test/*.cpp'],
-                                         excl=excludes),
-                use=['common-include'],
-                lib=libs)
