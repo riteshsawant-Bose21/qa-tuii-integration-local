@@ -16,11 +16,11 @@ func HandleRequestAuthorizer(ctx context.Context, event map[string]interface{}) 
 	// Generate a new request ID for this request
 	requestID := uuid.New().String()
 
-	// Extract source IP from request context (API Gateway v2 HTTP API format)
+	// Extract source IP from request context (REST API Gateway v1 format)
 	sourceIP := ""
 	if requestContext, ok := event["requestContext"].(map[string]interface{}); ok {
-		if http, ok := requestContext["http"].(map[string]interface{}); ok {
-			sourceIP, _ = http["sourceIp"].(string)
+		if identity, ok := requestContext["identity"].(map[string]interface{}); ok {
+			sourceIP, _ = identity["sourceIp"].(string)
 		}
 	}
 
@@ -62,15 +62,9 @@ func HandleRequestAuthorizer(ctx context.Context, event map[string]interface{}) 
 		"email": email,
 	})
 
-	// Extract HTTP method and path from event
-	method := ""
-	if rc, ok := event["requestContext"].(map[string]interface{}); ok {
-		if http, ok := rc["http"].(map[string]interface{}); ok {
-			method, _ = http["method"].(string)
-		}
-	}
-
-	path, _ := event["rawPath"].(string)
+	// Extract HTTP method and path from event (REST API Gateway v1 format)
+	method, _ := event["httpMethod"].(string)
+	path, _ := event["path"].(string)
 	if method == "" || path == "" {
 		log.LogAuthAttempt(email, method, path, false, "Missing method or path")
 		return denyResponse(email, "Missing method or path"), nil
