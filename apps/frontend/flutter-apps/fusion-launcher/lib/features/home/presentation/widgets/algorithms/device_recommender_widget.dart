@@ -85,8 +85,11 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget> with 
       // if (devices.isEmpty) {
       //   return "No suitable device configuration found";
       // }
-
+      final List<RecommendedDeviceResult> bestCombination = DspDeviceRecommendation().pickBasedOnPrice(
+        combinations: <List<RecommendedDeviceResult>>[combination.powerPure, combination.powerSmart],
+      );
       return <(String, String)>[
+        ("Recommended Configuration", bestCombination.map((RecommendedDeviceResult result) => result.toString()).join("\n")),
         ("Power Pure Combination", combination.powerPure.map((RecommendedDeviceResult result) => result.toString()).join("\n")),
 
         ("Power Smart Combination", combination.powerSmart.map((RecommendedDeviceResult result) => result.toString()).join("\n")),

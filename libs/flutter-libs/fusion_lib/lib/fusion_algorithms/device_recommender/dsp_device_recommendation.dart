@@ -14,12 +14,17 @@ class RecommendedDeviceResult {
 }
 
 class DspDeviceRecommendation {
-  // List<RecommendedDeviceResult> pickBasedOnPrice({
-  //   required List<List<RecommendedDeviceResult>> combinations,
-  //   required ProductCatalog productCatalog,
-  // }) {
+  List<RecommendedDeviceResult> pickBasedOnPrice({
+    required List<List<RecommendedDeviceResult>> combinations,
 
-  // }
+  }) {
+    final combinationWithPrices = combinations.map((combination) {
+      final price = _calculateCombinationPrice(combination);
+      return (combination: combination, price: price);
+    }).toList();
+
+    return combinationWithPrices.reduce((best, current) => current.price < best.price ? current : best).combination;
+  }
 
   ({List<RecommendedDeviceResult> powerPure, List<RecommendedDeviceResult> powerSmart}) recommendDevices({
     required int analogInputs,
@@ -164,18 +169,18 @@ class DspDeviceRecommendation {
   double _devicePriceByName(String deviceName) {
     switch (deviceName) {
       case _device4chPowerSmart:
-        return DeviceCatalog.powerSmart4ch.price;
+        return 1075; //viceCatalog.powerSmart4ch.price;
       case _device8chPowerSmart:
-        return DeviceCatalog.powerSmart8ch.price;
+        return 2000; //DeviceCatalog.powerSmart8ch.price;
       case _deviceFm6:
         return DeviceCatalog.fm6.price;
       case _deviceFm8y:
         return DeviceCatalog.fm8y.price;
       case _device4chPowerPure:
-        return DeviceCatalog.powerPureAmplifier.price;
+        return 850.0; //DeviceCatalog.powerPureAmplifier.price;
       case _device8chPowerPure:
         // Catalog has 4ch PowerPure only; treat 8ch as two 4ch units.
-        return DeviceCatalog.powerPureAmplifier.price * 2;
+        return 1550; //DeviceCatalog.powerPureAmplifier.price * 2;
       default:
         return 0;
     }

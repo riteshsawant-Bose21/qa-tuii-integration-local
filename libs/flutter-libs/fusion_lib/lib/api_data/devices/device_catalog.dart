@@ -40,7 +40,7 @@ class DeviceCatalog {
       networkInputs: 0,
       networkOutputs: 0,
       imageUrl: 'assets/images/bose_dsp.png',
-      price: 300.0,
+      price: 800.0,
     ),
     DeviceSpec(
       name: "FM8Y",
@@ -51,7 +51,7 @@ class DeviceCatalog {
       networkInputs: 8,
       networkOutputs: 8,
       imageUrl: 'assets/images/bose_dsp.png',
-      price: 400.0,
+      price: 975.0,
     ),
   ];
 
