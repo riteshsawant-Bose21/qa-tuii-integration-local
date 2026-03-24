@@ -432,7 +432,7 @@ class _FusionCustomTextFieldState extends State<FusionCustomTextField> {
     if (widget.variant == FusionFieldVariant.neumorphic) {
       return BoxDecoration(
         color: isHoverActive ? context.colorScheme.elevation2 : _fillColor(),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(widget.borderRadius),
         boxShadow: widget.fieldState == FusionFieldState.focused
             ? [
                 BoxShadow(
@@ -461,7 +461,7 @@ class _FusionCustomTextFieldState extends State<FusionCustomTextField> {
 
     return BoxDecoration(
       color: isHoverActive ? context.colorScheme.elevation2 : _fillColor(),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(widget.borderRadius),
       border: Border.all(
         color: isHoverActive ? context.colorScheme.textPrimary : _borderColor(),
         width: 2,

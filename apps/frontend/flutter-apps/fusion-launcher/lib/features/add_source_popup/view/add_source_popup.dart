@@ -75,7 +75,7 @@ class AddSourcePopup extends StatelessWidget {
                             onTap: Navigator.of(context).pop,
                             child: Padding(
                               padding: const EdgeInsets.all(2.0),
-                              child: Icon(
+                              child: FusionIcon.icon(
                                 LucideIcons.x200,
                                 size: 16,
                                 color: context.colorScheme.iconDefault,
@@ -120,6 +120,51 @@ class AddSourcePopup extends StatelessWidget {
                             //   onChanged: addSourceViewModel.setSourceOption,
                             // ),
                             // const SizedBox(height: 28),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Expanded(
+                                  child: FusionAppText(
+                                    text: "Name",
+                                    style: context.textTheme.bodyMedium?.copyWith(
+                                      color: context.colorScheme.onSurface,
+                                      fontWeight: FontWeight.normal,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: SemanticHelper.container(
+                                    testId: SemanticHelper.createTestId(
+                                      SemanticTypes.container,
+                                      "add_source_section_name_input",
+                                    ),
+                                    child: FusionCustomTextField(
+                                      height: 30,
+                                      borderRadius: 8,
+                                      variant: FusionFieldVariant.neumorphic,
+                                      semanticId: '',
+                                      hint: 'Enter name',
+                                      controller: TextEditingController(),
+                                      charlimit: 24,
+                                      onSubmit: (String value) {
+                                        addSourceViewModel.setSelectedSourceName(value);
+                                      },
+                                    ),
+                                    // PropertyTextField(
+                                    //   onChanged: (String value) => addSourceViewModel.setSelectedSourceName(value),
+                                    //   maxLength: 24,
+                                    //   contentPadding: const EdgeInsets.symmetric(
+                                    //     vertical: 12,
+                                    //     horizontal: 10,
+                                    //   ),
+                                    //   hintText: 'Enter name',
+                                    // ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
                             SemanticHelper.dropdown(
                               testId: SemanticHelper.createTestId(SemanticTypes.dropdown, "add_source_section_type"),
                               child: BuildRowPropertyWidget<SourceSectionType>(
@@ -138,7 +183,7 @@ class AddSourcePopup extends StatelessWidget {
                               ),
                             ),
 
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 8),
 
                             Row(
                               children: <Widget>[
@@ -231,11 +276,9 @@ class AddSourcePopup extends StatelessWidget {
                                   ),
                                 ),
                               ),
-
-                              const SizedBox(height: 5),
                             ],
 
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 16),
 
                             MouseRegion(
                               cursor: isFromBuildingPage ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
@@ -329,7 +372,7 @@ class AddSourcePopup extends StatelessWidget {
                                                     BoxShadow(color: context.colorScheme.elevation2, blurRadius: 1, offset: const Offset(-2, -3)),
                                                     BoxShadow(color: context.colorScheme.black, blurRadius: 1, offset: const Offset(2, 3)),
                                                   ],
-                                                  color: context.colorScheme.surface,
+                                                  color: context.colorScheme.elevation1,
                                                   borderRadius: BorderRadius.circular(8),
                                                 ),
                                                 child: FusionAppText(
@@ -382,9 +425,7 @@ class AddSourcePopup extends StatelessWidget {
                               },
                             ),
 
-                            const SizedBox(height: 10),
-
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 16),
 
                             MouseRegion(
                               cursor: SystemMouseCursors.forbidden,
@@ -413,7 +454,7 @@ class AddSourcePopup extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 16),
 
                             BuildRowPropertyWidget<SourceConnectionType>(
                               label: "Connection",
@@ -429,83 +470,82 @@ class AddSourcePopup extends StatelessWidget {
                                 );
                               },
                             ),
-                            const SizedBox(height: 20),
+                            // const SizedBox(height: 16),
+                            //
+                            // BuildRowPropertyWidget<SourceConnectionType>(
+                            //   label: "Stream",
+                            //   value: state.selectedConnectionType,
+                            //   options: state.selectedSourceSectionType.connectionTypes,
+                            //   labelBuilder: (SourceConnectionType option) => option.displayName,
+                            //   onOptionSelected: (
+                            //     int value,
+                            //     SourceConnectionType option,
+                            //   ) {
+                            //     addSourceViewModel.setSelectedConnectionType(
+                            //       option,
+                            //     );
+                            //   },
+                            // ),
+                            // const SizedBox(height: 16),
+                            //
+                            // BuildRowPropertyWidget<SourceConnectionType>(
+                            //   label: "Channel",
+                            //   value: state.selectedConnectionType,
+                            //   options: state.selectedSourceSectionType.connectionTypes,
+                            //   labelBuilder: (SourceConnectionType option) => option.displayName,
+                            //   onOptionSelected: (
+                            //     int value,
+                            //     SourceConnectionType option,
+                            //   ) {
+                            //     addSourceViewModel.setSelectedConnectionType(
+                            //       option,
+                            //     );
+                            //   },
+                            // ),
+                            const SizedBox(height: 40),
 
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                Expanded(
-                                  child: FusionAppText(
-                                    text: "Name",
-                                    style: context.textTheme.bodyMedium?.copyWith(
-                                      color: context.colorScheme.onSurface,
-                                      fontWeight: FontWeight.normal,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: SemanticHelper.container(
-                                    testId: SemanticHelper.createTestId(
-                                      SemanticTypes.container,
-                                      "add_source_section_name_input",
-                                    ),
-                                    child: FusionCustomTextField(
-                                      height: 30,
-                                      borderRadius: 8,
-                                      variant: FusionFieldVariant.neumorphic,
-                                      semanticId: '',
-                                      hint: 'Enter name',
-                                      controller: TextEditingController(),
-                                      charlimit: 24,
-                                      onSubmit: (String value) {
-                                        addSourceViewModel.setSelectedSourceName(value);
-                                      },
-                                    ),
-                                    // PropertyTextField(
-                                    //   onChanged: (String value) => addSourceViewModel.setSelectedSourceName(value),
-                                    //   maxLength: 24,
-                                    //   contentPadding: const EdgeInsets.symmetric(
-                                    //     vertical: 12,
-                                    //     horizontal: 10,
-                                    //   ),
-                                    //   hintText: 'Enter name',
-                                    // ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 20),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: <Widget>[
                                 // Cancel & Save buttons
-                                GestureDetector(
-                                  onTap: Navigator.of(context).pop,
-                                  child: SemanticHelper.button(
-                                    testId: SemanticHelper.createTestId(
-                                      SemanticTypes.button,
-                                      "add_source_cancel_button",
-                                    ),
-                                    child: FusionAppText(
-                                      text: "Cancel",
-                                      style: context.textTheme.bodyMedium?.copyWith(
-                                        color: context.colorScheme.onSurface,
-                                        fontWeight: FontWeight.w400,
-                                      ),
+                                FusionAppButton(
+                                  semanticId: "add_source_cancel_button",
+                                  onPressed: Navigator.of(context).pop,
+                                  style: FusionAppButtonStyle.tertiary,
+                                  child: FusionAppText(
+                                    text: "Cancel",
+                                    style: context.textTheme.bodyMedium?.copyWith(
+                                      color: context.colorScheme.onSurface,
+                                      fontWeight: FontWeight.w400,
                                     ),
                                   ),
                                 ),
+                                // GestureDetector(
+                                //   onTap: Navigator.of(context).pop,
+                                //   child: SemanticHelper.button(
+                                //     testId: SemanticHelper.createTestId(
+                                //       SemanticTypes.button,
+                                //       "add_source_cancel_button",
+                                //     ),
+                                //     child: FusionAppText(
+                                //       text: "Cancel",
+                                //       style: context.textTheme.bodyMedium?.copyWith(
+                                //         color: context.colorScheme.onSurface,
+                                //         fontWeight: FontWeight.w400,
+                                //       ),
+                                //     ),
+                                //   ),
+                                // ),
                                 const SizedBox(width: 15),
                                 SemanticHelper.button(
                                   testId: SemanticHelper.createTestId(
                                     SemanticTypes.button,
                                     "add_source_save_button",
                                   ),
-                                  child: FusionNeumorphicButton(
+                                  child: FusionAppButton(
+                                    style: FusionAppButtonStyle.neumorphic,
                                     semanticId: 'add_source_save_button',
-                                    onTap: () {
+                                    onPressed: () {
                                       context.read<AddSourceViewModel>().onSaveTap(context);
                                     },
                                     color: context.colorScheme.surface,
@@ -514,6 +554,17 @@ class AddSourcePopup extends StatelessWidget {
                                     height: 32,
                                     borderRadius: 8,
                                   ),
+                                  // child:FusionNeumorphicButton(
+                                  //   semanticId: 'add_source_save_button',
+                                  //   onTap: () {
+                                  //     context.read<AddSourceViewModel>().onSaveTap(context);
+                                  //   },
+                                  //   color: context.colorScheme.surface,
+                                  //   text: "Save",
+                                  //   width: 69,
+                                  //   height: 32,
+                                  //   borderRadius: 8,
+                                  // ),
                                 ),
                               ],
                             ),
