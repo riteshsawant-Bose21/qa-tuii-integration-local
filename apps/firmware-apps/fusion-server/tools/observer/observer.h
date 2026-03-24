@@ -1198,7 +1198,7 @@ private:
           }
           else
           {
-            SPDLOG_INFO("Processing update message (no _fusion_op). Raw JSON: {}",
+            SPDLOG_DEBUG("Processing update message (no _fusion_op). Raw JSON: {}",
                         response.toStyledString());
             handleUpdateMessage(response);
           }
@@ -1212,7 +1212,7 @@ private:
   }
   void handleDeviceUpdate(const Json::Value &deviceInfo)
   {
-    SPDLOG_INFO("Device Information Updated: {}", deviceInfo.toStyledString());
+    SPDLOG_DEBUG("Device Information Updated: {}", deviceInfo.toStyledString());
 
     if (deviceInfo.isMember("id"))
     {
