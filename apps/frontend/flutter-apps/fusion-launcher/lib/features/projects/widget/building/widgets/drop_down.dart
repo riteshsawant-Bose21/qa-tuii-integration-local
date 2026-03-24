@@ -137,9 +137,7 @@ class _BuildingPageDropDownState<T> extends State<BuildingPageDropDown<T>> {
                         style: Theme.of(
                           context,
                         ).textTheme.labelLarge?.copyWith(
-                          color: context.colorScheme.onSurface.withValues(
-                            alpha: widget.value == null ? 0.5 : 1.0,
-                          ),
+                          color: context.colorScheme.textPlaceholder,
                           fontWeight: FontWeight.normal,
                           fontSize: 12,
                         ),
