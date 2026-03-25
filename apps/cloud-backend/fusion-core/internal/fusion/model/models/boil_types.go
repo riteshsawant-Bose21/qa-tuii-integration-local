@@ -51,6 +51,34 @@ func makeCacheKey(cols boil.Columns, nzDefaults []string) string {
 	return str
 }
 
+// Enum values for BundleApprovalStatusEnum
+const (
+	BundleApprovalStatusEnumPENDING  string = "PENDING"
+	BundleApprovalStatusEnumAPPROVED string = "APPROVED"
+	BundleApprovalStatusEnumREVOKED  string = "REVOKED"
+)
+
+func AllBundleApprovalStatusEnum() []string {
+	return []string{
+		BundleApprovalStatusEnumPENDING,
+		BundleApprovalStatusEnumAPPROVED,
+		BundleApprovalStatusEnumREVOKED,
+	}
+}
+
+// Enum values for BundleUpdateStatusEnum
+const (
+	BundleUpdateStatusEnumINSTALL_SUCCESS string = "INSTALL_SUCCESS"
+	BundleUpdateStatusEnumINSTALL_FAIL    string = "INSTALL_FAIL"
+)
+
+func AllBundleUpdateStatusEnum() []string {
+	return []string{
+		BundleUpdateStatusEnumINSTALL_SUCCESS,
+		BundleUpdateStatusEnumINSTALL_FAIL,
+	}
+}
+
 // Enum values for ClaimStatusEnum
 const (
 	ClaimStatusEnumUNCLAIMED string = "UNCLAIMED"
@@ -91,6 +119,7 @@ const (
 	ProductTypeEnumController string = "controller"
 	ProductTypeEnumIoEndpoint string = "io_endpoint"
 	ProductTypeEnumAccessory  string = "accessory"
+	ProductTypeEnumUnknown    string = "unknown"
 )
 
 func AllProductTypeEnum() []string {
@@ -101,6 +130,7 @@ func AllProductTypeEnum() []string {
 		ProductTypeEnumController,
 		ProductTypeEnumIoEndpoint,
 		ProductTypeEnumAccessory,
+		ProductTypeEnumUnknown,
 	}
 }
 

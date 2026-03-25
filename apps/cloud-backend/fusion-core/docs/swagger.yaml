@@ -95,6 +95,43 @@ definitions:
       success:
         type: boolean
     type: object
+  types.BundleDetails:
+    properties:
+      approval_status:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      min_desktop_app_version:
+        type: string
+      min_prev_version:
+        type: string
+      release_notes:
+        type: string
+      updated_at:
+        type: string
+      version:
+        type: string
+    type: object
+  types.BundleListResponse:
+    properties:
+      bundles:
+        items:
+          $ref: '#/definitions/types.BundleDetails'
+        type: array
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+    type: object
+  types.BundleResponse:
+    properties:
+      id:
+        type: string
+    type: object
   types.CommandRequest:
     properties:
       command:
@@ -146,43 +183,6 @@ definitions:
     type: string
     x-enum-varnames:
     - CommandRestart
-  types.BundleDetails:
-    properties:
-      approval_status:
-        type: string
-      created_at:
-        type: string
-      id:
-        type: string
-      min_desktop_app_version:
-        type: string
-      min_prev_version:
-        type: string
-      release_notes:
-        type: string
-      updated_at:
-        type: string
-      version:
-        type: string
-    type: object
-  types.BundleListResponse:
-    properties:
-      bundles:
-        items:
-          $ref: '#/definitions/types.BundleDetails'
-        type: array
-      limit:
-        type: integer
-      page:
-        type: integer
-      total:
-        type: integer
-    type: object
-  types.BundleResponse:
-    properties:
-      id:
-        type: string
-    type: object
   types.CreateRoleRequest:
     properties:
       description:
@@ -302,6 +302,8 @@ definitions:
       is_primary:
         type: boolean
       project_id:
+        type: string
+    type: object
   types.DownloadArtifactResponse:
     properties:
       checksum:
@@ -1383,6 +1385,31 @@ paths:
         in: path
         name: command_id
         required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved command status
+          schema:
+            $ref: '#/definitions/types.CommandStatusResponse'
+        "400":
+          description: Bad request - Invalid command ID
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Command not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get command status
+      tags:
+      - devices
   /firmware/bundles:
     get:
       consumes:
@@ -1408,15 +1435,6 @@ paths:
       - application/json
       responses:
         "200":
-          description: Successfully retrieved command status
-          schema:
-            $ref: '#/definitions/types.CommandStatusResponse'
-        "400":
-          description: Bad request - Invalid command ID
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-        "404":
-          description: Command not found
           description: List of firmware bundles with pagination metadata
           schema:
             $ref: '#/definitions/types.BundleListResponse'
@@ -1430,9 +1448,6 @@ paths:
             $ref: '#/definitions/types.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Get command status
-      tags:
-      - devices
       summary: List Firmware Bundles
       tags:
       - Firmware Update - Management API

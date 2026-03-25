@@ -208,7 +208,7 @@ func main() {
 	loggers.AppLogger.Info("Initialized Firmware DB Service.")
 
 	// Initialize Firmware Service
-	firmwareSVC := firmware.NewService(firmwareDBSvc, s3Handler.Bucket(cfg.S3.FirmwareBundleBucket))
+	firmwareSVC := firmware.NewService(firmwareDBSvc, s3Handler.Bucket(cfg.Cloud.FirmwareBundleBucket))
 	if firmwareSVC == nil {
 		loggers.AppLogger.Fatal("Failed to initialize firmware service")
 	}

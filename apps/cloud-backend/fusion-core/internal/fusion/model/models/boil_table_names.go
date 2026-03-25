@@ -9,6 +9,8 @@ var TableNames = struct {
 	AccountType            string
 	AccountTypeRole        string
 	AppUser                string
+	Bundle                 string
+	BundleUpdateStatus     string
 	Device                 string
 	DeviceCommandHistory   string
 	DeviceOwnershipHistory string
@@ -29,6 +31,8 @@ var TableNames = struct {
 	AccountType:            "account_type",
 	AccountTypeRole:        "account_type_role",
 	AppUser:                "app_user",
+	Bundle:                 "bundle",
+	BundleUpdateStatus:     "bundle_update_status",
 	Device:                 "device",
 	DeviceCommandHistory:   "device_command_history",
 	DeviceOwnershipHistory: "device_ownership_history",

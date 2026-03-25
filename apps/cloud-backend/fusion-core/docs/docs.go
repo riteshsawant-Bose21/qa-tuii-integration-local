@@ -258,7 +258,6 @@ const docTemplate = `{
             }
         },
         "/devices/commands/{command_id}/status": {
-        "/firmware/bundles": {
             "get": {
                 "security": [
                     {
@@ -266,7 +265,6 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Get the status of a command by its ID",
-                "description": "Returns a paginated list of firmware bundles with optional filtering by approval status. Results are ordered by creation date in descending order.",
                 "consumes": [
                     "application/json"
                 ],
@@ -284,29 +282,6 @@ const docTemplate = `{
                         "name": "command_id",
                         "in": "path",
                         "required": true
-                    "Firmware Update - Management API"
-                ],
-                "summary": "List Firmware Bundles",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Page number (default: 1)",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 10,
-                        "description": "Items per page (default: 10, max: 100)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by approval status (PENDING, APPROVED, REVOKED)",
-                        "name": "approval_status",
-                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -324,13 +299,6 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Command not found",
-                        "description": "List of firmware bundles with pagination metadata",
-                        "schema": {
-                            "$ref": "#/definitions/types.BundleListResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid query parameters",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -412,7 +380,6 @@ const docTemplate = `{
             }
         },
         "/devices/{device_id}/claim": {
-            },
             "post": {
                 "security": [
                     {
@@ -420,7 +387,6 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Claim an unclaimed device for a user and project",
-                "description": "Creates a new firmware bundle entry containing the manifest details. This is intended to be called by CI/CD pipelines after successfully uploading a bundle to S3. If there are no minimum version checks required, you MUST specify \"0.0.0\" for both min_prev_version and min_desktop_app_version.",
                 "consumes": [
                     "application/json"
                 ],
@@ -568,17 +534,6 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/types.DeviceRotateCertRequest"
-                    "Firmware Update - CI/CD API"
-                ],
-                "summary": "Notify Firmware Bundle Upload",
-                "parameters": [
-                    {
-                        "description": "Firmware bundle metadata including version, checksum, and manifest",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/types.NotifyBundleUploadPayload"
                         }
                     }
                 ],
@@ -603,6 +558,110 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Device not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/firmware/bundles": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a paginated list of firmware bundles with optional filtering by approval status. Results are ordered by creation date in descending order.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Firmware Update - Management API"
+                ],
+                "summary": "List Firmware Bundles",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Items per page (default: 10, max: 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by approval status (PENDING, APPROVED, REVOKED)",
+                        "name": "approval_status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of firmware bundles with pagination metadata",
+                        "schema": {
+                            "$ref": "#/definitions/types.BundleListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid query parameters",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a new firmware bundle entry containing the manifest details. This is intended to be called by CI/CD pipelines after successfully uploading a bundle to S3. If there are no minimum version checks required, you MUST specify \"0.0.0\" for both min_prev_version and min_desktop_app_version.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Firmware Update - CI/CD API"
+                ],
+                "summary": "Notify Firmware Bundle Upload",
+                "parameters": [
+                    {
+                        "description": "Firmware bundle metadata including version, checksum, and manifest",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.NotifyBundleUploadPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
                         "description": "Returns the created bundle details",
                         "schema": {
                             "$ref": "#/definitions/types.BundleResponse"
@@ -2567,6 +2626,63 @@ const docTemplate = `{
                 }
             }
         },
+        "types.BundleDetails": {
+            "type": "object",
+            "properties": {
+                "approval_status": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "min_desktop_app_version": {
+                    "type": "string"
+                },
+                "min_prev_version": {
+                    "type": "string"
+                },
+                "release_notes": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.BundleListResponse": {
+            "type": "object",
+            "properties": {
+                "bundles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.BundleDetails"
+                    }
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "types.BundleResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
         "types.CommandRequest": {
             "type": "object",
             "required": [
@@ -2631,25 +2747,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "status": {
-        "types.BundleDetails": {
-            "type": "object",
-            "properties": {
-                "approval_status": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "min_desktop_app_version": {
-                    "type": "string"
-                },
-                "min_prev_version": {
-                    "type": "string"
-                },
-                "release_notes": {
                     "type": "string"
                 },
                 "updated_at": {
@@ -2665,39 +2762,6 @@ const docTemplate = `{
             "x-enum-varnames": [
                 "CommandRestart"
             ]
-                },
-                "version": {
-                    "type": "string"
-                }
-            }
-        },
-        "types.BundleListResponse": {
-            "type": "object",
-            "properties": {
-                "bundles": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/types.BundleDetails"
-                    }
-                },
-                "limit": {
-                    "type": "integer"
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                }
-            }
-        },
-        "types.BundleResponse": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "string"
-                }
-            }
         },
         "types.CreateRoleRequest": {
             "type": "object",
@@ -2869,6 +2933,10 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "project_id": {
+                    "type": "string"
+                }
+            }
+        },
         "types.DownloadArtifactResponse": {
             "type": "object",
             "properties": {
