@@ -399,10 +399,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                                       description:
                                           "Devices will appear here once added to this project.",
                                       icon: Icons.devices_outlined,
-                                      buttonText: "Add Device",
-                                      onButtonPressed: () {
-                                        // open modal later
-                                      },
+                                      
                                     );
                                   }
 
