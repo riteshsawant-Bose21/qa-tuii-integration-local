@@ -141,7 +141,6 @@ struct fusion_cn_metrics_record {
 
 struct fc_get_timing_status_reply
 {
-    uint8_t pps_seen;
     uint8_t discipline_ready;
     uint8_t epoch_valid;
     uint8_t aligned;
@@ -759,7 +758,6 @@ private:
     bool debug_sent;
     bool iface_sent;
     bool phc_anchor_logged;
-    bool gpt_pps_seen_logged;
     bool gpt_discipline_ready_logged;
     SAPAnnouncer sap_announcer;
 
@@ -801,7 +799,7 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
     : bosepro::Module(configuration), mgr_started(false), device_id(""),
       enet_iface("lan1"), period_ms(1000), debug_enabled(false),
       debug_sent(false), iface_sent(false), phc_anchor_logged(false),
-      gpt_pps_seen_logged(false), gpt_discipline_ready_logged(false), sap_announcer(""),
+      gpt_discipline_ready_logged(false), sap_announcer(""),
       ptp_sync_good(false), ptp_anchor_pending(false), ptp_good_streak(0),
       ptp_bad_streak(0), ptp_role_flag(-1), ptp_false_streak(0), mgr_start_failures(0),
       ptp_state(PtpState::RESET) {
@@ -1309,7 +1307,6 @@ void FusionConnectClient::reset_timing_session(const char *reason)
 
     ptp_anchor_pending = false;
     phc_anchor_logged = false;
-    gpt_pps_seen_logged = false;
     gpt_discipline_ready_logged = false;
 
     SPDLOG_INFO("Timing state reset due to {}", reason);
@@ -1356,7 +1353,6 @@ void FusionConnectClient::update_ptp_state()
         }
         ptp_anchor_pending = true;
         phc_anchor_logged = false;
-        gpt_pps_seen_logged = false;
         gpt_discipline_ready_logged = false;
     };
 
@@ -1514,16 +1510,6 @@ void FusionConnectClient::maybe_set_phc_anchor()
 
     fc_get_timing_status_reply st{};
     if (!nl_get_timing_status(client, &st)) return;
-
-    if (st.pps_seen && !gpt_pps_seen_logged) {
-        const uint32_t pps_seq = st.pps_seq;
-        SPDLOG_INFO("GPT timing reports PPS seen (pps_seq={})", pps_seq);
-        gpt_pps_seen_logged = true;
-    }
-
-    if (!st.pps_seen) {
-        return;
-    }
 
     if (st.discipline_ready && !gpt_discipline_ready_logged) {
         const uint32_t pps_seq = st.pps_seq;

@@ -9,7 +9,6 @@ struct fusion_gpt_client_ops {
 };
 
 struct fusion_gpt_timing_status {
-	bool pps_seen;
 	bool discipline_ready;
 	bool epoch_valid;
 	bool aligned;

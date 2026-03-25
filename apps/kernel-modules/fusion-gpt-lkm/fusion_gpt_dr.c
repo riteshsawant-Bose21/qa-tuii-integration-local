@@ -607,7 +607,6 @@ int fusion_gpt_get_timing_status(struct fusion_gpt_timing_status *status)
 		return -ENODEV;
 
 	raw_spin_lock_irqsave(&g->pps_lock, flags);
-	status->pps_seen = g->pps_valid;
 	status->discipline_ready = READ_ONCE(g->discipline_ready);
 	status->epoch_valid = g->phc_epoch_valid;
 	status->aligned = READ_ONCE(g->phc_aligned);
