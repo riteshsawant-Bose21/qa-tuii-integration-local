@@ -83,4 +83,11 @@ const (
 
 	// EndpointCommandStatus is the endpoint for getting the status of a command.
 	EndpointCommandStatus = "/commands/:command_id/status"
+	// Device Update endpoints
+	EndpointFirmware              = "/firmware"
+	EndpointFirmwareBundles       = EndpointFirmware + "/bundles"
+	EndpointApproveBundle         = EndpointFirmwareBundles + "/:bundleID/approve"
+	EndpointFirmwareUpdateCheck   = EndpointFirmware + "/updates/check"
+	EndpointBundleDownload        = EndpointFirmwareBundles + "/:bundleID/request-download-url"
+	EndpointLogBundleUpdateStatus = EndpointFirmware + "/updates/status"
 )

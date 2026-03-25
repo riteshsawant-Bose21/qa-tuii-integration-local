@@ -8,6 +8,7 @@ projects:
   - 'apps/frontend/flutter-apps/*'
   - 'apps/firmware-apps/fusion-dsp'
   - 'libs/firmware-libs/fusion-embedded-interface'
+  - 'libs/firmware-libs/fusion-embedded-framework'
   - 'apps/firmware-apps/fusion-server'
   - 'apps/firmware-apps/fusion-system-monitor'
   - 'apps/firmware-apps/fusion-edge-gateway'

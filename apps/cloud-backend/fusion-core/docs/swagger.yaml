@@ -146,6 +146,43 @@ definitions:
     type: string
     x-enum-varnames:
     - CommandRestart
+  types.BundleDetails:
+    properties:
+      approval_status:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      min_desktop_app_version:
+        type: string
+      min_prev_version:
+        type: string
+      release_notes:
+        type: string
+      updated_at:
+        type: string
+      version:
+        type: string
+    type: object
+  types.BundleListResponse:
+    properties:
+      bundles:
+        items:
+          $ref: '#/definitions/types.BundleDetails'
+        type: array
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+    type: object
+  types.BundleResponse:
+    properties:
+      id:
+        type: string
+    type: object
   types.CreateRoleRequest:
     properties:
       description:
@@ -265,6 +302,11 @@ definitions:
       is_primary:
         type: boolean
       project_id:
+  types.DownloadArtifactResponse:
+    properties:
+      checksum:
+        type: string
+      download_url:
         type: string
     type: object
   types.EnvironmentType:
@@ -313,6 +355,35 @@ definitions:
         example: launcher.project.create
         type: string
     type: object
+  types.FirmwareUpdateResponse:
+    properties:
+      app_update_required:
+        example: false
+        type: boolean
+      bundle_id:
+        example: 72e1e23e-eb51-42c1-9ecb-bd7cf7304b60
+        type: string
+      created_at:
+        type: string
+      manifest_data:
+        additionalProperties: true
+        type: object
+      min_desktop_app_version:
+        example: 1.4.0
+        type: string
+      min_required_prev_version:
+        example: 2.0.0
+        type: string
+      release_notes:
+        example: Bug fixes and performance improvements
+        type: string
+      update_available:
+        example: true
+        type: boolean
+      version:
+        example: 2.5.6
+        type: string
+    type: object
   types.GetAllProjectsResponse:
     properties:
       data:
@@ -333,6 +404,59 @@ definitions:
     properties:
       project:
         $ref: '#/definitions/types.Project'
+    type: object
+  types.LogBundleUpdateStatusPayload:
+    properties:
+      bundle_version:
+        type: string
+      installed_at:
+        type: string
+      launcher_version:
+        type: string
+      previous_version:
+        type: string
+      project_id:
+        type: string
+      status:
+        enum:
+        - INSTALL_SUCCESS
+        - INSTALL_FAIL
+        type: string
+      update_id:
+        type: string
+    required:
+    - bundle_version
+    - installed_at
+    - project_id
+    - status
+    - update_id
+    type: object
+  types.NotifyBundleUploadPayload:
+    properties:
+      checksum:
+        type: string
+      manifest_data: {}
+      min_desktop_app_version:
+        example: 0.0.0
+        type: string
+      min_prev_version:
+        example: 0.0.0
+        type: string
+      release_notes:
+        type: string
+      s3_path:
+        example: bundles/stable/bundle-1.2.3.zip
+        type: string
+      version:
+        example: 1.2.3
+        type: string
+    required:
+    - checksum
+    - manifest_data
+    - min_desktop_app_version
+    - min_prev_version
+    - s3_path
+    - version
     type: object
   types.OrganizationUsersResponse:
     properties:
@@ -1259,6 +1383,26 @@ paths:
         in: path
         name: command_id
         required: true
+  /firmware/bundles:
+    get:
+      consumes:
+      - application/json
+      description: Returns a paginated list of firmware bundles with optional filtering
+        by approval status. Results are ordered by creation date in descending order.
+      parameters:
+      - default: 1
+        description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 'Items per page (default: 10, max: 100)'
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by approval status (PENDING, APPROVED, REVOKED)
+        in: query
+        name: approval_status
         type: string
       produces:
       - application/json
@@ -1273,6 +1417,11 @@ paths:
             $ref: '#/definitions/types.ErrorResponse'
         "404":
           description: Command not found
+          description: List of firmware bundles with pagination metadata
+          schema:
+            $ref: '#/definitions/types.BundleListResponse'
+        "400":
+          description: Invalid query parameters
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "500":
@@ -1284,6 +1433,207 @@ paths:
       summary: Get command status
       tags:
       - devices
+      summary: List Firmware Bundles
+      tags:
+      - Firmware Update - Management API
+    post:
+      consumes:
+      - application/json
+      description: Creates a new firmware bundle entry containing the manifest details.
+        This is intended to be called by CI/CD pipelines after successfully uploading
+        a bundle to S3. If there are no minimum version checks required, you MUST
+        specify "0.0.0" for both min_prev_version and min_desktop_app_version.
+      parameters:
+      - description: Firmware bundle metadata including version, checksum, and manifest
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/types.NotifyBundleUploadPayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns the created bundle details
+          schema:
+            $ref: '#/definitions/types.BundleResponse'
+        "400":
+          description: Invalid request payload or version already exists
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Notify Firmware Bundle Upload
+      tags:
+      - Firmware Update - CI/CD API
+  /firmware/bundles/{bundleID}/approve:
+    put:
+      consumes:
+      - application/json
+      description: Approves a firmware bundle, making it available for deployment
+      parameters:
+      - description: Action to perform
+        enum:
+        - approve
+        - revoke
+        in: query
+        name: action
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Bundle successfully approved or revoked
+        "400":
+          description: Invalid bundleID or request payload or bundle not approved
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Bundle not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Approve Firmware Bundle
+      tags:
+      - Firmware Update - Management API
+  /firmware/bundles/{bundleID}/request-download-url:
+    get:
+      consumes:
+      - application/json
+      description: Generates a presigned S3 URL for downloading a specific firmware
+        bundle artifact. The URL is valid for 2 hours and includes the file checksum
+        for integrity verification. Only approved bundles can be downloaded.
+      parameters:
+      - description: Unique identifier of the firmware bundle (UUID format)
+        in: path
+        name: bundleID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Presigned download URL and file checksum
+          schema:
+            $ref: '#/definitions/types.DownloadArtifactResponse'
+        "400":
+          description: Missing or invalid bundleID
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "403":
+          description: Bundle not approved for download
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Firmware bundle not found, or bundle artifact not found in
+            storage
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Get Firmware Bundle Download URL
+      tags:
+      - Firmware Update - Client API
+  /firmware/updates/check:
+    get:
+      description: |-
+        Checks for the latest available firmware bundle. Steps performed:
+        1. Query for latest approved bundle where: bundle.version > current_firmware_version AND bundle.min_prev_version <= current_firmware_version AND bundle.min_desktop_app_version <= current_desktop_app_version AND (channel matches prerelease OR prerelease IS NULL for stable)
+        2. If found and current_firmware_version >= bundle.min_prev_version: return update_available=true with bundle details
+        3. If not found or firmware too old: query for latest bundle where bundle is compatible with current firmware (ignoring desktop app version)
+        4. If found and current_desktop_app_version < bundle.min_desktop_app_version: return update_available=true, app_update_required=true
+        5. Otherwise: return update_available=false
+
+        **Response Scenarios:**
+
+        **Scenario 1 - Update Available:**
+        ```json
+        {"update_available": true, "app_update_required": false, "bundle_id": "uuid", "version": "2.5.6", "release_notes": "...", "min_required_prev_version": "2.0.0", "min_desktop_app_version": "1.4.0", "manifest_data": {}, "created_at": "..."}
+        ```
+
+        **Scenario 2 - App Update Required:**
+        ```json
+        {"update_available": true, "app_update_required": true, "min_desktop_app_version": "2.0.0"}
+        ```
+
+        **Scenario 3 - No Update Available:**
+        ```json
+        {"update_available": false, "app_update_required": false}
+        ```
+      parameters:
+      - description: Current firmware version (semver format)
+        in: query
+        name: current_firmware_version
+        required: true
+        type: string
+      - description: Current desktop application version (semver format)
+        in: query
+        name: current_desktop_app_version
+        required: true
+        type: string
+      - description: 'Release channel: ''beta'', ''alpha'', etc. Omit for stable releases
+          (prerelease IS NULL)'
+        in: query
+        name: channel
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Response varies by scenario - see description above
+          schema:
+            $ref: '#/definitions/types.FirmwareUpdateResponse'
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Check for Firmware Updates
+      tags:
+      - Firmware Update - Client API
+  /firmware/updates/status:
+    post:
+      consumes:
+      - application/json
+      description: Records the success or failure of a firmware bundle update installation.
+      parameters:
+      - description: Bundle update status details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/types.LogBundleUpdateStatusPayload'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Update status logged successfully
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Log Bundle Update Status
+      tags:
+      - Firmware Update - Client API
   /organization/role-management:
     get:
       consumes:

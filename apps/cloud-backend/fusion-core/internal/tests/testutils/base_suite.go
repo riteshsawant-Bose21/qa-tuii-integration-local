@@ -20,6 +20,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/device"
 	devicedb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/device/db"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/firmware"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/id"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
@@ -55,12 +56,13 @@ type BaseIntegrationSuite struct {
 	RouterMutex       sync.Mutex
 
 	// Services available to all tests
-	ProductSVC *product.Service
-	ProjectSVC *project.Service
-	UserSVC    *user.Service
-	DeviceSVC  *device.Service
-	Loggers    *log.Loggers
-	ZapLogger  *zap.Logger
+	ProductSVC  *product.Service
+	ProjectSVC  *project.Service
+	FirmwareSVC *firmware.Service
+	UserSVC     *user.Service
+	DeviceSVC   *device.Service
+	Loggers     *log.Loggers
+	ZapLogger   *zap.Logger
 
 	// Test data
 	TestUsers []TestUser
@@ -263,7 +265,7 @@ func (suite *BaseIntegrationSuite) setupServices() error {
 	authSvc := &MockAuthService{}
 	authMiddleware := &MockMiddleware{}
 
-	apiServer, err := api.New(apiConfig, suite.ProductSVC, suite.ProjectSVC, suite.UserSVC, authSvc, authMiddleware, suite.DeviceSVC, loggers)
+	apiServer, err := api.New(apiConfig, suite.ProductSVC, suite.ProjectSVC, suite.UserSVC, authSvc, suite.FirmwareSVC, authMiddleware, suite.DeviceSVC, loggers)
 	if err != nil {
 		return fmt.Errorf("failed to initialize API server: %w", err)
 	}

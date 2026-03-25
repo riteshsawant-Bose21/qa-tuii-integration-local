@@ -117,4 +117,19 @@ func (a *API) registerRoutes() {
 		devices.POST(constants.EndpointDeviceCommand, deviceHandler.Command)
 		devices.GET(constants.EndpointCommandStatus, deviceHandler.GetCommandStatus)
 	}
+	firmwareUpdate := v1.Group("")
+	firmwareHandler := handler.NewFirmwareUpdateHandler(a.firmware)
+	{
+		firmwareUpdate.POST(constants.EndpointFirmwareBundles, firmwareHandler.NotifyBundleUpload)
+	}
+
+	firmwareUpdate.Use(middleware.ExtractUserFromHeaders())
+	{
+		firmwareUpdate.GET(constants.EndpointFirmwareBundles, firmwareHandler.ListBundles)
+		firmwareUpdate.PUT(constants.EndpointApproveBundle, firmwareHandler.ApproveBundle)
+		firmwareUpdate.GET(constants.EndpointFirmwareUpdateCheck, firmwareHandler.CheckForUpdate)
+		firmwareUpdate.GET(constants.EndpointBundleDownload, firmwareHandler.GetBundleDownloadURL)
+		firmwareUpdate.POST(constants.EndpointLogBundleUpdateStatus, firmwareHandler.LogBundleUpdateStatus)
+	}
+
 }

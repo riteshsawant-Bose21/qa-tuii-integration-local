@@ -8,13 +8,14 @@ import (
 
 // CloudConfig holds the configuration settings for connecting to a cloud service.
 type CloudConfig struct {
-	PriceS3Bucket   string
-	ProductS3Bucket string
-	ProjectS3Bucket string
-	Region          string
-	IoTEndpoint     string
-	IoTCommandTopic string
-	IoTDevicePolicy string
+	PriceS3Bucket        string
+	ProductS3Bucket      string
+	ProjectS3Bucket      string
+	FirmwareBundleBucket string
+	Region               string
+	IoTEndpoint          string
+	IoTCommandTopic      string
+	IoTDevicePolicy      string
 }
 
 // Cloud retrieves the cloud configuration from the store.
@@ -32,6 +33,11 @@ func (s *Service) Cloud() (*CloudConfig, error) {
 	priceBucket, err := s.store.ReqString(environment.S3.PriceBucket)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get S3 price bucket: %w", err)
+	}
+
+	firmwareBundleBucket, err := s.store.ReqString(environment.S3.FirmwareBundleBucket)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get S3 firmware bucket: %w", err)
 	}
 
 	region, err := s.store.ReqString(environment.AWS.Region)
@@ -55,12 +61,13 @@ func (s *Service) Cloud() (*CloudConfig, error) {
 	}
 
 	return &CloudConfig{
-		PriceS3Bucket:   priceBucket,
-		ProductS3Bucket: productBucket,
-		ProjectS3Bucket: projectBucket,
-		Region:          region,
-		IoTEndpoint:     iotEndpoint,
-		IoTCommandTopic: iotCommandTopic,
-		IoTDevicePolicy: iotDevicePolicy,
+		PriceS3Bucket:        priceBucket,
+		ProductS3Bucket:      productBucket,
+		ProjectS3Bucket:      projectBucket,
+		FirmwareBundleBucket: firmwareBundleBucket,
+		Region:               region,
+		IoTEndpoint:          iotEndpoint,
+		IoTCommandTopic:      iotCommandTopic,
+		IoTDevicePolicy:      iotDevicePolicy,
 	}, nil
 }

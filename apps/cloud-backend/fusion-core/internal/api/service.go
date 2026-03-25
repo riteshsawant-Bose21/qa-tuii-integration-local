@@ -24,6 +24,7 @@ type API struct {
 	project               fusion.Project
 	user                  fusion.User
 	auth                  fusion.Auth
+	firmware              fusion.Firmware
 	roleManagementService *userdb.RoleManagementService
 	authMiddleware        middleware.AuthMiddleware
 	appLog                *zap.Logger
@@ -43,6 +44,7 @@ func New(cfg *Config,
 	project fusion.Project,
 	userSvc fusion.User,
 	authSvc fusion.Auth,
+	firmwareSvc fusion.Firmware,
 	authMiddleware middleware.AuthMiddleware,
 	deviceSvc fusion.Device,
 	loggers *log.Loggers,
@@ -77,6 +79,10 @@ func New(cfg *Config,
 		return nil, errors.New("missing auth service")
 	}
 
+	if firmwareSvc == nil {
+		return nil, errors.New("missing firmware service")
+	}
+
 	if authMiddleware == nil {
 		return nil, errors.New("missing auth middleware")
 	}
@@ -91,6 +97,7 @@ func New(cfg *Config,
 		project:        project,
 		user:           userSvc,
 		auth:           authSvc,
+		firmware:       firmwareSvc,
 		authMiddleware: authMiddleware,
 		appLog:         loggers.AppLogger,
 		device:         deviceSvc,

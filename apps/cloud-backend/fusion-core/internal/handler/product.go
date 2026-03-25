@@ -9,6 +9,7 @@ import (
 	response "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/response"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -35,12 +36,7 @@ func NewProductHandler(productSvc fusion.Product) *ProductHandler {
 //	@Failure		500	{object}	types.ErrorResponse "Internal server error"
 //	@Router			/products [get]
 func (a *ProductHandler) GetAllProducts(c *gin.Context) {
-	loggerFromContext, exists := c.Get("logger")
-	if !exists {
-		response.InternalError(c)
-		return
-	}
-	logger := loggerFromContext.(*zap.Logger)
+	logger := log.GetLogger(c)
 	logger = logger.With(zap.String("handler", "GetAllProducts"))
 	products, err := a.product.GetAllProducts(c.Request.Context(), logger)
 	if err != nil {
@@ -64,12 +60,7 @@ func (a *ProductHandler) GetAllProducts(c *gin.Context) {
 //	@Failure		500	{object}	types.ErrorResponse "Internal server error"
 //	@Router			/products/{id} [get]
 func (a *ProductHandler) GetProductByID(c *gin.Context) {
-	loggerFromContext, exists := c.Get("logger")
-	if !exists {
-		response.InternalError(c)
-		return
-	}
-	logger := loggerFromContext.(*zap.Logger)
+	logger := log.GetLogger(c)
 	logger = logger.With(zap.String("handler", "GetProductByID"))
 	id := c.Param("id")
 	if id == "" {
@@ -105,12 +96,7 @@ func (a *ProductHandler) GetProductByID(c *gin.Context) {
 //	@Failure		500			{object}	types.ErrorResponse "Internal server error"
 //	@Router			/products/{id}/prices [get]
 func (a *ProductHandler) GetProductPrices(c *gin.Context) {
-	loggerFromContext, exists := c.Get("logger")
-	if !exists {
-		response.InternalError(c)
-		return
-	}
-	logger := loggerFromContext.(*zap.Logger)
+	logger := log.GetLogger(c)
 	logger = logger.With(zap.String("handler", "GetProductPrices"))
 
 	id := c.Param("id")
