@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/form_fields/fusion_custom_textfield.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
 import '../../viewModel/input_stream_viewmodel/input_stream_viewmodel.dart';
@@ -113,6 +112,7 @@ class _DialogContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final InputStreamViewmodel cubit = context.read<InputStreamViewmodel>();
     final bool isControl = state.mode == Aes67AppMode.control;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -132,7 +132,6 @@ class _DialogContent extends StatelessWidget {
                     SizedBox(
                       width: _nameFieldW,
                       child: _DarkTextField(
-                        semanticId: 'name-field',
                         value: state.name,
                         onChanged: cubit.updateName,
                       ),
@@ -166,8 +165,6 @@ class _DialogContent extends StatelessWidget {
                   children: <Widget>[
                     const SizedBox(width: _labelW, child: _FieldLabel(text: 'Channels')),
                     const SizedBox(width: _gapLabel),
-
-                    /// dynamic channel list
                     SizedBox(
                       width: _nameFieldW,
                       child: _DarkDropdown<int>(
@@ -277,7 +274,6 @@ class _ChannelGrid extends StatelessWidget {
                   SizedBox(
                     width: dropW,
                     child: _DarkTextField(
-                      semanticId: '',
                       value: channel.label ?? '',
                       onChanged: (String v) => cubit.updateChannelLabel(channel.channelNumber, v),
                     ),
@@ -387,7 +383,7 @@ class _SessionTable extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: context.colorScheme.elevation2.withAlpha(200),
+        color: context.colorScheme.primaryBlack,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: context.colorScheme.strokeLight),
       ),
@@ -472,7 +468,7 @@ class _SessionTableRow extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: <Widget>[
             // Session ID (bold)
@@ -653,10 +649,9 @@ class _FieldLabel extends StatelessWidget {
 /// Dark rounded text field matching the dialog aesthetic
 class _DarkTextField extends StatefulWidget {
   final String value;
-  final String semanticId;
   final ValueChanged<String> onChanged;
 
-  const _DarkTextField({required this.value, required this.onChanged, required this.semanticId});
+  const _DarkTextField({required this.value, required this.onChanged});
 
   @override
   State<_DarkTextField> createState() => _DarkTextFieldState();
@@ -687,13 +682,31 @@ class _DarkTextFieldState extends State<_DarkTextField> {
 
   @override
   Widget build(BuildContext context) {
-    return FusionCustomTextField(
-      variant: FusionFieldVariant.neumorphic,
-      semanticId: widget.semanticId,
+    return TextField(
       controller: _ctrl,
-      onChange: widget.onChanged,
-      height: 35,
-      borderRadius: 8,
+      onChanged: widget.onChanged,
+      style: context.textTheme.bodySmall?.copyWith(
+        color: context.colorScheme.textPrimary,
+        fontWeight: FontWeight.w400,
+      ),
+      decoration: InputDecoration(
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        filled: true,
+        fillColor: context.colorScheme.elevation2,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: context.colorScheme.strokeLight),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: context.colorScheme.strokeLight),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: context.colorScheme.primaryColor),
+        ),
+      ),
     );
   }
 }
@@ -716,28 +729,46 @@ class _DarkDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 15.0),
+    return Container(
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation2,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: context.colorScheme.strokeLight),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       child: DropdownButtonHideUnderline(
-        child: FusionNeumorphicDropdown<T>(
+        child: DropdownButton<T>(
           value: value,
-          height: 35,
-          borderRadius: BorderRadius.circular(8),
-
-          hintText: hint,
-          items: items,
-          itemBuilderWithSelection: (BuildContext context, T item, bool isSelected) {
-            return FusionAppText(
-              text: labelBuilder(item),
-              style: context.textTheme.bodySmall?.copyWith(
-                color: isSelected ? context.colorScheme.primary : context.colorScheme.textPrimary,
-              ),
-            );
-          },
+          hint: FusionAppText(
+            text: hint,
+            style: context.textTheme.bodySmall?.copyWith(
+              color: context.colorScheme.textSecondary,
+            ),
+          ),
+          isDense: true,
+          isExpanded: true,
+          dropdownColor: context.colorScheme.elevation2,
+          icon: Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: context.colorScheme.textSecondary),
+          style: context.textTheme.bodySmall?.copyWith(
+            color: context.colorScheme.textPrimary,
+          ),
+          items:
+              items
+                  .map(
+                    (item) => DropdownMenuItem<T>(
+                      value: item,
+                      child: FusionAppText(
+                        text: labelBuilder(item),
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: context.colorScheme.textPrimary,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
           onChanged: onChanged,
         ),
       ),
     );
-    // );
   }
 }

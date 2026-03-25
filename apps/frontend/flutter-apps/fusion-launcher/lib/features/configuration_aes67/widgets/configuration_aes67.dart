@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/configuration_aes67/widgets/outputStreams/output_stream_dialog.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
@@ -119,11 +120,7 @@ class _ConfigurationAes67View extends StatelessWidget {
           _StreamSection(
             title: 'AES 67 Input Streams',
             addLabel: 'Add Input Stream',
-            onAdd:
-                (BuildContext context) => InputStreamDialog.show(
-                  context,
-                  mode: Aes67AppMode.control,
-                ),
+            onAdd: (BuildContext context) => InputStreamDialog.show(context, mode: Aes67AppMode.control),
             columns: _inputColumns(),
             rows: _buildInputRows(context, state.inputStreams, cubit),
           ),
@@ -134,7 +131,7 @@ class _ConfigurationAes67View extends StatelessWidget {
           _StreamSection(
             title: 'AES 67 Output Streams',
             addLabel: 'Add Output Stream',
-            onAdd: (BuildContext context) {},
+            onAdd: (BuildContext context) => OutputStreamDialog.show(context),
             columns: _outputColumns(),
             rows: _buildOutputRows(context, state.outputStreams, cubit),
           ),
