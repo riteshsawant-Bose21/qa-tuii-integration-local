@@ -1,5 +1,7 @@
 #pragma once
 
+#include <bosepro/telemetry_version.h>
+
 #include <stdlib.h>
 #include <unistd.h>
 #include <string>
