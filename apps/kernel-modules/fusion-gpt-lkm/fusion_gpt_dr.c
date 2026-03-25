@@ -97,6 +97,10 @@ enum cal_state {
 #define CAL_LOCK_ERR_THRESH 1U
 #define CAL_LOCK_CONSECUTIVE 5U
 
+static bool pps_diag_enable;
+module_param(pps_diag_enable, bool, 0644);
+MODULE_PARM_DESC(pps_diag_enable, "Enable periodic 1PPS diagnostic logging");
+
 struct fusion_gpt_cal_config {
 	s32 k1_q16;
 	s32 k2_q16;
@@ -1185,12 +1189,13 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
           }
 
 	          if (__ratelimit(&_rs)) {
-	              pr_debug("fusion_gpt: [PPS] diff=%llu ticks err=%ld ticks rms=%u ticks cum=%lld ticks cum_lock=%lld ticks 48k_off=%ldns dac=%d\n",
-	                       diff, freq_error, rms_jitter,
-	                       (long long)g->cumulative_error_ticks_total,
-	                       (long long)g->cumulative_error_ticks_locked,
-	                       if2_offset_ns, g->dac_target);
-	              
+	              if (pps_diag_enable)
+	                      pr_info("fusion_gpt: [PPS] diff=%llu ticks err=%ld ticks rms=%u ticks cum=%lld ticks cum_lock=%lld ticks 48k_off=%ldns dac=%d\n",
+	                              diff, freq_error, rms_jitter,
+	                              (long long)g->cumulative_error_ticks_total,
+	                              (long long)g->cumulative_error_ticks_locked,
+	                              if2_offset_ns, g->dac_target);
+
 	              g->sq_err_sum = 0;
 	              g->err_count = 0;
           }
@@ -1760,4 +1765,4 @@ module_platform_driver(drv);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Bose Pro");
 MODULE_DESCRIPTION("GPT1 SHIM EXPORTING 1/3MS TICKS");
-MODULE_VERSION("1.0.1-PR-Changes");
+MODULE_VERSION("1.0.1");
