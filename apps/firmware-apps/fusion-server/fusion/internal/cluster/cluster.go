@@ -27,6 +27,7 @@ const (
 type VIPMonitorInterface interface {
 	GetCurrentVIP() string
 	IsLocalVIPHolder() bool
+	GetKeepalivedPriority() (int, error)
 }
 
 // ClusterInfo provides information about the cluster
@@ -556,4 +557,17 @@ func (c *Cluster) isLocalNodePrimary() bool {
 	}
 
 	return false
+}
+
+func (c *Cluster) getKeepalivedPriority() int {
+	if c.vipMonitor != nil {
+		 priority, err := c.vipMonitor.GetKeepalivedPriority()
+		 if err != nil {
+			 logging.GetLogger().Error("Failed to get keepalived priority: %v", err)
+			 return 0
+		 }
+		 return priority
+	}
+	logging.GetLogger().Warn("VIP Monitor not set, cannot get keepalived priority")
+	return 0
 }

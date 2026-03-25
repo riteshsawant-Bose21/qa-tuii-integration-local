@@ -5,10 +5,10 @@ info:
 
 http:
   method: POST
-  url: http://192.168.2.38:8080/devices/vip/:vip
+  url: "{{node_url}}/devices/vip/:vip"
   params:
     - name: vip
-      value: 192.168.4.100
+      value: 10.1.123.100
       type: path
   body:
     type: json

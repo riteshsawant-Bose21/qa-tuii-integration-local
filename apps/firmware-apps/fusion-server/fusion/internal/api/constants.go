@@ -26,6 +26,9 @@ const (
 
 	SnapshotIDKey = "snapshot_id"
 
+	VIPEligiblePriority   = 120
+	VIPIneligiblePriority = 90
+
 	// Request types
 	WSMsgTypeDevices            = "devices"
 	WSMsgTypeDeviceByID         = "device_by_id"

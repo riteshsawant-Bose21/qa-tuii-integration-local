@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -212,6 +213,78 @@ func WriteToKeepalivedConfig(path, newVIP string) error {
 	}
 
 	return nil
+}
+
+// WritePriorityToKeepalivedConfig updates the first keepalived priority directive.
+func WritePriorityToKeepalivedConfig(path string, priority int) error {
+	if priority <= 0 {
+		return fmt.Errorf("invalid keepalived priority %d", priority)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("unable to read config file: %w", err)
+	}
+
+	lines := strings.Split(string(data), "\n")
+	updated := false
+
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "priority ") {
+			indent := line[:len(line)-len(strings.TrimLeft(line, " \t"))]
+			lines[i] = fmt.Sprintf("%spriority %d", indent, priority)
+			updated = true
+			break
+		}
+	}
+
+	if !updated {
+		return fmt.Errorf("no keepalived priority directive found")
+	}
+
+	content := strings.Join(lines, "\n") + "\n"
+	if len(strings.TrimSpace(content)) == 0 {
+		return fmt.Errorf("refusing to write empty config")
+	}
+
+	if err := atomicReplaceConfig(path, content, ".bak"); err != nil {
+		return fmt.Errorf("failed to update config file: %w", err)
+	}
+
+	return nil
+}
+
+// ReadPriorityFromKeepalivedConfig returns the first keepalived priority directive value.
+func ReadPriorityFromKeepalivedConfig(path string) (int, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 0, fmt.Errorf("unable to read config file: %w", err)
+	}
+
+	lines := strings.Split(string(data), "\n")
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "priority ") {
+			parts := strings.Fields(trimmed)
+			if len(parts) < 2 {
+				return 0, fmt.Errorf("invalid keepalived priority directive")
+			}
+
+			priority, err := strconv.Atoi(parts[1])
+			if err != nil {
+				return 0, fmt.Errorf("invalid keepalived priority value %q: %w", parts[1], err)
+			}
+			if priority <= 0 {
+				return 0, fmt.Errorf("invalid keepalived priority %d", priority)
+			}
+
+			return priority, nil
+		}
+	}
+
+	return 0, fmt.Errorf("no keepalived priority directive found")
 }
 
 // ReadFromLocalConfig reads the VIP from the first line of the local config file.

@@ -1,0 +1,17 @@
+info:
+  name: Get All Devices Info
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{api_url}}/devices"
+  body:
+    type: json
+    data: ""
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

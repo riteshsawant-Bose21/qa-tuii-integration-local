@@ -212,6 +212,7 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.DevicesEndpoint, app.Server.GetDevicesInfo)
 	app.registerPublicGET(routes.DevicesVIPEndpoint, app.VIPMonitor.HandleGetVIP)
 	app.registerPublicPOST(routes.DevicesSetVIPEndpoint, app.VIPMonitor.HandleSetVIP)
+	app.registerPublicPOST(routes.DevicesIDVIPMasterEligibilityEndpoint, app.VIPMonitor.HandleSetMasterEligibility)
 	app.registerPublicPOST(routes.DeviceReloadVIPEndpoint, app.VIPMonitor.HandleReloadVIP)
 	app.registerPublicPATCH(routes.DevicesIDEndpoint, app.Server.UpdateDeviceInfo)
 
@@ -300,6 +301,7 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivatePATCH(routes.DeviceEndpoint, app.Server.UpdateDeviceInfoLocal)
 	app.registerPrivateGET(routes.DevicesVIPEndpoint, app.VIPMonitor.HandleGetVIP)
 	app.registerPrivatePOST(routes.DevicesSetVIPEndpoint, app.VIPMonitor.HandleUpdateVIPLocal)
+	app.registerPrivatePOST(routes.DevicesIDVIPMasterEligibilityEndpoint, app.VIPMonitor.HandleSetMasterEligibilityLocal)
 	app.registerPrivatePOST(routes.DeviceReloadVIPEndpoint, app.VIPMonitor.HandleReloadVIPLocal)
 	app.registerPrivateGET(routes.DevicesGetCSREndpoint, app.Server.GetCSR)
 	app.registerPrivateDELETE(routes.DevicesIDResetEndpoint, app.Server.ResetDeviceCertificate)
