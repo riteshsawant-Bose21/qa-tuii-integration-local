@@ -5,21 +5,27 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../viewModel/config_aes67_viewmodel.dart';
 import '../../viewModel/output_stream_viewmodel/output_stream_viewmodel.dart';
 
 // ── Entry point ──────────────────────────────────────────────────────────────
 
 class OutputStreamDialog extends StatelessWidget {
-  const OutputStreamDialog({super.key});
+  final void Function(Aes67Stream stream)? onSave;
 
-  static Future<void> show(BuildContext context) {
+  const OutputStreamDialog({super.key, this.onSave});
+
+  static Future<void> show(
+    BuildContext context, {
+    void Function(Aes67Stream stream)? onSave,
+  }) {
     return showGeneralDialog(
       context: context,
       barrierDismissible: false,
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       barrierColor: Colors.black87,
       transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (BuildContext ctx, _, __) => const OutputStreamDialog(),
+      pageBuilder: (BuildContext ctx, _, __) => OutputStreamDialog(onSave: onSave),
     );
   }
 
@@ -27,7 +33,7 @@ class OutputStreamDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider<OutputStreamViewmodel>(
       create: (_) => OutputStreamViewmodel()..init(),
-      child: const _DialogContent(),
+      child: _DialogContent(onSave: onSave),
     );
   }
 }
@@ -35,7 +41,9 @@ class OutputStreamDialog extends StatelessWidget {
 // ── Dialog shell ─────────────────────────────────────────────────────────────
 
 class _DialogContent extends StatelessWidget {
-  const _DialogContent();
+  final void Function(Aes67Stream stream)? onSave;
+
+  const _DialogContent({this.onSave});
 
   void _close(BuildContext context) => Navigator.of(context).pop();
 
@@ -79,7 +87,7 @@ class _DialogContent extends StatelessWidget {
                               padding: const EdgeInsets.all(24),
                               child: FusionAppText(text: message),
                             ),
-                            OutputStreamLoaded() => _LoadedBody(state: state),
+                            OutputStreamLoaded() => _LoadedBody(state: state, onSave: onSave),
                           },
                     ),
                   ),
@@ -141,7 +149,9 @@ class _Header extends StatelessWidget {
 
 class _LoadedBody extends StatelessWidget {
   final OutputStreamLoaded state;
-  const _LoadedBody({required this.state});
+  final void Function(Aes67Stream stream)? onSave;
+
+  const _LoadedBody({required this.state, this.onSave});
 
   // Fixed measurement constants — shared by every row so columns align
   static const double _labelW = 100.0; // "Name", "Session ID", etc.
@@ -210,7 +220,22 @@ class _LoadedBody extends StatelessWidget {
         // ── Footer ──────────────────────────────────────────────────
         _Footer(
           onExport: cubit.exportSdp,
-          onSave: cubit.save,
+          onSave: () {
+            final Aes67Stream stream = Aes67Stream(
+              id: 'out_${DateTime.now().millisecondsSinceEpoch}',
+              name: state.name,
+              device: state.sessionId,
+              streamOrAdvertisement: 'Dante (mDNS)',
+              addressPort: '${state.ipAddress}:5004',
+              channels: state.channelCount,
+              bitDepth: state.bitDepth,
+              packetTime: state.packetTime,
+              isEnabled: true,
+            );
+            onSave?.call(stream);
+            cubit.save();
+            Navigator.of(context).pop();
+          },
         ),
       ],
     );

@@ -120,7 +120,13 @@ class _ConfigurationAes67View extends StatelessWidget {
           _StreamSection(
             title: 'AES 67 Input Streams',
             addLabel: 'Add Input Stream',
-            onAdd: (BuildContext context) => InputStreamDialog.show(context, mode: Aes67AppMode.control),
+            emptyMessage: 'No input streams configured',
+            onAdd:
+                (BuildContext context) => InputStreamDialog.show(
+                  context,
+                  mode: Aes67AppMode.control,
+                  onSave: cubit.addInputStream,
+                ),
             columns: _inputColumns(),
             rows: _buildInputRows(context, state.inputStreams, cubit),
           ),
@@ -131,7 +137,12 @@ class _ConfigurationAes67View extends StatelessWidget {
           _StreamSection(
             title: 'AES 67 Output Streams',
             addLabel: 'Add Output Stream',
-            onAdd: (BuildContext context) => OutputStreamDialog.show(context),
+            emptyMessage: 'No output streams configured',
+            onAdd:
+                (BuildContext context) => OutputStreamDialog.show(
+                  context,
+                  onSave: cubit.addOutputStream,
+                ),
             columns: _outputColumns(),
             rows: _buildOutputRows(context, state.outputStreams, cubit),
           ),
@@ -288,6 +299,7 @@ class _StreamSection extends StatelessWidget {
   final List<FusionTableColumn> columns;
   final List<FusionTableRow> rows;
   final void Function(BuildContext context) onAdd;
+  final String emptyMessage;
 
   const _StreamSection({
     required this.title,
@@ -295,6 +307,7 @@ class _StreamSection extends StatelessWidget {
     required this.onAdd,
     required this.columns,
     required this.rows,
+    required this.emptyMessage,
   });
 
   @override
@@ -307,7 +320,7 @@ class _StreamSection extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: context.colorScheme.elevation1,
+        color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: context.colorScheme.elevation2),
       ),
@@ -353,15 +366,59 @@ class _StreamSection extends StatelessWidget {
             ),
           ),
 
-          // FusionTable with fixed height so it doesn't need Expanded inside scroll
-          Container(
-            color: context.colorScheme.elevation2,
-            height: tableHeight,
-            child: FusionTable(
-              columns: columns,
-              rows: rows,
+          // Show empty state or table
+          if (rows.isEmpty)
+            Container(
+              color: context.colorScheme.elevation1,
+              padding: const EdgeInsets.symmetric(vertical: 48),
+              width: double.infinity,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  FusionAppText(
+                    text: emptyMessage,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: context.colorScheme.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  InkWell(
+                    onTap: () => onAdd(context),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Icon(Icons.add, size: 16, color: context.colorScheme.primaryColor),
+                          const SizedBox(width: 4),
+                          FusionAppText(
+                            text: addLabel,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: context.colorScheme.primaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            // FusionTable with fixed height so it doesn't need Expanded inside scroll
+            Container(
+              color: context.colorScheme.elevation1,
+              height: tableHeight,
+              child: FusionTable(
+                columns: columns,
+                rows: rows,
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -423,8 +480,9 @@ class _CellText extends StatelessWidget {
 
   @override
   Widget build(BuildContext _) {
+    final String displayText = text.isEmpty ? '-' : text;
     return FusionAppText(
-      text: text,
+      text: displayText,
       maxLine: 1,
       textOverflow: TextOverflow.ellipsis,
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(

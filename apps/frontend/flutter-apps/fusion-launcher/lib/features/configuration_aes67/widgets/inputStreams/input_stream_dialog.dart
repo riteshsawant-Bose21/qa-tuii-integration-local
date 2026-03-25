@@ -4,17 +4,20 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
+import '../../viewModel/config_aes67_viewmodel.dart';
 import '../../viewModel/input_stream_viewmodel/input_stream_viewmodel.dart';
 import 'header.dart';
 
 class InputStreamDialog extends StatelessWidget {
   final Aes67AppMode mode;
+  final void Function(Aes67Stream stream)? onSave;
 
-  const InputStreamDialog({super.key, required this.mode});
+  const InputStreamDialog({super.key, required this.mode, this.onSave});
 
   static Future<void> show(
     BuildContext context, {
     required Aes67AppMode mode,
+    void Function(Aes67Stream stream)? onSave,
   }) {
     return showGeneralDialog(
       context: context,
@@ -22,7 +25,7 @@ class InputStreamDialog extends StatelessWidget {
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       barrierColor: Colors.black87,
       transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (BuildContext ctx, _, __) => InputStreamDialog(mode: mode),
+      pageBuilder: (BuildContext ctx, _, __) => InputStreamDialog(mode: mode, onSave: onSave),
     );
   }
 
@@ -30,13 +33,15 @@ class InputStreamDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider<InputStreamViewmodel>(
       create: (_) => InputStreamViewmodel()..init(mode: mode),
-      child: const _InputStreamDialogContent(),
+      child: _InputStreamDialogContent(onSave: onSave),
     );
   }
 }
 
 class _InputStreamDialogContent extends StatelessWidget {
-  const _InputStreamDialogContent();
+  final void Function(Aes67Stream stream)? onSave;
+
+  const _InputStreamDialogContent({this.onSave});
 
   void _close(BuildContext context) => Navigator.of(context).pop();
 
@@ -80,7 +85,7 @@ class _InputStreamDialogContent extends StatelessWidget {
                               padding: const EdgeInsets.all(24),
                               child: FusionAppText(text: message),
                             ),
-                            InputStreamLoaded() => _DialogContent(state: state),
+                            InputStreamLoaded() => _DialogContent(state: state, onSave: onSave),
                           },
                     ),
                   ),
@@ -96,7 +101,9 @@ class _InputStreamDialogContent extends StatelessWidget {
 
 class _DialogContent extends StatelessWidget {
   final InputStreamLoaded state;
-  const _DialogContent({required this.state});
+  final void Function(Aes67Stream stream)? onSave;
+
+  const _DialogContent({required this.state, this.onSave});
 
   /// ── Fixed column measurements (shared by header rows AND every channel row
   ///    so every element lines up in a perfect two-column grid) ──────────────
@@ -205,7 +212,31 @@ class _DialogContent extends StatelessWidget {
         if (isControl)
           _Footer(
             onImport: cubit.importSdp,
-            onConfirm: cubit.confirmSelectSession,
+            onConfirm: () {
+              // Get selected session for address/port info
+              final Aes67SessionEntry? selectedSession =
+                  state.selectedSessionId != null
+                      ? state.sessions.cast<Aes67SessionEntry?>().firstWhere(
+                        (Aes67SessionEntry? s) => s?.id == state.selectedSessionId,
+                        orElse: () => null,
+                      )
+                      : null;
+
+              final Aes67Stream stream = Aes67Stream(
+                id: 'in_${DateTime.now().millisecondsSinceEpoch}',
+                name: state.name,
+                device: selectedSession?.sessionId ?? 'Unknown Device',
+                streamOrAdvertisement: state.assignedTo ?? selectedSession?.sessionId ?? '',
+                addressPort: selectedSession != null ? '${selectedSession.ipAddress}:${selectedSession.port}' : '',
+                channels: state.channelCount,
+                bitDepth: selectedSession != null ? '${selectedSession.bitDepth} bit' : '24 bit',
+                packetTime: selectedSession?.packetTime ?? '1ms',
+                isEnabled: true,
+              );
+              onSave?.call(stream);
+              cubit.confirmSelectSession();
+              Navigator.of(context).pop();
+            },
           ),
       ],
     );
@@ -755,7 +786,7 @@ class _DarkDropdown<T> extends StatelessWidget {
           items:
               items
                   .map(
-                    (item) => DropdownMenuItem<T>(
+                    (T item) => DropdownMenuItem<T>(
                       value: item,
                       child: FusionAppText(
                         text: labelBuilder(item),
