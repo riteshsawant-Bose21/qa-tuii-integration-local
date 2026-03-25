@@ -10,7 +10,7 @@ language: go
 tasks:
   build:
     command: "./build-fusion-server"
-    args: ["--package"]
+    args: ["--release", "--package"]
     deps:
       - 'ready-script'
 

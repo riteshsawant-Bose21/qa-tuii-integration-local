@@ -94,29 +94,29 @@ var AppUserWhere = struct {
 
 // AppUserRels is where relationship names are stored.
 var AppUserRels = struct {
-	Account              string
-	AccountTypeRole      string
-	UserUserProfile      string
-	UserUserSetting      string
-	LockedByUserProjects string
-	UserProjectUsers     string
+	Account                        string
+	AccountTypeRole                string
+	UserUserSetting                string
+	ApprovalStatusChangedByBundles string
+	LockedByUserProjects           string
+	UserProjectUsers               string
 }{
-	Account:              "Account",
-	AccountTypeRole:      "AccountTypeRole",
-	UserUserProfile:      "UserUserProfile",
-	UserUserSetting:      "UserUserSetting",
-	LockedByUserProjects: "LockedByUserProjects",
-	UserProjectUsers:     "UserProjectUsers",
+	Account:                        "Account",
+	AccountTypeRole:                "AccountTypeRole",
+	UserUserSetting:                "UserUserSetting",
+	ApprovalStatusChangedByBundles: "ApprovalStatusChangedByBundles",
+	LockedByUserProjects:           "LockedByUserProjects",
+	UserProjectUsers:               "UserProjectUsers",
 }
 
 // appUserR is where relationships are stored.
 type appUserR struct {
-	Account              *Account         `boil:"Account" json:"Account" toml:"Account" yaml:"Account"`
-	AccountTypeRole      *AccountTypeRole `boil:"AccountTypeRole" json:"AccountTypeRole" toml:"AccountTypeRole" yaml:"AccountTypeRole"`
-	UserUserProfile      *UserProfile     `boil:"UserUserProfile" json:"UserUserProfile" toml:"UserUserProfile" yaml:"UserUserProfile"`
-	UserUserSetting      *UserSetting     `boil:"UserUserSetting" json:"UserUserSetting" toml:"UserUserSetting" yaml:"UserUserSetting"`
-	LockedByUserProjects ProjectSlice     `boil:"LockedByUserProjects" json:"LockedByUserProjects" toml:"LockedByUserProjects" yaml:"LockedByUserProjects"`
-	UserProjectUsers     ProjectUserSlice `boil:"UserProjectUsers" json:"UserProjectUsers" toml:"UserProjectUsers" yaml:"UserProjectUsers"`
+	Account                        *Account         `boil:"Account" json:"Account" toml:"Account" yaml:"Account"`
+	AccountTypeRole                *AccountTypeRole `boil:"AccountTypeRole" json:"AccountTypeRole" toml:"AccountTypeRole" yaml:"AccountTypeRole"`
+	UserUserSetting                *UserSetting     `boil:"UserUserSetting" json:"UserUserSetting" toml:"UserUserSetting" yaml:"UserUserSetting"`
+	ApprovalStatusChangedByBundles BundleSlice      `boil:"ApprovalStatusChangedByBundles" json:"ApprovalStatusChangedByBundles" toml:"ApprovalStatusChangedByBundles" yaml:"ApprovalStatusChangedByBundles"`
+	LockedByUserProjects           ProjectSlice     `boil:"LockedByUserProjects" json:"LockedByUserProjects" toml:"LockedByUserProjects" yaml:"LockedByUserProjects"`
+	UserProjectUsers               ProjectUserSlice `boil:"UserProjectUsers" json:"UserProjectUsers" toml:"UserProjectUsers" yaml:"UserProjectUsers"`
 }
 
 // NewStruct creates a new relationship struct
@@ -156,22 +156,6 @@ func (r *appUserR) GetAccountTypeRole() *AccountTypeRole {
 	return r.AccountTypeRole
 }
 
-func (o *AppUser) GetUserUserProfile() *UserProfile {
-	if o == nil {
-		return nil
-	}
-
-	return o.R.GetUserUserProfile()
-}
-
-func (r *appUserR) GetUserUserProfile() *UserProfile {
-	if r == nil {
-		return nil
-	}
-
-	return r.UserUserProfile
-}
-
 func (o *AppUser) GetUserUserSetting() *UserSetting {
 	if o == nil {
 		return nil
@@ -186,6 +170,22 @@ func (r *appUserR) GetUserUserSetting() *UserSetting {
 	}
 
 	return r.UserUserSetting
+}
+
+func (o *AppUser) GetApprovalStatusChangedByBundles() BundleSlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetApprovalStatusChangedByBundles()
+}
+
+func (r *appUserR) GetApprovalStatusChangedByBundles() BundleSlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.ApprovalStatusChangedByBundles
 }
 
 func (o *AppUser) GetLockedByUserProjects() ProjectSlice {
@@ -558,17 +558,6 @@ func (o *AppUser) AccountTypeRole(mods ...qm.QueryMod) accountTypeRoleQuery {
 	return AccountTypeRoles(queryMods...)
 }
 
-// UserUserProfile pointed to by the foreign key.
-func (o *AppUser) UserUserProfile(mods ...qm.QueryMod) userProfileQuery {
-	queryMods := []qm.QueryMod{
-		qm.Where("\"user_id\" = ?", o.ID),
-	}
-
-	queryMods = append(queryMods, mods...)
-
-	return UserProfiles(queryMods...)
-}
-
 // UserUserSetting pointed to by the foreign key.
 func (o *AppUser) UserUserSetting(mods ...qm.QueryMod) userSettingQuery {
 	queryMods := []qm.QueryMod{
@@ -578,6 +567,20 @@ func (o *AppUser) UserUserSetting(mods ...qm.QueryMod) userSettingQuery {
 	queryMods = append(queryMods, mods...)
 
 	return UserSettings(queryMods...)
+}
+
+// ApprovalStatusChangedByBundles retrieves all the bundle's Bundles with an executor via approval_status_changed_by column.
+func (o *AppUser) ApprovalStatusChangedByBundles(mods ...qm.QueryMod) bundleQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"bundle\".\"approval_status_changed_by\"=?", o.ID),
+	)
+
+	return Bundles(queryMods...)
 }
 
 // LockedByUserProjects retrieves all the project's Projects with an executor via locked_by_user_id column.
@@ -848,123 +851,6 @@ func (appUserL) LoadAccountTypeRole(ctx context.Context, e boil.ContextExecutor,
 	return nil
 }
 
-// LoadUserUserProfile allows an eager lookup of values, cached into the
-// loaded structs of the objects. This is for a 1-1 relationship.
-func (appUserL) LoadUserUserProfile(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAppUser interface{}, mods queries.Applicator) error {
-	var slice []*AppUser
-	var object *AppUser
-
-	if singular {
-		var ok bool
-		object, ok = maybeAppUser.(*AppUser)
-		if !ok {
-			object = new(AppUser)
-			ok = queries.SetFromEmbeddedStruct(&object, &maybeAppUser)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeAppUser))
-			}
-		}
-	} else {
-		s, ok := maybeAppUser.(*[]*AppUser)
-		if ok {
-			slice = *s
-		} else {
-			ok = queries.SetFromEmbeddedStruct(&slice, maybeAppUser)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeAppUser))
-			}
-		}
-	}
-
-	args := make(map[interface{}]struct{})
-	if singular {
-		if object.R == nil {
-			object.R = &appUserR{}
-		}
-		args[object.ID] = struct{}{}
-	} else {
-		for _, obj := range slice {
-			if obj.R == nil {
-				obj.R = &appUserR{}
-			}
-
-			args[obj.ID] = struct{}{}
-		}
-	}
-
-	if len(args) == 0 {
-		return nil
-	}
-
-	argsSlice := make([]interface{}, len(args))
-	i := 0
-	for arg := range args {
-		argsSlice[i] = arg
-		i++
-	}
-
-	query := NewQuery(
-		qm.From(`user_profile`),
-		qm.WhereIn(`user_profile.user_id in ?`, argsSlice...),
-	)
-	if mods != nil {
-		mods.Apply(query)
-	}
-
-	results, err := query.QueryContext(ctx, e)
-	if err != nil {
-		return errors.Wrap(err, "failed to eager load UserProfile")
-	}
-
-	var resultSlice []*UserProfile
-	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice UserProfile")
-	}
-
-	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for user_profile")
-	}
-	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for user_profile")
-	}
-
-	if len(userProfileAfterSelectHooks) != 0 {
-		for _, obj := range resultSlice {
-			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
-				return err
-			}
-		}
-	}
-
-	if len(resultSlice) == 0 {
-		return nil
-	}
-
-	if singular {
-		foreign := resultSlice[0]
-		object.R.UserUserProfile = foreign
-		if foreign.R == nil {
-			foreign.R = &userProfileR{}
-		}
-		foreign.R.User = object
-	}
-
-	for _, local := range slice {
-		for _, foreign := range resultSlice {
-			if local.ID == foreign.UserID {
-				local.R.UserUserProfile = foreign
-				if foreign.R == nil {
-					foreign.R = &userProfileR{}
-				}
-				foreign.R.User = local
-				break
-			}
-		}
-	}
-
-	return nil
-}
-
 // LoadUserUserSetting allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for a 1-1 relationship.
 func (appUserL) LoadUserUserSetting(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAppUser interface{}, mods queries.Applicator) error {
@@ -1074,6 +960,119 @@ func (appUserL) LoadUserUserSetting(ctx context.Context, e boil.ContextExecutor,
 					foreign.R = &userSettingR{}
 				}
 				foreign.R.User = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadApprovalStatusChangedByBundles allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (appUserL) LoadApprovalStatusChangedByBundles(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAppUser interface{}, mods queries.Applicator) error {
+	var slice []*AppUser
+	var object *AppUser
+
+	if singular {
+		var ok bool
+		object, ok = maybeAppUser.(*AppUser)
+		if !ok {
+			object = new(AppUser)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeAppUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeAppUser))
+			}
+		}
+	} else {
+		s, ok := maybeAppUser.(*[]*AppUser)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeAppUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeAppUser))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &appUserR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &appUserR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`bundle`),
+		qm.WhereIn(`bundle.approval_status_changed_by in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load bundle")
+	}
+
+	var resultSlice []*Bundle
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice bundle")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on bundle")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for bundle")
+	}
+
+	if len(bundleAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.ApprovalStatusChangedByBundles = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &bundleR{}
+			}
+			foreign.R.ApprovalStatusChangedByAppUser = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if queries.Equal(local.ID, foreign.ApprovalStatusChangedBy) {
+				local.R.ApprovalStatusChangedByBundles = append(local.R.ApprovalStatusChangedByBundles, foreign)
+				if foreign.R == nil {
+					foreign.R = &bundleR{}
+				}
+				foreign.R.ApprovalStatusChangedByAppUser = local
 				break
 			}
 		}
@@ -1402,56 +1401,6 @@ func (o *AppUser) SetAccountTypeRole(ctx context.Context, exec boil.ContextExecu
 	return nil
 }
 
-// SetUserUserProfile of the appUser to the related item.
-// Sets o.R.UserUserProfile to related.
-// Adds o to related.R.User.
-func (o *AppUser) SetUserUserProfile(ctx context.Context, exec boil.ContextExecutor, insert bool, related *UserProfile) error {
-	var err error
-
-	if insert {
-		related.UserID = o.ID
-
-		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
-			return errors.Wrap(err, "failed to insert into foreign table")
-		}
-	} else {
-		updateQuery := fmt.Sprintf(
-			"UPDATE \"user_profile\" SET %s WHERE %s",
-			strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
-			strmangle.WhereClause("\"", "\"", 2, userProfilePrimaryKeyColumns),
-		)
-		values := []interface{}{o.ID, related.ID}
-
-		if boil.IsDebug(ctx) {
-			writer := boil.DebugWriterFrom(ctx)
-			fmt.Fprintln(writer, updateQuery)
-			fmt.Fprintln(writer, values)
-		}
-		if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
-			return errors.Wrap(err, "failed to update foreign table")
-		}
-
-		related.UserID = o.ID
-	}
-
-	if o.R == nil {
-		o.R = &appUserR{
-			UserUserProfile: related,
-		}
-	} else {
-		o.R.UserUserProfile = related
-	}
-
-	if related.R == nil {
-		related.R = &userProfileR{
-			User: o,
-		}
-	} else {
-		related.R.User = o
-	}
-	return nil
-}
-
 // SetUserUserSetting of the appUser to the related item.
 // Sets o.R.UserUserSetting to related.
 // Adds o to related.R.User.
@@ -1499,6 +1448,133 @@ func (o *AppUser) SetUserUserSetting(ctx context.Context, exec boil.ContextExecu
 	} else {
 		related.R.User = o
 	}
+	return nil
+}
+
+// AddApprovalStatusChangedByBundles adds the given related objects to the existing relationships
+// of the app_user, optionally inserting them as new records.
+// Appends related to o.R.ApprovalStatusChangedByBundles.
+// Sets related.R.ApprovalStatusChangedByAppUser appropriately.
+func (o *AppUser) AddApprovalStatusChangedByBundles(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Bundle) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			queries.Assign(&rel.ApprovalStatusChangedBy, o.ID)
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"bundle\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"approval_status_changed_by"}),
+				strmangle.WhereClause("\"", "\"", 2, bundlePrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			queries.Assign(&rel.ApprovalStatusChangedBy, o.ID)
+		}
+	}
+
+	if o.R == nil {
+		o.R = &appUserR{
+			ApprovalStatusChangedByBundles: related,
+		}
+	} else {
+		o.R.ApprovalStatusChangedByBundles = append(o.R.ApprovalStatusChangedByBundles, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &bundleR{
+				ApprovalStatusChangedByAppUser: o,
+			}
+		} else {
+			rel.R.ApprovalStatusChangedByAppUser = o
+		}
+	}
+	return nil
+}
+
+// SetApprovalStatusChangedByBundles removes all previously related items of the
+// app_user replacing them completely with the passed
+// in related items, optionally inserting them as new records.
+// Sets o.R.ApprovalStatusChangedByAppUser's ApprovalStatusChangedByBundles accordingly.
+// Replaces o.R.ApprovalStatusChangedByBundles with related.
+// Sets related.R.ApprovalStatusChangedByAppUser's ApprovalStatusChangedByBundles accordingly.
+func (o *AppUser) SetApprovalStatusChangedByBundles(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Bundle) error {
+	query := "update \"bundle\" set \"approval_status_changed_by\" = null where \"approval_status_changed_by\" = $1"
+	values := []interface{}{o.ID}
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, query)
+		fmt.Fprintln(writer, values)
+	}
+	_, err := exec.ExecContext(ctx, query, values...)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove relationships before set")
+	}
+
+	if o.R != nil {
+		for _, rel := range o.R.ApprovalStatusChangedByBundles {
+			queries.SetScanner(&rel.ApprovalStatusChangedBy, nil)
+			if rel.R == nil {
+				continue
+			}
+
+			rel.R.ApprovalStatusChangedByAppUser = nil
+		}
+		o.R.ApprovalStatusChangedByBundles = nil
+	}
+
+	return o.AddApprovalStatusChangedByBundles(ctx, exec, insert, related...)
+}
+
+// RemoveApprovalStatusChangedByBundles relationships from objects passed in.
+// Removes related items from R.ApprovalStatusChangedByBundles (uses pointer comparison, removal does not keep order)
+// Sets related.R.ApprovalStatusChangedByAppUser.
+func (o *AppUser) RemoveApprovalStatusChangedByBundles(ctx context.Context, exec boil.ContextExecutor, related ...*Bundle) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	for _, rel := range related {
+		queries.SetScanner(&rel.ApprovalStatusChangedBy, nil)
+		if rel.R != nil {
+			rel.R.ApprovalStatusChangedByAppUser = nil
+		}
+		if _, err = rel.Update(ctx, exec, boil.Whitelist("approval_status_changed_by")); err != nil {
+			return err
+		}
+	}
+	if o.R == nil {
+		return nil
+	}
+
+	for _, rel := range related {
+		for i, ri := range o.R.ApprovalStatusChangedByBundles {
+			if rel != ri {
+				continue
+			}
+
+			ln := len(o.R.ApprovalStatusChangedByBundles)
+			if ln > 1 && i < ln-1 {
+				o.R.ApprovalStatusChangedByBundles[i] = o.R.ApprovalStatusChangedByBundles[ln-1]
+			}
+			o.R.ApprovalStatusChangedByBundles = o.R.ApprovalStatusChangedByBundles[:ln-1]
+			break
+		}
+	}
+
 	return nil
 }
 
