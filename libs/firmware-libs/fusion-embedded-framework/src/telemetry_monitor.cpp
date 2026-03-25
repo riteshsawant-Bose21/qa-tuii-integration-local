@@ -3,6 +3,8 @@
 
 #include <bosepro/telemetry.h>
 #include <bosepro/named_shared_memory_manager_factory.h>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
 #include <string>
 #include <functional>

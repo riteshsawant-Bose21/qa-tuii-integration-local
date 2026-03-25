@@ -25,6 +25,11 @@ func Created(c *gin.Context, data any) {
 	SendJSON(c, http.StatusCreated, data)
 }
 
+// Accepted sends a 202 Accepted response
+func Accepted(ctx *gin.Context) {
+	ctx.Status(http.StatusAccepted)
+}
+
 // NoContent sends a 204 No Content response
 func NoContent(c *gin.Context) {
 	c.Status(http.StatusNoContent)
