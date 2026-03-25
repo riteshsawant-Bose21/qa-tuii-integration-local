@@ -168,6 +168,73 @@ type SnapshotOperation struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+// SnapshotDefinition represents a stored Snapshot definition.
+type SnapshotDefinition struct {
+	ID   string         `json:"id"`
+	Name string         `json:"name,omitempty"`
+	Data map[string]any `json:"data"`
+}
+
+// Scene represents a stored Scene definition.
+type Scene struct {
+	ID   string         `json:"id"`
+	Name string         `json:"name,omitempty"`
+	Data map[string]any `json:"data"`
+}
+
+// SceneSet represents a set of scenes and current/default scene tracking.
+type SceneSet struct {
+	SetID          string  `json:"set_id"`
+	Name           string  `json:"name,omitempty"`
+	DefaultSceneID string  `json:"default_scene,omitempty"`
+	CurrentSceneID string  `json:"current_scene_id,omitempty"`
+	Scenes         []Scene `json:"scenes"`
+}
+
+// ActivateSnapshotRequest is the request body for snapshot activation.
+type ActivateSnapshotRequest struct {
+	ID string `json:"id"`
+}
+
+// ActivateSceneSetRequest is the request body for scene activation in a set.
+type ActivateSceneSetRequest struct {
+	SetID   string `json:"set_id"`
+	SceneID string `json:"scene_id"`
+}
+
+// CurrentSceneResponse is the response body for current scene lookup.
+type CurrentSceneResponse struct {
+	SetID        string               `json:"set_id"`
+	CurrentScene CurrentSceneMetadata `json:"current_scene"`
+}
+
+// CurrentSceneMetadata identifies the active scene details for a scene set.
+type CurrentSceneMetadata struct {
+	SceneID string `json:"scene_id"`
+	Name    string `json:"name,omitempty"`
+}
+
+// SnapshotListResponse is the response body for listing stored snapshots.
+type SnapshotListResponse struct {
+	Snapshots []SnapshotDefinition `json:"snapshots"`
+}
+
+// SceneListResponse is the response body for listing stored scenes.
+type SceneListResponse struct {
+	Scenes []Scene `json:"scenes"`
+}
+
+// SceneSetListResponse is the response body for listing stored scene sets.
+type SceneSetListResponse struct {
+	SceneSets []SceneSet `json:"scene_sets"`
+}
+
+// SceneCatalogListResponse is the response body for listing all stored scene data.
+type SceneCatalogListResponse struct {
+	Snapshots []SnapshotDefinition `json:"snapshots"`
+	SceneSets []SceneSet           `json:"scene_sets"`
+}
+
 // TaskType represents scheduled task
 type TaskType string
 
