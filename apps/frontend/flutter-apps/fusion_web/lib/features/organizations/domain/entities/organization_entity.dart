@@ -2,7 +2,8 @@
 enum OrganizationType {
   distributor,
   reseller,
-  endUser;
+  endUser,
+  bosePro;
 
   String get displayName {
     switch (this) {
@@ -12,6 +13,8 @@ enum OrganizationType {
         return 'Reseller';
       case OrganizationType.endUser:
         return 'End User / System Owner';
+      case OrganizationType.bosePro:
+        return 'Bose Pro';
     }
   }
 
@@ -21,6 +24,10 @@ enum OrganizationType {
         return OrganizationType.distributor;
       case 'reseller':
         return OrganizationType.reseller;
+      case 'bose pro':
+      case 'bosepro':
+      case 'bose_pro':
+        return OrganizationType.bosePro;
       case 'enduser':
       case 'end_user':
       case 'system_owner':
@@ -38,7 +45,8 @@ enum OrganizationRegion {
   asia,
   southAmerica,
   africa,
-  oceania;
+  oceania,
+  unknown;
 
   String get displayName {
     switch (this) {
@@ -54,6 +62,8 @@ enum OrganizationRegion {
         return 'Africa';
       case OrganizationRegion.oceania:
         return 'Oceania';
+      case OrganizationRegion.unknown:
+        return '-';
     }
   }
 
@@ -75,8 +85,11 @@ enum OrganizationRegion {
         return OrganizationRegion.africa;
       case 'oceania':
         return OrganizationRegion.oceania;
+      case 'unknown':
+      case '-':
+      case '':
       default:
-        return OrganizationRegion.northAmerica;
+        return OrganizationRegion.unknown;
     }
   }
 }

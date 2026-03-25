@@ -3,6 +3,7 @@ import 'package:fusion_web/core/usecases/usecase.dart';
 import 'package:fusion_web/features/users/domain/entities/user_entity.dart';
 import 'package:fusion_web/features/users/domain/repositories/users_repository.dart';
 import 'package:fusion_web/features/users/domain/usecases/users_usecases.dart';
+import 'package:fusion_web/core/permissions/permission_service.dart';
 
 class UsersViewModel extends BaseViewModel<List<UserEntity>> {
   final GetUsersUseCase getUsersUseCase;
@@ -13,6 +14,7 @@ class UsersViewModel extends BaseViewModel<List<UserEntity>> {
   final SearchUsersUseCase searchUsersUseCase;
   final InviteUserUseCase inviteUserUseCase;
   final ResendInviteUseCase resendInviteUseCase;
+  final InviteUsersToOrganizationUseCase inviteUsersToOrganizationUseCase;
   final UpdateUserRolesUseCase updateUserRolesUseCase;
   final AssignUserToProjectsUseCase assignUserToProjectsUseCase;
   final RemoveUserFromProjectsUseCase removeUserFromProjectsUseCase;
@@ -42,6 +44,7 @@ class UsersViewModel extends BaseViewModel<List<UserEntity>> {
     required this.searchUsersUseCase,
     required this.inviteUserUseCase,
     required this.resendInviteUseCase,
+    required this.inviteUsersToOrganizationUseCase,
     required this.updateUserRolesUseCase,
     required this.assignUserToProjectsUseCase,
     required this.removeUserFromProjectsUseCase,
@@ -205,12 +208,22 @@ class UsersViewModel extends BaseViewModel<List<UserEntity>> {
   }) async {
     try {
       setLoading();
+
+      // Get organization ID from PermissionService
+      final organizationId = PermissionService.instance.currentUser?.account.id;
+      if (organizationId == null) {
+        throw Exception(
+          'Organization ID not available. Please ensure user is properly authenticated.',
+        );
+      }
+
       final params = InviteUserParams(
         email: email,
         name: name,
         roles: roles,
         projectIds: projectIds,
         userType: userType,
+        organizationId: organizationId,
       );
       await inviteUserUseCase(params);
       await loadUsers();
@@ -225,6 +238,39 @@ class UsersViewModel extends BaseViewModel<List<UserEntity>> {
       // Show success message
     } catch (e) {
       setError('Failed to resend invite: ${e.toString()}');
+    }
+  }
+
+  Future<void> inviteUsersToOrganization(
+    List<Map<String, String>> users,
+  ) async {
+    try {
+      setLoading();
+
+      // Debug: Check if use case is null
+      if (inviteUsersToOrganizationUseCase == null) {
+        throw Exception(
+          'InviteUsersToOrganizationUseCase is null. Service locator needs reset.',
+        );
+      }
+
+      // Get organization ID from PermissionService
+      final organizationId = PermissionService.instance.currentUser?.account.id;
+      if (organizationId == null) {
+        throw Exception(
+          'Organization ID not available. Please ensure user is properly authenticated.',
+        );
+      }
+
+      final params = InviteUsersToOrganizationParams(
+        organizationId: organizationId,
+        users: users,
+      );
+
+      await inviteUsersToOrganizationUseCase(params);
+      await loadUsers();
+    } catch (e) {
+      setError('Failed to invite users to organization: ${e.toString()}');
     }
   }
 

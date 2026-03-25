@@ -41,13 +41,26 @@ class AuthViewModel extends ChangeNotifier {
 
       if (_isLoggedIn) {
         await _initializeApiToken();
-        _currentUser = await getCurrentUserUseCase();
-        print('🔍 AuthViewModel: Current user loaded: ${_currentUser?.email}');
+
+        // Validate token by trying to get user info
+        try {
+          _currentUser = await getCurrentUserUseCase();
+          print(
+            '🔍 AuthViewModel: Current user loaded: ${_currentUser?.email}',
+          );
+        } catch (e) {
+          print(
+            '⚠️ AuthViewModel: Failed to get current user, token may be invalid: $e',
+          );
+          // If we can't get user info, the token is likely invalid
+          await _handleInvalidToken();
+        }
       }
       notifyListeners();
     } catch (e) {
       print('⚠️ AuthViewModel: Error checking auth status: $e');
       _error = e.toString();
+      await _handleInvalidToken();
       notifyListeners();
     }
   }
@@ -57,17 +70,36 @@ class AuthViewModel extends ChangeNotifier {
     try {
       if (_authRepository != null) {
         final token = await _authRepository.getIdToken();
-        if (token != null) {
+        if (token != null && token.isNotEmpty) {
           ServiceLocator().apiService.setBearerToken(token);
           print('✅ AuthViewModel: API token set successfully');
         } else {
-          print('⚠️ AuthViewModel: No token received from auth repository');
+          print(
+            '⚠️ AuthViewModel: No valid token received from auth repository',
+          );
+          await _handleInvalidToken();
         }
       } else {
         print('⚠️ AuthViewModel: Auth repository is null');
       }
     } catch (e) {
       print('❌ AuthViewModel: Failed to initialize API token: $e');
+      await _handleInvalidToken();
+    }
+  }
+
+  Future<void> _handleInvalidToken() async {
+    print('🚨 AuthViewModel: Handling invalid/expired token');
+    ServiceLocator().apiService.clearToken();
+    _currentUser = null;
+    _isLoggedIn = false;
+    _error = 'Session expired. Please log in again.';
+
+    // Clear any stored auth data
+    try {
+      await logoutUseCase();
+    } catch (e) {
+      print('⚠️ AuthViewModel: Error during cleanup logout: $e');
     }
   }
 

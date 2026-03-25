@@ -77,23 +77,28 @@ class OrganizationModel extends OrganizationEntity {
       name: getString(json['name'], ''),
       type: OrganizationType.fromString(getString(json['type'], 'endUser')),
       region: OrganizationRegion.fromString(
-        getString(json['region'], 'northAmerica'),
+        getString(json['region'], 'unknown'),
       ),
       status: OrganizationStatus.fromString(
         getString(json['status'], 'active'),
       ),
       userCount: getInt(
-        json['userCount'] ?? json['users_count'] ?? json['totalUsers'],
+        json['userCount'] ??
+            json['user_count'] ??
+            json['users_count'] ??
+            json['totalUsers'],
         0,
       ),
       ongoingProjectsCount: getInt(
         json['ongoingProjectsCount'] ??
+            json['ongoing_projects'] ??
             json['ongoing_projects_count'] ??
             json['activeProjects'],
         0,
       ),
       completedProjectsCount: getInt(
         json['completedProjectsCount'] ??
+            json['completed_projects'] ??
             json['completed_projects_count'] ??
             json['completedProjects'],
         0,
@@ -341,5 +346,57 @@ class OrganizationModel extends OrganizationEntity {
         ],
       ),
     ];
+  }
+
+  factory OrganizationModel.fromEntity(OrganizationEntity entity) {
+    return OrganizationModel(
+      id: entity.id,
+      name: entity.name,
+      type: entity.type,
+      region: entity.region,
+      status: entity.status,
+      userCount: entity.userCount,
+      ongoingProjectsCount: entity.ongoingProjectsCount,
+      completedProjectsCount: entity.completedProjectsCount,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+      description: entity.description,
+      address: entity.address,
+      phone: entity.phone,
+      email: entity.email,
+      website: entity.website,
+      contactPersonName: entity.contactPersonName,
+      contactPersonEmail: entity.contactPersonEmail,
+      contactPersonPhone: entity.contactPersonPhone,
+      userIds: entity.userIds,
+      projectIds: entity.projectIds,
+      isActive: entity.isActive,
+    );
+  }
+
+  OrganizationEntity toEntity() {
+    return OrganizationEntity(
+      id: id,
+      name: name,
+      type: type,
+      region: region,
+      status: status,
+      userCount: userCount,
+      ongoingProjectsCount: ongoingProjectsCount,
+      completedProjectsCount: completedProjectsCount,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      description: description,
+      address: address,
+      phone: phone,
+      email: email,
+      website: website,
+      contactPersonName: contactPersonName,
+      contactPersonEmail: contactPersonEmail,
+      contactPersonPhone: contactPersonPhone,
+      userIds: userIds,
+      projectIds: projectIds,
+      isActive: isActive,
+    );
   }
 }

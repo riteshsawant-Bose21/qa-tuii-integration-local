@@ -153,6 +153,18 @@ class UsersRepositoryImpl implements UsersRepository {
   }
 
   @override
+  Future<void> inviteUsersToOrganization(
+    String organizationId,
+    List<Map<String, String>> users,
+  ) async {
+    try {
+      await remoteDataSource.inviteUsersToOrganization(organizationId, users);
+    } catch (e) {
+      throw Exception('Failed to invite users to organization: $e');
+    }
+  }
+
+  @override
   Future<UserEntity> updateUserRoles(UpdateUserRoleParams params) async {
     try {
       return await remoteDataSource.updateUserRoles(params);

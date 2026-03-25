@@ -19,7 +19,7 @@ class UsersPage extends StatefulWidget {
 }
 
 class _UsersPageState extends State<UsersPage> {
-  late final UsersViewModel _viewModel = ServiceLocator().usersViewModel;
+  late final UsersViewModel _viewModel;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String? _selectedRole;
@@ -28,6 +28,11 @@ class _UsersPageState extends State<UsersPage> {
   @override
   void initState() {
     super.initState();
+
+    // Reset cached viewmodel to ensure fresh instance with all dependencies
+    ServiceLocator().resetUsersViewModel();
+    _viewModel = ServiceLocator().usersViewModel;
+
     _viewModel.initialize();
     _searchController.addListener(() {
       setState(() {
@@ -976,17 +981,8 @@ class _UsersPageState extends State<UsersPage> {
       context: context,
       builder: (context) => InviteUserDialog(
         onInvite: (List<Map<String, String>> invites) async {
-          for (var invite in invites) {
-            await _viewModel.inviteUser(
-              email: invite['email']!,
-              name: _getNameFromEmail(
-                invite['email']!,
-              ), // Extract name from email
-              roles: [invite['role']!], // Convert single role to list
-              projectIds: [], // Empty project list for organization invites
-              userType: UserType.viewer, // Default user type
-            );
-          }
+          // Use the new bulk invite method
+          await _viewModel.inviteUsersToOrganization(invites);
 
           if (_viewModel.hasError) {
             _showErrorSnackBar(_viewModel.errorMessage);

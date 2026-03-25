@@ -92,6 +92,31 @@ class ResendInviteUseCase implements UseCase<void, String> {
   }
 }
 
+class InviteUsersToOrganizationParams {
+  final String organizationId;
+  final List<Map<String, String>> users;
+
+  const InviteUsersToOrganizationParams({
+    required this.organizationId,
+    required this.users,
+  });
+}
+
+class InviteUsersToOrganizationUseCase
+    implements UseCase<void, InviteUsersToOrganizationParams> {
+  final UsersRepository repository;
+
+  const InviteUsersToOrganizationUseCase(this.repository);
+
+  @override
+  Future<void> call(InviteUsersToOrganizationParams params) async {
+    return await repository.inviteUsersToOrganization(
+      params.organizationId,
+      params.users,
+    );
+  }
+}
+
 class UpdateUserRolesUseCase
     implements UseCase<UserEntity, UpdateUserRoleParams> {
   final UsersRepository repository;

@@ -91,6 +91,9 @@ class ServiceLocator {
         searchUsersUseCase: SearchUsersUseCase(repository),
         inviteUserUseCase: InviteUserUseCase(repository),
         resendInviteUseCase: ResendInviteUseCase(repository),
+        inviteUsersToOrganizationUseCase: InviteUsersToOrganizationUseCase(
+          repository,
+        ),
         updateUserRolesUseCase: UpdateUserRolesUseCase(repository),
         assignUserToProjectsUseCase: AssignUserToProjectsUseCase(repository),
         removeUserFromProjectsUseCase: RemoveUserFromProjectsUseCase(
@@ -203,6 +206,11 @@ class ServiceLocator {
     _authRepository = null;
     _organizationsRepository = null;
     _projectsRepository = null;
+    _usersRepository = null;
+  }
+
+  void resetUsersViewModel() {
+    _usersViewModel = null;
     _usersRepository = null;
   }
 

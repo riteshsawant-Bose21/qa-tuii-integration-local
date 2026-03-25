@@ -48,110 +48,174 @@ class OrganizationsViewModel extends BaseViewModel<List<OrganizationEntity>> {
     required this.deactivateOrganizationUseCase,
   });
 
-  // Getters
-  List<OrganizationEntity> get allOrganizations => _allOrganizations;
-  List<OrganizationEntity> get filteredOrganizations => _filteredOrganizations;
+  List<OrganizationEntity> get organizations {
+    if (_filteredOrganizations.isNotEmpty) {
+      return _filteredOrganizations;
+    }
+    return _allOrganizations;
+  }
+
   OrganizationEntity? get selectedOrganization => _selectedOrganization;
   List<OrganizationUserEntity> get organizationUsers => _organizationUsers;
   List<OrganizationProjectEntity> get organizationProjects =>
       _organizationProjects;
   String get searchQuery => _searchQuery;
   OrganizationMetrics? get metrics => _metrics;
+
+  String get errorMessage {
+    if (hasError && state is ErrorState) {
+      return (state as ErrorState).message;
+    }
+    return '';
+  }
+
+  // Getters for filter states
   OrganizationType? get selectedType => _selectedType;
   OrganizationRegion? get selectedRegion => _selectedRegion;
   OrganizationStatus? get selectedStatus => _selectedStatus;
 
-  // Initialize
   Future<void> initialize() async {
-    await loadOrganizations();
-    await loadMetrics();
+    await Future.wait([loadOrganizations(), loadMetrics()]);
   }
 
-  // Load Organizations
   Future<void> loadOrganizations() async {
     try {
       setLoading();
       final organizations = await getOrganizationsUseCase(NoParams());
       _allOrganizations = organizations;
-      _filteredOrganizations = organizations;
-      setLoaded(organizations);
+      _applyCurrentFilters();
+      setLoaded(
+        _filteredOrganizations.isNotEmpty
+            ? _filteredOrganizations
+            : _allOrganizations,
+      );
     } catch (e) {
-      setError('Failed to load organizations: $e');
+      print('Load organizations error: $e');
+      setError('Failed to load organizations: ${e.toString()}');
     }
   }
 
-  // Load Metrics
   Future<void> loadMetrics() async {
     try {
+      print('Loading organization metrics...');
       _metrics = await getOrganizationMetricsUseCase(NoParams());
-      // Don't call notifyListeners() here as this is a BaseViewModel
+      print(
+        'Metrics loaded: distributors=${_metrics?.totalDistributors}, resellers=${_metrics?.totalResellers}, endUsers=${_metrics?.totalEndUsers}, total=${_metrics?.totalOrganizations}',
+      );
+      // Trigger UI update since metrics are loaded separately
+      if (state is LoadedState) {
+        emit(state); // Re-emit current state to trigger UI rebuild
+      }
     } catch (e) {
-      print('Failed to load metrics: $e');
+      print('Load metrics error: $e');
+      // Don't affect main loading state, but still log the error
     }
   }
 
-  // Load Organization by ID
   Future<void> loadOrganizationById(String id) async {
     try {
+      print('🔄 Loading organization: $id');
+      setLoading();
+
+      // Clear previous organization data to prevent stale data display
+      print('🗑️ Clearing previous organization data');
+      _selectedOrganization = null;
+      _organizationUsers = [];
+      _organizationProjects = [];
+
       final organization = await getOrganizationByIdUseCase(id);
       _selectedOrganization = organization;
+      print('✅ Loaded organization: ${organization.name} (${organization.id})');
 
-      // Load organization users and projects
-      await loadOrganizationUsers(id);
-      await loadOrganizationProjects(id);
+      // Also load related data
+      print('📊 Loading users and projects for org: $id');
+      await Future.wait([
+        loadOrganizationUsers(id),
+        loadOrganizationProjects(id),
+      ]);
 
-      // Don't call notifyListeners() here as this is a BaseViewModel
+      print(
+        '🎉 Organization data loaded - Users: ${_organizationUsers.length}, Projects: ${_organizationProjects.length}',
+      );
+      setLoaded(
+        _filteredOrganizations.isNotEmpty
+            ? _filteredOrganizations
+            : _allOrganizations,
+      );
     } catch (e) {
-      print('Failed to load organization: $e');
-      setError('Failed to load organization details');
+      print('❌ Error loading organization $id: $e');
+      setError('Failed to load organization: ${e.toString()}');
     }
   }
 
-  // Load Organization Users
   Future<void> loadOrganizationUsers(String organizationId) async {
     try {
+      print('👥 Loading users for organization: $organizationId');
       _organizationUsers = await getOrganizationUsersUseCase(organizationId);
-      // Don't call notifyListeners() here as this is a BaseViewModel
+      print(
+        '👥 Loaded ${_organizationUsers.length} users for org: $organizationId',
+      );
     } catch (e) {
-      print('Failed to load organization users: $e');
+      print('❌ Error loading users for org $organizationId: $e');
+      // Silently handle error, don't affect main UI state
+      _organizationUsers = [];
     }
   }
 
-  // Load Organization Projects
   Future<void> loadOrganizationProjects(String organizationId) async {
     try {
+      print('🏗️ Loading projects for organization: $organizationId');
       _organizationProjects = await getOrganizationProjectsUseCase(
         organizationId,
       );
-      // Don't call notifyListeners() here as this is a BaseViewModel
+      print(
+        '🏗️ Loaded ${_organizationProjects.length} projects for org: $organizationId',
+      );
     } catch (e) {
-      print('Failed to load organization projects: $e');
+      print('❌ Error loading projects for org $organizationId: $e');
+      // Silently handle error, don't affect main UI state
+      _organizationProjects = [];
     }
   }
 
-  // Search Organizations
   Future<void> searchOrganizations(String query) async {
     _searchQuery = query;
-
     if (query.isEmpty) {
-      _filteredOrganizations = _allOrganizations;
-    } else {
-      try {
-        _filteredOrganizations = await searchOrganizationsUseCase(query);
-      } catch (e) {
-        // Fallback to local filtering
-        _filteredOrganizations = _allOrganizations
-            .where(
-              (org) => org.name.toLowerCase().contains(query.toLowerCase()),
-            )
-            .toList();
-      }
+      _filteredOrganizations = [];
+      setLoaded(_allOrganizations);
+      return;
     }
 
-    setLoaded(_filteredOrganizations);
+    try {
+      setLoading();
+      final results = await searchOrganizationsUseCase(query);
+      _filteredOrganizations = results;
+      setLoaded(_filteredOrganizations);
+    } catch (e) {
+      // Fallback to local filtering
+      _filterLocally();
+      setLoaded(_filteredOrganizations);
+    }
   }
 
-  // Apply Filters
+  void _filterLocally() {
+    _filteredOrganizations = _allOrganizations.where((org) {
+      final matchesQuery =
+          _searchQuery.isEmpty ||
+          org.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          org.description?.toLowerCase().contains(_searchQuery.toLowerCase()) ==
+              true;
+
+      final matchesType = _selectedType == null || org.type == _selectedType;
+      final matchesRegion =
+          _selectedRegion == null || org.region == _selectedRegion;
+      final matchesStatus =
+          _selectedStatus == null || org.status == _selectedStatus;
+
+      return matchesQuery && matchesType && matchesRegion && matchesStatus;
+    }).toList();
+  }
+
   Future<void> applyFilters({
     OrganizationType? type,
     OrganizationRegion? region,
@@ -161,123 +225,118 @@ class OrganizationsViewModel extends BaseViewModel<List<OrganizationEntity>> {
     _selectedRegion = region;
     _selectedStatus = status;
 
+    await _applyCurrentFilters();
+  }
+
+  Future<void> _applyCurrentFilters() async {
+    // If we have no filters and no search, show all
+    if (_selectedType == null &&
+        _selectedRegion == null &&
+        _selectedStatus == null &&
+        _searchQuery.isEmpty) {
+      _filteredOrganizations = [];
+      return;
+    }
+
     try {
+      // Try to use backend filtering if available
       final params = OrganizationFilterParams(
-        type: type,
-        region: region,
-        status: status,
-        searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
+        type: _selectedType,
+        region: _selectedRegion,
+        status: _selectedStatus,
+        searchQuery: _searchQuery,
       );
 
-      _filteredOrganizations = await filterOrganizationsUseCase(params);
-      setLoaded(_filteredOrganizations);
+      final results = await filterOrganizationsUseCase(params);
+      _filteredOrganizations = results;
     } catch (e) {
       // Fallback to local filtering
-      _filteredOrganizations = _allOrganizations.where((org) {
-        if (type != null && org.type != type) return false;
-        if (region != null && org.region != region) return false;
-        if (status != null && org.status != status) return false;
-        if (_searchQuery.isNotEmpty &&
-            !org.name.toLowerCase().contains(_searchQuery.toLowerCase()))
-          return false;
-        return true;
-      }).toList();
-
-      setLoaded(_filteredOrganizations);
+      _filterLocally();
     }
   }
 
-  // Clear Filters
   void clearFilters() {
     _selectedType = null;
     _selectedRegion = null;
     _selectedStatus = null;
     _searchQuery = '';
-    _filteredOrganizations = _allOrganizations;
-    setLoaded(_filteredOrganizations);
+    _filteredOrganizations = [];
+    setLoaded(_allOrganizations);
   }
 
-  // Create Organization
   Future<void> createOrganization(OrganizationEntity organization) async {
     try {
-      final createdOrg = await createOrganizationUseCase(organization);
-      _allOrganizations.add(createdOrg);
-      _filteredOrganizations = _allOrganizations;
-      await loadMetrics(); // Refresh metrics
-      setLoaded(_filteredOrganizations);
+      setLoading();
+      await createOrganizationUseCase(organization);
+      await loadOrganizations();
     } catch (e) {
-      setError('Failed to create organization: $e');
+      setError('Failed to create organization: \${e.toString()}');
     }
   }
 
-  // Update Organization
   Future<void> updateOrganization(OrganizationEntity organization) async {
     try {
-      final updatedOrg = await updateOrganizationUseCase(organization);
-      final index = _allOrganizations.indexWhere(
-        (org) => org.id == organization.id,
-      );
-      if (index != -1) {
-        _allOrganizations[index] = updatedOrg;
-        _filteredOrganizations = _allOrganizations;
-      }
+      setLoading();
+      await updateOrganizationUseCase(organization);
+
+      // Update the selected organization if it's the same one
       if (_selectedOrganization?.id == organization.id) {
-        _selectedOrganization = updatedOrg;
+        _selectedOrganization = organization;
       }
-      setLoaded(_filteredOrganizations);
+
+      await loadOrganizations();
     } catch (e) {
-      setError('Failed to update organization: $e');
+      setError('Failed to update organization: \${e.toString()}');
     }
   }
 
-  // Delete Organization
   Future<void> deleteOrganization(String id) async {
     try {
+      setLoading();
       await deleteOrganizationUseCase(id);
-      _allOrganizations.removeWhere((org) => org.id == id);
-      _filteredOrganizations = _allOrganizations;
-      await loadMetrics(); // Refresh metrics
-      setLoaded(_filteredOrganizations);
+
+      // Clear selected organization if it was deleted
+      if (_selectedOrganization?.id == id) {
+        _selectedOrganization = null;
+        _organizationUsers.clear();
+        _organizationProjects.clear();
+      }
+
+      await loadOrganizations();
     } catch (e) {
-      setError('Failed to delete organization: $e');
+      setError('Failed to delete organization: \${e.toString()}');
     }
   }
 
-  // Activate Organization
   Future<void> activateOrganization(String id) async {
     try {
-      final activatedOrg = await activateOrganizationUseCase(id);
-      final index = _allOrganizations.indexWhere((org) => org.id == id);
-      if (index != -1) {
-        _allOrganizations[index] = activatedOrg;
-        _filteredOrganizations = _allOrganizations;
-      }
+      setLoading();
+      final updatedOrg = await activateOrganizationUseCase(id);
+
+      // Update the selected organization if it's the same one
       if (_selectedOrganization?.id == id) {
-        _selectedOrganization = activatedOrg;
+        _selectedOrganization = updatedOrg;
       }
-      await loadMetrics(); // Refresh metrics
-      setLoaded(_filteredOrganizations);
+
+      await loadOrganizations();
     } catch (e) {
-      setError('Failed to activate organization: $e');
+      setError('Failed to activate organization: \${e.toString()}');
     }
   }
 
-  // Deactivate Organization
   Future<void> deactivateOrganization(String id) async {
     try {
-      final deactivatedOrg = await deactivateOrganizationUseCase(id);
-      final index = _allOrganizations.indexWhere((org) => org.id == id);
-      if (index != -1) {
-        _allOrganizations[index] = deactivatedOrg;
-        _filteredOrganizations = _allOrganizations;
-      }
+      setLoading();
+      final updatedOrg = await deactivateOrganizationUseCase(id);
+
+      // Update the selected organization if it's the same one
       if (_selectedOrganization?.id == id) {
-        _selectedOrganization = deactivatedOrg;
+        _selectedOrganization = updatedOrg;
       }
-      await loadMetrics(); // Refresh metrics
-      setLoaded(_filteredOrganizations);
+
+      await loadOrganizations();
     } catch (e) {
-      setError('Failed to deactivate organization: $e');
+      setError('Failed to deactivate organization: \${e.toString()}');
     }
   }
 

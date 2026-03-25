@@ -10,7 +10,6 @@ import 'package:fusion_web/features/organizations/domain/entities/organization_p
 import 'package:fusion_web/core/services/service_locator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
-import 'package:fusion_web/features/users/domain/entities/user_entity.dart';
 
 class OrganizationProfilePage extends StatefulWidget {
   final String organizationId;
@@ -32,19 +31,6 @@ class _OrganizationProfilePageState extends State<OrganizationProfilePage> {
     _viewModel.loadOrganizationById(widget.organizationId);
   }
 
-  Color _getStatusColor(OrganizationStatus status) {
-    switch (status) {
-      case OrganizationStatus.active:
-        return Colors.green;
-      case OrganizationStatus.inactive:
-        return Colors.red;
-      case OrganizationStatus.pending:
-        return Colors.orange;
-      case OrganizationStatus.suspended:
-        return Colors.red.shade800;
-    }
-  }
-
   Color _getTypeColor(OrganizationType type) {
     switch (type) {
       case OrganizationType.distributor:
@@ -53,19 +39,8 @@ class _OrganizationProfilePageState extends State<OrganizationProfilePage> {
         return Colors.blue;
       case OrganizationType.endUser:
         return Colors.green.shade700;
-    }
-  }
-
-  Color _getUserStatusColor(UserStatus status) {
-    switch (status) {
-      case UserStatus.active:
-        return Colors.green;
-      case UserStatus.invited:
-        return Colors.orange;
-      case UserStatus.pending:
-        return Colors.amber;
-      case UserStatus.inactive:
-        return Colors.red;
+      case OrganizationType.bosePro:
+        return Colors.orange.shade700;
     }
   }
 
@@ -407,40 +382,47 @@ class _OrganizationProfilePageState extends State<OrganizationProfilePage> {
   }
 
   Widget _buildUsersSection() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade200,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+    return BlocBuilder<
+      OrganizationsViewModel,
+      BaseState<List<OrganizationEntity>>
+    >(
+      builder: (context, state) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.shade200,
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Row(
-              children: [
-                Text(
-                  'Users (${_viewModel.organizationUsers.length})',
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[900],
-                  ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  children: [
+                    Text(
+                      'Users (${_viewModel.organizationUsers.length})',
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[900],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const Divider(height: 0),
+              _buildUsersTable(),
+            ],
           ),
-          const Divider(height: 0),
-          _buildUsersTable(),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -583,36 +565,43 @@ class _OrganizationProfilePageState extends State<OrganizationProfilePage> {
   }
 
   Widget _buildProjectsSection() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade200,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(
-              'Projects (${_viewModel.organizationProjects.length})',
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[900],
+    return BlocBuilder<
+      OrganizationsViewModel,
+      BaseState<List<OrganizationEntity>>
+    >(
+      builder: (context, state) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.shade200,
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               ),
-            ),
+            ],
           ),
-          const Divider(height: 0),
-          _buildProjectsTable(),
-        ],
-      ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Projects (${_viewModel.organizationProjects.length})',
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[900],
+                  ),
+                ),
+              ),
+              const Divider(height: 0),
+              _buildProjectsTable(),
+            ],
+          ),
+        );
+      },
     );
   }
 

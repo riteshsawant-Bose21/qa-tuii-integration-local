@@ -7,6 +7,7 @@ class InviteUserParams {
   final List<String> roles;
   final List<String> projectIds;
   final UserType userType;
+  final String organizationId;
 
   const InviteUserParams({
     required this.email,
@@ -14,6 +15,7 @@ class InviteUserParams {
     required this.roles,
     this.projectIds = const [],
     required this.userType,
+    required this.organizationId,
   });
 }
 
@@ -56,6 +58,10 @@ abstract class UsersRepository {
   // New methods for enhanced user management
   Future<UserEntity> inviteUser(InviteUserParams params);
   Future<void> resendInvite(String userId);
+  Future<void> inviteUsersToOrganization(
+    String organizationId,
+    List<Map<String, String>> users,
+  );
   Future<UserEntity> updateUserRoles(UpdateUserRoleParams params);
   Future<UserEntity> assignUserToProjects(
     String userId,

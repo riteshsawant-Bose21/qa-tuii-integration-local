@@ -281,4 +281,22 @@ class OrganizationUserModel extends OrganizationUserEntity {
         return [];
     }
   }
+
+  OrganizationUserEntity toEntity() {
+    return OrganizationUserEntity(
+      id: id,
+      name: name,
+      email: email,
+      roles: roles,
+      status: status,
+      userType: userType,
+      createdAt: createdAt,
+      organizationId: organizationId,
+      lastLoginAt: lastLoginAt,
+      inviteDate: inviteDate,
+      avatar: avatar,
+      phone: phone,
+      isActive: isActive,
+    );
+  }
 }

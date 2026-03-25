@@ -259,4 +259,21 @@ class OrganizationProjectModel extends OrganizationProjectEntity {
         return [];
     }
   }
+
+  OrganizationProjectEntity toEntity() {
+    return OrganizationProjectEntity(
+      id: id,
+      name: name,
+      status: status,
+      type: type,
+      region: region,
+      lastUpdated: lastUpdated,
+      createdAt: createdAt,
+      organizationId: organizationId,
+      description: description,
+      budgetAmount: budgetAmount,
+      projectManagerId: projectManagerId,
+      assignedUserIds: assignedUserIds,
+    );
+  }
 }

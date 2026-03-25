@@ -6,6 +6,7 @@ import 'package:fusion_web/core/navigation/app_router.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
 import 'package:fusion_web/core/presentation/base_viewmodel.dart';
 import 'package:fusion_web/core/widgets/viewmodels/sidebar_viewmodel.dart';
+import 'package:fusion_web/core/permissions/permission_service.dart';
 import 'package:fusion_web/features/auth/data/datasources/auth0_datasource.dart';
 import 'package:fusion_web/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:fusion_web/features/auth/domain/usecases/auth_usecases.dart';
@@ -176,12 +177,14 @@ class FusionSidebar extends StatelessWidget {
                     Icons.people,
                     DashboardTabs.users,
                   ),
-                  _buildNavItem(
-                    context,
-                    viewModel,
-                    Icons.business,
-                    DashboardTabs.organizations,
-                  ),
+                  // Only show Organizations tab for Super Admin with Bose Pro account
+                  if (_shouldShowOrganizations())
+                    _buildNavItem(
+                      context,
+                      viewModel,
+                      Icons.business,
+                      DashboardTabs.organizations,
+                    ),
                   _buildNavItem(
                     context,
                     viewModel,
@@ -231,6 +234,22 @@ class FusionSidebar extends StatelessWidget {
         onTabChanged?.call(tab);
       },
     );
+  }
+
+  /// Check if the Organizations tab should be shown based on user role and account type
+  bool _shouldShowOrganizations() {
+    final permissionService = PermissionService.instance;
+
+    // Check if user is authenticated
+    if (!permissionService.isAuthenticated) {
+      return false;
+    }
+
+    // Check if user role is "Super Admin" and account type is "Bose Pro"
+    final userRole = permissionService.userRole;
+    final accountType = permissionService.accountType;
+
+    return userRole == 'Super Admin' && accountType == 'Bose Pro';
   }
 
   // ===============================

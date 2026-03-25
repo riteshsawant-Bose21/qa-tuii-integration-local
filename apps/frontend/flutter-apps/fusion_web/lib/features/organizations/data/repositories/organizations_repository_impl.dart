@@ -1,58 +1,43 @@
 import 'package:fusion_web/features/organizations/data/datasources/organizations_datasource.dart';
-import 'package:fusion_web/features/organizations/data/models/organization_model.dart';
-import 'package:fusion_web/features/organizations/data/models/organization_user_model.dart';
-import 'package:fusion_web/features/organizations/data/models/organization_project_model.dart';
 import 'package:fusion_web/features/organizations/domain/entities/organization_entity.dart';
 import 'package:fusion_web/features/organizations/domain/entities/organization_user_entity.dart';
 import 'package:fusion_web/features/organizations/domain/entities/organization_project_entity.dart';
 import 'package:fusion_web/features/organizations/domain/repositories/organizations_repository.dart';
 
 class OrganizationsRepositoryImpl implements OrganizationsRepository {
-  final OrganizationsRemoteDataSource remoteDataSource;
-  final OrganizationsLocalDataSource localDataSource;
+  final OrganizationsDataSource remoteDataSource;
+  final OrganizationsDataSource localDataSource;
 
   const OrganizationsRepositoryImpl({
     required this.remoteDataSource,
     required this.localDataSource,
   });
 
-  OrganizationModel _entityToModel(OrganizationEntity organization) {
-    return OrganizationModel(
-      id: organization.id,
-      name: organization.name,
-      type: organization.type,
-      region: organization.region,
-      status: organization.status,
-      userCount: organization.userCount,
-      ongoingProjectsCount: organization.ongoingProjectsCount,
-      completedProjectsCount: organization.completedProjectsCount,
-      createdAt: organization.createdAt,
-      updatedAt: organization.updatedAt,
-      description: organization.description,
-      address: organization.address,
-      phone: organization.phone,
-      email: organization.email,
-      website: organization.website,
-      contactPersonName: organization.contactPersonName,
-      contactPersonEmail: organization.contactPersonEmail,
-      contactPersonPhone: organization.contactPersonPhone,
-      userIds: organization.userIds,
-      projectIds: organization.projectIds,
-      isActive: organization.isActive,
-    );
-  }
-
   @override
   Future<List<OrganizationEntity>> getOrganizations() async {
     try {
-      final remoteData = await remoteDataSource.getOrganizations();
-      localDataSource.cacheOrganizations(remoteData);
-      return remoteData;
+      // Try to get from remote first
+      final remoteOrganizations = await remoteDataSource.getOrganizations();
+      final organizationEntities = remoteOrganizations
+          .map((model) => model.toEntity())
+          .toList();
+
+      // Cache the results locally
+      if (localDataSource is OrganizationsLocalDataSource) {
+        (localDataSource as OrganizationsLocalDataSource).cacheOrganizations(
+          remoteOrganizations,
+        );
+      }
+
+      return organizationEntities;
     } catch (e) {
+      // Fallback to local cache
       try {
-        return await localDataSource.getOrganizations();
-      } catch (e) {
-        return OrganizationModel.mockOrganizations();
+        final cachedOrganizations = await localDataSource.getOrganizations();
+        return cachedOrganizations.map((model) => model.toEntity()).toList();
+      } catch (cacheError) {
+        // If both remote and cache fail, return empty list
+        return [];
       }
     }
   }
@@ -60,14 +45,18 @@ class OrganizationsRepositoryImpl implements OrganizationsRepository {
   @override
   Future<OrganizationEntity> getOrganizationById(String id) async {
     try {
-      return await remoteDataSource.getOrganizationById(id);
+      // Try remote first
+      final organizationModel = await remoteDataSource.getOrganizationById(id);
+      return organizationModel.toEntity();
     } catch (e) {
+      // Fallback to cache
       try {
-        return await localDataSource.getOrganizationById(id);
-      } catch (e) {
-        // Return mock data if not found in cache
-        final mockOrgs = OrganizationModel.mockOrganizations();
-        return mockOrgs.firstWhere((org) => org.id == id);
+        final cachedOrganization = await localDataSource.getOrganizationById(
+          id,
+        );
+        return cachedOrganization.toEntity();
+      } catch (cacheError) {
+        throw Exception('Organization with id \$id not found');
       }
     }
   }
@@ -77,12 +66,16 @@ class OrganizationsRepositoryImpl implements OrganizationsRepository {
     OrganizationEntity organization,
   ) async {
     try {
-      final model = _entityToModel(organization);
-      final result = await remoteDataSource.createOrganization(model);
-      return result;
+      final organizationModel = await remoteDataSource.createOrganization(
+        organization,
+      );
+
+      // Refresh local cache after successful creation
+      _refreshCacheInBackground();
+
+      return organizationModel.toEntity();
     } catch (e) {
-      print('Failed to create organization: $e');
-      rethrow;
+      throw Exception('Failed to create organization: \${e.toString()}');
     }
   }
 
@@ -91,33 +84,49 @@ class OrganizationsRepositoryImpl implements OrganizationsRepository {
     OrganizationEntity organization,
   ) async {
     try {
-      final model = _entityToModel(organization);
-      final result = await remoteDataSource.updateOrganization(model);
-      return result;
+      final organizationModel = await remoteDataSource.updateOrganization(
+        organization,
+      );
+
+      // Refresh local cache after successful update
+      _refreshCacheInBackground();
+
+      return organizationModel.toEntity();
     } catch (e) {
-      print('Failed to update organization: $e');
-      rethrow;
+      throw Exception('Failed to update organization: \${e.toString()}');
     }
   }
 
   @override
-  Future<void> deleteOrganization(String id) async {
+  Future<bool> deleteOrganization(String id) async {
     try {
-      await remoteDataSource.deleteOrganization(id);
+      final success = await remoteDataSource.deleteOrganization(id);
+
+      if (success) {
+        // Refresh local cache after successful deletion
+        _refreshCacheInBackground();
+      }
+
+      return success;
     } catch (e) {
-      print('Failed to delete organization: $e');
-      rethrow;
+      throw Exception('Failed to delete organization: \${e.toString()}');
     }
   }
 
   @override
   Future<List<OrganizationEntity>> searchOrganizations(String query) async {
     try {
-      return await remoteDataSource.searchOrganizations(query);
+      // Try remote search first
+      final remoteOrganizations = await remoteDataSource.searchOrganizations(
+        query,
+      );
+      return remoteOrganizations.map((model) => model.toEntity()).toList();
     } catch (e) {
+      // Fallback to local search
       try {
-        return await localDataSource.searchOrganizations(query);
-      } catch (e) {
+        final cachedResults = await localDataSource.searchOrganizations(query);
+        return cachedResults.map((model) => model.toEntity()).toList();
+      } catch (cacheError) {
         return [];
       }
     }
@@ -128,11 +137,17 @@ class OrganizationsRepositoryImpl implements OrganizationsRepository {
     OrganizationFilterParams params,
   ) async {
     try {
-      return await remoteDataSource.filterOrganizations(params);
+      // Try remote filtering first
+      final remoteOrganizations = await remoteDataSource.filterOrganizations(
+        params,
+      );
+      return remoteOrganizations.map((model) => model.toEntity()).toList();
     } catch (e) {
+      // Fallback to local filtering
       try {
-        return await localDataSource.filterOrganizations(params);
-      } catch (e) {
+        final cachedResults = await localDataSource.filterOrganizations(params);
+        return cachedResults.map((model) => model.toEntity()).toList();
+      } catch (cacheError) {
         return [];
       }
     }
@@ -141,11 +156,21 @@ class OrganizationsRepositoryImpl implements OrganizationsRepository {
   @override
   Future<OrganizationMetrics> getOrganizationMetrics() async {
     try {
-      return await remoteDataSource.getOrganizationMetrics();
+      // Try to get metrics from remote
+      final metrics = await remoteDataSource.getOrganizationMetrics();
+
+      // Cache the metrics locally
+      if (localDataSource is OrganizationsLocalDataSource) {
+        (localDataSource as OrganizationsLocalDataSource).cacheMetrics(metrics);
+      }
+
+      return metrics;
     } catch (e) {
+      // Fallback to cached metrics
       try {
         return await localDataSource.getOrganizationMetrics();
-      } catch (e) {
+      } catch (cacheError) {
+        // Return default metrics if both fail
         return const OrganizationMetrics(
           totalDistributors: 0,
           totalResellers: 0,
@@ -161,10 +186,20 @@ class OrganizationsRepositoryImpl implements OrganizationsRepository {
     String organizationId,
   ) async {
     try {
-      return await remoteDataSource.getOrganizationUsers(organizationId);
+      final userModels = await remoteDataSource.getOrganizationUsers(
+        organizationId,
+      );
+      return userModels.map((model) => model.toEntity()).toList();
     } catch (e) {
-      // Fallback to mock data
-      return OrganizationUserModel.mockUsersForOrganization(organizationId);
+      // Fallback to local cache (though it may be empty)
+      try {
+        final cachedUsers = await localDataSource.getOrganizationUsers(
+          organizationId,
+        );
+        return cachedUsers.map((model) => model.toEntity()).toList();
+      } catch (cacheError) {
+        return [];
+      }
     }
   }
 
@@ -173,32 +208,74 @@ class OrganizationsRepositoryImpl implements OrganizationsRepository {
     String organizationId,
   ) async {
     try {
-      return await remoteDataSource.getOrganizationProjects(organizationId);
-    } catch (e) {
-      // Fallback to mock data
-      return OrganizationProjectModel.mockProjectsForOrganization(
+      final projectModels = await remoteDataSource.getOrganizationProjects(
         organizationId,
       );
+      return projectModels.map((model) => model.toEntity()).toList();
+    } catch (e) {
+      // Fallback to local cache (though it may be empty)
+      try {
+        final cachedProjects = await localDataSource.getOrganizationProjects(
+          organizationId,
+        );
+        return cachedProjects.map((model) => model.toEntity()).toList();
+      } catch (cacheError) {
+        return [];
+      }
     }
   }
 
   @override
   Future<OrganizationEntity> activateOrganization(String id) async {
     try {
-      return await remoteDataSource.activateOrganization(id);
+      final organizationModel = await remoteDataSource.activateOrganization(id);
+
+      // Refresh local cache after successful activation
+      _refreshCacheInBackground();
+
+      return organizationModel.toEntity();
     } catch (e) {
-      print('Failed to activate organization: $e');
-      rethrow;
+      throw Exception('Failed to activate organization: \${e.toString()}');
     }
   }
 
   @override
   Future<OrganizationEntity> deactivateOrganization(String id) async {
     try {
-      return await remoteDataSource.deactivateOrganization(id);
+      final organizationModel = await remoteDataSource.deactivateOrganization(
+        id,
+      );
+
+      // Refresh local cache after successful deactivation
+      _refreshCacheInBackground();
+
+      return organizationModel.toEntity();
     } catch (e) {
-      print('Failed to deactivate organization: $e');
-      rethrow;
+      throw Exception('Failed to deactivate organization: \${e.toString()}');
+    }
+  }
+
+  // Helper method to refresh cache in background
+  void _refreshCacheInBackground() {
+    // Run cache refresh in background without awaiting
+    Future.microtask(() async {
+      try {
+        final remoteOrganizations = await remoteDataSource.getOrganizations();
+        if (localDataSource is OrganizationsLocalDataSource) {
+          (localDataSource as OrganizationsLocalDataSource).cacheOrganizations(
+            remoteOrganizations,
+          );
+        }
+      } catch (e) {
+        // Silently handle cache refresh errors
+      }
+    });
+  }
+
+  // Additional utility methods
+  Future<void> clearCache() async {
+    if (localDataSource is OrganizationsLocalDataSource) {
+      (localDataSource as OrganizationsLocalDataSource).clearCache();
     }
   }
 }

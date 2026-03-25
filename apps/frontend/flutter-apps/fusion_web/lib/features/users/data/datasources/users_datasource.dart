@@ -1,4 +1,5 @@
 import 'package:fusion_web/features/users/data/models/user_model.dart';
+import 'package:fusion_web/features/users/domain/entities/user_entity.dart';
 import 'package:fusion_web/features/users/domain/repositories/users_repository.dart';
 import 'package:fusion_web/core/services/api_service.dart';
 
@@ -9,13 +10,23 @@ abstract class UsersDataSource {
   Future<UserModel> updateUser(UserModel user);
   Future<void> deleteUser(String id);
   Future<List<UserModel>> searchUsers(String query);
-  
+
   // New methods
   Future<UserModel> inviteUser(InviteUserParams params);
   Future<void> resendInvite(String userId);
+  Future<void> inviteUsersToOrganization(
+    String organizationId,
+    List<Map<String, String>> users,
+  );
   Future<UserModel> updateUserRoles(UpdateUserRoleParams params);
-  Future<UserModel> assignUserToProjects(String userId, List<String> projectIds);
-  Future<UserModel> removeUserFromProjects(String userId, List<String> projectIds);
+  Future<UserModel> assignUserToProjects(
+    String userId,
+    List<String> projectIds,
+  );
+  Future<UserModel> removeUserFromProjects(
+    String userId,
+    List<String> projectIds,
+  );
   Future<UserModel> activateUser(String userId);
   Future<UserModel> deactivateUser(String userId);
   Future<List<UserModel>> filterUsers(UserFilterParams params);
@@ -172,22 +183,55 @@ class UsersRemoteDataSource implements UsersDataSource {
   @override
   Future<UserModel> inviteUser(InviteUserParams params) async {
     try {
-      final response = await _apiService.post(
-        '/organization/users/invite',
+      // Use the bulk invite endpoint for single user invite
+      await _apiService.post(
+        '/organizations/${params.organizationId}/invite-users',
         {
-          'email': params.email,
-          'name': params.name,
-          'roles': params.roles,
-          'project_ids': params.projectIds,
-          'user_type': params.userType.displayName,
+          'users': [
+            {
+              'email': params.email,
+              'role': params.roles.isNotEmpty ? params.roles.first : 'User',
+            },
+          ],
         },
       );
-      final userData = response['data'] as Map<String, dynamic>? ?? response;
-      return UserModel.fromJson(userData);
+
+      // Since the bulk invite endpoint doesn't return user data,
+      // create a basic UserModel from the invite parameters
+      return UserModel(
+        id: 'invited_${DateTime.now().millisecondsSinceEpoch}', // temporary ID
+        email: params.email,
+        name: params.name.isNotEmpty
+            ? params.name
+            : _extractNameFromEmail(params.email),
+        roles: params.roles.isNotEmpty ? params.roles : ['User'],
+        status: UserStatus.pending,
+        userType: params.userType,
+        createdAt: DateTime.now(),
+        permissions: const [], // Empty permissions for invited user
+        isActive: true,
+      );
     } catch (e) {
-      print('API Error, simulating invite: $e');
+      print('API Error inviting user: $e');
       throw Exception('Failed to invite user: $e');
     }
+  }
+
+  String _extractNameFromEmail(String email) {
+    final parts = email.split('@');
+    if (parts.isNotEmpty) {
+      final namePart = parts[0];
+      // Convert email prefix to a readable name (e.g., john.doe -> John Doe)
+      return namePart
+          .split('.')
+          .map(
+            (part) => part.isNotEmpty
+                ? part[0].toUpperCase() + part.substring(1)
+                : '',
+          )
+          .join(' ');
+    }
+    return 'Invited User';
   }
 
   @override
@@ -197,6 +241,20 @@ class UsersRemoteDataSource implements UsersDataSource {
     } catch (e) {
       print('API Error, simulating resend invite: $e');
       await Future.delayed(const Duration(milliseconds: 400));
+    }
+  }
+
+  @override
+  Future<void> inviteUsersToOrganization(
+    String organizationId,
+    List<Map<String, String>> users,
+  ) async {
+    try {
+      await _apiService.post('/organizations/$organizationId/invite-users', {
+        'users': users,
+      });
+    } catch (e) {
+      throw Exception('Failed to invite users to organization: $e');
     }
   }
 
@@ -216,7 +274,10 @@ class UsersRemoteDataSource implements UsersDataSource {
   }
 
   @override
-  Future<UserModel> assignUserToProjects(String userId, List<String> projectIds) async {
+  Future<UserModel> assignUserToProjects(
+    String userId,
+    List<String> projectIds,
+  ) async {
     try {
       final response = await _apiService.post(
         '/organization/users/$userId/projects',
@@ -231,7 +292,10 @@ class UsersRemoteDataSource implements UsersDataSource {
   }
 
   @override
-  Future<UserModel> removeUserFromProjects(String userId, List<String> projectIds) async {
+  Future<UserModel> removeUserFromProjects(
+    String userId,
+    List<String> projectIds,
+  ) async {
     try {
       await _apiService.delete('/organization/users/$userId/projects');
       // For now, fetch the updated user since delete doesn't return data
@@ -279,11 +343,15 @@ class UsersRemoteDataSource implements UsersDataSource {
     try {
       final queryParams = <String, dynamic>{};
       if (params.role != null) queryParams['role'] = params.role;
-      if (params.status != null) queryParams['status'] = params.status!.displayName;
-      if (params.userType != null) queryParams['user_type'] = params.userType!.displayName;
-      if (params.projectId != null) queryParams['project_id'] = params.projectId;
+      if (params.status != null)
+        queryParams['status'] = params.status!.displayName;
+      if (params.userType != null)
+        queryParams['user_type'] = params.userType!.displayName;
+      if (params.projectId != null)
+        queryParams['project_id'] = params.projectId;
       if (params.lastLoginStart != null) {
-        queryParams['last_login_start'] = params.lastLoginStart!.toIso8601String();
+        queryParams['last_login_start'] = params.lastLoginStart!
+            .toIso8601String();
       }
       if (params.lastLoginEnd != null) {
         queryParams['last_login_end'] = params.lastLoginEnd!.toIso8601String();
@@ -293,9 +361,14 @@ class UsersRemoteDataSource implements UsersDataSource {
           .map((e) => '${e.key}=${Uri.encodeComponent(e.value.toString())}')
           .join('&');
 
-      final response = await _apiService.get('/organization/users/filter?$queryString');
-      final usersJson = response['data'] as List<dynamic>? ?? response['users'] as List<dynamic>? ?? [];
-      
+      final response = await _apiService.get(
+        '/organization/users/filter?$queryString',
+      );
+      final usersJson =
+          response['data'] as List<dynamic>? ??
+          response['users'] as List<dynamic>? ??
+          [];
+
       return usersJson
           .map((json) => UserModel.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -310,7 +383,7 @@ class UsersRemoteDataSource implements UsersDataSource {
     try {
       final response = await _apiService.get('/organization/users/metrics');
       final metrics = response['data'] as Map<String, dynamic>? ?? response;
-      
+
       return {
         'total': metrics['total'] as int? ?? 0,
         'active': metrics['active'] as int? ?? 0,
@@ -393,17 +466,31 @@ class UsersLocalDataSource implements UsersDataSource {
   }
 
   @override
+  Future<void> inviteUsersToOrganization(
+    String organizationId,
+    List<Map<String, String>> users,
+  ) async {
+    throw UnimplementedError('Local datasource does not support bulk invite');
+  }
+
+  @override
   Future<UserModel> updateUserRoles(UpdateUserRoleParams params) async {
     throw UnimplementedError();
   }
 
   @override
-  Future<UserModel> assignUserToProjects(String userId, List<String> projectIds) async {
+  Future<UserModel> assignUserToProjects(
+    String userId,
+    List<String> projectIds,
+  ) async {
     throw UnimplementedError();
   }
 
   @override
-  Future<UserModel> removeUserFromProjects(String userId, List<String> projectIds) async {
+  Future<UserModel> removeUserFromProjects(
+    String userId,
+    List<String> projectIds,
+  ) async {
     throw UnimplementedError();
   }
 

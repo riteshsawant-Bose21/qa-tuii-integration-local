@@ -18,6 +18,16 @@ class ApiService {
 
   void clearToken() {
     _bearerToken = null;
+    print('🔐 API Service: Bearer token cleared');
+  }
+
+  void _handleUnauthorized() {
+    // Clear the expired/invalid token
+    clearToken();
+
+    // Import and redirect to login will be handled by the calling code
+    // throwing the exception will trigger error handling in the UI layer
+    print('🔄 API Service: Cleared token due to 401 Unauthorized');
   }
 
   Map<String, String> get _headers {
@@ -156,6 +166,12 @@ class ApiService {
         }
       } catch (e) {
         // If error body is not valid JSON, use the default error message
+      }
+
+      // Handle 401 Unauthorized - token expired/invalid
+      if (response.statusCode == 401) {
+        print('🚨 API Service: 401 Unauthorized - Token expired/invalid');
+        _handleUnauthorized();
       }
 
       throw ApiException(errorMessage, statusCode: response.statusCode);

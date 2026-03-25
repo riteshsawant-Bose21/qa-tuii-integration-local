@@ -17,8 +17,7 @@ class OrganizationsPage extends StatefulWidget {
 }
 
 class _OrganizationsPageState extends State<OrganizationsPage> {
-  late final OrganizationsViewModel _viewModel =
-      ServiceLocator().organizationsViewModel;
+  late final OrganizationsViewModel _viewModel;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   OrganizationType? _selectedType;
@@ -28,6 +27,14 @@ class _OrganizationsPageState extends State<OrganizationsPage> {
   @override
   void initState() {
     super.initState();
+
+    try {
+      _viewModel = ServiceLocator().organizationsViewModel;
+    } catch (e) {
+      print('OrganizationsPage: Error creating viewModel: $e');
+      rethrow;
+    }
+
     _viewModel.initialize();
     _searchController.addListener(() {
       setState(() {
@@ -45,16 +52,6 @@ class _OrganizationsPageState extends State<OrganizationsPage> {
     );
   }
 
-  void _clearFilters() {
-    setState(() {
-      _selectedType = null;
-      _selectedRegion = null;
-      _selectedStatus = null;
-      _searchController.clear();
-    });
-    _viewModel.clearFilters();
-  }
-
   Color _getTypeColor(OrganizationType type) {
     switch (type) {
       case OrganizationType.distributor:
@@ -63,6 +60,8 @@ class _OrganizationsPageState extends State<OrganizationsPage> {
         return Colors.blue;
       case OrganizationType.endUser:
         return Colors.green.shade700;
+      case OrganizationType.bosePro:
+        return Colors.orange.shade700;
     }
   }
 
