@@ -76,6 +76,33 @@ class _DroConfigScreenState extends State<DroConfigScreen> {
 
               const SizedBox(height: 16),
 
+              //button to trigger DRO process - for testing purposes
+              SizedBox(
+                width: 300,
+                child: Row(
+                  children: <Widget>[
+                    FusionAppText(
+                      text: 'Enable Dev Mode',
+                      style: TextStyle(
+                        color: context.colorScheme.textPrimary,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    FusionSwitch(
+                      height: 40,
+                      semanticId: 'trigger_dro_process',
+                      value: serviceLocator<SharedPreferencesHandler>().getBool(SharedPreferenceKeys.enableDevMode) ?? false,
+                      onChanged: (bool value) {
+                        serviceLocator<SharedPreferencesHandler>().setBool(SharedPreferenceKeys.enableDevMode, value);
+                        setState(() {});
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
               // --- DRO Response Images Section ---
               if (result != null) ...<Widget>[
                 _buildImagesSection(context, result),
