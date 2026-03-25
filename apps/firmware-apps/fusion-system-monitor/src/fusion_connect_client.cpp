@@ -786,6 +786,7 @@ private:
     void maybe_start_manager();
     void maybe_set_debug();
     void update_ptp_state();
+    void start_timing_session();
     void reset_timing_session(const char *reason);
     void maybe_set_phc_anchor();
 
@@ -1311,6 +1312,22 @@ void FusionConnectClient::reset_timing_session(const char *reason)
     SPDLOG_INFO("Timing state reset due to {}", reason);
 }
 
+void FusionConnectClient::start_timing_session()
+{
+    if (!nl_reset_timing_state(client)) {
+        SPDLOG_WARN("Failed to reset GPT timing state before enabling PPS");
+    }
+    if (!set_pps_enable(true)) {
+        SPDLOG_WARN("Failed to enable PPS");
+    } else {
+        SPDLOG_INFO("Enabled PHC PPS output; waiting for GPT PPS/disciplined timing");
+    }
+
+    ptp_anchor_pending = true;
+    phc_anchor_logged = false;
+    gpt_discipline_ready_logged = false;
+}
+
 void FusionConnectClient::update_ptp_state()
 {
     constexpr auto GM_WAIT = std::chrono::seconds(25);
@@ -1340,20 +1357,6 @@ void FusionConnectClient::update_ptp_state()
         SPDLOG_DEBUG("PTP status missing gmPresent; keeping previous sync state");
         return;
     }
-
-    auto enable_ptp = [&]() {
-        if (!nl_reset_timing_state(client)) {
-            SPDLOG_WARN("Failed to reset GPT timing state before enabling PPS");
-        }
-        if (!set_pps_enable(true)) {
-            SPDLOG_WARN("Failed to enable PPS");
-        } else {
-            SPDLOG_INFO("Enabled PHC PPS output; waiting for GPT PPS/disciplined timing");
-        }
-        ptp_anchor_pending = true;
-        phc_anchor_logged = false;
-        gpt_discipline_ready_logged = false;
-    };
 
     if (ptp_state == PtpState::RESET) {
         ptp_sync_good = false;
@@ -1389,7 +1392,7 @@ void FusionConnectClient::update_ptp_state()
                 ptp_state = PtpState::SYNCED;
                 ptp_state_since = now;
                 SPDLOG_INFO("No GM after {}s; assuming GM role", GM_WAIT.count());
-                enable_ptp();
+                start_timing_session();
             }
             break;
 
@@ -1422,7 +1425,7 @@ void FusionConnectClient::update_ptp_state()
                     ptp_anchor_pending = false;
                     ptp_state = PtpState::SYNCED;
                     ptp_state_since = now;
-                    enable_ptp();
+                    start_timing_session();
                 }
             } else {
                 ptp_good_streak = 0;
