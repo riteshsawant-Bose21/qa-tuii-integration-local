@@ -88,6 +88,25 @@ class CanvasControlWrapper extends StatelessWidget {
                 );
               }
             },
+            onPointerPanZoomStart: (PointerPanZoomStartEvent event) {
+              controller.onStartPanZoom(event.localPosition);
+            },
+            onPointerPanZoomUpdate: (PointerPanZoomUpdateEvent event) {
+              final Offset localPanDelta = event.localPanDelta * (1 / controller.state.scale);
+              controller.onUpdatePanZoom(event.scale, event.localPosition, localPanDelta);
+              final Offset correctedPosition = controller.correctPosition(
+                event.localPosition,
+              );
+              // Update mouse position for snapping before handling pan
+              context.read<FusionCanvasInputViewModel>().updateMousePosition(
+                correctedPosition,
+                localPanDelta, // Scale delta for consistent panning speed
+              );
+              // );
+            },
+            onPointerPanZoomEnd: (PointerPanZoomEndEvent event) {
+              controller.onEndPanZoom();
+            },
 
             onPointerMove: (PointerMoveEvent event) {
               final Offset correctedPosition = controller.correctPosition(
