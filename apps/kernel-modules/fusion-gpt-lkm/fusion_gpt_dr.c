@@ -1571,9 +1571,6 @@ static int gpt_probe(struct platform_device *pdev)
 	struct i2c_board_info dac_info = {
 		I2C_BOARD_INFO("mcp4725", DEFAULT_DAC_I2C_ADDR),
 	};
-	struct i2c_board_info si_info = {
-		I2C_BOARD_INFO("fusion-si5351b", DEFAULT_SI5351B_I2C_ADDR),
-	};
 
 	g = devm_kzalloc(&pdev->dev, sizeof(*g), GFP_KERNEL);
 	if (!g)
@@ -1650,8 +1647,12 @@ static int gpt_probe(struct platform_device *pdev)
 		goto err_disable_clks;
 	}
 
-	/* Create Si5351b client. */
-	g->si5351b_client = i2c_new_client_device(adapter, &si_info);
+	/*
+	 * Use a dummy client so the kernel does not try to bind a real
+	 * Si5351b driver when we only need raw I2C access for gain writes.
+	 */
+	g->si5351b_client = i2c_new_dummy_device(adapter,
+						 DEFAULT_SI5351B_I2C_ADDR);
 	if (IS_ERR(g->si5351b_client)) {
 		dev_warn(&pdev->dev, "failed to create I2C client for Si5351b: %ld\n",
 			 PTR_ERR(g->si5351b_client));
