@@ -2510,6 +2510,214 @@
           }
         }
       ]
+    },
+    {
+      "type": "folder",
+      "name": "WebSocket",
+      "filename": "WebSocket",
+      "seq": 16,
+      "examples": [],
+      "root": {
+        "docs": "WebSocket API for real-time device management with structured messaging.\n\n**Connection:** ws://{{api_url}}/ws\n**Protocol:** Custom message format (version 1)\n\n**Pull-then-Push Pattern:**\n- Request data (devices, config) automatically subscribes to updates\n- Use unsubscribe messages to stop notifications\n\n**Message Format:**\nRequest: {\"id\": \"req-001\", \"version\": 1, \"type\": \"message_type\", \"data\": {}}\nResponse: {\"id\": \"req-001\", \"version\": 1, \"type\": \"response_type\", \"code\": 3000, \"status\": \"success\", \"message\": \"OK\", \"data\": {}, \"timestamp\": \"2026-03-24T10:00:00Z\"}",
+        "meta": {
+          "name": "WebSocket",
+          "seq": 16
+        }
+      },
+      "items": [
+        {
+          "type": "ws",
+          "name": "List All Devices",
+          "filename": "List All Devices.bru",
+          "seq": 1,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/ws",
+            "body": {
+              "mode": "ws",
+              "ws": {
+                "name": "devices request",
+                "type": "json",
+                "content": "{\n  \"id\": \"devices-001\",\n  \"version\": 1,\n  \"type\": \"devices\"\n}"
+              }
+            },
+            "auth": {
+              "mode": "none"
+            }
+          },
+          "docs": "List all devices and automatically subscribe to device updates."
+        },
+        {
+          "type": "ws",
+          "name": "Get Device By ID",
+          "filename": "Get Device By ID.bru",
+          "seq": 2,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/ws",
+            "body": {
+              "mode": "ws",
+              "ws": {
+                "name": "device_by_id request",
+                "type": "json",
+                "content": "{\n  \"id\": \"device-001\",\n  \"version\": 1,\n  \"type\": \"device_by_id\",\n  \"data\": {\n    \"device_id\": \"fusion_dha3vl5kxmdn_1md6_instance\"\n  }\n}"
+              }
+            },
+            "auth": {
+              "mode": "none"
+            }
+          },
+          "docs": "Get a specific device by ID and automatically subscribe to device updates."
+        },
+        {
+          "type": "ws",
+          "name": "Get Configuration",
+          "filename": "Get Configuration.bru",
+          "seq": 3,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/ws",
+            "body": {
+              "mode": "ws",
+              "ws": {
+                "name": "config request",
+                "type": "json",
+                "content": "{\n  \"id\": \"config-001\",\n  \"version\": 1,\n  \"type\": \"config\"\n}"
+              }
+            },
+            "auth": {
+              "mode": "none"
+            }
+          },
+          "docs": "Get current configuration and automatically subscribe to config updates."
+        },
+        {
+          "type": "ws",
+          "name": "Patch Configuration",
+          "filename": "Patch Configuration.bru",
+          "seq": 4,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/ws",
+            "body": {
+              "mode": "ws",
+              "ws": {
+                "name": "patch_config request",
+                "type": "json",
+                "content": "{\n  \"id\": \"req-5\",\n  \"version\": 1,\n  \"type\": \"patch_config\",\n  \"data\": {\n    \"settings\": {\n      \"audio\": {\n        \"gain3\": {\n          \"gain\": 13\n        }\n      }\n    }\n  }\n}"
+              }
+            },
+            "auth": {
+              "mode": "none"
+            }
+          },
+          "docs": "Apply partial configuration patch with same semantics as HTTP PATCH. Empty patch {} is valid (no-op)."
+        },
+        {
+          "type": "ws",
+          "name": "Update Device Info",
+          "filename": "Update Device Info.bru",
+          "seq": 5,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/ws",
+            "body": {
+              "mode": "ws",
+              "ws": {
+                "name": "update_device_info request",
+                "type": "json",
+                "content": "{\n  \"id\": \"update-001\",\n  \"version\": 1,\n  \"type\": \"update_device_info\",\n  \"data\": {\n    \"device_id\": \"fusion_dha3vl5kxmdn_1md6_instance\",\n    \"name\": \"Updated Device Name\",\n    \"location\": \"Building B - Room 101\",\n    \"is_claimed\": true\n  }\n}"
+              }
+            },
+            "auth": {
+              "mode": "none"
+            }
+          },
+          "docs": "Update device information using DevicePatch structure. All fields except device_id are optional (partial update)."
+        },
+        {
+          "type": "ws",
+          "name": "Unsubscribe from Config",
+          "filename": "Unsubscribe from Config.bru",
+          "seq": 6,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/ws",
+            "body": {
+              "mode": "ws",
+              "ws": {
+                "name": "unsubscribe_config request",
+                "type": "json",
+                "content": "{\n  \"id\": \"unsub-config-001\",\n  \"version\": 1,\n  \"type\": \"unsubscribe_config\"\n}"
+              }
+            },
+            "auth": {
+              "mode": "none"
+            }
+          },
+          "docs": "Stop receiving configuration update push notifications."
+        },
+        {
+          "type": "ws",
+          "name": "Unsubscribe from Devices",
+          "filename": "Unsubscribe from Devices.bru",
+          "seq": 7,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/ws",
+            "body": {
+              "mode": "ws",
+              "ws": {
+                "name": "unsubscribe_devices request",
+                "type": "json",
+                "content": "{\n  \"id\": \"unsub-devices-001\",\n  \"version\": 1,\n  \"type\": \"unsubscribe_devices\"\n}"
+              }
+            },
+            "auth": {
+              "mode": "none"
+            }
+          },
+          "docs": "Stop receiving device update push notifications."
+        },
+        {
+          "type": "ws",
+          "name": "Ping Health Check",
+          "filename": "Ping Health Check.bru",
+          "seq": 8,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/ws",
+            "body": {
+              "mode": "ws",
+              "ws": {
+                "name": "ping request",
+                "type": "json",
+                "content": "{\n  \"id\": \"ping-001\",\n  \"version\": 1,\n  \"type\": \"ping\"\n}"
+              }
+            },
+            "auth": {
+              "mode": "none"
+            }
+          },
+          "docs": "Health check - responds with pong."
+        }
+      ]
     }
   ],
   "activeEnvironmentUid": "NuA59EZe9jyRMKDaNQCaJ",
