@@ -85,20 +85,24 @@ class SplViewModel extends Cubit<SplState> {
     final List<ListeningArea> surfaces = serviceLocator<ProjectViewModel>().getAllDrawnListeningAreasForFloor(
       floorId: currentFloor.id,
     );
-    // if (!useIsolateEngine) {
-    //   await SPLCalculationManager.calculateSpl(
-    //     _engine!,
-    //     speakers,
-    //     surfaces,
-    //     _lastPanelData!.getResolutionSpacing(),
-    //   );
-    // } else {
+
+    final List<ListeningArea> nonZeroAreas = <ListeningArea>[];
+    for (final ListeningArea area in surfaces) {
+      final Path path = Path()..addPolygon(area.vertices.map((FusionCanvasPoint e) => e.position).toList(), true);
+
+      final Size size = path.getBounds().size;
+      if (size.width > 0 && size.height > 0) {
+        nonZeroAreas.add(area);
+      } else {
+        print("Skipping area with zero size: ${area.id}, size: $size");
+      }
+    }
+
     await IsolatedMaceCalculationManager.instance.calculateSpl(
       speakers: speakers,
-      surfaces: surfaces,
+      surfaces: nonZeroAreas,
       resolutionSpacing: state.panelData.getResolutionSpacing(),
     );
-    // }
 
     final SplPanelData currentPanelData = splRangeController.getPanelData();
     final Bandwidth maceBandwidth = _mapToMaceBandwidth(
