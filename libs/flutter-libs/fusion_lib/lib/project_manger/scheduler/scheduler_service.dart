@@ -16,10 +16,41 @@ extension SchedulerService on ProjectService {
     if (!schedulerConfig.exists(scheduleId)) {
       throw Exception("Schedule with ID $scheduleId does not exist.");
     }
+
+    final parentEvents = relationships.getParents(RelationshipType.eventsItemMapping, scheduleId);
+    final copyOfParentEvents = List<String>.from(parentEvents);
+    for (final eventId in copyOfParentEvents) {
+      removeEvent(eventId);
+    }
+
     schedulerConfig.remove(scheduleId);
   }
 
   List<ScheduleConfig> getAllSchedules() {
     return schedulerConfig.getAll();
+  }
+
+  Map<String, ScheduleConfig> reOrderSchedule({required String scheduleIdToMove, required String scheduleAtNewIndexId}) {
+    List<ScheduleConfig> items = getAllSchedules();
+
+    // Find indices
+    int fromIndex = items.indexWhere((s) => s.id == scheduleIdToMove);
+    int toIndex = items.indexWhere((s) => s.id == scheduleAtNewIndexId);
+
+    // Validate
+    if (fromIndex == -1 || toIndex == -1) {
+      throw ArgumentError('Invalid Schedule IDs');
+    }
+
+    // Reorder using List operations
+    ScheduleConfig item = items.removeAt(fromIndex);
+    items.insert(toIndex, item);
+
+    // Convert back to Map
+    return {for (var s in items) s.id: s};
+  }
+
+  ScheduleConfig? getScheduleById(String scheduleId) {
+    return schedulerConfig.get(scheduleId);
   }
 }

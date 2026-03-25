@@ -9,13 +9,16 @@ import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_dialog.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/source_model.dart';
 import 'package:fusion_lib/models/project_entities/source_set_model.dart';
 
 import '../../../core/constants/assets_constants.dart';
-import '../../../core/service_locator.dart';
-import '../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../viewModel/source_sets_viewmodel/config_source_sets_state.dart';
+import '../viewModel/source_sets_viewmodel/config_source_sets_viewmodel.dart';
+import '../viewModel/sources_viewmodel/config_sources_viewmodel.dart';
 
 class SelectedSource {
   final String id;
@@ -37,7 +40,9 @@ class SourceSetItem extends StatefulWidget {
 
 class _SourceSetItemState extends State<SourceSetItem> {
   late ValueNotifier<bool> _isSourcesSetExpanded;
-  ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
+
+  ConfigSourceSetsViewmodel get _sourceSetsViewmodel => context.read<ConfigSourceSetsViewmodel>();
+  ConfigSourcesViewmodel get _sourcesViewmodel => context.read<ConfigSourcesViewmodel>();
   final TextEditingController _sourceSetNameController = TextEditingController();
   final List<SelectedSource> _selectedSources = <SelectedSource>[];
   bool _isHovered = false;
@@ -50,7 +55,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
   @override
   void initState() {
     super.initState();
-    _isSourcesSetExpanded = ValueNotifier<bool>(false);
+    _isSourcesSetExpanded = ValueNotifier<bool>(true);
   }
 
   @override
@@ -74,12 +79,13 @@ class _SourceSetItemState extends State<SourceSetItem> {
     );
 
     /// Add selected sources to the new source set
-    _projectViewModel.updateSourceSet(sourceSet: newSourceSet);
+    _sourceSetsViewmodel.updateSourceSet(newSourceSet);
 
-    _projectViewModel.updateSourcesInSourceSet(
+    _sourceSetsViewmodel.updateSourcesInSourceSet(
       sourceSetId: newSourceSet.id,
       sourceIds: _selectedSources.map((SelectedSource s) => s.id).toList(),
     );
+    _sourcesViewmodel.syncWithProjectViewModel();
 
     /// Expand source set to show updated sources
     _isSourcesSetExpanded.value = true;
@@ -104,159 +110,166 @@ class _SourceSetItemState extends State<SourceSetItem> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: _isSourcesSetExpanded,
-      builder: (BuildContext context, bool subZoneExpanded, Widget? child) {
-        return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-          builder: (BuildContext context, ProjectViewModelState state) {
-            return Column(
-              children: <Widget>[
-                MouseRegion(
-                  onEnter: (_) => setState(() => _isHovered = true),
-                  onExit: (_) => setState(() => _isHovered = false),
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 250),
+      alignment: AlignmentGeometry.topCenter,
+      child: ValueListenableBuilder<bool>(
+        valueListenable: _isSourcesSetExpanded,
+        builder: (BuildContext context, bool subZoneExpanded, Widget? child) {
+          return Column(
+            children: <Widget>[
+              MouseRegion(
+                onEnter: (_) => setState(() => _isHovered = true),
+                onExit: (_) => setState(() => _isHovered = false),
 
-                  child: GestureDetector(
-                    onTap: () {
-                      /// Toggle expand/collapse
-                      _isSourcesSetExpanded.value = !_isSourcesSetExpanded.value;
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      padding: const EdgeInsets.only(left: 12, right: 12),
-                      height: 36,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: widget.isDragHovered ? Theme.of(context).colorScheme.primary : Colors.transparent,
-                          width: 1.0,
+                child: GestureDetector(
+                  onTap: () {
+                    /// Toggle expand/collapse
+                    _isSourcesSetExpanded.value = !_isSourcesSetExpanded.value;
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 8, left: 8, right: 8),
+                    padding: const EdgeInsets.only(left: 12, right: 12),
+                    height: 36,
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: widget.isDragHovered ? Theme.of(context).colorScheme.primary : Colors.transparent,
+                        width: 1.0,
+                      ),
+                      borderRadius: BorderRadius.circular(6),
+                      color:
+                          widget.isDragHovered
+                              ? Theme.of(context).colorScheme.primary.withAlpha(50)
+                              : (_isHovered ? context.colorScheme.elevation3 : context.colorScheme.elevation2),
+                    ),
+                    child: Row(
+                      children: <Widget>[
+                        /// Expand/collapse icon
+                        Icon(
+                          _isSourcesSetExpanded.value ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
+                          color: Theme.of(context).colorScheme.iconWhite,
                         ),
-                        color:
-                            widget.isDragHovered
-                                ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                                : (_isHovered ? Theme.of(context).colorScheme.grey.withAlpha(200) : Theme.of(context).colorScheme.greyLight),
-                      ),
-                      child: Row(
-                        children: <Widget>[
-                          /// Expand/collapse icon
-                          Icon(
-                            _isSourcesSetExpanded.value ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
-                            color: Theme.of(context).colorScheme.fusionTextViewColor.withAlpha(90),
-                          ),
-                          const SizedBox(width: 4),
+                        const SizedBox(width: 4),
 
-                          /// Source set name
-                          Expanded(
-                            child: FusionAppText(
-                              text: widget.sourceSet.name,
-                              maxLine: 1,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
+                        /// Source set name
+                        Expanded(
+                          child: FusionAppText(
+                            text: widget.sourceSet.name,
+                            maxLine: 1,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
+                        ),
 
-                          Visibility(
-                            visible: _projectViewModel.canLinkSourceSet(sourceSetId: widget.sourceSet.id),
-                            child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                              builder: (BuildContext context, ProjectViewModelState state) {
-                                return Tooltip(
-                                  message: widget.sourceSet.isLinked ? 'Unlink Source Set' : 'Link Source Set',
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      showDialog(
-                                        context: context,
+                        Visibility(
+                          visible: _sourceSetsViewmodel.canLinkSourceSet(sourceSetId: widget.sourceSet.id),
+                          child: BlocBuilder<ConfigSourceSetsViewmodel, ConfigSourceSetsState>(
+                            builder: (BuildContext context, ConfigSourceSetsState state) {
+                              return Tooltip(
+                                message: widget.sourceSet.isLinked ? 'Unlink Source Set' : 'Link Source Set',
+                                child: GestureDetector(
+                                  onTap: () {
+                                    showDialog(
+                                      context: context,
 
-                                        builder:
-                                            (_) => FusionDialog(
-                                              title: "Confirm ${widget.sourceSet.isLinked ? "Unlink" : 'Link'}",
-                                              description:
-                                                  'Are you sure you want to ${widget.sourceSet.isLinked ? 'unlink' : 'link'} this source set? All associated processing blocks will be affected.',
-                                              primaryButtonLabel: widget.sourceSet.isLinked ? "Unlink" : 'Link',
-                                              secondaryButtonLabel: 'Cancel',
-                                              onPrimaryPressed: () {
-                                                if (widget.sourceSet.isLinked) {
-                                                  _projectViewModel.unlinkSourceSet(sourceSetId: widget.sourceSet.id);
-                                                  FusionToast.success(
-                                                    context,
-                                                    message: "Source set unlinked successfully",
-                                                  );
-                                                } else {
-                                                  _projectViewModel.linkSourceSet(sourceSetId: widget.sourceSet.id);
-                                                  FusionToast.success(
-                                                    context,
-                                                    message: "Source set linked successfully",
-                                                  );
-                                                }
-                                                Navigator.pop(context);
-                                              },
-                                              onSecondaryPressed: () => Navigator.pop(context),
-                                            ),
-                                      );
-                                    },
-                                    child: FusionImage.asset(
-                                      widget.sourceSet.isLinked ? Assets.unLinkIcon : Assets.linkIcon,
-                                      width: 22,
-                                      height: 22,
-                                      fit: BoxFit.contain,
-                                    ),
+                                      builder:
+                                          (_) => FusionDialog(
+                                            title: "Confirm ${widget.sourceSet.isLinked ? "Unlink" : 'Link'}",
+                                            description:
+                                                'Are you sure you want to ${widget.sourceSet.isLinked ? 'unlink' : 'link'} this source set? All associated processing blocks will be affected.',
+                                            primaryButtonLabel: widget.sourceSet.isLinked ? "Unlink" : 'Link',
+                                            secondaryButtonLabel: 'Cancel',
+                                            onPrimaryPressed: () {
+                                              if (widget.sourceSet.isLinked) {
+                                                _sourceSetsViewmodel.unlinkSourceSet(sourceSetId: widget.sourceSet.id);
+                                                FusionToast.success(
+                                                  context,
+                                                  message: "Source set unlinked successfully",
+                                                );
+                                              } else {
+                                                _sourceSetsViewmodel.linkSourceSet(sourceSetId: widget.sourceSet.id);
+                                                FusionToast.success(
+                                                  context,
+                                                  message: "Source set linked successfully",
+                                                );
+                                              }
+                                              Navigator.pop(context);
+                                            },
+                                            onSecondaryPressed: () => Navigator.pop(context),
+                                          ),
+                                    );
+                                  },
+                                  child: FusionImage.asset(
+                                    widget.sourceSet.isLinked ? Assets.unLinkIcon : Assets.linkIcon,
+                                    width: 22,
+                                    height: 22,
+                                    assetColor: context.colorScheme.primaryWhite,
+                                    fit: BoxFit.contain,
                                   ),
-                                );
-                              },
-                            ),
+                                ),
+                              );
+                            },
                           ),
+                        ),
 
-                          const SizedBox(width: 8),
-                          Tooltip(
-                            message: 'Processing Blocks',
-                            child: InkWell(
-                              onTap: () {
-                                ProcessingChainView.showForSourceSet(context, widget.sourceSet);
-                              },
-                              child: const FusionImage.asset(
-                                Assets.processingBlocksIcon,
-                                width: 18,
-                                height: 12,
-                                fit: BoxFit.contain,
-                              ),
+                        const SizedBox(width: 8),
+                        Tooltip(
+                          message: 'Processing Blocks',
+                          child: InkWell(
+                            onTap: () {
+                              ProcessingChainView.showForSourceSet(context, widget.sourceSet);
+                            },
+                            child: FusionImage.asset(
+                              Assets.processingBlocksIcon,
+                              width: 18,
+                              height: 12,
+                              assetColor: context.colorScheme.primaryWhite,
+                              fit: BoxFit.contain,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Tooltip(
-                            message: 'Edit Source Set',
-                            child: GestureDetector(
-                              key: _addSourceIconKey,
-                              onTap: _showEditSourceSetPopup,
-                              child: const FusionImage.asset(
-                                Assets.addSourceIcon,
-                                width: 22,
-                                height: 22,
-                                fit: BoxFit.contain,
-                              ),
+                        ),
+                        const SizedBox(width: 8),
+                        Tooltip(
+                          message: 'Edit Source Set',
+                          child: GestureDetector(
+                            key: _addSourceIconKey,
+                            onTap: _showEditSourceSetPopup,
+                            child: FusionImage.asset(
+                              Assets.addSourceIcon,
+                              width: 22,
+                              height: 22,
+                              assetColor: context.colorScheme.primaryWhite,
+                              fit: BoxFit.contain,
                             ),
                           ),
-                          Tooltip(
-                            message: 'Delete Source Set',
-                            child: GestureDetector(
-                              onTap: _confirmDeleteSourceSet,
-                              child: const FusionImage.asset(
-                                Assets.deleteIcon,
-                                width: 17,
-                                height: 17,
-                                fit: BoxFit.contain,
-                              ),
+                        ),
+                        const SizedBox(width: 4),
+
+                        Tooltip(
+                          message: 'Delete Source Set',
+                          child: GestureDetector(
+                            onTap: _confirmDeleteSourceSet,
+                            child: FusionImage.asset(
+                              Assets.deleteIcon,
+                              width: 17,
+                              height: 17,
+                              assetColor: context.colorScheme.primaryWhite,
+                              fit: BoxFit.contain,
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                if (subZoneExpanded) _buildSourcesList(),
-              ],
-            );
-          },
-        );
-      },
+              ),
+              if (subZoneExpanded) _buildSourcesList(),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -268,7 +281,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
     }
 
     /// Pre-select sources already in this source set
-    final List<Source> currentSourcesInSet = _projectViewModel.getSourcesInSourceSet(sourceSetId: widget.sourceSet.id);
+    final List<Source> currentSourcesInSet = _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: widget.sourceSet.id);
     for (final Source s in currentSourcesInSet) {
       final bool alreadyAdded = _selectedSources.any((SelectedSource sel) => sel.id == s.id);
       if (!alreadyAdded) {
@@ -288,7 +301,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
     await showMenu<dynamic>(
       context: context,
       position: position,
-      color: Theme.of(context).colorScheme.white,
+      color: context.colorScheme.elevation1,
       constraints: const BoxConstraints(maxHeight: 500, maxWidth: 250),
       items: <PopupMenuEntry<dynamic>>[
         PopupMenuItem<dynamic>(
@@ -301,7 +314,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                 return SingleChildScrollView(
                   child: _SourceSetCreationWidget(
                     sourceSetNameController: _sourceSetNameController,
-                    availableSources: _projectViewModel.sources,
+                    availableSources: _sourceSetsViewmodel.getAllSources(),
                     selectedSources: _selectedSources,
                     onAddSourceSet: () {
                       _editSourceSet();
@@ -333,11 +346,13 @@ class _SourceSetItemState extends State<SourceSetItem> {
 
   /// Build the list of sources within the source set
   Widget _buildSourcesList() {
-    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-      builder: (BuildContext context, ProjectViewModelState state) {
-        final List<Source> sourceList = _projectViewModel.getSourcesInSourceSet(sourceSetId: widget.sourceSet.id);
+    return BlocBuilder<ConfigSourceSetsViewmodel, ConfigSourceSetsState>(
+      builder: (BuildContext context, ConfigSourceSetsState state) {
+        final List<Source> sourceList = _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: widget.sourceSet.id);
         return Container(
-          color: Theme.of(context).colorScheme.greyLight.withAlpha(50),
+          padding: const EdgeInsets.only(top: 12, bottom: 12),
+          margin: const EdgeInsets.only(left: 12, right: 12),
+          color: context.colorScheme.elevation2.withAlpha(100),
           child: ReorderableListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -369,14 +384,22 @@ class _SourceSetItemState extends State<SourceSetItem> {
                   color: Colors.transparent,
                   child: Opacity(
                     opacity: 0.8,
-                    child: Container(color: context.colorScheme.white, width: 220, child: SourceItem(source: sourceData, isDragging: true)),
+                    child: Container(
+                      color: context.colorScheme.elevation1,
+                      width: 220,
+                      child: SourceItem(
+                        index: index,
+                        source: sourceData,
+                        isDragging: true,
+                      ),
+                    ),
                   ),
                 ),
                 childWhenDragging: Opacity(
                   opacity: 0.5,
-                  child: SourceItem(source: sourceData, isDragging: true),
+                  child: SourceItem(index: index, source: sourceData, isDragging: true),
                 ),
-                child: SourceItem(sourceSet: widget.sourceSet, source: sourceData, isDragging: _draggingSourceId == sourceData.id),
+                child: SourceItem(index: index, sourceSet: widget.sourceSet, source: sourceData, isDragging: _draggingSourceId == sourceData.id),
               );
             },
           ),
@@ -392,7 +415,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
       builder: (BuildContext ctx) {
         final ColorScheme scheme = Theme.of(ctx).colorScheme;
         return Dialog(
-          backgroundColor: scheme.white,
+          backgroundColor: scheme.elevation1,
           insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           child: ConstrainedBox(
@@ -425,6 +448,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                           label: "Cancel",
                           textStyle: Theme.of(ctx).textTheme.labelLarge?.copyWith(fontSize: 11),
                           onTap: () => Navigator.of(ctx).pop(),
+                          accessLabel: '',
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -434,13 +458,15 @@ class _SourceSetItemState extends State<SourceSetItem> {
                           label: "Delete",
                           textStyle: Theme.of(ctx).textTheme.labelLarge?.copyWith(
                             fontSize: 11,
-                            color: scheme.fusionButtonTextColor,
+                            color: scheme.primaryWhite,
                           ),
                           isActive: true,
                           onTap: () {
                             Navigator.of(ctx).pop();
-                            _projectViewModel.removeSourceSet(sourceSetId: widget.sourceSet.id);
+                            _sourceSetsViewmodel.deleteSourceSet(widget.sourceSet.id);
+                            _sourcesViewmodel.syncWithProjectViewModel();
                           },
+                          accessLabel: '',
                         ),
                       ),
                     ],
@@ -481,7 +507,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Theme.of(context).colorScheme.white,
+      color: context.colorScheme.elevation1,
       width: 250,
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -510,9 +536,19 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
           FusionTextField(
             controller: widget.sourceSetNameController,
             hintText: "Enter source set name",
-            decoration: FusionInputDecoration.fusionDense(
-              colorScheme: Theme.of(context).colorScheme,
-              hintText: 'Enter source set name',
+            semanticFieldId: "source_set_name_input",
+            decoration: InputDecoration(
+              hintText: "Enter source set name",
+
+              hintStyle: Theme.of(context).inputDecorationTheme.hintStyle,
+              counterText: '',
+              fillColor: context.colorScheme.elevation2,
+              filled: true,
+              border: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+              enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+              focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
             ),
             onChanged: (String value) {
               setState(() {});
@@ -534,7 +570,8 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
           Container(
             height: 28,
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey[300]!),
+              color: context.colorScheme.elevation2,
+              border: Border.all(color: context.colorScheme.elevation4),
               borderRadius: BorderRadius.circular(4),
             ),
             child: PopupMenuButton<String>(
@@ -548,7 +585,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
-              color: Theme.of(context).colorScheme.white,
+              color: context.colorScheme.elevation2,
               offset: const Offset(0, 35),
               itemBuilder: (BuildContext context) {
                 return <PopupMenuEntry<String>>[
@@ -558,6 +595,9 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                     child: StatefulBuilder(
                       builder: (BuildContext context, StateSetter setPopupState) {
                         return Container(
+                          decoration: BoxDecoration(
+                            color: context.colorScheme.elevation2,
+                          ),
                           width: 240,
                           constraints: const BoxConstraints(maxHeight: 460),
                           child: Column(
@@ -568,7 +608,9 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 decoration: BoxDecoration(
                                   border: Border(
-                                    bottom: BorderSide(color: Colors.grey[300]!),
+                                    bottom: BorderSide(
+                                      color: context.colorScheme.elevation4,
+                                    ),
                                   ),
                                 ),
                                 child: Row(
@@ -581,14 +623,17 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                    InkWell(
-                                      onTap: () {
-                                        Navigator.of(context).pop();
-                                      },
-                                      child: Icon(
-                                        Icons.close,
-                                        size: 16,
-                                        color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                    SemanticHelper.button(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.button, "source_set_name_dropdown_close_button"),
+                                      child: InkWell(
+                                        onTap: () {
+                                          Navigator.of(context).pop();
+                                        },
+                                        child: Icon(
+                                          Icons.close,
+                                          size: 16,
+                                          color: Theme.of(context).colorScheme.iconWhite,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -608,13 +653,13 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                 Container(
                                                   width: double.infinity,
                                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                                  color: Theme.of(context).colorScheme.greyLight.withAlpha(40),
+                                                  // color: context.colorScheme.primaryBlack.withAlpha(40),
                                                   child: FusionAppText(
                                                     text: "Selected (${widget.selectedSources.length})",
                                                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                       fontSize: 10,
                                                       fontWeight: FontWeight.w600,
-                                                      color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                                      color: Theme.of(context).colorScheme.textPrimary,
                                                     ),
                                                   ),
                                                 ),
@@ -627,7 +672,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                   );
                                                   return InkWell(
                                                     onTap: () {
-                                                      widget.onSourceChanged(source!, false);
+                                                      widget.onSourceChanged(source, false);
                                                       setPopupState(() {});
                                                       setState(() {});
                                                     },
@@ -641,20 +686,38 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                             child: Checkbox(
                                                               value: true,
                                                               onChanged: (bool? value) {
-                                                                widget.onSourceChanged(source!, false);
+                                                                widget.onSourceChanged(source, false);
                                                                 setPopupState(() {});
                                                                 setState(() {});
                                                               },
-                                                              activeColor: Theme.of(context).colorScheme.greyDark,
+                                                              activeColor: context.colorScheme.elevation4,
                                                               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                                               visualDensity: VisualDensity.compact,
-                                                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                                                              shape: const RoundedRectangleBorder(
+                                                                borderRadius: BorderRadius.zero,
+                                                                side: BorderSide(width: 0.5),
+                                                              ),
+
+                                                              side: MaterialStateBorderSide.resolveWith(
+                                                                (Set<WidgetState> states) {
+                                                                  if (states.contains(MaterialState.selected)) {
+                                                                    return BorderSide(
+                                                                      color: context.colorScheme.primaryWhite,
+                                                                      width: 1,
+                                                                    );
+                                                                  }
+                                                                  return BorderSide(
+                                                                    color: context.colorScheme.primaryWhite,
+                                                                    width: 1,
+                                                                  );
+                                                                },
+                                                              ),
                                                             ),
                                                           ),
                                                           const SizedBox(width: 12),
                                                           Expanded(
                                                             child: FusionAppText(
-                                                              text: source?.name ?? sel.name,
+                                                              text: source.name ?? sel.name,
                                                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                                 fontWeight: FontWeight.w500,
                                                                 fontSize: 10,
@@ -701,7 +764,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                                 setPopupState(() {});
                                                                 setState(() {});
                                                               },
-                                                              activeColor: Theme.of(context).colorScheme.greyDark,
+                                                              activeColor: context.colorScheme.primaryBlack,
                                                               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                                               visualDensity: VisualDensity.compact,
                                                               shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
@@ -744,28 +807,31 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                   ),
                 ];
               },
-              child: Container(
-                height: 29,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: FusionAppText(
-                        text:
-                            widget.selectedSources.isEmpty
-                                ? "Select Sources"
-                                : "${widget.selectedSources.length} source${widget.selectedSources.length > 1 ? 's' : ''} selected",
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: widget.selectedSources.isEmpty ? Theme.of(context).colorScheme.greyDark : Theme.of(context).textTheme.bodySmall?.color,
+              child: SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, "source_set_name_dropdown"),
+                child: Container(
+                  height: 29,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: FusionAppText(
+                          text:
+                              widget.selectedSources.isEmpty
+                                  ? "Select Sources"
+                                  : "${widget.selectedSources.length} source${widget.selectedSources.length > 1 ? 's' : ''} selected",
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: widget.selectedSources.isEmpty ? context.colorScheme.textSecondary : Theme.of(context).textTheme.bodySmall?.color,
+                          ),
                         ),
                       ),
-                    ),
-                    Icon(
-                      Icons.keyboard_arrow_down,
-                      size: 20,
-                      color: Theme.of(context).colorScheme.greyDark,
-                    ),
-                  ],
+                      Icon(
+                        Icons.keyboard_arrow_down,
+                        size: 20,
+                        color: context.colorScheme.iconWhite,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -784,19 +850,23 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                   onTap: () {
                     widget.onCancel.call();
                   },
+                  accessLabel: '',
                 ),
               ),
               const SizedBox(width: 8),
               Flexible(
                 child: FusionButton(
                   width: double.infinity,
-                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
+                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    fontSize: 10 /*color: context.colorScheme.primaryBlack*/,
+                  ),
 
                   label: "Edit",
                   isActive: widget.sourceSetNameController.text.trim().isNotEmpty && widget.selectedSources.length >= 2,
                   onTap: () {
                     widget.onAddSourceSet.call();
                   },
+                  accessLabel: '',
                 ),
               ),
             ],

@@ -3,8 +3,8 @@ package persistence
 import (
 	"bytes"
 	"fmt"
+	"fusion-services-core/logging"
 	"fusion/internal/api"
-	"fusion/internal/logging"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 	"io"
@@ -533,7 +533,7 @@ func (sm *StateManager) validateState() {
 			continue
 		}
 
-		url := buildInternalURL(member.Addr.String(), api.AdminPort, routes.StateEndpoint)
+		url := utils.BuildInternalURL(member.Addr.String(), api.AdminPort, routes.StateEndpoint)
 		resp, err := sm.httpClient.Get(url)
 		if err != nil {
 			logger.Warn("Failed to get state from %s: %v", member.Name, err)
@@ -600,7 +600,7 @@ func (sm *StateManager) getMemberData() []api.MemberMetadata {
 			continue
 		}
 
-		url := buildInternalURL(member.Addr.String(), api.HTTPPort, routes.MetadataEndpoint)
+		url := utils.BuildInternalURL(member.Addr.String(), api.HTTPPort, routes.MetadataEndpoint)
 		resp, err := sm.httpClient.Get(url)
 		if err != nil {
 			logger.Warn("Failed to get metadata from %s: %v", member.Name, err)
@@ -666,7 +666,7 @@ func (sm *StateManager) validateData() {
 		mostCurrent.Metadata.Version,
 	)
 
-	exportURL := buildInternalURL(
+	exportURL := utils.BuildInternalURL(
 		mostCurrent.Member.Addr.String(),
 		api.AdminPort,
 		routes.StateEndpoint,
@@ -700,7 +700,7 @@ func (sm *StateManager) syncData(memberMetadata []api.MemberMetadata, currentHas
 
 	for _, ms := range memberMetadata {
 		if ms.Metadata.Hash != currentHash {
-			importURL := buildInternalURL(ms.Member.Addr.String(), api.AdminPort, routes.DataEndpoint)
+			importURL := utils.BuildInternalURL(ms.Member.Addr.String(), api.AdminPort, routes.DataEndpoint)
 			sm.importData(importURL, data)
 		}
 	}
@@ -743,10 +743,6 @@ func hashIsConsistent(metadata []api.MemberMetadata) bool {
 		}
 	}
 	return true
-}
-
-func buildInternalURL(address, port, endpoint string) string {
-	return fmt.Sprintf("%s%s:%s%s", api.Protocol, address, port, endpoint)
 }
 
 // deepCopyState makes a deep copy of the state map

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../semantics/semantic_helper.dart';
@@ -91,7 +92,7 @@ class FusionOutlinedButton extends StatelessWidget {
   final String? semanticsId;
 
   /// Semantic label for screen readers.
-  final String? accessLabel;
+  final String accessLabel;
 
   /// Creates a [FusionOutlinedButton].
   ///
@@ -117,13 +118,17 @@ class FusionOutlinedButton extends StatelessWidget {
     this.showSuffixIcon = false,
     this.suffixIcon,
     this.semanticsId,
-    this.accessLabel,
+    required this.accessLabel,
   });
 
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(SemanticTypes.button, semanticsId ?? label),
+      isEnabled: isActive,
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.button,
+        semanticsId ?? label,
+      ),
       child: Container(
         margin: EdgeInsets.only(top: topMargin, bottom: bottomMargin),
         child: IgnorePointer(
@@ -141,36 +146,49 @@ class FusionOutlinedButton extends StatelessWidget {
                 borderRadius: BorderRadius.circular(borderRadius),
                 border: Border.all(
                   color: isActive
-                      ? activeBorderColor ?? Theme.of(context).colorScheme.fusionOutlinedButtonColor
-                      : activeBorderColor?.withOpacity(0.5) ?? Theme.of(context).colorScheme.fusionOutlinedButtonColor.withOpacity(0.5),
+                      ? activeBorderColor ?? Theme.of(context).colorScheme.elevation4
+                      : activeBorderColor?.withOpacity(0.5) ?? Theme.of(context).colorScheme.elevation2,
                 ),
               ),
               child: isLoading
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 24,
                       height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.black)),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          context.colorScheme.primary,
+                        ),
+                      ),
                     )
                   : Row(
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         if (showPrefixIcon && prefixIcon != null) ...[
-                          Icon(prefixIcon, size: 16, color: isActive ? foregroundColor : foregroundColor.withOpacity(0.5)),
+                          Icon(
+                            prefixIcon,
+                            size: 16,
+                            color: isActive ? foregroundColor : foregroundColor.withOpacity(0.5),
+                          ),
                           const SizedBox(width: 8),
                         ],
                         Expanded(
-                          child: Text(
-                            label,
+                          child: FusionAppText(
+                            text: label,
                             textAlign: TextAlign.center,
                             style: textStyle ?? Theme.of(context).textTheme.labelLarge,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            maxLine: 1,
+                            textOverflow: TextOverflow.ellipsis,
                           ),
                         ),
                         if (showSuffixIcon && suffixIcon != null) ...[
                           const SizedBox(width: 8),
-                          Icon(suffixIcon, size: 16, color: isActive ? foregroundColor : foregroundColor.withOpacity(0.5)),
+                          Icon(
+                            suffixIcon,
+                            size: 16,
+                            color: isActive ? foregroundColor : foregroundColor.withOpacity(0.5),
+                          ),
                         ],
                       ],
                     ),

@@ -5,6 +5,8 @@ import 'dart:typed_data';
 import 'package:archive/archive_io.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:logger/logger.dart';
 import 'package:path/path.dart';
 import 'package:path/path.dart' as p;
@@ -15,7 +17,9 @@ import 'package:uuid/uuid.dart';
 class FusionUtils {
   //singleton
   FusionUtils._internal();
+
   static final FusionUtils _instance = FusionUtils._internal();
+
   factory FusionUtils() => _instance;
 
   //generate  uuid
@@ -184,6 +188,28 @@ class FusionUtils {
       return zipFile;
     } catch (e, st) {
       FusionLogger.log(tag: LogTag.exceptions, message: "Exception: [zipFile] zipping files failed $e\n$st");
+      return null;
+    }
+  }
+
+  /// Get duration of any media file (audio/video) across all platforms
+  Future<Duration?> getMediaDuration(File file) async {
+    try {
+      JustAudioMediaKit.ensureInitialized();
+      final player = AudioPlayer();
+
+      try {
+        await player.setFilePath(file.path);
+        final duration = player.duration;
+        await player.dispose();
+        return duration;
+      } catch (e) {
+        FusionLogger.log(tag: LogTag.exceptions, message: "Exception: [getMediaDuration] failed to set file path $e");
+        await player.dispose();
+        return null;
+      }
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Exception: [getMediaDuration] failed to get media duration $e");
       return null;
     }
   }

@@ -7,6 +7,8 @@ import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/product_query/product_query_model.dart';
 import 'package:fusion_lib/models/project_entities/listening_area_model.dart';
@@ -14,7 +16,7 @@ import 'package:fusion_lib/models/project_entities/listening_area_model.dart';
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../product_query/presentation/pages/product_query.dart';
-import 'listening_area_dropdown_widget.dart';
+import '../../views/widgets/forms/listening_area_dropdown_widget.dart';
 
 /// Common reusable popup menu widget for adding a circuit (speaker group)
 class AddSpeakersMenu extends StatefulWidget {
@@ -34,7 +36,9 @@ class AddSpeakersMenu extends StatefulWidget {
 }
 
 class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
-  final TextEditingController numberOfSpeakers = TextEditingController(text: "1");
+  final TextEditingController numberOfSpeakers = TextEditingController(
+    text: "1",
+  );
 
   String? selectedListeningAreaId;
   List<ListeningArea> listeningAreas = <ListeningArea>[];
@@ -69,7 +73,7 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
       ),
-      color: Theme.of(context).colorScheme.white,
+      color: Theme.of(context).colorScheme.primaryWhite,
       menuPadding: EdgeInsets.zero,
       itemBuilder: (BuildContext context) {
         return <PopupMenuEntry<dynamic>>[
@@ -87,7 +91,12 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                   return SingleChildScrollView(
                     physics: const ClampingScrollPhysics(),
                     child: Padding(
-                      padding: const EdgeInsets.only(left: 16, right: 12, bottom: 12, top: 12),
+                      padding: const EdgeInsets.only(
+                        left: 16,
+                        right: 12,
+                        bottom: 12,
+                        top: 12,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
@@ -100,44 +109,65 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                                   speakerData = item;
                                 });
                               },
-                              child: Container(
-                                height: 30,
-
-                                margin: const EdgeInsets.only(bottom: 4),
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(
-                                    color: speakerData?.sku == item.sku ? Colors.black : Theme.of(context).colorScheme.grey,
-                                    width: 1,
-                                  ),
-                                  color: speakerData?.sku == item.sku ? Theme.of(context).colorScheme.grey : null,
+                              child: SemanticHelper.container(
+                                testId: SemanticHelper.createTestId(
+                                  SemanticTypes.container,
+                                  "speaker_${item.sku}",
                                 ),
-                                child: Row(
-                                  children: <Widget>[
-                                    FusionImage.asset(
-                                      item.image.isNotEmpty ? item.image : '',
-                                      height: 14,
-                                      width: 14,
-                                      fit: BoxFit.contain,
+                                child: Container(
+                                  height: 30,
+                                  margin: const EdgeInsets.only(bottom: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                      color:
+                                          speakerData?.sku == item.sku
+                                              ? Colors.black
+                                              : context
+                                                  .colorScheme
+                                                  .primaryBlack,
+                                      width: 1,
                                     ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: FusionAppText(
-                                        text: item.name,
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                          fontSize: 11,
-                                          fontWeight: speakerData?.sku == item.sku ? FontWeight.w600 : null,
+                                    color:
+                                        speakerData?.sku == item.sku
+                                            ? context.colorScheme.primaryBlack
+                                            : null,
+                                  ),
+                                  child: Row(
+                                    children: <Widget>[
+                                      FusionImage.asset(
+                                        item.image.isNotEmpty ? item.image : '',
+                                        height: 14,
+                                        width: 14,
+                                        fit: BoxFit.contain,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: FusionAppText(
+                                          text: item.name,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodySmall?.copyWith(
+                                            fontSize: 11,
+                                            fontWeight:
+                                                speakerData?.sku == item.sku
+                                                    ? FontWeight.w600
+                                                    : null,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    if (speakerData?.sku == item.sku)
-                                      const Icon(
-                                        Icons.check_circle,
-                                        size: 16,
-                                        color: Colors.black,
-                                      ),
-                                  ],
+                                      if (speakerData?.sku == item.sku)
+                                        const Icon(
+                                          Icons.check_circle,
+                                          size: 16,
+                                          color: Colors.black,
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -148,34 +178,45 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                           /// ---- Speakers count ----
                           FusionAppText(
                             text: "Speakers count",
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                           const SizedBox(height: 4),
                           // todo change it to + and - button
-                          FusionTextField(
-                            controller: numberOfSpeakers,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
-                            hintText: "Enter zone name",
-                            decoration: FusionInputDecoration.fusionDense(
-                              colorScheme: Theme.of(context).colorScheme,
-                              hintText: 'Enter zone name',
+                          SemanticHelper.formControl(
+                            testId: SemanticHelper.createTestId(
+                              SemanticTypes.textInput,
+                              "speakers_count_field",
                             ),
-                            onChanged: (String value) {
-                              final int count = int.tryParse(value) ?? 1;
-                              if (count < 1 || count > 25) {
-                                setMenuState(() {
-                                  numberOfSpeakers.text = '1';
-                                });
-                                FusionToast.error(
-                                  context,
-                                  message: "Count should be between 1 and 25",
-                                );
-                              }
-                            },
+                            child: FusionTextField(
+                              semanticFieldId: 'speakers_count_field',
+                              controller: numberOfSpeakers,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: <TextInputFormatter>[
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
+                              hintText: "Enter zone name",
+                              decoration: FusionInputDecoration.fusionDense(
+                                colorScheme: Theme.of(context).colorScheme,
+                                hintText: 'Enter zone name',
+                              ),
+                              onChanged: (String value) {
+                                final int count = int.tryParse(value) ?? 1;
+                                if (count < 1 || count > 25) {
+                                  setMenuState(() {
+                                    numberOfSpeakers.text = '1';
+                                  });
+                                  FusionToast.error(
+                                    context,
+                                    message: "Count should be between 1 and 25",
+                                  );
+                                }
+                              },
+                            ),
                           ),
 
                           const SizedBox(height: 16),
@@ -183,7 +224,9 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                           /// ---- Location ----
                           FusionAppText(
                             text: "Select Listening Area",
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
                             ),
@@ -191,28 +234,48 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                           const SizedBox(height: 6),
                           SizedBox(
                             width: double.infinity,
-                            child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                              builder: (BuildContext context, ProjectViewModelState state) {
+                            child: BlocBuilder<
+                              ProjectViewModel,
+                              ProjectViewModelState
+                            >(
+                              builder: (
+                                BuildContext context,
+                                ProjectViewModelState state,
+                              ) {
                                 if (widget.subZoneId != null) {
-                                  listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(subZoneId: widget.subZoneId!);
+                                  listeningAreas =
+                                      serviceLocator<ProjectViewModel>()
+                                          .getListeningAreasInSubZone(
+                                            subZoneId: widget.subZoneId!,
+                                          );
                                 } else {
-                                  listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: widget.zoneId);
+                                  listeningAreas =
+                                      serviceLocator<ProjectViewModel>()
+                                          .getListeningAreasForZone(
+                                            zoneId: widget.zoneId,
+                                          );
                                 }
                                 return ListeningAreaDropdownWidget(
                                   listeningAreas: listeningAreas,
-                                  selectedListeningAreaIds: _selectedListeningAreaIds,
-                                  onSelectionChanged: (List<String> selectedIds, String floorId) {
+                                  selectedListeningAreaIds:
+                                      _selectedListeningAreaIds,
+                                  onSelectionChanged: (
+                                    List<String> selectedIds,
+                                    String floorId,
+                                  ) {
                                     /// Add listening area to zone/subzone if not already added
                                     if (widget.subZoneId != null) {
-                                      serviceLocator<ProjectViewModel>().addListeningAreaToSubZone(
-                                        areaId: selectedIds.first,
-                                        subZoneId: widget.subZoneId!,
-                                      );
+                                      serviceLocator<ProjectViewModel>()
+                                          .addListeningAreaToSubZone(
+                                            areaId: selectedIds.first,
+                                            subZoneId: widget.subZoneId!,
+                                          );
                                     } else {
-                                      serviceLocator<ProjectViewModel>().addListeningAreaToZone(
-                                        listeningAreaId: selectedIds.first,
-                                        zoneId: widget.zoneId,
-                                      );
+                                      serviceLocator<ProjectViewModel>()
+                                          .addListeningAreaToZone(
+                                            listeningAreaId: selectedIds.first,
+                                            zoneId: widget.zoneId,
+                                          );
                                     }
 
                                     _selectedListeningAreaIds = selectedIds;
@@ -231,7 +294,11 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                                 child: FusionOutlinedButton(
                                   width: double.infinity,
                                   label: "Cancel",
-                                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
+                                  accessLabel: "add_speakers_cancel_button",
+                                  textStyle: Theme.of(context)
+                                      .textTheme
+                                      .labelLarge
+                                      ?.copyWith(fontSize: 10),
                                   onTap: () {
                                     Navigator.of(context).pop();
                                     // remove speakerData
@@ -243,37 +310,61 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                               ),
                               const SizedBox(width: 8),
                               Flexible(
-                                child: FusionButton(
-                                  width: double.infinity,
-                                  textStyle: Theme.of(
-                                    context,
-                                  ).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
+                                child: SemanticHelper.button(
+                                  testId: SemanticHelper.createTestId(
+                                    SemanticTypes.button,
+                                    "add_speakers_save_button",
+                                  ),
+                                  child: FusionButton(
+                                    accessLabel: "add_speakers_save_button",
+                                    width: double.infinity,
+                                    textStyle: Theme.of(
+                                      context,
+                                    ).textTheme.labelLarge?.copyWith(
+                                      fontSize: 10,
+                                      color: context.colorScheme.primaryBlack,
+                                    ),
 
-                                  label: "Save",
-                                  isActive: speakerData != null && _selectedListeningAreaIds.isNotEmpty,
-                                  onTap: () {
-                                    if (speakerData != null && _selectedListeningAreaIds.isNotEmpty) {
-                                      serviceLocator<ProjectViewModel>().createCircuitWithSpeakers(
-                                        speakerData: speakerData!,
-                                        listeningAreaId: _selectedListeningAreaIds.first,
-                                        speakerCount: int.tryParse(numberOfSpeakers.text) ?? 1,
-                                        zoneId: widget.zoneId,
-                                        subZoneId: widget.subZoneId,
-                                        circuitName: "${speakerData!.name} Circuit",
-                                      );
-                                      FusionToast.success(
-                                        context,
-                                        message: "Speakers added to circuit successfully",
-                                      );
-                                      if (widget.onSpeakerAdded != null) {
-                                        widget.onSpeakerAdded!();
+                                    label: "Save",
+                                    isActive:
+                                        speakerData != null &&
+                                        _selectedListeningAreaIds.isNotEmpty,
+                                    onTap: () {
+                                      if (speakerData != null &&
+                                          _selectedListeningAreaIds
+                                              .isNotEmpty) {
+                                        serviceLocator<ProjectViewModel>()
+                                            .createCircuitWithSpeakers(
+                                              speakerData: speakerData!,
+                                              listeningAreaId:
+                                                  _selectedListeningAreaIds
+                                                      .first,
+                                              speakerCount:
+                                                  int.tryParse(
+                                                    numberOfSpeakers.text,
+                                                  ) ??
+                                                  1,
+                                              zoneId: widget.zoneId,
+                                              subZoneId: widget.subZoneId,
+                                              isFromBuildingPage: false,
+                                              circuitName:
+                                                  "${speakerData!.name} Circuit",
+                                            );
+                                        FusionToast.success(
+                                          context,
+                                          message:
+                                              "Speakers added to circuit successfully",
+                                        );
+                                        if (widget.onSpeakerAdded != null) {
+                                          widget.onSpeakerAdded!();
+                                        }
                                       }
-                                    }
-                                    speakerData = null;
-                                    Navigator.pop(context);
-                                    numberOfSpeakers.text = '1';
-                                    _selectedListeningAreaIds.clear();
-                                  },
+                                      speakerData = null;
+                                      Navigator.pop(context);
+                                      numberOfSpeakers.text = '1';
+                                      _selectedListeningAreaIds.clear();
+                                    },
+                                  ),
                                 ),
                               ),
                             ],

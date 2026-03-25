@@ -34,6 +34,10 @@ class Assets {
   //Images
   static const String dmPendent = 'assets/images/speakers/DM_pendant.png';
 
+  /// Commissioning images
+  static const String mobileHotspot = 'assets/images/commission/mobile_hotspot.webp';
+  static const String errorFace = "assets/images/commission/error_face.webp";
+
   //svgs
   static const String listeningAreaSvg = 'assets/svg/ear_sound.svg';
 }

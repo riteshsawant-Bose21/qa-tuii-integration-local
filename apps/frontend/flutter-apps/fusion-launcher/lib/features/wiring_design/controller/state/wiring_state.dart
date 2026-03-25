@@ -5,7 +5,7 @@ import 'package:fusion_launcher/features/wiring_design/controller/state/canvas_s
 import 'package:fusion_launcher/features/wiring_design/model/canvas_element.dart';
 import 'package:fusion_launcher/features/wiring_design/model/circuit_component.dart';
 import 'package:fusion_launcher/features/wiring_design/model/circuit_port.dart';
-import 'package:fusion_launcher/features/wiring_design/util/wiring_serialization_util.dart';
+import 'package:fusion_lib/fusion_utils/deserialization_util.dart';
 
 import '../../model/wire.dart';
 
@@ -36,10 +36,9 @@ abstract class WiringState {
     final List<Wire> wires = <Wire>[];
     for (final dynamic element in map['components']) {
       if (element is Map) {
-        final String? id = WiringSerializationUtil.stringDeserializer
-            .deserialize(
-              element['id'],
-            );
+        final String? id = DeserializationUtil.stringDeserializer.deserialize(
+          element['id'],
+        );
         if (id == null) continue;
         final CanvasElement? comp = db.getComponent(id);
         if (comp == null) continue;
@@ -51,10 +50,9 @@ abstract class WiringState {
 
     for (final dynamic element in map['wires']) {
       if (element is Map) {
-        final String? id = WiringSerializationUtil.stringDeserializer
-            .deserialize(
-              element['id'],
-            );
+        final String? id = DeserializationUtil.stringDeserializer.deserialize(
+          element['id'],
+        );
         if (id == null) continue;
         final CanvasElement? comp = db.getComponent(id);
         if (comp == null) continue;
@@ -222,10 +220,7 @@ extension WiringStateMutation on WiringState {
     if (element is CircuitPort) {
       return ConnectionProgressWiringState(
         components: components,
-        wires:
-            wires
-                .where((Wire w) => w.from != element && w.to != element)
-                .toList(),
+        wires: wires.where((Wire w) => w.from != element && w.to != element).toList(),
         port: element,
         canvasState: canvasState,
         destination: position,

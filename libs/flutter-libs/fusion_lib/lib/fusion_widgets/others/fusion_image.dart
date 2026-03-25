@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 /// A unified and reusable image widget for the Fusion design system.
 ///
@@ -57,7 +58,12 @@ class FusionImage extends StatelessWidget {
   /// Custom error builder when loading the image fails.
   ///
   /// If not provided, a default broken image icon will be shown.
-  final Widget Function(BuildContext context, Object error, StackTrace? stackTrace)? errorBuilder;
+  final Widget Function(
+    BuildContext context,
+    Object error,
+    StackTrace? stackTrace,
+  )?
+  errorBuilder;
 
   /// The width of the image.
   final double? width;
@@ -76,6 +82,11 @@ class FusionImage extends StatelessWidget {
   /// Whether the image should be circular.
   final bool isCircle;
 
+  /// Optional color to apply to asset images.
+  final Color? assetColor;
+
+  final String? semanticId;
+
   /// Creates a [FusionImage] that loads from a network URL.
   const FusionImage.network(
     this.imageUrl, {
@@ -86,38 +97,69 @@ class FusionImage extends StatelessWidget {
     this.height,
     this.fit = BoxFit.cover,
     this.borderRadius,
+    this.assetColor,
+    this.semanticId,
   }) : file = null,
        asset = null,
        isCircle = false;
 
   /// Creates a [FusionImage] that loads from a local file.
-  const FusionImage.file(this.file, {super.key, this.width, this.height, this.fit = BoxFit.cover, this.borderRadius, this.placeholder, this.errorBuilder})
-    : imageUrl = null,
-      asset = null,
-      isCircle = false;
+  const FusionImage.file(
+    this.file, {
+    super.key,
+    this.width,
+    this.semanticId,
+    this.height,
+    this.fit = BoxFit.cover,
+    this.borderRadius,
+    this.placeholder,
+    this.errorBuilder,
+    this.assetColor,
+  }) : imageUrl = null,
+       asset = null,
+       isCircle = false;
 
   /// Creates a [FusionImage] that loads from an asset.
-  const FusionImage.asset(this.asset, {super.key, this.width, this.height, this.fit = BoxFit.cover, this.borderRadius, this.placeholder, this.errorBuilder})
-    : file = null,
-      imageUrl = null,
-      isCircle = false;
+  const FusionImage.asset(
+    this.asset, {
+    super.key,
+    this.semanticId,
+    this.width,
+    this.height,
+    this.fit = BoxFit.cover,
+    this.borderRadius,
+    this.placeholder,
+    this.errorBuilder,
+    this.assetColor,
+  }) : file = null,
+       imageUrl = null,
+       isCircle = false;
 
   /// Creates a circular [FusionImage].
   ///
   /// Can be used with either [imageUrl], [file], or [asset].
   /// You must provide exactly **one source**.
-  const FusionImage.circle({super.key, this.imageUrl, this.file, this.asset, this.placeholder, this.errorBuilder, double? size, this.fit = BoxFit.cover})
-    : width = size,
-      height = size,
-      borderRadius = null,
-      isCircle = true;
+  const FusionImage.circle({
+    super.key,
+    this.imageUrl,
+    this.semanticId,
+    this.file,
+    this.asset,
+    this.placeholder,
+    this.errorBuilder,
+    double? size,
+    this.fit = BoxFit.cover,
+    this.assetColor,
+  }) : width = size,
+       height = size,
+       borderRadius = null,
+       isCircle = true;
 
   @override
   Widget build(BuildContext context) {
     Widget image;
 
     if (imageUrl != null) {
-      /// Network image with loading/error handling
       image = Image.network(
         imageUrl!,
         width: width,
@@ -126,13 +168,20 @@ class FusionImage extends StatelessWidget {
         loadingBuilder: (context, child, progress) {
           if (progress == null) return child;
           return placeholder ??
-              Center(
+              SemanticHelper.container(
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.container,
+                  "fusion_image${semanticId}",
+                ),
                 child: SizedBox(
                   width: 24,
                   height: 24,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    value: progress.expectedTotalBytes != null ? progress.cumulativeBytesLoaded / (progress.expectedTotalBytes ?? 1) : null,
+                    value: progress.expectedTotalBytes != null
+                        ? progress.cumulativeBytesLoaded /
+                              (progress.expectedTotalBytes ?? 1)
+                        : null,
                   ),
                 ),
               );
@@ -165,6 +214,7 @@ class FusionImage extends StatelessWidget {
         width: width,
         height: height,
         fit: fit,
+        color: assetColor,
         errorBuilder: (context, error, stackTrace) {
           if (errorBuilder != null) {
             return errorBuilder!(context, error, stackTrace);

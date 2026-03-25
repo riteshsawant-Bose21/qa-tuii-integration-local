@@ -1,6 +1,8 @@
 import 'package:fusion_web/features/devices/data/models/devices_model.dart';
 import 'package:fusion_web/features/devices/presentation/pages/device_detail_page.dart';
 import 'package:fusion_web/features/devices/presentation/pages/devices_page.dart';
+import 'package:fusion_web/features/organizations/presentation/pages/organizations_page.dart';
+import 'package:fusion_web/features/organizations/presentation/pages/organization_profile_page.dart';
 import 'package:fusion_web/features/projects/presentation/pages/project_detail_page.dart';
 import 'package:fusion_web/features/roles/presentation/pages/roles_page.dart';
 import 'package:fusion_web/features/settings/presentation/pages/settings_page.dart';
@@ -9,7 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
 import 'package:fusion_web/core/widgets/main_layout.dart';
 import 'package:fusion_web/features/auth/presentation/pages/login_page.dart';
-import 'package:fusion_web/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:fusion_web/features/dashboard/presentation/pages/partner_dashboard_page.dart';
 import 'package:fusion_web/features/projects/presentation/pages/projects_page.dart';
 
 enum DashboardTabs {
@@ -17,6 +19,7 @@ enum DashboardTabs {
   projects("Projects"),
   devices("Devices"),
   users("Users"),
+  organizations("Organizations"),
   roles("Roles"),
   settings("Settings");
 
@@ -33,6 +36,8 @@ enum DashboardTabs {
         return AppConstants.devicesRoute;
       case DashboardTabs.users:
         return AppConstants.usersRoute;
+      case DashboardTabs.organizations:
+        return AppConstants.organizationsRoute;
       case DashboardTabs.roles:
         return AppConstants.rolesRoute;
       case DashboardTabs.settings:
@@ -61,7 +66,7 @@ final GoRouter appRouter = GoRouter(
       routes: [
         GoRoute(
           path: AppConstants.dashboardRoute,
-          builder: (_, __) => const DashboardPage(),
+          builder: (_, __) => const PartnerDashboardPage(),
         ),
 
         GoRoute(
@@ -91,6 +96,14 @@ final GoRouter appRouter = GoRouter(
         ),
 
         GoRoute(
+          path: '${AppConstants.projectsRoute}/:id',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return ProjectDetailPage(projectId: id);
+          },
+        ),
+
+        GoRoute(
           path: AppConstants.devicesRoute,
           builder: (_, __) => const DevicesPage(),
           routes: [
@@ -112,6 +125,19 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: AppConstants.usersRoute,
           builder: (_, __) => const UsersPage(),
+        ),
+
+        GoRoute(
+          path: AppConstants.organizationsRoute,
+          builder: (_, __) => const OrganizationsPage(),
+        ),
+
+        GoRoute(
+          path: '${AppConstants.organizationsRoute}/:id',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return OrganizationProfilePage(organizationId: id);
+          },
         ),
 
         GoRoute(
@@ -137,6 +163,9 @@ DashboardTabs _getInitialTab(String path) {
   }
   if (path.startsWith(AppConstants.usersRoute)) {
     return DashboardTabs.users;
+  }
+  if (path.startsWith(AppConstants.organizationsRoute)) {
+    return DashboardTabs.organizations;
   }
   if (path.startsWith(AppConstants.rolesRoute)) {
     return DashboardTabs.roles;

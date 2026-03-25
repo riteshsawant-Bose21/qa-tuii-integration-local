@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 /// A reusable toggle row widget with a switch and a label.
@@ -34,11 +35,14 @@ class FusionToggleRow extends StatelessWidget {
 
   final Color? inactiveTrackColor;
 
+  final String semanticId;
+
   /// Creates a Fusion toggle row.
   const FusionToggleRow({
     super.key,
     required this.title,
     required this.value,
+    required this.semanticId,
     required this.onChanged,
     this.activeColor,
     this.activeTrackColor,
@@ -48,35 +52,52 @@ class FusionToggleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        SizedBox(
-          height: 18,
-          width: 30,
-          child: FittedBox(
-            fit: BoxFit.cover,
-            child: Switch(
-              value: value,
-              onChanged: onChanged,
-              activeColor: activeColor ?? Theme.of(context).colorScheme.white,
-              activeTrackColor: activeTrackColor ?? Theme.of(context).colorScheme.grey,
-              inactiveThumbColor: inactiveThumbColor ?? Theme.of(context).colorScheme.white,
-              inactiveTrackColor: inactiveTrackColor ?? const Color(0xFFE5E5E5),
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              splashRadius: 0,
-              trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
-              thumbColor: WidgetStateProperty.all(Theme.of(context).colorScheme.white),
+    return SemanticHelper.toggle(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.toggle,
+        'fusion_toggle_switch_$semanticId',
+      ),
+      value: value,
+      child: Row(
+        children: <Widget>[
+          SizedBox(
+            height: 18,
+            width: 30,
+            child: FittedBox(
+              fit: BoxFit.cover,
+              child: Switch(
+                value: value,
+                onChanged: onChanged,
+                activeColor: activeColor ?? context.colorScheme.primaryWhite,
+                activeTrackColor:
+                    activeTrackColor ?? context.colorScheme.primaryBlack,
+                inactiveThumbColor:
+                    inactiveThumbColor ?? context.colorScheme.primaryWhite,
+                inactiveTrackColor:
+                    inactiveTrackColor ?? const Color(0xFFE5E5E5),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                splashRadius: 0,
+                trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+                thumbColor: WidgetStateProperty.all(
+                  context.colorScheme.primaryWhite,
+                ),
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            title,
-            style: const TextStyle(fontSize: 11, color: Color(0xFF333333), fontWeight: FontWeight.w400, letterSpacing: -0.2),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 11,
+                color: Color(0xFF333333),
+                fontWeight: FontWeight.w400,
+                letterSpacing: -0.2,
+              ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

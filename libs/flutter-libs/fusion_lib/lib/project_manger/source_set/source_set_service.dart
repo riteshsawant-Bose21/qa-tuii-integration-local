@@ -84,7 +84,7 @@ extension SourceSetService on ProjectService {
     //remove current parent
     final currentParent = relationships.getParent(RelationshipType.sourceSetSources, sourceId);
     if (currentParent != null && currentParent != sourceSetId) {
-      relationships.unlink(RelationshipType.sourceSetSources, currentParent, sourceId);
+      removeSourceFromSourceSet(sourceId, currentParent);
     }
 
     // Add to id list idempotently
@@ -95,6 +95,8 @@ extension SourceSetService on ProjectService {
     if (parentZone != null) {
       relationships.unlink(RelationshipType.zoneSources, parentZone, sourceId);
     }
+
+    checkAndRemoveSourceFromZonePrioritySources(sourceId: sourceId);
 
     //validate if Source set should be in linked state
     final sourceSet = getSourceSetById(sourceSetId);

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"fusion/internal/api"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"fusion/internal/routes"
 
 	json "github.com/goccy/go-json"

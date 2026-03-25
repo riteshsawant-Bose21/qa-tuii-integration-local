@@ -134,9 +134,31 @@ class SceneSetRepository extends Repository<SceneSetModel> {
   }
 }
 
-class GPIORepository extends Repository<GpioConfig> {}
+class GPIORepository extends Repository<GpioConfig> {
+  GPIORepository copyWith(Map<String, GpioConfig> items) {
+    final newRepo = GPIORepository();
+    newRepo._items.addAll(items);
+    return newRepo;
+  }
+}
 
-class SchedulerRepository extends Repository<ScheduleConfig> {}
+class SchedulerRepository extends Repository<ScheduleConfig> {
+  SchedulerRepository copyWith(Map<String, ScheduleConfig> items) {
+    final newRepo = SchedulerRepository();
+    newRepo._items.addAll(items);
+    return newRepo;
+  }
+}
+
+class EventsRepository extends Repository<FusionEvent> {
+  EventsRepository copyWith(Map<String, FusionEvent> items) {
+    final newRepo = EventsRepository();
+    newRepo._items.addAll(items);
+    return newRepo;
+  }
+}
+
+class MediaFileRepository extends Repository<MediaFileModel> {}
 
 class ZoneFunctionRepository extends Repository<ZoneFunctions> {
   // Get ZoneFunction by function id
@@ -251,3 +273,5 @@ class PrioritySourceDataRepository extends Repository<PrioritySourceData> {
     }
   }
 }
+
+class EquipLocationRepository extends Repository<EquipLocation> {}

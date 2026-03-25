@@ -113,6 +113,20 @@ extension ListeningAreaManager on ProjectManager {
     return projectService!.getAvailableListeningAreasForZone(id);
   }
 
+  List<ListeningArea> getPendingListeningAreaToDraw({required String floorId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getPendingListeningAreasToDraw(floorId);
+  }
+
+  List<ListeningArea> getAllDrawnListeningAreasForFloor({required String floorId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getDrawnListeningAreas(floorId);
+  }
+
   //get Available Listening Areas for Zone or subzone
   List<ListeningArea> getAvailableListeningAreasForSubZone({String? subZoneId, required String parentZoneId}) {
     if (projectService == null) {

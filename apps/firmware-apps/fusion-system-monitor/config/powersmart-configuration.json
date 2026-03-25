@@ -1,0 +1,66 @@
+{
+    "session": {
+        "name": "fusion_system_monitor"
+    },
+    "periodic_tasks": [
+        {
+            "name": "system_info",
+            "property_settings": [
+                { "name": "period_ms", "value": 2000 }
+            ],
+            "blocks": [
+                {
+                    "name": "system_info",
+                    "module": "system_info",
+                    "telemetry": [
+                        { "name": "cpu" },
+                        { "name": "high_cpu_usage" },
+                        { "name": "ram" },
+                        { "name": "high_ram_usage" },
+                        { "name": "emmc" },
+                        { "name": "high_emmc_usage" },
+                        { "name": "usb_storage" },
+                        { "name": "usb_connected" },
+                        { "name": "temperature" }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "fusion_connect",
+            "property_settings": [
+                { "name": "period_ms", "value": 500 }
+            ],
+            "blocks": [
+                {
+                    "name": "fusion_connect_client",
+                    "module": "fusion_connect_client",
+                    "property_settings": [
+                        { "name": "period_ms", "value": 500 },
+                        { "name": "enet_iface", "value": "lan1" }
+                    ],
+                    "parameters": [
+                        { "name": "audio_streams_update" }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "amp_control",
+            "property_settings": [
+                { "name": "period_ms", "value": 100 }
+            ],
+            "blocks": [
+                {
+                    "name": "amp_control",
+                    "module": "bdif_client",
+                    "property_settings": [
+                        { "name": "uart_device", "value": "/dev/ttymxc2" },
+                        { "name": "boot0_gpio_num", "value": 517 },
+                        { "name": "nrst_gpio_num", "value": 8 }
+                    ]
+                }
+            ]
+        }
+    ]
+}

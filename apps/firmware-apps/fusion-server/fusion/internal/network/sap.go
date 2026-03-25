@@ -1,8 +1,8 @@
 package network
 
 import (
+	"fusion-services-core/logging"
 	"fusion/internal/api"
-	"fusion/internal/logging"
 	"fusion/internal/server/handler"
 	"net"
 	"time"

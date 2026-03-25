@@ -106,7 +106,7 @@ class FusionAppText extends StatelessWidget {
     /// Builds the FusionAppText widget with semantics for accessibility.
     return SemanticHelper.staticText(
       testId: SemanticHelper.createTestId(SemanticTypes.text, semanticId ?? text),
-
+      value: displayText,
       /// Exclude semantics from the child widget to avoid redundancy.
       child: ExcludeSemantics(
         excluding: true,

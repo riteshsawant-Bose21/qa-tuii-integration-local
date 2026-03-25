@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_chain_view.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/config_sources.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../core/constants/assets_constants.dart';
@@ -8,11 +9,13 @@ class SourceItem extends StatefulWidget {
   final Source source;
   final SourceSet? sourceSet;
   final bool isDragging;
+  final int index;
 
   const SourceItem({
     required this.source,
     this.sourceSet,
     this.isDragging = false,
+    required this.index,
     super.key,
   });
 
@@ -38,21 +41,36 @@ class _SourceItemState extends State<SourceItem> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: widget.isDragging ? Theme.of(context).colorScheme.primary.withOpacity(0.15) : (_isHovered ? Colors.grey[200] : null),
+          color:
+              widget.isDragging
+                  ? context.colorScheme.primary.withAlpha(150)
+                  : (_isHovered ? context.colorScheme.elevation2 : null),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: widget.isDragging ? Theme.of(context).colorScheme.primary : Colors.transparent, width: 1.0),
+          border: Border.all(
+            color:
+                widget.isDragging
+                    ? context.colorScheme.primary
+                    : Colors.transparent,
+            width: 1.0,
+          ),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         child: Row(
           children: <Widget>[
             if (widget.sourceSet != null)
-              Opacity(
-                opacity: 0.4,
-                child: FusionImage.asset(
-                  widget.sourceSet!.isLinked ? Assets.linkIcon : null,
-                  width: 18,
-                  height: 18,
-                  fit: BoxFit.contain,
+              SemanticHelper.image(
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.icon,
+                  FusionTestKeys.instance.sourcelistitemimage,
+                ),
+                child: Opacity(
+                  opacity: 0.4,
+                  child: FusionImage.asset(
+                    widget.sourceSet!.isLinked ? Assets.linkIcon : null,
+                    width: 18,
+                    height: 18,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
             if (widget.sourceSet != null) const SizedBox(width: 8),
@@ -63,13 +81,23 @@ class _SourceItemState extends State<SourceItem> {
               fit: BoxFit.contain,
             ),
             const SizedBox(width: 12),
+
             Expanded(
-              child: FusionAppText(
-                text: widget.source.name,
-                maxLine: 1,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+              child: SemanticHelper.staticText(
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.text,
+                  FusionTestKeys.instance.sourcelistitemtext,
+                ),
+                child: FusionAppText(
+                  text: widget.source.name,
+                  maxLine: 1,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontSize: 11),
+                ),
               ),
             ),
+            // todo : add configuration icon back in when source configuration is supported (ex:media player)
             // const FusionImage.asset(
             //   Assets.configurationFilledIcon,
             //   width: 24,
@@ -78,15 +106,22 @@ class _SourceItemState extends State<SourceItem> {
             // ),
             const SizedBox(width: 8),
             if (!widget.isDragging)
-              InkWell(
-                onTap: () {
-                  ProcessingChainView.showForSource(context, widget.source);
-                },
-                child: const FusionImage.asset(
-                  Assets.processingBlocksFilledIcon,
-                  width: 24,
-                  height: 24,
-                  fit: BoxFit.contain,
+              SemanticHelper.button(
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.button,
+                  "${FusionTestKeys.instance.sourceitemprocessing}_${widget.index}",
+                ),
+                child: InkWell(
+                  onTap: () {
+                    ProcessingChainView.showForSource(context, widget.source);
+                  },
+                  child: FusionImage.asset(
+                    Assets.processingBlocksFilledIcon,
+                    width: 24,
+                    height: 24,
+                    assetColor: context.colorScheme.primaryWhite,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
           ],

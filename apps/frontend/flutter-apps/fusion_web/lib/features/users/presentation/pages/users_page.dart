@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:data_table_2/data_table_2.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_web/core/presentation/base_viewmodel.dart';
 import 'package:fusion_web/features/users/presentation/viewmodels/users_viewmodel.dart';
-import 'package:fusion_web/features/users/data/datasources/users_datasource.dart';
-import 'package:fusion_web/features/users/data/repositories/users_repository_impl.dart';
-import 'package:fusion_web/features/users/domain/usecases/users_usecases.dart';
 import 'package:fusion_web/features/users/domain/entities/user_entity.dart';
 import 'package:fusion_web/features/users/presentation/widgets/invite_user_dialog.dart';
 import 'package:fusion_web/features/users/presentation/widgets/edit_user_dialog.dart';
@@ -20,7 +19,7 @@ class UsersPage extends StatefulWidget {
 }
 
 class _UsersPageState extends State<UsersPage> {
-  late UsersViewModel _viewModel;
+  late final UsersViewModel _viewModel = ServiceLocator().usersViewModel;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String? _selectedRole;
@@ -29,50 +28,13 @@ class _UsersPageState extends State<UsersPage> {
   @override
   void initState() {
     super.initState();
-    _initializeViewModel();
+    _viewModel.initialize();
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text;
       });
       _viewModel.searchUsers(_searchQuery);
     });
-  }
-
-  void _initializeViewModel() {
-    final apiService = ServiceLocator().apiService;
-    final remoteDataSource = UsersRemoteDataSource(apiService: apiService);
-    final localDataSource = UsersLocalDataSource();
-    final repository = UsersRepositoryImpl(
-      remoteDataSource: remoteDataSource,
-      localDataSource: localDataSource,
-    );
-
-    _viewModel = UsersViewModel(
-      getUsersUseCase: GetUsersUseCase(repository),
-      getUserByIdUseCase: GetUserByIdUseCase(repository),
-      createUserUseCase: CreateUserUseCase(repository),
-      updateUserUseCase: UpdateUserUseCase(repository),
-      deleteUserUseCase: DeleteUserUseCase(repository),
-      searchUsersUseCase: SearchUsersUseCase(repository),
-      inviteUserUseCase: InviteUserUseCase(repository),
-      resendInviteUseCase: ResendInviteUseCase(repository),
-      updateUserRolesUseCase: UpdateUserRolesUseCase(repository),
-      assignUserToProjectsUseCase: AssignUserToProjectsUseCase(repository),
-      removeUserFromProjectsUseCase: RemoveUserFromProjectsUseCase(repository),
-      activateUserUseCase: ActivateUserUseCase(repository),
-      deactivateUserUseCase: DeactivateUserUseCase(repository),
-      filterUsersUseCase: FilterUsersUseCase(repository),
-      getUserMetricsUseCase: GetUserMetricsUseCase(repository),
-    );
-
-    _viewModel.initialize();
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _viewModel.dispose();
-    super.dispose();
   }
 
   void _applyFilters() {
@@ -90,49 +52,52 @@ class _UsersPageState extends State<UsersPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight - 48, // Account for padding
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header Section with Metrics
-                    _buildHeaderWithMetrics(),
-                    const SizedBox(height: 24),
+    return BlocProvider.value(
+      value: _viewModel,
+      child: Scaffold(
+        backgroundColor: Colors.grey[50],
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight:
+                        constraints.maxHeight - 48, // Account for padding
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header Section with Metrics
+                      _buildHeaderWithMetrics(),
+                      const SizedBox(height: 24),
 
-                    // Filters and Search Section
-                    _buildFiltersSection(),
-                    const SizedBox(height: 24),
+                      // Filters and Search Section
+                      _buildFiltersSection(),
+                      const SizedBox(height: 24),
 
-                    // Data Table Section
-                    SizedBox(
-                      height:
-                          constraints.maxHeight -
-                          400, // Reserve space for header and filters
-                      child: _buildDataTable(),
-                    ),
-                  ],
+                      // Data Table Section
+                      SizedBox(
+                        height:
+                            constraints.maxHeight -
+                            400, // Reserve space for header and filters
+                        child: _buildDataTable(),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );
   }
 
   Widget _buildHeaderWithMetrics() {
-    return ListenableBuilder(
-      listenable: _viewModel,
-      builder: (context, _) {
+    return BlocBuilder<UsersViewModel, BaseState<List<UserEntity>>>(
+      builder: (context, state) {
         final metrics = _viewModel.metrics;
 
         return Column(
@@ -145,18 +110,18 @@ class _UsersPageState extends State<UsersPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'User Management',
-                      style: GoogleFonts.montserrat(
+                      'Users',
+                      style: GoogleFonts.inter(
                         fontSize: 32,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black87,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Manage user accounts, roles, and permissions',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 16,
+                      'Manage user lifecycle, invitations, and account-level access',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
                         color: Colors.grey[600],
                       ),
                     ),
@@ -164,20 +129,20 @@ class _UsersPageState extends State<UsersPage> {
                 ),
                 ElevatedButton.icon(
                   onPressed: _showInviteUserDialog,
-                  icon: const Icon(Icons.person_add, size: 20),
+                  icon: const Icon(Icons.person_add_outlined, size: 18),
                   label: Text(
                     'Invite User',
-                    style: GoogleFonts.montserrat(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black87,
+                    backgroundColor: Colors.grey[900],
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 18,
+                      horizontal: 16,
+                      vertical: 10,
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -187,65 +152,38 @@ class _UsersPageState extends State<UsersPage> {
               ],
             ),
 
-            // Metrics Cards
+            // Metrics Cards - Only 3 cards as per Figma
             if (metrics.isNotEmpty) ...[
-              const SizedBox(height: 24),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  return Wrap(
-                    spacing: 16,
-                    runSpacing: 16,
-                    children: [
-                      SizedBox(
-                        width:
-                            (constraints.maxWidth - 64) /
-                            5, // 5 cards with spacing
-                        child: _buildMetricCard(
-                          'Total Users',
-                          metrics['total']?.toString() ?? '0',
-                          Icons.people,
-                          Colors.blue,
-                        ),
-                      ),
-                      SizedBox(
-                        width: (constraints.maxWidth - 64) / 5,
-                        child: _buildMetricCard(
-                          'Active',
-                          metrics['active']?.toString() ?? '0',
-                          Icons.check_circle,
-                          Colors.green,
-                        ),
-                      ),
-                      SizedBox(
-                        width: (constraints.maxWidth - 64) / 5,
-                        child: _buildMetricCard(
-                          'Invited',
-                          metrics['invited']?.toString() ?? '0',
-                          Icons.email,
-                          Colors.orange,
-                        ),
-                      ),
-                      SizedBox(
-                        width: (constraints.maxWidth - 64) / 5,
-                        child: _buildMetricCard(
-                          'Pending',
-                          metrics['pending']?.toString() ?? '0',
-                          Icons.pending,
-                          Colors.amber,
-                        ),
-                      ),
-                      SizedBox(
-                        width: (constraints.maxWidth - 64) / 5,
-                        child: _buildMetricCard(
-                          'Inactive',
-                          metrics['inactive']?.toString() ?? '0',
-                          Icons.block,
-                          Colors.red,
-                        ),
-                      ),
-                    ],
-                  );
-                },
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMetricCard(
+                      'Total Users',
+                      metrics['total']?.toString() ?? '15',
+                      Icons.people_outlined,
+                      Colors.blue,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildMetricCard(
+                      'Active Users',
+                      metrics['active']?.toString() ?? '15',
+                      Icons.person_outline,
+                      Colors.green,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildMetricCard(
+                      'Pending Invitations',
+                      metrics['invited']?.toString() ?? '0',
+                      Icons.schedule_outlined,
+                      Colors.orange,
+                    ),
+                  ),
+                ],
               ),
             ],
           ],
@@ -616,16 +554,15 @@ class _UsersPageState extends State<UsersPage> {
               ),
             ],
           ),
-          child: ListenableBuilder(
-            listenable: _viewModel,
-            builder: (context, child) {
-              if (_viewModel.isLoading) {
+          child: BlocBuilder<UsersViewModel, BaseState<List<UserEntity>>>(
+            builder: (context, state) {
+              if (state is LoadingState<List<UserEntity>>) {
                 return const Center(
                   child: CircularProgressIndicator(color: Colors.black87),
                 );
               }
 
-              if (_viewModel.hasError) {
+              if (state is ErrorState<List<UserEntity>>) {
                 return _buildErrorState();
               }
 
@@ -658,31 +595,10 @@ class _UsersPageState extends State<UsersPage> {
                             color: Colors.black87,
                           ),
                         ),
-                        Row(
-                          children: [
-                            IconButton(
-                              onPressed: () => _viewModel.loadUsers(),
-                              icon: const Icon(Icons.refresh, size: 20),
-                              tooltip: 'Refresh',
-                            ),
-                            const SizedBox(width: 8),
-                            OutlinedButton.icon(
-                              onPressed: () => _showBulkActions(),
-                              icon: const Icon(Icons.group_work, size: 18),
-                              label: Text(
-                                'Bulk Actions',
-                                style: GoogleFonts.montserrat(
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                              ),
-                            ),
-                          ],
+                        IconButton(
+                          onPressed: () => _viewModel.loadUsers(),
+                          icon: const Icon(Icons.refresh, size: 20),
+                          tooltip: 'Refresh',
                         ),
                       ],
                     ),
@@ -1059,30 +975,40 @@ class _UsersPageState extends State<UsersPage> {
     showDialog(
       context: context,
       builder: (context) => InviteUserDialog(
-        onInvite:
-            ({
-              required String email,
-              required String name,
-              required String role,
-              required List<String> projectIds,
-            }) async {
-              await _viewModel.inviteUser(
-                email: email,
-                name: name,
-                roles: [role], // Convert single role to list
-                projectIds: projectIds,
-                userType: UserType
-                    .viewer, // Default user type since it's removed from UI
-              );
+        onInvite: (List<Map<String, String>> invites) async {
+          for (var invite in invites) {
+            await _viewModel.inviteUser(
+              email: invite['email']!,
+              name: _getNameFromEmail(
+                invite['email']!,
+              ), // Extract name from email
+              roles: [invite['role']!], // Convert single role to list
+              projectIds: [], // Empty project list for organization invites
+              userType: UserType.viewer, // Default user type
+            );
+          }
 
-              if (_viewModel.hasError) {
-                _showErrorSnackBar(_viewModel.errorMessage);
-              } else {
-                _showSuccessSnackBar('User invitation sent successfully!');
-              }
-            },
+          if (_viewModel.hasError) {
+            _showErrorSnackBar(_viewModel.errorMessage);
+          } else {
+            final count = invites.length;
+            final message = count == 1
+                ? 'User invitation sent successfully!'
+                : '$count user invitations sent successfully!';
+            _showSuccessSnackBar(message);
+          }
+        },
       ),
     );
+  }
+
+  // Helper function to extract name from email
+  String _getNameFromEmail(String email) {
+    final atIndex = email.indexOf('@');
+    if (atIndex > 0) {
+      return email.substring(0, atIndex);
+    }
+    return email;
   }
 
   void _showUserProfile(UserEntity user) {
@@ -1112,18 +1038,6 @@ class _UsersPageState extends State<UsersPage> {
             _showSuccessSnackBar('User updated successfully!');
           }
         },
-      ),
-    );
-  }
-
-  void _showBulkActions() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Bulk actions feature coming soon!',
-          style: GoogleFonts.montserrat(),
-        ),
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }

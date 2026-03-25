@@ -1,33 +1,38 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/if.h>
 #include "fusion_connect_manager.h"
 
-static char *eth_iface = "lan3";
-module_param(eth_iface, charp, 0444);
-MODULE_PARM_DESC(eth_iface, "Ethernet interface for FusionConnect traffic (default: lan3)");
+#define FUSION_CN_DEFAULT_IFACE "lan1"
+
+static char *eth_iface = FUSION_CN_DEFAULT_IFACE;
+module_param_named(iface, eth_iface, charp, 0444);
+MODULE_PARM_DESC(iface, "Network interface name used by Fusion Connect");
 
 static bool debug = false;
-module_param(debug, bool, 0444);
-MODULE_PARM_DESC(debug, "Turn on debug printks (default: false)");
+module_param_named(debug, debug, bool, 0444);
+MODULE_PARM_DESC(debug, "Enable Fusion Connect debug logging");
 
-static struct fusion_cn_manager mgr;
+static struct fusion_cn_manager fusion_cn_mgr;
 
 static int __init fusion_cn_init(void)
 {
-  int ret;
-  strscpy(mgr.netfilter.iface_name, eth_iface, IFNAMSIZ);
-  mgr.ptp.ptp_timing_mode = TIMING_HRTIMER;
-  mgr.debug = mgr.rtp.debug = debug;
+    int ret;
 
-  ret = fusion_cn_mgr_init(&mgr);
-  if (ret) printk(KERN_ERR"fusion_cn: Module init failed: %d\n", ret);
-  
-  return ret;
+    strscpy(fusion_cn_mgr.netfilter.iface_name, eth_iface, IFNAMSIZ);
+    fusion_cn_mgr.debug = debug;
+    fusion_cn_mgr.rtp.debug = debug;
+
+    ret = fusion_cn_mgr_init(&fusion_cn_mgr);
+    if (ret)
+        pr_err("fusion_cn: module init failed: %d\n", ret);
+
+    return ret;
 }
 
 static void __exit fusion_cn_exit(void)
 {
-  fusion_cn_mgr_destroy(&mgr);
+    fusion_cn_mgr_destroy(&fusion_cn_mgr);
 }
 
 module_init(fusion_cn_init);

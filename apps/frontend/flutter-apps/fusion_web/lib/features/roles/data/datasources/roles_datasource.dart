@@ -21,7 +21,7 @@ class RolesDataSource {
       _checkAuthorization();
       print('🔍 [RolesDataSource] Fetching all roles...');
 
-      final response = await _apiService.get('organization/role-management');
+      final response = await _apiService.get('/organization/role-management');
       print('✅ [RolesDataSource] Raw API Response: $response');
 
       // Handle both direct response and nested response formats

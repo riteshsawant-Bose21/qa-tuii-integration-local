@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 
 class SearchBarSources extends StatelessWidget {
   final TextEditingController searchController;
@@ -27,42 +29,63 @@ class SearchBarSources extends StatelessWidget {
       child: Container(
         clipBehavior: Clip.hardEdge,
         decoration: BoxDecoration(
+          color: context.colorScheme.elevation2,
           border:
               isFromActionList
                   ? null
                   : Border(
-                    bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant, width: 1),
+                    bottom: BorderSide(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                      width: 1,
+                    ),
                   ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             /// Search + filter + sort row
-            SizedBox(
+            Container(
+              color: context.colorScheme.elevation2,
               height: 32,
               child: Row(
                 children: <Widget>[
                   /// Search box
                   Expanded(
-                    child: FusionTextField(
-                      controller: searchController,
-                      hintText: 'Search sources',
-                      prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 16),
-                      onChanged: (String value) {
-                        if (value.isEmpty) {
-                          onClearSearch?.call();
-                        }
-                        onSearchChanged?.call(value);
-                      },
-                      suffixIcon:
-                          searchController.text.isNotEmpty
-                              ? IconButton(
-                                icon: Icon(Icons.clear, color: Colors.grey[400], size: 16),
-                                onPressed: onClearSearch,
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                              )
-                              : null,
+                    child: SemanticHelper.formControl(
+                      testId: SemanticHelper.createTestId(
+                        SemanticTypes.textInput,
+                        "search_bar_sources",
+                      ),
+                      child: FusionTextField(
+                        semanticFieldId: 'search_bar_sources',
+                        controller: searchController,
+                        hintText: 'Search sources',
+
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: Colors.grey[400],
+                          size: 16,
+                        ),
+                        onChanged: (String value) {
+                          if (value.isEmpty) {
+                            onClearSearch?.call();
+                          }
+                          onSearchChanged?.call(value);
+                        },
+                        suffixIcon:
+                            searchController.text.isNotEmpty
+                                ? IconButton(
+                                  icon: Icon(
+                                    Icons.clear,
+                                    color: Colors.grey[400],
+                                    size: 16,
+                                  ),
+                                  onPressed: onClearSearch,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                )
+                                : null,
+                      ),
                     ),
                   ),
 
@@ -111,7 +134,7 @@ class SearchBarSources extends StatelessWidget {
   }) {
     return PopupMenuButton<void>(
       tooltip: tooltip,
-      color: Theme.of(context).colorScheme.white,
+      color: context.colorScheme.elevation1,
       offset: const Offset(0, 30),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),

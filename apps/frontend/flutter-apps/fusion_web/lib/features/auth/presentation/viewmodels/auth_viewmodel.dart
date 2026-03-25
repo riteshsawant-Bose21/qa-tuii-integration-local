@@ -76,6 +76,17 @@ class AuthViewModel extends ChangeNotifier {
     _clearError();
 
     try {
+      // First check if user is already logged in to avoid unnecessary redirects
+      final isAlreadyLoggedIn = await isLoggedInUseCase();
+      if (isAlreadyLoggedIn) {
+        print('User is already logged in, skipping Auth0 redirect');
+        _currentUser = await getCurrentUserUseCase();
+        _isLoggedIn = true;
+        await _initializeApiToken();
+        notifyListeners();
+        return;
+      }
+
       _currentUser = await loginUseCase();
       _isLoggedIn = _currentUser != null;
 
@@ -85,6 +96,7 @@ class AuthViewModel extends ChangeNotifier {
 
       notifyListeners();
     } catch (e) {
+      print('Login error: $e');
       _error = e.toString();
       notifyListeners();
     } finally {

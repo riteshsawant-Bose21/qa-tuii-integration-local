@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 
 	sdp "github.com/pion/sdp/v3"
 )
@@ -189,7 +189,7 @@ func (h *Handler) pruneExpiredSAPSessions() {
 // updateStateMap update the global state only if the node is primary
 func (h *Handler) updateStateMap() error {
 
-	if h.appConfig.NodeName == h.memberlist.LocalNode().Name {
+	if h.appConfig.NodeName == h.clusterTransport.LocalNode().Name {
 		// All nodes are going to receive the SAP multicast messages.
 		// We only need the primary to set the state. It will naturally
 		// propogate across all nodes.

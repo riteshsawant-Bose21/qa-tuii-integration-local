@@ -16,7 +16,9 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+# version should be like dev.0.3.0+1
+
+version: 0.4.1+1
 
 environment:
   sdk: ^3.7.2
@@ -44,16 +46,18 @@ dependencies:
   dio: ^5.8.0+1
   mutex: ^3.1.0
   intl: ">=0.19.0"
+  country_code_picker: ^3.4.1
   flutter_bloc: ^9.1.1
 
   shared_preferences: ^2.4.0
   freezed: ^2.5.7
   simple_gradient_text: ^1.3.0
   fluttertoast: ^8.2.12
-  google_fonts: ^6.2.1
+  google_fonts: ^8.0.0
   archive: ^4.0.7
   share_plus: ^12.0.1
-  file_picker: ^10.2.0
+  file_picker: 10.3.10
+  flutter_inappwebview: ^6.1.5
   webview_all: ^0.5.2
   photo_view: ^0.15.0
   pretty_qr_code: ^3.4.0
@@ -63,15 +67,21 @@ dependencies:
   flutter_svg: ^2.2.1
   lucide_icons_flutter: ^3.1.6
   flutter_secure_storage: ^9.2.4
+  flutter_colorpicker: ^1.1.0
+  audioplayers: ^6.5.1
+  package_info_plus: ^8.1.2
 
 
   # Authentication
   auth0_flutter: ^1.14.0
-
+  desktop_auth0_flutter: ^0.2.0
   flutter_dotenv: ^6.0.0
 
   calendar_date_picker2: ^2.0.1
   date_picker_plus: ^4.2.0
+
+  universal_platform: ^1.1.0
+  desktop_drop: ^0.7.0
 
   fusion_lib:
     path: ../../../../libs/flutter-libs/fusion_lib
@@ -87,11 +97,13 @@ dev_dependencies:
   appium_flutter_server: 
     git:
       url: https://github.com/Preetham-BoseProfessional/appium-flutter-server-x.git
-      ref: main
+      ref: 5c49bc85a17d4e6ee88d3c99b15973d71d4f30b8
       path: server
   integration_test:
     sdk: flutter
   permission_handler: ^11.0.1
+  lottie: ^3.3.2
+  visibility_detector: ^0.4.0+2
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -99,6 +111,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+#  msix: ^3.16.12
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -126,8 +139,13 @@ flutter:
     - assets/icons/
     - assets/icons/wiring_ports/
     - assets/icons/scheduler/
+    - assets/icons/gpio/
     # - packages/fusion_lib/lib/assets/
     - assets/svg/
+    - assets/images/commission/
+    - assets/zip/product_cache.zip
+    - assets/lottie/
+    - assets/fonts/
 
 
   # An image asset can refer to one or more resolution-specific "variants", see
@@ -141,17 +159,24 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
-  # fonts:
-  #   - family: Schyler
-  #     fonts:
-  #       - asset: fonts/Schyler-Regular.ttf
-  #       - asset: fonts/Schyler-Italic.ttf
-  #         style: italic
-  #   - family: Trajan Pro
-  #     fonts:
-  #       - asset: fonts/TrajanPro.ttf
-  #       - asset: fonts/TrajanPro_Bold.ttf
-  #         weight: 700
+  fonts:
+     # EaseStd – Regular and Bold (Headings)
+     - family: EaseStd
+       fonts:
+         - asset: assets/fonts/EaseStd-Regular.otf
+           weight: 400
+         - asset: assets/fonts/EaseStd-bold.otf
+           weight: 700
+
+     # Inter – Variable font (Body & Labels)
+     - family: Inter
+       fonts:
+          - asset: assets/fonts/Inter-VariableFont_opsz,wght.ttf
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+msix_config:
+  display_name: app_links_example
+  msix_version: 1.0.0.0
+  protocol_activation: https, com.bosepro.fusion # Add the protocols to activate the app
+  app_uri_handler_hosts: id-dev.boseprofessional.com # Add the app uri handler hosts. You can't use patterns here.

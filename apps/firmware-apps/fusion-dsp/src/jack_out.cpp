@@ -1,5 +1,6 @@
 
 #include <bosepro/algorithm.h>
+#include <bosepro/conversion.h>
 #include <bosepro/jack.h>
 
 #include <cstring>
