@@ -1,275 +1,232 @@
-// @title Fusion Cloud Backend API
-// @version 1.0
-// @description This is the Fusion Cloud Backend API server providing comprehensive role-based access control, user management, and project management capabilities.
-// @termsOfService http://swagger.io/terms/
-
-// @contact.name API Support
-// @contact.url http://www.swagger.io/support
-// @contact.email support@swagger.io
-
-// @license.name MIT
-// @license.url https://opensource.org/licenses/MIT
-
-// @BasePath /api/v1
-// @schemes http https
-// @securityDefinitions.apikey BearerAuth
-// @in header
-// @name Authorization
-// @description Type "Bearer" followed by a space and JWT token.
+// Package main provides the entry point for the sync service.
 package main
 
 import (
-	"context"
-	"flag"
-	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
+ "context"
+ "encoding/json"
+ "fmt"
+ inbuiltlog "log"
+ "net/url"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/docs"
-	api "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api"
-	serverapi "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/server/api"
+ "github.com/aws/aws-lambda-go/events"
+ "github.com/aws/aws-lambda-go/lambda"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
+ "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+ "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
+ "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
+ "go.uber.org/zap"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/firmware"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
-	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
-	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
-
-	"go.uber.org/zap"
-
-	projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
-
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/auth"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user"
-	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
-
-	firmwaredb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/firmware/db"
-
-	authZero "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/auth/authzero"
+ "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
+ sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
+ "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
+ "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
+ productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
+ serverSync "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/server/sync"
 )
 
-func main() {
-	ctx := context.Background()
+var (
+ logger     *log.Logger
+ productSVC *product.Service
 
-	// Parse the flags
-	envFile := flag.String("c", ".env", "config environment file")
-	envName := flag.String("e", "local", "application environment (e.g. local, dev, staging, prod)")
-	flag.Parse()
+ productBucket string
+ priceBucket   string
+)
 
-	// Check for environment variable first, then fallback to command line flag
-	actualEnvName := *envName
-	if envFromVar := os.Getenv("FUSION_ENVIRONMENT"); envFromVar != "" {
-		actualEnvName = envFromVar
-	}
+// init runs exactly once per each Lambda cold start, before the first handler is called.
+// All expensive setup ís placed within the init
+func init() {
+ var err error
 
-	env := environment.New(environment.DefaultLoadLookuper)
+ logger, err = log.NewProduction()
+ if err != nil {
+  inbuiltlog.Fatalf("Failed to initialize logger: %v", err)
+ }
 
-	fmt.Printf("Running in %s environment\n", actualEnvName)
+ // Lambda environment variables are injected directly by the runtime.
+ env := environment.New(environment.DefaultLoadLookuper)
 
-	if actualEnvName == "local" {
-		if err := env.Load(*envFile); err != nil {
-			fmt.Printf("Error loading environment file %s: %v\n", *envFile, err)
-			os.Exit(1)
-		}
-	}
+ configSVC, err := config.NewService(env)
+ if err != nil {
+  logger.Fatal("Failed to initialize config service", zap.Error(err))
+ }
 
-	// Initialize configuration service
-	configSVC, err := config.NewService(env)
-	if err != nil {
-		fmt.Printf("Failed to initialize config service: %v\n", err)
-		panic(err)
-	}
+ syncCfg, err := serverSync.NewSyncConfig(configSVC)
+ if err != nil {
+  logger.Fatal("Failed to load sync config", zap.Error(err))
+ }
 
-	// Load API configuration
-	cfg, err := serverapi.NewAPIConfig(configSVC)
-	if err != nil {
-		fmt.Printf("Failed to load API config: %v\n", err)
-		panic(err)
-	}
+ productBucket = syncCfg.S3.ProductBucket
+ priceBucket = syncCfg.S3.PriceBucket
+ s3Region := syncCfg.S3.Region
 
-	// Initialize dual loggers with lumberjack rotation
-	loggerConfig := log.DefaultLoggerConfig()
-	loggerConfig.Mode = cfg.Server.LogLevel
-	if cfg.Server.LogDir != "" {
-		loggerConfig.LogDir = cfg.Server.LogDir
-	}
+ if productBucket == "" || priceBucket == "" {
+  logger.Fatal("S3_PRODUCT_BUCKET and S3_PRICE_BUCKET environment variables must be set")
+ }
 
-	loggers, err := log.NewLoggers(loggerConfig)
-	if err != nil {
-		panic(fmt.Errorf("failed to initialize loggers: %w", err))
-	}
+ if s3Region == "" {
+  logger.Fatal("AWS_REGION environment variable must be set.")
+ }
 
-	// // Set host dynamically from configuration
-	docs.SwaggerInfo.Host = cfg.Server.SwaggerHost
+ pgs, err := sql.New(
+  sql.PostgresOpener,
+  syncCfg.Postgres.Host, // Use a proxy for AWS Rds
+  syncCfg.Postgres.Port,
+  syncCfg.Postgres.User,
+  syncCfg.Postgres.Password,
+  syncCfg.Postgres.Database,
+  syncCfg.Postgres.SSLMode,
+ )
 
-	// Initialize the database connection.
-	pgs, err := sql.New(
-		sql.PostgresOpener,
-		cfg.Postgres.Host,     // host
-		cfg.Postgres.Port,     // port
-		cfg.Postgres.User,     // user
-		cfg.Postgres.Password, // password
-		cfg.Postgres.Database, // instance (example: database name)
-		cfg.Postgres.SSLMode,  // sslmode
-	)
+ if err != nil {
+  logger.Fatal("Failed to connect to database", zap.Error(err))
+ }
 
-	if err != nil {
-		loggers.AppLogger.Fatal("Failed to connect to the database", zap.Error(err))
-	}
+ validationCfg, err := configSVC.Validation()
+ if err != nil {
+  logger.Fatal("Failed to get validation config", zap.Error(err))
+ }
 
-	loggers.AppLogger.Info("Database connection established successfully")
+ processingCfg, err := configSVC.Processing()
+ if err != nil {
+  logger.Fatal("Failed to get processing config", zap.Error(err))
+ }
 
-	//Initialize Product DB Service
-	productDBSvc := productdb.NewService(pgs, loggers.AppLogger)
-	if productDBSvc == nil {
-		loggers.AppLogger.Fatal("Failed to initialize product database service")
-	}
-	loggers.AppLogger.Info("Initialized Product DB Service.")
-	validationCfg, err := configSVC.Validation()
-	if err != nil {
-		loggers.AppLogger.Fatal("Failed to get validation config", zap.Error(err))
-	}
+ // Initialize S3 client
+ s3Handler, err := cloudfs.NewS3Client(context.Background(), syncCfg.S3.Region)
+ if err != nil {
+  logger.Fatal("Failed to initialize S3 client", zap.Error(err))
+ }
 
-	processingCfg, err := configSVC.Processing()
-	if err != nil {
-		loggers.AppLogger.Fatal("Failed to get processing config", zap.Error(err))
-	}
+ productDBSvc := productdb.NewService(pgs, logger.JobSyncLog())
+ if productDBSvc == nil {
+  logger.Fatal("Failed to initialize product database service")
+ }
 
-	s3Handler, err := cloudfs.NewS3Client(ctx, cfg.S3.Region)
-	if err != nil {
-		loggers.AppLogger.Fatal("Failed to initialize S3 client", zap.Error(err))
-	}
-	loggers.AppLogger.Info("Initialized S3 client")
-
-	//Initialize Product Service (now includes sync functionality)
-	productSVC := product.NewService(productDBSvc, validationCfg.DefaultVersion, validationCfg, processingCfg, s3Handler, loggers.AppLogger)
-	if productSVC == nil {
-		loggers.AppLogger.Fatal("Failed to initialize product service")
-	}
-	loggers.AppLogger.Info("Initialized Product Service.")
-
-	// Initialize Project DB Service
-	projectDBSvc := projectdb.NewService(pgs)
-	if projectDBSvc == nil {
-		loggers.AppLogger.Fatal("Failed to initialize project service")
-	}
-
-	//Initialize Project Service
-	projectSVC := project.NewService(projectDBSvc, s3Handler.Bucket(cfg.S3.ProjectBucket))
-	if projectSVC == nil {
-		loggers.AppLogger.Fatal("Failed to initialize project service")
-	}
-	loggers.AppLogger.Info("Initialized Project Service.")
-	// Initialize User DB Service
-	userDBSvc := userdb.NewService(pgs)
-	if userDBSvc == nil {
-		loggers.AppLogger.Fatal("Failed to initialize user service")
-	}
-	loggers.AppLogger.Info("Initialized User DB Service.")
-
-	// Initialize User Service
-	userSVC := user.NewService(userDBSvc)
-	if userSVC == nil {
-		loggers.AppLogger.Fatal("Failed to initialize user service")
-	}
-	loggers.AppLogger.Info("Initialized User Service.")
-
-	// Initialize Auth0 Service
-	authZeroSVC := authZero.NewService(cfg.AuthZero, loggers.AppLogger)
-	if authZeroSVC == nil {
-		loggers.AppLogger.Fatal("Failed to initialize auth0 service")
-	}
-	loggers.AppLogger.Info("Initialized Auth0 Service.")
-
-	// Initialize Auth Service
-	authSVC := auth.NewService(authZeroSVC)
-	if authSVC == nil {
-		loggers.AppLogger.Fatal("Failed to initialize auth service")
-	}
-	loggers.AppLogger.Info("Initialized Auth Service.")
-
-	// initiate firmware service
-	firmwareDBSvc := firmwaredb.NewService(pgs)
-	if firmwareDBSvc == nil {
-		loggers.AppLogger.Fatal("Failed to initialize firmware service")
-	}
-	loggers.AppLogger.Info("Initialized Firmware DB Service.")
-
-	// Initialize Firmware Service
-	firmwareSVC := firmware.NewService(firmwareDBSvc, s3Handler.Bucket(cfg.S3.FirmwareBundleBucket))
-	if firmwareSVC == nil {
-		loggers.AppLogger.Fatal("Failed to initialize firmware service")
-	}
-	loggers.AppLogger.Info("Initialized Firmware Service.")
-
-	// Initialize Auth middleware using Auth service (consolidates all authentication functionality)
-	authMiddleware := middleware.NewAuth0Middleware(authSVC)
-	loggers.AppLogger.Info("Initialized Auth0 middleware")
-
-	// Initialize API Server (with configurable host and port)
-	server, err := api.New(&api.Config{
-		Host: cfg.Server.APIHost,
-		Port: cfg.Server.APIPort,
-	}, productSVC, projectSVC, userSVC, authSVC, firmwareSVC, authMiddleware, loggers)
-	if err != nil {
-		loggers.AppLogger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
-	}
-
-	loggers.AppLogger.Info("Initialized the API.",
-		zap.String("host", cfg.Server.APIHost),
-		zap.String("port", cfg.Server.APIPort))
-	// Setup graceful shutdown
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	shutdownChan := make(chan os.Signal, 1)
-	signal.Notify(shutdownChan, syscall.SIGINT, syscall.SIGTERM)
-
-	// Start server in goroutine
-	serverDoneChan := make(chan error, 1)
-	go func() {
-		loggers.AppLogger.Info("Starting server...")
-		err := server.Start(ctx)
-		serverDoneChan <- err // Send result regardless of error or nil
-	}()
-
-	// Wait for shutdown signal or server error
-	select {
-	case <-shutdownChan:
-		loggers.AppLogger.Info("Received shutdown signal, initiating graceful shutdown...")
-		cancel()
-
-		// Give server time to shutdown gracefully
-		shutdownTimeout := time.NewTimer(30 * time.Second)
-		defer shutdownTimeout.Stop()
-
-		select {
-		case err := <-serverDoneChan:
-			if err != nil {
-				loggers.AppLogger.Error("Server shutdown with error", zap.Error(err))
-			} else {
-				loggers.AppLogger.Info("Server shutdown completed successfully")
-			}
-		case <-shutdownTimeout.C:
-			loggers.AppLogger.Info("Server shutdown timeout exceeded - forcing exit")
-		}
-
-	case err := <-serverDoneChan:
-		if err != nil {
-			loggers.AppLogger.Error("Server error", zap.Error(err))
-		} else {
-			loggers.AppLogger.Info("Server exited normally")
-		}
-		cancel()
-	}
-
-	loggers.AppLogger.Info("Application stopped gracefully")
+ productSVC = product.NewService(
+  productDBSvc,
+  validationCfg.DefaultVersion,
+  validationCfg,
+  processingCfg,
+  s3Handler,
+  logger.JobSyncLog(),
+ )
+ if productSVC == nil {
+  logger.Fatal("Failed to initialize product service")
+ }
 }
+
+// inferSyncType determines the sync type from the S3 object key path.
+// Prefix convention:
+// s3://<S3_PRODUCT_BUCKET>/XXXX/<file>.json -> "product"
+// s3://<S3_PRICE_BUCKET>/XXXX/<file>.json   -> "price"
+func inferSyncType(bucket string) (string, error) {
+ switch bucket {
+ case productBucket:
+  return "product", nil
+ case priceBucket:
+  return "price", nil
+ default:
+  return "", fmt.Errorf(
+   "unknown bucket %q: must match S3_PRODUCT_BUCKET or S3_PRICE_BUCKET",
+   bucket,
+  )
+ }
+}
+
+// s3EventBridgeDetail holds the S3-specific fields from an EventBridge "Object Created" event.
+type s3EventBridgeDetail struct {
+ Bucket struct {
+  Name string `json:"name"`
+ } `json:"bucket"`
+ Object struct {
+  Key string `json:"key"`
+ } `json:"object"`
+}
+
+// handler is invoked by the Lambda runtime for each S3 EventBridge notification.
+// If it returns non-nil value, it tells Lambda to retry.
+func handler(ctx context.Context, event events.CloudWatchEvent) error {
+ var detail s3EventBridgeDetail
+ if err := json.Unmarshal(event.Detail, &detail); err != nil {
+  return fmt.Errorf("failed to unmarshal EventBridge detail: %w", err)
+ }
+
+ key, err := url.QueryUnescape(detail.Object.Key)
+ if err != nil {
+  logger.Error("failed to URL-decode S3 key",
+   zap.String("raw_key", detail.Object.Key),
+   zap.Error(err),
+  )
+  return fmt.Errorf("invalid S3 key encoding %q: %w", detail.Object.Key, err)
+ }
+
+ bucket := detail.Bucket.Name
+ region := event.Region
+
+ logger.Info("Received S3 EventBridge event",
+  zap.String("bucket", bucket),
+  zap.String("key", key),
+  zap.String("region", region),
+  zap.String("detailType", event.DetailType),
+ )
+
+ syncType, err := inferSyncType(bucket)
+ if err != nil {
+  logger.Error("failed to infer sync type",
+   zap.String("key", key),
+   zap.Error(err),
+  )
+  return err
+ }
+
+ syncRequest := &types.SyncRequest{
+  SyncType:         syncType,
+  SyncOperation:    "scheduled_sync",
+  SourceType:       "s3",
+  S3Bucket:         bucket,
+  S3Key:            key,
+  Region:           region,
+  EnableValidation: true,
+ }
+
+ result, err := productSVC.Execute(ctx, syncRequest)
+ if err != nil {
+  logger.Error("sync execution failed",
+   zap.String("bucket", bucket),
+   zap.String("key", key),
+   zap.String("sync_type", syncType),
+   zap.Error(err),
+  )
+  // Non-nil error -> Lambda retries according to retry policy.
+  return fmt.Errorf("sync failed for s3://%s/%s: %w", bucket, key, err)
+ }
+
+ logger.Info("sync completed",
+  zap.String("bucket", bucket),
+  zap.String("key", key),
+  zap.String("sync_type", syncType),
+  zap.Int("total_items", result.TotalItems),
+  zap.Int("successful", result.Successful),
+  zap.Int("failed", result.Failed),
+  zap.Duration("duration", result.Duration),
+ )
+
+ if result.Failed > 0 {
+  logger.Warn("sync completed with partial failures",
+   zap.Int("failed_count", result.Failed),
+   zap.Strings("validation_warnings", result.ValidationWarnings),
+  )
+  return fmt.Errorf(
+   "sync completed with %d item failure(s) for s3://%s/%s",
+   result.Failed, bucket, key,
+  )
+ }
+
+ return nil
+}
+
+// main just calls the lambda handler
+func main() {
+ lambda.Start(handler)
+}
+ 
