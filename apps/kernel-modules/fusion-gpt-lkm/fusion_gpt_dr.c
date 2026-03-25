@@ -571,27 +571,6 @@ int fusion_gpt_set_phc_anchor(u64 phc_ns_at_pps)
 }
 EXPORT_SYMBOL(fusion_gpt_set_phc_anchor);
 
-int fusion_gpt_get_phc_status(bool *epoch_valid, bool *aligned, u32 *pps_seq)
-{
-	struct fusion_gpt *g;
-	unsigned long flags;
-	if (!epoch_valid || !aligned || !pps_seq) return -EINVAL;
-
-	mutex_lock(&gpt_singleton_lock);
-	g = gpt_singleton;
-	mutex_unlock(&gpt_singleton_lock);
-	if (!g) return -ENODEV;
-
-	/* single spin-locked snapshot */
-	raw_spin_lock_irqsave(&g->pps_lock, flags);
-	*epoch_valid = g->phc_epoch_valid;
-	*aligned     = READ_ONCE(g->phc_aligned);
-	*pps_seq     = g->pps_seq;
-	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
-	return 0;
-}
-EXPORT_SYMBOL(fusion_gpt_get_phc_status);
-
 int fusion_gpt_get_timing_status(struct fusion_gpt_timing_status *status)
 {
 	struct fusion_gpt *g;
@@ -1752,4 +1731,4 @@ module_platform_driver(drv);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Bose Pro");
 MODULE_DESCRIPTION("GPT1 SHIM EXPORTING 1/3MS TICKS");
-MODULE_VERSION("1.0.1-configuration-save");
+MODULE_VERSION("1.0.1-PR-Changes");

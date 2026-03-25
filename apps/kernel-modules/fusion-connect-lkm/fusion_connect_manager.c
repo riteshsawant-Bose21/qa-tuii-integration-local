@@ -374,11 +374,11 @@ static inline void fusion_cn_queue_process(void)
 static void fusion_cn_gpt_tick(void *ctx, u64 tick64)
 {
     struct fusion_cn_manager *mgr = ctx;
-    bool epoch_ok, aligned;
-    u32  seq;
+    struct fusion_gpt_timing_status timing_status;
     u64  now_ns;
 
-    if (fusion_gpt_get_phc_status(&epoch_ok, &aligned, &seq) || !epoch_ok || !aligned)
+    if (fusion_gpt_get_timing_status(&timing_status) ||
+        !timing_status.epoch_valid || !timing_status.aligned)
         return; /* hard gate: no PHC, no work */
 
     now_ns = fusion_gpt_read_phc_ns();
@@ -403,8 +403,7 @@ static const struct fusion_gpt_client_ops fusion_cn_gpt_ops = {
 static int fusion_cn_timer_init(struct fusion_cn_manager *mgr)
 {
     int ret;
-    bool epoch_ok, aligned;
-    u32  seq;
+    struct fusion_gpt_timing_status timing_status;
     u64  now_ns = 0;
 
     mgr->timer.tick_count = 0;
@@ -415,7 +414,7 @@ static int fusion_cn_timer_init(struct fusion_cn_manager *mgr)
         return ret;
     }
 
-    if (!fusion_gpt_get_phc_status(&epoch_ok, &aligned, &seq) && epoch_ok) {
+    if (!fusion_gpt_get_timing_status(&timing_status) && timing_status.epoch_valid) {
         now_ns = fusion_gpt_read_phc_ns();
     }
 
@@ -423,7 +422,7 @@ static int fusion_cn_timer_init(struct fusion_cn_manager *mgr)
         mgr->timer.last_tick_ns = now_ns;
         mgr->timer.next_tick_ns = now_ns + TIMER_BASE_INTERVAL_NS;
         pr_info("fusion_cn: GPT timing active (PHC-aligned%s)\n",
-                aligned ? ", aligned" : ", waiting alignment");
+                timing_status.aligned ? ", aligned" : ", waiting alignment");
     } else {
         mgr->timer.last_tick_ns = 0;
         mgr->timer.next_tick_ns = 0;
@@ -938,31 +937,6 @@ static int handle_set_phc_anchor(struct fusion_cn_manager *mgr,
     return 0;
 }
 
-struct fc_get_phc_status_reply
-{
-    bool epoch_valid;
-    bool aligned;
-    u32  pps_seq;
-} __packed;
-
-static int handle_get_phc_status(struct fusion_cn_manager *mgr,
-                                 struct fusion_cn_ctrl_msg *msg,
-                                 struct fusion_cn_ctrl_msg *reply)
-{
-    struct fc_get_phc_status_reply r;
-    int rc = fusion_gpt_get_phc_status(&r.epoch_valid, &r.aligned, &r.pps_seq);
-    if (rc)
-        return reply->err = rc;
-
-    reply->data = kmemdup(&r, sizeof(r), GFP_KERNEL);
-    if (!reply->data)
-        return reply->err = -ENOMEM;
-
-    reply->data_size = sizeof(r);
-    reply->err = 0;
-    return 0;
-}
-
 struct fc_get_timing_status_reply
 {
     bool discipline_ready;
@@ -1057,7 +1031,6 @@ static const struct message_handler_entry message_handlers[] = {
     { FUSION_CN_CTRL_CMD_REMOVE_STREAM, handle_remove_stream },
     { FUSION_CN_CTRL_CMD_GET_METRICS,   handle_get_metrics },
     { FUSION_CN_CTRL_CMD_SET_PHC_ANCHOR, handle_set_phc_anchor },
-    { FUSION_CN_CTRL_CMD_GET_PHC_STATUS, handle_get_phc_status },
     { FUSION_CN_CTRL_CMD_GET_TIMING_STATUS, handle_get_timing_status },
     { FUSION_CN_CTRL_CMD_RESET_TIMING_STATE, handle_reset_timing_state },
     { FUSION_CN_CTRL_CMD_SET_DEBUG, handle_set_debug },
