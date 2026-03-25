@@ -288,3 +288,9 @@ type WebSocketStats struct {
 	LastReset      time.Time        `json:"last_reset"`                 // Stats last reset
 	MessagesByType map[string]int64 `json:"messages_by_type,omitempty"` // Messages by type
 }
+
+type FirmwareInfo struct {
+	BuildConfiguration struct {
+		FirmwareBundleVersion string `json:"FIRMWARE_BUNDLE_VERSION"`
+	} `json:"build_configuration"`
+}
