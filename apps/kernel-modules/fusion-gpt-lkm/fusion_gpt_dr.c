@@ -77,135 +77,44 @@ enum cal_state {
 	CAL_FAIL,
 };
 
-/* Startup local-surface identification + one-shot jump */
-static bool cal_enable = true;
-module_param(cal_enable, bool, 0644);
-MODULE_PARM_DESC(cal_enable, "Enable startup gain/dac surface calibration");
+#define CAL_CONFIG_VERSION 2U
+#define CAL_CONFIG_PATH "/var/lib/fusion/fusion-gpt-calibration.conf"
 
-static u32 cal_gain_delta = 20000;
-module_param(cal_gain_delta, uint, 0644);
-MODULE_PARM_DESC(cal_gain_delta, "Gain perturbation for startup probes");
+#define CAL_ENABLE true
+#define CAL_DEFAULT_GAIN_DELTA 20000U
+#define CAL_DEFAULT_DAC_DELTA 8U
+#define CAL_DEFAULT_SETTLE_PPS 2U
+#define CAL_DEFAULT_MEASURE_PPS 4U
+#define CAL_DEFAULT_FIT_RESIDUAL_THRESH 30U
+#define CAL_DEFAULT_SI_GAIN_START 70000U
+#define CAL_DEFAULT_INVERSE_GAIN_STEP 10000U
+#define CAL_DEFAULT_JUMP_DAC_MIN 30
+#define CAL_DEFAULT_JUMP_DAC_MAX 225
+#define CAL_DEFAULT_PRE_E0_SAMPLES 3U
+#define CAL_DEFAULT_PRE_E0_ABS_MAX 1000U
+#define CAL_DEFAULT_PRE_E0_MAX_WAIT 12U
 
-static u32 cal_dac_delta = 8;
-module_param(cal_dac_delta, uint, 0644);
-MODULE_PARM_DESC(cal_dac_delta, "DAC perturbation for startup probes");
+#define CAL_LOCK_ERR_THRESH 1U
+#define CAL_LOCK_CONSECUTIVE 5U
 
-static u32 cal_settle_pps = 2;
-module_param(cal_settle_pps, uint, 0644);
-MODULE_PARM_DESC(cal_settle_pps, "PPS samples to settle after each probe write");
-
-static u32 cal_measure_pps = 4;
-module_param(cal_measure_pps, uint, 0644);
-MODULE_PARM_DESC(cal_measure_pps, "PPS samples to average per probe point");
-
-static u32 cal_fit_residual_thresh = 30;
-module_param(cal_fit_residual_thresh, uint, 0644);
-MODULE_PARM_DESC(cal_fit_residual_thresh, "Maximum mean residual (ticks) accepted for model fit");
-
-static u32 cal_lambda_gain = 4;
-module_param(cal_lambda_gain, uint, 0644);
-MODULE_PARM_DESC(cal_lambda_gain, "Gain move penalty for one-shot optimization");
-
-static u32 cal_lambda_dac = 4;
-module_param(cal_lambda_dac, uint, 0644);
-MODULE_PARM_DESC(cal_lambda_dac, "DAC move penalty for one-shot optimization");
-
-static u32 cal_max_gain_step = 60000;
-module_param(cal_max_gain_step, uint, 0644);
-MODULE_PARM_DESC(cal_max_gain_step, "Maximum absolute gain jump from startup center");
-
-static u32 cal_max_dac_step = 64;
-module_param(cal_max_dac_step, uint, 0644);
-MODULE_PARM_DESC(cal_max_dac_step, "Maximum absolute DAC jump from startup center");
-
-static u32 cal_gain_search_step = 1000;
-module_param(cal_gain_search_step, uint, 0644);
-MODULE_PARM_DESC(cal_gain_search_step, "Gain step used in bounded one-shot target search");
-
-static u32 si_gain_start = 70000;
-module_param(si_gain_start, uint, 0644);
-MODULE_PARM_DESC(si_gain_start, "Starting Si5351b gain for startup, calibration center, and inverse-model jump search");
-
-static u32 cal_inverse_gain_step = 10000;
-module_param(cal_inverse_gain_step, uint, 0644);
-MODULE_PARM_DESC(cal_inverse_gain_step, "Absolute gain increment for inverse-model startup solve");
-
-static int cal_jump_dac_min = 30;
-module_param(cal_jump_dac_min, int, 0644);
-MODULE_PARM_DESC(cal_jump_dac_min, "Minimum acceptable DAC value for the one-shot calibration jump");
-
-static int cal_jump_dac_max = 225;
-module_param(cal_jump_dac_max, int, 0644);
-MODULE_PARM_DESC(cal_jump_dac_max, "Maximum acceptable DAC value for the one-shot calibration jump");
-
-static bool cal_use_prebaked = false;
-module_param(cal_use_prebaked, bool, 0644);
-MODULE_PARM_DESC(cal_use_prebaked, "Skip startup probing and use prebaked model coefficients");
-
-#define CAL_CONFIG_PATH_MAX 256
-static char cal_config_path[CAL_CONFIG_PATH_MAX] = "/var/lib/fusion/fusion-gpt-calibration.conf";
-module_param_string(cal_config_path, cal_config_path, sizeof(cal_config_path), 0644);
-MODULE_PARM_DESC(cal_config_path, "Path to persisted prebaked model coefficient file");
-
-static bool cal_config_autoload = true;
-module_param(cal_config_autoload, bool, 0644);
-MODULE_PARM_DESC(cal_config_autoload, "Load prebaked model coefficients from cal_config_path at startup");
-
-static bool cal_config_autosave = true;
-module_param(cal_config_autosave, bool, 0644);
-MODULE_PARM_DESC(cal_config_autosave, "Save fitted model coefficients to cal_config_path after calibration");
-
-static bool cal_pre_valid = false;
-module_param(cal_pre_valid, bool, 0644);
-MODULE_PARM_DESC(cal_pre_valid, "Prebaked model coefficients are valid");
-
-static int cal_pre_k1_q16 = 0;
-module_param(cal_pre_k1_q16, int, 0644);
-MODULE_PARM_DESC(cal_pre_k1_q16, "Prebaked k1 coefficient in Q16");
-
-static int cal_pre_k2_q16 = 0;
-module_param(cal_pre_k2_q16, int, 0644);
-MODULE_PARM_DESC(cal_pre_k2_q16, "Prebaked k2 coefficient in Q16");
-
-static int cal_pre_k3_q16 = 0;
-module_param(cal_pre_k3_q16, int, 0644);
-MODULE_PARM_DESC(cal_pre_k3_q16, "Prebaked k3 coefficient in Q16");
-
-static bool cal_capture_fit = true;
-module_param(cal_capture_fit, bool, 0644);
-MODULE_PARM_DESC(cal_capture_fit, "Capture fitted coefficients into cal_last_* for reuse");
-
-static int cal_last_k1_q16;
-module_param(cal_last_k1_q16, int, 0444);
-MODULE_PARM_DESC(cal_last_k1_q16, "Last fitted k1 coefficient in Q16 (read-only)");
-
-static int cal_last_k2_q16;
-module_param(cal_last_k2_q16, int, 0444);
-MODULE_PARM_DESC(cal_last_k2_q16, "Last fitted k2 coefficient in Q16 (read-only)");
-
-static int cal_last_k3_q16;
-module_param(cal_last_k3_q16, int, 0444);
-MODULE_PARM_DESC(cal_last_k3_q16, "Last fitted k3 coefficient in Q16 (read-only)");
-
-static u32 cal_pre_e0_samples = 3;
-module_param(cal_pre_e0_samples, uint, 0644);
-MODULE_PARM_DESC(cal_pre_e0_samples, "Number of sane PPS errors to average for prebaked e0");
-
-static u32 cal_pre_e0_abs_max = 1000;
-module_param(cal_pre_e0_abs_max, uint, 0644);
-MODULE_PARM_DESC(cal_pre_e0_abs_max, "Maximum absolute PPS error accepted for prebaked e0 collection");
-
-static u32 cal_pre_e0_max_wait = 12;
-module_param(cal_pre_e0_max_wait, uint, 0644);
-MODULE_PARM_DESC(cal_pre_e0_max_wait, "Maximum PPS intervals to wait for sane prebaked e0 samples");
-
-static u32 lock_err_thresh = 1;
-module_param(lock_err_thresh, uint, 0644);
-MODULE_PARM_DESC(lock_err_thresh, "Absolute PPS error threshold in ticks required to declare discipline ready");
-
-static u32 lock_consecutive = 5;
-module_param(lock_consecutive, uint, 0644);
-MODULE_PARM_DESC(lock_consecutive, "Consecutive in-threshold PPS samples required to declare discipline ready");
+struct fusion_gpt_cal_config {
+	s32 k1_q16;
+	s32 k2_q16;
+	s32 k3_q16;
+	u32 si_gain_start;
+	u32 cal_gain_delta;
+	u32 cal_dac_delta;
+	u32 cal_settle_pps;
+	u32 cal_measure_pps;
+	u32 cal_fit_residual_thresh;
+	u32 cal_inverse_gain_step;
+	int cal_jump_dac_min;
+	int cal_jump_dac_max;
+	u32 cal_pre_e0_samples;
+	u32 cal_pre_e0_abs_max;
+	u32 cal_pre_e0_max_wait;
+	bool coeffs_valid;
+};
 
 struct fusion_gpt
 {
@@ -283,6 +192,7 @@ struct fusion_gpt
   s32 cal_k1_q16;
   s32 cal_k2_q16;
   s32 cal_k3_q16;
+  struct fusion_gpt_cal_config cal_cfg;
   bool cal_config_checked;
 
   /* Sticky startup-ready flag for downstream GPT clients. */
@@ -295,21 +205,115 @@ static struct fusion_gpt *gpt_singleton;
 static DEFINE_MUTEX(gpt_singleton_lock);
 static int si5351b_write_gain(struct fusion_gpt *g, u32 gain);
 
-static int cal_load_prebaked_config(s32 *k1_q16, s32 *k2_q16, s32 *k3_q16)
+static void cal_config_set_defaults(struct fusion_gpt_cal_config *cfg)
+{
+	memset(cfg, 0, sizeof(*cfg));
+	cfg->si_gain_start = CAL_DEFAULT_SI_GAIN_START;
+	cfg->cal_gain_delta = CAL_DEFAULT_GAIN_DELTA;
+	cfg->cal_dac_delta = CAL_DEFAULT_DAC_DELTA;
+	cfg->cal_settle_pps = CAL_DEFAULT_SETTLE_PPS;
+	cfg->cal_measure_pps = CAL_DEFAULT_MEASURE_PPS;
+	cfg->cal_fit_residual_thresh = CAL_DEFAULT_FIT_RESIDUAL_THRESH;
+	cfg->cal_inverse_gain_step = CAL_DEFAULT_INVERSE_GAIN_STEP;
+	cfg->cal_jump_dac_min = CAL_DEFAULT_JUMP_DAC_MIN;
+	cfg->cal_jump_dac_max = CAL_DEFAULT_JUMP_DAC_MAX;
+	cfg->cal_pre_e0_samples = CAL_DEFAULT_PRE_E0_SAMPLES;
+	cfg->cal_pre_e0_abs_max = CAL_DEFAULT_PRE_E0_ABS_MAX;
+	cfg->cal_pre_e0_max_wait = CAL_DEFAULT_PRE_E0_MAX_WAIT;
+}
+
+static int cal_parse_config_buf(char *buf, struct fusion_gpt_cal_config *cfg)
+{
+	char *cursor = buf;
+	char *line;
+	unsigned int version = 0;
+	bool have_version = false, have_k1 = false, have_k2 = false, have_k3 = false;
+	bool have_gain_start = false, have_gain_delta = false, have_dac_delta = false;
+	bool have_settle_pps = false, have_measure_pps = false, have_fit_residual = false;
+	bool have_inverse_gain_step = false, have_jump_dac_min = false, have_jump_dac_max = false;
+	bool have_pre_e0_samples = false, have_pre_e0_abs_max = false, have_pre_e0_max_wait = false;
+	int tmp_int;
+	unsigned int tmp_u32;
+
+	cal_config_set_defaults(cfg);
+
+	while ((line = strsep(&cursor, "\n")) != NULL) {
+		if (!*line)
+			continue;
+		if (sscanf(line, "version=%u", &version) == 1) {
+			have_version = true;
+		} else if (sscanf(line, "k1_q16=%d", &tmp_int) == 1) {
+			cfg->k1_q16 = (s32)tmp_int;
+			have_k1 = true;
+		} else if (sscanf(line, "k2_q16=%d", &tmp_int) == 1) {
+			cfg->k2_q16 = (s32)tmp_int;
+			have_k2 = true;
+		} else if (sscanf(line, "k3_q16=%d", &tmp_int) == 1) {
+			cfg->k3_q16 = (s32)tmp_int;
+			have_k3 = true;
+		} else if (sscanf(line, "si_gain_start=%u", &tmp_u32) == 1) {
+			cfg->si_gain_start = tmp_u32;
+			have_gain_start = true;
+		} else if (sscanf(line, "cal_gain_delta=%u", &tmp_u32) == 1) {
+			cfg->cal_gain_delta = tmp_u32;
+			have_gain_delta = true;
+		} else if (sscanf(line, "cal_dac_delta=%u", &tmp_u32) == 1) {
+			cfg->cal_dac_delta = tmp_u32;
+			have_dac_delta = true;
+		} else if (sscanf(line, "cal_settle_pps=%u", &tmp_u32) == 1) {
+			cfg->cal_settle_pps = tmp_u32;
+			have_settle_pps = true;
+		} else if (sscanf(line, "cal_measure_pps=%u", &tmp_u32) == 1) {
+			cfg->cal_measure_pps = tmp_u32;
+			have_measure_pps = true;
+		} else if (sscanf(line, "cal_fit_residual_thresh=%u", &tmp_u32) == 1) {
+			cfg->cal_fit_residual_thresh = tmp_u32;
+			have_fit_residual = true;
+		} else if (sscanf(line, "cal_inverse_gain_step=%u", &tmp_u32) == 1) {
+			cfg->cal_inverse_gain_step = tmp_u32;
+			have_inverse_gain_step = true;
+		} else if (sscanf(line, "cal_jump_dac_min=%d", &tmp_int) == 1) {
+			cfg->cal_jump_dac_min = tmp_int;
+			have_jump_dac_min = true;
+		} else if (sscanf(line, "cal_jump_dac_max=%d", &tmp_int) == 1) {
+			cfg->cal_jump_dac_max = tmp_int;
+			have_jump_dac_max = true;
+		} else if (sscanf(line, "cal_pre_e0_samples=%u", &tmp_u32) == 1) {
+			cfg->cal_pre_e0_samples = tmp_u32;
+			have_pre_e0_samples = true;
+		} else if (sscanf(line, "cal_pre_e0_abs_max=%u", &tmp_u32) == 1) {
+			cfg->cal_pre_e0_abs_max = tmp_u32;
+			have_pre_e0_abs_max = true;
+		} else if (sscanf(line, "cal_pre_e0_max_wait=%u", &tmp_u32) == 1) {
+			cfg->cal_pre_e0_max_wait = tmp_u32;
+			have_pre_e0_max_wait = true;
+		}
+	}
+
+	if (!have_version || version < 1 || version > CAL_CONFIG_VERSION)
+		return -EINVAL;
+	if (!have_k1 || !have_k2 || !have_k3)
+		return -EINVAL;
+	if (version >= 2 &&
+	    (!have_gain_start || !have_gain_delta || !have_dac_delta ||
+	     !have_settle_pps || !have_measure_pps || !have_fit_residual ||
+	     !have_inverse_gain_step || !have_jump_dac_min || !have_jump_dac_max ||
+	     !have_pre_e0_samples || !have_pre_e0_abs_max || !have_pre_e0_max_wait))
+		return -EINVAL;
+
+	cfg->coeffs_valid = true;
+	return 0;
+}
+
+static int cal_load_prebaked_config(struct fusion_gpt_cal_config *cfg)
 {
 	struct file *filp;
 	char *buf;
 	loff_t pos = 0;
 	ssize_t nread;
-	unsigned int version = 0;
-	int k1 = 0, k2 = 0, k3 = 0;
-	int parsed;
 	int ret = 0;
 
-	if (!cal_config_path[0])
-		return -ENOENT;
-
-	filp = filp_open(cal_config_path, O_RDONLY, 0);
+	filp = filp_open(CAL_CONFIG_PATH, O_RDONLY, 0);
 	if (IS_ERR(filp))
 		return PTR_ERR(filp);
 
@@ -326,16 +330,7 @@ static int cal_load_prebaked_config(s32 *k1_q16, s32 *k2_q16, s32 *k3_q16)
 	}
 
 	buf[nread] = '\0';
-	parsed = sscanf(buf, "version=%u\nk1_q16=%d\nk2_q16=%d\nk3_q16=%d",
-			&version, &k1, &k2, &k3);
-	if (parsed != 4 || version != 1) {
-		ret = -EINVAL;
-		goto out_free;
-	}
-
-	*k1_q16 = (s32)k1;
-	*k2_q16 = (s32)k2;
-	*k3_q16 = (s32)k3;
+	ret = cal_parse_config_buf(buf, cfg);
 
 out_free:
 	kfree(buf);
@@ -344,22 +339,47 @@ out_close:
 	return ret;
 }
 
-static int cal_save_prebaked_config(s32 k1_q16, s32 k2_q16, s32 k3_q16)
+static int cal_save_prebaked_config(const struct fusion_gpt_cal_config *cfg)
 {
 	struct file *filp;
-	char buf[128];
+	char buf[512];
 	loff_t pos = 0;
 	int len;
 	ssize_t nwritten;
 
-	if (!cal_config_path[0])
-		return -ENOENT;
-
 	len = scnprintf(buf, sizeof(buf),
-			"version=1\nk1_q16=%d\nk2_q16=%d\nk3_q16=%d\n",
-			(int)k1_q16, (int)k2_q16, (int)k3_q16);
+			"version=%u\n"
+			"k1_q16=%d\n"
+			"k2_q16=%d\n"
+			"k3_q16=%d\n"
+			"si_gain_start=%u\n"
+			"cal_gain_delta=%u\n"
+			"cal_dac_delta=%u\n"
+			"cal_settle_pps=%u\n"
+			"cal_measure_pps=%u\n"
+			"cal_fit_residual_thresh=%u\n"
+			"cal_inverse_gain_step=%u\n"
+			"cal_jump_dac_min=%d\n"
+			"cal_jump_dac_max=%d\n"
+			"cal_pre_e0_samples=%u\n"
+			"cal_pre_e0_abs_max=%u\n"
+			"cal_pre_e0_max_wait=%u\n",
+			CAL_CONFIG_VERSION,
+			(int)cfg->k1_q16, (int)cfg->k2_q16, (int)cfg->k3_q16,
+			cfg->si_gain_start,
+			cfg->cal_gain_delta,
+			cfg->cal_dac_delta,
+			cfg->cal_settle_pps,
+			cfg->cal_measure_pps,
+			cfg->cal_fit_residual_thresh,
+			cfg->cal_inverse_gain_step,
+			cfg->cal_jump_dac_min,
+			cfg->cal_jump_dac_max,
+			cfg->cal_pre_e0_samples,
+			cfg->cal_pre_e0_abs_max,
+			cfg->cal_pre_e0_max_wait);
 
-	filp = filp_open(cal_config_path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+	filp = filp_open(CAL_CONFIG_PATH, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	if (IS_ERR(filp))
 		return PTR_ERR(filp);
 
@@ -381,19 +401,23 @@ static inline u64 ceil_div_u64(u64 a, u64 b)
 	return (a + b - 1) / b;
 }
 
-static inline u32 fusion_start_gain_value(void)
+static inline u32 fusion_start_gain_value(const struct fusion_gpt_cal_config *cfg)
 {
-	return clamp_t(u32, si_gain_start, 40000, 250000);
+	return clamp_t(u32, cfg->si_gain_start, 40000, 250000);
 }
 
-static inline int cal_jump_dac_min_value(void)
+static inline int cal_jump_dac_min_value(const struct fusion_gpt_cal_config *cfg)
 {
-	return clamp_t(int, min_t(int, cal_jump_dac_min, cal_jump_dac_max), 0, 255);
+	return clamp_t(int,
+		       min_t(int, cfg->cal_jump_dac_min, cfg->cal_jump_dac_max),
+		       0, 255);
 }
 
-static inline int cal_jump_dac_max_value(void)
+static inline int cal_jump_dac_max_value(const struct fusion_gpt_cal_config *cfg)
 {
-	return clamp_t(int, max_t(int, cal_jump_dac_min, cal_jump_dac_max), 0, 255);
+	return clamp_t(int,
+		       max_t(int, cfg->cal_jump_dac_min, cfg->cal_jump_dac_max),
+		       0, 255);
 }
 
 static void gpt_reset_timing_state_locked(struct fusion_gpt *g)
@@ -419,7 +443,7 @@ static void gpt_reset_timing_state_locked(struct fusion_gpt *g)
 	WRITE_ONCE(g->si_gain_pending, false);
 	WRITE_ONCE(g->discipline_ready, false);
 	g->lock_streak = 0;
-	g->cal_state = cal_enable ? CAL_IDLE : CAL_DONE;
+	g->cal_state = CAL_ENABLE ? CAL_IDLE : CAL_DONE;
 	g->cal_probe_idx = 0;
 	g->cal_settle_left = 0;
 	g->cal_measure_left = 0;
@@ -433,6 +457,7 @@ static void gpt_reset_timing_state_locked(struct fusion_gpt *g)
 	g->cal_k1_q16 = 0;
 	g->cal_k2_q16 = 0;
 	g->cal_k3_q16 = 0;
+	cal_config_set_defaults(&g->cal_cfg);
 	g->cal_config_checked = false;
 }
 
@@ -690,8 +715,8 @@ static inline bool cal_active(const struct fusion_gpt *g)
 static void gpt_update_discipline_ready(struct fusion_gpt *g, long freq_error)
 {
 	long abs_err = (freq_error < 0) ? -freq_error : freq_error;
-	u32 thresh = READ_ONCE(lock_err_thresh);
-	u32 needed = max_t(u32, 1, READ_ONCE(lock_consecutive));
+	u32 thresh = CAL_LOCK_ERR_THRESH;
+	u32 needed = max_t(u32, 1, CAL_LOCK_CONSECUTIVE);
 
 	if (READ_ONCE(g->discipline_ready))
 		return;
@@ -711,7 +736,6 @@ static void gpt_update_discipline_ready(struct fusion_gpt *g, long freq_error)
 
 	if (g->lock_streak >= needed) {
 		WRITE_ONCE(g->discipline_ready, true);
-		pr_info("fusion_gpt: lock achieved\n");
 		pr_info("fusion_gpt: discipline ready (|err| <= %u ticks for %u PPS)\n",
 			thresh, needed);
 	}
@@ -721,8 +745,8 @@ static void cal_prepare_points(struct fusion_gpt *g)
 {
 	u32 g0 = g->si_gain_current;
 	int d0 = clamp(g->dac_target, 0, 255);
-	u32 dg = max_t(u32, 1, cal_gain_delta);
-	int dd = max_t(int, 1, (int)cal_dac_delta);
+	u32 dg = max_t(u32, 1, g->cal_cfg.cal_gain_delta);
+	int dd = max_t(int, 1, (int)g->cal_cfg.cal_dac_delta);
 	u32 g1, g2, g4;
 
 	g->cal_center_gain = g0;
@@ -800,18 +824,13 @@ static bool cal_fit_model(struct fusion_gpt *g, u32 *mean_residual_out)
 	}
 
 	pred_q16 = (e0 << 16) + k1_q16 * dg4 + k2_q16 * dd4 + k3_q16 * dg4 * dd4;
-	pr_info("fusion_gpt: cal fit k1_q16=%lld k2_q16=%lld k3_q16=%lld p4_meas=%lld p4_pred=%lld\n",
-		(long long)k1_q16, (long long)k2_q16, (long long)k3_q16,
-		(long long)e4, (long long)(pred_q16 >> 16));
+	pr_debug("fusion_gpt: cal fit k1_q16=%lld k2_q16=%lld k3_q16=%lld p4_meas=%lld p4_pred=%lld\n",
+		 (long long)k1_q16, (long long)k2_q16, (long long)k3_q16,
+		 (long long)e4, (long long)(pred_q16 >> 16));
 
 	g->cal_k1_q16 = (s32)k1_q16;
 	g->cal_k2_q16 = (s32)k2_q16;
 	g->cal_k3_q16 = (s32)k3_q16;
-	if (cal_capture_fit) {
-		cal_last_k1_q16 = g->cal_k1_q16;
-		cal_last_k2_q16 = g->cal_k2_q16;
-		cal_last_k3_q16 = g->cal_k3_q16;
-	}
 
 	*mean_residual_out = (u32)div_s64(residual_sum, 5);
 	return true;
@@ -834,8 +853,8 @@ static bool cal_find_best_target(struct fusion_gpt *g, u32 *best_gain, int *best
 {
 	s64 e0_q16 = (s64)g->cal_probe_mean[0] << 16;
 	u32 gv;
-	u32 gain_step = max_t(u32, 1, cal_inverse_gain_step);
-	u32 gain_start = clamp(max_t(u32, g->si_gain_min, fusion_start_gain_value()),
+	u32 gain_step = max_t(u32, 1, g->cal_cfg.cal_inverse_gain_step);
+	u32 gain_start = clamp(max_t(u32, g->si_gain_min, fusion_start_gain_value(&g->cal_cfg)),
 			       g->si_gain_min, g->si_gain_max);
 
 	*best_gain = g->cal_center_gain;
@@ -849,26 +868,27 @@ static bool cal_find_best_target(struct fusion_gpt *g, u32 *best_gain, int *best
 		s64 dv;
 
 		if (denom == 0) {
-			pr_info("fusion_gpt: cal inverse reject gain=%u dac=undefined denom=0\n",
-				gv);
+			pr_debug("fusion_gpt: cal inverse reject gain=%u dac=undefined denom=0\n",
+				 gv);
 			goto next_gain;
 		}
 
 		dd = cal_div_round_closest_s64(numer, denom);
 		dv = (s64)g->cal_center_dac + dd;
-		if (dv >= cal_jump_dac_min_value() && dv <= cal_jump_dac_max_value()) {
+		if (dv >= cal_jump_dac_min_value(&g->cal_cfg) &&
+		    dv <= cal_jump_dac_max_value(&g->cal_cfg)) {
 			*best_gain = gv;
 			*best_dac = (int)dv;
-			pr_info("fusion_gpt: cal inverse target gain=%u dac=%d (center gain=%u dac=%d)\n",
-				*best_gain, *best_dac,
-				g->cal_center_gain, g->cal_center_dac);
+			pr_debug("fusion_gpt: cal inverse target gain=%u dac=%d (center gain=%u dac=%d)\n",
+				 *best_gain, *best_dac,
+				 g->cal_center_gain, g->cal_center_dac);
 			return true;
 		}
 
-		pr_info("fusion_gpt: cal inverse reject gain=%u dac=%lld (allowed %d..%d)\n",
-			gv, (long long)dv,
-			cal_jump_dac_min_value(),
-			cal_jump_dac_max_value());
+		pr_debug("fusion_gpt: cal inverse reject gain=%u dac=%lld (allowed %d..%d)\n",
+			 gv, (long long)dv,
+			 cal_jump_dac_min_value(&g->cal_cfg),
+			 cal_jump_dac_max_value(&g->cal_cfg));
 
 next_gain:
 		if (gv > g->si_gain_max - gain_step)
@@ -949,7 +969,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
           g->sq_err_sum += (s64)freq_error * (s64)freq_error;
           g->err_count++;
 
-          if (cal_enable && g->cal_state == CAL_IDLE &&
+          if (CAL_ENABLE && g->cal_state == CAL_IDLE &&
               g->dac_client && g->si5351b_client) {
               g->error_integrator = 0;
               WRITE_ONCE(g->si_gain_pending, false);
@@ -957,40 +977,40 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
               if (!g->cal_config_checked) {
                   g->cal_state = CAL_CONFIG_CHECK;
                   schedule_work(&g->dac_work);
-              } else if (cal_use_prebaked && cal_pre_valid) {
+              } else if (g->cal_cfg.coeffs_valid) {
                   g->cal_center_gain = g->si_gain_current;
                   g->cal_center_dac = clamp(g->dac_target, 0, 255);
                   g->cal_err_accum = 0;
                   g->cal_err_samples = 0;
-                  g->cal_measure_left = max_t(u32, 1, cal_pre_e0_samples);
-                  g->cal_settle_left = max_t(u32, 1, cal_pre_e0_max_wait);
+                  g->cal_measure_left = max_t(u32, 1, g->cal_cfg.cal_pre_e0_samples);
+                  g->cal_settle_left = max_t(u32, 1, g->cal_cfg.cal_pre_e0_max_wait);
                   g->cal_state = CAL_PREBAKE_WAIT;
                   pr_info("fusion_gpt: cal prebaked wait center gain=%u dac=%d k=[%d %d %d] need=%u abs<=%u wait<=%u\n",
                           g->cal_center_gain, g->cal_center_dac,
-                          cal_pre_k1_q16, cal_pre_k2_q16, cal_pre_k3_q16,
-                          max_t(u32, 1, cal_pre_e0_samples),
-                          cal_pre_e0_abs_max,
-                          max_t(u32, 1, cal_pre_e0_max_wait));
+                          g->cal_cfg.k1_q16, g->cal_cfg.k2_q16, g->cal_cfg.k3_q16,
+                          max_t(u32, 1, g->cal_cfg.cal_pre_e0_samples),
+                          g->cal_cfg.cal_pre_e0_abs_max,
+                          max_t(u32, 1, g->cal_cfg.cal_pre_e0_max_wait));
               } else {
                   cal_prepare_points(g);
                   g->cal_state = CAL_APPLY_POINT;
                   pr_info("fusion_gpt: cal start center gain=%u dac=%d settle=%u measure=%u\n",
                           g->cal_center_gain, g->cal_center_dac,
-                          max_t(u32, 1, cal_settle_pps),
-                          max_t(u32, 1, cal_measure_pps));
+                          max_t(u32, 1, g->cal_cfg.cal_settle_pps),
+                          max_t(u32, 1, g->cal_cfg.cal_measure_pps));
                   schedule_work(&g->dac_work);
               }
-          } else if (cal_enable && g->cal_state == CAL_IDLE &&
+          } else if (CAL_ENABLE && g->cal_state == CAL_IDLE &&
                      (!g->dac_client || !g->si5351b_client)) {
               g->cal_state = CAL_DONE;
-              pr_warn_ratelimited("fusion_gpt: cal skipped (missing DAC or Si5351 client)\n");
+              pr_warn("fusion_gpt: cal skipped (missing DAC or Si5351 client)\n");
           }
 
           if (cal_active(g)) {
               if (g->cal_state == CAL_PREBAKE_WAIT) {
                   long abs_err = (freq_error < 0) ? -freq_error : freq_error;
 
-                  if (abs_err <= cal_pre_e0_abs_max) {
+                  if (abs_err <= g->cal_cfg.cal_pre_e0_abs_max) {
                       g->cal_err_accum += freq_error;
                       g->cal_err_samples++;
                   }
@@ -998,13 +1018,13 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
                   if (g->cal_settle_left > 0)
                       g->cal_settle_left--;
 
-                  if (g->cal_err_samples >= max_t(u32, 1, cal_pre_e0_samples)) {
+                  if (g->cal_err_samples >= max_t(u32, 1, g->cal_cfg.cal_pre_e0_samples)) {
                       long e0 = (long)div_s64(g->cal_err_accum,
                                               max_t(u32, 1, g->cal_err_samples));
                       g->cal_probe_mean[0] = e0;
-                      g->cal_k1_q16 = cal_pre_k1_q16;
-                      g->cal_k2_q16 = cal_pre_k2_q16;
-                      g->cal_k3_q16 = cal_pre_k3_q16;
+                      g->cal_k1_q16 = g->cal_cfg.k1_q16;
+                      g->cal_k2_q16 = g->cal_cfg.k2_q16;
+                      g->cal_k3_q16 = g->cal_cfg.k3_q16;
                       if (cal_find_best_target(g, &g->si_gain_target, &g->dac_target)) {
                           g->cal_state = CAL_APPLY_JUMP;
                           pr_info("fusion_gpt: cal prebaked jump start center gain=%u dac=%d e0=%ld k=[%d %d %d]\n",
@@ -1026,7 +1046,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
                   if (g->cal_settle_left == 0) {
                       g->cal_err_accum = 0;
                       g->cal_err_samples = 0;
-                      g->cal_measure_left = max_t(u32, 1, cal_measure_pps);
+                      g->cal_measure_left = max_t(u32, 1, g->cal_cfg.cal_measure_pps);
                       g->cal_state = CAL_MEASURE;
                   }
               } else if (g->cal_state == CAL_MEASURE) {
@@ -1044,11 +1064,11 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
                       else
                           idx = 0;
 
-                      pr_info("fusion_gpt: cal probe[%d] gain=%u dac=%d mean_err=%ld\n",
-                              idx,
-                              g->cal_probe_gain[idx],
-                              g->cal_probe_dac[idx],
-                              mean);
+                      pr_debug("fusion_gpt: cal probe[%d] gain=%u dac=%d mean_err=%ld\n",
+                               idx,
+                               g->cal_probe_gain[idx],
+                               g->cal_probe_dac[idx],
+                               mean);
 
                       if (idx < 4) {
                           g->cal_probe_idx++;
@@ -1104,12 +1124,12 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
                   if (sat_high || sat_low) {
                       if (sat_high) {
                           g->dac_target = 255;
-                          pr_warn_ratelimited("fusion_gpt: DAC saturated high (freq_err=%ld tick, integ=%ld)\n",
-                                              freq_error, g->error_integrator);
+                          pr_debug_ratelimited("fusion_gpt: DAC saturated high (freq_err=%ld tick, integ=%ld)\n",
+                                               freq_error, g->error_integrator);
                       } else {
                           g->dac_target = 0;
-                          pr_warn_ratelimited("fusion_gpt: DAC saturated low (freq_err=%ld tick, integ=%ld)\n",
-                                              freq_error, g->error_integrator);
+                          pr_debug_ratelimited("fusion_gpt: DAC saturated low (freq_err=%ld tick, integ=%ld)\n",
+                                               freq_error, g->error_integrator);
                       }
 
                       if (g->si5351b_client) {
@@ -1122,8 +1142,8 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
                               if (next_gain > g->si_gain_current) {
                                   WRITE_ONCE(g->si_gain_target, next_gain);
                                   WRITE_ONCE(g->si_gain_pending, true);
-                                  pr_info_ratelimited("fusion_gpt: Queued Si5351b gain increase to %u\n",
-                                                      next_gain);
+                                  pr_debug_ratelimited("fusion_gpt: queued Si5351b gain increase to %u\n",
+                                                       next_gain);
                               } else {
                                   pr_debug_ratelimited("fusion_gpt: DAC saturated at max Si5351b gain (%u)\n",
                                                        g->si_gain_current);
@@ -1165,7 +1185,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
           }
 
 	          if (__ratelimit(&_rs)) {
-	              pr_alert("fusion_gpt: [PPS] diff=%llu ticks, err=%ld ticks, rms=%u ticks, cum=%lld ticks, cum_lock=%lld ticks | [48K] off=%ldns | DAC=%d\n",
+	              pr_debug("fusion_gpt: [PPS] diff=%llu ticks err=%ld ticks rms=%u ticks cum=%lld ticks cum_lock=%lld ticks 48k_off=%ldns dac=%d\n",
 	                       diff, freq_error, rms_jitter,
 	                       (long long)g->cumulative_error_ticks_total,
 	                       (long long)g->cumulative_error_ticks_locked,
@@ -1317,7 +1337,8 @@ static int fusion_write_dac(struct fusion_gpt *g, int target, bool ratelimited_l
 
 	g->current_dac_value = target;
 	if (ratelimited_log)
-		pr_info_ratelimited("fusion_gpt: Updated DAC to %u (Integrator Move)\n", target);
+		pr_debug_ratelimited("fusion_gpt: updated DAC to %u (integrator move)\n",
+				     target);
 
 	return 0;
 }
@@ -1331,47 +1352,55 @@ static void fusion_dac_work_handler(struct work_struct *work)
     u32 gain_target = READ_ONCE(g->si_gain_target);
 
     if (g->cal_state == CAL_CONFIG_CHECK) {
-        s32 k1_q16 = 0, k2_q16 = 0, k3_q16 = 0;
+        u32 start_gain;
 
         g->cal_config_checked = true;
 
-        if (cal_config_autoload) {
-            ret = cal_load_prebaked_config(&k1_q16, &k2_q16, &k3_q16);
-            if (ret == 0) {
-                cal_pre_k1_q16 = k1_q16;
-                cal_pre_k2_q16 = k2_q16;
-                cal_pre_k3_q16 = k3_q16;
-                cal_pre_valid = true;
-                cal_use_prebaked = true;
-                pr_info("fusion_gpt: loaded prebaked coefficients from %s k=[%d %d %d]\n",
-                        cal_config_path, cal_pre_k1_q16, cal_pre_k2_q16, cal_pre_k3_q16);
-            } else if (ret != -ENOENT) {
-                pr_warn("fusion_gpt: failed to load prebaked coefficients from %s ret=%d, running live calibration\n",
-                        cal_config_path, ret);
-            }
+        ret = cal_load_prebaked_config(&g->cal_cfg);
+        if (ret == 0) {
+            pr_info("fusion_gpt: loaded prebaked config from %s k=[%d %d %d]\n",
+                    CAL_CONFIG_PATH,
+                    g->cal_cfg.k1_q16, g->cal_cfg.k2_q16, g->cal_cfg.k3_q16);
+        } else if (ret != -ENOENT) {
+            cal_config_set_defaults(&g->cal_cfg);
+            pr_warn("fusion_gpt: failed to load prebaked config from %s ret=%d, running live calibration\n",
+                    CAL_CONFIG_PATH, ret);
         }
 
-        if (cal_use_prebaked && cal_pre_valid) {
+        start_gain = clamp(fusion_start_gain_value(&g->cal_cfg),
+                           g->si_gain_min, g->si_gain_max);
+        if (start_gain != g->si_gain_current) {
+            ret = si5351b_write_gain(g, start_gain);
+            if (ret < 0) {
+                pr_warn("fusion_gpt: failed to apply configured startup gain %u ret=%d\n",
+                        start_gain, ret);
+            } else {
+                g->si_gain_current = start_gain;
+            }
+        }
+        g->si_gain_target = g->si_gain_current;
+
+        if (g->cal_cfg.coeffs_valid) {
             g->cal_center_gain = g->si_gain_current;
             g->cal_center_dac = clamp(g->dac_target, 0, 255);
             g->cal_err_accum = 0;
             g->cal_err_samples = 0;
-            g->cal_measure_left = max_t(u32, 1, cal_pre_e0_samples);
-            g->cal_settle_left = max_t(u32, 1, cal_pre_e0_max_wait);
+            g->cal_measure_left = max_t(u32, 1, g->cal_cfg.cal_pre_e0_samples);
+            g->cal_settle_left = max_t(u32, 1, g->cal_cfg.cal_pre_e0_max_wait);
             g->cal_state = CAL_PREBAKE_WAIT;
             pr_info("fusion_gpt: cal prebaked wait center gain=%u dac=%d k=[%d %d %d] need=%u abs<=%u wait<=%u\n",
                     g->cal_center_gain, g->cal_center_dac,
-                    cal_pre_k1_q16, cal_pre_k2_q16, cal_pre_k3_q16,
-                    max_t(u32, 1, cal_pre_e0_samples),
-                    cal_pre_e0_abs_max,
-                    max_t(u32, 1, cal_pre_e0_max_wait));
+                    g->cal_cfg.k1_q16, g->cal_cfg.k2_q16, g->cal_cfg.k3_q16,
+                    max_t(u32, 1, g->cal_cfg.cal_pre_e0_samples),
+                    g->cal_cfg.cal_pre_e0_abs_max,
+                    max_t(u32, 1, g->cal_cfg.cal_pre_e0_max_wait));
         } else {
             cal_prepare_points(g);
             g->cal_state = CAL_APPLY_POINT;
             pr_info("fusion_gpt: cal start center gain=%u dac=%d settle=%u measure=%u\n",
                     g->cal_center_gain, g->cal_center_dac,
-                    max_t(u32, 1, cal_settle_pps),
-                    max_t(u32, 1, cal_measure_pps));
+                    max_t(u32, 1, g->cal_cfg.cal_settle_pps),
+                    max_t(u32, 1, g->cal_cfg.cal_measure_pps));
             schedule_work(&g->dac_work);
         }
         return;
@@ -1402,7 +1431,7 @@ static void fusion_dac_work_handler(struct work_struct *work)
 
         g->dac_target = probe_dac;
         g->error_integrator = 0;
-        g->cal_settle_left = max_t(u32, 1, cal_settle_pps);
+        g->cal_settle_left = max_t(u32, 1, g->cal_cfg.cal_settle_pps);
         g->cal_state = CAL_SETTLE;
         return;
     }
@@ -1416,31 +1445,29 @@ static void fusion_dac_work_handler(struct work_struct *work)
             return;
         }
 
-        if (residual > cal_fit_residual_thresh) {
+        if (residual > g->cal_cfg.cal_fit_residual_thresh) {
             pr_warn("fusion_gpt: cal fit residual too high (%u > %u), skipping jump\n",
-                    residual, cal_fit_residual_thresh);
+                    residual, g->cal_cfg.cal_fit_residual_thresh);
             g->cal_state = CAL_FAIL;
             return;
         }
 
-        cal_pre_k1_q16 = g->cal_k1_q16;
-        cal_pre_k2_q16 = g->cal_k2_q16;
-        cal_pre_k3_q16 = g->cal_k3_q16;
-        cal_pre_valid = true;
-        cal_use_prebaked = true;
-        if (cal_config_autosave) {
-            ret = cal_save_prebaked_config(g->cal_k1_q16, g->cal_k2_q16, g->cal_k3_q16);
-            if (ret < 0) {
-                if (ret == -ENOENT)
-                    pr_warn("fusion_gpt: failed to save prebaked coefficients to %s ret=%d (missing parent directory?)\n",
-                            cal_config_path, ret);
-                else
-                    pr_warn("fusion_gpt: failed to save prebaked coefficients to %s ret=%d\n",
-                            cal_config_path, ret);
-            } else {
-                pr_info("fusion_gpt: saved prebaked coefficients to %s\n",
-                        cal_config_path);
-            }
+        g->cal_cfg.k1_q16 = g->cal_k1_q16;
+        g->cal_cfg.k2_q16 = g->cal_k2_q16;
+        g->cal_cfg.k3_q16 = g->cal_k3_q16;
+        g->cal_cfg.coeffs_valid = true;
+
+        ret = cal_save_prebaked_config(&g->cal_cfg);
+        if (ret < 0) {
+            if (ret == -ENOENT)
+                pr_warn("fusion_gpt: failed to save prebaked config to %s ret=%d (missing parent directory?)\n",
+                        CAL_CONFIG_PATH, ret);
+            else
+                pr_warn("fusion_gpt: failed to save prebaked config to %s ret=%d\n",
+                        CAL_CONFIG_PATH, ret);
+        } else {
+            pr_info("fusion_gpt: saved prebaked config to %s\n",
+                    CAL_CONFIG_PATH);
         }
 
         if (cal_find_best_target(g, &g->si_gain_target, &g->dac_target)) {
@@ -1456,8 +1483,8 @@ static void fusion_dac_work_handler(struct work_struct *work)
     if (g->cal_state == CAL_APPLY_JUMP) {
         u32 jump_gain = clamp(g->si_gain_target, g->si_gain_min, g->si_gain_max);
         int jump_dac = clamp(g->dac_target,
-                             cal_jump_dac_min_value(),
-                             cal_jump_dac_max_value());
+                             cal_jump_dac_min_value(&g->cal_cfg),
+                             cal_jump_dac_max_value(&g->cal_cfg));
 
         if (jump_gain != g->si_gain_current) {
             ret = si5351b_write_gain(g, jump_gain);
@@ -1495,9 +1522,9 @@ static void fusion_dac_work_handler(struct work_struct *work)
 
     ret = fusion_write_dac(g, target, true);
     if (ret == -ENODEV) {
-        pr_info_ratelimited("fusion_gpt: DAC client missing\n");
+        pr_debug_ratelimited("fusion_gpt: DAC client missing\n");
     } else if (ret < 0) {
-        pr_err_ratelimited("fusion_gpt: I2C DAC write failed: %d\n", ret);
+        pr_debug_ratelimited("fusion_gpt: I2C DAC write failed: %d\n", ret);
     }
 
     if (gain_pending) {
@@ -1506,8 +1533,8 @@ static void fusion_dac_work_handler(struct work_struct *work)
             if (si5351b_write_gain(g, gain_target) >= 0) {
                 g->si_gain_current = gain_target;
                 WRITE_ONCE(g->si_gain_pending, false);
-                pr_info_ratelimited("fusion_gpt: Si5351b gain increased to %u\n",
-                                    g->si_gain_current);
+                pr_debug_ratelimited("fusion_gpt: Si5351b gain increased to %u\n",
+                                     g->si_gain_current);
             }
         } else {
             WRITE_ONCE(g->si_gain_pending, false);
@@ -1530,7 +1557,7 @@ static int si5351b_write_gain(struct fusion_gpt *g, u32 gain)
 
     ret = i2c_master_send(g->si5351b_client, buf, 4);
     if (ret < 0)
-        pr_err_ratelimited("fusion_gpt: Si5351b gain write failed: %d\n", ret);
+        pr_debug_ratelimited("fusion_gpt: Si5351b gain write failed: %d\n", ret);
 
     return ret;
 }
@@ -1622,7 +1649,8 @@ static int gpt_probe(struct platform_device *pdev)
 	g->current_dac_value = 0xFFFF; /* force first write */
 	g->si_gain_min = 40000;
 	g->si_gain_max = 250000;
-	g->si_gain_current = clamp(fusion_start_gain_value(),
+	cal_config_set_defaults(&g->cal_cfg);
+	g->si_gain_current = clamp(fusion_start_gain_value(&g->cal_cfg),
 				   g->si_gain_min, g->si_gain_max);
 	g->si_gain_target = g->si_gain_current;
 	g->si_gain_pending = false;
