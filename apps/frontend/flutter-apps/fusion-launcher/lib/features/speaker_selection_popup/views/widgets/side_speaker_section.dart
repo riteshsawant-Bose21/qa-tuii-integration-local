@@ -9,7 +9,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/service_locator.dart';
 import '../../../projects/viewmodel/building_page_viewmodel.dart';
 import 'auto_place_dialog.dart';
-import '../speaker_selection_popup].dart';
+import '../speaker_selection_popup.dart';
 
 class SpeakerSelectionWidget extends StatefulWidget {
   const SpeakerSelectionWidget({super.key});

@@ -68,33 +68,32 @@ class _BuildingPageTextFieldState extends State<BuildingPageTextField> {
         Expanded(
           child: FusionAppText(
             text: widget.label,
-            style: context.textTheme.bodySmall?.copyWith(
-              color: context.colorScheme.onSurface,
-              fontWeight: FontWeight.normal,
+            style: context.textTheme.l1Regular.copyWith(
+              color: context.colorScheme.textPrimary,
             ),
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: Container(
-            decoration: BoxDecoration(
+          child: FusionContainer(
+            raised: true,
+            child: ClipRRect(
               borderRadius: BorderRadius.circular(6),
-              color: context.colorScheme.elevation1,
-            ),
-            child: PropertyTextField(
-              controller: _controller,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              hintText: widget.hintText,
-              fillColor: widget.fillColor ?? context.colorScheme.elevation2,
-              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-              inputFormatters: widget.inputFormatters,
-              validator: widget.validator,
-              onChanged: widget.onChanged,
-              onSubmitted: widget.onFieldSubmitted,
-              onTapOutside: (PointerDownEvent event) {
-                widget.onFieldSubmitted?.call(_controller.text);
-                FocusScope.of(context).unfocus();
-              },
+              child: PropertyTextField(
+                controller: _controller,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                hintText: widget.hintText,
+                fillColor: widget.fillColor ?? context.colorScheme.elevation2,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                inputFormatters: widget.inputFormatters,
+                validator: widget.validator,
+                onChanged: widget.onChanged,
+                onSubmitted: widget.onFieldSubmitted,
+                onTapOutside: (PointerDownEvent event) {
+                  widget.onFieldSubmitted?.call(_controller.text);
+                  FocusScope.of(context).unfocus();
+                },
+              ),
             ),
           ),
         ),

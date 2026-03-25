@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/projects/widget/building/widgets/text_field.dart';
 import 'package:fusion_launcher/features/speaker_selection_popup/views/widgets/constant_enums.dart';
 import 'package:fusion_launcher/features/speaker_selection_popup/views/widgets/select_listening_area.dart';
-import 'package:fusion_launcher/features/projects/widget/building/widgets/text_field.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/models/speaker_product.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -618,7 +618,7 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
         Expanded(
           child: FusionAppText(
             text: label,
-            style: context.textTheme.b3Regular.copyWith(
+            style: context.textTheme.l1Regular.copyWith(
               color: context.colorScheme.textPrimary,
             ),
           ),
