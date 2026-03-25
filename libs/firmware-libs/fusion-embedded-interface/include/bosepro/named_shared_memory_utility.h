@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstring>
+#include <cstdint>
 #include <vector>
 
 namespace bosepro {
@@ -36,16 +37,44 @@ struct WriteBlock {
 struct Metadata {
     static constexpr std::size_t NAME_MAX_LENGTH = 32;   // Maximum length for the shared memory name
     static constexpr std::size_t MAX_WRITE_BLOCKS = 10; // Maximum number of WriteBlock entries
-    static constexpr std::size_t META_DATA_MAX_SIZE = NAME_MAX_LENGTH*sizeof(char) + 
-                                    3*sizeof(std::size_t) + sizeof(WriteBlock) * MAX_WRITE_BLOCKS;  
+    static constexpr uint32_t MAGIC = 0x424d5441; // "BMTA"
+    static constexpr uint16_t PROTOCOL_VERSION = 1;
+    static constexpr uint16_t SCHEMA_VERSION = 1;
+    static constexpr std::size_t HEADER_SIZE =
+                                    sizeof(MAGIC) +
+                                    sizeof(PROTOCOL_VERSION) +
+                                    sizeof(SCHEMA_VERSION);
+    static constexpr std::size_t NAME_FIELD_SIZE =
+                                    NAME_MAX_LENGTH * sizeof(char);
+    static constexpr std::size_t SCALAR_FIELD_SIZE =
+                                    sizeof(std::size_t) +  // size
+                                    sizeof(std::size_t) +  // totalBytesWritten
+                                    sizeof(std::size_t);   // numberOfWriteBlocks
+    static constexpr std::size_t WRITE_BLOCK_STORAGE_SIZE =
+                                    sizeof(WriteBlock) * MAX_WRITE_BLOCKS;
+    static constexpr std::size_t META_DATA_MAX_SIZE =
+                                    HEADER_SIZE +
+                                    NAME_FIELD_SIZE +
+                                    SCALAR_FIELD_SIZE +
+                                    WRITE_BLOCK_STORAGE_SIZE;
 
+    uint32_t magic;                         // Magic value for identifying metadata layout
+    uint16_t protocolVersion;              // Shared memory metadata protocol version
+    uint16_t schemaVersion;                // Shared memory metadata schema version
     char name[NAME_MAX_LENGTH];              // Name of the shared memory
     std::size_t size;                        // Total size of the shared memory
     std::size_t totalBytesWritten;           // Total bytes available to write to SHM
     std::size_t numberOfWriteBlocks;         // Number of WriteBlock entries
     std::vector<WriteBlock> writeBlocks;
 
-    Metadata() : name{}, size(0), totalBytesWritten(0), numberOfWriteBlocks(0) {
+    Metadata()
+        : magic(MAGIC),
+          protocolVersion(PROTOCOL_VERSION),
+          schemaVersion(SCHEMA_VERSION),
+          name{},
+          size(0),
+          totalBytesWritten(0),
+          numberOfWriteBlocks(0) {
         writeBlocks.clear();
     }
     

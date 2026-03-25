@@ -13,9 +13,14 @@
 #include "telemetry_utils.h"
 #include "telemetry_msg_handler.h"
 
+namespace {
+}
+
 // Message Format:
 //  "parameters": {
 //     "name": <Name>,
+//     "protocol_version": <ProtocolVersion>,
+//     "schema_version": <SchemaVersion>,
 //     "block_size": [<hi>, <med>, <lo>]
 //  }
 int process_pub_register_req(bosepro::telemetryManager& telm_mgr,
@@ -24,11 +29,29 @@ int process_pub_register_req(bosepro::telemetryManager& telm_mgr,
                              bosepro::HandlerContext& /*unused*/)
 {
     std::vector<int_fast32_t> shm_size;
+    int_fast32_t protocol_version = 0;
+    int_fast32_t schema_version = 0;
     int ret_val = 0;
 
     // Get Sub name
-    if (proc_pkt.get_value("name", req_name))
+    if (proc_pkt.get_value("name", req_name) &&
+        proc_pkt.get_value("protocol_version", protocol_version) &&
+        proc_pkt.get_value("schema_version", schema_version))
     {
+        if (!bosepro::is_supported_telemetry_protocol_version(protocol_version))
+        {
+            SPDLOG_ERROR("Publisher '{}' requested unsupported telemetry protocol version {} (supported: {} or {})",
+                         req_name, protocol_version, bosepro::kTelemetryProtocolVersion, bosepro::kTelemetryProtocolVersion - 1);
+            return -1;
+        }
+
+        if (!bosepro::is_supported_telemetry_schema_version(schema_version))
+        {
+            SPDLOG_ERROR("Publisher '{}' requested unsupported telemetry schema version {} (supported: {} or {})",
+                         req_name, schema_version, bosepro::kTelemetrySchemaVersion, bosepro::kTelemetrySchemaVersion - 1);
+            return -1;
+        }
+
         // Get address
         proc_pkt.get_config_value_vector("block_size", shm_size);
         SPDLOG_DEBUG("Size: [ {}, {}, {}]",
@@ -56,6 +79,8 @@ int process_pub_register_req(bosepro::telemetryManager& telm_mgr,
 //      packet_id: pkt_id,
 //      parameters:{
 //      name:pub_name
+//      protocol_version:<ProtocolVersion>
+//      schema_version:<SchemaVersion>
 //      block_name:[HI, MED, LO]
 //      value:OK_NOK(0/1)
 //   }
@@ -70,6 +95,8 @@ int process_pub_register_rsp(bosepro::telemetryManager& telm_mgr,
     message << "\"packet_id\":" << pkt_id << ",";
     message << "\"parameters\":{";
     message << "\"name\":\"" << req_name << "\",";
+    message << "\"protocol_version\":" << bosepro::kTelemetryProtocolVersion << ",";
+    message << "\"schema_version\":" << bosepro::kTelemetrySchemaVersion << ",";
     message << "\"block_name\":[";
 
     if (ok_nok)
@@ -151,6 +178,8 @@ int process_pub_deregister_rsp(bosepro::telemetryManager& telm_mgr,
 //   message_name:update_meters_req,
 //      packet_id: pkt_id,
 //      parameters:{
+//      protocol_version:<ProtocolVersion>
+//      schema_version:<SchemaVersion>
 //      type:[HI, MED, LO]
 //   }
 int process_update_meters_req(const std::string& req_type,
@@ -165,7 +194,8 @@ int process_update_meters_req(const std::string& req_type,
     message << "\"message_name\":\"update_meters_req\",";
     message << "\"packet_id\":" << pkt_id << ",";
     message << "\"parameters\":{";
-
+    message << "\"protocol_version\":" << bosepro::kTelemetryProtocolVersion << ",";
+    message << "\"schema_version\":" << bosepro::kTelemetrySchemaVersion << ",";
     message << "\"period_type\":\"" << req_type << "\"";
     message << "}";
     message << "}\n";
@@ -180,6 +210,8 @@ int process_update_meters_req(const std::string& req_type,
 //      packet_id: pkt_id,
 //      parameters:{
 //      name:pub_name
+//      protocol_version:<ProtocolVersion>
+//      schema_version:<SchemaVersion>
 //      value:OK_NOK(0/1)
 //   }
 int process_update_meters_rsp(bosepro::telemetryManager& telm_mgr,
@@ -189,12 +221,30 @@ int process_update_meters_rsp(bosepro::telemetryManager& telm_mgr,
 {
     int ret_val = 0;
     std::string ok_nok;
+    int_fast32_t protocol_version = 0;
+    int_fast32_t schema_version = 0;
     enum eMeterCategory meter_type;
 
     // Get Sub name
     if ((proc_pkt.get_value("name", req_name)) &&
+        (proc_pkt.get_value("protocol_version", protocol_version)) &&
+        (proc_pkt.get_value("schema_version", schema_version)) &&
         (proc_pkt.get_value("value", ok_nok)))
     {
+        if (!bosepro::is_supported_telemetry_protocol_version(protocol_version))
+        {
+            SPDLOG_ERROR("Publisher '{}' responded with unsupported telemetry protocol version {} (supported: {} or {})",
+                         req_name, protocol_version, bosepro::kTelemetryProtocolVersion, bosepro::kTelemetryProtocolVersion - 1);
+            return -1;
+        }
+
+        if (!bosepro::is_supported_telemetry_schema_version(schema_version))
+        {
+            SPDLOG_ERROR("Publisher '{}' responded with unsupported telemetry schema version {} (supported: {} or {})",
+                         req_name, schema_version, bosepro::kTelemetrySchemaVersion, bosepro::kTelemetrySchemaVersion - 1);
+            return -1;
+        }
+
         // This validates if the response matches one of the
         // requests (process_update_meters_req()).
         ret_val = telm_mgr.validate_update_meter_rsp(pkt_id, req_name,

@@ -1,6 +1,6 @@
 {
-  "version" : "1.0.1",
-  "date" : "19-02-2026",
+  "version": "1.0.4",
+  "date": "23-03-2026",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://boseprofessional.com/schemas/project-data-schema",
   "title": "Bose Professional Product Data Schema",
@@ -108,6 +108,11 @@
           "description": "Full product name",
           "minLength": 1
         },
+        "data_sheet_link": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to product data sheet"
+        },
         "bsf_file_url": {
           "type": "string",
           "format": "uri",
@@ -127,26 +132,104 @@
           },
           "minItems": 1
         },
+        "max_spl": {
+          "type": "object",
+          "title": "Maximum SPL Specification",
+          "description": "Maximum sound pressure level measurements at 1 meter",
+          "properties": {
+            "continuous": {
+              "$ref": "#/$defs/valueWithUnit"
+            },
+            "peak": {
+              "$ref": "#/$defs/valueWithUnit"
+            }
+          },
+          "required": [
+            "continuous",
+            "peak"
+          ],
+          "additionalProperties": false
+        },
         "power_handling": {
-          "$ref": "#/$defs/powerHandling"
+          "type": "object",
+          "title": "Power Handling Specification",
+          "properties": {
+            "unit": {
+              "type": "string",
+              "const": "Watts"
+            },
+            "long_term_rms": {
+              "type": "number",
+              "minimum": 0
+            },
+            "peak": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "unit",
+            "long_term_rms",
+            "peak"
+          ],
+          "additionalProperties": false
         },
         "sensitivity": {
           "$ref": "#/$defs/measurement"
         },
-        "max_spl": {
-          "$ref": "#/$defs/measurement"
-        },
         "frequency_range": {
-          "$ref": "#/$defs/frequencyRange"
+          "type": "object",
+          "title": "Frequency Range",
+          "description": "Frequency Range (−10 dB)",
+          "properties": {
+            "unit": {
+              "type": "string",
+              "const": "Hz"
+            },
+            "reference_db": {
+              "type": "number",
+              "const": -10
+            },
+            "low": {
+              "type": "number",
+              "minimum": 0
+            },
+            "high": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "unit",
+            "low",
+            "high"
+          ],
+          "additionalProperties": false
         },
         "frequency_response": {
-          "$ref": "#/$defs/frequencyResponse"
-        },
-        "frequency_response_curve": {
           "type": "array",
-          "description": "Frequency response curve data points",
+          "description": "Frequency response curve data points (−3 dB reference)",
           "items": {
-            "$ref": "#/$defs/frequencyResponsePoint"
+            "type": "object",
+            "title": "Frequency Response Point",
+            "properties": {
+              "reference_db": {
+                "type": "number",
+                "const": -3
+              },
+              "frequency_hz": {
+                "type": "number",
+                "minimum": 0
+              },
+              "level_db": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "frequency_hz",
+              "level_db"
+            ],
+            "additionalProperties": false
           }
         },
         "nominal_impedance": {
@@ -156,7 +239,121 @@
           "type": "array",
           "description": "Speaker coverage patterns",
           "items": {
-            "$ref": "#/$defs/coverage"
+            "type": "object",
+            "title": "Coverage Pattern",
+            "properties": {
+              "frequency_range": {
+                "type": "object",
+                "oneOf": [
+                  {
+                    "title": "1–4 kHz",
+                    "properties": {
+                      "low": {
+                        "type": "object",
+                        "properties": {
+                          "value": {
+                            "const": 1
+                          },
+                          "unit": {
+                            "const": "kHz"
+                          }
+                        },
+                        "required": [
+                          "value",
+                          "unit"
+                        ]
+                      },
+                      "high": {
+                        "type": "object",
+                        "properties": {
+                          "value": {
+                            "const": 4
+                          },
+                          "unit": {
+                            "const": "kHz"
+                          }
+                        },
+                        "required": [
+                          "value",
+                          "unit"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "low",
+                      "high"
+                    ]
+                  },
+                  {
+                    "title": "1–10 kHz",
+                    "properties": {
+                      "low": {
+                        "type": "object",
+                        "properties": {
+                          "value": {
+                            "const": 1
+                          },
+                          "unit": {
+                            "const": "kHz"
+                          }
+                        },
+                        "required": [
+                          "value",
+                          "unit"
+                        ]
+                      },
+                      "high": {
+                        "type": "object",
+                        "properties": {
+                          "value": {
+                            "const": 10
+                          },
+                          "unit": {
+                            "const": "kHz"
+                          }
+                        },
+                        "required": [
+                          "value",
+                          "unit"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "low",
+                      "high"
+                    ]
+                  }
+                ]
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "rectangular",
+                  "conical",
+                  "line_array"
+                ]
+              },
+              "horizontal_deg": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 360
+              },
+              "vertical_deg": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 360
+              },
+              "angle_deg": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 360
+              }
+            },
+            "required": [
+              "frequency_range",
+              "type"
+            ],
+            "additionalProperties": false
           }
         },
         "acoustic_technology": {
@@ -164,7 +361,20 @@
           "description": "Acoustic technology description"
         },
         "installation": {
-          "$ref": "#/$defs/installation"
+          "type": "object",
+          "title": "Installation Specification",
+          "properties": {
+            "technology": {
+              "type": "string"
+            },
+            "accessories": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/accessory"
+              }
+            }
+          },
+          "additionalProperties": false
         },
         "certifications": {
           "type": "array",
@@ -212,22 +422,77 @@
             "Wall",
             "Ceiling",
             "Pendant",
-            "Surface",
-            "Flush"
+            "Surface"
           ]
         },
         "impedance": {
-          "$ref": "#/$defs/impedanceRange"
+          "type": "object",
+          "title": "Impedance Range",
+          "properties": {
+            "unit": {
+              "type": "string",
+              "enum": [
+                "ohms",
+                "ohm"
+              ]
+            },
+            "low": {
+              "type": "number",
+              "minimum": 0
+            },
+            "high": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "unit"
+          ],
+          "additionalProperties": false
         },
         "impedance_curve": {
           "type": "array",
           "description": "Impedance curve data points",
           "items": {
-            "$ref": "#/$defs/impedancePoint"
+            "type": "object",
+            "title": "Impedance Point",
+            "properties": {
+              "frequency_hz": {
+                "type": "number",
+                "minimum": 0
+              },
+              "impedance_ohms": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "frequency_hz",
+              "impedance_ohms"
+            ],
+            "additionalProperties": false
           }
         },
-        "available_taps": {
-          "$ref": "#/$defs/voltageTaps"
+        "voltage_taps": {
+          "type": "object",
+          "title": "Voltage Taps",
+          "properties": {
+            "70v": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "100v": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          },
+          "additionalProperties": false
         },
         "no_of_passbands": {
           "type": "integer",
@@ -245,20 +510,9 @@
           "type": "boolean",
           "description": "Whether the speaker is a subwoofer"
         },
-        "is_weather_rated": {
-          "type": "boolean",
-          "description": "Whether the speaker is weather rated"
-        },
         "is_high_impedance_rated": {
           "type": "boolean",
           "description": "Whether the speaker supports high impedance"
-        },
-        "high_impedance_taps": {
-          "type": "array",
-          "description": "High impedance tap options",
-          "items": {
-            "type": "number"
-          }
         },
         "polar_data": {
           "type": "string",
@@ -271,7 +525,92 @@
           "description": "URL to Bose Professional voicing data"
         },
         "driver_components": {
-          "$ref": "#/$defs/driverComponents"
+          "type": "object",
+          "title": "Driver Components",
+          "properties": {
+            "full_range": {
+              "type": "object",
+              "properties": {
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "unit": {
+                  "type": "string",
+                  "enum": [
+                    "inch",
+                    "mm",
+                    "cm"
+                  ]
+                },
+                "size": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "quantity",
+                "unit",
+                "size"
+              ],
+              "additionalProperties": false
+            },
+            "woofer": {
+              "type": "object",
+              "properties": {
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "unit": {
+                  "type": "string",
+                  "enum": [
+                    "inch",
+                    "mm",
+                    "cm"
+                  ]
+                },
+                "size": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "quantity",
+                "unit",
+                "size"
+              ],
+              "additionalProperties": false
+            },
+            "tweeter": {
+              "type": "object",
+              "properties": {
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "unit": {
+                  "type": "string",
+                  "enum": [
+                    "inch",
+                    "mm",
+                    "cm"
+                  ]
+                },
+                "size": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "quantity",
+                "unit",
+                "size"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
         },
         "net_weight": {
           "type": "array",
@@ -289,25 +628,29 @@
       "required": [
         "id",
         "model_family",
+        "type",
         "model_name",
-        "skus",
+        "data_sheet_link",
         "bsf_file_url",
+        "dsp_eq_file_url",
+        "skus",
+        "max_spl",
         "power_handling",
         "sensitivity",
-        "max_spl",
         "frequency_range",
+        "frequency_response",
         "nominal_impedance",
         "coverage",
         "description",
+        "short_description",
         "environment",
+        "dimensions",
         "mount_type",
         "impedance",
-        "available_taps",
+        "voltage_taps",
         "images",
         "is_subwoofer",
-        "is_weather_rated",
-        "is_high_impedance_rated",
-        "high_impedance_taps"
+        "is_high_impedance_rated"
       ],
       "additionalProperties": false
     },
@@ -331,6 +674,11 @@
           "description": "Full product name",
           "minLength": 1
         },
+        "data_sheet_link": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to product data sheet"
+        },
         "skus": {
           "type": "array",
           "description": "Array of SKU numbers",
@@ -341,7 +689,171 @@
           "minItems": 1
         },
         "power_output": {
-          "$ref": "#/$defs/amplifierPowerOutput"
+          "type": "object",
+          "title": "Amplifier Power Output",
+          "properties": {
+            "symmetrical": {
+              "type": "object",
+              "title": "Power Configuration",
+              "properties": {
+                "rated_per_channel": {
+                  "type": "object",
+                  "title": "Power Measurement",
+                  "oneOf": [
+                    {
+                      "properties": {
+                        "at": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "impedance": {
+                                "$ref": "#/$defs/valueWithUnit"
+                              },
+                              "power": {
+                                "$ref": "#/$defs/valueWithUnit"
+                              }
+                            },
+                            "required": [
+                              "impedance",
+                              "power"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "at"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "properties": {
+                        "unit": {
+                          "type": "string"
+                        },
+                        "at": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string"
+                              },
+                              "value": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "unit",
+                        "at"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "peak_per_channel": {
+                  "$ref": "#/$defs/measurement"
+                },
+                "rated_per_channel_high_voltage": {
+                  "$ref": "#/$defs/measurement"
+                },
+                "peak_per_channel_high_voltage": {
+                  "$ref": "#/$defs/measurement"
+                }
+              },
+              "additionalProperties": false
+            },
+            "asymmetrical": {
+              "type": "object",
+              "title": "Power Configuration",
+              "properties": {
+                "rated_per_channel": {
+                  "type": "object",
+                  "title": "Power Measurement",
+                  "oneOf": [
+                    {
+                      "properties": {
+                        "at": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "impedance": {
+                                "$ref": "#/$defs/valueWithUnit"
+                              },
+                              "power": {
+                                "$ref": "#/$defs/valueWithUnit"
+                              }
+                            },
+                            "required": [
+                              "impedance",
+                              "power"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "at"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "properties": {
+                        "unit": {
+                          "type": "string"
+                        },
+                        "at": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string"
+                              },
+                              "value": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "unit",
+                        "at"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "peak_per_channel": {
+                  "$ref": "#/$defs/measurement"
+                },
+                "rated_per_channel_high_voltage": {
+                  "$ref": "#/$defs/measurement"
+                },
+                "peak_per_channel_high_voltage": {
+                  "$ref": "#/$defs/measurement"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
         },
         "number_of_inputs_and_outputs": {
           "$ref": "#/$defs/inputsOutputs"
@@ -368,21 +880,6 @@
         },
         "firmware": {
           "$ref": "#/$defs/firmware"
-        },
-        "images": {
-          "type": "array",
-          "description": "Product images",
-          "items": {
-            "type": "string",
-            "format": "uri"
-          }
-        },
-        "colors": {
-          "type": "array",
-          "description": "Available colors",
-          "items": {
-            "type": "string"
-          }
         },
         "dimensions": {
           "type": "array",
@@ -422,8 +919,10 @@
         "id",
         "model_family",
         "model_name",
+        "data_sheet_link",
         "skus",
         "power_output",
+        "firmware",
         "number_of_inputs_and_outputs",
         "front_panel_image",
         "rear_panel_image"
@@ -450,6 +949,11 @@
           "description": "Full product name",
           "minLength": 1
         },
+        "data_sheet_link": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to product data sheet"
+        },
         "skus": {
           "type": "array",
           "description": "Array of SKU numbers",
@@ -467,14 +971,6 @@
         },
         "firmware": {
           "$ref": "#/$defs/firmware"
-        },
-        "images": {
-          "type": "array",
-          "description": "Product images",
-          "items": {
-            "type": "string",
-            "format": "uri"
-          }
         },
         "dsp_architecture": {
           "type": "string",
@@ -503,22 +999,11 @@
           }
         },
         "dimensions": {
-          "type": "object",
-          "description": "Product dimensions",
-          "properties": {
-            "rack_space": {
-              "type": "string",
-              "description": "Rack space requirement"
-            },
-            "size": {
-              "type": "array",
-              "description": "Dimensions in different units",
-              "items": {
-                "$ref": "#/$defs/dimensions"
-              }
-            }
-          },
-          "additionalProperties": false
+          "type": "array",
+          "description": "Product dimensions in different units",
+          "items": {
+            "$ref": "#/$defs/dimensions"
+          }
         },
         "net_weight": {
           "type": "array",
@@ -534,6 +1019,14 @@
             "type": "string"
           }
         },
+        "front_panel_image": {
+          "type": "string",
+          "description": "Path to front panel image"
+        },
+        "rear_panel_image": {
+          "type": "string",
+          "description": "Path to rear panel image"
+        },
         "updated_at": {
           "type": "string",
           "format": "epoch",
@@ -544,8 +1037,12 @@
         "id",
         "model_name",
         "model_family",
+        "data_sheet_link",
         "skus",
-        "number_of_inputs_and_outputs"
+        "number_of_inputs_and_outputs",
+        "firmware",
+        "front_panel_image",
+        "rear_panel_image"
       ],
       "additionalProperties": false
     },
@@ -566,6 +1063,11 @@
         "model_name": {
           "type": "string",
           "description": "Product model name"
+        },
+        "data_sheet_link": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to product data sheet"
         },
         "skus": {
           "type": "array",
@@ -637,6 +1139,8 @@
         "model_family",
         "model_name",
         "zone_control_count",
+        "data_sheet_link",
+        "skus",
         "images",
         "control_type",
         "additional_sensors"
@@ -660,6 +1164,11 @@
         "model_name": {
           "type": "string",
           "description": "Product model name"
+        },
+        "data_sheet_link": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to product data sheet"
         },
         "skus": {
           "type": "array",
@@ -686,6 +1195,7 @@
         "id",
         "model_family",
         "model_name",
+        "data_sheet_link",
         "skus",
         "number_of_inputs_and_outputs",
         "images"
@@ -707,6 +1217,11 @@
           "description": "Accessory Model name",
           "minLength": 1
         },
+        "data_sheet_link": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to product data sheet"
+        },
         "model_family": {
           "type": "string",
           "description": "Accessory model family"
@@ -715,8 +1230,29 @@
           "type": "array",
           "description": "SKU identifier"
         },
-         "images": {
-          "$ref": "#/$defs/productAccessoryImages"
+        "images": {
+          "type": "object",
+          "title": "Product Accessory Images",
+          "properties": {
+            "black": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "white": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         },
         "type": {
           "type": "string",
@@ -747,32 +1283,8 @@
         "model_family",
         "type",
         "quantity",
-        "skus", 
+        "skus",
         "images"
-      ],
-      "additionalProperties": false
-    },
-    "powerHandling": {
-      "type": "object",
-      "title": "Power Handling Specification",
-      "properties": {
-        "unit": {
-          "type": "string",
-          "const": "Watts"
-        },
-        "long_term_rms": {
-          "type": "number",
-          "minimum": 0
-        },
-        "peak": {
-          "type": "number",
-          "minimum": 0
-        }
-      },
-      "required": [
-        "unit",
-        "long_term_rms",
-        "peak"
       ],
       "additionalProperties": false
     },
@@ -874,163 +1386,6 @@
       ],
       "additionalProperties": false
     },
-    "frequencyRange": {
-      "type": "object",
-      "title": "Frequency Range",
-      "properties": {
-        "unit": {
-          "type": "string",
-          "const": "Hz"
-        },
-        "low": {
-          "type": "number",
-          "minimum": 0
-        },
-        "high": {
-          "type": "number",
-          "minimum": 0
-        }
-      },
-      "required": [
-        "unit",
-        "low",
-        "high"
-      ],
-      "additionalProperties": false
-    },
-    "frequencyResponse": {
-      "type": "object",
-      "title": "Frequency Response",
-      "properties": {
-        "at": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "level": {
-                "$ref": "#/$defs/valueWithUnit"
-              },
-              "range": {
-                "type": "object",
-                "properties": {
-                  "min": {
-                    "type": "number",
-                    "minimum": 0
-                  },
-                  "max": {
-                    "type": "number",
-                    "minimum": 0
-                  },
-                  "unit": {
-                    "type": "string",
-                    "const": "Hz"
-                  }
-                },
-                "required": [
-                  "min",
-                  "max",
-                  "unit"
-                ],
-                "additionalProperties": false
-              }
-            },
-            "required": [
-              "level",
-              "range"
-            ],
-            "additionalProperties": false
-          }
-        }
-      },
-      "required": [
-        "at"
-      ],
-      "additionalProperties": false
-    },
-    "frequencyResponsePoint": {
-      "type": "object",
-      "title": "Frequency Response Point",
-      "properties": {
-        "frequency_hz": {
-          "type": "number",
-          "minimum": 0
-        },
-        "level_db": {
-          "type": "number"
-        }
-      },
-      "required": [
-        "frequency_hz",
-        "level_db"
-      ],
-      "additionalProperties": false
-    },
-    "coverage": {
-      "type": "object",
-      "title": "Coverage Pattern",
-      "properties": {
-        "frequency_range": {
-          "type": "object",
-          "properties": {
-            "low": {
-              "$ref": "#/$defs/valueWithUnit"
-            },
-            "high": {
-              "$ref": "#/$defs/valueWithUnit"
-            }
-          },
-          "required": [
-            "low",
-            "high"
-          ],
-          "additionalProperties": false
-        },
-        "type": {
-          "type": "string",
-          "enum": [
-            "rectangular",
-            "conical",
-            "line_array"
-          ]
-        },
-        "horizontal_deg": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 360
-        },
-        "vertical_deg": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 360
-        },
-        "angle_deg": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 360
-        }
-      },
-      "required": [
-        "frequency_range",
-        "type"
-      ],
-      "additionalProperties": false
-    },
-    "installation": {
-      "type": "object",
-      "title": "Installation Specification",
-      "properties": {
-        "technology": {
-          "type": "string"
-        },
-        "accessories": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/accessory"
-          }
-        }
-      },
-      "additionalProperties": false
-    },
     "dimensions": {
       "type": "object",
       "title": "Dimensions",
@@ -1039,9 +1394,7 @@
           "type": "string",
           "enum": [
             "mm",
-            "inches",
-            "cm",
-            "m"
+            "inches"
           ]
         },
         "height": {
@@ -1062,98 +1415,9 @@
       ],
       "additionalProperties": false
     },
-    "impedanceRange": {
-      "type": "object",
-      "title": "Impedance Range",
-      "properties": {
-        "unit": {
-          "type": "string",
-          "enum": [
-            "ohms",
-            "ohm"
-          ]
-        },
-        "low": {
-          "type": "number",
-          "minimum": 0
-        },
-        "high": {
-          "type": "number",
-          "minimum": 0
-        }
-      },
-      "required": [
-        "unit"
-      ],
-      "additionalProperties": false
-    },
-    "impedancePoint": {
-      "type": "object",
-      "title": "Impedance Point",
-      "properties": {
-        "frequency_hz": {
-          "type": "number",
-          "minimum": 0
-        },
-        "impedance_ohms": {
-          "type": "number",
-          "minimum": 0
-        }
-      },
-      "required": [
-        "frequency_hz",
-        "impedance_ohms"
-      ],
-      "additionalProperties": false
-    },
-    "voltageTaps": {
-      "type": "object",
-      "title": "Voltage Taps",
-      "properties": {
-        "70v": {
-          "type": "array",
-          "items": {
-            "type": "number",
-            "minimum": 0
-          }
-        },
-        "100v": {
-          "type": "array",
-          "items": {
-            "type": "number",
-            "minimum": 0
-          }
-        }
-      },
-      "additionalProperties": false
-    },
     "productImages": {
       "type": "object",
       "title": "Product Images",
-      "properties": {
-        "black": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "white": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-       "additionalProperties": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
-      }
-    },
-    "productAccessoryImages": {
-      "type": "object",
-      "title": "Product Accessory Images",
       "properties": {
         "black": {
           "type": "array",
@@ -1174,190 +1438,6 @@
           "type": "string"
         }
       }
-    },
-    "driverComponents": {
-      "type": "object",
-      "title": "Driver Components",
-      "properties": {
-        "full_range": {
-          "type": "object",
-          "properties": {
-            "quantity": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "unit": {
-              "type": "string",
-              "enum": [
-                "inch",
-                "mm",
-                "cm"
-              ]
-            },
-            "size": {
-              "type": "number",
-              "minimum": 0
-            }
-          },
-          "required": [
-            "quantity",
-            "unit",
-            "size"
-          ],
-          "additionalProperties": false
-        },
-        "woofer": {
-          "type": "object",
-          "properties": {
-            "quantity": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "unit": {
-              "type": "string",
-              "enum": [
-                "inch",
-                "mm",
-                "cm"
-              ]
-            },
-            "size": {
-              "type": "number",
-              "minimum": 0
-            }
-          },
-          "required": [
-            "quantity",
-            "unit",
-            "size"
-          ],
-          "additionalProperties": false
-        },
-        "tweeter": {
-          "type": "object",
-          "properties": {
-            "quantity": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "unit": {
-              "type": "string",
-              "enum": [
-                "inch",
-                "mm",
-                "cm"
-              ]
-            },
-            "size": {
-              "type": "number",
-              "minimum": 0
-            }
-          },
-          "required": [
-            "quantity",
-            "unit",
-            "size"
-          ],
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    "amplifierPowerOutput": {
-      "type": "object",
-      "title": "Amplifier Power Output",
-      "properties": {
-        "symmetrical": {
-          "$ref": "#/$defs/powerConfiguration"
-        },
-        "asymmetrical": {
-          "$ref": "#/$defs/powerConfiguration"
-        }
-      },
-      "additionalProperties": false
-    },
-    "powerConfiguration": {
-      "type": "object",
-      "title": "Power Configuration",
-      "properties": {
-        "rated_per_channel": {
-          "$ref": "#/$defs/powerMeasurement"
-        },
-        "peak_per_channel": {
-          "$ref": "#/$defs/measurement"
-        },
-        "rated_per_channel_high_voltage": {
-          "$ref": "#/$defs/measurement"
-        },
-        "peak_per_channel_high_voltage": {
-          "$ref": "#/$defs/measurement"
-        }
-      },
-      "additionalProperties": false
-    },
-    "powerMeasurement": {
-      "type": "object",
-      "title": "Power Measurement",
-      "oneOf": [
-        {
-          "properties": {
-            "at": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "impedance": {
-                    "$ref": "#/$defs/valueWithUnit"
-                  },
-                  "power": {
-                    "$ref": "#/$defs/valueWithUnit"
-                  }
-                },
-                "required": [
-                  "impedance",
-                  "power"
-                ],
-                "additionalProperties": false
-              }
-            }
-          },
-          "required": [
-            "at"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "properties": {
-            "unit": {
-              "type": "string"
-            },
-            "at": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "key": {
-                    "type": "string"
-                  },
-                  "value": {
-                    "type": "number"
-                  }
-                },
-                "required": [
-                  "key",
-                  "value"
-                ],
-                "additionalProperties": false
-              }
-            }
-          },
-          "required": [
-            "unit",
-            "at"
-          ],
-          "additionalProperties": false
-        }
-      ]
     },
     "inputsOutputs": {
       "type": "object",
@@ -1506,7 +1586,6 @@
               "minimum": 0
             }
           },
-
           "additionalProperties": false
         },
         "xlr": {
@@ -1580,32 +1659,6 @@
           "pattern": "^v?\\d+\\.\\d+\\.\\d+.*$"
         }
       },
-      "additionalProperties": false
-    },
-    "connection": {
-      "type": "object",
-      "title": "Connection Specification",
-      "properties": {
-        "channels": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "connector": {
-          "type": "string",
-          "enum": [
-            "RJ-45",
-            "XLR",
-            "TRS",
-            "RCA",
-            "USB",
-            "BNC"
-          ]
-        }
-      },
-      "required": [
-        "channels",
-        "connector"
-      ],
       "additionalProperties": false
     }
   }

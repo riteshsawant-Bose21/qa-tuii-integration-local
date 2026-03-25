@@ -32,6 +32,11 @@ ifeq ($(UNAME_S),Darwin)
     OSX_ARM_INCLUDES  := -I/opt/homebrew/include
     OSX_ARM_LIB_PATHS := -L/opt/homebrew/lib
 
+	# Homebrew googletest paths (used for tests)
+	OSX_ARM_GTEST_PREFIX  := /opt/homebrew/opt/googletest
+	OSX_ARM_GTEST_CFLAGS  := -I$(OSX_ARM_GTEST_PREFIX)/include
+	OSX_ARM_GTEST_LDFLAGS := -L$(OSX_ARM_GTEST_PREFIX)/lib
+
     # Prefer pkg-config for jsoncpp on arm64 brew
     PKGCONF_ARM := pkg-config
     OSX_ARM_JSONCPP_LIBS    := $(shell $(PKGCONF_ARM) --libs jsoncpp 2>/dev/null || echo -ljsoncpp)
@@ -124,12 +129,12 @@ osx-arm64: $(TARGET_OSX_ARM)
 $(TARGET_OSX_ARM): $(OBJS_OSX_ARM)
 	@mkdir -p $(dir $@)
 	$(CXX) $(OSX_ARM_FLAGS) $(OBJS_OSX_ARM) -o $@ \
-		$(OSX_ARM_LIB_PATHS) $(OSX_ARM_JSONCPP_LIBS)
+		$(OSX_ARM_LIB_PATHS) $(OSX_ARM_JSONCPP_LIBS) -lfmt
 
 $(BUILD_DIR_OSX_ARM)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(OSX_ARM_FLAGS) $(INCLUDES) \
-		$(OSX_ARM_INCLUDES) $(OSX_ARM_JSONCPP_CFLAGS) -c $< -o $@
+		$(OSX_ARM_INCLUDES) $(OSX_ARM_JSONCPP_CFLAGS) $(OSX_ARM_GTEST_CFLAGS) -c $< -o $@
 
 # ================================
 # Tests
@@ -159,7 +164,7 @@ $(TEST_TARGET_ARM): $(TEST_OBJS_ARM)
 $(TEST_TARGET_OSX_ARM): $(TEST_OBJS_OSX_ARM)
 	@mkdir -p $(dir $@)
 	$(CXX) $(OSX_ARM_FLAGS) $(TEST_OBJS_OSX_ARM) -o $@ \
-		$(OSX_ARM_LIB_PATHS) $(OSX_ARM_JSONCPP_LIBS) $(TEST_LIBS)
+		$(OSX_ARM_LIB_PATHS) $(OSX_ARM_JSONCPP_LIBS) $(OSX_ARM_GTEST_LDFLAGS) -lfmt $(TEST_LIBS)
 
 # ================================
 # Utilities
