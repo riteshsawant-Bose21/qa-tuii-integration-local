@@ -458,12 +458,10 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                               physics: const ClampingScrollPhysics(),
                                               child: Column(
                                                 children:
-                                                    widget.availableSources.map<Widget>((Source source) {
+                                                    widget.availableSources.asMap().entries.map<Widget>((MapEntry entry) {
+                                                      final Source source = entry.value;
+                                                      final int index = entry.key;
                                                       final bool isSelected = widget.selectedSources.any(
-                                                        (SelectedSource selectedSource) => selectedSource.id == source.id,
-                                                      );
-
-                                                      final int index = widget.selectedSources.indexWhere(
                                                         (SelectedSource selectedSource) => selectedSource.id == source.id,
                                                       );
 
