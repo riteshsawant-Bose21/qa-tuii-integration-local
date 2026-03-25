@@ -194,11 +194,10 @@ func (m *MDNSManager) loop() {
 		}
 
 		// If already running with same VIP, treat as idempotent success.
-		//Commented out to see if we do unneccesory calls to do restarts. We can optimize later if needed
-		// if st.running && st.vip != nil && st.vip.Equal(vip) {
-		// 	logger.Debug("[Discovery] Already running with same VIP %v, treating as idempotent success", vip)
-		// 	return nil
-		// }
+		 if st.running && st.vip != nil && st.vip.Equal(vip) {
+		 	logger.Warn("[Discovery] Already running with same VIP %v, treating as idempotent success", vip)
+		 	return nil
+		 }
 
 		// If running with different VIP, restart.
 		if st.running {
