@@ -470,7 +470,7 @@ extension HardwareViewModel on ProjectViewModel {
 
   double _resolveCoverageAngle(SpeakerProduct? product) {
     if (product == null || product.coverage.isEmpty) return 90.0;
-    final int angle = product.coverage.first.horizontalDeg;
+    final int angle = product.coverage.firstOrNull?.horizontalDeg ?? 90;
     return angle <= 0 ? 90.0 : angle.toDouble();
   }
 
