@@ -35,7 +35,13 @@ func HandleRequestAuthorizer(ctx context.Context, event map[string]interface{}) 
 	}
 
 	// Extract token from headers (case-insensitive)
-	headers, _ := event["headers"].(map[string]interface{})
+	headers, ok := event["headers"].(map[string]interface{})
+
+	if !ok || len(headers) == 0 {
+		log.LogAuthAttempt("anonymous", "", "", false, "No headers provided")
+		return denyResponse("anonymous", "No headers provided"), nil
+	}
+
 	token := ""
 	for k, v := range headers {
 		if strings.ToLower(k) == "authorization" {
@@ -69,11 +75,16 @@ func HandleRequestAuthorizer(ctx context.Context, event map[string]interface{}) 
 	})
 
 	// Extract HTTP method and path from event (REST API Gateway v1 format)
-	method, _ := event["httpMethod"].(string)
-	path, _ := event["path"].(string)
-	if method == "" || path == "" {
-		log.LogAuthAttempt(email, method, path, false, "Missing method or path")
-		return denyResponse(email, "Missing method or path"), nil
+	method, ok := event["httpMethod"].(string)
+	if !ok {
+		log.LogAuthAttempt(email, "", "", false, "Missing HTTP method")
+		return denyResponse(email, "Missing HTTP method"), nil
+	}
+
+	path, ok := event["path"].(string)
+	if !ok {
+		log.LogAuthAttempt(email, method, "", false, "Missing path")
+		return denyResponse(email, "Missing path"), nil
 	}
 
 	// Check permissions with timing
