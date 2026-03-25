@@ -15,10 +15,6 @@ class _WorkAreaAppbarAction extends StatelessWidget {
                 width: 160,
                 decoration: BoxDecoration(
                   color: context.colorScheme.elevation1,
-                  border: Border(
-                    top: BorderSide(width: 1, color: context.colorScheme.elevation2),
-                    bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
-                  ),
                 ),
 
                 alignment: Alignment.center,
@@ -74,10 +70,6 @@ class _WorkAreaAppbarAction extends StatelessWidget {
                   height: 48,
                   decoration: BoxDecoration(
                     color: context.colorScheme.elevation1,
-                    border: Border(
-                      top: BorderSide(width: 1, color: context.colorScheme.elevation2),
-                      bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
-                    ),
                   ),
                   alignment: Alignment.center,
                   child: Container(
@@ -227,6 +219,37 @@ class _WorkAreaAppbarAction extends StatelessWidget {
             // ),
             // ),
             // ),
+
+            /// Meter Icon Section
+            if (serviceLocator<SharedPreferencesHandler>().getBool(SharedPreferenceKeys.enableDevMode) ?? false)
+              Container(
+                width: 56,
+                height: 48,
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                decoration: BoxDecoration(
+                  border: Border.symmetric(
+                    vertical: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                  ),
+                ),
+                child: Tooltip(
+                  message: 'ZMQ meter data',
+                  child: InkWell(
+                    child: Icon(
+                      Icons.electric_meter_outlined,
+                      size: 24,
+                      color: Theme.of(context).colorScheme.primaryWhite,
+                    ),
+                    onTap: () async {
+                      showMeterDataPopup(context);
+                    },
+                  ),
+                ),
+                // child: Image.asset(
+                //   "assets/images/share_icon.png",
+                //   width: 24,
+                //   height: 24,
+                // ),
+              ),
 
             /// Share Icon Section
             Container(

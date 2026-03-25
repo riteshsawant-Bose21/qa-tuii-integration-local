@@ -307,7 +307,7 @@ func fetchGenericFromAdmin[T any](
 
 		remoteSlice, err := remoteFetch(addr, endpoint)
 		if err != nil {
-			url := getLocalURL(addr, endpoint)
+			url := utils.GetLocalURL(addr, endpoint)
 			logger.Error("GET %s failed: %v", url, err)
 			continue
 		}
@@ -393,6 +393,68 @@ func fetchAndDecode[T any](
 	return decodeSlice(resp.Body, dest)
 }
 
+func (c *Cluster) FetchGenericWithTargetDevice(
+	deviceID string,
+	endpointTemplate string,
+	localFn func() ([]byte, error),
+	remoteFn func(url string) ([]byte, error),
+) ([]byte, error) {
+
+	deviceInfos := c.GetAllDevicesInfo()
+
+	var targetDevice *api.DeviceInfo
+	for i := range deviceInfos {
+		if deviceInfos[i].Id == deviceID {
+			targetDevice = &deviceInfos[i]
+			break
+		}
+	}
+	if targetDevice == nil {
+		return nil, fmt.Errorf("device %s not found", deviceID)
+	}
+
+	if c.hostIsLocal(targetDevice.Address) {
+		return localFn()
+	}
+
+	deviceAddress := net.JoinHostPort(targetDevice.Address, api.AdminPort)
+	endpoint := strings.Replace(endpointTemplate, "{id}", deviceID, 1)
+	url := utils.GetLocalURL(deviceAddress, endpoint)
+
+	return remoteFn(url)
+}
+
+func (c *Cluster) DoGenericToTargetDevice(
+	deviceID string,
+	endpointTemplate string,
+	payload []byte,
+	localFn func(payload []byte) error,
+	remoteFn func(payload []byte, url string) error,
+) error {
+	deviceInfos := c.GetAllDevicesInfo()
+
+	var targetDevice *api.DeviceInfo
+	for i := range deviceInfos {
+		if deviceInfos[i].Id == deviceID {
+			targetDevice = &deviceInfos[i]
+			break
+		}
+	}
+	if targetDevice == nil {
+		return fmt.Errorf("device %s not found", deviceID)
+	}
+
+	if c.hostIsLocal(targetDevice.Address) {
+		return localFn(payload)
+	}
+
+	deviceAddress := net.JoinHostPort(targetDevice.Address, api.AdminPort)
+	endpoint := strings.Replace(endpointTemplate, "{id}", deviceID, 1)
+	url := utils.GetLocalURL(deviceAddress, endpoint)
+
+	return remoteFn(payload, url)
+}
+
 // PostGenericToAdmin POSTs to an admin route on all nodes
 func (c *Cluster) PostGenericToAdmin(
 	endpoint string,
@@ -409,7 +471,7 @@ func (c *Cluster) PostGenericToAdmin(
 		}
 
 		// POST to the remote node’s admin endpoint
-		urlStr := getLocalURL(addr, endpoint)
+		urlStr := utils.GetLocalURL(addr, endpoint)
 		resp, err := http.Post(urlStr, "", nil)
 		if err != nil {
 			return err
@@ -431,7 +493,7 @@ func postGenericToAdminLast(
 		}
 
 		// POST to the remote node’s admin endpoint
-		urlStr := getLocalURL(addr, endpoint)
+		urlStr := utils.GetLocalURL(addr, endpoint)
 		resp, err := http.Post(urlStr, "", nil)
 		if err != nil {
 			logging.GetLogger().Error("POST to %s failed: %v", urlStr, err)
@@ -457,7 +519,7 @@ func postGenericToAdminLast(
 // getLocalEndpointResponse calls a endpoint
 func getLocalEndpointResponse(c *Cluster, addr, endpoint string) (response *http.Response, err error) {
 
-	url := getLocalURL(addr, endpoint)
+	url := utils.GetLocalURL(addr, endpoint)
 	resp, err := c.httpClient.Get(url)
 	if err != nil {
 		return nil, err
@@ -494,10 +556,4 @@ func (c *Cluster) isLocalNodePrimary() bool {
 	}
 
 	return false
-}
-
-// getLocalURL builds a full API URL to the endpoint
-// fixme: need to move it to utils
-func getLocalURL(addr, endpoint string) string {
-	return fmt.Sprintf("%s%s%s", api.Protocol, addr, endpoint)
 }
