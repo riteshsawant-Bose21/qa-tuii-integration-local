@@ -6,8 +6,6 @@ import 'package:fusion_launcher/core/models/products_data.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
-import 'package:fusion_lib/fusion_algorithms/ceiling_pendant_speakers_autolayout/ceiling_pendant_speakers_autolayout.dart' as ceiling_algo;
-import 'package:fusion_lib/fusion_algorithms/surface_speakers_autolayout/surface_speakers_autolayout.dart' as surface_algo;
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/endpoints.dart';
@@ -315,12 +313,17 @@ extension HardwareViewModel on ProjectViewModel {
 
       if (targetSpeakers.isEmpty) return ResponseCallback<bool>.failure('Add at least one non-subwoofer speaker to auto-place.');
 
-      final List<Offset> candidatePoints = _calculateAutoPlacedPositions(
-        listeningArea: listeningArea,
-        catalogSpeakers: catalogSpeakers,
-        targetSpeakers: targetSpeakers,
-        autoPlacementResult: autoPlacementResult,
-      );
+      final ({List<Offset> positions, SurfacePlacementResult? surfacePlacementResult, PlacementResult? placementResult}) autoPlacedDetails =
+          _calculateAutoPlacedPositions(
+            listeningArea: listeningArea,
+            catalogSpeakers: catalogSpeakers,
+            targetSpeakers: targetSpeakers,
+            autoPlacementResult: autoPlacementResult,
+          );
+
+      final List<Offset> candidatePoints = autoPlacedDetails.positions;
+      final SurfacePlacementResult? surfacePlacementResult = autoPlacedDetails.surfacePlacementResult;
+      final PlacementResult? placementResult = autoPlacedDetails.placementResult;
 
       if (candidatePoints.isEmpty) {
         FusionLogger.log(tag: LogTag.project, message: 'Auto-placement candidate points: $candidatePoints');
@@ -336,7 +339,12 @@ extension HardwareViewModel on ProjectViewModel {
       recordSnapshot();
 
       // Save auto-placement result to listening area for future reference and to display in UI if needed.
-      final ListeningArea updatedListeningArea = listeningArea.copyWith(autoPlacementResult: autoPlacementResult);
+      final ListeningArea updatedListeningArea = listeningArea.copyWith(
+        autoPlacementResult: autoPlacementResult.copyWith(
+          ceilingPendantPlacementResult: placementResult,
+          surfacePlacementResult: surfacePlacementResult,
+        ),
+      );
       updateListeningArea(area: updatedListeningArea, autoSave: false);
 
       final Speaker templateSpeaker = targetSpeakers.first;
@@ -364,7 +372,7 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  List<Offset> _calculateAutoPlacedPositions({
+  ({List<Offset> positions, SurfacePlacementResult? surfacePlacementResult, PlacementResult? placementResult}) _calculateAutoPlacedPositions({
     required ListeningArea listeningArea,
     required List<SpeakerProduct> catalogSpeakers,
     required List<Speaker> targetSpeakers,
@@ -378,23 +386,13 @@ extension HardwareViewModel on ProjectViewModel {
     final SpeakerProduct? speakerProduct = catalogSpeakers.where((SpeakerProduct p) => p.productId == referenceSpeaker.productId).firstOrNull;
     final double coverageAngle = _resolveCoverageAngle(speakerProduct);
 
-    double minX = listeningArea.vertices.first.position.dx;
-    double maxX = minX;
-    double minY = listeningArea.vertices.first.position.dy;
-    double maxY = minY;
+    final ListeningAreaRoomBounds bounds = listeningArea.getBoundsForVertices();
+    final double roomLength = bounds.roomLengthInMeters;
+    final double roomWidth = bounds.roomWidthInMeters;
 
-    for (final FusionCanvasPoint vertex in listeningArea.vertices) {
-      if (vertex.position.dx < minX) minX = vertex.position.dx;
-      if (vertex.position.dx > maxX) maxX = vertex.position.dx;
-      if (vertex.position.dy < minY) minY = vertex.position.dy;
-      if (vertex.position.dy > maxY) maxY = vertex.position.dy;
+    if (roomLength <= 0 || roomWidth <= 0) {
+      throw ArgumentError('Invalid room dimensions calculated from listening area vertices. Length and width must be greater than 0.');
     }
-
-    final double roomLength = (maxX - minX).abs() / 100;
-    final double roomWidth = (maxY - minY).abs() / 100;
-
-    if (roomLength <= 0 || roomWidth <= 0) return <Offset>[];
-
     final double listenerHeight = listeningArea.listeningHeight;
 
     if (listenerHeight <= 0) throw ArgumentError('Listener height must be greater than 0.');
@@ -409,22 +407,24 @@ extension HardwareViewModel on ProjectViewModel {
     // if (boundaryThreshold < 0.3 || boundaryThreshold >= 1) throw ArgumentError('Boundary threshold must be between 0.3 and 1.');
 
     if (mountingType == MountingType.ceiling || mountingType == MountingType.pendant) {
-      final List<ceiling_algo.Point2D> geometry =
-          listeningArea.vertices.map((FusionCanvasPoint point) {
-            return ceiling_algo.Point2D((point.position.dx - minX) / 100, (point.position.dy - minY) / 100);
-          }).toList();
+      final List<Point2D> geometry = <Point2D>[
+        ...listeningArea.vertices.map(
+          (FusionCanvasPoint point) {
+            return Point2D(
+              (point.position.dx - bounds.minX) / 100,
+              (point.position.dy - bounds.minY) / 100,
+            );
+          },
+        ),
+      ];
 
-      final ceiling_algo.Room room = ceiling_algo.Room.asymmetrical(
-        geometry: geometry,
-        ceilingHeight: ceilingHeight,
-        listenerHeight: listenerHeight,
-      );
+      final Room room = Room.asymmetrical(geometry: geometry, ceilingHeight: ceilingHeight, listenerHeight: listenerHeight);
 
-      final ceiling_algo.SpeakerType speakerType = mountingType == MountingType.pendant ? ceiling_algo.SpeakerType.pendant : ceiling_algo.SpeakerType.ceiling;
+      final SpeakerType speakerType = mountingType == MountingType.pendant ? SpeakerType.pendant : SpeakerType.ceiling;
 
-      final ceiling_algo.PlacementResult result = ceiling_algo.AutoSpeakerPlacement.calculatePlacement(
+      final PlacementResult result = AutoSpeakerPlacement.calculatePlacement(
         room: room,
-        speakerSpec: ceiling_algo.SpeakerSpec(
+        speakerSpec: SpeakerSpec(
           coverageAngle: coverageAngle,
           type: speakerType,
           // TODO: SHARATH - need to verify if zAxis is the right dimension to use for pendant height in the algorithm, and if the algorithm expects it to be in mm or meters (we may need to convert from our internal cm representation)
@@ -432,42 +432,45 @@ extension HardwareViewModel on ProjectViewModel {
         ),
         coveragePreference: autoPlacementResult.autoPlaceCoveragePreference,
         layoutPattern: autoPlacementResult.autoPlaceLayoutPattern,
-        // customOriginOffset: ceiling_algo.Point2D(autoPlacementResult.autoPlaceGridOffsetX, autoPlacementResult.autoPlaceGridOffsetY),
+        // customOriginOffset: Point2D(autoPlacementResult.autoPlaceGridOffsetX, autoPlacementResult.autoPlaceGridOffsetY),
         // boundaryOverlapThreshold: boundaryThreshold,
       );
 
       log("Total speakers placed by algorithm: ${result.speakerPositions.length}");
-      return result.speakerPositions.map((ceiling_algo.Point2D p) => Offset((p.x * 100) + minX, (p.y * 100) + minY)).toList();
+      final List<Offset> positions = result.speakerPositions.map((Point2D p) => Offset((p.x * 100) + bounds.minX, (p.y * 100) + bounds.minY)).toList();
+
+      return (positions: positions, surfacePlacementResult: null, placementResult: result);
     } else {
-      final surface_algo.SurfacePlacementResult result = surface_algo.SurfaceSpeakerPlacer.calculatePlacement(
-        room: surface_algo.SurfaceRoom(
+      final SurfacePlacementResult result = SurfaceSpeakerPlacer.calculatePlacement(
+        room: SurfaceRoom(
           length: roomLength,
           width: roomWidth,
           ceilingHeight: ceilingHeight,
           listenerHeight: listenerHeight,
         ),
-        speaker: surface_algo.Loudspeaker(horizontalCoverageAngle: coverageAngle, type: referenceSpeaker.speakerSKU),
-        config: surface_algo.PlacementConfig(
+        speaker: Loudspeaker(horizontalCoverageAngle: coverageAngle, type: referenceSpeaker.speakerSKU),
+        config: PlacementConfig(
           coveragePreference: autoPlacementResult.autoPlaceCoveragePreference,
         ),
       );
 
-      // return result.positions
-      //     .map(
-      //       (surface_algo.SpeakerPosition p) => Offset(
-      //         minX + p.x + autoPlacementResult.autoPlaceGridX,
-      //         minY + p.y + autoPlacementResult.autoPlaceOffsetY,
-      //       ),
-      //     )
-      //     .toList();
-
-      return result.positions.map((surface_algo.SpeakerPosition p) => Offset((p.x * 100) + minX, (p.y * 100) + minY)).toList();
+      final List<Offset> positions = <Offset>[
+        ...result.positions.map(
+          (SpeakerPosition p) {
+            return Offset(
+              (p.x * 100) + bounds.minX,
+              (p.y * 100) + bounds.minY,
+            );
+          },
+        ),
+      ];
+      return (positions: positions, surfacePlacementResult: result, placementResult: null);
     }
   }
 
   double _resolveCoverageAngle(SpeakerProduct? product) {
     if (product == null || product.coverage.isEmpty) return 90.0;
-    final int angle = product.coverage.first.horizontalDeg;
+    final int angle = product.coverage.firstOrNull?.horizontalDeg ?? 90;
     return angle <= 0 ? 90.0 : angle.toDouble();
   }
 

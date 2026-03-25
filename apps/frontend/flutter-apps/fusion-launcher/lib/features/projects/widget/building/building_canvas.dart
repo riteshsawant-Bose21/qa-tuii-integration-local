@@ -323,13 +323,17 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                               penToolEvents: FusionPenToolEvents(
                                                 onPathClosed: (List<FusionCanvasPoint> value) {
                                                   final ProjectViewModel projectVM = serviceLocator<ProjectViewModel>();
+                                                  final ListeningArea listeningArea = ListeningArea(
+                                                    vertices: value,
+                                                    name: "Listening Area ${projectVM.listeningAreas.length + 1}",
+                                                  );
                                                   projectVM.addListeningArea(
-                                                    area: ListeningArea(
-                                                      vertices: value,
-                                                      name: "Listening Area ${projectVM.listeningAreas.length + 1}",
-                                                    ),
+                                                    area: listeningArea,
                                                     floorId: floor.id,
                                                   );
+                                                  projectVM.setCurrentSelectedHardware(null);
+                                                  projectVM.setCurrentSelectedListeningArea(listeningArea.id);
+
                                                   calculateSpl(context);
                                                 },
                                               ),
@@ -345,11 +349,13 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                         crossAxisAlignment: CrossAxisAlignment.start,
                                                         children: <Widget>[
                                                           widget.rightPanel,
-                                                          SizedBox(
-                                                            height: constraints.maxHeight,
-                                                            child: SplSlider(
-                                                              splPanelData: widget.splPanelData,
-                                                              splRangeController: widget.splRangeController,
+                                                          WorkSafeAreaContent(
+                                                            child: SizedBox(
+                                                              height: constraints.maxHeight - WorkAreaScope.of(context).appBarHeight,
+                                                              child: SplSlider(
+                                                                splPanelData: widget.splPanelData,
+                                                                splRangeController: widget.splRangeController,
+                                                              ),
                                                             ),
                                                           ),
                                                         ],
@@ -1126,36 +1132,34 @@ class SplSlider extends StatelessWidget {
             builder: (BuildContext context, BoxConstraints constraints) {
               return Align(
                 alignment: Alignment.centerRight,
-                child: WorkSafeAreaContent(
-                  child: SPLRangeSlider(
-                    width: 24,
-                    height: constraints.maxHeight,
-                    controller: splRangeController,
-                    minValue: serviceLocator<ProjectViewModel>().minSPL,
-                    maxValue: serviceLocator<ProjectViewModel>().maxSPL,
-                    invertedColors: splPanelData.splInvertColor,
-                    onChanged: (double min, double max) {
-                      // debugPrint("SPL Range changed: ${min.round()} - ${max.round()}");
-                      serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
-                      serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);
-                      // if (!showLiveSpl) {
-                      //   setState(() {
-                      //     showLiveSpl = true;
-                      //   });
-                      // }
-                    },
-                    onChangeEnd: (double min, double max) {
-                      // debugPrint("SPL Range change ended: ${min.round()} - ${max.round()}");
-                      serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
-                      serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);
-                      // serviceLocator<ProjectViewModel>().saveProjectToLocal();
-                      // if (showLiveSpl) {
-                      //   setState(() {
-                      //     showLiveSpl = false;
-                      //   });
-                      // }
-                    },
-                  ),
+                child: SPLRangeSlider(
+                  width: 24,
+                  height: constraints.maxHeight,
+                  controller: splRangeController,
+                  minValue: serviceLocator<ProjectViewModel>().minSPL,
+                  maxValue: serviceLocator<ProjectViewModel>().maxSPL,
+                  invertedColors: splPanelData.splInvertColor,
+                  onChanged: (double min, double max) {
+                    // debugPrint("SPL Range changed: ${min.round()} - ${max.round()}");
+                    serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
+                    serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);
+                    // if (!showLiveSpl) {
+                    //   setState(() {
+                    //     showLiveSpl = true;
+                    //   });
+                    // }
+                  },
+                  onChangeEnd: (double min, double max) {
+                    // debugPrint("SPL Range change ended: ${min.round()} - ${max.round()}");
+                    serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
+                    serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);
+                    // serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                    // if (showLiveSpl) {
+                    //   setState(() {
+                    //     showLiveSpl = false;
+                    //   });
+                    // }
+                  },
                 ),
               );
             },

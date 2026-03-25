@@ -138,7 +138,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                         final List<Speaker> allSubwoofer = <Speaker>[...nonPlacedSubwoofer, ...placedSubwoofer];
 
                         final bool hasSubwooferSpeakerInLA = allSubwoofer.isNotEmpty;
-                        final bool shouldPlaceNonPlacedSpeakers = projectViewModel.shouldPlaceNonPlacedSpeakers;
+                        final bool isSpeakerPlacementMode = context.watch<BuildingPageViewModel>().isSpeakerPlacementMode;
 
                         Widget buildSpeakerGroupSection({
                           required String title,
@@ -247,15 +247,16 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                         cursor: SystemMouseCursors.click,
                                         child: GestureDetector(
                                           onTap: () {
-                                            if (listeningArea.autoPlacement) return projectViewModel.setShouldPlaceNonPlacedSpeakers(false);
-                                            projectViewModel.setShouldPlaceNonPlacedSpeakers(!projectViewModel.shouldPlaceNonPlacedSpeakers);
+                                            final BuildingPageViewModel buildingPageViewModel = context.read<BuildingPageViewModel>();
+                                            if (listeningArea.autoPlacement) return buildingPageViewModel.setShouldPlaceNonPlacedSpeakers(false);
+                                            buildingPageViewModel.setShouldPlaceNonPlacedSpeakers(!isSpeakerPlacementMode);
                                           },
                                           child: Tooltip(
                                             message: 'Place non-placed speakers',
                                             child: Icon(
                                               LucideIcons.mapPin200,
                                               size: 16,
-                                              color: shouldPlaceNonPlacedSpeakers ? context.colorScheme.primaryColor : context.colorScheme.iconDefault,
+                                              color: isSpeakerPlacementMode ? context.colorScheme.primaryColor : context.colorScheme.iconDefault,
                                             ),
                                           ),
                                         ),
@@ -507,7 +508,8 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                       width: 40,
                                       onChanged: (bool value) {
                                         if (value) {
-                                          projectViewModel.setShouldPlaceNonPlacedSpeakers(false);
+                                          final BuildingPageViewModel buildingPageViewModel = context.read<BuildingPageViewModel>();
+                                          buildingPageViewModel.setShouldPlaceNonPlacedSpeakers(false);
                                         }
                                         final ListeningArea updatedLA = listeningArea.copyWith(autoPlacement: value);
                                         projectViewModel.updateListeningArea(area: updatedLA);

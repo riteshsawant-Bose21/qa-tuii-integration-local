@@ -41,10 +41,12 @@ class ConfigSnapshotsViewmodel extends Cubit<ConfigSnapshotsState> {
       print("emitting snapshots loaded with ${snapshots.length} snapshots and selectedSnapshotId: ${_projectViewModel.selectedSnapshotId}");
 
       if (currentState is SnapshotsLoaded) {
+        final bool shouldClearSelection = _projectViewModel.selectedSnapshotId == null;
         emit(
           currentState.copyWith(
             snapshots: snapshots,
             selectedSnapshotId: _projectViewModel.selectedSnapshotId,
+            clearSelectedSnapshotId: shouldClearSelection,
           ),
         );
       } else {

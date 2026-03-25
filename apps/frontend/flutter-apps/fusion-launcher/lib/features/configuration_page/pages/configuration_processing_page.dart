@@ -239,7 +239,7 @@ class _ConfigurationProcessingPageBodyState extends State<_ConfigurationProcessi
             DragDivider(onDragUpdate: _updateSourcesHeight),
 
             /// Sources Sets Section
-            const SourceSetSection(),
+            const Expanded(child: SourceSetSection()),
           ],
         ),
       ),

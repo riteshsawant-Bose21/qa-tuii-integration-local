@@ -570,36 +570,27 @@ class _ListeningAreaDropdownWidgetState
                                         /// Create and Select Button
                                         Align(
                                           alignment: Alignment.centerRight,
-                                          child: SemanticHelper.button(
-                                            testId: SemanticHelper.createTestId(
-                                              SemanticTypes.button,
-                                              "create_new_location_add_button",
-                                            ),
-                                            child: FusionButton(
-                                              accessLabel: 'add',
-                                              height: 32,
-                                              label: "Add",
-                                              activeBackgroundColor:
-                                                  context
-                                                      .colorScheme
-                                                      .primaryColor,
-                                              textStyle: context
-                                                  .textTheme
-                                                  .labelMedium
-                                                  ?.copyWith(
-                                                    color: Colors.white,
-                                                  ),
-                                              isActive:
-                                                  _areaNameController.text
-                                                      .trim()
-                                                      .isNotEmpty &&
-                                                  _selectedFloorId.isNotEmpty,
-                                              onTap: () {
-                                                _createNewArea(
-                                                  floorId: _selectedFloorId,
-                                                );
-                                              },
-                                            ),
+                                          child: FusionButton(
+                                            accessLabel:"create_new_location_add",
+                                            height: 32,
+                                            label: "Add",
+                                            activeBackgroundColor:
+                                                context.colorScheme.primaryColor,
+                                            textStyle: context
+                                                .textTheme
+                                                .labelMedium
+                                                ?.copyWith(
+                                                  color: Colors.white,
+                                                ),
+                                            isActive: _areaNameController.text
+                                                    .trim()
+                                                    .isNotEmpty &&
+                                                _selectedFloorId.isNotEmpty,
+                                            onTap: () {
+                                              _createNewArea(
+                                                floorId: _selectedFloorId,
+                                              );
+                                            },
                                           ),
                                         ),
                                       ],

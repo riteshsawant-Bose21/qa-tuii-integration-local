@@ -7,6 +7,7 @@ import 'package:fusion_launcher/features/projects/view_model/spl_viewmodel.dart'
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:nested/nested.dart';
 
+import '../../../../fusion_canvas/state/fusion_tool_state.dart';
 import '../../../../fusion_canvas/state/tools/measure_tool_state.dart';
 import '../../../../fusion_canvas/state/tools/pen_tool_state.dart';
 import '../../../../fusion_canvas/state/tools/select_tool_state.dart' hide SelectToolState;
@@ -18,6 +19,7 @@ part '_tool_bar_icon.dart';
 part 'acoustic_toolbar.dart';
 part 'mode_selection_toolbar.dart';
 part 'system_toolbar.dart';
+part 'ternary_toolbar.dart';
 
 class CanvasToolBar extends StatelessWidget {
   const CanvasToolBar({super.key});
@@ -33,7 +35,7 @@ class CanvasToolBar extends StatelessWidget {
           listener: (BuildContext context, BuildingPageState state) {
             if (state.toolState is SystemToolState) {
               context.read<FusionCanvasToolViewModel>().setTool(IdleSelectToolState());
-            } else if (state.toolState is DrawingListingAreaState) {
+            } else if (state.toolState is DrawingListeningAreaState) {
               context.read<FusionCanvasToolViewModel>().setTool(IdlePenToolState());
             } else if (state.toolState is MeasuringToolState) {
               context.read<FusionCanvasToolViewModel>().setTool(IdleMeasureToolState());
@@ -60,9 +62,20 @@ class CanvasToolBar extends StatelessWidget {
               child: Row(
                 children: <Widget>[
                   AnimatedSwitcher(
+                    layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+                      return Stack(
+                        alignment: Alignment.centerLeft,
+                        children: <Widget>[
+                          ...previousChildren,
+                          if (currentChild != null) currentChild,
+                        ],
+                      );
+                    },
                     transitionBuilder:
-                        (Widget child, Animation<double> animation) =>
-                            SlideTransition(position: Tween<Offset>(begin: const Offset(-0.5, 0), end: Offset.zero).animate(animation), child: child),
+                        (Widget child, Animation<double> animation) => SlideTransition(
+                          position: Tween<Offset>(begin: const Offset(-1, 0), end: Offset.zero).animate(animation),
+                          child: child,
+                        ),
                     duration: const Duration(milliseconds: 200),
                     child: currentMode == ToolbarMode.acoustics ? const AcousticToolBar() : const SystemToolbar(),
                   ),
@@ -77,6 +90,10 @@ class CanvasToolBar extends StatelessWidget {
                 ],
               ),
             ),
+          ),
+          const AnimatedSize(
+            duration: Duration(milliseconds: 200),
+            child: _TernaryToolbar(),
           ),
         ],
       ),

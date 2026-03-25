@@ -4,7 +4,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/message_player_config/viewmodel/message_player_config_cubit.dart';
+import 'package:fusion_lib/constants/semantics/features/message_player/messageplayerKeys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_widgets/form_fields/fusion_custom_textfield.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Center panel for configuring message details
@@ -13,72 +15,76 @@ class MessageConfigPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<MessagePlayerConfigCubit, MessagePlayerConfigState>(
-      builder: (BuildContext context, MessagePlayerConfigState state) {
-        final MessagePlayerConfigCubit messagePlayerConfigCubit = context.read<MessagePlayerConfigCubit>();
-        final MediaFileModel? mediaFile = messagePlayerConfigCubit.getMediaFileForSelectedMessage();
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.messageconfigpanel),
+      child: BlocBuilder<MessagePlayerConfigCubit, MessagePlayerConfigState>(
+        builder: (BuildContext context, MessagePlayerConfigState state) {
+          final MessagePlayerConfigCubit messagePlayerConfigCubit = context.read<MessagePlayerConfigCubit>();
+          final MediaFileModel? mediaFile = messagePlayerConfigCubit.getMediaFileForSelectedMessage();
 
-        final MessageModel? selectedMessage = state.selectedMessage;
+          final MessageModel? selectedMessage = state.selectedMessage;
 
-        if (selectedMessage == null) {
-          return Center(
-            child: FusionAppText(
-              text: 'Select a message to configure',
-              style: context.textTheme.bodyMedium?.copyWith(
-                color: context.colorScheme.textSecondary,
+          if (selectedMessage == null) {
+            return Center(
+              child: FusionAppText(
+                semanticId: FusionTestKeys.instance.messageconfigpanelselct,
+                text: 'Select a message to configure',
+                style: context.textTheme.bodyMedium?.copyWith(
+                  color: context.colorScheme.textSecondary,
+                ),
               ),
-            ),
-          );
-        }
+            );
+          }
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              /// Message Name
-              _MessageNameField(
-                initialValue: selectedMessage.name,
-                onChanged: (String value) {
-                  context.read<MessagePlayerConfigCubit>().updateMessageName(value);
-                },
-              ),
-
-              const SizedBox(height: 20),
-
-              /// Audio File
-              _AudioFileSection(
-                selectedMessage: selectedMessage,
-                state: state,
-              ),
-
-              /// Audio Player (only show if audio file is selected)
-              if (messagePlayerConfigCubit.hasMediaAssignedToSelectedMessage() && mediaFile != null) ...<Widget>[
-                const SizedBox(height: 16),
-                _AudioPlayerWidget(state: state),
-
-                const SizedBox(height: 16),
-
-                /// Gain Control
-                _GainControlSection(
-                  gain: selectedMessage.gain,
-                  onChanged: (double value) {
-                    context.read<MessagePlayerConfigCubit>().updateGain(value);
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                /// Message Name
+                _MessageNameField(
+                  initialValue: selectedMessage.name,
+                  onChanged: (String value) {
+                    context.read<MessagePlayerConfigCubit>().updateMessageName(value);
                   },
                 ),
+
                 const SizedBox(height: 20),
 
-                /// Repeat Settings
-                _RepeatSettingsSection(
-                  repeat: selectedMessage.repeat,
-                  repeatCount: selectedMessage.repeatCount,
-                  intervalSeconds: selectedMessage.repeatIntervalSeconds,
+                /// Audio File
+                _AudioFileSection(
+                  selectedMessage: selectedMessage,
+                  state: state,
                 ),
+
+                /// Audio Player (only show if audio file is selected)
+                if (messagePlayerConfigCubit.hasMediaAssignedToSelectedMessage() && mediaFile != null) ...<Widget>[
+                  const SizedBox(height: 16),
+                  _AudioPlayerWidget(state: state),
+
+                  const SizedBox(height: 16),
+
+                  /// Gain Control
+                  _GainControlSection(
+                    gain: selectedMessage.gain,
+                    onChanged: (double value) {
+                      context.read<MessagePlayerConfigCubit>().updateGain(value);
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
+                  /// Repeat Settings
+                  _RepeatSettingsSection(
+                    repeat: selectedMessage.repeat,
+                    repeatCount: selectedMessage.repeatCount,
+                    intervalSeconds: selectedMessage.repeatIntervalSeconds,
+                  ),
+                ],
               ],
-            ],
-          ),
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -145,45 +151,57 @@ class _MessageNameFieldState extends State<_MessageNameField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        FusionAppText(
-          text: 'Message Name',
-          style: context.textTheme.labelMedium?.copyWith(
-            color: context.colorScheme.textSecondary,
-          ),
-        ),
-        const SizedBox(height: 8),
-        FusionContainer(
-          raised: false,
-          height: 40,
+        // FusionAppText(
+        //   text: 'Message Name',
+        //   style: context.textTheme.labelMedium?.copyWith(
+        //     color: context.colorScheme.textSecondary,
+        //   ),
+        // ),
+        // const SizedBox(height: 8),
+        FusionCustomTextField(
           width: 400,
-          child: TextField(
-            controller: _controller,
-            focusNode: _focusNode,
-            style: context.textTheme.b3Regular,
-            onSubmitted: _onSubmitted,
-            decoration: InputDecoration(
-              hintText: 'Enter message Name',
-              hintStyle: context.textTheme.bodySmall?.copyWith(
-                color: context.colorScheme.textPlaceholder,
-              ),
-              fillColor: context.colorScheme.elevation1,
-              filled: true,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Colors.transparent),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Colors.transparent),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Colors.transparent),
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            ),
-          ),
+          height: 40,
+          semanticId: FusionTestKeys.instance.messageconfigpaneltxtfield,
+          label: 'Message Name',
+          hint: 'Enter message Name',
+          onSubmit: _onSubmitted,
+
+          controller: _controller,
+          variant: FusionFieldVariant.neumorphic,
         ),
+
+        // FusionContainer(
+        //   raised: false,
+        //   height: 40,
+        //   width: 400,
+        //   child: TextField(
+        //     controller: _controller,
+        //     focusNode: _focusNode,
+        //     style: context.textTheme.b3Regular,
+        //     onSubmitted: _onSubmitted,
+        //     decoration: InputDecoration(
+        //       hintText: 'Enter message Name',
+        //       hintStyle: context.textTheme.bodySmall?.copyWith(
+        //         color: context.colorScheme.textPlaceholder,
+        //       ),
+        //       fillColor: context.colorScheme.elevation1,
+        //       filled: true,
+        //       border: OutlineInputBorder(
+        //         borderRadius: BorderRadius.circular(8),
+        //         borderSide: const BorderSide(color: Colors.transparent),
+        //       ),
+        //       enabledBorder: OutlineInputBorder(
+        //         borderRadius: BorderRadius.circular(8),
+        //         borderSide: const BorderSide(color: Colors.transparent),
+        //       ),
+        //       focusedBorder: OutlineInputBorder(
+        //         borderRadius: BorderRadius.circular(8),
+        //         borderSide: const BorderSide(color: Colors.transparent),
+        //       ),
+        //       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        //     ),
+        //   ),
+        // ),
       ],
     );
   }
@@ -204,6 +222,7 @@ class _AudioFileSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         FusionAppText(
+          semanticId: FusionTestKeys.instance.messageconfigpaneltxt,
           text: 'Audio File',
           style: context.textTheme.labelMedium?.copyWith(
             color: context.colorScheme.textSecondary,
@@ -237,39 +256,89 @@ class _AudioFileDropdownState extends State<_AudioFileDropdown> {
     final MediaFileModel? mediaFile = cubit.getMediaFileForSelectedMessage();
     final String? audioFileName = mediaFile?.name;
 
-    return Stack(
-      children: <Widget>[
-        // Main popup menu (always visible as trigger)
-        _buildMainPopup(context, cubit, audioFileName),
-        // Hidden audio files popup - we'll trigger it programmatically
-        Positioned(
-          left: 0,
-          right: 0,
-          child: Opacity(
-            opacity: 0,
-            child: IgnorePointer(
-              child: SizedBox(
-                height: 0,
-                child: _buildAudioFilesListPopup(context, cubit, audioFileName),
+    return SemanticHelper.dropdown(
+      testId: SemanticHelper.createTestId(SemanticTypes.dropdown, FusionTestKeys.instance.messageconfigpaneldropdown),
+      value: mediaFile?.name,
+      child: Stack(
+        children: <Widget>[
+          // Main popup menu (always visible as trigger)
+          _buildMainPopup(context, cubit, audioFileName),
+          // Hidden audio files popup - we'll trigger it programmatically
+          Positioned(
+            left: 0,
+            right: 0,
+            child: Opacity(
+              opacity: 0,
+              child: IgnorePointer(
+                child: SizedBox(
+                  height: 0,
+                  child: _buildAudioFilesListPopup(context, cubit, audioFileName),
+                ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
+  // Widget _buildMainPopup(BuildContext context, MessagePlayerConfigCubit cubit, String? audioFileName) {
+  //   return FusionPopupMenu<_AudioFileOption>(
+  //     items: const <_AudioFileOption>[
+  //       _AudioFileOption.selectAudioFile,
+  //       _AudioFileOption.uploadAudioFile,
+  //     ],
+  //     tooltip: 'Audio file options',
+  //     matchChildWidth: true,
+  //     semanticsId: 'audio_file_options_popup',
+  //     popupOffset: const Offset(0, 6),
+  //     onSelected: (_AudioFileOption option) {
+  //       if (option == _AudioFileOption.selectAudioFile) {
+  //         final List<MediaFileModel> audioFiles = cubit.getAvailableAudioFiles();
+  //         if (audioFiles.isEmpty) {
+  //           FusionToast.error(context, message: 'No audio files available. Please upload an audio file first.');
+  //           return;
+  //         }
+  //         // Show the audio files dialog after a short delay to let the main popup close
+  //         Future<void>.delayed(const Duration(milliseconds: 100), () {
+  //           if (mounted) {
+  //             _showAudioFilesDialog(context, cubit);
+  //           }
+  //         });
+  //       } else {
+  //         _uploadAudioFile(context, cubit);
+  //       }
+  //     },
+  //     itemBuilder: (BuildContext context, _AudioFileOption item) {
+  //       return Row(
+  //         children: <Widget>[
+  //           Icon(
+  //             item == _AudioFileOption.selectAudioFile ? LucideIcons.music : LucideIcons.upload,
+  //             size: 18,
+  //             color: context.colorScheme.textPrimary,
+  //           ),
+  //           const SizedBox(width: 12),
+  //           FusionAppText(
+  //             text: item == _AudioFileOption.selectAudioFile ? 'Select Audio File' : 'Upload Audio File',
+  //             style: context.textTheme.bodyMedium?.copyWith(
+  //               color: context.colorScheme.textPrimary,
+  //             ),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //     child: _buildTrigger(context, audioFileName),
+  //   );
+  // }
   Widget _buildMainPopup(BuildContext context, MessagePlayerConfigCubit cubit, String? audioFileName) {
-    return FusionPopupMenu<_AudioFileOption>(
+    return FusionNeumorphicDropdown<_AudioFileOption>(
+      hintText: 'Select Audio File',
+      width: 400,
       items: const <_AudioFileOption>[
         _AudioFileOption.selectAudioFile,
         _AudioFileOption.uploadAudioFile,
       ],
-      tooltip: 'Audio file options',
-      matchChildWidth: true,
-      semanticsId: 'audio_file_options_popup',
-      popupOffset: const Offset(0, 6),
-      onSelected: (_AudioFileOption option) {
+      onChanged: (_AudioFileOption option) {
         if (option == _AudioFileOption.selectAudioFile) {
           final List<MediaFileModel> audioFiles = cubit.getAvailableAudioFiles();
           if (audioFiles.isEmpty) {
@@ -304,7 +373,8 @@ class _AudioFileDropdownState extends State<_AudioFileDropdown> {
           ],
         );
       },
-      child: _buildTrigger(context, audioFileName),
+      displayValue: audioFileName ?? 'Select Audio File',
+      // child: _buildTrigger(context, audioFileName),
     );
   }
 
@@ -323,6 +393,10 @@ class _AudioFileDropdownState extends State<_AudioFileDropdown> {
         offset.dx + size.width,
         offset.dy + size.height + 8,
       ),
+      constraints: BoxConstraints(
+        minWidth: size.width,
+        maxWidth: size.width,
+      ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: context.colorScheme.strokeLight, width: 1),
@@ -334,10 +408,10 @@ class _AudioFileDropdownState extends State<_AudioFileDropdown> {
             return PopupMenuItem<MediaFileModel>(
               value: file,
               child: SizedBox(
-                width: size.width - 32,
+                width: double.infinity,
                 child: Row(
                   children: <Widget>[
-                    Icon(
+                    FusionIcon.icon(
                       LucideIcons.music,
                       size: 18,
                       color: isSelected ? context.colorScheme.primary : context.colorScheme.iconDefault,
@@ -354,7 +428,7 @@ class _AudioFileDropdownState extends State<_AudioFileDropdown> {
                       ),
                     ),
                     if (isSelected)
-                      Icon(
+                      FusionIcon.icon(
                         LucideIcons.check,
                         size: 18,
                         color: context.colorScheme.primary,
@@ -379,7 +453,7 @@ class _AudioFileDropdownState extends State<_AudioFileDropdown> {
       key: _audioFilesPopupKey,
       items: audioFiles,
       tooltip: 'Select audio file',
-      semanticsId: 'audio_files_list_popup',
+      semanticsId: FusionTestKeys.instance.audiolist,
       popupOffset: const Offset(0, 8),
       onSelected: (MediaFileModel file) {
         cubit.assignAudioFile(file.id);
@@ -492,54 +566,62 @@ class _AudioPlayerWidget extends StatelessWidget {
 
     if (mediaFile == null) return const SizedBox.shrink();
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation2,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          /// File name with play button
-          Row(
-            children: <Widget>[
-              InkWell(
-                onTap: () => cubit.togglePlayPause(),
-                borderRadius: BorderRadius.circular(20),
-                child: Icon(
-                  state.isPlaying ? Icons.pause : Icons.play_arrow,
-                  color: context.colorScheme.iconWhite,
-                  size: 20,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.messageconfigpanelaudioplayer),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: context.colorScheme.elevation2,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            /// File name with play button
+            Row(
+              children: <Widget>[
+                InkWell(
+                  onTap: () => cubit.togglePlayPause(),
+                  borderRadius: BorderRadius.circular(20),
+                  child: FusionIcon.icon(
+                    semanticId: FusionTestKeys.instance.messageconfigpanelaudioplayericon,
+                    state.isPlaying ? Icons.pause : Icons.play_arrow,
+                    color: context.colorScheme.iconWhite,
+                    size: 20,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: FusionAppText(
-                  text: mediaFile.name,
-                  style: context.textTheme.l1Regular.withColor(context.colorScheme.textSecondary),
-                  maxLine: 1,
-                  textOverflow: TextOverflow.ellipsis,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FusionAppText(
+                    semanticId: FusionTestKeys.instance.messageconfigpanelaudioplayertext,
+                    text: mediaFile.name,
+                    style: context.textTheme.l1Regular.withColor(context.colorScheme.textSecondary),
+                    maxLine: 1,
+                    textOverflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: FusionAudioSlider(
-              currentPosition: state.currentPosition,
-              totalDuration: state.totalDuration,
-              onSeek: (Duration duration) => cubit.seekTo(duration),
-              activeColor: context.colorScheme.primary,
-              inactiveColor: context.colorScheme.elevation4,
-              textColor: context.colorScheme.textSecondary,
-              timeTextStyle: context.textTheme.labelSmall,
+              ],
             ),
-          ),
-        ],
+
+            const SizedBox(height: 12),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: SemanticHelper.container(
+                testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.messageconfigpanelaudioplayerslider),
+                child: FusionAudioSlider(
+                  currentPosition: state.currentPosition,
+                  totalDuration: state.totalDuration,
+                  onSeek: (Duration duration) => cubit.seekTo(duration),
+                  activeColor: context.colorScheme.primary,
+                  inactiveColor: context.colorScheme.elevation4,
+                  textColor: context.colorScheme.textSecondary,
+                  timeTextStyle: context.textTheme.labelSmall,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -556,45 +638,52 @@ class _GainControlSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation2,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              // Icon(
-              //   LucideIcons.volume2,
-              //   size: 18,
-              //   color: context.colorScheme.iconDefault,
-              // ),
-              // const SizedBox(width: 8),
-              FusionAppText(
-                text: 'Audio Gain Control',
-                style: context.textTheme.l1Regular.withColor(context.colorScheme.textSecondary),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.messageconfigpanelaudiogaincontroler),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: context.colorScheme.elevation2,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                // Icon(
+                //   LucideIcons.volume2,
+                //   size: 18,
+                //   color: context.colorScheme.iconDefault,
+                // ),
+                // const SizedBox(width: 8),
+                FusionAppText(
+                  semanticId: FusionTestKeys.instance.messageconfigpanelaudiogaincontrolertxt,
+                  text: 'Audio Gain Control',
+                  style: context.textTheme.l1Regular.withColor(context.colorScheme.textSecondary),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SemanticHelper.container(
+              testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.messageconfigpanelaudiogaincontrolerslider),
+              child: FusionAudioGainSlider(
+                value: gain,
+                onChanged: (double value) {
+                  context.read<MessagePlayerConfigCubit>().updateGain(value);
+                },
+                activeColor: context.colorScheme.primary,
+                inactiveColor: context.colorScheme.elevation4,
+                textColor: context.colorScheme.textSecondary,
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          FusionAudioGainSlider(
-            value: gain,
-            onChanged: (double value) {
-              context.read<MessagePlayerConfigCubit>().updateGain(value);
-            },
-            activeColor: context.colorScheme.primary,
-            inactiveColor: context.colorScheme.elevation4,
-            textColor: context.colorScheme.textSecondary,
-          ),
+            ),
 
-          // _GainSlider(
-          //   value: gain,
-          //   onChanged: onChanged,
-          // ),
-        ],
+            // _GainSlider(
+            //   value: gain,
+            //   onChanged: onChanged,
+            // ),
+          ],
+        ),
       ),
     );
   }
@@ -615,45 +704,50 @@ class _RepeatSettingsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final MessagePlayerConfigCubit cubit = context.read<MessagePlayerConfigCubit>();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        // Repeat checkbox
-        Row(
-          children: <Widget>[
-            FusionCheckbox(
-              value: repeat,
-              semanticId: 'repeat_checkbox',
-              onChanged: () => cubit.toggleRepeat(!repeat),
-            ),
-            const SizedBox(width: 8),
-            FusionAppText(text: 'Repeat', style: context.textTheme.l1Regular.withColor(context.colorScheme.textSecondary)),
-          ],
-        ),
-
-        if (repeat) ...<Widget>[
-          const SizedBox(height: 16),
-
-          // Times and Interval dropdowns
-          Column(
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.messageconfigpanelrepeat),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          // Repeat checkbox
+          Row(
             children: <Widget>[
-              _DropdownField(
-                label: 'Times (No.)',
-                value: repeatCount,
-                items: List<int>.generate(10, (int i) => i + 1),
-                onChanged: (int value) => cubit.updateRepeatCount(value),
+              FusionCheckbox(
+                value: repeat,
+                semanticId: FusionTestKeys.instance.repeatcheckbox,
+                onChanged: () => cubit.toggleRepeat(!repeat),
               ),
-              const SizedBox(height: 20),
-              _DropdownField(
-                label: 'Interval (sec.)',
-                value: intervalSeconds,
-                items: <int>[1, 2, 3, 5, 10, 15, 30, 60],
-                onChanged: (int value) => cubit.updateRepeatInterval(value),
-              ),
+              const SizedBox(width: 8),
+              FusionAppText(text: 'Repeat', style: context.textTheme.l1Regular.withColor(context.colorScheme.textSecondary)),
             ],
           ),
+
+          if (repeat) ...<Widget>[
+            const SizedBox(height: 16),
+
+            // Times and Interval dropdowns
+            Column(
+              children: <Widget>[
+                _DropdownField(
+                  semanticId: FusionTestKeys.instance.messageconfigpanelrepeattime,
+                  label: 'Times (No.)',
+                  value: repeatCount,
+                  items: List<int>.generate(10, (int i) => i + 1),
+                  onChanged: (int value) => cubit.updateRepeatCount(value),
+                ),
+                const SizedBox(height: 20),
+                _DropdownField(
+                  semanticId: FusionTestKeys.instance.messageconfigpanelintervaltime,
+                  label: 'Interval (sec.)',
+                  value: intervalSeconds,
+                  items: <int>[1, 2, 3, 5, 10, 15, 30, 60],
+                  onChanged: (int value) => cubit.updateRepeatInterval(value),
+                ),
+              ],
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -663,66 +757,72 @@ class _DropdownField extends StatelessWidget {
   final int value;
   final List<int> items;
   final ValueChanged<int> onChanged;
+  final String semanticId;
 
   const _DropdownField({
     required this.label,
     required this.value,
     required this.items,
     required this.onChanged,
+    required this.semanticId,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.max,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.start,
-      children: <Widget>[
-        SizedBox(
-          width: 100,
-          child: FusionAppText(
-            text: label,
-            style: context.textTheme.l1Medium,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, semanticId),
+      child: Row(
+        mainAxisSize: MainAxisSize.max,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: <Widget>[
+          SizedBox(
+            width: 100,
+            child: FusionAppText(
+              semanticId: FusionTestKeys.instance.messageconfigpanelrepeattxt,
+              text: label,
+              style: context.textTheme.l1Medium,
+            ),
           ),
-        ),
-        FusionPopupMenu<int>(
-          semanticsId: '${label}_dropdown',
-          items: items,
-          popupOffset: const Offset(0, 6),
-          onSelected: onChanged,
-          matchChildWidth: true,
-          itemBuilder: (BuildContext context, int item) {
-            final bool isSelected = item == value;
-            return FusionAppText(
-              text: item.toString(),
-              style: context.textTheme.bodyMedium?.copyWith(
-                color: isSelected ? context.colorScheme.textPrimary : context.colorScheme.textPrimary,
-              ),
-            );
-          },
-          child: FusionContainer(
-            color: context.colorScheme.elevation1,
-            width: 53,
-            height: 24,
-            raised: true,
-            borderRadius: 5,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  FusionAppText(text: value.toString(), style: context.textTheme.b3Regular),
-                  Icon(
-                    Icons.keyboard_arrow_down,
-                    color: context.colorScheme.iconDefault,
-                    size: 20,
-                  ),
-                ],
+          FusionNeumorphicDropdown<int>(
+            // semanticsId: '${label}_dropdown',
+            items: items,
+            // popupOffset: const Offset(0, 6),
+            onChanged: onChanged,
+            matchChildWidth: true,
+            itemBuilder: (BuildContext context, int item) {
+              final bool isSelected = item == value;
+              return FusionAppText(
+                text: item.toString(),
+                style: context.textTheme.bodyMedium?.copyWith(
+                  color: isSelected ? context.colorScheme.textPrimary : context.colorScheme.textPrimary,
+                ),
+              );
+            },
+            child: FusionContainer(
+              color: context.colorScheme.elevation1,
+              width: 53,
+              height: 24,
+              raised: true,
+              borderRadius: 5,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    FusionAppText(text: value.toString(), style: context.textTheme.b3Regular),
+                    Icon(
+                      Icons.keyboard_arrow_down,
+                      color: context.colorScheme.iconDefault,
+                      size: 20,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

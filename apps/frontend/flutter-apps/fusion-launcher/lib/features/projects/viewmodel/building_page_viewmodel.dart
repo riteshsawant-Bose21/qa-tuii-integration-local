@@ -30,7 +30,7 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
         state.copyWith(
           toolbarMode: ToolbarMode.acoustics,
           toolState: _defaultToolForMode(
-            ToolbarMode.acoustics,
+            SelectToolState(),
             selectedListeningAreaId: _projectViewModel.currentSelectedListeningAreaId,
             selectedSpeakerId: _projectViewModel.currentSelectedHardwareId,
           ),
@@ -41,7 +41,7 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
         state.copyWith(
           toolbarMode: ToolbarMode.system,
           toolState: _defaultToolForMode(
-            ToolbarMode.acoustics,
+            SystemSelectToolState(),
             selectedListeningAreaId: _projectViewModel.currentSelectedListeningAreaId,
             selectedSpeakerId: _projectViewModel.currentSelectedHardwareId,
           ),
@@ -54,14 +54,14 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
     emit(state.copyWith(toolState: _toolStateWithProjectSelection(toolState)));
   }
 
-  void addSourceState() {
-    emit(state.copyWith(toolState: AddSourceState()));
-  }
+  // void addSourceState() {
+  //   emit(state.copyWith(toolState: AddSourceState()));
+  // }
 
   void cancelState() {
     emit(
       state.copyWith(
-        toolState: _defaultToolForMode(state.toolbarMode),
+        toolState: _defaultToolForMode(state.toolState),
       ),
     );
   }
@@ -126,7 +126,7 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
     // listeningAreaChanged && isSpeakerPlacementMode
     // ?
     _defaultToolForMode(
-      state.toolbarMode,
+      state.toolState,
       selectedListeningAreaId: nextListeningAreaId,
       selectedSpeakerId: nextSpeakerId,
     );
@@ -145,11 +145,24 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
   }
 
   BuildingPageToolState _defaultToolForMode(
-    ToolbarMode mode, {
+    BuildingPageToolState mode, {
     String? selectedListeningAreaId,
     String? selectedSpeakerId,
   }) {
+    if (mode is SplToolState) {
+      return SplSelectToolState(
+        selectedListeningAreaId: selectedListeningAreaId,
+        selectedSpeakerId: selectedSpeakerId,
+      );
+    }
+    if (mode is SystemSelectToolState) {
+      return SystemSelectToolState(
+        selectedListeningAreaId: selectedListeningAreaId,
+        selectedSpeakerId: selectedSpeakerId,
+      );
+    }
     // if (mode == ToolbarMode.acoustics) {
+
     return SelectToolState(
       selectedListeningAreaId: selectedListeningAreaId,
       selectedSpeakerId: selectedSpeakerId,

@@ -6,7 +6,9 @@ import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.da
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/speaker_selection_popup/views/widgets/properties_and_filter_section.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/drop_down.dart';
+import 'package:fusion_lib/constants/semantics/features/add_sources_popup/add_sources_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_widgets/form_fields/fusion_custom_textfield.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../view_model/add_source_viewmodel.dart';
@@ -26,8 +28,8 @@ class AddSourcePopup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FusionArrowPopup(
-      semanticId: 'add_source_popup',
-      backgroundColor: context.colorScheme.elevation1,
+      semanticId: FusionTestKeys.instance.addSourcesPopup,
+      backgroundColor: context.colorScheme.elevation2,
       content: BlocProvider<AddSourceViewModel>(
         create: (BuildContext context) {
           return AddSourceViewModel()..init(
@@ -43,7 +45,7 @@ class AddSourcePopup extends StatelessWidget {
           child: SemanticHelper.container(
             testId: SemanticHelper.createTestId(
               SemanticTypes.container,
-              "add_source_dialog",
+              FusionTestKeys.instance.addSourcesDialog,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -57,7 +59,7 @@ class AddSourcePopup extends StatelessWidget {
                       Expanded(
                         child: FusionAppText(
                           text: 'ADD SOURCE',
-                          style: context.textTheme.bodyMedium?.copyWith(
+                          style: context.textTheme.labelSmall?.copyWith(
                             color: context.colorScheme.primaryWhite,
                             fontWeight: FontWeight.w400,
                           ),
@@ -66,7 +68,7 @@ class AddSourcePopup extends StatelessWidget {
                       SemanticHelper.button(
                         testId: SemanticHelper.createTestId(
                           SemanticTypes.button,
-                          "close_add_source_popup_button",
+                          FusionTestKeys.instance.closeAddSourcePanel,
                         ),
                         child: MouseRegion(
                           cursor: SystemMouseCursors.click,
@@ -74,9 +76,9 @@ class AddSourcePopup extends StatelessWidget {
                             onTap: Navigator.of(context).pop,
                             child: Padding(
                               padding: const EdgeInsets.all(2.0),
-                              child: Icon(
+                              child: FusionIcon.icon(
                                 LucideIcons.x200,
-                                size: 16,
+                                size: 10,
                                 color: context.colorScheme.iconDefault,
                               ),
                             ),
@@ -104,26 +106,43 @@ class AddSourcePopup extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            // FusionRadio<SourceSelectionOption>(
-                            //   selected: state.selectedSourceOption,
-                            //   options: SourceSelectionOption.values,
-                            //   labelBuilder: (SourceSelectionOption option) {
-                            //     return FusionAppText(
-                            //       text: option.displayName,
-                            //       style: context.textTheme.bodyMedium?.copyWith(
-                            //         color: context.colorScheme.onSurface,
-                            //         fontWeight: FontWeight.w400,
-                            //       ),
-                            //     );
-                            //   },
-                            //   onChanged: addSourceViewModel.setSourceOption,
-                            // ),
-                            // const SizedBox(height: 28),
-                            SemanticHelper.container(
-                              testId: SemanticHelper.createTestId(
-                                SemanticTypes.container,
-                                "add_source_section_type",
-                              ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Expanded(
+                                  child: FusionAppText(
+                                    text: "Name",
+                                    style: context.textTheme.b3Regular.copyWith(
+                                      color: context.colorScheme.onSurface,
+                                      fontWeight: FontWeight.normal,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: SemanticHelper.container(
+                                    testId: SemanticHelper.createTestId(
+                                      SemanticTypes.container,
+                                      FusionTestKeys.instance.addSourceNameInput,
+                                    ),
+                                    child: FusionCustomTextField(
+                                      height: 30,
+                                      borderRadius: 8,
+                                      variant: FusionFieldVariant.neumorphic,
+                                      semanticId: '',
+                                      hint: 'Enter name',
+                                      charlimit: 24,
+                                      onChange: (String value) {
+                                        addSourceViewModel.setSelectedSourceName(value);
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            SemanticHelper.dropdown(
+                              testId: SemanticHelper.createTestId(SemanticTypes.dropdown, "add_source_section_type"),
                               child: BuildRowPropertyWidget<SourceSectionType>(
                                 label: "Type",
                                 value: state.selectedSourceSectionType,
@@ -140,7 +159,7 @@ class AddSourcePopup extends StatelessWidget {
                               ),
                             ),
 
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 8),
 
                             Row(
                               children: <Widget>[
@@ -157,7 +176,7 @@ class AddSourcePopup extends StatelessWidget {
                                         return SemanticHelper.container(
                                           testId: SemanticHelper.createTestId(
                                             SemanticTypes.container,
-                                            "add_source_section_item_$index",
+                                            "${FusionTestKeys.instance.addSourceSectionItem}_$index",
                                           ),
                                           child: Padding(
                                             padding: const EdgeInsets.only(
@@ -167,20 +186,10 @@ class AddSourcePopup extends StatelessWidget {
                                               value: selectedItem,
                                               hintText: "Select source",
                                               items: state.selectedSourceSectionType.items,
-                                              onSelect: (SourceData newValue) {
-                                                addSourceViewModel.updateSource(
-                                                  index,
-                                                  newValue,
-                                                );
-                                              },
-                                              labelBuilder: (
-                                                SourceData option,
-                                              ) {
+                                              onSelect: (SourceData newValue) => addSourceViewModel.updateSource(index, newValue),
+                                              labelBuilder: (SourceData option) {
                                                 return SemanticHelper.container(
-                                                  testId: SemanticHelper.createTestId(
-                                                    SemanticTypes.container,
-                                                    "add_source_section_item_label_$index",
-                                                  ),
+                                                  testId: SemanticHelper.createTestId(SemanticTypes.container, "add_source_section_item_label_$index"),
                                                   child: Padding(
                                                     padding: const EdgeInsets.symmetric(
                                                       horizontal: 8,
@@ -198,6 +207,7 @@ class AddSourcePopup extends StatelessWidget {
                                                         ),
                                                         Flexible(
                                                           child: FusionAppText(
+                                                            maxLine: 1,
                                                             text: option.name,
                                                             style:
                                                                 Theme.of(
@@ -226,7 +236,7 @@ class AddSourcePopup extends StatelessWidget {
                                 child: SemanticHelper.formControl(
                                   testId: SemanticHelper.createTestId(
                                     SemanticTypes.textInput,
-                                    "add_source_section_add_button",
+                                    FusionTestKeys.instance.addSourceSectionAddButton,
                                   ),
                                   child: NeumorphicDarkButton(
                                     onTap: addSourceViewModel.addEmptySource,
@@ -242,71 +252,49 @@ class AddSourcePopup extends StatelessWidget {
                                   ),
                                 ),
                               ),
-
-                              const SizedBox(height: 5),
                             ],
 
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 16),
 
                             MouseRegion(
                               cursor: isFromBuildingPage ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
                               child: IgnorePointer(
                                 ignoring: isFromBuildingPage,
-                                child: SemanticHelper.container(
+                                child: SemanticHelper.dropdown(
                                   testId: SemanticHelper.createTestId(
-                                    SemanticTypes.container,
-                                    "add_source_section_listening_area_dropdown",
+                                    SemanticTypes.dropdown,
+                                    FusionTestKeys.instance.addSourceSectionListeningAreaDropdown,
                                   ),
+                                  value: state.selectedListeningArea?.name ?? '',
                                   child: BuildRowPropertyWidget<ListeningArea>(
                                     label: "Location",
                                     value: state.selectedListeningArea,
                                     options: listeningAreas,
                                     labelBuilder: (ListeningArea option) => option.name,
                                     valueBuilder: (ListeningArea option) {
-                                      final String? floorName =
-                                          serviceLocator<ProjectViewModel>()
-                                              .getFloorForListeningArea(
-                                                areaId: option.id,
-                                              )
-                                              ?.name;
+                                      final String? floorName = serviceLocator<ProjectViewModel>().getFloorForListeningArea(areaId: option.id)?.name;
 
                                       String? zoneName;
-                                      zoneName =
-                                          serviceLocator<ProjectViewModel>()
-                                              .getSubZoneForListeningArea(
-                                                areaId: option.id,
-                                              )
-                                              ?.name;
-                                      zoneName ??=
-                                          serviceLocator<ProjectViewModel>()
-                                              .getZonesForListeningArea(
-                                                areaId: option.id,
-                                              )
-                                              ?.name;
+                                      zoneName = serviceLocator<ProjectViewModel>().getSubZoneForListeningArea(areaId: option.id)?.name;
+                                      zoneName ??= serviceLocator<ProjectViewModel>().getZonesForListeningArea(areaId: option.id)?.name;
 
                                       return SemanticHelper.container(
-                                        testId: SemanticHelper.createTestId(
-                                          SemanticTypes.container,
-                                          "add_source_section_listening_area_dropdown_value",
-                                        ),
+                                        testId: SemanticHelper.createTestId(SemanticTypes.container, "add_source_section_listening_area_dropdown_value"),
                                         child: Row(
                                           children: <Widget>[
                                             Expanded(
                                               child: FusionAppText(
                                                 text: "$floorName / ${option.name}",
-                                                style:
-                                                    Theme.of(
-                                                      context,
-                                                    ).textTheme.labelMedium,
+                                                maxLine: 1,
+                                                style: Theme.of(context).textTheme.labelMedium,
                                               ),
                                             ),
                                             const SizedBox(width: 5),
                                             // floor name/zone name/subszone name
                                             FusionAppText(
                                               text: zoneName ?? 'No zone',
-                                              style: Theme.of(
-                                                context,
-                                              ).textTheme.labelSmall?.copyWith(
+                                              maxLine: 1,
+                                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                                 color: Theme.of(context).colorScheme.onSurface.withAlpha(100),
                                               ),
                                             ),
@@ -314,13 +302,8 @@ class AddSourcePopup extends StatelessWidget {
                                         ),
                                       );
                                     },
-                                    onOptionSelected: (
-                                      int value,
-                                      ListeningArea option,
-                                    ) {
-                                      addSourceViewModel.setSelectedListeningArea(
-                                        option,
-                                      );
+                                    onOptionSelected: (int value, ListeningArea option) {
+                                      addSourceViewModel.setSelectedListeningArea(option);
                                     },
                                   ),
                                 ),
@@ -334,7 +317,7 @@ class AddSourcePopup extends StatelessWidget {
                                 return SemanticHelper.container(
                                   testId: SemanticHelper.createTestId(
                                     SemanticTypes.container,
-                                    "add_source_section_zone_info",
+                                    FusionTestKeys.instance.addSourceSectionZoneInfo,
                                   ),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -362,7 +345,11 @@ class AddSourcePopup extends StatelessWidget {
                                                   horizontal: 8,
                                                 ),
                                                 decoration: BoxDecoration(
-                                                  color: context.colorScheme.surface,
+                                                  boxShadow: <BoxShadow>[
+                                                    BoxShadow(color: context.colorScheme.shadowDark, offset: const Offset(1.5, 1.5), blurRadius: 7),
+                                                    BoxShadow(color: context.colorScheme.shadowLight, offset: const Offset(-1.5, -1.5), blurRadius: 5),
+                                                  ],
+                                                  color: context.colorScheme.elevation1,
                                                   borderRadius: BorderRadius.circular(8),
                                                 ),
                                                 child: FusionAppText(
@@ -415,9 +402,7 @@ class AddSourcePopup extends StatelessWidget {
                               },
                             ),
 
-                            const SizedBox(height: 10),
-
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 16),
 
                             MouseRegion(
                               cursor: SystemMouseCursors.forbidden,
@@ -425,19 +410,13 @@ class AddSourcePopup extends StatelessWidget {
                                 child: SemanticHelper.container(
                                   testId: SemanticHelper.createTestId(
                                     SemanticTypes.container,
-                                    "add_source_section_signal_type_radio_group",
+                                    FusionTestKeys.instance.addSourceSectionSignalTypeRadioGroup,
                                   ),
                                   child: FusionRadio<SignalType>(
                                     selected: SignalType.mono,
                                     options: SignalType.values,
                                     labelBuilder: (SignalType option) {
-                                      return FusionAppText(
-                                        text: option.displayName,
-                                        style: context.textTheme.bodyMedium?.copyWith(
-                                          color: context.colorScheme.onSurface,
-                                          fontWeight: FontWeight.w400,
-                                        ),
-                                      );
+                                      return FusionAppText(text: option.displayName, style: context.textTheme.b3Regular);
                                     },
                                     onChanged: (SignalType value) {
                                       addSourceViewModel.setSignalType(value);
@@ -446,7 +425,7 @@ class AddSourcePopup extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 16),
 
                             BuildRowPropertyWidget<SourceConnectionType>(
                               label: "Connection",
@@ -462,79 +441,65 @@ class AddSourcePopup extends StatelessWidget {
                                 );
                               },
                             ),
-                            const SizedBox(height: 20),
+                            // const SizedBox(height: 16),
+                            //
+                            // BuildRowPropertyWidget<SourceConnectionType>(
+                            //   label: "Stream",
+                            //   value: state.selectedConnectionType,
+                            //   options: state.selectedSourceSectionType.connectionTypes,
+                            //   labelBuilder: (SourceConnectionType option) => option.displayName,
+                            //   onOptionSelected: (
+                            //     int value,
+                            //     SourceConnectionType option,
+                            //   ) {
+                            //     addSourceViewModel.setSelectedConnectionType(
+                            //       option,
+                            //     );
+                            //   },
+                            // ),
+                            // const SizedBox(height: 16),
+                            //
+                            // BuildRowPropertyWidget<SourceConnectionType>(
+                            //   label: "Channel",
+                            //   value: state.selectedConnectionType,
+                            //   options: state.selectedSourceSectionType.connectionTypes,
+                            //   labelBuilder: (SourceConnectionType option) => option.displayName,
+                            //   onOptionSelected: (
+                            //     int value,
+                            //     SourceConnectionType option,
+                            //   ) {
+                            //     addSourceViewModel.setSelectedConnectionType(
+                            //       option,
+                            //     );
+                            //   },
+                            // ),
+                            const SizedBox(height: 40),
 
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                Expanded(
-                                  child: FusionAppText(
-                                    text: "Name",
-                                    style: context.textTheme.bodyMedium?.copyWith(
-                                      color: context.colorScheme.onSurface,
-                                      fontWeight: FontWeight.normal,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: SemanticHelper.container(
-                                    testId: SemanticHelper.createTestId(
-                                      SemanticTypes.container,
-                                      "add_source_section_name_input",
-                                    ),
-                                    child: PropertyTextField(
-                                      onChanged: (String value) => addSourceViewModel.setSelectedSourceName(value),
-                                      maxLength: 24,
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        vertical: 12,
-                                        horizontal: 10,
-                                      ),
-                                      hintText: 'Enter name',
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 20),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: <Widget>[
                                 // Cancel & Save buttons
-                                GestureDetector(
-                                  onTap: Navigator.of(context).pop,
-                                  child: SemanticHelper.button(
-                                    testId: SemanticHelper.createTestId(
-                                      SemanticTypes.button,
-                                      "add_source_cancel_button",
-                                    ),
-                                    child: FusionAppText(
-                                      text: "Cancel",
-                                      style: context.textTheme.bodyMedium?.copyWith(
-                                        color: context.colorScheme.onSurface,
-                                        fontWeight: FontWeight.w400,
-                                      ),
-                                    ),
-                                  ),
+                                FusionAppButton(
+                                  semanticId: FusionTestKeys.instance.addSourceCancelButton,
+                                  onPressed: Navigator.of(context).pop,
+                                  style: FusionAppButtonStyle.tertiary,
+                                  text: "Cancel",
+                                  textstyle: context.textTheme.b3Regular,
                                 ),
+
                                 const SizedBox(width: 15),
-                                SemanticHelper.button(
-                                  testId: SemanticHelper.createTestId(
-                                    SemanticTypes.button,
-                                    "add_source_save_button",
-                                  ),
-                                  child: FusionNeumorphicButton(
-                                    semanticId: 'add_source_save_button',
-                                    onTap: () {
-                                      context.read<AddSourceViewModel>().onSaveTap(context);
-                                    },
-                                    color: context.colorScheme.surface,
-                                    text: "Save",
-                                    width: 69,
-                                    height: 32,
-                                    borderRadius: 8,
-                                  ),
+                                FusionAppButton(
+                                  style: FusionAppButtonStyle.neumorphic,
+                                  semanticId: FusionTestKeys.instance.addSourceSaveButton,
+                                  onPressed: () {
+                                    context.read<AddSourceViewModel>().onSaveTap(context);
+                                  },
+                                  color: context.colorScheme.surface,
+                                  text: "Save",
+                                  textstyle: context.textTheme.b3Regular,
+                                  width: 69,
+                                  height: 32,
+                                  borderRadius: 8,
                                 ),
                               ],
                             ),

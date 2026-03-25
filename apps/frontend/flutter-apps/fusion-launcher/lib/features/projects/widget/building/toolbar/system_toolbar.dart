@@ -16,12 +16,12 @@ class SystemToolbar extends StatelessWidget {
                 SemanticTypes.button,
                 "add_sources",
               ),
-              child: AddSourcePopup(
+              child: const AddSourcePopup(
                 isFromBuildingPage: true,
                 child: _ToolBarIcon(
                   icon: "source.png",
                   label: "Add Source",
-                  isSelected: toolState is AddSourceState,
+                  isSelected: false,
                   onTap: null,
                 ),
               ),
