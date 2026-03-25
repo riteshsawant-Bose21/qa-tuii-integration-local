@@ -18,9 +18,11 @@ class FusionNeumorphicDropdown<T> extends StatefulWidget {
     this.matchChildWidth = true,
     this.borderRadius,
     this.child,
+    this.popupOffset = const Offset(-1, 6),
   });
 
   final String? displayValue;
+  final Offset popupOffset;
   final BorderRadius? borderRadius;
   final List<T> items;
   final T? value;
@@ -93,7 +95,7 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
       popupwidth: widget.matchChildWidth ? null : widget.popupWidth,
       items: widget.items,
       onSelected: _handleChange,
-      popupOffset: const Offset(-1, 6),
+      popupOffset: widget.popupOffset,
       matchChildWidth: widget.matchChildWidth,
       itemBuilder: (context, item) {
         final bool isSelected = item == _selectedValue;
@@ -123,7 +125,7 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
               child: FusionAppText(
                 text: _getLabel(item),
                 style: context.textTheme.bodyMedium?.copyWith(
-                  color: isSelected ? context.colorScheme.primary : context.colorScheme.onSurface,
+                  color: isSelected ? context.colorScheme.primary : context.colorScheme.textPlaceholder,
                 ),
               ),
             ),
