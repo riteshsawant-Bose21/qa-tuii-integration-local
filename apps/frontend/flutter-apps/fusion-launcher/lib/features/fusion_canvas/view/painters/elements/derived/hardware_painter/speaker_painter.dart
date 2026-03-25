@@ -1,5 +1,6 @@
 import 'dart:developer' as dev;
 import 'dart:math';
+import 'dart:ui' show PathMetric;
 
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
@@ -19,10 +20,9 @@ class SpeakerPainter extends FusionCanvasElementPainter {
     final Offset? position = hardware.pos;
     if (position != null) {
       final Rect rect = getTransformedRect(painter);
-
-      final ListeningArea? listeningArea = serviceLocator<ProjectViewModel>().getCurrentSelectedListeningArea();
-
-      if (listeningArea != null) {
+      final String? listeningAreaId = hardware.locationEntity.listeningAreaId;
+      if (listeningAreaId != null) {
+        final ListeningArea listeningArea = serviceLocator<ProjectViewModel>().getListeningArea(areaId: listeningAreaId);
         final ListeningAreaRoomBounds bounds = listeningArea.getBoundsForVertices();
 
         if (hardware.mountingType == MountingType.surface && listeningArea.autoPlacementResult?.surfacePlacementResult != null) {
@@ -42,6 +42,7 @@ class SpeakerPainter extends FusionCanvasElementPainter {
           dev.log('Drawing ceiling/pendant coverage for speaker: ${hardware.id}');
           _drawCeilingCoverageCircle(
             canvas,
+            painter: painter,
             speakerCenter: rect.center,
             gridSpacing: listeningArea.autoPlacementResult!.ceilingPendantPlacementResult!.gridSpacing,
           );
@@ -60,28 +61,29 @@ class SpeakerPainter extends FusionCanvasElementPainter {
 
   void _drawCeilingCoverageCircle(
     Canvas canvas, {
+    required FusionCanvasPainter painter,
     required Offset speakerCenter,
     required double gridSpacing, // algorithm metres
   }) {
+    const Color dottedOutlineColor = Color(0x80000000); // 50% black
     // gridSpacing is the centre-to-centre speaker spacing in metres.
     // The coverage radius per speaker is half that, converted to canvas model px (×100).
     final double radius = (gridSpacing / 2) * 100.0;
     if (radius <= 0 || !radius.isFinite) return;
 
-    canvas.drawCircle(
-      speakerCenter,
-      radius,
-      Paint()
-        ..color = Colors.orange.withAlpha(38)
-        ..style = PaintingStyle.fill,
-    );
-    canvas.drawCircle(
-      speakerCenter,
-      radius,
-      Paint()
-        ..color = Colors.orange.withAlpha(128)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.0,
+    final Path circlePath = Path()..addOval(Rect.fromCircle(center: speakerCenter, radius: radius));
+    final Paint outlinePaint =
+        Paint()
+          ..color = dottedOutlineColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = nonScaling(1.2, painter);
+
+    _drawDashedPath(
+      canvas: canvas,
+      path: circlePath,
+      paint: outlinePaint,
+      dashLength: nonScaling(6.0, painter),
+      gapLength: nonScaling(4.0, painter),
     );
   }
 
@@ -95,14 +97,11 @@ class SpeakerPainter extends FusionCanvasElementPainter {
     required double distanceToListenerPlane,
     required double horizontalCoverageAngle,
   }) {
-    final Paint coveragePaint = Paint();
-    coveragePaint.color = Colors.orange.withAlpha(38);
-    coveragePaint.style = PaintingStyle.fill;
-
-    final Paint coverageStrokePaint = Paint();
-    coverageStrokePaint.color = Colors.orange.withAlpha(128);
-    coverageStrokePaint.style = PaintingStyle.stroke;
-    coverageStrokePaint.strokeWidth = 1;
+    const Color dottedOutlineColor = Color(0x80000000); // 50% black
+    final Paint coverageOutlinePaint = Paint();
+    coverageOutlinePaint.color = dottedOutlineColor;
+    coverageOutlinePaint.style = PaintingStyle.stroke;
+    coverageOutlinePaint.strokeWidth = nonScaling(1.2, painter);
 
     // Transform room corners to screen/draw coordinates using the canvas painter's
     // actual zoom + pan — same transform used by getTransformedRect / _drawSpeaker.
@@ -137,8 +136,9 @@ class SpeakerPainter extends FusionCanvasElementPainter {
         speakerScreenCenter.dy,
         coverageDistance,
         90,
-        coveragePaint,
-        coverageStrokePaint,
+        coverageOutlinePaint,
+        nonScaling(6.0, painter),
+        nonScaling(4.0, painter),
         horizontalCoverageAngle,
       );
       dev.log("onFrontWall");
@@ -150,8 +150,9 @@ class SpeakerPainter extends FusionCanvasElementPainter {
         speakerScreenCenter.dy,
         coverageDistance,
         270,
-        coveragePaint,
-        coverageStrokePaint,
+        coverageOutlinePaint,
+        nonScaling(6.0, painter),
+        nonScaling(4.0, painter),
         horizontalCoverageAngle,
       );
       dev.log("onBackWall");
@@ -163,8 +164,9 @@ class SpeakerPainter extends FusionCanvasElementPainter {
         speakerScreenCenter.dy,
         coverageDistance,
         0,
-        coveragePaint,
-        coverageStrokePaint,
+        coverageOutlinePaint,
+        nonScaling(6.0, painter),
+        nonScaling(4.0, painter),
         horizontalCoverageAngle,
       );
       dev.log("onLeftWall");
@@ -176,8 +178,9 @@ class SpeakerPainter extends FusionCanvasElementPainter {
         speakerScreenCenter.dy,
         coverageDistance,
         180,
-        coveragePaint,
-        coverageStrokePaint,
+        coverageOutlinePaint,
+        nonScaling(6.0, painter),
+        nonScaling(4.0, painter),
         horizontalCoverageAngle,
       );
       dev.log("onRightWall");
@@ -196,8 +199,9 @@ class SpeakerPainter extends FusionCanvasElementPainter {
     double centerY,
     double distance,
     double directionDegrees,
-    Paint fillPaint,
     Paint strokePaint,
+    double dashLength,
+    double gapLength,
     double horizontalCoverageAngle,
   ) {
     // Convert direction to radians
@@ -230,9 +234,31 @@ class SpeakerPainter extends FusionCanvasElementPainter {
     path.lineTo(centerX, centerY); // Line back to speaker position
     path.close();
 
-    // Draw coverage sector
-    canvas.drawPath(path, fillPaint);
-    canvas.drawPath(path, strokePaint);
+    // Draw dashed sector outline only.
+    _drawDashedPath(
+      canvas: canvas,
+      path: path,
+      paint: strokePaint,
+      dashLength: dashLength,
+      gapLength: gapLength,
+    );
+  }
+
+  void _drawDashedPath({
+    required Canvas canvas,
+    required Path path,
+    required Paint paint,
+    required double dashLength,
+    required double gapLength,
+  }) {
+    for (final PathMetric metric in path.computeMetrics()) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        final double next = min(distance + dashLength, metric.length);
+        canvas.drawPath(metric.extractPath(distance, next), paint);
+        distance = next + gapLength;
+      }
+    }
   }
 
   void _drawSpeaker(Rect rect, Canvas canvas, FusionCanvasPainter painter, Speaker speaker) {
