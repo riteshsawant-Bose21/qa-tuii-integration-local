@@ -277,30 +277,23 @@ extension ListExtension<T> on List<T> {
 class AutoPlacementResult {
   final CoveragePreference autoPlaceCoveragePreference;
   final LayoutPattern autoPlaceLayoutPattern;
-  // final double autoPlaceCustomSpacing;
-  // final double autoPlaceGridOffsetX;
-  // final double autoPlaceGridOffsetY;
-  // final bool autoPlaceMatchGrid;
-  // final double autoPlaceBoundaryThreshold;
+
+  // AutoPlacement results from the algorithm, including the user's coverage preference and layout pattern choice.
+  final SurfacePlacementResult? surfacePlacementResult;
+  final PlacementResult? ceilingPendantPlacementResult;
 
   const AutoPlacementResult({
     this.autoPlaceCoveragePreference = CoveragePreference.minimumOverlap,
     this.autoPlaceLayoutPattern = LayoutPattern.hexagonal,
-    // this.autoPlaceCustomSpacing = 0.0,
-    // this.autoPlaceMatchGrid = false,
-    // this.autoPlaceGridOffsetX = 0.0,
-    // this.autoPlaceGridOffsetY = 0.0,
-    // this.autoPlaceBoundaryThreshold = 0.3, // min 30%.
+    this.surfacePlacementResult,
+    this.ceilingPendantPlacementResult,
   });
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'autoPlaceCoveragePreference': autoPlaceCoveragePreference.name,
     'autoPlaceLayoutPattern': autoPlaceLayoutPattern.name,
-    // 'autoPlaceGridOffsetX': autoPlaceGridOffsetX,
-    // 'autoPlaceGridOffsetY': autoPlaceGridOffsetY,
-    // 'autoPlaceCustomSpacing': autoPlaceCustomSpacing,
-    // 'autoPlaceMatchGrid': autoPlaceMatchGrid,
-    // 'autoPlaceBoundaryThreshold': autoPlaceBoundaryThreshold,
+    'surfacePlacementResult': surfacePlacementResult?.toJson(),
+    'ceilingPendantPlacementResult': ceilingPendantPlacementResult?.toJson(),
   };
 
   factory AutoPlacementResult.fromJson(Map<String, dynamic> json) {
@@ -320,31 +313,26 @@ class AutoPlacementResult {
     return AutoPlacementResult(
       autoPlaceCoveragePreference: autoPlaceCoveragePreference,
       autoPlaceLayoutPattern: autoPlaceLayoutPattern,
-      // autoPlaceGridOffsetX: (json['autoPlaceGridOffsetX'] as num?)?.toDouble() ?? 0.0,
-      // autoPlaceGridOffsetY: (json['autoPlaceGridOffsetY'] as num?)?.toDouble() ?? 0.0,
-      // autoPlaceCustomSpacing: (json['autoPlaceCustomSpacing'] as num?)?.toDouble() ?? 0.0,
-      // autoPlaceMatchGrid: json['autoPlaceMatchGrid'] as bool? ?? false,
-      // autoPlaceBoundaryThreshold: (json['autoPlaceBoundaryThreshold'] as num?)?.toDouble() ?? 0.0,
+      surfacePlacementResult: json['surfacePlacementResult'] != null
+          ? SurfacePlacementResult.fromJson(json['surfacePlacementResult'] as Map<String, dynamic>)
+          : null,
+      ceilingPendantPlacementResult: json['ceilingPendantPlacementResult'] != null
+          ? PlacementResult.fromJson(json['ceilingPendantPlacementResult'] as Map<String, dynamic>)
+          : null,
     );
   }
 
   AutoPlacementResult copyWith({
     CoveragePreference? autoPlaceCoveragePreference,
     LayoutPattern? autoPlaceLayoutPattern,
-    // double? autoPlaceGridOffsetX,
-    // double? autoPlaceGridOffsetY,
-    // double? autoPlaceCustomSpacing,
-    // bool? autoPlaceMatchGrid,
-    // double? autoPlaceBoundaryThreshold,
+    SurfacePlacementResult? surfacePlacementResult,
+    PlacementResult? ceilingPendantPlacementResult,
   }) {
     return AutoPlacementResult(
       autoPlaceCoveragePreference: autoPlaceCoveragePreference ?? this.autoPlaceCoveragePreference,
       autoPlaceLayoutPattern: autoPlaceLayoutPattern ?? this.autoPlaceLayoutPattern,
-      // autoPlaceGridOffsetX: autoPlaceGridOffsetX ?? this.autoPlaceGridOffsetX,
-      // autoPlaceGridOffsetY: autoPlaceGridOffsetY ?? this.autoPlaceGridOffsetY,
-      // autoPlaceCustomSpacing: autoPlaceCustomSpacing ?? this.autoPlaceCustomSpacing,
-      // autoPlaceMatchGrid: autoPlaceMatchGrid ?? this.autoPlaceMatchGrid,
-      // autoPlaceBoundaryThreshold: autoPlaceBoundaryThreshold ?? this.autoPlaceBoundaryThreshold,
+      surfacePlacementResult: surfacePlacementResult ?? this.surfacePlacementResult,
+      ceilingPendantPlacementResult: ceilingPendantPlacementResult ?? this.ceilingPendantPlacementResult,
     );
   }
 }
@@ -709,6 +697,31 @@ class ListeningArea {
     final Offset proj = Offset(v.dx + t * dx, v.dy + t * dy);
     return (p - proj).distance;
   }
+
+  ListeningAreaRoomBounds getBoundsForVertices() {
+    double minX = vertices.first.position.dx;
+    double maxX = minX;
+    double minY = vertices.first.position.dy;
+    double maxY = minY;
+
+    for (final FusionCanvasPoint vertex in vertices) {
+      if (vertex.position.dx < minX) minX = vertex.position.dx;
+      if (vertex.position.dx > maxX) maxX = vertex.position.dx;
+      if (vertex.position.dy < minY) minY = vertex.position.dy;
+      if (vertex.position.dy > maxY) maxY = vertex.position.dy;
+    }
+
+    return ListeningAreaRoomBounds(minX: minX, maxX: maxX, minY: minY, maxY: maxY);
+  }
+}
+
+class ListeningAreaRoomBounds {
+  final double minX, maxX, minY, maxY;
+
+  const ListeningAreaRoomBounds({required this.minX, required this.maxX, required this.minY, required this.maxY});
+
+  double get roomLengthInMeters => (maxX - minX).abs() / 100; // convert from cm to m
+  double get roomWidthInMeters => (maxY - minY).abs() / 100; // convert from cm to m
 }
 
 /// Holds the SPL results for one surface,
