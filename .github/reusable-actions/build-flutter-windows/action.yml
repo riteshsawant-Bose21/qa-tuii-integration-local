@@ -91,7 +91,7 @@ runs:
         curl.exe -k --ssl-no-revoke -f -u "$username`:$password" -T $buildPath $nexusUrl
         Write-Output "flutter-windows: https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-$version.exe"
 
-    - name: Clone project
+    # - name: Clone project
       if: >-
         ${{
           (
@@ -118,7 +118,7 @@ runs:
           libs/
         fetch-depth: 0 
 
-    - name: Flutter Windows Automation build
+    # - name: Flutter Windows Automation build
       if: >-
         ${{
           (

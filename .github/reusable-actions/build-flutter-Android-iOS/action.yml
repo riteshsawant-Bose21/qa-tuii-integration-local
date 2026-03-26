@@ -66,7 +66,7 @@ runs:
         # echo "flutter-apk: https://nexus.dev.prod.bosepro.internal:8445/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-apk/Fusion-Launcher-$VERSION.apk"
         # echo "flutter-iOS: https://nexus.dev.prod.bosepro.internal:8445/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-iOS/Fusion-Launcher-$VERSION.ipa"
         echo "flutter-macOS: https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-macOS/Fusion-Launcher-$VERSION.dmg"
-    - name: Flutter macOS Automation build
+    # - name: Flutter macOS Automation build
       if: >-
         ${{
           (
