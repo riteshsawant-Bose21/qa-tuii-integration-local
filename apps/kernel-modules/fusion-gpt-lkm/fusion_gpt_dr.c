@@ -611,19 +611,21 @@ int fusion_gpt_set_phc_anchor(u64 phc_ns_at_pps)
     struct fusion_gpt *g;
     unsigned long flags;
 
-    mutex_lock(&gpt_singleton_lock);
-    g = gpt_singleton;
-    mutex_unlock(&gpt_singleton_lock);
-    if (!g)
+    rcu_read_lock();
+    g = rcu_dereference(gpt_singleton);
+    if (!g) {
+        rcu_read_unlock();
         return -ENODEV;
+    }
 
     raw_spin_lock_irqsave(&g->pps_lock, flags);
 
     if (phc_ns_at_pps == 0) {
         g->pending_future_anchor = false;
         g->pending_future_phc_ns = 0;
-        pr_debug_ratelimited("fusion_gpt: phc anchor cleared\n");
+        pr_debug("fusion_gpt: phc anchor cleared\n");
         raw_spin_unlock_irqrestore(&g->pps_lock, flags);
+        rcu_read_unlock();
         return 0;
     }
 
@@ -637,8 +639,9 @@ int fusion_gpt_set_phc_anchor(u64 phc_ns_at_pps)
     /* Epoch becomes valid at the next ICR1 edge (when we bind cap64 -> PHC) */
     g->phc_epoch_valid   = false;
 
-    pr_debug_ratelimited("fusion_gpt: phc anchor armed %llu\n", phc_ns_at_pps);
+    pr_debug("fusion_gpt: phc anchor armed %llu\n", phc_ns_at_pps);
     raw_spin_unlock_irqrestore(&g->pps_lock, flags);
+    rcu_read_unlock();
     return 0;
 }
 EXPORT_SYMBOL(fusion_gpt_set_phc_anchor);
@@ -651,11 +654,12 @@ int fusion_gpt_get_timing_status(struct fusion_gpt_timing_status *status)
 	if (!status)
 		return -EINVAL;
 
-	mutex_lock(&gpt_singleton_lock);
-	g = gpt_singleton;
-	mutex_unlock(&gpt_singleton_lock);
-	if (!g)
+	rcu_read_lock();
+	g = rcu_dereference(gpt_singleton);
+	if (!g) {
+		rcu_read_unlock();
 		return -ENODEV;
+	}
 
 	raw_spin_lock_irqsave(&g->pps_lock, flags);
 	status->discipline_ready = READ_ONCE(g->discipline_ready);
@@ -664,6 +668,7 @@ int fusion_gpt_get_timing_status(struct fusion_gpt_timing_status *status)
 	status->pps_rebasing_active = g->phc_epoch_valid && !g->pending_future_anchor;
 	status->pps_seq = g->pps_seq;
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
+	rcu_read_unlock();
 	return 0;
 }
 EXPORT_SYMBOL(fusion_gpt_get_timing_status);
@@ -678,11 +683,12 @@ int fusion_gpt_reset_timing_state(void)
 	enum cal_state prev_cal_state;
 	bool changed;
 
-	mutex_lock(&gpt_singleton_lock);
-	g = gpt_singleton;
-	mutex_unlock(&gpt_singleton_lock);
-	if (!g)
+	rcu_read_lock();
+	g = rcu_dereference(gpt_singleton);
+	if (!g) {
+		rcu_read_unlock();
 		return -ENODEV;
+	}
 
 	raw_spin_lock_irqsave(&g->pps_lock, flags);
 	prev_pps_seq = g->pps_seq;
@@ -706,6 +712,7 @@ int fusion_gpt_reset_timing_state(void)
 		pr_info("fusion_gpt: timing reset reason=api prev{pps_seq=%u epoch=%u aligned=%u ready=%u pending=%u cal=%u freq_err=%ld}\n",
 			prev_pps_seq, prev_epoch_valid, prev_aligned, prev_ready,
 			prev_pending, prev_cal_state, prev_freq_error);
+	rcu_read_unlock();
 	return 0;
 }
 EXPORT_SYMBOL(fusion_gpt_reset_timing_state);
@@ -894,9 +901,9 @@ static bool cal_fit_model(struct fusion_gpt *g, u32 *mean_residual_out)
 	}
 
 	pred_q16 = (e0 << 16) + k1_q16 * dg4 + k2_q16 * dd4 + k3_q16 * dg4 * dd4;
-	pr_debug_ratelimited("fusion_gpt: cal fit k1_q16=%lld k2_q16=%lld k3_q16=%lld p4_meas=%lld p4_pred=%lld\n",
-			     (long long)k1_q16, (long long)k2_q16, (long long)k3_q16,
-			     (long long)e4, (long long)(pred_q16 >> 16));
+	pr_debug("fusion_gpt: cal fit k1_q16=%lld k2_q16=%lld k3_q16=%lld p4_meas=%lld p4_pred=%lld\n",
+		 (long long)k1_q16, (long long)k2_q16, (long long)k3_q16,
+		 (long long)e4, (long long)(pred_q16 >> 16));
 
 	g->cal_k1_q16 = (s32)k1_q16;
 	g->cal_k2_q16 = (s32)k2_q16;
@@ -938,8 +945,8 @@ static bool cal_find_best_target(struct fusion_gpt *g, u32 *best_gain, int *best
 		s64 dv;
 
 		if (denom == 0) {
-			pr_debug_ratelimited("fusion_gpt: cal inverse reject gain=%u dac=undefined denom=0\n",
-					     gv);
+			pr_debug("fusion_gpt: cal inverse reject gain=%u dac=undefined denom=0\n",
+				 gv);
 			goto next_gain;
 		}
 
@@ -949,16 +956,16 @@ static bool cal_find_best_target(struct fusion_gpt *g, u32 *best_gain, int *best
 		    dv <= cal_jump_dac_max_value(&g->cal_cfg)) {
 			*best_gain = gv;
 			*best_dac = (int)dv;
-			pr_debug_ratelimited("fusion_gpt: cal inverse target gain=%u dac=%d (center gain=%u dac=%d)\n",
-					     *best_gain, *best_dac,
-					     g->cal_center_gain, g->cal_center_dac);
+			pr_debug("fusion_gpt: cal inverse target gain=%u dac=%d (center gain=%u dac=%d)\n",
+				 *best_gain, *best_dac,
+				 g->cal_center_gain, g->cal_center_dac);
 			return true;
 		}
 
-		pr_debug_ratelimited("fusion_gpt: cal inverse reject gain=%u dac=%lld (allowed %d..%d)\n",
-				     gv, (long long)dv,
-				     cal_jump_dac_min_value(&g->cal_cfg),
-				     cal_jump_dac_max_value(&g->cal_cfg));
+		pr_debug("fusion_gpt: cal inverse reject gain=%u dac=%lld (allowed %d..%d)\n",
+			 gv, (long long)dv,
+			 cal_jump_dac_min_value(&g->cal_cfg),
+			 cal_jump_dac_max_value(&g->cal_cfg));
 
 next_gain:
 		if (gv > g->si_gain_max - gain_step)
@@ -1129,11 +1136,11 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
                       else
                           idx = 0;
 
-                      pr_debug_ratelimited("fusion_gpt: cal probe[%d] gain=%u dac=%d mean_err=%ld\n",
-                                           idx,
-                                           g->cal_probe_gain[idx],
-                                           g->cal_probe_dac[idx],
-                                           mean);
+                      pr_debug("fusion_gpt: cal probe[%d] gain=%u dac=%d mean_err=%ld\n",
+                               idx,
+                               g->cal_probe_gain[idx],
+                               g->cal_probe_dac[idx],
+                               mean);
 
                       if (idx < 4) {
                           g->cal_probe_idx++;
