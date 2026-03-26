@@ -101,7 +101,7 @@ class _FusionMultiSelectPopupMenuState<T> extends State<FusionMultiSelectPopupMe
         widget.semanticsId ??
         SemanticHelper.createTestId(
           SemanticTypes.dropdown,
-          widget.tooltip ?? 'multi_select_popup_menu',
+          'multi_select_popup_menu',
         );
 
     _overlayEntry = OverlayEntry(
@@ -121,7 +121,7 @@ class _FusionMultiSelectPopupMenuState<T> extends State<FusionMultiSelectPopupMe
             child: Material(
               color: Colors.transparent,
               child: SemanticHelper.dropdown(
-                testId: '${semanticId}_container',
+                testId: semanticId,
                 value: widget.tooltip,
                 child: Container(
                   constraints: BoxConstraints(maxHeight: widget.maxHeight),
