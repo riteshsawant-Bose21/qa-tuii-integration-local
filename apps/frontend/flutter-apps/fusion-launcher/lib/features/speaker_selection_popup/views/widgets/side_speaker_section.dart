@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
+import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/models/models.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../../../core/service_locator.dart';
-import '../../../viewmodel/building_page_viewmodel.dart';
-import 'parts/auto_place_dialog.dart';
-import 'parts/select_speaker_popup.dart';
+import '../../../../core/service_locator.dart';
+import '../../../projects/viewmodel/building_page_viewmodel.dart';
+import '../speaker_selection_popup.dart';
+import 'auto_place_dialog.dart';
 
 class SpeakerSelectionWidget extends StatefulWidget {
   const SpeakerSelectionWidget({super.key});
@@ -93,7 +93,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                       padding: EdgeInsets.zero,
                                       child: Theme(
                                         data: ThemeData.dark(),
-                                        child: const SpeakerQueryPopup(
+                                        child: const SpeakerSelectionPopup(
                                           isFromBuildingPage: true,
                                         ),
                                       ),
@@ -235,7 +235,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                             padding: EdgeInsets.zero,
                                             child: Theme(
                                               data: ThemeData.dark(),
-                                              child: const SpeakerQueryPopup(isFromBuildingPage: true),
+                                              child: const SpeakerSelectionPopup(isFromBuildingPage: true),
                                             ),
                                           ),
                                         ];

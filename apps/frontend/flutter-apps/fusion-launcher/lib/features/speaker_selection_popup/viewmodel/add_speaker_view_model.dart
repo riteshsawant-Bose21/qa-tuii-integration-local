@@ -6,8 +6,8 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/models/models.dart';
 
-import '../parts/constant_enums.dart';
-import '../parts/replace_speaker_warning_dialog.dart';
+import '../views/widgets/constant_enums.dart';
+import '../views/widgets/replace_speaker_warning_dialog.dart';
 import 'product_query_view_model.dart';
 
 part 'state.dart';

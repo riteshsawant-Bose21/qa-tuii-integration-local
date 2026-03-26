@@ -5,16 +5,16 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
-import '../../../../viewmodel/building_page_viewmodel.dart';
-import '../view_model/add_speaker_view_model.dart';
-import 'properties_and_filter_section.dart';
-import 'speaker_lists.dart';
+import '../../projects/viewmodel/building_page_viewmodel.dart';
+import '../viewmodel/add_speaker_view_model.dart';
+import 'widgets/properties_and_filter_section.dart';
+import 'widgets/speaker_lists.dart';
 
-class SpeakerQueryPopup extends StatefulWidget {
+class SpeakerSelectionPopup extends StatefulWidget {
   final bool isFromBuildingPage;
   final String? zoneId;
   final String? subZoneId;
-  const SpeakerQueryPopup({
+  const SpeakerSelectionPopup({
     super.key,
     required this.isFromBuildingPage,
     this.zoneId,
@@ -22,10 +22,10 @@ class SpeakerQueryPopup extends StatefulWidget {
   });
 
   @override
-  State<SpeakerQueryPopup> createState() => SpeakerQueryPopupState();
+  State<SpeakerSelectionPopup> createState() => SpeakerSelectionPopupState();
 }
 
-class SpeakerQueryPopupState extends State<SpeakerQueryPopup> {
+class SpeakerSelectionPopupState extends State<SpeakerSelectionPopup> {
   final TextEditingController searchController = TextEditingController();
 
   ProjectViewModel get projectViewModel => serviceLocator<ProjectViewModel>();
@@ -44,7 +44,6 @@ class SpeakerQueryPopupState extends State<SpeakerQueryPopup> {
   void dispose() {
     onClose();
     searchController.dispose();
-
     super.dispose();
   }
 

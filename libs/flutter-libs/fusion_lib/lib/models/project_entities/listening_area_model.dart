@@ -278,22 +278,14 @@ class AutoPlacementResult {
   final CoveragePreference autoPlaceCoveragePreference;
   final LayoutPattern autoPlaceLayoutPattern;
 
-  // AutoPlacement results from the algorithm, including the user's coverage preference and layout pattern choice.
-  final SurfacePlacementResult? surfacePlacementResult;
-  final PlacementResult? ceilingPendantPlacementResult;
-
   const AutoPlacementResult({
     this.autoPlaceCoveragePreference = CoveragePreference.minimumOverlap,
     this.autoPlaceLayoutPattern = LayoutPattern.hexagonal,
-    this.surfacePlacementResult,
-    this.ceilingPendantPlacementResult,
   });
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'autoPlaceCoveragePreference': autoPlaceCoveragePreference.name,
     'autoPlaceLayoutPattern': autoPlaceLayoutPattern.name,
-    'surfacePlacementResult': surfacePlacementResult?.toJson(),
-    'ceilingPendantPlacementResult': ceilingPendantPlacementResult?.toJson(),
   };
 
   factory AutoPlacementResult.fromJson(Map<String, dynamic> json) {
@@ -313,26 +305,16 @@ class AutoPlacementResult {
     return AutoPlacementResult(
       autoPlaceCoveragePreference: autoPlaceCoveragePreference,
       autoPlaceLayoutPattern: autoPlaceLayoutPattern,
-      surfacePlacementResult: json['surfacePlacementResult'] != null
-          ? SurfacePlacementResult.fromJson(json['surfacePlacementResult'] as Map<String, dynamic>)
-          : null,
-      ceilingPendantPlacementResult: json['ceilingPendantPlacementResult'] != null
-          ? PlacementResult.fromJson(json['ceilingPendantPlacementResult'] as Map<String, dynamic>)
-          : null,
     );
   }
 
   AutoPlacementResult copyWith({
     CoveragePreference? autoPlaceCoveragePreference,
     LayoutPattern? autoPlaceLayoutPattern,
-    SurfacePlacementResult? surfacePlacementResult,
-    PlacementResult? ceilingPendantPlacementResult,
   }) {
     return AutoPlacementResult(
       autoPlaceCoveragePreference: autoPlaceCoveragePreference ?? this.autoPlaceCoveragePreference,
       autoPlaceLayoutPattern: autoPlaceLayoutPattern ?? this.autoPlaceLayoutPattern,
-      surfacePlacementResult: surfacePlacementResult ?? this.surfacePlacementResult,
-      ceilingPendantPlacementResult: ceilingPendantPlacementResult ?? this.ceilingPendantPlacementResult,
     );
   }
 }

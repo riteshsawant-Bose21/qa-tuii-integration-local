@@ -3,8 +3,8 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_lib/fusion_algorithms/surface_speakers_autolayout/surface_speakers_autolayout.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../../../../../core/assets/asset_svg.dart';
-import '../../../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../../../core/assets/asset_svg.dart';
+import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 
 class AutoPlaceDialog extends StatefulWidget {
   const AutoPlaceDialog({super.key, this.result});
