@@ -851,6 +851,7 @@ class _ZoneCardState extends State<ZoneCard> {
           _initializeTempSelection();
 
           return FusionMultiSelectPopupMenu<dynamic>(
+            maxHeight: 350,
             semanticsId: FusionTestKeys.instance.selectsrc,
             saveButtonLabel: "ADD",
             tooltip: "Select Sources",
@@ -891,12 +892,8 @@ class _ZoneCardState extends State<ZoneCard> {
             itemBuilder: (BuildContext context, dynamic item, bool _) {
               // -------- DIVIDER --------
               if (item is _HeaderItem && item.title == 'DIVIDER') {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 6),
-                  child: Divider(thickness: 1),
-                );
+                return const Divider(thickness: 1);
               }
-
               // -------- SOURCES --------
               if (item is _HeaderItem && item.title == 'SOURCES_BLOCK') {
                 return StatefulBuilder(
@@ -909,8 +906,6 @@ class _ZoneCardState extends State<ZoneCard> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          const SizedBox(height: 4),
-
                           FusionAppText(
                             text: 'SOURCES',
                             semanticId: FusionTestKeys.instance.sourcetext,
@@ -921,7 +916,7 @@ class _ZoneCardState extends State<ZoneCard> {
                             ),
                           ),
 
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 4),
 
                           ...availableSources.asMap().entries.map((MapEntry<int, Source> entry) {
                             final int index = entry.key;
@@ -942,7 +937,7 @@ class _ZoneCardState extends State<ZoneCard> {
                               child: Opacity(
                                 opacity: isPrioritySource ? 0.5 : 1,
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 5.0),
+                                  padding: const EdgeInsets.symmetric(vertical: 2.0),
                                   child: Row(
                                     children: <Widget>[
                                       FusionCheckbox(
@@ -1012,7 +1007,7 @@ class _ZoneCardState extends State<ZoneCard> {
                             ),
                           ),
 
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 5),
 
                           ...sourceSetList.asMap().entries.map((MapEntry<int, SourceSet> entry) {
                             final int index = entry.key;
@@ -1029,7 +1024,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                 setPopupState(() {});
                               },
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 5.0),
+                                padding: const EdgeInsets.symmetric(vertical: 2.0),
                                 child: Row(
                                   children: <Widget>[
                                     FusionCheckbox(
