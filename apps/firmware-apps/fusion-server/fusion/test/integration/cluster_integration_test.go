@@ -13,7 +13,7 @@ import (
 
 func TestIntegrationTestReadMe(t *testing.T) {
 	//To init test with a cluster
-	fc := NewTestCluster(t)
+	fc := NewTestCluster(t, false)
 	ctx, cancel := context.WithTimeout(context.Background(), fc.Env.MaxWait)
 	defer cancel()
 
@@ -25,11 +25,11 @@ func TestIntegrationTestReadMe(t *testing.T) {
 
 	//To stop an instance
 	primary, err := fc.Primary()
-	// someNode, err := fc.Nodes[0]
+
 	if err != nil {
 		t.Fatalf("primary not found: %v", err)
 	}
-	t.Logf("Stopping primary instance: %s addr=%s", primary.MultipassName, primary.FusionAddr)
+	t.Logf("Stopping primary instance: %s addr=%s", primary.MultipassName, primary.Device.Address)
 	if err := StopInstance(ctx, primary.MultipassName); err != nil {
 		t.Fatalf("stop primary failed: %v", err)
 	}
@@ -49,7 +49,7 @@ func TestIntegrationTestReadMe(t *testing.T) {
 }
 
 func TestPrimaryRestart(t *testing.T) {
-	fc := NewTestCluster(t)
+	fc := NewTestCluster(t, false)
 
 	ctx, cancel := context.WithTimeout(context.Background(), fc.Env.MaxWait)
 	defer cancel()
@@ -59,7 +59,7 @@ func TestPrimaryRestart(t *testing.T) {
 	if err != nil {
 		t.Fatalf("primary not found: %v", err)
 	}
-	t.Logf("Stopping primary instance: %s addr=%s", primary.MultipassName, primary.FusionAddr)
+	t.Logf("Stopping primary instance: %s addr=%s", primary.MultipassName, primary.Device.Address)
 	if err := StopInstance(ctx, primary.MultipassName); err != nil {
 		t.Fatalf("stop primary failed: %v", err)
 	}
@@ -70,10 +70,10 @@ func TestPrimaryRestart(t *testing.T) {
 	}
 	var otherURLs []string
 	for _, n := range fc.Nodes {
-		if n.FusionAddr == primary.FusionAddr {
+		if n.Device.Address == primary.Device.Address {
 			continue
 		}
-		otherURLs = append(otherURLs, fmt.Sprintf("http://%s:%s", n.FusionAddr, fc.Env.Port))
+		otherURLs = append(otherURLs, fmt.Sprintf("http://%s:%s", n.Device.Address, fc.Env.Port))
 	}
 	if len(otherURLs) == 0 {
 		t.Fatalf("no other nodes to query")
@@ -111,7 +111,7 @@ func TestPrimaryRestart(t *testing.T) {
 // // TestVIPCascadeShutdownRestart exercises repeated VIP holder failure until all nodes are down,
 // // then brings all nodes back simultaneously, then tests full shutdown and sequential bring-up.
 func TestPrimaryCascadeShutdownRestart(t *testing.T) {
-	fc := NewTestCluster(t)
+	fc := NewTestCluster(t, true)
 	ctx, cancel := context.WithTimeout(context.Background(), fc.Env.MaxWait)
 	defer cancel()
 	if err := CheckClusterHealth(ctx, fc.Env, fc.Env.ClusterSize); err != nil {
@@ -129,7 +129,7 @@ func TestPrimaryCascadeShutdownRestart(t *testing.T) {
 		if err != nil {
 			t.Fatalf("primary not found (remaining %d): %v", remaining, err)
 		}
-		t.Logf("Stopping VIP holder: %s addr=%s remaining_before=%d", primary.MultipassName, primary.FusionAddr, remaining)
+		t.Logf("Stopping VIP holder: %s addr=%s remaining_before=%d", primary.MultipassName, primary.Device.Address, remaining)
 		shutdownOrder = append(shutdownOrder, primary.MultipassName)
 		if err := StopInstance(ctx, primary.MultipassName); err != nil {
 			t.Fatalf("stop primary %s failed: %v", primary.MultipassName, err)

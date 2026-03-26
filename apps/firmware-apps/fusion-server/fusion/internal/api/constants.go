@@ -27,6 +27,7 @@ const (
 	SnapshotIDKey = "snapshot_id"
 
 	VIPEligiblePriority   = 120
+	VIPDefaultPriority    = 100
 	VIPIneligiblePriority = 90
 
 	// Request types

@@ -6,6 +6,7 @@ package integration
 import (
 	"context"
 	"fmt"
+	"fusion/internal/api"
 	"sort"
 	"strings"
 	"testing"
@@ -22,16 +23,12 @@ type FusionCluster struct {
 type FusionNode struct {
 	MultipassName string
 	MultipassIPs  []string
-	FusionName    string
-	FusionAddr    string
-	MemberName    string
-	MemberAddr    string
-	IsPrimary     bool
+	Device        api.DeviceInfo
 }
 
 // NewTestCluster builds, resets, restarts and validates a cluster for tests.
 // expectedSize overrides Env.ClusterSize when >0.
-func NewTestCluster(t *testing.T) FusionCluster {
+func NewTestCluster(t *testing.T, withReset bool) FusionCluster {
 	t.Helper()
 	env := LoadEnv()
 	fmt.Printf("[integration] TestEnv: %+v\n", env)
@@ -42,13 +39,15 @@ func NewTestCluster(t *testing.T) FusionCluster {
 	defer cancel()
 	time.Sleep(5 * time.Second)
 
-	// Reset & restart for a clean slate
-	fmt.Printf("[integration] resetting cluster...\n")
-	if err := ResetCluster(ctx, env); err != nil {
-		t.Fatalf("cluster reset failed: %v", err)
+	if withReset {
+		// Reset & restart for a clean slate
+		fmt.Printf("[integration] resetting cluster...\n")
+		if err := ResetCluster(ctx, env); err != nil {
+			t.Fatalf("cluster reset failed: %v", err)
+		}
+		fmt.Printf("[integration] restarting cluster...\n")
+		RestartCluster(ctx, env, env.ClusterSize)
 	}
-	fmt.Printf("[integration] restarting cluster...\n")
-	RestartCluster(ctx, env, env.ClusterSize)
 
 	fmt.Printf("[integration] building fusion cluster mappings...\n")
 	fc, err := buildFusionCluster(ctx)
@@ -98,16 +97,6 @@ func (fc *FusionCluster) Refresh(ctx context.Context) error {
 	return nil
 }
 
-// Primary returns the primary node if any.
-func (fc FusionCluster) Primary() (FusionNode, error) {
-	for _, n := range fc.Nodes {
-		if n.IsPrimary {
-			return n, nil
-		}
-	}
-	return FusionNode{}, fmt.Errorf("primary node not found")
-}
-
 // // WaitForClusterSize waits until the cluster has at least n members.
 // func (fc FusionCluster) WaitForClusterSize(ctx context.Context, env Env, n int) error {
 // 	return PollUntil(ctx, 1*time.Second, func() (bool, error) {
@@ -122,11 +111,43 @@ func (fc FusionCluster) Primary() (FusionNode, error) {
 // buildFusionCluster loads env, discovers multipass instances, devices, members, and correlates to nodes.
 func buildFusionCluster(ctx context.Context) (FusionCluster, error) {
 	env := LoadEnv()
-	nodes, err := buildNodeMappings(ctx, env)
-	if err != nil {
-		return FusionCluster{}, err
+
+	const (
+		maxRetries = 10
+		retryDelay = 5 * time.Second
+	)
+
+	var lastErr error
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		nodes, err := buildNodeMappings(ctx, env)
+		if err == nil {
+			return FusionCluster{Env: env, Nodes: nodes}, nil
+		}
+
+		lastErr = err
+		if !isTransientMappingError(err) || attempt == maxRetries {
+			break
+		}
+
+		select {
+		case <-ctx.Done():
+			return FusionCluster{}, ctx.Err()
+		case <-time.After(retryDelay):
+		}
 	}
-	return FusionCluster{Env: env, Nodes: nodes}, nil
+
+	return FusionCluster{}, lastErr
+}
+
+func isTransientMappingError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errMsg := strings.ToLower(err.Error())
+	return strings.Contains(errMsg, "context deadline exceeded") ||
+		strings.Contains(errMsg, "client.timeout exceeded") ||
+		strings.Contains(errMsg, "timeout")
 }
 
 // buildNodeMappings constructs unified mappings from current environment.
@@ -156,30 +177,22 @@ func buildNodeMappings(ctx context.Context, env Env) ([]FusionNode, error) {
 
 	var mappings []FusionNode
 	for _, d := range devices {
-		fusionIP := d.Address
-		if strings.Contains(fusionIP, ":") {
-			fusionIP = strings.Split(fusionIP, ":")[0]
-		}
-		instName := ipToInstance[fusionIP]
+		instName := ipToInstance[d.Address]
 
 		mappings = append(mappings, FusionNode{
 			MultipassName: instName,
 			MultipassIPs:  instanceToIPs[instName],
-			FusionName:    d.Name,
-			FusionAddr:    fusionIP,
-			MemberName:    d.Name,
-			MemberAddr:    fusionIP,
-			IsPrimary:     d.IsPrimary,
+			Device:        d,
 		})
 	}
 	sort.Slice(mappings, func(i, j int) bool {
-		if mappings[i].IsPrimary && !mappings[j].IsPrimary {
+		if mappings[i].Device.IsPrimaryNode && !mappings[j].Device.IsPrimaryNode {
 			return true
 		}
-		if mappings[j].IsPrimary && !mappings[i].IsPrimary {
+		if mappings[j].Device.IsPrimaryNode && !mappings[i].Device.IsPrimaryNode {
 			return false
 		}
-		return mappings[i].FusionAddr < mappings[j].FusionAddr
+		return mappings[i].Device.Address < mappings[j].Device.Address
 	})
 	return mappings, nil
 }
@@ -200,10 +213,43 @@ func (fc FusionCluster) instanceNames() []string {
 func (fc FusionCluster) NodeURLs() []string {
 	urls := make([]string, 0, len(fc.Nodes))
 	for _, n := range fc.Nodes {
-		urls = append(urls, fmt.Sprintf("http://%s:%s", n.FusionAddr, fc.Env.Port))
+		urls = append(urls, fmt.Sprintf("http://%s:%s", n.Device.Address, fc.Env.Port))
 	}
 	sort.Strings(urls)
 	return urls
+}
+
+// Primary fetches devices from the /devices API and returns the single primary node.
+// It fails if there is not exactly one primary device.
+func (fc FusionCluster) Primary() (FusionNode, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	devices, err := GetDevices(ctx, fc.Env.BaseURL())
+	if err != nil {
+		return FusionNode{}, fmt.Errorf("get devices: %w", err)
+	}
+
+	var primary *api.DeviceInfo
+	for i := range devices {
+		if devices[i].IsPrimaryNode {
+			if primary != nil {
+				return FusionNode{}, fmt.Errorf("expected exactly one primary, found multiple")
+			}
+			primary = &devices[i]
+		}
+	}
+	if primary == nil {
+		return FusionNode{}, fmt.Errorf("expected exactly one primary, found none")
+	}
+
+	for _, n := range fc.Nodes {
+		if n.Device.Address == primary.Address {
+			return n, nil
+		}
+	}
+	// Fallback: node not yet in mapping, construct from device info
+	return FusionNode{Device: *primary}, nil
 }
 
 // // StopAll stops all discovered multipass instances.
