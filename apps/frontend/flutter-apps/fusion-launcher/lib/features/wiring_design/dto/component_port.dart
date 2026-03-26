@@ -9,6 +9,8 @@ class ComponentPort {
   final PortPosition? position;
   final int index;
   final String? description;
+
+  
   ComponentPort({
     required this.id,
     this.image,
@@ -35,9 +37,9 @@ class ComponentPort {
       description: portData.description ?? '',
       image: switch (portData.type) {
         PortType.ethernet || PortType.networkSwitchIn || PortType.networkSwitchOut => 'assets/icons/wiring_ports/ethernet.png',
-        PortType.wifiIn || PortType.wifiOut || PortType.wifi => 'assets/icons/wiring_ports/wifi.png',
-        PortType.bleIn || PortType.bleOut || PortType.ble => 'assets/icons/wiring_ports/bluetooth.png',
-        PortType.hdmiIn || PortType.hdmiOut || PortType.hdmi => 'assets/icons/wiring_ports/hdmi.png',
+        PortType.wifiIn || PortType.wifiOut => 'assets/icons/wiring_ports/wifi.png',
+        PortType.bleIn || PortType.bleOut => 'assets/icons/wiring_ports/bluetooth.png',
+        PortType.hdmiIn || PortType.hdmiOut => 'assets/icons/wiring_ports/hdmi.png',
         PortType.usbIn || PortType.usbOut || PortType.usb => 'assets/icons/wiring_ports/usb.png',
         PortType.audioJackInput || PortType.audioJackOutput => 'assets/icons/wiring_ports/audio_jack.png',
         _ => null,

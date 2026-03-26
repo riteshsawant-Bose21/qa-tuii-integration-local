@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/wiring_design/dto/component_data.dart';
-import 'package:fusion_lib/fusion_utils/deserialization_util.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import 'canvas_element.dart';
 import 'circuit_component.dart';
@@ -58,5 +58,17 @@ class CircuitPort extends CanvasElement {
           map['padding'],
         ) ??
         padding;
+  }
+
+  PortData toPortData() {
+    return PortData(
+      id: data.id,
+      name: data.label ?? '',
+      type: data.type,
+      compatibleTypes: data.compatibleTypes,
+      description: data.description,
+      portNumber: data.index,
+      position: data.position ?? PortPosition.topLeft,
+    );
   }
 }

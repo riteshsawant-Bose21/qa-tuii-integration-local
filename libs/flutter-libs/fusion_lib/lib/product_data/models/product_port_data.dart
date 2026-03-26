@@ -193,13 +193,6 @@ class ProductPortData {
           position: PortPosition.bottomLeft,
 
           compatibleTypes: [PortType.audioJackOutput],
-          // compatibleTypes: switch (type) {
-          //   PortType.analogOutput => [PortType.analogInput],
-          //   PortType.amplifierInput => [PortType.dspAnalogOutput],
-          //   PortType.dspAnalogInput => [PortType.analogOutput],
-          //   PortType.endpointInput => [PortType.analogOutput],
-          //   _ => [],
-          // },
         );
       }),
       ...List.generate(
