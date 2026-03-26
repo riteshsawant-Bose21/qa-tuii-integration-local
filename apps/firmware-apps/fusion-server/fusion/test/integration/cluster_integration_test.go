@@ -13,7 +13,7 @@ import (
 
 func TestIntegrationTestReadMe(t *testing.T) {
 	//To init test with a cluster
-	fc := NewTestCluster(t)
+	fc := NewTestCluster(t, false)
 	ctx, cancel := context.WithTimeout(context.Background(), fc.Env.MaxWait)
 	defer cancel()
 
@@ -25,7 +25,7 @@ func TestIntegrationTestReadMe(t *testing.T) {
 
 	//To stop an instance
 	primary, err := fc.Primary()
-	// someNode, err := fc.Nodes[0]
+
 	if err != nil {
 		t.Fatalf("primary not found: %v", err)
 	}
@@ -49,7 +49,7 @@ func TestIntegrationTestReadMe(t *testing.T) {
 }
 
 func TestPrimaryRestart(t *testing.T) {
-	fc := NewTestCluster(t)
+	fc := NewTestCluster(t, false)
 
 	ctx, cancel := context.WithTimeout(context.Background(), fc.Env.MaxWait)
 	defer cancel()
@@ -111,7 +111,7 @@ func TestPrimaryRestart(t *testing.T) {
 // // TestVIPCascadeShutdownRestart exercises repeated VIP holder failure until all nodes are down,
 // // then brings all nodes back simultaneously, then tests full shutdown and sequential bring-up.
 func TestPrimaryCascadeShutdownRestart(t *testing.T) {
-	fc := NewTestCluster(t)
+	fc := NewTestCluster(t, true)
 	ctx, cancel := context.WithTimeout(context.Background(), fc.Env.MaxWait)
 	defer cancel()
 	if err := CheckClusterHealth(ctx, fc.Env, fc.Env.ClusterSize); err != nil {

@@ -31,7 +31,7 @@ type FusionNode struct {
 
 // NewTestCluster builds, resets, restarts and validates a cluster for tests.
 // expectedSize overrides Env.ClusterSize when >0.
-func NewTestCluster(t *testing.T) FusionCluster {
+func NewTestCluster(t *testing.T, withReset bool) FusionCluster {
 	t.Helper()
 	env := LoadEnv()
 	fmt.Printf("[integration] TestEnv: %+v\n", env)
@@ -42,13 +42,15 @@ func NewTestCluster(t *testing.T) FusionCluster {
 	defer cancel()
 	time.Sleep(5 * time.Second)
 
-	// Reset & restart for a clean slate
-	fmt.Printf("[integration] resetting cluster...\n")
-	if err := ResetCluster(ctx, env); err != nil {
-		t.Fatalf("cluster reset failed: %v", err)
+	if withReset {
+		// Reset & restart for a clean slate
+		fmt.Printf("[integration] resetting cluster...\n")
+		if err := ResetCluster(ctx, env); err != nil {
+			t.Fatalf("cluster reset failed: %v", err)
+		}
+		fmt.Printf("[integration] restarting cluster...\n")
+		RestartCluster(ctx, env, env.ClusterSize)
 	}
-	fmt.Printf("[integration] restarting cluster...\n")
-	RestartCluster(ctx, env, env.ClusterSize)
 
 	fmt.Printf("[integration] building fusion cluster mappings...\n")
 	fc, err := buildFusionCluster(ctx)
@@ -96,16 +98,6 @@ func (fc *FusionCluster) Refresh(ctx context.Context) error {
 	}
 	fc.Nodes = nodes
 	return nil
-}
-
-// Primary returns the primary node if any.
-func (fc FusionCluster) Primary() (FusionNode, error) {
-	for _, n := range fc.Nodes {
-		if n.IsPrimary {
-			return n, nil
-		}
-	}
-	return FusionNode{}, fmt.Errorf("primary node not found")
 }
 
 // // WaitForClusterSize waits until the cluster has at least n members.
@@ -169,7 +161,7 @@ func buildNodeMappings(ctx context.Context, env Env) ([]FusionNode, error) {
 			FusionAddr:    fusionIP,
 			MemberName:    d.Name,
 			MemberAddr:    fusionIP,
-			IsPrimary:     d.IsPrimary,
+			IsPrimary:     d.IsPrimaryNode,
 		})
 	}
 	sort.Slice(mappings, func(i, j int) bool {

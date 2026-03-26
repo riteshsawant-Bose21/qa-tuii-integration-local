@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"fusion/internal/api"
 	"net/http"
 	"time"
 )
@@ -63,7 +64,7 @@ func CheckClusterHealth(ctx context.Context, env Env, expectedSize int) error {
 		}
 		primaries := 0
 		for _, d := range devices {
-			if d.IsPrimary {
+			if d.IsPrimaryNode {
 				primaries++
 			}
 		}
@@ -102,10 +103,10 @@ func CheckClusterHealth(ctx context.Context, env Env, expectedSize int) error {
 	return nil
 }
 
-func hasSinglePrimary(ds []Device) bool {
+func hasSinglePrimary(ds []api.DeviceInfo) bool {
 	count := 0
 	for _, d := range ds {
-		if d.IsPrimary {
+		if d.IsPrimaryNode {
 			count++
 		}
 	}
@@ -123,15 +124,8 @@ func combineErrors(errs []error) error {
 	return errors.New(msg)
 }
 
-// Device represents an entry from /devices.
-type Device struct {
-	Address   string `json:"address"`
-	Name      string `json:"name"`
-	IsPrimary bool   `json:"is_primary"`
-}
-
 // GetDevices fetches devices from the VIP.
-func GetDevices(ctx context.Context, baseURL string) ([]Device, error) {
+func GetDevices(ctx context.Context, baseURL string) ([]api.DeviceInfo, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/devices", nil)
 	if err != nil {
 		return nil, err
@@ -144,7 +138,7 @@ func GetDevices(ctx context.Context, baseURL string) ([]Device, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("devices status=%d", resp.StatusCode)
 	}
-	var ds []Device
+	var ds []api.DeviceInfo
 	if err := json.NewDecoder(resp.Body).Decode(&ds); err != nil {
 		return nil, err
 	}
