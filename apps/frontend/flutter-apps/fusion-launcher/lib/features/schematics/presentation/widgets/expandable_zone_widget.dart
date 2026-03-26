@@ -178,7 +178,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 ),
                 child: FusionArrowPopup(
                   semanticId: 'add_speakers_menu',
-                  content: SpeakerQueryPopup(
+                  content: SpeakerSelectionPopup(
                     isFromBuildingPage: false,
                     zoneId: widget.zoneId,
                   ),

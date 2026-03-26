@@ -8,8 +8,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../projects/viewmodel/building_page_viewmodel.dart';
-import 'auto_place_dialog.dart';
 import '../speaker_selection_popup.dart';
+import 'auto_place_dialog.dart';
 
 class SpeakerSelectionWidget extends StatefulWidget {
   const SpeakerSelectionWidget({super.key});
@@ -93,7 +93,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                       padding: EdgeInsets.zero,
                                       child: Theme(
                                         data: ThemeData.dark(),
-                                        child: const SpeakerQueryPopup(
+                                        child: const SpeakerSelectionPopup(
                                           isFromBuildingPage: true,
                                         ),
                                       ),
@@ -235,7 +235,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                             padding: EdgeInsets.zero,
                                             child: Theme(
                                               data: ThemeData.dark(),
-                                              child: const SpeakerQueryPopup(isFromBuildingPage: true),
+                                              child: const SpeakerSelectionPopup(isFromBuildingPage: true),
                                             ),
                                           ),
                                         ];
