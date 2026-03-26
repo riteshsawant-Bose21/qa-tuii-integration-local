@@ -9,6 +9,7 @@ import 'package:fusion_lib/models/dock_item_config.dart';
 import 'package:nested/nested.dart';
 
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../../../speaker_selection_popup/views/widgets/side_speaker_section.dart';
 import '../../../../wiring_design/view/port_connection/port_connection_overlay.dart';
 import '../../../view_model/spl_viewmodel.dart';
 import '../../../viewmodel/building_page_viewmodel.dart';
@@ -18,7 +19,6 @@ import '../../../widget/building/side_panel_widgets/equipment_location/equipment
 import '../../../widget/building/side_panel_widgets/listening_areas_panel.dart';
 import '../../../widget/building/side_panel_widgets/properties_panel.dart';
 import '../../../widget/building/side_panel_widgets/zone_and_listening_area.dart';
-import '../../../../speaker_selection_popup/views/widgets/side_speaker_section.dart';
 
 class BuildingPage extends StatelessWidget {
   const BuildingPage({super.key, required this.floorCanvasController, required this.appBarHeight});
@@ -135,7 +135,7 @@ class BuildingPage extends StatelessWidget {
 
                             if (toolbarMode == ToolbarMode.acoustics && currentSelectedListeningAreaId != null)
                               FusionResizableSidebarSection(
-                                sementicId: 'building_plan_equipment_location',
+                                sementicId: 'building_plan_speaker_selection',
                                 enableExpandCollapse: false,
                                 stickToBottom: true,
                                 builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
