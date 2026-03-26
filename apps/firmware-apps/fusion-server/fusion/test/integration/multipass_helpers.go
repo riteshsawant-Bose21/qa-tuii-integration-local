@@ -7,10 +7,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -144,7 +147,109 @@ func StartInstance(ctx context.Context, name string) error {
 	if err != nil {
 		return fmt.Errorf("multipass start %s failed: %v; output: %s", name, err, string(out))
 	}
+
+	env := LoadEnv()
+	if err := waitForInstanceReady(ctx, name, env); err != nil {
+		return fmt.Errorf("instance %s did not become ready after start: %w", name, err)
+	}
 	return nil
+}
+
+func waitForInstanceReady(ctx context.Context, name string, env Env) error {
+	var instanceIPs []string
+
+	if err := PollUntil(ctx, 1*time.Second, func() (bool, error) {
+		ips, err := getRunningInstanceIPv4(ctx, name)
+		if err != nil {
+			return false, nil
+		}
+		if len(ips) == 0 {
+			return false, nil
+		}
+		instanceIPs = prioritizeNodeIPs(ips, env.VIP)
+		return true, nil
+	}); err != nil {
+		return fmt.Errorf("timed out waiting for running state/IP: %w", err)
+	}
+
+	if err := PollUntil(ctx, 1*time.Second, func() (bool, error) {
+		for _, ip := range instanceIPs {
+			ok, err := isNodeServiceReady(ctx, ip, env.Port)
+			if err == nil && ok {
+				return true, nil
+			}
+		}
+		return false, nil
+	}); err != nil {
+		return fmt.Errorf("timed out waiting for node service health on %v: %w", instanceIPs, err)
+	}
+
+	return nil
+}
+
+func getRunningInstanceIPv4(ctx context.Context, name string) ([]string, error) {
+	cmd := exec.CommandContext(ctx, "multipass", "info", name, "--format", "json")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("multipass info %s failed: %v; output: %s", name, err, string(out))
+	}
+
+	var payload struct {
+		Info map[string]struct {
+			State string   `json:"state"`
+			IPv4  []string `json:"ipv4"`
+		} `json:"info"`
+	}
+
+	if err := json.Unmarshal(out, &payload); err != nil {
+		return nil, fmt.Errorf("parse multipass info for %s failed: %w", name, err)
+	}
+
+	entry, ok := payload.Info[name]
+	if !ok {
+		return nil, fmt.Errorf("instance %s not found in multipass info", name)
+	}
+
+	if !strings.EqualFold(entry.State, "running") {
+		return nil, fmt.Errorf("instance %s state=%s", name, entry.State)
+	}
+
+	return entry.IPv4, nil
+}
+
+func prioritizeNodeIPs(ips []string, vip string) []string {
+	out := make([]string, 0, len(ips))
+	for _, ip := range ips {
+		if ip == "" || ip == vip {
+			continue
+		}
+		out = append(out, ip)
+	}
+	if len(out) == 0 {
+		for _, ip := range ips {
+			if ip != "" {
+				out = append(out, ip)
+			}
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+func isNodeServiceReady(ctx context.Context, ip, port string) (bool, error) {
+	url := fmt.Sprintf("http://%s:%s/cluster/status", ip, port)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return false, err
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	return resp.StatusCode == http.StatusOK, nil
 }
 
 // GetMultipassInstances returns map from IP -> instance name for quick resolution.

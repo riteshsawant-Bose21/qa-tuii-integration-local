@@ -118,27 +118,24 @@ func NewVIPMonitor(netIface string, isLocal bool, cluster transport.ClusterInter
 	}
 }
 
-func parseEnabledValue(enabledValue string) (bool, error) {
+func parseMasterEligibilityPriority(enabledValue string) (int, error) {
 	normalized := strings.TrimSpace(strings.ToLower(enabledValue))
 	switch normalized {
-	case "1", "true":
-		return true, nil
-	case "0", "false":
-		return false, nil
+	case  "true":
+		return api.VIPEligiblePriority, nil
+	case "default":
+		return api.VIPDefaultPriority, nil
+	case "false":
+		return api.VIPIneligiblePriority, nil
 	default:
-		return false, fmt.Errorf("invalid enabled value %q; expected true|false|1|0", enabledValue)
+		return 0, fmt.Errorf("invalid enabled value %q; expected true|false|default", enabledValue)
 	}
 }
 
-func (m *VIPMonitor) setMasterEligibility(enabled bool) error {
+func (m *VIPMonitor) setMasterEligibility(priority int, enabledValue string) error {
 	if m.isLocal {
-		logging.GetLogger().Debug("Skipping keepalived priority update in local mode (enabled=%v)", enabled)
+		logging.GetLogger().Debug("Skipping keepalived priority update in local mode (enabled=%q priority=%d)", enabledValue, priority)
 		return nil
-	}
-
-	priority := api.VIPIneligiblePriority
-	if enabled {
-		priority = api.VIPEligiblePriority
 	}
 
 	if err := vip.WritePriorityToKeepalivedConfig(m.configPath, priority); err != nil {
@@ -838,13 +835,13 @@ func (m *VIPMonitor) HandleSetMasterEligibilityLocal(w http.ResponseWriter, r *h
 		return
 	}
 
-	enabled, err := parseEnabledValue(enabledValue)
+	priority, err := parseMasterEligibilityPriority(enabledValue)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := m.setMasterEligibility(enabled); err != nil {
+	if err := m.setMasterEligibility(priority, enabledValue); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -871,7 +868,7 @@ func (m *VIPMonitor) HandleSetMasterEligibility(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	enabled, err := parseEnabledValue(enabledValue)
+	priority, err := parseMasterEligibilityPriority(enabledValue)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -881,7 +878,7 @@ func (m *VIPMonitor) HandleSetMasterEligibility(w http.ResponseWriter, r *http.R
 	endpoint = strings.Replace(endpoint, "{enabled}", url.QueryEscape(enabledValue), 1)
 
 	localFn := func(payload []byte) error {
-		return m.setMasterEligibility(enabled)
+		return m.setMasterEligibility(priority, enabledValue)
 	}
 
 	remoteFn := func(payload []byte, targetURL string) error {

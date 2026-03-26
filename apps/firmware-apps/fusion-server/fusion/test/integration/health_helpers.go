@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"fusion/internal/api"
 	"net/http"
+	"sort"
 	"time"
 )
 
@@ -36,26 +37,15 @@ func CheckClusterHealth(ctx context.Context, env Env, expectedSize int) error {
 		return nil
 	}
 
-	// 1. VIP reachability (/cluster/status should be 200)
+	// 1. Node-first reachability (/cluster/status should be 200 on any node; VIP last fallback)
 	func() {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, env.BaseURL()+"/cluster/status", nil)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("cluster status request build: %w", err))
-			return
-		}
-		resp, err := httpClient.Do(req)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("cluster status request: %w", err))
-			return
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			errs = append(errs, fmt.Errorf("/cluster/status status=%d", resp.StatusCode))
+		if err := checkClusterStatusNodePreferred(ctx, env); err != nil {
+			errs = append(errs, err)
 		}
 	}()
 
-	// 2. Devices: exact count == expectedSize, exactly one primary
-	devices, err := GetDevices(ctx, env.BaseURL())
+	// 2. Devices: query nodes directly first; use VIP only as fallback.
+	devices, err := GetDevicesNodePreferred(ctx, env)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("get devices: %w", err))
 	} else {
@@ -103,6 +93,89 @@ func CheckClusterHealth(ctx context.Context, env Env, expectedSize int) error {
 	return nil
 }
 
+func nodeBaseURLs(ctx context.Context, env Env) []string {
+	ipToInstance, err := GetMultipassInstances(ctx)
+	if err != nil {
+		return nil
+	}
+
+	seen := make(map[string]struct{})
+	urls := make([]string, 0, len(ipToInstance))
+	for ip := range ipToInstance {
+		if ip == "" || ip == env.VIP {
+			continue
+		}
+		if _, ok := seen[ip]; ok {
+			continue
+		}
+		seen[ip] = struct{}{}
+		urls = append(urls, fmt.Sprintf("http://%s:%s", ip, env.Port))
+	}
+	sort.Strings(urls)
+	return urls
+}
+
+func GetDevicesNodePreferred(ctx context.Context, env Env) ([]api.DeviceInfo, error) {
+	var firstErr error
+	for _, baseURL := range nodeBaseURLs(ctx, env) {
+		ds, err := GetDevices(ctx, baseURL)
+		if err == nil {
+			return ds, nil
+		}
+		if firstErr == nil {
+			firstErr = err
+		}
+	}
+
+	ds, err := GetDevices(ctx, env.BaseURL())
+	if err == nil {
+		return ds, nil
+	}
+	if firstErr != nil {
+		return nil, fmt.Errorf("node-first devices query failed (node=%v, vip=%w)", firstErr, err)
+	}
+	return nil, err
+}
+
+func checkClusterStatusNodePreferred(ctx context.Context, env Env) error {
+	var firstErr error
+	for _, baseURL := range nodeBaseURLs(ctx, env) {
+		if err := checkClusterStatus(ctx, baseURL); err == nil {
+			return nil
+		} else if firstErr == nil {
+			firstErr = err
+		}
+	}
+
+	if err := checkClusterStatus(ctx, env.BaseURL()); err != nil {
+		if firstErr != nil {
+			return fmt.Errorf("cluster status failed (node=%v, vip=%w)", firstErr, err)
+		}
+		return err
+	}
+
+	return nil
+}
+
+func checkClusterStatus(ctx context.Context, baseURL string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/cluster/status", nil)
+	if err != nil {
+		return fmt.Errorf("cluster status request build: %w", err)
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("cluster status request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("%s/cluster/status status=%d", baseURL, resp.StatusCode)
+	}
+
+	return nil
+}
+
 func hasSinglePrimary(ds []api.DeviceInfo) bool {
 	count := 0
 	for _, d := range ds {
@@ -147,10 +220,9 @@ func GetDevices(ctx context.Context, baseURL string) ([]api.DeviceInfo, error) {
 
 func (fc FusionCluster) WaitForClusterSize(ctx context.Context, n int) error {
 	return PollUntil(ctx, 1*time.Second, func() (bool, error) {
-		devices, err := GetDevices(ctx, fc.Env.BaseURL())
+		devices, err := GetDevicesNodePreferred(ctx, fc.Env)
 		if err != nil {
-			// logging.GetLogger().Info("WaitForClusterSize: GetDevices error from %s: %v", env.BaseURL(), err)
-			return false, err
+			return false, nil
 		}
 		if len(devices) >= n {
 			return true, nil
