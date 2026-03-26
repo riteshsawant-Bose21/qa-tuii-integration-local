@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"fusion/internal/api"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 )
@@ -110,11 +111,43 @@ func (fc *FusionCluster) Refresh(ctx context.Context) error {
 // buildFusionCluster loads env, discovers multipass instances, devices, members, and correlates to nodes.
 func buildFusionCluster(ctx context.Context) (FusionCluster, error) {
 	env := LoadEnv()
-	nodes, err := buildNodeMappings(ctx, env)
-	if err != nil {
-		return FusionCluster{}, err
+
+	const (
+		maxRetries = 10
+		retryDelay = 5 * time.Second
+	)
+
+	var lastErr error
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		nodes, err := buildNodeMappings(ctx, env)
+		if err == nil {
+			return FusionCluster{Env: env, Nodes: nodes}, nil
+		}
+
+		lastErr = err
+		if !isTransientMappingError(err) || attempt == maxRetries {
+			break
+		}
+
+		select {
+		case <-ctx.Done():
+			return FusionCluster{}, ctx.Err()
+		case <-time.After(retryDelay):
+		}
 	}
-	return FusionCluster{Env: env, Nodes: nodes}, nil
+
+	return FusionCluster{}, lastErr
+}
+
+func isTransientMappingError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errMsg := strings.ToLower(err.Error())
+	return strings.Contains(errMsg, "context deadline exceeded") ||
+		strings.Contains(errMsg, "client.timeout exceeded") ||
+		strings.Contains(errMsg, "timeout")
 }
 
 // buildNodeMappings constructs unified mappings from current environment.
