@@ -1600,9 +1600,6 @@ static int gpt_probe(struct platform_device *pdev)
 	struct resource *res;
 	int irq, ret;
 	struct i2c_adapter *adapter;
-	struct i2c_board_info dac_info = {
-		I2C_BOARD_INFO("mcp4725", DEFAULT_DAC_I2C_ADDR),
-	};
 
 	g = devm_kzalloc(&pdev->dev, sizeof(*g), GFP_KERNEL);
 	if (!g)
@@ -1670,8 +1667,11 @@ static int gpt_probe(struct platform_device *pdev)
 		goto err_disable_clks;
 	}
 
-	/* Create DAC client. */
-	g->dac_client = i2c_new_client_device(adapter, &dac_info);
+	/*
+	 * Use a dummy client so the kernel does not try to bind a real
+	 * MCP4725 driver when we only need raw I2C access for DAC writes.
+	 */
+	g->dac_client = i2c_new_dummy_device(adapter, DEFAULT_DAC_I2C_ADDR);
 	if (IS_ERR(g->dac_client)) {
 		ret = PTR_ERR(g->dac_client);
 		g->dac_client = NULL;
