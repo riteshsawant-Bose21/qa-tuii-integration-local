@@ -178,4 +178,7 @@ runs:
         curl.exe -k --ssl-no-revoke -f -u "$username`:$password" -T $buildPath $nexusUrl
         Write-Output "flutter-windows: https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-$version.exe"
         Write-Output "flutter-automation-build-windows: https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-Automation-Build-$version.exe"
+
+        Write-Output "Cleaning up C:\Users\Administrator\Documents\fusion-monorepo"
+        robocopy C:\temp\empty C:\Users\Administrator\Documents\fusion-monorepo /MIR /XD .moon
         
