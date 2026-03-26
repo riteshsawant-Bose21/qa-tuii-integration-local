@@ -147,23 +147,7 @@ func GetDevices(ctx context.Context, baseURL string) ([]api.DeviceInfo, error) {
 
 func (fc FusionCluster) WaitForClusterSize(ctx context.Context, n int) error {
 	return PollUntil(ctx, 1*time.Second, func() (bool, error) {
-		for _, base := range fc.NodeURLs() {
-			devices, err := GetDevices(ctx, base)
-			if err != nil {
-				fmt.Printf("WaitForClusterSize: GetDevices error from %s: %v\n", base, err)
-				continue
-			}
-			if len(devices) >= n {
-				return true, nil
-			}
-		}
-		return false, nil
-	})
-}
-
-func WaitForClusterSizeFromVIP(ctx context.Context, env Env, n int) error {
-	return PollUntil(ctx, 1*time.Second, func() (bool, error) {
-		devices, err := GetDevices(ctx, env.BaseURL())
+		devices, err := GetDevices(ctx, fc.Env.BaseURL())
 		if err != nil {
 			// logging.GetLogger().Info("WaitForClusterSize: GetDevices error from %s: %v", env.BaseURL(), err)
 			return false, err

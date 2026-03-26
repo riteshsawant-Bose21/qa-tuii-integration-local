@@ -6,8 +6,8 @@ package integration
 import (
 	"context"
 	"fmt"
+	"fusion/internal/api"
 	"sort"
-	"strings"
 	"testing"
 	"time"
 )
@@ -22,11 +22,7 @@ type FusionCluster struct {
 type FusionNode struct {
 	MultipassName string
 	MultipassIPs  []string
-	FusionName    string
-	FusionAddr    string
-	MemberName    string
-	MemberAddr    string
-	IsPrimary     bool
+	Device        api.DeviceInfo
 }
 
 // NewTestCluster builds, resets, restarts and validates a cluster for tests.
@@ -148,30 +144,22 @@ func buildNodeMappings(ctx context.Context, env Env) ([]FusionNode, error) {
 
 	var mappings []FusionNode
 	for _, d := range devices {
-		fusionIP := d.Address
-		if strings.Contains(fusionIP, ":") {
-			fusionIP = strings.Split(fusionIP, ":")[0]
-		}
-		instName := ipToInstance[fusionIP]
+		instName := ipToInstance[d.Address]
 
 		mappings = append(mappings, FusionNode{
 			MultipassName: instName,
 			MultipassIPs:  instanceToIPs[instName],
-			FusionName:    d.Name,
-			FusionAddr:    fusionIP,
-			MemberName:    d.Name,
-			MemberAddr:    fusionIP,
-			IsPrimary:     d.IsPrimaryNode,
+			Device:        d,
 		})
 	}
 	sort.Slice(mappings, func(i, j int) bool {
-		if mappings[i].IsPrimary && !mappings[j].IsPrimary {
+		if mappings[i].Device.IsPrimaryNode && !mappings[j].Device.IsPrimaryNode {
 			return true
 		}
-		if mappings[j].IsPrimary && !mappings[i].IsPrimary {
+		if mappings[j].Device.IsPrimaryNode && !mappings[i].Device.IsPrimaryNode {
 			return false
 		}
-		return mappings[i].FusionAddr < mappings[j].FusionAddr
+		return mappings[i].Device.Address < mappings[j].Device.Address
 	})
 	return mappings, nil
 }
@@ -192,10 +180,43 @@ func (fc FusionCluster) instanceNames() []string {
 func (fc FusionCluster) NodeURLs() []string {
 	urls := make([]string, 0, len(fc.Nodes))
 	for _, n := range fc.Nodes {
-		urls = append(urls, fmt.Sprintf("http://%s:%s", n.FusionAddr, fc.Env.Port))
+		urls = append(urls, fmt.Sprintf("http://%s:%s", n.Device.Address, fc.Env.Port))
 	}
 	sort.Strings(urls)
 	return urls
+}
+
+// Primary fetches devices from the /devices API and returns the single primary node.
+// It fails if there is not exactly one primary device.
+func (fc FusionCluster) Primary() (FusionNode, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	devices, err := GetDevices(ctx, fc.Env.BaseURL())
+	if err != nil {
+		return FusionNode{}, fmt.Errorf("get devices: %w", err)
+	}
+
+	var primary *api.DeviceInfo
+	for i := range devices {
+		if devices[i].IsPrimaryNode {
+			if primary != nil {
+				return FusionNode{}, fmt.Errorf("expected exactly one primary, found multiple")
+			}
+			primary = &devices[i]
+		}
+	}
+	if primary == nil {
+		return FusionNode{}, fmt.Errorf("expected exactly one primary, found none")
+	}
+
+	for _, n := range fc.Nodes {
+		if n.Device.Address == primary.Address {
+			return n, nil
+		}
+	}
+	// Fallback: node not yet in mapping, construct from device info
+	return FusionNode{Device: *primary}, nil
 }
 
 // // StopAll stops all discovered multipass instances.

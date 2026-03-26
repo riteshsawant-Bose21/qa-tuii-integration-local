@@ -48,7 +48,7 @@ func RestartCluster(ctx context.Context, env Env, expected int) error {
 		return err
 	}
 	// Allow convergence under the parent ctx
-	return WaitForClusterSizeFromVIP(ctx, env, expected)
+	return (FusionCluster{Env: env}).WaitForClusterSize(ctx, expected)
 }
 
 // StopInstancesParallel stops instances concurrently up to maxParallel.
