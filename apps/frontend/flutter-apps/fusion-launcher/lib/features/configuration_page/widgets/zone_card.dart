@@ -1383,7 +1383,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
                             FusionAppText(
                               text: 'SOURCES',
-                              semanticId: FusionTestKeys.instance.SourceText,
+                              semanticId: FusionTestKeys.instance.sourceText,
                               maxLine: 1,
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 fontSize: 11,
@@ -1416,7 +1416,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                     child: Row(
                                       children: <Widget>[
                                         FusionCheckbox(
-                                          semanticId: "${FusionTestKeys.instance.SrcSetListCheckbox}_${index}",
+                                          semanticId: "${FusionTestKeys.instance.srcSetListCheckbox}_${index}",
                                           value: isSelected,
                                           onChanged: () {
                                             if (isPrioritySource) return;
@@ -1432,7 +1432,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                             children: <Widget>[
                                               Expanded(
                                                 child: FusionAppText(
-                                                  semanticId: "${FusionTestKeys.instance.SrcListTxt}_${index}",
+                                                  semanticId: "${FusionTestKeys.instance.srcListTxt}_${index}",
                                                   text: src.name,
                                                   maxLine: 1,
                                                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
@@ -1475,7 +1475,7 @@ class _ZoneCardState extends State<ZoneCard> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             FusionAppText(
-                              semanticId: FusionTestKeys.instance.SourceSetText,
+                              semanticId: FusionTestKeys.instance.sourceSetText,
                               text: 'SOURCE SETS',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 fontSize: 11,
@@ -1504,7 +1504,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                   child: Row(
                                     children: <Widget>[
                                       FusionCheckbox(
-                                        semanticId: "${FusionTestKeys.instance.SourceSetListCheckbox}_$index",
+                                        semanticId: "${FusionTestKeys.instance.sourceSetListCheckbox}_$index",
                                         value: isSelected,
                                         onChanged: () {
                                           isSelected ? _tempSelectedItems.remove(setItem) : _tempSelectedItems.add(setItem);
@@ -1515,7 +1515,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                       const SizedBox(width: 6),
                                       Expanded(
                                         child: FusionAppText(
-                                          semanticId: "${FusionTestKeys.instance.SrcSetListTxt}_$index",
+                                          semanticId: "${FusionTestKeys.instance.srcSetListTxt}_$index",
                                           text: '${setItem.name} (${sourcesInSet.length} sources)',
                                           maxLine: 1,
                                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
