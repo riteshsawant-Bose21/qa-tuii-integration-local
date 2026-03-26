@@ -42,6 +42,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"go.uber.org/zap"
 )
 
 // Constants for frequently used literals
@@ -289,9 +290,10 @@ func (suite *ProjectIntegrationTestSuite) setupAPI() error {
 
 	// Create mock auth service and middleware
 	authSvc := &mockAuthService{}
+	firmwareSvc := &mockFirmwareService{}
 	authMiddleware := &mockMiddlewareStruct{}
 
-	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC, authSvc, authMiddleware, loggers)
+	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC, authSvc, firmwareSvc, authMiddleware, loggers)
 	if err != nil {
 		return fmt.Errorf("failed to initialize API server: %w", err)
 	}
@@ -3337,4 +3339,30 @@ type mockMiddlewareStruct struct{}
 
 func (m *mockMiddlewareStruct) Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) { c.Next() }
+}
+
+type mockFirmwareService struct{}
+
+func (m *mockFirmwareService) NotifyBundleUpload(_ context.Context, _ *types.NotifyBundleUploadPayload, _ *zap.Logger) (*types.BundleResponse, error) {
+	return nil, nil
+}
+
+func (m *mockFirmwareService) ListBundles(_ context.Context, _ *string, _, _ int) (*types.BundleListResponse, error) {
+	return nil, nil
+}
+
+func (m *mockFirmwareService) ApproveBundle(_ context.Context, _ string, _ string, _ string, _ *zap.Logger) error {
+	return nil
+}
+
+func (m *mockFirmwareService) CheckForUpdate(_ context.Context, _ *types.FirmwareUpdateRequest, _ *zap.Logger) (*types.FirmwareUpdateResponse, error) {
+	return nil, nil
+}
+
+func (m *mockFirmwareService) GetBundleDownloadURL(_ context.Context, _ string, _ *zap.Logger) (*types.DownloadArtifactResponse, error) {
+	return nil, nil
+}
+
+func (m *mockFirmwareService) InsertBundleUpdateStatus(_ context.Context, _ *types.LogBundleUpdateStatusPayload, _ *zap.Logger) error {
+	return nil
 }

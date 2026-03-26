@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	inbuiltlog "log"
 	"net/url"
@@ -92,7 +93,8 @@ func init() {
 		logger.Fatal("Failed to get processing config", zap.Error(err))
 	}
 
-	s3Handler, err := cloudfs.NewS3Client(context.Background(), s3Region)
+	// Initialize S3 client
+	s3Handler, err := cloudfs.NewS3Client(context.Background(), syncCfg.S3.Region)
 	if err != nil {
 		logger.Fatal("Failed to initialize S3 client", zap.Error(err))
 	}
@@ -117,8 +119,6 @@ func init() {
 	if productSVC == nil {
 		logger.Fatal("Failed to initialize product service")
 	}
-
-	logger.Info("Lambda cold start init complete.")
 }
 
 // inferSyncType determines the sync type from the S3 object key path.
@@ -139,82 +139,93 @@ func inferSyncType(bucket string) (string, error) {
 	}
 }
 
-// handler is invoked by the Lambda runtime for each S3 event notif.
-// If it returns non-nil value, it tells Lambda to retry
-func handler(ctx context.Context, s3Event events.S3Event) error {
-	for _, record := range s3Event.Records {
+// s3EventBridgeDetail holds the S3-specific fields from an EventBridge "Object Created" event.
+type s3EventBridgeDetail struct {
+	Bucket struct {
+		Name string `json:"name"`
+	} `json:"bucket"`
+	Object struct {
+		Key string `json:"key"`
+	} `json:"object"`
+}
 
-		key, err := url.QueryUnescape(record.S3.Object.Key)
+// handler is invoked by the Lambda runtime for each S3 EventBridge notification.
+// If it returns non-nil value, it tells Lambda to retry.
+func handler(ctx context.Context, event events.CloudWatchEvent) error {
+	var detail s3EventBridgeDetail
+	if err := json.Unmarshal(event.Detail, &detail); err != nil {
+		return fmt.Errorf("failed to unmarshal EventBridge detail: %w", err)
+	}
 
-		if err != nil {
-			logger.Error("failed to URL-decode S3 key",
-				zap.String("raw_key", record.S3.Object.Key),
-				zap.Error(err),
-			)
-			return fmt.Errorf("invalid S3 key encoding %q: %w", record.S3.Object.Key, err)
-		}
-
-		bucket := record.S3.Bucket.Name
-		region := record.AWSRegion
-
-		logger.Info("Received S3 event",
-			zap.String("bucket", bucket),
-			zap.String("key", key),
-			zap.String("region", region),
-			zap.String("eventName", record.EventName),
+	key, err := url.QueryUnescape(detail.Object.Key)
+	if err != nil {
+		logger.Error("failed to URL-decode S3 key",
+			zap.String("raw_key", detail.Object.Key),
+			zap.Error(err),
 		)
+		return fmt.Errorf("invalid S3 key encoding %q: %w", detail.Object.Key, err)
+	}
 
-		syncType, err := inferSyncType(bucket)
-		if err != nil {
-			logger.Error("failed to infer sync type",
-				zap.String("key", key),
-				zap.Error(err),
-			)
-			return err
-		}
+	bucket := detail.Bucket.Name
+	region := event.Region
 
-		syncRequest := &types.SyncRequest{
-			SyncType:         syncType,
-			SyncOperation:    "scheduled_sync",
-			SourceType:       "s3",
-			S3Bucket:         bucket,
-			S3Key:            key,
-			Region:           region,
-			EnableValidation: true,
-		}
+	logger.Info("Received S3 EventBridge event",
+		zap.String("bucket", bucket),
+		zap.String("key", key),
+		zap.String("region", region),
+		zap.String("detailType", event.DetailType),
+	)
 
-		result, err := productSVC.Execute(ctx, syncRequest)
-		if err != nil {
-			logger.Error("sync execution failed",
-				zap.String("bucket", bucket),
-				zap.String("key", key),
-				zap.String("sync_type", syncType),
-				zap.Error(err),
-			)
-			// Non-nil error -> Lambda retries according to retry policy.
-			return fmt.Errorf("sync failed for s3://%s/%s: %w", bucket, key, err)
-		}
+	syncType, err := inferSyncType(bucket)
+	if err != nil {
+		logger.Error("failed to infer sync type",
+			zap.String("key", key),
+			zap.Error(err),
+		)
+		return err
+	}
 
-		logger.Info("sync completed",
+	syncRequest := &types.SyncRequest{
+		SyncType:         syncType,
+		SyncOperation:    "scheduled_sync",
+		SourceType:       "s3",
+		S3Bucket:         bucket,
+		S3Key:            key,
+		Region:           region,
+		EnableValidation: true,
+	}
+
+	result, err := productSVC.Execute(ctx, syncRequest)
+	if err != nil {
+		logger.Error("sync execution failed",
 			zap.String("bucket", bucket),
 			zap.String("key", key),
 			zap.String("sync_type", syncType),
-			zap.Int("total_items", result.TotalItems),
-			zap.Int("successful", result.Successful),
-			zap.Int("failed", result.Failed),
-			zap.Duration("duration", result.Duration),
+			zap.Error(err),
 		)
+		// Non-nil error -> Lambda retries according to retry policy.
+		return fmt.Errorf("sync failed for s3://%s/%s: %w", bucket, key, err)
+	}
 
-		if result.Failed > 0 {
-			logger.Warn("sync completed with partial failures",
-				zap.Int("failed_count", result.Failed),
-				zap.Strings("validation_warnings", result.ValidationWarnings),
-			)
-			return fmt.Errorf(
-				"sync completed with %d item failure(s) for s3://%s/%s",
-				result.Failed, bucket, key,
-			)
-		}
+	logger.Info("sync completed",
+		zap.String("bucket", bucket),
+		zap.String("key", key),
+		zap.String("sync_type", syncType),
+		zap.Int("total_items", result.TotalItems),
+		zap.Int("successful", result.Successful),
+		zap.Int("failed", result.Failed),
+		zap.Duration("duration", result.Duration),
+	)
+
+	if result.Failed > 0 {
+		logger.Warn("sync completed with partial failures",
+			zap.Int("failed_count", result.Failed),
+			zap.Strings("validation_warnings", result.ValidationWarnings),
+		)
+		return fmt.Errorf(
+			"sync completed with %d item failure(s) for s3://%s/%s",
+			result.Failed, bucket, key,
+		)
 	}
 
 	return nil

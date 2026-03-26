@@ -103,6 +103,10 @@ type GetAllProjectsParams struct {
 	SortOrder  string `form:"sort_order" validate:"omitempty,sort_order" example:"asc"`
 }
 
+type GetProjectByIDResponse struct {
+	Project Project `json:"project"`
+}
+
 // GetAllProjectsResponse represents the response for retrieving all projects with pagination.
 type GetAllProjectsResponse struct {
 	Data       []Project `json:"data"`

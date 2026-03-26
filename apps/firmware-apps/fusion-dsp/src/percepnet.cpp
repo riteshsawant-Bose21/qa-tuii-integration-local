@@ -35,7 +35,6 @@ public:
 private:
 	// --- constants and terminals ---
 	int_fast32_t channels;
-	int_fast32_t frame_size;
 
 	bosepro::DspSignalMemory<const float *[]> in;
 	bosepro::DspSignalMemory<float *[]> out;
@@ -123,7 +122,6 @@ PercepNet::PercepNet(const bosepro::BlockConfiguration &configuration)
 	: bosepro::Algorithm(configuration)
 {
 	get_property("channels", channels);
-	get_property("frame_size", frame_size);
 
 	assign_terminal("in", in);
 	assign_terminal("out", out);
@@ -137,7 +135,7 @@ PercepNet::PercepNet(const bosepro::BlockConfiguration &configuration)
 
 	// right now only works when frame_size = FRAME_SIZE = 480,
 	// print error if frame_size is different
-	if (frame_size != FRAME_SIZE)
+	if (get_frame_size() != FRAME_SIZE)
 		SPDLOG_ERROR("frame size for the percepnet model can only be 480");
 
 	curr_fft = std::make_unique<fft::Fft>(WINDOW_SIZE);

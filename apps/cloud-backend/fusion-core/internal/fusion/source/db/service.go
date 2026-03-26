@@ -38,7 +38,12 @@ func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.So
 		logger.Error("failed to query sources", zap.Error(err))
 		return nil, fmt.Errorf("failed to query sources: %w", err)
 	}
-	defer rows.Close()
+
+	defer func() {
+    if err := rows.Close(); err != nil {
+        logger.Error("failed to close source rows", zap.Error(err))
+    }
+	}()
 
 	var sources []types.SourceItem
 	for rows.Next() {
