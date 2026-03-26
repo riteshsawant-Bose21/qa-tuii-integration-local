@@ -200,8 +200,9 @@ struct fusion_gpt
   bool cal_config_checked;
 
   /* Sticky startup-ready flag for downstream GPT clients. */
-  bool discipline_ready;
-  u32 lock_streak;
+	bool discipline_ready;
+	u32 lock_streak;
+	unsigned long pps_diag_next_jiffies;
 };
 
 
@@ -447,6 +448,7 @@ static void gpt_reset_timing_state_locked(struct fusion_gpt *g)
 	WRITE_ONCE(g->si_gain_pending, false);
 	WRITE_ONCE(g->discipline_ready, false);
 	g->lock_streak = 0;
+	g->pps_diag_next_jiffies = jiffies + HZ;
 	g->cal_state = CAL_ENABLE ? CAL_IDLE : CAL_DONE;
 	g->cal_probe_idx = 0;
 	g->cal_settle_left = 0;
@@ -628,6 +630,11 @@ int fusion_gpt_reset_timing_state(void)
 {
 	struct fusion_gpt *g;
 	unsigned long flags;
+	u32 prev_pps_seq;
+	long prev_freq_error;
+	bool prev_epoch_valid, prev_aligned, prev_ready, prev_pending;
+	enum cal_state prev_cal_state;
+	bool changed;
 
 	mutex_lock(&gpt_singleton_lock);
 	g = gpt_singleton;
@@ -636,10 +643,28 @@ int fusion_gpt_reset_timing_state(void)
 		return -ENODEV;
 
 	raw_spin_lock_irqsave(&g->pps_lock, flags);
+	prev_pps_seq = g->pps_seq;
+	prev_freq_error = g->latest_freq_error;
+	prev_epoch_valid = g->phc_epoch_valid;
+	prev_aligned = g->phc_aligned;
+	prev_ready = READ_ONCE(g->discipline_ready);
+	prev_pending = g->pending_future_anchor;
+	prev_cal_state = g->cal_state;
+	changed = g->pps_valid || g->if2_valid || g->phc_epoch_valid ||
+		  g->pending_future_anchor || g->pps_seq ||
+		  prev_ready || g->lock_streak ||
+		  (g->cal_state != CAL_IDLE &&
+		   g->cal_state != CAL_DONE &&
+		   g->cal_state != CAL_FAIL) ||
+		  g->latest_freq_error || g->cumulative_error_ticks_total ||
+		  g->cumulative_error_ticks_locked || g->error_integrator;
 	gpt_reset_timing_state_locked(g);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
-	pr_info("fusion_gpt: timing state reset\n");
+	if (changed)
+		pr_info("fusion_gpt: timing reset reason=api prev{pps_seq=%u epoch=%u aligned=%u ready=%u pending=%u cal=%u freq_err=%ld}\n",
+			prev_pps_seq, prev_epoch_valid, prev_aligned, prev_ready,
+			prev_pending, prev_cal_state, prev_freq_error);
 	return 0;
 }
 EXPORT_SYMBOL(fusion_gpt_reset_timing_state);
@@ -908,8 +933,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 {
 	struct fusion_gpt *g = dev_id;
 	u32 sr = rdl(g, GPT_SR);
-  u32 clr = 0;
-  static DEFINE_RATELIMIT_STATE(_rs, HZ, 1);
+	u32 clr = 0;
 	if (!sr) return IRQ_NONE;
 
 	/* extend 64-bit ticks on any event */
@@ -1188,17 +1212,22 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 	              rms_jitter = int_sqrt(g->sq_err_sum / g->err_count);
           }
 
-	          if (__ratelimit(&_rs)) {
-	              if (pps_diag_enable)
+	          if (pps_diag_enable) {
+	              if (time_after_eq(jiffies, g->pps_diag_next_jiffies)) {
 	                      pr_info("fusion_gpt: [PPS] diff=%llu ticks err=%ld ticks rms=%u ticks cum=%lld ticks cum_lock=%lld ticks 48k_off=%ldns dac=%d\n",
 	                              diff, freq_error, rms_jitter,
 	                              (long long)g->cumulative_error_ticks_total,
 	                              (long long)g->cumulative_error_ticks_locked,
 	                              if2_offset_ns, g->dac_target);
-
+	                      g->sq_err_sum = 0;
+	                      g->err_count = 0;
+	                      g->pps_diag_next_jiffies = jiffies + HZ;
+	              }
+	          } else {
 	              g->sq_err_sum = 0;
 	              g->err_count = 0;
-          }
+	              g->pps_diag_next_jiffies = jiffies + HZ;
+	          }
       }
 		prev_cap64 = g->pps_icr1_last64;
 		epoch_valid = g->phc_epoch_valid;
@@ -1765,4 +1794,4 @@ module_platform_driver(drv);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Bose Pro");
 MODULE_DESCRIPTION("GPT1 SHIM EXPORTING 1/3MS TICKS");
-MODULE_VERSION("1.0.1");
+MODULE_VERSION("1.0.1-Debug-Param");

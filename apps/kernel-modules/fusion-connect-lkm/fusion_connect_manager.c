@@ -975,8 +975,6 @@ static int handle_reset_timing_state(struct fusion_cn_manager *mgr,
                                      struct fusion_cn_ctrl_msg *reply)
 {
     reply->err = fusion_gpt_reset_timing_state();
-    if (!reply->err)
-        pr_info("fusion_cn: timing state reset\n");
     return 0;
 }
 
