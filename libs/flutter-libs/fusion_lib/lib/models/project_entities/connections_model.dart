@@ -11,12 +11,14 @@ enum ConnectionType {
   bluetooth,
   hdmi,
   audioJack,
+  rca,
   amplifier,
   dspAnalog,
   endpoint,
   xlr,
   circuit,
   gpio,
+  speaker,
   dsp
  }
 

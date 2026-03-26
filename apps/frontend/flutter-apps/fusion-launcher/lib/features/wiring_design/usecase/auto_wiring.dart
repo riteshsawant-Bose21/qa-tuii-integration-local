@@ -205,12 +205,8 @@ class AutoWiringUseCase {
   /// Returns `true` when either port declares the other port's type as
   /// compatible.
   bool _arePortsCompatible(PortData port1, PortData port2) {
-    // Check if types are directly compatible
-    if (port1.compatibleTypes.contains(port2.type) || port2.compatibleTypes.contains(port1.type)) {
-      return true;
-    }
+    return ConnectionUseCase().isCompatible(port1.type, port2.type);
     // Additional compatibility logic can be added here (e.g., based on port names or other metadata)
-    return false;
   }
 
   /// Returns `true` when the given `deviceId` + `portId` is already used on

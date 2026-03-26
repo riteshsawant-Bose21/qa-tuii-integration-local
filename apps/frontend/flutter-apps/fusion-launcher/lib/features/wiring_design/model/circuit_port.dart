@@ -65,7 +65,7 @@ class CircuitPort extends CanvasElement {
       id: data.id,
       name: data.label ?? '',
       type: data.type,
-      compatibleTypes: data.compatibleTypes,
+      // compatibleTypes: data.compatibleTypes,
       description: data.description,
       portNumber: data.index,
       position: data.position ?? PortPosition.topLeft,

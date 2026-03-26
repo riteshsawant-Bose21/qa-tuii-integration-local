@@ -39,6 +39,7 @@ class ConnectionUseCase {
 
   bool isCompatible(PortType fromPort, PortType toPort) {
     final PossibleConnection? possibleConnection = PossibleConnection.findConnection(fromPort, toPort);
+    print(" Checking compatibility between $fromPort and $toPort: ${possibleConnection != null}");
     return possibleConnection != null;
   }
 }
@@ -65,15 +66,21 @@ class PossibleConnection {
       PossibleConnection(fromPortType: PortType.circuitInput, toPortType: PortType.amplifierOutput, connectionType: ConnectionType.circuit),
 
       PossibleConnection(fromPortType: PortType.audioJackInput, toPortType: PortType.audioJackOutput, connectionType: ConnectionType.audioJack),
+      PossibleConnection(fromPortType: PortType.rcaInput, toPortType: PortType.rcaOutput, connectionType: ConnectionType.rca),
 
       PossibleConnection(fromPortType: PortType.xlrInput, toPortType: PortType.xlrOutput, connectionType: ConnectionType.xlr),
       PossibleConnection(fromPortType: PortType.usbIn, toPortType: PortType.usbOut, connectionType: ConnectionType.usb),
       PossibleConnection(fromPortType: PortType.hdmiIn, toPortType: PortType.hdmiOut, connectionType: ConnectionType.hdmi),
-
       PossibleConnection(fromPortType: PortType.bleIn, toPortType: PortType.bleOut, connectionType: ConnectionType.bluetooth),
+      PossibleConnection(fromPortType: PortType.wifiIn, toPortType: PortType.wifiOut, connectionType: ConnectionType.wifi),
+
       PossibleConnection(fromPortType: PortType.gpioInput, toPortType: PortType.gpioOutput, connectionType: ConnectionType.gpio),
 
       PossibleConnection(fromPortType: PortType.aes67Input, toPortType: PortType.aes67Output, connectionType: ConnectionType.aes67),
+
+      PossibleConnection(fromPortType: PortType.speakerInput, toPortType: PortType.amplifierOutput, connectionType: ConnectionType.speaker),
+
+      PossibleConnection(fromPortType: PortType.networkSwitchOut, toPortType: PortType.networkSwitchIn, connectionType: ConnectionType.ethernet),
     ];
   }
 

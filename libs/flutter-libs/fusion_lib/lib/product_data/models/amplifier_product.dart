@@ -22,10 +22,10 @@ class AmplifierMeasurementValue {
   }
 
   Map<String, dynamic> toJson() => {
-        'key': key,
-        'unit': unit,
-        'value': value,
-      };
+    'key': key,
+    'unit': unit,
+    'value': value,
+  };
 }
 
 /// Represents power specification with multiple measurements
@@ -40,19 +40,15 @@ class Power {
 
   factory Power.fromJson(Map<String, dynamic> json) {
     return Power(
-      at: (json['at'] as List<dynamic>?)
-              ?.map((e) =>
-                  AmplifierMeasurementValue.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
+      at: (json['at'] as List<dynamic>?)?.map((e) => AmplifierMeasurementValue.fromJson(e as Map<String, dynamic>)).toList() ?? [],
       unit: json['unit'] as String? ?? 'Watts',
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'at': at.map((e) => e.toJson()).toList(),
-        'unit': unit,
-      };
+    'at': at.map((e) => e.toJson()).toList(),
+    'unit': unit,
+  };
 }
 
 /// Amplifier product model
@@ -71,7 +67,7 @@ class AmplifierProduct {
   final Power? power;
   final Map<String, dynamic>? powerOutput;
   final String? shortDescription;
-  final List<int> skus;
+  final List<String> skus;
   final bool isFusionCompatible;
 
   const AmplifierProduct({
@@ -90,7 +86,8 @@ class AmplifierProduct {
   });
 
   factory AmplifierProduct.fromJson(Map<String, dynamic> json) {
-    final specs = json['specifications'] as Map<String, dynamic>? ?? {};
+    final specs = json;
+    //['specifications'] as Map<String, dynamic>? ?? {};
 
     return AmplifierProduct(
       productId: (json['productid'] as num?)?.toInt() ?? 0,
@@ -101,40 +98,32 @@ class AmplifierProduct {
       numberOfInputsAndOutputs: specs['number_of_inputs_and_outputs'] != null
           ? ProductPortData.fromMap(specs['number_of_inputs_and_outputs'] as Map<String, dynamic>)
           : null,
-      numberOfLoudspeakerInputs:
-          (specs['number_of_loudspeaker_inputs'] as num?)?.toInt() ?? 0,
-      power: specs['power'] != null
-          ? Power.fromJson(specs['power'] as Map<String, dynamic>)
-          : null,
+      numberOfLoudspeakerInputs: (specs['number_of_loudspeaker_inputs'] as num?)?.toInt() ?? 0,
+      power: specs['power'] != null ? Power.fromJson(specs['power'] as Map<String, dynamic>) : null,
       powerOutput: specs['power_output'] as Map<String, dynamic>?,
       shortDescription: specs['short_description'] as String?,
-      skus: (specs['skus'] as List<dynamic>?)
-              ?.map((e) => (e as num).toInt())
-              .toList() ??
-          [],
+      skus: (specs['skus'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       isFusionCompatible: json['is_fusion_compatible'] as bool? ?? false,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'productid': productId,
-        'assets': assets.toAssetList(),
-        'model_name': modelName,
-        'model_family': modelFamily,
-        'description': description,
-        'specifications': {
-          if (numberOfInputsAndOutputs != null)
-            'number_of_inputs_and_outputs': numberOfInputsAndOutputs,
-          'number_of_loudspeaker_inputs': numberOfLoudspeakerInputs,
-          if (power != null) 'power': power!.toJson(),
-          if (powerOutput != null) 'power_output': powerOutput,
-          if (shortDescription != null) 'short_description': shortDescription,
-          'skus': skus,
-        },
-        'is_fusion_compatible': isFusionCompatible,
-      };
+    'productid': productId,
+    'assets': assets.toAssetList(),
+    'model_name': modelName,
+    'model_family': modelFamily,
+    'description': description,
+    'specifications': {
+      if (numberOfInputsAndOutputs != null) 'number_of_inputs_and_outputs': numberOfInputsAndOutputs,
+      'number_of_loudspeaker_inputs': numberOfLoudspeakerInputs,
+      if (power != null) 'power': power!.toJson(),
+      if (powerOutput != null) 'power_output': powerOutput,
+      if (shortDescription != null) 'short_description': shortDescription,
+      'skus': skus,
+    },
+    'is_fusion_compatible': isFusionCompatible,
+  };
 
   @override
-  String toString() =>
-      'AmplifierProduct(productId: $productId, modelName: $modelName)';
+  String toString() => 'AmplifierProduct(productId: $productId, modelName: $modelName)';
 }
