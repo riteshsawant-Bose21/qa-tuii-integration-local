@@ -85,6 +85,48 @@ const std::string TelemetryMessage::get_packet_id() const
     return get_string("packet_id");
 }
 
+int_fast32_t TelemetryMessage::get_protocol_version() const
+{
+    int_fast32_t value = 0;
+    get_member_value("protocol_version", value);
+    return value;
+}
+
+int_fast32_t TelemetryMessage::get_schema_version() const
+{
+    int_fast32_t value = 0;
+    get_member_value("schema_version", value);
+    return value;
+}
+
+bool TelemetryMessage::try_get_protocol_version(int_fast32_t &value) const
+{
+    return try_member_value("protocol_version", value);
+}
+
+bool TelemetryMessage::try_get_schema_version(int_fast32_t &value) const
+{
+    return try_member_value("schema_version", value);
+}
+
+bool TelemetryMessage::has_supported_telemetry_versions() const
+{
+    int_fast32_t protocol_version = 0;
+    int_fast32_t schema_version = 0;
+    const auto &parameters = get_parameters();
+
+    if (!parameters.try_get_protocol_version(protocol_version)) {
+        return false;
+    }
+
+    if (!parameters.try_get_schema_version(schema_version)) {
+        return false;
+    }
+
+    return is_supported_telemetry_protocol_version(protocol_version) &&
+           is_supported_telemetry_schema_version(schema_version);
+}
+
 
 std::vector<std::string> TelemetryMessage::get_block_name() const
 {

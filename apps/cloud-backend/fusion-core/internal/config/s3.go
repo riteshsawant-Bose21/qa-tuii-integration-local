@@ -8,10 +8,11 @@ import (
 
 // S3Config holds the configuration settings for connecting to an S3 service.
 type S3Config struct {
-	PriceBucket   string
-	ProductBucket string
-	ProjectBucket string
-	Region        string
+	PriceBucket          string
+	ProductBucket        string
+	ProjectBucket        string
+	FirmwareBundleBucket string
+	Region               string
 }
 
 // S3 retrieves the S3 configuration from the store.
@@ -31,15 +32,21 @@ func (s *Service) S3() (*S3Config, error) {
 		return nil, fmt.Errorf("failed to get S3 price bucket: %w", err)
 	}
 
+	FirmwareBundleBucket, err := s.store.ReqString(environment.S3.FirmwareBundleBucket)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get S3 firmware bucket: %w", err)
+	}
+
 	region, err := s.store.ReqString(environment.AWS.Region)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get S3 region: %w", err)
 	}
 
 	return &S3Config{
-		PriceBucket:   priceBucket,
-		ProductBucket: productBucket,
-		ProjectBucket: projectBucket,
-		Region:        region,
+		PriceBucket:          priceBucket,
+		ProductBucket:        productBucket,
+		ProjectBucket:        projectBucket,
+		FirmwareBundleBucket: FirmwareBundleBucket,
+		Region:               region,
 	}, nil
 }

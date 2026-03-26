@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/select_speaker_popup.dart';
+import 'package:fusion_launcher/features/speaker_selection_popup/views/speaker_selection_popup.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -178,7 +178,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 ),
                 child: FusionArrowPopup(
                   semanticId: 'add_speakers_menu',
-                  content: SpeakerQueryPopup(
+                  content: SpeakerSelectionPopup(
                     isFromBuildingPage: false,
                     zoneId: widget.zoneId,
                   ),
