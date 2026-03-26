@@ -875,10 +875,14 @@ func (m *VIPMonitor) HandleSetMasterEligibility(w http.ResponseWriter, r *http.R
 	}
 
 	endpoint := routes.DevicesIDVIPMasterEligibilityEndpoint
-	endpoint = strings.Replace(endpoint, "{enabled}", url.QueryEscape(enabledValue), 1)
+	endpoint = strings.Replace(endpoint, "{enabled}", url.PathEscape(enabledValue), 1)
 
 	localFn := func(payload []byte) error {
 		return m.setMasterEligibility(priority, enabledValue)
+	}
+
+	httpClient := &http.Client{
+		Timeout: api.HTTPTimeout,
 	}
 
 	remoteFn := func(payload []byte, targetURL string) error {
@@ -887,7 +891,7 @@ func (m *VIPMonitor) HandleSetMasterEligibility(w http.ResponseWriter, r *http.R
 			return fmt.Errorf("failed to create POST request: %w", err)
 		}
 
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := httpClient.Do(req)
 		if err != nil {
 			return fmt.Errorf("master eligibility POST failed: %w", err)
 		}

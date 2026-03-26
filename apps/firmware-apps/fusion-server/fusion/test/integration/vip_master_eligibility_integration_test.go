@@ -208,7 +208,7 @@ func TestVIPMasterEligibilitySinglePreferredNodeBecomesPrimary(t *testing.T) {
 		if d.Id == "" || d.Address == "" {
 			t.Fatalf("invalid devices payload for node: %+v", d)
 		}
-		if d.VrrpPriority <= 0 {
+		if d.VrrpPriority < 1 {
 			t.Fatalf("expected positive vrrp_priority for %s, got %d", d.Id, d.VrrpPriority)
 		}
 	}

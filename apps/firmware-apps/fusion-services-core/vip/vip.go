@@ -217,7 +217,7 @@ func WriteToKeepalivedConfig(path, newVIP string) error {
 
 // WritePriorityToKeepalivedConfig updates the first keepalived priority directive.
 func WritePriorityToKeepalivedConfig(path string, priority int) error {
-	if priority <= 0 {
+	if priority < 1 || priority > 250 {
 		return fmt.Errorf("invalid keepalived priority %d", priority)
 	}
 
@@ -231,7 +231,8 @@ func WritePriorityToKeepalivedConfig(path string, priority int) error {
 
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "priority ") {
+		fields := strings.Fields(trimmed)
+		if len(fields) > 0 && fields[0] == "priority" {
 			indent := line[:len(line)-len(strings.TrimLeft(line, " \t"))]
 			lines[i] = fmt.Sprintf("%spriority %d", indent, priority)
 			updated = true
@@ -266,17 +267,17 @@ func ReadPriorityFromKeepalivedConfig(path string) (int, error) {
 
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "priority ") {
-			parts := strings.Fields(trimmed)
-			if len(parts) < 2 {
+		fields := strings.Fields(trimmed)
+		if len(fields) > 0 && fields[0] == "priority" {
+			if len(fields) < 2 {
 				return 0, fmt.Errorf("invalid keepalived priority directive")
 			}
 
-			priority, err := strconv.Atoi(parts[1])
+			priority, err := strconv.Atoi(fields[1])
 			if err != nil {
-				return 0, fmt.Errorf("invalid keepalived priority value %q: %w", parts[1], err)
+				return 0, fmt.Errorf("invalid keepalived priority value %q: %w", fields[1], err)
 			}
-			if priority <= 0 {
+			if priority < 1 {
 				return 0, fmt.Errorf("invalid keepalived priority %d", priority)
 			}
 

@@ -70,7 +70,7 @@ func CheckClusterHealth(ctx context.Context, env Env, expectedSize int) error {
 			innerCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 			_ = PollUntil(innerCtx, 500*time.Millisecond, func() (bool, error) {
-				ds, e := GetDevices(innerCtx, env.BaseURL())
+				ds, e := GetDevicesNodePreferred(innerCtx, env)
 				if e != nil {
 					return false, nil
 				}
@@ -80,7 +80,7 @@ func CheckClusterHealth(ctx context.Context, env Env, expectedSize int) error {
 				return false, nil
 			})
 			// Re-evaluate after polling.
-			ds2, e2 := GetDevices(ctx, env.BaseURL())
+			ds2, e2 := GetDevicesNodePreferred(ctx, env)
 			if e2 != nil || !hasSinglePrimary(ds2) {
 				errs = append(errs, errors.New("primary not established for single-node cluster within timeout"))
 			}
