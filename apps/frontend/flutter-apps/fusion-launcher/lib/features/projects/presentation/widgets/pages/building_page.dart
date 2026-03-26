@@ -18,7 +18,7 @@ import '../../../widget/building/side_panel_widgets/equipment_location/equipment
 import '../../../widget/building/side_panel_widgets/listening_areas_panel.dart';
 import '../../../widget/building/side_panel_widgets/properties_panel.dart';
 import '../../../widget/building/side_panel_widgets/zone_and_listening_area.dart';
-import '../../../widget/building/speaker_selection_section/side_speaker_section.dart';
+import '../../../../speaker_selection_popup/views/widgets/side_speaker_section.dart';
 
 class BuildingPage extends StatelessWidget {
   const BuildingPage({super.key, required this.floorCanvasController, required this.appBarHeight});

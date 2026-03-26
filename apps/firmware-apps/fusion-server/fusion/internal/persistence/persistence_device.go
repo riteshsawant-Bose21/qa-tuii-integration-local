@@ -3,9 +3,9 @@ package persistence
 import (
 	"fmt"
 	"fusion/internal/api"
-	"strconv"
 
 	json "github.com/goccy/go-json"
+	"strconv"
 
 	"go.etcd.io/bbolt"
 )

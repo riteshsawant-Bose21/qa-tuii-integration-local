@@ -11,6 +11,7 @@ import 'package:fusion_launcher/core/widgets/clean_widgets.dart';
 import 'package:fusion_launcher/features/create_new_project/views/create_new_project_dialog.dart';
 import 'package:fusion_launcher/features/projects/constant/semantic_keys.dart';
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
+import 'package:fusion_launcher/features/projects/widget/zmq_data/zmq_data_dialog.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/fusion_theme_notifier.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';

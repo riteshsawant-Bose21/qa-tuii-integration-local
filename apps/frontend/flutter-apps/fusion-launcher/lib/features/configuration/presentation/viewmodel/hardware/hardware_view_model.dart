@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/models/products_data.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
+import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/endpoints.dart';
@@ -299,17 +299,7 @@ extension HardwareViewModel on ProjectViewModel {
       final ProductQueryViewModel productQueryViewModel = serviceLocator<ProductQueryViewModel>();
       final List<SpeakerProduct> catalogSpeakers = productQueryViewModel.speakers;
 
-      final List<Speaker> nonPlacedSpeakers = getNonPlacedSpeakersForCurrentListeningArea();
-      final List<Speaker> placedSpeakers = getPlacedSpeakersForCurrentListeningArea();
-      final List<Speaker> allSpeakers = <Speaker>[...placedSpeakers, ...nonPlacedSpeakers];
-
-      final List<Speaker> targetSpeakers =
-          allSpeakers.where((Speaker speaker) {
-            final int? productId = speaker.productId;
-            if (productId == null) return true;
-            final SpeakerProduct? product = catalogSpeakers.where((SpeakerProduct p) => p.productId == productId).firstOrNull;
-            return !(product?.isSubwoofer ?? false);
-          }).toList();
+      final List<Speaker> targetSpeakers = _getAutoPlacementTargetSpeakers(catalogSpeakers: catalogSpeakers);
 
       if (targetSpeakers.isEmpty) return ResponseCallback<bool>.failure('Add at least one non-subwoofer speaker to auto-place.');
 
@@ -322,29 +312,20 @@ extension HardwareViewModel on ProjectViewModel {
           );
 
       final List<Offset> candidatePoints = autoPlacedDetails.positions;
-      final SurfacePlacementResult? surfacePlacementResult = autoPlacedDetails.surfacePlacementResult;
-      final PlacementResult? placementResult = autoPlacedDetails.placementResult;
 
       if (candidatePoints.isEmpty) {
         FusionLogger.log(tag: LogTag.project, message: 'Auto-placement candidate points: $candidatePoints');
         return ResponseCallback<bool>.failure('No valid placement positions found. Adjust your listening area shape or auto-placement settings and try again.');
       }
 
-      final Offset center = listeningArea.getCenterPositionOfVertices() ?? candidatePoints.first;
-      final List<Offset> sortedPoints = List<Offset>.from(candidatePoints)
-        ..sort((Offset a, Offset b) => (a - center).distance.compareTo((b - center).distance));
-
-      final int algorithmCount = sortedPoints.length;
+      final List<Offset> sortedPoints = _sortPlacementPoints(listeningArea: listeningArea, points: candidatePoints);
+      final int placeCount = sortedPoints.length;
+      final ListeningAreaRoomBounds roomBounds = listeningArea.getBoundsForVertices();
 
       recordSnapshot();
 
       // Save auto-placement result to listening area for future reference and to display in UI if needed.
-      final ListeningArea updatedListeningArea = listeningArea.copyWith(
-        autoPlacementResult: autoPlacementResult.copyWith(
-          ceilingPendantPlacementResult: placementResult,
-          surfacePlacementResult: surfacePlacementResult,
-        ),
-      );
+      final ListeningArea updatedListeningArea = listeningArea.copyWith(autoPlacementResult: autoPlacementResult);
       updateListeningArea(area: updatedListeningArea, autoSave: false);
 
       final Speaker templateSpeaker = targetSpeakers.first;
@@ -353,12 +334,17 @@ extension HardwareViewModel on ProjectViewModel {
       removeAllSpeakersFromCurrentListeningArea(autoSave: false);
 
       // Add a fresh set of algorithm-placed speakers only.
-      final int placeCount = algorithmCount;
-      for (int i = 0; i < placeCount; i++) {
-        final Speaker clonedSpeaker = templateSpeaker.getClone().copyWith(
-          pitch: listeningArea.mountingType == MountingType.pendant || listeningArea.mountingType == MountingType.ceiling ? 90.0 : 0.0,
+      for (final Offset point in sortedPoints) {
+        final ({double pitch, double yaw}) orientation = _resolveOrientationForPlacement(
+          mountingType: listeningArea.mountingType,
+          position: point,
+          bounds: roomBounds,
         );
-        clonedSpeaker.pos = sortedPoints[i];
+        final Speaker clonedSpeaker = templateSpeaker.getClone().copyWith(
+          pitch: orientation.pitch,
+          yaw: orientation.yaw,
+        );
+        clonedSpeaker.pos = point;
         addHardware(hardware: clonedSpeaker, autoSave: false);
       }
 
@@ -370,6 +356,29 @@ extension HardwareViewModel on ProjectViewModel {
       FusionLogger.log(tag: LogTag.project, message: 'Auto-placement failed: $e');
       return ResponseCallback<bool>.failure(e.toString().replaceFirst('Invalid argument(s): ', ''));
     }
+  }
+
+  // Helper methods for auto-placement
+  List<Speaker> _getAutoPlacementTargetSpeakers({required List<SpeakerProduct> catalogSpeakers}) {
+    final List<Speaker> nonPlacedSpeakers = getNonPlacedSpeakersForCurrentListeningArea();
+    final List<Speaker> placedSpeakers = getPlacedSpeakersForCurrentListeningArea();
+    final List<Speaker> allSpeakers = <Speaker>[...placedSpeakers, ...nonPlacedSpeakers];
+
+    return allSpeakers.where((Speaker speaker) {
+      final int? productId = speaker.productId;
+      if (productId == null) return true;
+
+      final SpeakerProduct? product = catalogSpeakers.where((SpeakerProduct p) => p.productId == productId).firstOrNull;
+      return !(product?.isSubwoofer ?? false);
+    }).toList();
+  }
+
+  // Sort candidate points based on distance from center of listening area, closest first.
+  // This is a heuristic to try to place speakers in a more balanced way in irregularly shaped rooms
+  // where the algorithm may return clusters of points in certain areas.
+  List<Offset> _sortPlacementPoints({required ListeningArea listeningArea, required List<Offset> points}) {
+    final Offset center = listeningArea.getCenterPositionOfVertices() ?? points.first;
+    return List<Offset>.from(points)..sort((Offset a, Offset b) => (a - center).distance.compareTo((b - center).distance));
   }
 
   ({List<Offset> positions, SurfacePlacementResult? surfacePlacementResult, PlacementResult? placementResult}) _calculateAutoPlacedPositions({
@@ -403,9 +412,6 @@ extension HardwareViewModel on ProjectViewModel {
 
     final double ceilingHeight = parsedCeilingHeight;
 
-    // final double boundaryThreshold = autoPlacementResult.autoPlaceBoundaryThreshold;
-    // if (boundaryThreshold < 0.3 || boundaryThreshold >= 1) throw ArgumentError('Boundary threshold must be between 0.3 and 1.');
-
     if (mountingType == MountingType.ceiling || mountingType == MountingType.pendant) {
       final List<Point2D> geometry = <Point2D>[
         ...listeningArea.vertices.map(
@@ -432,8 +438,6 @@ extension HardwareViewModel on ProjectViewModel {
         ),
         coveragePreference: autoPlacementResult.autoPlaceCoveragePreference,
         layoutPattern: autoPlacementResult.autoPlaceLayoutPattern,
-        // customOriginOffset: Point2D(autoPlacementResult.autoPlaceGridOffsetX, autoPlacementResult.autoPlaceGridOffsetY),
-        // boundaryOverlapThreshold: boundaryThreshold,
       );
 
       log("Total speakers placed by algorithm: ${result.speakerPositions.length}");
@@ -472,6 +476,25 @@ extension HardwareViewModel on ProjectViewModel {
     if (product == null || product.coverage.isEmpty) return 90.0;
     final int angle = product.coverage.firstOrNull?.horizontalDeg ?? 90;
     return angle <= 0 ? 90.0 : angle.toDouble();
+  }
+
+  ({double pitch, double yaw}) _resolveOrientationForPlacement({
+    required MountingType mountingType,
+    required Offset position,
+    required ListeningAreaRoomBounds bounds,
+  }) {
+    if (mountingType == MountingType.pendant || mountingType == MountingType.ceiling) return (pitch: 90.0, yaw: 0.0);
+    if (mountingType != MountingType.surface) return (pitch: 0.0, yaw: 0.0);
+
+    final double dLeft = (position.dx - bounds.minX).abs();
+    final double dTop = (position.dy - bounds.minY).abs();
+    final double dRight = (bounds.maxX - position.dx).abs();
+    final double dBottom = (bounds.maxY - position.dy).abs();
+
+    if (dLeft <= dTop && dLeft <= dRight && dLeft <= dBottom) return (pitch: 0.0, yaw: 0.0); // Left wall
+    if (dTop <= dRight && dTop <= dBottom) return (pitch: 0.0, yaw: 90.0); // Top wall
+    if (dRight <= dBottom) return (pitch: 0.0, yaw: 180.0); // Right wall
+    return (pitch: 0.0, yaw: -90.0); // Bottom wall
   }
 
   ResponseCallback<bool> moveHardware({
@@ -698,6 +721,11 @@ extension HardwareViewModel on ProjectViewModel {
 
   Speaker fromSpeakerProductModel(String assetImagePath, SpeakerProduct product, LocationModel locationEntity, bool isFromBuildingPage) {
     final MountingType? mountingType = MountingType.fromJson(product.mountType);
+
+    final double pitch = mountingType == MountingType.pendant || mountingType == MountingType.ceiling ? 90.0 : 0.0;
+    final double yaw = mountingType == MountingType.surface ? 90.0 : 0.0;
+    final double? horizontalCoverageAngle = product.coverage.firstOrNull?.horizontalDeg.toDouble();
+
     return Speaker(
       locationEntity: locationEntity,
       name: product.modelName,
@@ -711,7 +739,8 @@ extension HardwareViewModel on ProjectViewModel {
       type: OutputType.analogOutput,
       price: 0,
       mountingType: mountingType,
-      pitch: mountingType == MountingType.pendant || mountingType == MountingType.ceiling ? 90.0 : 0.0,
+      pitch: pitch,
+      yaw: yaw,
       inputPortsData: <PortData>[
         PortData(
           name: "In",
@@ -723,6 +752,7 @@ extension HardwareViewModel on ProjectViewModel {
         ),
       ],
       outputPortsData: <PortData>[],
+      horizontalCoverageAngle: horizontalCoverageAngle,
     );
   }
 
