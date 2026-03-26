@@ -103,6 +103,21 @@ class FusionCanvasStateViewModel extends Cubit<FusionCanvasState> {
     _startScale = null;
   }
 
+  void onStartPanZoom(Offset focalPoint) {
+    _startScale = 1;
+  }
+
+  void onUpdatePanZoom(double scale, Offset focalPoint, Offset delta) {
+    // print(" onUpdatePanZoom - scale: $scale, focalPoint: $focalPoint, delta: $delta");
+    onScaleUpdate(scale, focalPoint);
+    onPanUpdate(delta);
+  }
+
+  void onEndPanZoom() {
+    setCanvasState(state.idle());
+    _startScale = null;
+  }
+
   void setCanvasState(FusionCanvasState state) {
     emit(state);
   }
