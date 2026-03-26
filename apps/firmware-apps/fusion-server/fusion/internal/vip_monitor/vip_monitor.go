@@ -118,23 +118,23 @@ func NewVIPMonitor(netIface string, isLocal bool, cluster transport.ClusterInter
 	}
 }
 
-func parseMasterEligibilityPriority(enabledValue string) (int, error) {
-	normalized := strings.TrimSpace(strings.ToLower(enabledValue))
+func parseMasterPriorityMode(modeValue string) (int, error) {
+	normalized := strings.TrimSpace(strings.ToLower(modeValue))
 	switch normalized {
-	case  "true":
-		return api.VIPEligiblePriority, nil
+	case "high":
+		return api.VIPHighPriority, nil
 	case "default":
 		return api.VIPDefaultPriority, nil
-	case "false":
-		return api.VIPIneligiblePriority, nil
+	case "low":
+		return api.VIPLowPriority, nil
 	default:
-		return 0, fmt.Errorf("invalid enabled value %q; expected true|false|default", enabledValue)
+		return 0, fmt.Errorf("invalid mode value %q; expected low|default|high", modeValue)
 	}
 }
 
-func (m *VIPMonitor) setMasterEligibility(priority int, enabledValue string) error {
+func (m *VIPMonitor) setMasterPriority(priority int, modeValue string) error {
 	if m.isLocal {
-		logging.GetLogger().Debug("Skipping keepalived priority update in local mode (enabled=%q priority=%d)", enabledValue, priority)
+		logging.GetLogger().Debug("Skipping keepalived priority update in local mode (mode=%q priority=%d)", modeValue, priority)
 		return nil
 	}
 
@@ -810,8 +810,8 @@ func (m *VIPMonitor) HandleReloadVIP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// HandleSetMasterEligibilityLocal handles POST /devices/{id}/vip/master-eligibility/{enabled} on admin port.
-func (m *VIPMonitor) HandleSetMasterEligibilityLocal(w http.ResponseWriter, r *http.Request) {
+// HandleSetMasterPriorityLocal handles POST /devices/{id}/vip/master-priority/{mode} on admin port.
+func (m *VIPMonitor) HandleSetMasterPriorityLocal(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequirePost(w, r) {
 		return
 	}
@@ -829,19 +829,19 @@ func (m *VIPMonitor) HandleSetMasterEligibilityLocal(w http.ResponseWriter, r *h
 		return
 	}
 
-	enabledValue, err := utils.ExtractValue(r, "enabled")
+	modeValue, err := utils.ExtractValue(r, "mode")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	priority, err := parseMasterEligibilityPriority(enabledValue)
+	priority, err := parseMasterPriorityMode(modeValue)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := m.setMasterEligibility(priority, enabledValue); err != nil {
+	if err := m.setMasterPriority(priority, modeValue); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -849,8 +849,8 @@ func (m *VIPMonitor) HandleSetMasterEligibilityLocal(w http.ResponseWriter, r *h
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// HandleSetMasterEligibility handles POST /devices/{id}/vip/master-eligibility/{enabled}.
-func (m *VIPMonitor) HandleSetMasterEligibility(w http.ResponseWriter, r *http.Request) {
+// HandleSetMasterPriority handles POST /devices/{id}/vip/master-priority/{mode}.
+func (m *VIPMonitor) HandleSetMasterPriority(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequirePost(w, r) {
 		return
 	}
@@ -862,23 +862,23 @@ func (m *VIPMonitor) HandleSetMasterEligibility(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	enabledValue, err := utils.ExtractValue(r, "enabled")
+	modeValue, err := utils.ExtractValue(r, "mode")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	priority, err := parseMasterEligibilityPriority(enabledValue)
+	priority, err := parseMasterPriorityMode(modeValue)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	endpoint := routes.DevicesIDVIPMasterEligibilityEndpoint
-	endpoint = strings.Replace(endpoint, "{enabled}", url.PathEscape(enabledValue), 1)
+	endpoint := routes.DevicesIDVIPMasterPriorityEndpoint
+	endpoint = strings.Replace(endpoint, "{mode}", url.PathEscape(modeValue), 1)
 
 	localFn := func(payload []byte) error {
-		return m.setMasterEligibility(priority, enabledValue)
+		return m.setMasterPriority(priority, modeValue)
 	}
 
 	httpClient := &http.Client{
@@ -893,12 +893,12 @@ func (m *VIPMonitor) HandleSetMasterEligibility(w http.ResponseWriter, r *http.R
 
 		resp, err := httpClient.Do(req)
 		if err != nil {
-			return fmt.Errorf("master eligibility POST failed: %w", err)
+			return fmt.Errorf("master priority POST failed: %w", err)
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusNoContent {
-			return fmt.Errorf("master eligibility POST failed with status %d", resp.StatusCode)
+			return fmt.Errorf("master priority POST failed with status %d", resp.StatusCode)
 		}
 
 		return nil

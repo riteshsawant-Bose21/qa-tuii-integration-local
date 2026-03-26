@@ -1,14 +1,14 @@
 info:
-  name: Toggle VIP master eligibility
+  name: Set VIP master priority
   type: http
   seq: 6
 
 http:
   method: POST
-  url: "{{api_url}}/devices/:id/vip/master-eligibility/:enabled"
+  url: "{{api_url}}/devices/:id/vip/master-priority/:mode"
   params:
-    - name: enabled
-      value: "false"
+    - name: mode
+      value: low
       type: path
     - name: id
       value: fusion_dgoa3a0nspye_gg07_instance

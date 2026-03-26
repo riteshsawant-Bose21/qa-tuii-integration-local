@@ -22,7 +22,7 @@ const (
 	// From fusion/test/integration -> ../../../scripts/multipass (repo root scripts)
 	defaultScriptsDir        = "../../../scripts/multipass"
 	defaultClearConfigScript = "clear-config.sh"
-	defaultRestartScript     = "restart-fusion.sh"
+	defaultRestartPrefix     = "fusion"
 )
 
 // MultipassInstance represents an instance entry from `multipass list --format json`.
@@ -47,11 +47,54 @@ func ResetCluster(ctx context.Context, env Env) error {
 func RestartCluster(ctx context.Context, env Env, expected int) error {
 	rctx, cancel := context.WithTimeout(ctx, 4*time.Minute)
 	defer cancel()
-	if err := runScript(rctx, resolveScriptPath(defaultRestartScript)); err != nil {
+
+	names, err := getMultipassInstanceNamesByPrefix(rctx, defaultRestartPrefix)
+	if err != nil {
+		return err
+	}
+	if len(names) == 0 {
+		return fmt.Errorf("no multipass instances found with prefix %q", defaultRestartPrefix)
+	}
+
+	if err := StopInstancesParallel(rctx, names, 3); err != nil {
+		fmt.Printf("[integration] warning: stop errors during restart (continuing): %v\n", err)
+	}
+
+	if err := StartInstancesParallel(rctx, names, 3); err != nil {
 		return err
 	}
 	// Allow convergence under the parent ctx
 	return (FusionCluster{Env: env}).WaitForClusterSize(ctx, expected)
+}
+
+func getMultipassInstanceNamesByPrefix(ctx context.Context, prefix string) ([]string, error) {
+	cmd := exec.CommandContext(ctx, "multipass", "list", "--format", "json")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("multipass list failed: %v; output: %s", err, string(out))
+	}
+
+	var payload struct {
+		List []struct {
+			Name string `json:"name"`
+		} `json:"list"`
+	}
+	if err := json.Unmarshal(out, &payload); err != nil {
+		return nil, fmt.Errorf("parse multipass list json failed: %v", err)
+	}
+
+	names := make([]string, 0, len(payload.List))
+	for _, inst := range payload.List {
+		if inst.Name == "" {
+			continue
+		}
+		if strings.HasPrefix(inst.Name, prefix) {
+			names = append(names, inst.Name)
+		}
+	}
+
+	sort.Strings(names)
+	return names, nil
 }
 
 // StopInstancesParallel stops instances concurrently up to maxParallel.

@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-func TestVIPMasterEligibilityDemotesCurrentPrimary(t *testing.T) {
+func TestVIPMasterPriorityDemotesCurrentPrimary(t *testing.T) {
 	fc := NewTestCluster(t, false)
 	ctx, cancel := context.WithTimeout(context.Background(), fc.Env.MaxWait)
 	defer cancel()
@@ -38,7 +38,7 @@ func TestVIPMasterEligibilityDemotesCurrentPrimary(t *testing.T) {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 45*time.Second)
 		defer cleanupCancel()
 		for _, id := range ordered {
-			_ = setMasterEligibility(cleanupCtx, fc.Env.BaseURL(), id, true)
+			_ = setMasterPriority(cleanupCtx, fc.Env.BaseURL(), id, true)
 		}
 	}()
 
@@ -52,14 +52,14 @@ func TestVIPMasterEligibilityDemotesCurrentPrimary(t *testing.T) {
 		if d.Id == primary.Id {
 			continue
 		}
-		if err := setMasterEligibility(ctx, fc.Env.BaseURL(), d.Id, true); err != nil {
-			t.Fatalf("failed to normalize follower id=%s to enabled=true: %v", d.Id, err)
+		if err := setMasterPriority(ctx, fc.Env.BaseURL(), d.Id, true); err != nil {
+			t.Fatalf("failed to normalize follower id=%s to mode=high: %v", d.Id, err)
 		}
 	}
 
 	t.Logf("demoting current primary id=%s addr=%s priority=%d", primary.Id, primary.Address, primary.VrrpPriority)
-	if err := setMasterEligibility(ctx, fc.Env.BaseURL(), primary.Id, false); err != nil {
-		t.Fatalf("set master eligibility false failed: %v", err)
+	if err := setMasterPriority(ctx, fc.Env.BaseURL(), primary.Id, false); err != nil {
+		t.Fatalf("set master priority low failed: %v", err)
 	}
 	settled, err := waitForDevices(ctx, fc.Env.BaseURL(), func(ds []api.DeviceInfo) bool {
 		if len(ds) != len(devices) {
@@ -115,7 +115,7 @@ func TestVIPMasterEligibilityDemotesCurrentPrimary(t *testing.T) {
 	}
 }
 
-func TestVIPMasterEligibilitySinglePreferredNodeBecomesPrimary(t *testing.T) {
+func TestVIPMasterPrioritySinglePreferredNodeBecomesPrimary(t *testing.T) {
 	fc := NewTestCluster(t, false)
 	ctx, cancel := context.WithTimeout(context.Background(), fc.Env.MaxWait)
 	defer cancel()
@@ -149,12 +149,12 @@ func TestVIPMasterEligibilitySinglePreferredNodeBecomesPrimary(t *testing.T) {
 	}
 
 	for _, id := range ordered {
-		enabledValue := "default"
+		modeValue := "default"
 		if id == target.Id {
-			enabledValue = "true"
+			modeValue = "high"
 		}
-		if err := setMasterEligibilityByValue(ctx, fc.Env.BaseURL(), id, enabledValue); err != nil {
-			t.Fatalf("set master eligibility id=%s enabled=%q failed: %v", id, enabledValue, err)
+		if err := setMasterPriorityByMode(ctx, fc.Env.BaseURL(), id, modeValue); err != nil {
+			t.Fatalf("set master priority id=%s mode=%q failed: %v", id, modeValue, err)
 		}
 	}
 
@@ -162,7 +162,7 @@ func TestVIPMasterEligibilitySinglePreferredNodeBecomesPrimary(t *testing.T) {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 45*time.Second)
 		defer cleanupCancel()
 		for _, id := range ordered {
-			_ = setMasterEligibility(cleanupCtx, fc.Env.BaseURL(), id, true)
+			_ = setMasterPriority(cleanupCtx, fc.Env.BaseURL(), id, true)
 		}
 	}()
 
@@ -214,7 +214,7 @@ func TestVIPMasterEligibilitySinglePreferredNodeBecomesPrimary(t *testing.T) {
 	}
 }
 
-func TestVIPMasterEligibilityInvalidEnabledValues(t *testing.T) {
+func TestVIPMasterPriorityInvalidModeValues(t *testing.T) {
 	fc := NewTestCluster(t, false)
 	ctx, cancel := context.WithTimeout(context.Background(), fc.Env.MaxWait)
 	defer cancel()
@@ -230,28 +230,28 @@ func TestVIPMasterEligibilityInvalidEnabledValues(t *testing.T) {
 	deviceID := devices[0].Id
 
 	testCases := []struct {
-		enabledValue  string
+		modeValue     string
 		expectedCode  int
 		errorContains string
 	}{
-		{enabledValue: "", expectedCode: http.StatusNotFound},
-		{enabledValue: "1", expectedCode: http.StatusBadRequest, errorContains: "invalid enabled value"},
-		{enabledValue: "0", expectedCode: http.StatusBadRequest, errorContains: "invalid enabled value"},
-		{enabledValue: "fusion", expectedCode: http.StatusBadRequest, errorContains: "invalid enabled value"},
-		{enabledValue: "yes", expectedCode: http.StatusBadRequest, errorContains: "invalid enabled value"},
-		{enabledValue: "-1", expectedCode: http.StatusBadRequest, errorContains: "invalid enabled value"},
-		{enabledValue: "TRUEE", expectedCode: http.StatusBadRequest, errorContains: "invalid enabled value"},
-		{enabledValue: "defaultd", expectedCode: http.StatusBadRequest, errorContains: "invalid enabled value"},
+		{modeValue: "", expectedCode: http.StatusNotFound},
+		{modeValue: "1", expectedCode: http.StatusBadRequest, errorContains: "invalid mode value"},
+		{modeValue: "0", expectedCode: http.StatusBadRequest, errorContains: "invalid mode value"},
+		{modeValue: "fusion", expectedCode: http.StatusBadRequest, errorContains: "invalid mode value"},
+		{modeValue: "yes", expectedCode: http.StatusBadRequest, errorContains: "invalid mode value"},
+		{modeValue: "-1", expectedCode: http.StatusBadRequest, errorContains: "invalid mode value"},
+		{modeValue: "HIGHH", expectedCode: http.StatusBadRequest, errorContains: "invalid mode value"},
+		{modeValue: "defaultd", expectedCode: http.StatusBadRequest, errorContains: "invalid mode value"},
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("enabled=%q", tc.enabledValue), func(t *testing.T) {
-			status, body, reqErr := postMasterEligibilityRaw(ctx, fc.Env.BaseURL(), deviceID, tc.enabledValue)
+		t.Run(fmt.Sprintf("mode=%q", tc.modeValue), func(t *testing.T) {
+			status, body, reqErr := postMasterPriorityRaw(ctx, fc.Env.BaseURL(), deviceID, tc.modeValue)
 			if reqErr != nil {
 				t.Fatalf("request failed: %v", reqErr)
 			}
 			if status != tc.expectedCode {
-				t.Fatalf("expected status=%d for enabled=%q, got status=%d body=%q", tc.expectedCode, tc.enabledValue, status, body)
+				t.Fatalf("expected status=%d for mode=%q, got status=%d body=%q", tc.expectedCode, tc.modeValue, status, body)
 			}
 			if tc.errorContains != "" && !strings.Contains(strings.ToLower(body), tc.errorContains) {
 				t.Fatalf("expected error body to contain %q, got: %q", tc.errorContains, body)
@@ -260,7 +260,7 @@ func TestVIPMasterEligibilityInvalidEnabledValues(t *testing.T) {
 	}
 }
 
-func TestVIPMasterEligibilityAcceptedEnabledValueVariants(t *testing.T) {
+func TestVIPMasterPriorityAcceptedModeValueVariants(t *testing.T) {
 	fc := NewTestCluster(t, false)
 	ctx, cancel := context.WithTimeout(context.Background(), fc.Env.MaxWait)
 	defer cancel()
@@ -279,68 +279,64 @@ func TestVIPMasterEligibilityAcceptedEnabledValueVariants(t *testing.T) {
 		t.Fatalf("failed to pick non-primary target: %v", err)
 	}
 
-	accepted := []string{"true", "TRUE", "False", "default", "DEFAULT"}
-	for _, enabledValue := range accepted {
-		t.Run(fmt.Sprintf("enabled=%q", enabledValue), func(t *testing.T) {
-			status, body, reqErr := postMasterEligibilityRaw(ctx, fc.Env.BaseURL(), target.Id, enabledValue)
+	accepted := []string{"high", "HIGH", "Low", "default", "DEFAULT"}
+	for _, modeValue := range accepted {
+		t.Run(fmt.Sprintf("mode=%q", modeValue), func(t *testing.T) {
+			status, body, reqErr := postMasterPriorityRaw(ctx, fc.Env.BaseURL(), target.Id, modeValue)
 			if reqErr != nil {
 				t.Fatalf("request failed: %v", reqErr)
 			}
 			if status != http.StatusNoContent {
-				t.Fatalf("expected status=204 for enabled=%q, got status=%d body=%q", enabledValue, status, body)
+				t.Fatalf("expected status=204 for mode=%q, got status=%d body=%q", modeValue, status, body)
 			}
 		})
 	}
 
 	cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cleanupCancel()
-	if err := setMasterEligibility(cleanupCtx, fc.Env.BaseURL(), target.Id, true); err != nil {
+	if err := setMasterPriority(cleanupCtx, fc.Env.BaseURL(), target.Id, true); err != nil {
 		t.Fatalf("cleanup failed for target id=%s: %v", target.Id, err)
 	}
 }
 
-func setMasterEligibility(ctx context.Context, baseURL, deviceID string, enabled bool) error {
-	enabledStr := "false"
-	if enabled {
-		enabledStr = "true"
+func setMasterPriority(ctx context.Context, baseURL, deviceID string, high bool) error {
+	modeValue := "low"
+	if high {
+		modeValue = "high"
 	}
-	return setMasterEligibilityByValue(ctx, baseURL, deviceID, enabledStr)
+	return setMasterPriorityByMode(ctx, baseURL, deviceID, modeValue)
 }
 
-func setMasterEligibilityByValue(ctx context.Context, baseURL, deviceID, enabledValue string) error {
-	endpoint := fmt.Sprintf("%s/devices/%s/vip/master-eligibility/%s", baseURL, url.PathEscape(deviceID), url.PathEscape(enabledValue))
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
+func setMasterPriorityByMode(ctx context.Context, baseURL, deviceID, modeValue string) error {
+	status, body, err := postMasterPriorityRaw(ctx, baseURL, deviceID, modeValue)
 	if err != nil {
 		return err
 	}
-
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("unexpected status %d for %s", resp.StatusCode, endpoint)
+	if status != http.StatusNoContent {
+		return fmt.Errorf("unexpected status %d for mode=%q body=%q", status, modeValue, body)
 	}
 	return nil
 }
 
-func setMasterEligibilityDefault(ctx context.Context, baseURL, deviceID string) error {
-	return setMasterEligibilityByValue(ctx, baseURL, deviceID, "default")
+func setMasterPriorityDefault(ctx context.Context, baseURL, deviceID string) error {
+	return setMasterPriorityByMode(ctx, baseURL, deviceID, "default")
 }
 
 func setAllMasterDefault(ctx context.Context, baseURL string, deviceIDs []string) error {
 	for _, id := range deviceIDs {
-		if err := setMasterEligibilityDefault(ctx, baseURL, id); err != nil {
-			return fmt.Errorf("set master eligibility id=%s enabled=default failed: %w", id, err)
+		if err := setMasterPriorityDefault(ctx, baseURL, id); err != nil {
+			return fmt.Errorf("set master priority id=%s mode=default failed: %w", id, err)
 		}
 	}
 	return nil
 }
 
-func postMasterEligibilityRaw(ctx context.Context, baseURL, deviceID, enabledValue string) (int, string, error) {
-	endpoint := fmt.Sprintf("%s/devices/%s/vip/master-eligibility/%s", baseURL, url.PathEscape(deviceID), url.PathEscape(enabledValue))
+func postMasterPriorityRaw(ctx context.Context, baseURL, deviceID, modeValue string) (int, string, error) {
+	endpoint := fmt.Sprintf("%s/devices/%s/vip/master-priority/%s", baseURL, url.PathEscape(deviceID), url.PathEscape(modeValue))
+	return doPostNoBody(ctx, endpoint)
+}
+
+func doPostNoBody(ctx context.Context, endpoint string) (int, string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
 	if err != nil {
 		return 0, "", err
