@@ -1,10 +1,7 @@
-import 'dart:developer' as dev;
 import 'dart:math';
 import 'dart:ui' show PathMetric;
 
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canvas_painter.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -20,34 +17,8 @@ class SpeakerPainter extends FusionCanvasElementPainter {
     final Offset? position = hardware.pos;
     if (position != null) {
       final Rect rect = getTransformedRect(painter);
-      final String? listeningAreaId = hardware.locationEntity.listeningAreaId;
-      if (listeningAreaId != null) {
-        final ListeningArea listeningArea = serviceLocator<ProjectViewModel>().getListeningArea(areaId: listeningAreaId);
-        final ListeningAreaRoomBounds bounds = listeningArea.getBoundsForVertices();
 
-        if (hardware.mountingType == MountingType.surface && listeningArea.autoPlacementResult?.surfacePlacementResult != null) {
-          dev.log('Drawing directional coverage for speaker: ${hardware.id}');
-          _drawSurfaceDirectionalCoverage(
-            canvas,
-            painter: painter,
-            speakerScreenCenter: rect.center,
-            speakerModelPos: position,
-            bounds: bounds,
-            listeningAreaId: listeningArea.id,
-            distanceToListenerPlane: listeningArea.autoPlacementResult!.surfacePlacementResult!.distanceToListenerPlane,
-            horizontalCoverageAngle: listeningArea.autoPlacementResult!.surfacePlacementResult!.horizontalCoverageAngle,
-          );
-        } else if ((hardware.mountingType == MountingType.ceiling || hardware.mountingType == MountingType.pendant) &&
-            listeningArea.autoPlacementResult?.ceilingPendantPlacementResult != null) {
-          dev.log('Drawing ceiling/pendant coverage for speaker: ${hardware.id}');
-          _drawCeilingCoverageCircle(
-            canvas,
-            painter: painter,
-            speakerCenter: rect.center,
-            gridSpacing: listeningArea.autoPlacementResult!.ceilingPendantPlacementResult!.gridSpacing,
-          );
-        }
-      }
+      _drawDirectionalCoverage(canvas, painter: painter);
 
       _drawSpeaker(rect, canvas, painter, hardware);
     }
@@ -87,161 +58,142 @@ class SpeakerPainter extends FusionCanvasElementPainter {
     );
   }
 
-  void _drawSurfaceDirectionalCoverage(
-    Canvas canvas, {
-    required FusionCanvasPainter painter,
-    required Offset speakerScreenCenter,
-    required Offset speakerModelPos, // hardware.pos in canvas model px
-    required ListeningAreaRoomBounds bounds, // canvas model px
-    required String listeningAreaId,
-    required double distanceToListenerPlane,
-    required double horizontalCoverageAngle,
-  }) {
-    const Color dottedOutlineColor = Color(0x80000000); // 50% black
-    final Paint coverageOutlinePaint = Paint();
-    coverageOutlinePaint.color = dottedOutlineColor;
-    coverageOutlinePaint.style = PaintingStyle.stroke;
-    coverageOutlinePaint.strokeWidth = nonScaling(1.2, painter);
+  void _drawDirectionalCoverage(Canvas canvas, {required FusionCanvasPainter painter}) {
+    final double roll = hardware.roll;
+    final double pitch = hardware.pitch;
+    final double yaw = hardware.yaw;
 
-    // Transform room corners to screen/draw coordinates using the canvas painter's
-    // actual zoom + pan — same transform used by getTransformedRect / _drawSpeaker.
-    final Offset topLeft = transformOffsetForLayer(Offset(bounds.minX, bounds.minY), painter, listeningAreaId);
-    final Offset bottomRight = transformOffsetForLayer(Offset(bounds.maxX, bounds.maxY), painter, listeningAreaId);
-    final Rect roomBounds = Rect.fromLTRB(topLeft.dx, topLeft.dy, bottomRight.dx, bottomRight.dy);
+    final Offset? position = hardware.pos;
+    if (position == null) return;
 
-    // Save canvas state and apply clipping
-    canvas.save();
-    canvas.clipRect(roomBounds);
+    final double coverageAngle = hardware.coverageAngle ?? 90.0;
 
-    // Wall detection in canvas model px (position and bounds are in the same space).
-    const double wallTolerancePx = 5.0; // ~5 cm
-    final bool onLeftWall = (speakerModelPos.dx - bounds.minX).abs() < wallTolerancePx;
-    final bool onRightWall = (speakerModelPos.dx - bounds.maxX).abs() < wallTolerancePx;
-    final bool onFrontWall = (speakerModelPos.dy - bounds.minY).abs() < wallTolerancePx;
-    final bool onBackWall = (speakerModelPos.dy - bounds.maxY).abs() < wallTolerancePx;
+    final double coverageDistance = 200.0;
 
-    dev.log("Wall detection — left:$onLeftWall right:$onRightWall front:$onFrontWall back:$onBackWall");
+    final Offset origin = transformOffsetForLayer(position, painter, id);
 
-    // Coverage distance: algorithm metres → canvas model px (×100).
-    // The canvas painter pre-applies translate+scale, so drawing in model px is correct.
-    final double coverageDistance = distanceToListenerPlane * 100.0;
+    final double yawRad = yaw * pi / 180.0;
+    final double pitchRad = pitch * pi / 180.0;
+    final double rollRad = roll * pi / 180.0;
+    final double halfAngleRad = (coverageAngle * pi / 180.0) / 2.0;
 
-    final Path coveragePath = Path();
+    final double axisProjection = coverageDistance * cos(pitchRad).abs();
+    final Offset baseCenter = Offset(
+      origin.dx + axisProjection * cos(yawRad),
+      origin.dy + axisProjection * sin(yawRad),
+    );
 
-    if (onFrontWall) {
-      _drawSectorCoverage(
-        canvas,
-        coveragePath,
-        speakerScreenCenter.dx,
-        speakerScreenCenter.dy,
-        coverageDistance,
-        90,
-        coverageOutlinePaint,
-        nonScaling(6.0, painter),
-        nonScaling(4.0, painter),
-        horizontalCoverageAngle,
+    final double baseRadius = (coverageDistance * tan(halfAngleRad)).abs().clamp(1.0, coverageDistance * 10.0).toDouble();
+    final double minMinorRadius = nonScaling(2.0, painter);
+    final double minEllipseMinorScale = (minMinorRadius / baseRadius).clamp(0.0, 1.0).toDouble();
+    final double ellipseMinorScale = max(sin(pitchRad).abs(), minEllipseMinorScale).clamp(0.0, 1.0).toDouble();
+    final double ellipseMinorRadius = (baseRadius * ellipseMinorScale).clamp(minMinorRadius, baseRadius).toDouble();
+    final double ellipseRotation = yawRad + (pi / 2) + rollRad;
+
+    final double cosR = cos(ellipseRotation);
+    final double sinR = sin(ellipseRotation);
+
+    final Offset tipFromBase = origin - baseCenter;
+    // Convert tip to ellipse local space (axis-aligned ellipse centered at origin).
+    final Offset tipLocal = Offset(
+      tipFromBase.dx * cosR + tipFromBase.dy * sinR,
+      -tipFromBase.dx * sinR + tipFromBase.dy * cosR,
+    );
+
+    final Paint outlinePaint =
+        Paint()
+          ..color = const Color(0x80000000)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = nonScaling(1.2, painter);
+
+    final double ellipsePointFactor = sqrt(
+      (tipLocal.dx * tipLocal.dx) / (baseRadius * baseRadius) + (tipLocal.dy * tipLocal.dy) / (ellipseMinorRadius * ellipseMinorRadius),
+    );
+
+    // If tip projects inside the base ellipse, tangents are undefined.
+    // In that orientation, only the base rim silhouette is visible.
+    if (ellipsePointFactor <= 1.0001) {
+      canvas.save();
+      canvas.translate(baseCenter.dx, baseCenter.dy);
+      canvas.rotate(ellipseRotation);
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: Offset.zero,
+          width: baseRadius * 2,
+          height: ellipseMinorRadius * 2,
+        ),
+        outlinePaint,
       );
-      dev.log("onFrontWall");
-    } else if (onBackWall) {
-      _drawSectorCoverage(
-        canvas,
-        coveragePath,
-        speakerScreenCenter.dx,
-        speakerScreenCenter.dy,
-        coverageDistance,
-        270,
-        coverageOutlinePaint,
-        nonScaling(6.0, painter),
-        nonScaling(4.0, painter),
-        horizontalCoverageAngle,
-      );
-      dev.log("onBackWall");
-    } else if (onLeftWall) {
-      _drawSectorCoverage(
-        canvas,
-        coveragePath,
-        speakerScreenCenter.dx,
-        speakerScreenCenter.dy,
-        coverageDistance,
-        0,
-        coverageOutlinePaint,
-        nonScaling(6.0, painter),
-        nonScaling(4.0, painter),
-        horizontalCoverageAngle,
-      );
-      dev.log("onLeftWall");
-    } else if (onRightWall) {
-      _drawSectorCoverage(
-        canvas,
-        coveragePath,
-        speakerScreenCenter.dx,
-        speakerScreenCenter.dy,
-        coverageDistance,
-        180,
-        coverageOutlinePaint,
-        nonScaling(6.0, painter),
-        nonScaling(4.0, painter),
-        horizontalCoverageAngle,
-      );
-      dev.log("onRightWall");
-    } else {
-      dev.log("Nothing here to draw");
+      canvas.restore();
+      return;
     }
 
-    // Restore canvas state (remove clipping)
-    canvas.restore();
-  }
+    final double aNorm = tipLocal.dx / baseRadius;
+    final double bNorm = tipLocal.dy / ellipseMinorRadius;
+    final double phi = atan2(bNorm, aNorm);
+    final double delta = acos((1.0 / ellipsePointFactor).clamp(-1.0, 1.0));
+    final double t1 = phi + delta;
+    final double t2 = phi - delta;
 
-  void _drawSectorCoverage(
-    Canvas canvas,
-    Path path,
-    double centerX,
-    double centerY,
-    double distance,
-    double directionDegrees,
-    Paint strokePaint,
-    double dashLength,
-    double gapLength,
-    double horizontalCoverageAngle,
-  ) {
-    // Convert direction to radians
-    final double directionRadians = directionDegrees * 3.14159 / 180;
+    Offset pointOnEllipse(double t) => Offset(baseRadius * cos(t), ellipseMinorRadius * sin(t));
 
-    // Use actual horizontal coverage angle from speaker specification
-    final double halfAngleRadians = (horizontalCoverageAngle * 3.14159 / 180) / 2;
+    Offset localToWorld(Offset local) => Offset(
+      baseCenter.dx + local.dx * cosR - local.dy * sinR,
+      baseCenter.dy + local.dx * sinR + local.dy * cosR,
+    );
 
-    // Calculate the sector endpoints
-    final double leftAngle = directionRadians - halfAngleRadians;
-    final double rightAngle = directionRadians + halfAngleRadians;
+    final Offset p1 = localToWorld(pointOnEllipse(t1));
+    final Offset p2 = localToWorld(pointOnEllipse(t2));
 
-    // Calculate the end points of the sector
-    final double leftEndX = centerX + distance * cos(leftAngle);
-    final double leftEndY = centerY + distance * sin(leftAngle);
+    final Path sidePath =
+        Path()
+          ..moveTo(origin.dx, origin.dy)
+          ..lineTo(p1.dx, p1.dy)
+          ..moveTo(origin.dx, origin.dy)
+          ..lineTo(p2.dx, p2.dy);
+    canvas.drawPath(sidePath, outlinePaint);
 
-    // Create directional sector path (pie slice)
-    path.reset();
-    path.moveTo(centerX, centerY); // Start at speaker position
-    path.lineTo(leftEndX, leftEndY); // Line to left edge of coverage
+    double normalizeAngle(double angle) {
+      double a = angle % (2 * pi);
+      if (a < 0) a += 2 * pi;
+      return a;
+    }
 
-    // Add arc between the endpoints
-    path.arcTo(
-      Rect.fromCenter(center: Offset(centerX, centerY), width: distance * 2, height: distance * 2),
-      leftAngle,
-      rightAngle - leftAngle,
+    double ccwSweep(double start, double end) {
+      final double s = normalizeAngle(start);
+      final double e = normalizeAngle(end);
+      final double d = e - s;
+      return d >= 0 ? d : (d + 2 * pi);
+    }
+
+    final double sweep12 = ccwSweep(t1, t2);
+    final double sweep21 = (2 * pi) - sweep12;
+    final double mid12 = t1 + (sweep12 / 2.0);
+    final double mid21 = t2 + (sweep21 / 2.0);
+
+    final Offset m12 = pointOnEllipse(mid12);
+    final Offset m21 = pointOnEllipse(mid21);
+    final double d12 = (m12 - tipLocal).distanceSquared;
+    final double d21 = (m21 - tipLocal).distanceSquared;
+
+    final double arcStart = d12 >= d21 ? t1 : t2;
+    final double arcSweep = d12 >= d21 ? sweep12 : sweep21;
+
+    canvas.save();
+    canvas.translate(baseCenter.dx, baseCenter.dy);
+    canvas.rotate(ellipseRotation);
+    canvas.drawArc(
+      Rect.fromCenter(
+        center: Offset.zero,
+        width: baseRadius * 2,
+        height: ellipseMinorRadius * 2,
+      ),
+      arcStart,
+      arcSweep,
       false,
+      outlinePaint,
     );
-
-    path.lineTo(centerX, centerY); // Line back to speaker position
-    path.close();
-
-    // Draw dashed sector outline only.
-    _drawDashedPath(
-      canvas: canvas,
-      path: path,
-      paint: strokePaint,
-      dashLength: dashLength,
-      gapLength: gapLength,
-    );
+    canvas.restore();
   }
 
   void _drawDashedPath({

@@ -357,6 +357,7 @@ extension HardwareViewModel on ProjectViewModel {
       for (int i = 0; i < placeCount; i++) {
         final Speaker clonedSpeaker = templateSpeaker.getClone().copyWith(
           pitch: listeningArea.mountingType == MountingType.pendant || listeningArea.mountingType == MountingType.ceiling ? 90.0 : 0.0,
+          yaw: listeningArea.mountingType == MountingType.surface ? 90.0 : 0.0,
         );
         clonedSpeaker.pos = sortedPoints[i];
         addHardware(hardware: clonedSpeaker, autoSave: false);
@@ -698,6 +699,12 @@ extension HardwareViewModel on ProjectViewModel {
 
   Speaker fromSpeakerProductModel(String assetImagePath, SpeakerProduct product, LocationModel locationEntity, bool isFromBuildingPage) {
     final MountingType? mountingType = MountingType.fromJson(product.mountType);
+
+    final double pitch = mountingType == MountingType.pendant || mountingType == MountingType.ceiling ? 90.0 : 0.0;
+    final double yaw = mountingType == MountingType.surface ? 90.0 : 0.0;
+
+    log("MOUNTING TYPE: ${product.mountType}, resolved mounting type: $mountingType, pitch: $pitch, yaw: $yaw");
+
     return Speaker(
       locationEntity: locationEntity,
       name: product.modelName,
@@ -711,7 +718,8 @@ extension HardwareViewModel on ProjectViewModel {
       type: OutputType.analogOutput,
       price: 0,
       mountingType: mountingType,
-      pitch: mountingType == MountingType.pendant || mountingType == MountingType.ceiling ? 90.0 : 0.0,
+      pitch: pitch,
+      yaw: yaw,
       inputPortsData: <PortData>[
         PortData(
           name: "In",
@@ -723,6 +731,7 @@ extension HardwareViewModel on ProjectViewModel {
         ),
       ],
       outputPortsData: <PortData>[],
+      coverageAngle: product.coverage.firstOrNull?.horizontalDeg.toDouble(),
     );
   }
 
