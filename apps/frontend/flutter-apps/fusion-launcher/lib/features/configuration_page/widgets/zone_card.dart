@@ -307,6 +307,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
         // const Spacer(),
         _buildReorderablePriorityWidgets(),
+        const SizedBox(height: 10),
         buildSourceSelectionForZone(),
       ],
     );
@@ -561,7 +562,7 @@ class _ZoneCardState extends State<ZoneCard> {
                   },
 
                   child: Container(
-                    height: 32,
+                    height: 30,
                     padding: const EdgeInsets.only(right: 8, left: 8, top: 4, bottom: 4),
 
                     decoration: BoxDecoration(
@@ -608,8 +609,7 @@ class _ZoneCardState extends State<ZoneCard> {
                           child: FusionAppText(
                             text: selectedSource ?? 'Select',
                             maxLine: 1,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 12,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: isSelected ? context.colorScheme.primaryWhite : context.colorScheme.primaryWhite.withAlpha(120),
                             ),
                           ),
@@ -777,7 +777,7 @@ class _ZoneCardState extends State<ZoneCard> {
                 }
               },
               child: Container(
-                height: 32,
+                height: 30,
                 width: MediaQuery.of(context).size.width * 0.1,
                 padding: const EdgeInsets.all(8),
 
@@ -799,7 +799,7 @@ class _ZoneCardState extends State<ZoneCard> {
                         semanticId: FusionTestKeys.instance.functionselecttext,
                         text: selectedFunction?.displayName ?? '',
                         maxLine: 1,
-                        style: context.textTheme.l1Regular.withColor(context.colorScheme.textPrimary),
+                        style: context.textTheme.bodySmall?.withColor(context.colorScheme.textPrimary),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1066,60 +1066,10 @@ class _ZoneCardState extends State<ZoneCard> {
                 SemanticTypes.container,
                 FusionTestKeys.instance.selectSourceButton,
               ),
-              // child: Container(
-              //   height: 22,
-              //   width: 160,
-              //   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              //   decoration: BoxDecoration(
-              //     border: Border.all(
-              //       color: hasSelection ? context.colorScheme.elevation5 : context.colorScheme.elevation5.withAlpha(150),
-              //     ),
-              //     borderRadius: BorderRadius.circular(3),
-              //   ),
-              //   child: Row(
-              //     children: <Widget>[
-              //       Expanded(
-              //         child: FusionAppText(
-              //           text: hasSelection ? 'Sources selected' : 'Select sources',
-              //           maxLine: 1,
-              //           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              //             fontSize: 11,
-              //             color: hasSelection ? context.colorScheme.primaryWhite : context.colorScheme.primaryWhite.withAlpha(150),
-              //           ),
-              //         ),
-              //       ),
-              //       hasSelection
-              //           ? IntrinsicWidth(
-              //             child: Container(
-              //               height: 14,
-              //               padding: const EdgeInsets.symmetric(horizontal: 4),
-              //               alignment: Alignment.center,
-              //               decoration: BoxDecoration(
-              //                 color: context.colorScheme.primaryWhite,
-              //                 borderRadius: BorderRadius.circular(3),
-              //               ),
-              //               child: FusionAppText(
-              //                 text: _zonesViewmodel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
-              //                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              //                   fontSize: 8,
-              //                   color: context.colorScheme.primaryBlack,
-              //                   fontWeight: FontWeight.w600,
-              //                 ),
-              //               ),
-              //             ),
-              //           )
-              //           : Icon(
-              //             Icons.add,
-              //             color: context.colorScheme.primaryWhite.withAlpha(150),
-              //             size: 16,
-              //           ),
-              //     ],
-              //   ),
-              // ),
               child: Container(
-                width: MediaQuery.of(context).size.width * 0.105,
-                height: 32,
-                padding: const EdgeInsets.only(right: 8, left: 8, top: 4, bottom: 4),
+                width: MediaQuery.of(context).size.width * 0.3,
+                height: 30,
+                padding: const EdgeInsets.only(right: 9, left: 8, top: 4, bottom: 4),
 
                 decoration: BoxDecoration(
                   color: context.colorScheme.elevation1,
@@ -1142,8 +1092,7 @@ class _ZoneCardState extends State<ZoneCard> {
                       child: FusionAppText(
                         text: hasSelection ? 'Selected' : 'Select sources',
                         maxLine: 1,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 14,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.w500,
                           color: hasSelection ? context.colorScheme.primaryWhite : context.colorScheme.primaryWhite.withAlpha(140),
                         ),
@@ -1163,8 +1112,7 @@ class _ZoneCardState extends State<ZoneCard> {
                               ? Center(
                                 child: FusionAppText(
                                   text: _zonesViewmodel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontSize: 13,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                     fontWeight: FontWeight.w600,
                                     color: context.colorScheme.primaryWhite,
                                   ),
