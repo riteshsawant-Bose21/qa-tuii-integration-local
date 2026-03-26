@@ -53,8 +53,8 @@ extension ConfigZoneKeys on FusionTestKeys {
   String get selectSourceButton => "select_sources_popup_sources_section_button";
   String get SrcListTxt => "source_list_item_text";
   String get SrcSetListTxt => "source_list_item_text";
-  String get srcsetlistcheckbox => "source_list_item_checkbox";
-  String get sourcesetlistcheckbox => "source_set_list_item_checkbox";
-  String get sourcesettext => "source_set_header_text";
-  String get sourcetext => "source_header_text";
+  String get SrcSetListCheckbox => "source_list_item_checkbox";
+  String get SourceSetListCheckbox => "source_set_list_item_checkbox";
+  String get SourceSetText => "source_set_header_text";
+  String get SourceText => "source_header_text";
 }

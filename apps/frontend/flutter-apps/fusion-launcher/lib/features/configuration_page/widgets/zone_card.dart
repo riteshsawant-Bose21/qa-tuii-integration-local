@@ -1383,7 +1383,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
                             FusionAppText(
                               text: 'SOURCES',
-                              semanticId: FusionTestKeys.instance.sourcetext,
+                              semanticId: FusionTestKeys.instance.SourceText,
                               maxLine: 1,
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 fontSize: 11,
@@ -1416,7 +1416,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                     child: Row(
                                       children: <Widget>[
                                         FusionCheckbox(
-                                          semanticId: "${FusionTestKeys.instance.srcsetlistcheckbox}_${index}",
+                                          semanticId: "${FusionTestKeys.instance.SrcSetListCheckbox}_${index}",
                                           value: isSelected,
                                           onChanged: () {
                                             if (isPrioritySource) return;
@@ -1475,7 +1475,7 @@ class _ZoneCardState extends State<ZoneCard> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             FusionAppText(
-                              semanticId: FusionTestKeys.instance.sourcesettext,
+                              semanticId: FusionTestKeys.instance.SourceSetText,
                               text: 'SOURCE SETS',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 fontSize: 11,
@@ -1504,7 +1504,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                   child: Row(
                                     children: <Widget>[
                                       FusionCheckbox(
-                                        semanticId: "${FusionTestKeys.instance.sourcesetlistcheckbox}_$index",
+                                        semanticId: "${FusionTestKeys.instance.SourceSetListCheckbox}_$index",
                                         value: isSelected,
                                         onChanged: () {
                                           isSelected ? _tempSelectedItems.remove(setItem) : _tempSelectedItems.add(setItem);
