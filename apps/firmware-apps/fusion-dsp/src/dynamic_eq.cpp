@@ -3,6 +3,7 @@
 #include "iir.h"
 
 #include <bosepro/algorithm.h>
+#include <bosepro/conversion.h>
 #include <spdlog/spdlog.h>
 
 #include <cstdint>

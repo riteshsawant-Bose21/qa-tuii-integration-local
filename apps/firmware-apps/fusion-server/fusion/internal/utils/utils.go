@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"fusion/internal/api"
 	"io"
+	"log"
 	"mime/multipart"
 	"net"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strconv"
+	"time"
 
 	"github.com/gibson042/canonicaljson-go"
 	"github.com/gorilla/mux"
@@ -365,6 +367,11 @@ func BuildInternalURL(address, port, endpoint string) string {
 	return fmt.Sprintf("%s%s:%s%s", api.Protocol, address, port, endpoint)
 }
 
+// GetLocalURL builds a full API URL to the endpoint
+func GetLocalURL(addr, endpoint string) string {
+	return fmt.Sprintf("%s%s%s", api.Protocol, addr, endpoint)
+}
+
 // GetLocalIP returns the primary IP address used for outbound communication
 func GetLocalIP() (string, error) {
 	conn, err := net.Dial("udp", "8.8.8.8:80")
@@ -378,25 +385,43 @@ func GetLocalIP() (string, error) {
 }
 
 func GetLocalIPByInterface(interfaceName string) (string, error) {
-	iface, err := net.InterfaceByName(interfaceName)
-	if err != nil {
-		return "", fmt.Errorf("interface %s not found: %w", interfaceName, err)
-	}
+	const startupIPRetryInterval = 5 * time.Second
+	const startupIPWaitTimeout = 15 * time.Minute
 
-	addrs, err := iface.Addrs()
-	if err != nil {
-		return "", fmt.Errorf("failed to get addresses for interface %s: %w", interfaceName, err)
-	}
+	deadline := time.Now().Add(startupIPWaitTimeout)
 
-	for _, addr := range addrs {
-		if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
-			if ipNet.IP.To4() != nil { // IPv4
-				return ipNet.IP.String(), nil
+	for {
+		iface, err := net.InterfaceByName(interfaceName)
+		if err != nil {
+			return "", fmt.Errorf("interface %s not found: %w", interfaceName, err)
+		}
+
+		addrs, err := iface.Addrs()
+		if err != nil {
+			return "", fmt.Errorf("failed to get addresses for interface %s: %w", interfaceName, err)
+		}
+
+		for _, addr := range addrs {
+			if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
+				if ipNet.IP.To4() != nil { // IPv4
+					return ipNet.IP.String(), nil
+				}
 			}
 		}
-	}
 
-	return "", fmt.Errorf("no IPv4 address found on interface %s", interfaceName)
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			return "", fmt.Errorf("timed out waiting for IPv4 on interface %s after %s", interfaceName, startupIPWaitTimeout)
+		}
+
+		waitTime := startupIPRetryInterval
+		if remaining < waitTime {
+			waitTime = remaining
+		}
+
+		log.Printf("Warning: local IPv4 for interface %q not available yet, retrying in %s (remaining %s)", interfaceName, waitTime, remaining.Round(time.Second))
+		time.Sleep(waitTime)
+	}
 }
 
 func unwrapPrimitiveDiff(m map[string]any) (any, bool) {
@@ -414,4 +439,16 @@ func unwrapPrimitiveDiff(m map[string]any) (any, bool) {
 	default:
 		return v, true
 	}
+}
+
+func ToMap(v any) (map[string]any, error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	var m map[string]any
+	if err := json.Unmarshal(b, &m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }

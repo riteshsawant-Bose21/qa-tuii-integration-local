@@ -1,0 +1,21 @@
+info:
+  name: Set VIP
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: http://192.168.2.38:8080/devices/vip/:vip
+  params:
+    - name: vip
+      value: 192.168.4.100
+      type: path
+  body:
+    type: json
+    data: ""
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -17,6 +17,7 @@ SSH_OPTS=(
 OUTPUT_ROOT="./debug_logs"
 CAPTURE_MODE_LABEL=""
 RUN_TIMESTAMP=""
+SSH_FAILURE_REASON=""
 
 print_info() {
   echo -e "${BLUE}[INFO]${NC} $1"
@@ -87,10 +88,22 @@ prompt_mode() {
 
 check_connectivity() {
   local device="$1"
+  local ssh_output ssh_code
   print_info "[$device] Checking SSH connectivity"
-  if ssh "${SSH_OPTS[@]}" "$device" 'exit 0' >/dev/null 2>&1; then
+  ssh_output=$(ssh "${SSH_OPTS[@]}" "$device" 'exit 0' 2>&1)
+  ssh_code=$?
+
+  if [[ $ssh_code -eq 0 ]]; then
+    SSH_FAILURE_REASON=""
     return 0
   fi
+
+  if [[ -z "$ssh_output" ]]; then
+    SSH_FAILURE_REASON="SSH exited with code $ssh_code and returned no diagnostic output"
+  else
+    SSH_FAILURE_REASON="$ssh_output"
+  fi
+
   return 1
 }
 
@@ -242,8 +255,10 @@ process_device() {
 
   print_info "[$device] Starting collection"
   if ! check_connectivity "$device"; then
-    write_error_file "$outdir/device_error.txt" "SSH connection failure to $device"
-    print_error "[$device] SSH connection failed. Skipping device."
+    write_error_file "$outdir/device_error.txt" "SSH connection failure to $device
+Details: ${SSH_FAILURE_REASON}"
+    print_error "[$device] SSH connection failed: ${SSH_FAILURE_REASON}"
+    print_error "[$device] Skipping device."
     return 1
   fi
 
