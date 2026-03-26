@@ -10,13 +10,13 @@ import '../../../core/constants/assets_constants.dart';
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart'
     show SelectedItemType, ProjectViewModel, ProjectPropertiesViewModel, HardwareViewModel;
+import '../../processing_block/view/processing_chain_view.dart';
+import '../../zone_functions/source_matrix.dart';
+import '../../zone_functions/source_mix.dart';
 import '../viewModel/source_sets_viewmodel/config_source_sets_viewmodel.dart';
 import '../viewModel/sources_viewmodel/config_sources_viewmodel.dart';
 import '../viewModel/zones_viewmodel/config_zones_state.dart';
 import '../viewModel/zones_viewmodel/config_zones_viewmodel.dart';
-import '../../processing_block/view/processing_chain_view.dart';
-import '../../zone_functions/source_matrix.dart';
-import '../../zone_functions/source_mix.dart';
 
 class ZoneCard extends StatefulWidget {
   final String zoneId;
@@ -1005,7 +1005,7 @@ class _ZoneCardState extends State<ZoneCard> {
                 ),
               );
             } else {
-              for (final (index, src) in availableSources.indexed) {
+              for (final (int index, Source src) in availableSources.indexed) {
                 final String id = src.id;
 
                 /// Check if this source is already a priority source
@@ -1062,7 +1062,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                   children: <Widget>[
                                     Expanded(
                                       child: FusionAppText(
-                                        semanticId: "${FusionTestKeys.instance.selectsrcpopupuptext}_${index}",
+                                        semanticId: "${FusionTestKeys.instance.selectsrcpopupuptext}_$index",
                                         text: src.name,
                                         capitalize: true,
                                         maxLine: 1,
@@ -1136,7 +1136,7 @@ class _ZoneCardState extends State<ZoneCard> {
                 ),
               );
             } else {
-              for (final (index, s) in sourceSetList.indexed) {
+              for (final (int index, SourceSet s) in sourceSetList.indexed) {
                 final String id = s.id;
                 final List<Source> sourcesInSet = _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: s.id);
 
@@ -1182,7 +1182,7 @@ class _ZoneCardState extends State<ZoneCard> {
                               const SizedBox(width: 4),
                               Expanded(
                                 child: FusionAppText(
-                                  semanticId: "${FusionTestKeys.instance.selectsrcpopupupsettext}_${index}",
+                                  semanticId: "${FusionTestKeys.instance.selectsrcpopupupsettext}_$index",
                                   text: '${s.name} (${sourcesInSet.length} sources)',
                                   maxLine: 1,
                                   capitalize: true,

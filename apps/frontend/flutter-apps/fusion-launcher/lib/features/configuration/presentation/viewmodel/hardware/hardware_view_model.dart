@@ -702,8 +702,7 @@ extension HardwareViewModel on ProjectViewModel {
 
     final double pitch = mountingType == MountingType.pendant || mountingType == MountingType.ceiling ? 90.0 : 0.0;
     final double yaw = mountingType == MountingType.surface ? 90.0 : 0.0;
-
-    log("MOUNTING TYPE: ${product.mountType}, resolved mounting type: $mountingType, pitch: $pitch, yaw: $yaw");
+    final double? horizontalCoverageAngle = product.coverage.firstOrNull?.horizontalDeg.toDouble();
 
     return Speaker(
       locationEntity: locationEntity,
@@ -731,7 +730,7 @@ extension HardwareViewModel on ProjectViewModel {
         ),
       ],
       outputPortsData: <PortData>[],
-      coverageAngle: product.coverage.firstOrNull?.horizontalDeg.toDouble(),
+      horizontalCoverageAngle: horizontalCoverageAngle,
     );
   }
 

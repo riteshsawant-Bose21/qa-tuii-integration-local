@@ -15,7 +15,7 @@ class Speaker extends HardwareComponent {
   final double roll;
   final double yaw;
   final MountingType? mountingType;
-  final double? coverageAngle; // in degrees
+  final double? horizontalCoverageAngle; // in degrees
 
   Speaker({
     String? id,
@@ -45,7 +45,7 @@ class Speaker extends HardwareComponent {
     super.outputPortsData,
     required super.addedFromBuildingPage,
     this.mountingType,
-    this.coverageAngle,
+    this.horizontalCoverageAngle,
   }) : super(
          hardwareName: hardwareName ?? name,
          id: id ?? "SPEAKER${FusionUtils.shortStringUUID()}",
@@ -80,7 +80,7 @@ class Speaker extends HardwareComponent {
     bool? addedFromBuildingPage,
     Color? color,
     MountingType? mountingType,
-    double? coverageAngle,
+    double? horizontalCoverageAngle,
   }) {
     return Speaker(
       id: id ?? this.id,
@@ -108,7 +108,7 @@ class Speaker extends HardwareComponent {
       outputPortsData: outputPortsData ?? this.outputPortsData,
       addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
       mountingType: mountingType ?? this.mountingType,
-      coverageAngle: coverageAngle ?? this.coverageAngle,
+      horizontalCoverageAngle: horizontalCoverageAngle ?? this.horizontalCoverageAngle,
     );
   }
 
@@ -139,7 +139,7 @@ class Speaker extends HardwareComponent {
       outputPortsData: speaker.outputPortsData,
       addedFromBuildingPage: addedFromBuildingPage ? true : speaker.addedFromBuildingPage,
       mountingType: speaker.mountingType,
-      coverageAngle: speaker.coverageAngle,
+      horizontalCoverageAngle: speaker.horizontalCoverageAngle,
     );
   }
 
@@ -254,7 +254,7 @@ class Speaker extends HardwareComponent {
       'addedFromBuildingPage': addedFromBuildingPage,
       'equipmentLocationPosition': equipmentLocationPosition,
       "mountingType": mountingType?.name,
-      "coverageAngle": coverageAngle,
+      "horizontalCoverageAngle": horizontalCoverageAngle,
     };
   }
 
@@ -286,7 +286,7 @@ class Speaker extends HardwareComponent {
       addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
       equipmentLocationPosition: DeserializationUtil.intDeserializer.deserialize(json['equipmentLocationPosition']),
       mountingType: MountingType.fromJson(json['mountingType'] as String?),
-      coverageAngle: (json['coverageAngle'] as num?)?.toDouble(),
+      horizontalCoverageAngle: (json['horizontalCoverageAngle'] as num?)?.toDouble(),
     );
   }
 }

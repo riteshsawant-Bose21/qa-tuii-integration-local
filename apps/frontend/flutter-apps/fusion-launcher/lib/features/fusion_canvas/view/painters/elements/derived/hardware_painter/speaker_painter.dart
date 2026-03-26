@@ -66,7 +66,7 @@ class SpeakerPainter extends FusionCanvasElementPainter {
     final Offset? position = hardware.pos;
     if (position == null) return;
 
-    final double coverageAngle = hardware.coverageAngle ?? 90.0;
+    final double coverageAngle = (hardware.horizontalCoverageAngle ?? 90.0) / 2.0; // half-angle in degrees from center line to edge of coverage
 
     final double coverageDistance = 200.0;
 
