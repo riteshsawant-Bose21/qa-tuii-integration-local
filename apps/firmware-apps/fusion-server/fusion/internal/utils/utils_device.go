@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"fusion-services-core/logging"
@@ -21,9 +22,16 @@ func GetFirmwareVersion() string {
 	if err != nil {
 		logging.GetLogger().Warn("%s not found.", api.FirmwarePath)
 		return api.FirmwareUnknown
-	} else {
-		return string(bytes.TrimRight(data, "\x00\n"))
 	}
+
+	var fw api.FirmwareInfo
+	err = json.Unmarshal(data, &fw)
+	if err != nil {
+		logging.GetLogger().Warn("Failed to parse firmware file")
+		return api.FirmwareUnknown
+	}
+
+	return fw.BuildConfiguration.FirmwareBundleVersion
 }
 
 func GetSerialNumber() string {
