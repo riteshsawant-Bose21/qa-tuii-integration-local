@@ -358,6 +358,7 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
+  // Helper methods for auto-placement
   List<Speaker> _getAutoPlacementTargetSpeakers({required List<SpeakerProduct> catalogSpeakers}) {
     final List<Speaker> nonPlacedSpeakers = getNonPlacedSpeakersForCurrentListeningArea();
     final List<Speaker> placedSpeakers = getPlacedSpeakersForCurrentListeningArea();
@@ -372,6 +373,9 @@ extension HardwareViewModel on ProjectViewModel {
     }).toList();
   }
 
+  // Sort candidate points based on distance from center of listening area, closest first.
+  // This is a heuristic to try to place speakers in a more balanced way in irregularly shaped rooms
+  // where the algorithm may return clusters of points in certain areas.
   List<Offset> _sortPlacementPoints({required ListeningArea listeningArea, required List<Offset> points}) {
     final Offset center = listeningArea.getCenterPositionOfVertices() ?? points.first;
     return List<Offset>.from(points)..sort((Offset a, Offset b) => (a - center).distance.compareTo((b - center).distance));
@@ -408,9 +412,6 @@ extension HardwareViewModel on ProjectViewModel {
 
     final double ceilingHeight = parsedCeilingHeight;
 
-    // final double boundaryThreshold = autoPlacementResult.autoPlaceBoundaryThreshold;
-    // if (boundaryThreshold < 0.3 || boundaryThreshold >= 1) throw ArgumentError('Boundary threshold must be between 0.3 and 1.');
-
     if (mountingType == MountingType.ceiling || mountingType == MountingType.pendant) {
       final List<Point2D> geometry = <Point2D>[
         ...listeningArea.vertices.map(
@@ -437,8 +438,6 @@ extension HardwareViewModel on ProjectViewModel {
         ),
         coveragePreference: autoPlacementResult.autoPlaceCoveragePreference,
         layoutPattern: autoPlacementResult.autoPlaceLayoutPattern,
-        // customOriginOffset: Point2D(autoPlacementResult.autoPlaceGridOffsetX, autoPlacementResult.autoPlaceGridOffsetY),
-        // boundaryOverlapThreshold: boundaryThreshold,
       );
 
       log("Total speakers placed by algorithm: ${result.speakerPositions.length}");

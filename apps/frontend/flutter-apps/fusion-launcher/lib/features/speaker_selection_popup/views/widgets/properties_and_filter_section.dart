@@ -246,19 +246,19 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                     },
                                   ),
                                   const SizedBox(height: 5),
-                                  BuildingPageTextField(
-                                    label: "Floor Height (m)",
-                                    controller: floorHeightController,
-                                    hintText: "e.g. 0.0",
-                                    fillColor: context.colorScheme.elevation1,
-                                    inputFormatters: <TextInputFormatter>[
-                                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                                    ],
-                                    onFieldSubmitted: (String newValue) {
-                                      setState(() {});
-                                    },
-                                  ),
-                                  const SizedBox(height: 5),
+                                  // BuildingPageTextField(
+                                  //   label: "Floor Height (m)",
+                                  //   controller: floorHeightController,
+                                  //   hintText: "e.g. 0.0",
+                                  //   fillColor: context.colorScheme.elevation1,
+                                  //   inputFormatters: <TextInputFormatter>[
+                                  //     FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                                  //   ],
+                                  //   onFieldSubmitted: (String newValue) {
+                                  //     setState(() {});
+                                  //   },
+                                  // ),
+                                  // const SizedBox(height: 5),
                                   BuildRowPropertyWidget<String>(
                                     label: "Environment",
                                     value: selectedListeningArea.environmentType?.displayName,
@@ -268,16 +268,16 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                       speakerSelectionViewModel.setEnvironmentType(selectedIndex);
                                     },
                                   ),
-                                  const SizedBox(height: 5),
-                                  BuildRowPropertyWidget<String>(
-                                    label: "Background Noise",
-                                    value: selectedListeningArea.backgroundNoise?.displayName,
-                                    options: BackgroundNoise.values.map((BackgroundNoise option) => option.displayName).toList(),
-                                    labelBuilder: (String option) => option,
-                                    onOptionSelected: (int selectedIndex, String newValue) {
-                                      speakerSelectionViewModel.setBackgroundNoise(selectedIndex);
-                                    },
-                                  ),
+                                  // const SizedBox(height: 5),
+                                  // BuildRowPropertyWidget<String>(
+                                  //   label: "Background Noise",
+                                  //   value: selectedListeningArea.backgroundNoise?.displayName,
+                                  //   options: BackgroundNoise.values.map((BackgroundNoise option) => option.displayName).toList(),
+                                  //   labelBuilder: (String option) => option,
+                                  //   onOptionSelected: (int selectedIndex, String newValue) {
+                                  //     speakerSelectionViewModel.setBackgroundNoise(selectedIndex);
+                                  //   },
+                                  // ),
                                 ],
                               ),
                             ),
