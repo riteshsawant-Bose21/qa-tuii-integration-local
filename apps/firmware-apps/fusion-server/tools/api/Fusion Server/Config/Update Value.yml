@@ -1,0 +1,28 @@
+info:
+  name: Update Value
+  type: http
+  seq: 5
+
+http:
+  method: PATCH
+  url: "{{api_url}}/value"
+  headers:
+    - name: Content-Type
+      value: application/json
+  params:
+    - name: key
+      value: settings
+      type: query
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+          "test":121
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

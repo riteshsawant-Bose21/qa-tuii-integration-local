@@ -1,0 +1,28 @@
+info:
+  name: Get
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{api_url}}/tasks/:id"
+  headers:
+    - name: Content-Type
+      value: application/json
+  params:
+    - name: id
+      value: activate-snap-001
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "cron_expr": "*/5 * * * *",
+        "description": "updated"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
