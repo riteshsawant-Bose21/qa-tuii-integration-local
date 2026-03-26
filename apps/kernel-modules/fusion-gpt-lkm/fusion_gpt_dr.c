@@ -164,8 +164,6 @@ struct fusion_gpt
   struct i2c_client *dac_client;
   u16 current_dac_value;
 	  long latest_freq_error;    /* The most recent frequency delta */
-	  s64 cumulative_error_ticks_total;
-	  s64 cumulative_error_ticks_locked;
 
   /* PI loop */
   long error_integrator;
@@ -440,8 +438,6 @@ static void gpt_reset_timing_state_locked(struct fusion_gpt *g)
 	g->pending_future_anchor = false;
 	g->pending_future_phc_ns = 0;
 	g->latest_freq_error = 0;
-	g->cumulative_error_ticks_total = 0;
-	g->cumulative_error_ticks_locked = 0;
 	g->error_integrator = 0;
 	g->sq_err_sum = 0;
 	g->err_count = 0;
@@ -502,6 +498,50 @@ u64 fusion_gpt_read_ticks64(void)
 	return ret;
 }
 EXPORT_SYMBOL(fusion_gpt_read_ticks64);
+
+static void gpt_rebase_phc_epoch_locked(struct fusion_gpt *g, u64 cap64,
+					bool had_prev, u64 prev_cap64)
+{
+	if (g->pending_future_anchor) {
+		u64 prev_epoch_ns = g->phc_epoch_ns;
+		u64 prev_epoch_cnt64 = g->pps_epoch_cnt64;
+
+		g->phc_epoch_ns = g->pending_future_phc_ns;
+		g->pps_epoch_cnt64 = cap64;
+		g->phc_epoch_valid = true;
+		g->phc_aligned = false; /* ensure OF1 one-shot align runs */
+		g->pending_future_anchor = false;
+		pr_info("fusion_gpt: phc anchor latched epoch=%llu cnt=%llu\n",
+			g->phc_epoch_ns, g->pps_epoch_cnt64);
+		pr_info("fusion_gpt: rebase kind=anchor prev_epoch=%llu prev_cnt=%llu new_epoch=%llu new_cnt=%llu aligned=%d\n",
+			prev_epoch_ns, prev_epoch_cnt64,
+			g->phc_epoch_ns, g->pps_epoch_cnt64,
+			READ_ONCE(g->phc_aligned));
+		return;
+	}
+
+	if (!g->phc_epoch_valid || !had_prev)
+		return;
+
+	{
+		u64 prev_epoch_ns = g->phc_epoch_ns;
+		u64 prev_epoch_cnt64 = g->pps_epoch_cnt64;
+		u64 delta_ticks = cap64 - prev_cap64;
+		u64 intervals = (delta_ticks + (PPS_TICKS / 2)) / PPS_TICKS;
+		s64 tick_error;
+
+		if (intervals == 0)
+			intervals = 1;
+
+		tick_error = (s64)delta_ticks - ((s64)intervals * (s64)PPS_TICKS);
+		g->phc_epoch_ns += intervals * 1000000000ULL;
+		g->pps_epoch_cnt64 = cap64;
+
+		pr_info("fusion_gpt: rebase kind=pps prev_epoch=%llu prev_cnt=%llu cap=%llu delta_ticks=%llu intervals=%llu tick_err=%lld new_epoch=%llu new_cnt=%llu\n",
+			prev_epoch_ns, prev_epoch_cnt64, cap64, delta_ticks, intervals,
+			(long long)tick_error, g->phc_epoch_ns, g->pps_epoch_cnt64);
+	}
+}
 
 /* exported client API */
 int fusion_gpt_register_client(const struct fusion_gpt_client_ops *ops,
@@ -620,6 +660,7 @@ int fusion_gpt_get_timing_status(struct fusion_gpt_timing_status *status)
 	status->discipline_ready = READ_ONCE(g->discipline_ready);
 	status->epoch_valid = g->phc_epoch_valid;
 	status->aligned = READ_ONCE(g->phc_aligned);
+	status->pps_rebasing_active = g->phc_epoch_valid && !g->pending_future_anchor;
 	status->pps_seq = g->pps_seq;
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 	return 0;
@@ -656,8 +697,7 @@ int fusion_gpt_reset_timing_state(void)
 		  (g->cal_state != CAL_IDLE &&
 		   g->cal_state != CAL_DONE &&
 		   g->cal_state != CAL_FAIL) ||
-		  g->latest_freq_error || g->cumulative_error_ticks_total ||
-		  g->cumulative_error_ticks_locked || g->error_integrator;
+		  g->latest_freq_error || g->error_integrator;
 	gpt_reset_timing_state_locked(g);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
@@ -974,9 +1014,6 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
       u32 cap = rdl(g, GPT_ICR1);   /* latches & clears capture1 */
       u64 prev_cap64 = 0;
       bool had_prev = false;
-      bool epoch_valid = false;
-      u64 epoch_ns = 0;
-      u64 epoch_cnt64 = 0;
 
       /* Build a monotonic 64-bit capture close to "now" */
       u64 now64 = gpt_read_ticks64(g);                /* seq-safe read */
@@ -986,12 +1023,11 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 
       raw_spin_lock(&g->pps_lock);
       had_prev = g->pps_valid;
+      prev_cap64 = g->pps_icr1_last64;
 
-	      if (g->pps_valid) {
-	          u64 diff = cap64 - g->pps_icr1_last64;
+	      if (had_prev) {
+	          u64 diff = cap64 - prev_cap64;
 	          long freq_error = (long)diff - 10000000L;
-	          long phase_error = 0;
-	          bool was_ready = READ_ONCE(g->discipline_ready);
           
           /* Accumulate squared error for RMS jitter */
           g->sq_err_sum += (s64)freq_error * (s64)freq_error;
@@ -1195,17 +1231,8 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
               }
           }
 
-          if (g->phc_epoch_valid) {
-               u64 ticks_from_start = cap64 - g->pps_epoch_cnt64;
-               long rem = ticks_from_start % 10000000l;
-               if (rem > 5000000) phase_error = rem - 10000000l;
-               else phase_error = rem;
-	          }
 	          g->latest_freq_error = freq_error;
-	          g->cumulative_error_ticks_total += freq_error;
 	          gpt_update_discipline_ready(g, freq_error);
-	          if (was_ready || READ_ONCE(g->discipline_ready))
-	              g->cumulative_error_ticks_locked += freq_error;
 
 	          u32 rms_jitter = 0;
 	          if (g->err_count > 0) {
@@ -1214,11 +1241,10 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 
 	          if (pps_diag_enable) {
 	              if (time_after_eq(jiffies, g->pps_diag_next_jiffies)) {
-	                      pr_info("fusion_gpt: [PPS] diff=%llu ticks err=%ld ticks rms=%u ticks cum=%lld ticks cum_lock=%lld ticks 48k_off=%ldns dac=%d\n",
+	                      pr_info("fusion_gpt: [PPS] diff=%llu ticks err=%ld ticks rms=%u ticks 48k_off=%ldns dac=%d rebase=%d\n",
 	                              diff, freq_error, rms_jitter,
-	                              (long long)g->cumulative_error_ticks_total,
-	                              (long long)g->cumulative_error_ticks_locked,
-	                              if2_offset_ns, g->dac_target);
+	                              if2_offset_ns, g->dac_target,
+	                              g->phc_epoch_valid && !g->pending_future_anchor);
 	                      g->sq_err_sum = 0;
 	                      g->err_count = 0;
 	                      g->pps_diag_next_jiffies = jiffies + HZ;
@@ -1229,45 +1255,12 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 	              g->pps_diag_next_jiffies = jiffies + HZ;
 	          }
       }
-		prev_cap64 = g->pps_icr1_last64;
-		epoch_valid = g->phc_epoch_valid;
-		epoch_ns = g->phc_epoch_ns;
-		epoch_cnt64 = g->pps_epoch_cnt64;
 		g->pps_seq++;
 		g->pps_icr1_last32 = cap;
 		g->pps_icr1_last64 = cap64;
 		g->pps_valid       = true;
-
-		/* If armed for the next PPS, bind the epoch now */
-        if (g->pending_future_anchor) {
-            g->phc_epoch_ns        = g->pending_future_phc_ns;
-            g->pps_epoch_cnt64     = cap64;
-            g->phc_epoch_valid     = true;
-            g->phc_aligned         = false; /* ensure OF1 one-shot align runs */
-            g->pending_future_anchor = false;
-            pr_info("fusion_gpt: phc anchor latched epoch=%llu cnt=%llu\n",
-                    g->phc_epoch_ns, g->pps_epoch_cnt64);
-        }
+		gpt_rebase_phc_epoch_locked(g, cap64, had_prev, prev_cap64);
 		raw_spin_unlock(&g->pps_lock);
-
-		/* Unconditional PPS capture log for timing/health */
-		{
-			u64 missed = 0;
-			u64 delta_ticks = 0;
-			u64 phc_ns = 0;
-
-			if (had_prev) {
-				u64 intervals;
-				delta_ticks = cap64 - prev_cap64;
-				intervals = (delta_ticks + (PPS_TICKS / 2)) / PPS_TICKS;
-				if (intervals == 0)
-					intervals = 1;
-				missed = intervals - 1;
-			}
-
-			if (epoch_valid && cap64 >= epoch_cnt64)
-				phc_ns = epoch_ns + (cap64 - epoch_cnt64) * 100ULL;
-		}
 
 		if (READ_ONCE(g->dac_target) != READ_ONCE(g->current_dac_value) ||
 		    READ_ONCE(g->si_gain_pending) ||

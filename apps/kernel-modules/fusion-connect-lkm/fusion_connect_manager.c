@@ -942,6 +942,7 @@ struct fc_get_timing_status_reply
     bool discipline_ready;
     bool epoch_valid;
     bool aligned;
+    bool pps_rebasing_active;
     u32  pps_seq;
 } __packed;
 
@@ -959,6 +960,7 @@ static int handle_get_timing_status(struct fusion_cn_manager *mgr,
     r.discipline_ready = status.discipline_ready;
     r.epoch_valid = status.epoch_valid;
     r.aligned = status.aligned;
+    r.pps_rebasing_active = status.pps_rebasing_active;
     r.pps_seq = status.pps_seq;
 
     reply->data = kmemdup(&r, sizeof(r), GFP_KERNEL);

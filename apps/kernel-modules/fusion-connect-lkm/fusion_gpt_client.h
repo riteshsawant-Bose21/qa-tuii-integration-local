@@ -12,6 +12,7 @@ struct fusion_gpt_timing_status {
 	bool discipline_ready;
 	bool epoch_valid;
 	bool aligned;
+	bool pps_rebasing_active;
 	u32 pps_seq;
 };
 

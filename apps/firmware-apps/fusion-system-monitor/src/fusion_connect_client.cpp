@@ -143,6 +143,7 @@ struct fc_get_timing_status_reply
     uint8_t discipline_ready;
     uint8_t epoch_valid;
     uint8_t aligned;
+    uint8_t pps_rebasing_active;
     uint32_t pps_seq;
 } __attribute__((packed));
 
@@ -1515,7 +1516,8 @@ void FusionConnectClient::maybe_set_phc_anchor()
 
     if (st.discipline_ready && !gpt_discipline_ready_logged) {
         const uint32_t pps_seq = st.pps_seq;
-        SPDLOG_INFO("GPT timing reports discipline ready (pps_seq={})", pps_seq);
+        SPDLOG_INFO("GPT timing reports discipline ready (pps_seq={}, pps_rebasing_active={})",
+                    pps_seq, static_cast<bool>(st.pps_rebasing_active));
         gpt_discipline_ready_logged = true;
     }
 
@@ -1525,7 +1527,8 @@ void FusionConnectClient::maybe_set_phc_anchor()
 
     if (st.epoch_valid) {
         ptp_anchor_pending = false;
-        SPDLOG_DEBUG("PHC epoch already valid (aligned={}); skipping re-arm", st.aligned);
+        SPDLOG_DEBUG("PHC epoch already valid (aligned={}, pps_rebasing_active={}); skipping re-arm",
+                     st.aligned, static_cast<bool>(st.pps_rebasing_active));
         return;
     }
 
