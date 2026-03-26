@@ -339,12 +339,7 @@ extension HardwareViewModel on ProjectViewModel {
       recordSnapshot();
 
       // Save auto-placement result to listening area for future reference and to display in UI if needed.
-      final ListeningArea updatedListeningArea = listeningArea.copyWith(
-        autoPlacementResult: autoPlacementResult.copyWith(
-          ceilingPendantPlacementResult: placementResult,
-          surfacePlacementResult: surfacePlacementResult,
-        ),
-      );
+      final ListeningArea updatedListeningArea = listeningArea.copyWith(autoPlacementResult: autoPlacementResult);
       updateListeningArea(area: updatedListeningArea, autoSave: false);
 
       final Speaker templateSpeaker = targetSpeakers.first;

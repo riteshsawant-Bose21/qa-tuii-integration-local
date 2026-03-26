@@ -17,9 +17,7 @@ class SpeakerPainter extends FusionCanvasElementPainter {
     final Offset? position = hardware.pos;
     if (position != null) {
       final Rect rect = getTransformedRect(painter);
-
       _drawDirectionalCoverage(canvas, painter: painter);
-
       _drawSpeaker(rect, canvas, painter, hardware);
     }
   }
@@ -30,34 +28,6 @@ class SpeakerPainter extends FusionCanvasElementPainter {
     return oldDelegate.hardware != hardware;
   }
 
-  void _drawCeilingCoverageCircle(
-    Canvas canvas, {
-    required FusionCanvasPainter painter,
-    required Offset speakerCenter,
-    required double gridSpacing, // algorithm metres
-  }) {
-    const Color dottedOutlineColor = Color(0x80000000); // 50% black
-    // gridSpacing is the centre-to-centre speaker spacing in metres.
-    // The coverage radius per speaker is half that, converted to canvas model px (×100).
-    final double radius = (gridSpacing / 2) * 100.0;
-    if (radius <= 0 || !radius.isFinite) return;
-
-    final Path circlePath = Path()..addOval(Rect.fromCircle(center: speakerCenter, radius: radius));
-    final Paint outlinePaint =
-        Paint()
-          ..color = dottedOutlineColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = nonScaling(1.2, painter);
-
-    _drawDashedPath(
-      canvas: canvas,
-      path: circlePath,
-      paint: outlinePaint,
-      dashLength: nonScaling(6.0, painter),
-      gapLength: nonScaling(4.0, painter),
-    );
-  }
-
   void _drawDirectionalCoverage(Canvas canvas, {required FusionCanvasPainter painter}) {
     final double roll = hardware.roll;
     final double pitch = hardware.pitch;
@@ -66,7 +36,7 @@ class SpeakerPainter extends FusionCanvasElementPainter {
     final Offset? position = hardware.pos;
     if (position == null) return;
 
-    final double coverageAngle = (hardware.horizontalCoverageAngle ?? 90.0) / 2.0; // half-angle in degrees from center line to edge of coverage
+    final double coverageAngle = (hardware.horizontalCoverageAngle ?? 90.0) / 2;
 
     final double coverageDistance = 200.0;
 
@@ -100,11 +70,12 @@ class SpeakerPainter extends FusionCanvasElementPainter {
       -tipFromBase.dx * sinR + tipFromBase.dy * cosR,
     );
 
-    final Paint outlinePaint =
-        Paint()
-          ..color = const Color(0x80000000)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = nonScaling(1.2, painter);
+    final Paint outlinePaint = Paint();
+    outlinePaint.color = const Color(0x80000000);
+    outlinePaint.style = PaintingStyle.stroke;
+    outlinePaint.strokeWidth = nonScaling(1.2, painter);
+    final double dashLength = nonScaling(6.0, painter);
+    final double gapLength = nonScaling(4.0, painter);
 
     final double ellipsePointFactor = sqrt(
       (tipLocal.dx * tipLocal.dx) / (baseRadius * baseRadius) + (tipLocal.dy * tipLocal.dy) / (ellipseMinorRadius * ellipseMinorRadius),
@@ -116,14 +87,15 @@ class SpeakerPainter extends FusionCanvasElementPainter {
       canvas.save();
       canvas.translate(baseCenter.dx, baseCenter.dy);
       canvas.rotate(ellipseRotation);
-      canvas.drawOval(
-        Rect.fromCenter(
-          center: Offset.zero,
-          width: baseRadius * 2,
-          height: ellipseMinorRadius * 2,
-        ),
-        outlinePaint,
-      );
+      final Path rimPath =
+          Path()..addOval(
+            Rect.fromCenter(
+              center: Offset.zero,
+              width: baseRadius * 2,
+              height: ellipseMinorRadius * 2,
+            ),
+          );
+      _drawDashedPath(canvas: canvas, path: rimPath, paint: outlinePaint, dashLength: dashLength, gapLength: gapLength);
       canvas.restore();
       return;
     }
@@ -145,13 +117,12 @@ class SpeakerPainter extends FusionCanvasElementPainter {
     final Offset p1 = localToWorld(pointOnEllipse(t1));
     final Offset p2 = localToWorld(pointOnEllipse(t2));
 
-    final Path sidePath =
-        Path()
-          ..moveTo(origin.dx, origin.dy)
-          ..lineTo(p1.dx, p1.dy)
-          ..moveTo(origin.dx, origin.dy)
-          ..lineTo(p2.dx, p2.dy);
-    canvas.drawPath(sidePath, outlinePaint);
+    final Path sidePath = Path();
+    sidePath.moveTo(origin.dx, origin.dy);
+    sidePath.lineTo(p1.dx, p1.dy);
+    sidePath.moveTo(origin.dx, origin.dy);
+    sidePath.lineTo(p2.dx, p2.dy);
+    _drawDashedPath(canvas: canvas, path: sidePath, paint: outlinePaint, dashLength: dashLength, gapLength: gapLength);
 
     double normalizeAngle(double angle) {
       double a = angle % (2 * pi);
@@ -182,17 +153,14 @@ class SpeakerPainter extends FusionCanvasElementPainter {
     canvas.save();
     canvas.translate(baseCenter.dx, baseCenter.dy);
     canvas.rotate(ellipseRotation);
-    canvas.drawArc(
-      Rect.fromCenter(
-        center: Offset.zero,
-        width: baseRadius * 2,
-        height: ellipseMinorRadius * 2,
-      ),
+
+    final Path arcPath = Path();
+    arcPath.addArc(
+      Rect.fromCenter(center: Offset.zero, width: baseRadius * 2, height: ellipseMinorRadius * 2),
       arcStart,
       arcSweep,
-      false,
-      outlinePaint,
     );
+    _drawDashedPath(canvas: canvas, path: arcPath, paint: outlinePaint, dashLength: dashLength, gapLength: gapLength);
     canvas.restore();
   }
 
