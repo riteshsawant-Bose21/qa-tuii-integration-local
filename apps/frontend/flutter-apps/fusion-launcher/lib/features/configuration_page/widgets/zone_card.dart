@@ -947,6 +947,7 @@ class _ZoneCardState extends State<ZoneCard> {
           _initializeTempSelection(); // 🔥 CRITICAL
 
           return FusionMultiSelectPopupMenu<dynamic>(
+            maxHeight: 450,
             semanticsId: FusionTestKeys.instance.selectsrc,
             saveButtonLabel: "ADD",
             tooltip: "Select Sources",
