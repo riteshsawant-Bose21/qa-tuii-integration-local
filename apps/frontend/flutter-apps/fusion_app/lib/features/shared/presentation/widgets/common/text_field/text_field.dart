@@ -11,6 +11,7 @@ class AppTextField extends StatelessWidget {
   final bool enabled;
   final Widget? suffixIcon;
   final Widget? prefixIcon;
+  final Color? filledColor;
 
   const AppTextField({
     required this.controller,
@@ -21,6 +22,7 @@ class AppTextField extends StatelessWidget {
     this.enabled =true,
     this.hint,
     this.maxLines = 1,
+    this.filledColor,
     super.key,
   });
 
@@ -53,7 +55,7 @@ class AppTextField extends StatelessWidget {
       ),
 
       filled: true,
-      fillColor: enabled ? context.colorScheme.primaryBlack : context.colorScheme.elevation1,
+      fillColor: enabled ? getEnabledColor(context): context.colorScheme.elevation1,
       suffixIcon: suffixIcon ?? null,
       prefixIcon: prefixIcon ?? null,
       contentPadding: const EdgeInsets.symmetric(
@@ -73,5 +75,13 @@ class AppTextField extends StatelessWidget {
         ),
       ),
     );
+  }
+
+ Color getEnabledColor(BuildContext context) {
+
+    if(filledColor!=null){
+      return filledColor!;
+    }
+    return context.colorScheme.primaryBlack;
   }
 }

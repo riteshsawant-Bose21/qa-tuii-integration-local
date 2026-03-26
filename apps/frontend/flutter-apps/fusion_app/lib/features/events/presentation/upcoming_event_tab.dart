@@ -6,7 +6,8 @@ import 'package:fusion_app/features/shared/presentation/widgets/common/empty_sta
 
 class UpcomingEventsScreen extends StatelessWidget {
   final List<EventModel> events;
-  const UpcomingEventsScreen({required this.events,super.key});
+  final bool showTrailingIcon;
+  const UpcomingEventsScreen({required this.events,required this.showTrailingIcon,super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +30,7 @@ class UpcomingEventsScreen extends StatelessWidget {
         return Padding(
           padding: const EdgeInsets.only(bottom: 16),
           child: EventCard(
+            showTrailingIcon:showTrailingIcon,
             event: event,
           ),
         );

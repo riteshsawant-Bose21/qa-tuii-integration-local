@@ -6,6 +6,8 @@ import 'package:fusion_app/features/shared/presentation/widgets/common/app_bar/a
 import 'package:fusion_app/features/shared/presentation/widgets/common/tab_switcher.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_app/features/events/models/event_model.dart';
+
+import '../../authentication/presentation/login_page.dart';
 enum EventTab { scheduled, upcoming }
 
 class EventsScreen extends StatefulWidget {
@@ -368,9 +370,9 @@ class _EventsScreenState extends State<EventsScreen> {
   Widget _buildTabContent() {
     switch (_selectedTab) {
       case EventTab.scheduled:
-        return  ScheduledEventsScreen(events: events,);
+        return  ScheduledEventsScreen(events: events,showTrailingIcon: loggedInUserId == 0);
       case EventTab.upcoming:
-        return  UpcomingEventsScreen(events: upcomingEvents);
+        return  UpcomingEventsScreen(events: upcomingEvents,showTrailingIcon:loggedInUserId == 0);
     }
   }
 

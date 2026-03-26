@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fusion_app/features/feedback.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:path_provider/path_provider.dart';
 import '../router/navigation_observer.dart';
@@ -308,6 +309,68 @@ Status Code: ${statusCode ?? 'None'}
           ),
         ),
       ],
+    );
+  }
+
+  // Future<void> handleExportLogs(BuildContext context) async {
+  //   final String? choice = await showShareDownloadPopup(context);
+  //
+  //   if (choice == null) return; // User cancelled
+  //
+  //   if (choice == 'feedback') {
+  //     // Show feedback webview
+  //     await showFeedbackWebView(context);
+  //     return;
+  //   }
+  //
+  //   showLoader(context);
+  //
+  //   try {
+  //     final List<XFile> logsList = await generateSharableLogsFiles();
+  //     File? projectFile;
+  //
+  //     // Get project file for download option
+  //     projectFile =
+  //     await serviceLocator<ProjectViewModel>().getCurrentProjectFile();
+  //     if (projectFile != null) {
+  //       logsList.add(generateXFile(projectFile));
+  //     }
+  //
+  //     if (context.mounted) hideLoader(context);
+  //
+  //     if (choice == 'share') {
+  //       // Share logs only (Notes will be available on macOS)
+  //       await SharePlus.instance.share(
+  //         ShareParams(
+  //           text: "Fusion Logs ${DateTime.now()}",
+  //           files: logsList,
+  //         ),
+  //       );
+  //     } else if (choice == 'download') {
+  //       // Download locally - choose your preferred method:
+  //
+  //       // Option 1: Download as separate files in a folder
+  //       if (context.mounted)
+  //         await downloadFilesLocally(context, logsList, projectFile: projectFile);
+  //
+  //       // Option 2: Download as a single ZIP file
+  //       // await downloadAsZip(context, logsList, projectFile: projectFile);
+  //     }
+  //   } catch (e, st) {
+  //     if (context.mounted) hideLoader(context);
+  //     FusionLogger.log(
+  //       tag: LogTag.exceptions,
+  //       message: "Export failed: $e\n$st",
+  //     );
+  //   }
+  // }
+
+  static void showFeedbackWebView(BuildContext context)  {
+     Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => const FeedbackWebView(),
+        fullscreenDialog: true,
+      ),
     );
   }
 

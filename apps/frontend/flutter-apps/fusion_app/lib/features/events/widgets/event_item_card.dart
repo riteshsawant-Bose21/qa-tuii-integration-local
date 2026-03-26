@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/neumorphic_button.dart';
 
 class EventCard extends StatefulWidget {
-   EventModel event;
-   Color? bgColor;
-   EventCard({
+   final EventModel event;
+   final Color? bgColor;
+   final bool showTrailingIcon;
+   const EventCard({
     super.key,
     required this.event,
+    this.showTrailingIcon =true,
     this.bgColor
   });
 
@@ -133,7 +135,7 @@ class _EventCardState extends State<EventCard> {
               ],
             ),
           ),
-          if(widget.event.showSwitchIcon)
+          if(widget.event.showSwitchIcon && widget.showTrailingIcon)
             ValueListenableBuilder<bool>(
                 valueListenable: controller,
                 builder: (context, mode, _) {
@@ -152,7 +154,7 @@ class _EventCardState extends State<EventCard> {
                   );
                 }
             ),
-          if(widget.event.showDeleteIcon)
+          if(widget.event.showDeleteIcon && widget.showTrailingIcon)
             GestureDetector(
             onTap: (){
 
@@ -168,6 +170,7 @@ class _EventCardState extends State<EventCard> {
                     "Are you sure you want to skip the upcoming event\nYoga Session",
                     content: EventCard(
                       event: model,
+                      showTrailingIcon:false,
                       bgColor: context.colorScheme.elevation2,
                     ),
                     buttons: [

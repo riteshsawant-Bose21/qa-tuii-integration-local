@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_app/features/shared/presentation/widgets/common/app_bar/app_bar_search.dart';
+import 'package:fusion_app/features/shared/presentation/widgets/common/divider.dart';
+import 'package:fusion_app/features/shared/presentation/widgets/common/text_field/text_field.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 /// A reusable filter bottom sheet widget that displays filter options
@@ -47,7 +50,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   late List<FilterCategory> categories;
   String searchQuery = '';
   late String activeCategoryName;
-
+  TextEditingController controller = TextEditingController();
   @override
   void initState() {
     super.initState();
@@ -73,15 +76,29 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   void _selectAllInCategory(String categoryName) {
     setState(() {
       final category = categories.firstWhere((c) => c.name == categoryName);
-      selectedFilters[categoryName] = List.from(
-        category.options.map((e) => e.name),
-      );
+
+      final allOptions = <String>[];
+
+      for (final filter in category.options) {
+        // Add parent option
+        allOptions.add(filter.name);
+
+        // Add nested options if present
+        if (filter.options != null) {
+          allOptions.addAll(filter.options!.map((o) => o.name));
+        }
+      }
+      print("allOptions.length");
+      print(categoryName);
+      print(selectedFilters[categoryName]);
+      print(allOptions.length);
+
+      selectedFilters[categoryName] = allOptions;
     });
   }
-
   void _deselectAllInCategory(String categoryName) {
     setState(() {
-      selectedFilters[categoryName]?.clear();
+      selectedFilters.remove(categoryName);
     });
   }
 
@@ -113,9 +130,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     final textTheme = Theme.of(context).textTheme;
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
+      height: MediaQuery.of(context).size.height * 0.65,
       decoration: BoxDecoration(
-        color: colorScheme.elevation2,
+        color: colorScheme.elevation1,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(20),
           topRight: Radius.circular(20),
@@ -124,8 +141,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       child: Column(
         children: [
           // Header with title
+          SizedBox(height: 24,),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -138,97 +156,65 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                         color: colorScheme.textPrimary,
                       ),
                     ),
-                    // Divider line
-                    Container(
-                      width: 2,
-                      height: 24,
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: colorScheme.primaryWhite,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
+
                   ],
                 ),
                 const SizedBox(height: 16),
                 // Search field
-                _buildSearchField(context, colorScheme, textTheme),
+                Container(
+                    child:AppTextField(
+                      controller: controller,
+                      filledColor: colorScheme.elevation2,
+                      hint: 'Search across filters...',
+                      prefixIcon: GestureDetector(
+                        onTap: (){
+                          Navigator.pop(context);
+                        },
+                        child: Icon(
+                            Icons.search,
+                            color: context.colorScheme.iconDefault),
+                      ),
+                    )),
               ],
             ),
           ),
           // Filter content
           Expanded(
-            child: Row(
-              children: [
-                // Left sidebar - Category labels
-                _buildCategorySidebar(colorScheme, textTheme),
-                // Right side - Filter options
-                Expanded(
-                  child: _buildFilterOptions(colorScheme, textTheme),
+            child: Container(
+              margin: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: colorScheme.elevation2,
+                borderRadius: const BorderRadius.all( Radius.circular(16),
                 ),
-              ],
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Left sidebar - Category labels
+                  _buildCategorySidebar(colorScheme, textTheme),
+                  // Right side - Filter options
+                  Expanded(
+                    child: _buildFilterOptions(colorScheme, textTheme),
+                  ),
+                ],
+              ),
             ),
           ),
           // Bottom action buttons
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: _buildActionButtons(context, colorScheme, textTheme),
           ),
+          SizedBox(height: 40,)
         ],
       ),
     );
   }
 
-  Widget _buildSearchField(
-    BuildContext context,
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    return Container(
-      height: 48,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: colorScheme.elevation3,
-        border: Border.all(color: colorScheme.strokeLight),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.search,
-            color: colorScheme.textPrimary,
-            size: 24,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: TextField(
-              onChanged: (value) {
-                setState(() {
-                  searchQuery = value;
-                });
-              },
-              style: textTheme.b2Regular.copyWith(
-                color: colorScheme.textPrimary,
-              ),
-              decoration: InputDecoration(
-                hintText: 'Search across filters...',
-                hintStyle: textTheme.b2Regular.copyWith(
-                  color: colorScheme.textBody,
-                ),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildCategorySidebar(ColorScheme colorScheme, TextTheme textTheme) {
     return Container(
       width: 120,
-      color: colorScheme.elevation2,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -281,12 +267,12 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
 
   Widget _buildFilterOptions(ColorScheme colorScheme, TextTheme textTheme) {
     return Container(
-      color: colorScheme.elevation3,
       child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.start,
             children: [
               // Only show options for active category
               if (activeCategoryName.isNotEmpty)
@@ -319,8 +305,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
         categoryName,
         'Select All',
         isSelectAll: true,
-        isSelected: (selectedFilters[categoryName]?.length ?? 0) ==
-            categories[categoryIndex].options.length,
+        isSelected: isAllSelected(categoryName,categoryIndex),
         onChanged: (isSelected) {
           if (isSelected ?? false) {
             _selectAllInCategory(categoryName);
@@ -332,19 +317,49 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       const SizedBox(height: 16),
       // Individual filter options
       for (var option in _getFilteredOptions(categoryName))
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: _buildFilterTile(
-            colorScheme,
-            textTheme,
-            categoryName,
-            option.name,
-            isSelected: selectedFilters[categoryName]?.contains(option.name),
-            onChanged: (isSelected) {
-              _toggleFilter(categoryName, option.name);
-            },
-          ),
-        ),
+        Column(
+          children: [
+            _buildFilterTile(
+              colorScheme,
+              textTheme,
+              categoryName,
+              option.name,
+              isSelected: selectedFilters[categoryName]?.contains(option.name),
+              onChanged: (isSelected) {
+                _toggleFilter(categoryName, option.name);
+              },
+            ),
+            (option.options?.isNotEmpty ?? false) ? SizedBox(height: 20) : SizedBox.shrink(),
+            ListView.separated(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                physics: NeverScrollableScrollPhysics(),
+                itemCount: option.options?.length ?? 0,
+                separatorBuilder: (context,i){
+                    return  SizedBox(height: 20,);
+                },
+                itemBuilder: (context,i){
+                  Option item = option.options![i];
+                  return _buildFilterTile(
+                    colorScheme,
+                    textTheme,
+                    categoryName,
+                    item.name,
+                    isSelected: selectedFilters[categoryName]?.contains(item.name),
+                    onChanged: (isSelected) {
+                      _toggleFilter(categoryName, item.name);
+                    },
+                  );
+                }),
+            SizedBox(height: 20),
+            if(option.options!=null )
+            ...[
+              CommonDivider(paddingValue: 0,),
+              SizedBox(height: 20),
+            ],
+
+          ],
+        )
     ];
   }
 
@@ -384,24 +399,18 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             width: 16,
             height: 16,
             decoration: BoxDecoration(
+              color: isOptionSelected ? colorScheme.iconWhite : Colors.transparent,
               border: Border.all(
                 color: isOptionSelected
-                    ? colorScheme.primaryColor
+                    ? colorScheme.iconWhite
                     : colorScheme.textDisabled,
-                width: 1.5,
+
               ),
               borderRadius: BorderRadius.circular(4),
             ),
             child: isOptionSelected
                 ? Center(
-                    child: Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: colorScheme.primaryColor,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
+                    child: Icon(Icons.done, size: 12, color: context.colorScheme.primaryBlack),
                   )
                 : null,
           ),
@@ -422,7 +431,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             onPressed: _clearAllFilters,
             style: OutlinedButton.styleFrom(
               side: BorderSide(color: colorScheme.elevation2),
-              backgroundColor: colorScheme.elevation2,
+              backgroundColor: colorScheme.elevation1,
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -461,6 +470,23 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       ],
     );
   }
+
+    bool isAllSelected(String categoryName, int categoryIndex) {
+      final category = categories[categoryIndex];
+
+      final totalOptions = category.options.fold<int>(0, (sum, filter) {
+        if (filter.options != null && filter.options!.isNotEmpty) {
+          return sum + filter.options!.length; // count children
+        }
+        return sum + 1; // count parent if no children
+      });
+
+      final selectedCount = selectedFilters[categoryName]?.length ?? 0;
+      print("isAllSelected: " +category.name);
+      print(selectedCount);
+      print(totalOptions);
+      return selectedCount == totalOptions;
+    }
 }
 
 /// Model class representing a filter category
@@ -476,10 +502,22 @@ class FilterCategory {
 
 /// Model class representing a single filter option
 class FilterOption {
+  final List<Option>? options;
+  final String? id;
+  final String name;
+
+  FilterOption({
+    required this.name,
+     this.options,
+    this.id,
+  });
+}
+
+class Option {
   final String name;
   final String? id;
 
-  FilterOption({
+  Option({
     required this.name,
     this.id,
   });

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_app/core/router/navigation_observer.dart';
 import 'package:fusion_app/core/router/routes.dart';
+import 'package:fusion_app/core/utils/fusion_utils.dart';
 import 'package:fusion_app/features/dashboard/presentation/pages/home_screen.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/app_bar/app_bar.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/bottomsheet_action.dart';
@@ -11,95 +12,95 @@ import 'package:fusion_lib/fusion_lib.dart';
 class MenuDrawer extends StatelessWidget {
    MenuDrawer({super.key});
 
-  final List<MenuItemModel> drawerMenuItems = [
-    MenuItemModel(
-      icon: Icons.home_outlined,
-      title: 'Home',
-      showTrailingIcon: false,
-      onTap: () {},
-    ),
-    // MenuItemModel(
-    //   icon: Icons.grid_view_outlined,
-    //   title: 'All Projects',
-    //   onTap: () {},
-    // ),
-    MenuItemModel(
-      icon: Icons.settings_outlined,
-      title: 'Settings',
-      onTap: () {
-        navigate(Routes.settingsPage);
-      },
-    ),
-    MenuItemModel(
-      icon: Icons.person_outline,
-      title: 'Profile',
-      onTap: () {
-        navigate(Routes.profilePage);
-      },
-    ),
-    MenuItemModel(
-      icon: Icons.feedback_outlined,
-      title: 'Submit Feedback',
-      showTrailingIcon: false,
-      onTap: () {},
-    ),
-    MenuItemModel(
-      icon: Icons.logout,
-      title: 'Sign Out',
-      showTrailingIcon: false,
-      onTap: () {
-        showDialog(
-          context: globalNavigatorKey.currentState!.context,
-          builder: (context) {
-            return Container(
 
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: FusionConfirmationBottomSheet(
-                      title: "Sign Out",
-                      icon: Icons.question_mark,
-                      iconBackgroundColor: context.colorScheme.zone1Fill,
-                      subtitle: "Are you sure you want to sign out?",
-                      content: null,
-                      buttons: [
-                        FusionBottomSheetButton(
-                          text: "Cancel",
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
-                        ),
-                        FusionBottomSheetButton(
-                          text: "Sign Out",
-                          isPrimary:true,
-                          onPressed: () {
-                            showData=false;
-                            Navigator.pushNamedAndRemoveUntil(context, Routes.loginPage,
-                                    (Route<dynamic> route) => false);
-                          },
-                        ),
-
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    ),
-  ];
 
 
   @override
   Widget build(BuildContext context) {
 
+    final List<MenuItemModel> drawerMenuItems = [
+      MenuItemModel(
+        icon: Icons.home_outlined,
+        title: 'Home',
+        showTrailingIcon: false,
+        onTap: () {},
+      ),
+      // MenuItemModel(
+      //   icon: Icons.grid_view_outlined,
+      //   title: 'All Projects',
+      //   onTap: () {},
+      // ),
+      MenuItemModel(
+        icon: Icons.settings_outlined,
+        title: 'Settings',
+        onTap: () {
+          navigate(Routes.settingsPage);
+        },
+      ),
+      MenuItemModel(
+        icon: Icons.person_outline,
+        title: 'Profile',
+        onTap: () {
+          navigate(Routes.profilePage);
+        },
+      ),
+      MenuItemModel(
+        icon: Icons.feedback_outlined,
+        title: 'Submit Feedback',
+        showTrailingIcon: false,
+        onTap:  () => MobileFusionUiUtils.showFeedbackWebView(context),
+      ),
+      MenuItemModel(
+        icon: Icons.logout,
+        title: 'Sign Out',
+        showTrailingIcon: false,
+        onTap: () {
+          showDialog(
+            context: globalNavigatorKey.currentState!.context,
+            builder: (context) {
+              return Container(
 
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: FusionConfirmationBottomSheet(
+                        title: "Sign Out",
+                        icon: Icons.question_mark,
+                        iconBackgroundColor: context.colorScheme.zone1Fill,
+                        subtitle: "Are you sure you want to sign out?",
+                        content: null,
+                        buttons: [
+                          FusionBottomSheetButton(
+                            text: "Cancel",
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                          ),
+                          FusionBottomSheetButton(
+                            text: "Sign Out",
+                            isPrimary:true,
+                            onPressed: () {
+                              showData=false;
+                              Navigator.pushNamedAndRemoveUntil(context, Routes.loginPage,
+                                      (Route<dynamic> route) => false);
+                            },
+                          ),
+
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    ];
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: CommonAppBar(

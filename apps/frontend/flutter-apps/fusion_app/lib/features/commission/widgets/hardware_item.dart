@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_app/core/services/loader_service.dart';
+import 'package:fusion_app/features/shared/presentation/widgets/common/checkbox_field.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide FusionToast;
 import '../../shared/presentation/widgets/common/toast.dart';
 class HardwareItem extends StatefulWidget {
@@ -52,25 +53,7 @@ class _HardwareItemState extends State<HardwareItem> {
             ),
             child: Row(
               children: [
-                Container(
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    color:isSelected
-                        ? context.colorScheme.primary
-                        : Colors.transparent,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isSelected
-                          ? context.colorScheme.primary
-                          : context.colorScheme.textDisabled,
-                      width: 2,
-                    ),
-                  ),
-                  child: isSelected
-                      ?  Icon(Icons.done, size: 16, color: context.colorScheme.primaryBlack)
-                      : null,
-                ),
+                CommonCheckBox(isSelected: isSelected),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
@@ -111,8 +94,6 @@ class _HardwareItemState extends State<HardwareItem> {
                       isLoading = false;
                       if(shouldShowError){
                         shouldShowError = false;
-
-
                         FusionToast.show(
                           context,
                           message: "Unable to identify the device, try again",icon: Icons.error,
@@ -120,16 +101,9 @@ class _HardwareItemState extends State<HardwareItem> {
                           iconColor: context.colorScheme.errorText,
                           backgroundColor: context.colorScheme.errorFill,
                         );
-
                       }
-                      setState(() {
-
-                      });
-
+                      setState(() {});
                     });
-
-
-
                   },
                   child:  Icon(
                     Icons.lightbulb_outline,

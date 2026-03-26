@@ -4,10 +4,11 @@ import 'package:fusion_app/features/devices/widgets/device_item_card.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/app_bar/app_bar.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/fliter_chips.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import '../../shared/presentation/widgets/common/filter_bottom_sheet.dart';
 import '../../shared/presentation/widgets/common/toast.dart';
 class DevicesScreen extends StatelessWidget {
-  const DevicesScreen({super.key});
-
+   DevicesScreen({super.key});
+  Map<String, List<String>> selectedFilters = {};
   @override
   Widget build(BuildContext context) {
     final devices = [
@@ -50,7 +51,7 @@ class DevicesScreen extends StatelessWidget {
       appBar: CommonAppBar(title: "Devices",actions: [
         GestureDetector(
             onTap: (){
-
+              _openFilter(context);
             },
             child: Icon(Icons.search,color: context.colorScheme.textPrimary))
       ],),
@@ -83,6 +84,59 @@ class DevicesScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _openFilter(context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => FilterBottomSheet(
+        title: 'FILTERS',
+        categories: [
+          FilterCategory(
+            name: 'Zones',
+            options: [
+              FilterOption(name: 'Reception', id: 'reception',options: []),
+              FilterOption(name: 'Fitness', id: 'fitness',options: [
+                Option(name: 'Cardio'),
+                Option(name: 'Weights'),
+              ]),
+              FilterOption(name: 'Studio Platinum', id: 'studio_platinum',options: []),
+              FilterOption(name: 'Equipment Location', id: 'equipment_location',options: []),
+            ],
+          ),
+          FilterCategory(
+            name: 'Type',
+            options: [
+              FilterOption(name: 'DSP', id: 'dsp'),
+              FilterOption(name: 'AMP', id: 'amp'),
+            ],
+          ),
+          FilterCategory(
+            name: 'Alerts',
+            options: [
+              FilterOption(name: 'Error', id: 'error'),
+              FilterOption(name: 'Warning', id: 'warning'),
+              FilterOption(name: 'Information', id: 'information'),
+            ],
+          ),
+        ],
+        initialSelectedFilters: selectedFilters,
+        onApply: (filters) {
+          // setState(() {
+          //   selectedFilters = filters;
+          // });
+          // _fetchData(filters);
+        },
+        onClearFilters: () {
+          // setState(() {
+          //   selectedFilters.clear();
+          // });
+          // _fetchData({});
+        },
       ),
     );
   }

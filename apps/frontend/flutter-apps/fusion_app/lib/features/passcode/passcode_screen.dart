@@ -5,6 +5,7 @@ import 'package:fusion_app/features/passcode/widgets/pin_box.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/app_bar/app_bar.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../authentication/presentation/login_page.dart';
 import '../dashboard/presentation/pages/home_screen.dart';
 class PasscodeScreen extends StatefulWidget {
   const PasscodeScreen({super.key});
@@ -43,7 +44,9 @@ class _PasscodeScreenState extends State<PasscodeScreen> {
         // Navigate to the next screen or perform the desired action
         debugPrint("PIN is correct. Proceeding...");
         showData = true;
-        Navigator.pushNamed(context, Routes.homePage);
+
+          Navigator.pushReplacementNamed(context, Routes.controlPalPage);
+
       } else {
         hasError = true;
         debugPrint("Incorrect PIN. Please try again.");

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:fusion_app/core/router/routes.dart';
+import 'package:fusion_app/core/services/loader_service.dart';
 import 'package:fusion_app/core/utils/qr_data_parser.dart';
 import 'package:fusion_app/features/scanner/widgets/scan_instruction.dart';
 import 'package:fusion_app/features/scanner/widgets/scanner_painter.dart';
@@ -11,6 +12,7 @@ import 'package:fusion_app/features/shared/presentation/widgets/common/button.da
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../authentication/presentation/login_page.dart';
 import '../shared/presentation/widgets/common/empty_state.dart';
 class QrScannerScreen extends StatefulWidget {
   const QrScannerScreen({super.key});
@@ -19,30 +21,20 @@ class QrScannerScreen extends StatefulWidget {
   State<QrScannerScreen> createState() => _QrScannerScreenState();
 }
 
-class _QrScannerScreenState extends State<QrScannerScreen>  with WidgetsBindingObserver{
-  final MobileScannerController controller = MobileScannerController(
-    autoStart: false,
-    torchEnabled: true,
-    detectionSpeed: DetectionSpeed.normal,
-    detectionTimeoutMs: 250,
-    returnImage: false,
-  );
+class _QrScannerScreenState extends State<QrScannerScreen>  with WidgetsBindingObserver,SingleTickerProviderStateMixin{
+   MobileScannerController? controller;
   bool showErrorState = true;
   StreamSubscription<Object?>? _subscription;
   bool _isScanned = false;
-  bool _isTorchOn = false;
-
+  ValueNotifier<bool> _isTorchOn = ValueNotifier(false);
+   late AnimationController _controller;
+   late Animation<double> _animation;
   @override
   void initState() {
     super.initState();
     // Start listening to lifecycle changes.
     WidgetsBinding.instance.addObserver(this);
 
-    // Start listening to the barcode events.
-    _subscription = controller.barcodes.listen(_handleBarcode);
-
-    // Finally, start the scanner itself.
-    unawaited(controller.start());
   }
 
   @override
@@ -53,9 +45,10 @@ class _QrScannerScreenState extends State<QrScannerScreen>  with WidgetsBindingO
     unawaited(_subscription?.cancel());
     _subscription = null;
     // Dispose the widget itself.
+    _controller.dispose();
     super.dispose();
     // Finally, dispose of the controller.
-    await controller.dispose();
+    await controller!.dispose();
   }
 
 
@@ -75,15 +68,19 @@ class _QrScannerScreenState extends State<QrScannerScreen>  with WidgetsBindingO
       case AppLifecycleState.resumed:
       // Restart the scanner when the app is resumed.
       // Don't forget to resume listening to the barcode events.
-        _subscription = controller.barcodes.listen(_handleBarcode);
+        _subscription = controller!.barcodes.listen(_handleBarcode);
 
-        unawaited(controller.start());
+
+
+          _isTorchOn.value = controller!.torchEnabled;
+
+        unawaited(controller!.start());
       case AppLifecycleState.inactive:
       // Stop the scanner when the app is paused.
       // Also stop the barcode events subscription.
         unawaited(_subscription?.cancel());
         _subscription = null;
-        unawaited(controller.stop());
+        unawaited(controller!.stop());
     }
   }
 
@@ -105,7 +102,23 @@ class _QrScannerScreenState extends State<QrScannerScreen>  with WidgetsBindingO
     });
 
     // Stop camera
-    controller.stop();
+    controller!.stop();
+
+    GlobalLoader().hide();
+    GlobalLoader().show(context);
+
+      Future.delayed(Duration(milliseconds: 600),(){
+        GlobalLoader().hide();
+        if(loggedInUserId==0){
+          Navigator.pushReplacementNamed(context, Routes.passcodePage);
+        }else{
+          Navigator.pushReplacementNamed(context, Routes.controlPalPage);
+        }
+
+
+      });
+
+
     final details = QRConnectionParser.parse(qrData);
   }
 
@@ -132,20 +145,37 @@ class _QrScannerScreenState extends State<QrScannerScreen>  with WidgetsBindingO
         /// Scanner Overlay
         GestureDetector(
           onTap: (){
-            Navigator.pushNamed(context, Routes.passcodePage);
+            if(loggedInUserId==0){
+              Navigator.pushReplacementNamed(context, Routes.passcodePage);
+            }else{
+              Navigator.pushReplacementNamed(context, Routes.controlPalPage);
+            }
+
+
           },
-          child: CustomPaint(
-            painter: ScannerOverlayPainter(context),
-            child: Container(),
-          ),
+          child: AnimatedBuilder(
+            animation: _animation,
+            builder: (_, __) {
+              return CustomPaint(
+                size: Size.infinite,
+                painter: ScannerOverlayPainter(
+                  context,
+                  scanProgress: _animation.value,
+                ),
+              );
+            },
+          )
         ),
 
         /// Instructions
-        const Positioned(
+         Positioned(
           bottom: 160,
           left: 0,
           right: 0,
-          child: ScanInstruction(),
+          child: ScanInstruction(onClickFlash: (bool value){
+            _isTorchOn.value = value;
+              controller!.toggleTorch();
+          }, isFlashOn: _isTorchOn,),
         ),
 
         /// Wifi banner
@@ -169,7 +199,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>  with WidgetsBindingO
     debugPrint("QR Code: $value");
 
     /// Stop scanning to prevent duplicates
-    controller.stop();
+    controller!.stop();
 
     /// Example navigation
     // Navigator.push(...)
@@ -193,7 +223,28 @@ class _QrScannerScreenState extends State<QrScannerScreen>  with WidgetsBindingO
                 showErrorState=false;
               });
 
+              controller = MobileScannerController(
+                autoStart: false,
+                torchEnabled: false,
+                detectionSpeed: DetectionSpeed.normal,
+                detectionTimeoutMs: 250,
+                returnImage: false,
+              );
 
+
+
+              // Finally, start the scanner itself.
+              unawaited(controller!.start());
+              // Start listening to the barcode events.
+              _subscription = controller!.barcodes.listen(_handleBarcode);
+
+
+              _controller = AnimationController(
+                vsync: this,
+                duration: const Duration(seconds: 2),
+              )..repeat(reverse: false);
+
+              _animation = Tween<double>(begin: 0, end: 1).animate(_controller);
             },
           ),
         ),

@@ -3,18 +3,30 @@ import 'package:fusion_app/features/shared/presentation/widgets/common/circle_ic
 import 'package:fusion_lib/fusion_lib.dart';
 
 class ScanInstruction extends StatelessWidget {
-  const ScanInstruction({super.key});
+  final Function? onClickFlash;
+  final ValueNotifier<bool> isFlashOn;
+  const ScanInstruction({super.key,required this.isFlashOn,this.onClickFlash});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        CommonCircleIcon(
-          size: 48,
-          iconSize: 24,
-          icon: Icons.flash_on,
-          iconColor: context.colorScheme.iconWhite,
-          bgColor:  context.colorScheme.elevation2,
+        GestureDetector(
+          onTap: (){
+            onClickFlash!(!isFlashOn.value);
+          },
+          child: ValueListenableBuilder(
+              valueListenable: isFlashOn,
+              builder: (context, state, child) {
+              return CommonCircleIcon(
+                size: 48,
+                iconSize: 24,
+                icon:  isFlashOn.value ? Icons.flash_on :  Icons.flash_off,
+                iconColor: context.colorScheme.iconWhite,
+                bgColor: context.colorScheme.elevation2,
+              );
+            }
+          ),
         ),
 
         const SizedBox(height: 16),

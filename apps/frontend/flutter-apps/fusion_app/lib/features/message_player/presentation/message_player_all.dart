@@ -49,9 +49,7 @@ class _MessagePlayerViewState extends State<MessagePlayerView> {
                   Routes.messagePlayerPlayingPage,
                   arguments: {'title': list[index].title}
               );
-              // setState(() {
-              //
-              // });
+
             },
             title: list[index].title,
             showActiveCard: index == indexSelected,

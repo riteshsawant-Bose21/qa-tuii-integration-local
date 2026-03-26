@@ -5,7 +5,8 @@ import 'package:fusion_app/features/shared/presentation/widgets/common/empty_sta
 
 class ScheduledEventsScreen extends StatelessWidget {
   final List<EventModel> events;
-  const ScheduledEventsScreen({required this.events,super.key});
+  final bool showTrailingIcon;
+  const ScheduledEventsScreen({required this.events,required this.showTrailingIcon,super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +27,7 @@ class ScheduledEventsScreen extends StatelessWidget {
 
         return EventCard(
          event: event,
+          showTrailingIcon :showTrailingIcon
         );
       },separatorBuilder: (context, index) {
         return Padding(
