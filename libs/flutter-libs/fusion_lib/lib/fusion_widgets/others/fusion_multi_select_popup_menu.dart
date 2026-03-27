@@ -144,32 +144,29 @@ class _FusionMultiSelectPopupMenuState<T> extends State<FusionMultiSelectPopupMe
                             final bool isSelected = _tempSelectedItems.contains(item);
                             final String itemSemanticId = '${semanticId}_item_$index';
 
-                            return SemanticHelper.button(
-                              testId: itemSemanticId,
-                              child: InkWell(
-                                onTap: () => _toggleItem(item),
-                                borderRadius: BorderRadius.circular(4),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                  child: widget.itemBuilder != null
-                                      ? widget.itemBuilder!(context, item, isSelected)
-                                      : Row(
-                                          children: <Widget>[
-                                            FusionCheckbox(
-                                              value: isSelected,
-                                              semanticId: '${itemSemanticId}_checkbox',
-                                              onChanged: () => _toggleItem(item),
+                            return InkWell(
+                              onTap: () => _toggleItem(item),
+                              borderRadius: BorderRadius.circular(4),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                child: widget.itemBuilder != null
+                                    ? widget.itemBuilder!(context, item, isSelected)
+                                    : Row(
+                                        children: <Widget>[
+                                          FusionCheckbox(
+                                            value: isSelected,
+                                            semanticId: '${itemSemanticId}_checkbox',
+                                            onChanged: () => _toggleItem(item),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: FusionAppText(
+                                              text: widget.itemLabelBuilder != null ? widget.itemLabelBuilder!(item) : item.toString(),
+                                              style: context.textTheme.bodySmall,
                                             ),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: FusionAppText(
-                                                text: widget.itemLabelBuilder != null ? widget.itemLabelBuilder!(item) : item.toString(),
-                                                style: context.textTheme.bodySmall,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                ),
+                                          ),
+                                        ],
+                                      ),
                               ),
                             );
                           },
