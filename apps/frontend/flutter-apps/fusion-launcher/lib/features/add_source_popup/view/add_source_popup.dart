@@ -4,7 +4,7 @@ import 'package:fusion_launcher/core/models/products_data.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/properties_and_filter_section.dart';
+import 'package:fusion_launcher/features/speaker_selection_popup/views/widgets/properties_and_filter_section.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/drop_down.dart';
 import 'package:fusion_lib/constants/semantics/features/add_sources_popup/add_sources_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';

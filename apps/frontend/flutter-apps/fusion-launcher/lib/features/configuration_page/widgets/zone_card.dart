@@ -10,13 +10,13 @@ import '../../../core/constants/assets_constants.dart';
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart'
     show SelectedItemType, ProjectViewModel, ProjectPropertiesViewModel, HardwareViewModel;
+import '../../processing_block/view/processing_chain_view.dart';
+import '../../zone_functions/source_matrix.dart';
+import '../../zone_functions/source_mix.dart';
 import '../viewModel/source_sets_viewmodel/config_source_sets_viewmodel.dart';
 import '../viewModel/sources_viewmodel/config_sources_viewmodel.dart';
 import '../viewModel/zones_viewmodel/config_zones_state.dart';
 import '../viewModel/zones_viewmodel/config_zones_viewmodel.dart';
-import '../../processing_block/view/processing_chain_view.dart';
-import '../../zone_functions/source_matrix.dart';
-import '../../zone_functions/source_mix.dart';
 
 class ZoneCard extends StatefulWidget {
   final String zoneId;
@@ -391,7 +391,7 @@ class _ZoneCardState extends State<ZoneCard> {
     String? selectedSource;
     final List<String> prioritySources = _zonesViewmodel.getPrioritySourcesInZone(zoneId: widget.zoneId);
 
-    /// priority mapping
+    /// priority 1
     if (priorityIndex == 1) {
       if (prioritySources.isNotEmpty && prioritySources[0].isNotEmpty) {
         final HardwareComponent? sourceData = _zonesViewmodel.getHardware(hardwareId: prioritySources[0]);
@@ -401,6 +401,7 @@ class _ZoneCardState extends State<ZoneCard> {
         }
       }
     } else {
+      /// priority 2
       if (prioritySources.length > 1 && prioritySources[1].isNotEmpty) {
         final HardwareComponent? sourceData = _zonesViewmodel.getHardware(hardwareId: prioritySources[1]);
         if (sourceData != null) {
@@ -446,8 +447,10 @@ class _ZoneCardState extends State<ZoneCard> {
                 return PopupMenuButton<String>(
                   onSelected: (String value) {
                     setState(() {
+                      /// Remove from regular source selection if it's currently selected
                       _zonesViewmodel.removeSourceFromZone(zoneId: widget.zoneId, sourceId: value);
 
+                      /// Add to priority
                       _zonesViewmodel.addPrioritySourceToZone(
                         zoneId: widget.zoneId,
                         sourceId: value,
@@ -632,6 +635,7 @@ class _ZoneCardState extends State<ZoneCard> {
                               fontWeight: FontWeight.w600,
                               color: isSelected ? context.colorScheme.textPrimary : context.colorScheme.textDisabled,
                             ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
                       ],
@@ -826,6 +830,13 @@ class _ZoneCardState extends State<ZoneCard> {
   }
 
   /// Multi-select source selection for zone (checkboxes)
+  void _initializeTempSelection() {
+    _tempSelectedItems = {
+      ..._zonesViewmodel.getSourcesInZone(zoneId: widget.zoneId),
+      ..._zonesViewmodel.getSourceSetsInZone(zoneId: widget.zoneId),
+    };
+  }
+
   Widget buildSourceSelectionForZone() {
     /// Get current selections from the zone
     final List<Source> currentZoneSources = _zonesViewmodel.getSourcesInZone(zoneId: widget.zoneId);
@@ -851,7 +862,7 @@ class _ZoneCardState extends State<ZoneCard> {
           _initializeTempSelection();
 
           return FusionMultiSelectPopupMenu<dynamic>(
-            maxHeight: 350,
+            maxHeight: 450,
             semanticsId: FusionTestKeys.instance.selectsrc,
             saveButtonLabel: "ADD",
             tooltip: "Select Sources",
@@ -863,8 +874,8 @@ class _ZoneCardState extends State<ZoneCard> {
             ],
 
             selectedItems: <dynamic>{
-              ..._zonesViewmodel.getSourcesInZone(zoneId: widget.zoneId),
-              ..._zonesViewmodel.getSourceSetsInZone(zoneId: widget.zoneId),
+              ...currentZoneSources,
+              ...currentZoneSourceSets,
             },
 
             onSave: (Set<dynamic> _) {
@@ -885,15 +896,19 @@ class _ZoneCardState extends State<ZoneCard> {
               );
 
               setState(() {
-                _tempSelectedItems.clear();
+                _tempSelectedItems.clear(); // optional cleanup
               });
             },
 
             itemBuilder: (BuildContext context, dynamic item, bool _) {
               // -------- DIVIDER --------
               if (item is _HeaderItem && item.title == 'DIVIDER') {
-                return const Divider(thickness: 1);
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 6),
+                  child: Divider(thickness: 1),
+                );
               }
+
               // -------- SOURCES --------
               if (item is _HeaderItem && item.title == 'SOURCES_BLOCK') {
                 return StatefulBuilder(
@@ -906,9 +921,11 @@ class _ZoneCardState extends State<ZoneCard> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
+                          const SizedBox(height: 4),
+
                           FusionAppText(
                             text: 'SOURCES',
-                            semanticId: FusionTestKeys.instance.sourcetext,
+                            semanticId: FusionTestKeys.instance.sourceText,
                             maxLine: 1,
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 11,
@@ -916,11 +933,11 @@ class _ZoneCardState extends State<ZoneCard> {
                             ),
                           ),
 
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 10),
 
-                          ...availableSources.asMap().entries.map((MapEntry<int, Source> entry) {
-                            final int index = entry.key;
+                          ...availableSources.asMap().entries.map((entry) {
                             final Source src = entry.value;
+
                             final bool isPrioritySource = _zonesViewmodel.getPrioritySourcesInZone(zoneId: widget.zoneId).contains(src.id);
 
                             final bool isSelected = _tempSelectedItems.contains(src);
@@ -937,11 +954,11 @@ class _ZoneCardState extends State<ZoneCard> {
                               child: Opacity(
                                 opacity: isPrioritySource ? 0.5 : 1,
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 2.0),
+                                  padding: const EdgeInsets.symmetric(vertical: 5.0),
                                   child: Row(
                                     children: <Widget>[
                                       FusionCheckbox(
-                                        semanticId: "${FusionTestKeys.instance.srcsetlistcheckbox}_${index}",
+                                        semanticId: FusionTestKeys.instance.srcSetListCheckbox,
                                         value: isSelected,
                                         onChanged: () {
                                           if (isPrioritySource) return;
@@ -957,7 +974,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                           children: <Widget>[
                                             Expanded(
                                               child: FusionAppText(
-                                                semanticId: "${FusionTestKeys.instance.SrcListTxt}_${index}",
+                                                semanticId: FusionTestKeys.instance.srcListTxt,
                                                 text: src.name,
                                                 maxLine: 1,
                                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
@@ -986,6 +1003,7 @@ class _ZoneCardState extends State<ZoneCard> {
                   },
                 );
               }
+
               // -------- SOURCE SETS --------
               if (item is _HeaderItem && item.title == 'SOURCE_SETS_BLOCK') {
                 return StatefulBuilder(
@@ -999,7 +1017,7 @@ class _ZoneCardState extends State<ZoneCard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           FusionAppText(
-                            semanticId: FusionTestKeys.instance.sourcesettext,
+                            semanticId: FusionTestKeys.instance.sourceSetText,
                             text: 'SOURCE SETS',
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 11,
@@ -1007,11 +1025,11 @@ class _ZoneCardState extends State<ZoneCard> {
                             ),
                           ),
 
-                          const SizedBox(height: 5),
+                          const SizedBox(height: 10),
 
-                          ...sourceSetList.asMap().entries.map((MapEntry<int, SourceSet> entry) {
-                            final int index = entry.key;
+                          ...sourceSetList.asMap().entries.map((entry) {
                             final SourceSet setItem = entry.value;
+
                             final List<Source> sourcesInSet = _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: setItem.id);
 
                             final bool isSelected = _tempSelectedItems.contains(setItem);
@@ -1024,11 +1042,11 @@ class _ZoneCardState extends State<ZoneCard> {
                                 setPopupState(() {});
                               },
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 2.0),
+                                padding: const EdgeInsets.symmetric(vertical: 5.0),
                                 child: Row(
                                   children: <Widget>[
                                     FusionCheckbox(
-                                      semanticId: "${FusionTestKeys.instance.sourcesetlistcheckbox}_$index",
+                                      semanticId: FusionTestKeys.instance.sourceSetListCheckbox,
                                       value: isSelected,
                                       onChanged: () {
                                         isSelected ? _tempSelectedItems.remove(setItem) : _tempSelectedItems.add(setItem);
@@ -1039,7 +1057,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                     const SizedBox(width: 6),
                                     Expanded(
                                       child: FusionAppText(
-                                        semanticId: "${FusionTestKeys.instance.SrcSetListTxt}_$index",
+                                        semanticId: FusionTestKeys.instance.srcSetListTxt,
                                         text: '${setItem.name} (${sourcesInSet.length} sources)',
                                         maxLine: 1,
                                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
@@ -1060,71 +1078,59 @@ class _ZoneCardState extends State<ZoneCard> {
               return const SizedBox();
             },
 
-            // -------- BUTTON --------
             child: SemanticHelper.button(
               testId: SemanticHelper.createTestId(
                 SemanticTypes.container,
                 FusionTestKeys.instance.selectSourceButton,
               ),
               child: Container(
-                width: MediaQuery.of(context).size.width * 0.3,
-                height: 30,
-                padding: const EdgeInsets.only(right: 9, left: 8, top: 4, bottom: 4),
-
+                height: 22,
+                width: 160,
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: context.colorScheme.elevation1,
-                  borderRadius: BorderRadius.circular(6),
-
-                  boxShadow: <BoxShadow>[
-                    BoxShadow(color: context.colorScheme.shadowDark, offset: const Offset(1.5, 1.5), blurRadius: 7),
-                    BoxShadow(
-                      color: context.colorScheme.shadowLight,
-                      offset: const Offset(-1.5, -1.5),
-                      blurRadius: 5,
-                      blurStyle: BlurStyle.solid,
-                    ),
-                  ],
+                  border: Border.all(
+                    color: hasSelection ? context.colorScheme.elevation5 : context.colorScheme.elevation5.withAlpha(150),
+                  ),
+                  borderRadius: BorderRadius.circular(3),
                 ),
-
                 child: Row(
                   children: <Widget>[
                     Expanded(
                       child: FusionAppText(
-                        text: hasSelection ? 'Selected' : 'Select sources',
+                        text: hasSelection ? 'Sources selected' : 'Select sources',
                         maxLine: 1,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w500,
-                          color: hasSelection ? context.colorScheme.primaryWhite : context.colorScheme.primaryWhite.withAlpha(140),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontSize: 11,
+                          color: hasSelection ? context.colorScheme.primaryWhite : context.colorScheme.primaryWhite.withAlpha(150),
                         ),
                       ),
                     ),
-
-                    Container(
-                      height: 24,
-                      width: 24,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: hasSelection ? context.colorScheme.elevation3 : context.colorScheme.elevation2,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child:
-                          hasSelection
-                              ? Center(
-                                child: FusionAppText(
-                                  text: _zonesViewmodel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: context.colorScheme.primaryWhite,
-                                  ),
-                                ),
-                              )
-                              : const Center(
-                                child: Icon(
-                                  Icons.add,
-                                  size: 16,
-                                ),
+                    hasSelection
+                        ? IntrinsicWidth(
+                          child: Container(
+                            height: 14,
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: context.colorScheme.primaryWhite,
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: FusionAppText(
+                              semanticId: FusionTestKeys.instance.selectSourceText,
+                              text: _zonesViewmodel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontSize: 8,
+                                color: context.colorScheme.primaryBlack,
+                                fontWeight: FontWeight.w600,
                               ),
-                    ),
+                            ),
+                          ),
+                        )
+                        : Icon(
+                          Icons.add,
+                          color: context.colorScheme.primaryWhite.withAlpha(150),
+                          size: 16,
+                        ),
                   ],
                 ),
               ),
@@ -1302,15 +1308,6 @@ class _ZoneCardState extends State<ZoneCard> {
         ),
       ),
     );
-  }
-
-  void _initializeTempSelection() {
-    if (_tempSelectedItems.isEmpty) {
-      _tempSelectedItems = <dynamic>{
-        ..._zonesViewmodel.getSourcesInZone(zoneId: widget.zoneId),
-        ..._zonesViewmodel.getSourceSetsInZone(zoneId: widget.zoneId),
-      };
-    }
   }
 }
 

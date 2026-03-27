@@ -1,0 +1,21 @@
+info:
+  name: Import State
+  type: http
+  seq: 11
+
+http:
+  method: POST
+  url: "{{admin_url}}/state"
+  body:
+    type: json
+    data: |-
+      {
+          "State": {},
+          "Checksum": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

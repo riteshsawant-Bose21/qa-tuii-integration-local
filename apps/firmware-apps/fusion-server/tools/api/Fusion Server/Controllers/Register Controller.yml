@@ -1,0 +1,23 @@
+info:
+  name: Register Controller
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{api_url}}/controllers"
+  body:
+    type: json
+    data: |
+      {
+        "id": "ctrl-test-001",
+        "name": "Test Controller",
+        "address": "192.168.64.250",
+        "version": "1.0.0"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
