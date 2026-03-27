@@ -307,8 +307,14 @@ class _WidgetDetailsSectionState extends State<WidgetDetailsSection> {
         return _buildFusionTableVariants(context);
       case "FusionSwitch":
         return _buildFusionSwitchVariants(context);
-      case "FusionSvgIcon":
+      case "FusionIcon":
         return _buildFusionSvgIconVariants(context);
+      case "FusionAppText":
+        return _buildFusionAppText(context);
+      case "FusionRow":
+        return _buildFusionRow(context);
+      case "FusionColumn":
+        return _buildFusionColumn(context);
 
       default:
         return const FusionAppText(
@@ -727,6 +733,259 @@ FusionAppButton(
           ),
 ''',
         ),
+      ],
+    );
+  }
+
+  Widget _buildFusionRow(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        /// CENTER + CENTER
+        _buildWithCopy(
+          context: context,
+          preview: const FusionRow(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            spacing: 10,
+            children: <Widget>[
+              Text("Left"),
+              Text("Right"),
+            ],
+          ),
+          code: '''
+const FusionRow(
+  mainAxisAlignment: MainAxisAlignment.center,
+  crossAxisAlignment: CrossAxisAlignment.center,
+  spacing: 10,
+  children: [
+    Text("Left"),
+    Text("Right"),
+  ],
+),
+''',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFusionColumn(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const SizedBox(
+          height: 10,
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: const FusionColumn(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text("Left"),
+              SizedBox(
+                width: 10,
+              ),
+              Text("Right"),
+            ],
+          ),
+          code: '''
+const FusionColumn(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Text("Left"),
+              SizedBox(
+                width: 10,
+              ),
+              Text("Right"),
+            ],
+          ),
+''',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFusionAppText(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        /// ================= H1 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H1 Regular", style: context.textTheme.h1Regular),
+          code: 'FusionAppText(text: "H1 Regular", style: context.textTheme.h1Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H1 Bold", style: context.textTheme.h1Bold),
+          code: 'FusionAppText(text: "H1 Bold", style: context.textTheme.h1Bold)',
+        ),
+
+        /// ================= H2 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H2 Regular", style: context.textTheme.h2Regular),
+          code: 'FusionAppText(text: "H2 Regular", style: context.textTheme.h2Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H2 Bold", style: context.textTheme.h2Bold),
+          code: 'FusionAppText(text: "H2 Bold", style: context.textTheme.h2Bold)',
+        ),
+
+        /// ================= H3 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H3 Regular", style: context.textTheme.h3Regular),
+          code: 'FusionAppText(text: "H3 Regular", style: context.textTheme.h3Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H3 Bold", style: context.textTheme.h3Bold),
+          code: 'FusionAppText(text: "H3 Bold", style: context.textTheme.h3Bold)',
+        ),
+
+        /// ================= H4 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H4 Regular", style: context.textTheme.h4Regular),
+          code: 'FusionAppText(text: "H4 Regular", style: context.textTheme.h4Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H4 SemiBold", style: context.textTheme.h4SemiBold),
+          code: 'FusionAppText(text: "H4 SemiBold", style: context.textTheme.h4SemiBold)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H4 Bold", style: context.textTheme.h4Bold),
+          code: 'FusionAppText(text: "H4 Bold", style: context.textTheme.h4Bold)',
+        ),
+
+        /// ================= H5 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H5 Regular", style: context.textTheme.h5Regular),
+          code: 'FusionAppText(text: "H5 Regular", style: context.textTheme.h5Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H5 Bold", style: context.textTheme.h5Bold),
+          code: 'FusionAppText(text: "H5 Bold", style: context.textTheme.h5Bold)',
+        ),
+
+        /// ================= H6 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H6 Regular", style: context.textTheme.h6Regular),
+          code: 'FusionAppText(text: "H6 Regular", style: context.textTheme.h6Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H6 Bold", style: context.textTheme.h6Bold),
+          code: 'FusionAppText(text: "H6 Bold", style: context.textTheme.h6Bold)',
+        ),
+
+        /// ================= B1 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "B1 Regular", style: context.textTheme.b1Regular),
+          code: 'FusionAppText(text: "B1 Regular", style: context.textTheme.b1Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "B1 Bold", style: context.textTheme.b1Bold),
+          code: 'FusionAppText(text: "B1 Bold", style: context.textTheme.b1Bold)',
+        ),
+
+        /// ================= B2 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "B2 Regular", style: context.textTheme.b2Regular),
+          code: 'FusionAppText(text: "B2 Regular", style: context.textTheme.b2Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "B2 Medium", style: context.textTheme.b2Medium),
+          code: 'FusionAppText(text: "B2 Medium", style: context.textTheme.b2Medium)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "B2 SemiBold", style: context.textTheme.b2SemiBold),
+          code: 'FusionAppText(text: "B2 SemiBold", style: context.textTheme.b2SemiBold)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "B2 Bold", style: context.textTheme.b2Bold),
+          code: 'FusionAppText(text: "B2 Bold", style: context.textTheme.b2Bold)',
+        ),
+
+        /// ================= B3 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "B3 Regular", style: context.textTheme.b3Regular),
+          code: 'FusionAppText(text: "B3 Regular", style: context.textTheme.b3Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "B3 Medium", style: context.textTheme.b3Medium),
+          code: 'FusionAppText(text: "B3 Medium", style: context.textTheme.b3Medium)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "B3 SemiBold", style: context.textTheme.b3SemiBold),
+          code: 'FusionAppText(text: "B3 SemiBold", style: context.textTheme.b3SemiBold)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "B3 Bold", style: context.textTheme.b3Bold),
+          code: 'FusionAppText(text: "B3 Bold", style: context.textTheme.b3Bold)',
+        ),
+
+        /// ================= L1 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "L1 Regular", style: context.textTheme.l1Regular),
+          code: 'FusionAppText(text: "L1 Regular", style: context.textTheme.l1Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "L1 Medium", style: context.textTheme.l1Medium),
+          code: 'FusionAppText(text: "L1 Medium", style: context.textTheme.l1Medium)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "L1 SemiBold", style: context.textTheme.l1SemiBold),
+          code: 'FusionAppText(text: "L1 SemiBold", style: context.textTheme.l1SemiBold)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "L1 Bold", style: context.textTheme.l1Bold),
+          code: 'FusionAppText(text: "L1 Bold", style: context.textTheme.l1Bold)',
+        ),
+
+        /// ================= L2 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "L2 Regular", style: context.textTheme.l2Regular),
+          code: 'FusionAppText(text: "L2 Regular", style: context.textTheme.l2Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "L2 Medium", style: context.textTheme.l2Medium),
+          code: 'FusionAppText(text: "L2 Medium", style: context.textTheme.l2Medium)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "L2 SemiBold", style: context.textTheme.l2SemiBold),
+          code: 'FusionAppText(text: "L2 SemiBold", style: context.textTheme.l2SemiBold)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "L2 Bold", style: context.textTheme.l2Bold),
+          code: 'FusionAppText(text: "L2 Bold", style: context.textTheme.l2Bold)',
+        ),
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -2746,8 +3005,9 @@ FusionKeyboardWrapper(
           preview: ElevatedButton(
             onPressed: () {
               FusionToast.success(
+                duration: const Duration(seconds: 5),
                 context,
-                message: "Sucess Toast",
+                message: "Timed Sucess Toast",
               );
             },
             child: const Text("Success Toast"),
@@ -2755,6 +3015,7 @@ FusionKeyboardWrapper(
 
           code: '''
               FusionToast.success(
+              duration: const Duration(seconds: 5),
                 context,
                 message: "Sucess Toast",
               );
