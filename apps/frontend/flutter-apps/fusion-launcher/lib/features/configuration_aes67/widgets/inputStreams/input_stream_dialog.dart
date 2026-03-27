@@ -755,7 +755,7 @@ class _DarkDropdown<T> extends StatelessWidget {
           items:
               items
                   .map(
-                    (item) => DropdownMenuItem<T>(
+                    (T item) => DropdownMenuItem<T>(
                       value: item,
                       child: FusionAppText(
                         text: labelBuilder(item),
