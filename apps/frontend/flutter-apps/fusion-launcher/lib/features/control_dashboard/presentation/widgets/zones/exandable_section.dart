@@ -63,61 +63,64 @@ class _CircuitExpandableSectionState extends State<CircuitExpandableSection> wit
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        // --- HEADER ---
-        InkWell(
-          onTap: _handleTap,
-          // Removed default splash to keep it clean like the screenshot
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-          child: Padding(
-            padding: widget.padding ?? const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
-            child: Row(
-              mainAxisSize: MainAxisSize.min, // Compact width
-              children: <Widget>[
-                RotationTransition(
-                  turns: _iconTurns,
-                  child: Icon(
-                    Icons.play_arrow, // Filled triangle shape
-                    color: context.colorScheme.iconWhite,
-                    size: 12,
+    return Container(
+      color: context.colorScheme.elevation1,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          // --- HEADER ---
+          InkWell(
+            onTap: _handleTap,
+            // Removed default splash to keep it clean like the screenshot
+            splashColor: Colors.transparent,
+            highlightColor: Colors.transparent,
+            child: Padding(
+              padding: widget.padding ?? const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+              child: Row(
+                mainAxisSize: MainAxisSize.min, // Compact width
+                children: <Widget>[
+                  RotationTransition(
+                    turns: _iconTurns,
+                    child: Icon(
+                      Icons.play_arrow, // Filled triangle shape
+                      color: context.colorScheme.iconWhite,
+                      size: 12,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                FusionAppText(
-                  text: widget.title,
-                  style: TextStyle(
-                    color: context.colorScheme.iconWhite,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500, // Medium weight
+                  const SizedBox(width: 8),
+                  FusionAppText(
+                    text: widget.title,
+                    style: TextStyle(
+                      color: context.colorScheme.iconWhite,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500, // Medium weight
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
 
-        // --- EXPANDABLE BODY ---
-        // Uses AnimatedSize for smooth height transition
-        AnimatedSize(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-          child: SizedBox(
-            width: double.infinity,
-            // If collapsed, height is 0. If expanded, height is auto (null)
-            height: _isExpanded ? null : 0,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                const SizedBox(height: 8), // Spacing between header and content
-                ...widget.children,
-              ],
+          // --- EXPANDABLE BODY ---
+          // Uses AnimatedSize for smooth height transition
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            child: SizedBox(
+              width: double.infinity,
+              // If collapsed, height is 0. If expanded, height is auto (null)
+              height: _isExpanded ? null : 0,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const SizedBox(height: 8), // Spacing between header and content
+                  ...widget.children,
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

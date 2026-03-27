@@ -1,11 +1,14 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/events/configation_events_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../viewModel/actions_viewmodel/config_event_actions_state.dart';
 import '../../viewModel/actions_viewmodel/config_event_actions_viewmodel.dart';
+import '../../viewModel/events_viewmodel/config_events_state.dart';
+import '../../viewModel/events_viewmodel/config_events_viewmodel.dart';
 
 class EventActionRowHeader extends StatelessWidget {
   const EventActionRowHeader({super.key});
@@ -36,6 +39,7 @@ class EventActionRowHeader extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
                   FusionAppText(
+                    semanticId: FusionTestKeys.instance.eventtriggeractionstxt,
                     text: "Actions",
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
@@ -51,96 +55,104 @@ class EventActionRowHeader extends StatelessWidget {
                         if (selectedEventId == null) return;
                         actionsViewModel.addAction();
                       },
-                      child: const Icon(Icons.add, size: 16),
+                      child: FusionIcon.icon(semanticId: FusionTestKeys.instance.eventtriggeractionsicon, Icons.add, size: 16),
                     ),
                   ),
                 ],
               ),
             ),
 
-            /// State Selector for 2-state events
-            Builder(
-              builder: (BuildContext context) {
-                if (selectedEventId == null) {
-                  return const SizedBox.shrink();
-                }
+            /// State Selector for 2-state events (above / below).
+            /// Uses BlocBuilder<ConfigEventsViewmodel> so that:
+            /// - the slider position reflects the latest selectedState
+            /// - updateEventSelectedState goes through events viewmodel,
+            ///   which always emits a new state and unblocks EventActionRowData.
+            if (selectedEventId != null)
+              BlocBuilder<ConfigEventsViewmodel, ConfigEventsState>(
+                builder: (BuildContext context, ConfigEventsState eventsState) {
+                  final ConfigEventsViewmodel configEventsViewmodel = context.read<ConfigEventsViewmodel>();
+                  final FusionEvent selectedEvent = configEventsViewmodel.getEventById(selectedEventId);
+                  final List<EventStates>? states = selectedEvent.states;
 
-                final FusionEvent selectedEvent = actionsViewModel.getEventById(selectedEventId);
+                  /// Hide if null or not exactly 2 states
+                  if (states == null || states.length != 2) {
+                    return const SizedBox.shrink();
+                  }
 
-                final List<EventStates>? states = selectedEvent.states;
+                  final EventStates left = states.first;
+                  final EventStates right = states.last;
 
-                /// Hide if null or not exactly 2 states
-                if (states == null || states.length != 2) {
-                  return const SizedBox.shrink();
-                }
-
-                /// Maintain order as provided by backend
-                final EventStates left = states.first;
-                final EventStates right = states.last;
-
-                final Map<bool, Widget> sliderChildren = <bool, Widget>{
-                  true: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: FusionAppText(
-                      text: left.name,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 13,
-                        color: Theme.of(context).colorScheme.textPrimary,
+                  final Map<bool, Widget> sliderChildren = <bool, Widget>{
+                    true: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: FusionAppText(
+                        semanticId: FusionTestKeys.instance.eventtriggeractionstoogletxt1,
+                        text: left.name,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: 13,
+                          color: Theme.of(context).colorScheme.textPrimary,
+                        ),
                       ),
                     ),
-                  ),
-                  false: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: FusionAppText(
-                      text: right.name,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 13,
-                        color: Theme.of(context).colorScheme.textPrimary,
+                    false: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: FusionAppText(
+                        semanticId: FusionTestKeys.instance.eventtriggeractionstoogletxt2,
+                        text: right.name,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: 13,
+                          color: Theme.of(context).colorScheme.textPrimary,
+                        ),
                       ),
                     ),
-                  ),
-                };
+                  };
 
-                /// Determine current group value based on event.selectedState
-                final bool groupValue = (selectedEvent.selectedState?.stateType == left.stateType);
+                  /// Determine current group value based on event.selectedState
+                  final bool groupValue = (selectedEvent.selectedState?.stateType == left.stateType);
 
-                return Container(
-                  alignment: Alignment.centerRight,
-                  padding: EdgeInsets.only(
-                    bottom: 20,
-                    right: responsivePadding,
-                  ),
-                  child: CupertinoSlidingSegmentedControl<bool>(
-                    children: sliderChildren,
-                    groupValue: groupValue,
-                    onValueChanged: (bool? value) {
-                      if (value == null) return;
-                      final EventStates newSelected = value ? left : right;
-                      actionsViewModel.updateEventSelectedState(
-                        eventId: selectedEventId,
-                        selectedState: newSelected,
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
+                  return Container(
+                    alignment: Alignment.centerRight,
+                    padding: EdgeInsets.only(
+                      bottom: 20,
+                      right: responsivePadding,
+                    ),
+                    child: CupertinoSlidingSegmentedControl<bool>(
+                      children: sliderChildren,
+                      groupValue: groupValue,
+                      onValueChanged: (bool? value) {
+                        if (value == null) return;
+                        final EventStates newSelected = value ? left : right;
+                        // Route through ConfigEventsViewmodel so the events state
+                        // always emits a fresh object → EventActionRowData rebuilds.
+                        configEventsViewmodel.updateEventSelectedState(
+                          eventId: selectedEventId,
+                          selectedState: newSelected,
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+
             Container(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               color: context.colorScheme.elevation2.withAlpha(120),
               child: Row(
                 spacing: screenWidth * 0.01,
-
                 children: <Widget>[
                   SizedBox(width: screenWidth * 0.01),
-                  const _HeaderCell(text: "Action Type"),
-
-                  const _HeaderCell(text: "Action Item"),
-
-                  const _HeaderCell(text: "Param / Action"),
-
-                  const _HeaderCell(
+                  _HeaderCell(semanticId: FusionTestKeys.instance.eventtriggeractiontype, text: "Action Type"),
+                  _HeaderCell(
+                    text: "Action Item",
+                    semanticId: FusionTestKeys.instance.eventtriggeractionitem,
+                  ),
+                  _HeaderCell(
+                    text: "Param / Action",
+                    semanticId: FusionTestKeys.instance.eventtriggeractionparm,
+                  ),
+                  _HeaderCell(
                     text: "Value",
+                    semanticId: FusionTestKeys.instance.eventtriggeractionvalue,
                   ),
                   SizedBox(width: screenWidth * 0.046),
                 ],
@@ -156,12 +168,14 @@ class EventActionRowHeader extends StatelessWidget {
 /// Header cell widget
 class _HeaderCell extends StatelessWidget {
   final String text;
-  const _HeaderCell({required this.text});
+  final String semanticId;
+  const _HeaderCell({required this.text, required this.semanticId});
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: FusionAppText(
+        semanticId: semanticId,
         text: text,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
           fontWeight: FontWeight.w600,

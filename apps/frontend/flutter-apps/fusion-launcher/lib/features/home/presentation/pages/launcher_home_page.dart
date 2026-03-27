@@ -3,11 +3,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
+import 'package:fusion_launcher/core/widgets/test_library_screen.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/widget_library/widget_library.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/service_locator.dart';
+import '../../../widget_library/widget_library.dart';
 import '../widgets/fusion_side_bar.dart';
 import '../widgets/home_tab_content.dart';
 import '../widgets/profile_tab_content.dart';
@@ -20,6 +21,7 @@ enum DashboardTabs {
   settings("Settings"),
   // community("Community"),
   testLibrady("Test Library"),
+  widgetLibrary("Widget Library"),
   savedProjects("Saved Projects");
 
   final String name;
@@ -34,14 +36,11 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final ValueNotifier<DashboardTabs> _currentTabNotifier =
-      ValueNotifier<DashboardTabs>(DashboardTabs.home);
+  final ValueNotifier<DashboardTabs> _currentTabNotifier = ValueNotifier<DashboardTabs>(DashboardTabs.home);
 
   final ValueNotifier<bool> _showAllProjects = ValueNotifier<bool>(false);
-  final UserProfileManager userProfileManager =
-      serviceLocator<UserProfileManager>();
-  final SharedPreferencesHandler prefs =
-      serviceLocator<SharedPreferencesHandler>();
+  final UserProfileManager userProfileManager = serviceLocator<UserProfileManager>();
+  final SharedPreferencesHandler prefs = serviceLocator<SharedPreferencesHandler>();
 
   @override
   void initState() {
@@ -86,7 +85,6 @@ class _HomePageState extends State<HomePage> {
                     },
                   ),
                 ],
-
                 // ==================================
                 //          Tab Content
                 // ==================================
@@ -101,8 +99,7 @@ class _HomePageState extends State<HomePage> {
                           FusionUiUtils.hideLoader(context);
                           Navigator.pushNamed(context, Routes.projectPage).then(
                             (_) async {
-                              await serviceLocator<ProjectViewModel>()
-                                  .loadAllLocalProjects();
+                              await serviceLocator<ProjectViewModel>().loadAllLocalProjects();
                             },
                           );
                         }
@@ -135,6 +132,8 @@ class _HomePageState extends State<HomePage> {
                             case DashboardTabs.savedProjects:
                               return const SavedProjectsTabContent();
                             case DashboardTabs.testLibrady:
+                              return TestLibraryScreen();
+                            case DashboardTabs.widgetLibrary:
                               return const WidgetLibrary();
                           }
                         },
