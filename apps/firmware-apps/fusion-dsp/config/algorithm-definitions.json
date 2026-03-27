@@ -1571,6 +1571,20 @@
                     "default_value": false
                 },
                 {
+                    "name": "out_mute",
+                    "dimensions": ["out"],
+                    "value_type": "bool",
+                    "default_value": false
+                },
+                {
+                    "name": "out_gain",
+                    "value_type": "float",
+                    "dimensions": ["out"],
+                    "default_value": 0.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 12.0
+                },
+                {
                     "name": "routing",
                     "value_type": "bool",
                     "dimensions": ["in", "out"],
@@ -1670,7 +1684,7 @@
                 },
                 {
                     "name": "output_mute",
-                    "dimensions": ["in"],
+                    "dimensions": ["out"],
                     "value_type": "bool",
                     "default_value": false
                 }
