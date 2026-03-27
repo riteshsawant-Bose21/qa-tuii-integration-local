@@ -520,6 +520,20 @@ u64 fusion_gpt_read_ticks64(void)
 }
 EXPORT_SYMBOL(fusion_gpt_read_ticks64);
 
+static void gpt_rephase_of1_from_pps_locked(struct fusion_gpt *g, u64 cap64)
+{
+	u32 cap32 = (u32)cap64;
+	u32 next = cap32 + PERIOD_TICKS_BASE;
+
+	if ((s32)(next - g->last32) <= 0)
+		next = g->last32 + PERIOD_TICKS_BASE;
+
+	g->frac = 0;
+	g->next_ocr1 = next;
+	wrl(g, g->next_ocr1, GPT_OCR1);
+	g->phc_aligned = true;
+}
+
 static void gpt_rebase_phc_epoch_locked(struct fusion_gpt *g, u64 cap64,
 					bool had_prev, u64 prev_cap64)
 {
@@ -530,7 +544,7 @@ static void gpt_rebase_phc_epoch_locked(struct fusion_gpt *g, u64 cap64,
 		g->phc_epoch_ns = g->pending_future_phc_ns;
 		g->pps_epoch_cnt64 = cap64;
 		g->phc_epoch_valid = true;
-		g->phc_aligned = false; /* ensure OF1 one-shot align runs */
+		g->phc_aligned = false;
 		g->pending_future_anchor = false;
 		pr_info("fusion_gpt: phc anchor latched epoch=%llu cnt=%llu\n",
 			g->phc_epoch_ns, g->pps_epoch_cnt64);
@@ -1289,6 +1303,8 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 		g->pps_icr1_last64 = cap64;
 		g->pps_valid       = true;
 		gpt_rebase_phc_epoch_locked(g, cap64, had_prev, prev_cap64);
+		if (g->phc_epoch_valid)
+			gpt_rephase_of1_from_pps_locked(g, cap64);
 		raw_spin_unlock(&g->pps_lock);
 
 		if (READ_ONCE(g->dac_target) != READ_ONCE(g->current_dac_value) ||
@@ -1305,63 +1321,6 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 		clr |= SR_IF2;
 
 	if (sr & SR_OF1) {
-		bool do_align = false;
-		u64 epoch_ns = 0, epoch_cnt64 = 0;
-
-		/* One-shot phase align: if we have a valid PHC epoch and haven't aligned yet */
-		if (!READ_ONCE(g->phc_aligned)) {
-			unsigned long flags;
-			bool valid;
-
-			/* Snapshot epoch under pps_lock */
-			raw_spin_lock_irqsave(&g->pps_lock, flags);
-			valid       = g->phc_epoch_valid;
-			epoch_ns    = g->phc_epoch_ns;
-			epoch_cnt64 = g->pps_epoch_cnt64;
-			raw_spin_unlock_irqrestore(&g->pps_lock, flags);
-
-			do_align = valid;
-		}
-
-		if (do_align) {
-			/*
-			 * Compute current PHC time from GPT ticks:
-			 *   phc_now_ns = epoch_ns + (now64 - epoch_cnt64) * 100
-			 * Then retarget next OCR1 so that the next OF1 occurs at the next
-			 * PHC multiple of 333,333 ns (i.e., 1/3 ms boundary).
-			 */
-			u64 now64 = (g->hi | g->last32);          /* extended earlier in this IRQ */
-			u64 dt_ticks = now64 - epoch_cnt64;
-			u64 phc_now_ns = epoch_ns + dt_ticks * 100ULL;
-
-			const u64 grid_ns = 333333ULL;
-			u64 rem = phc_now_ns % grid_ns;
-			u64 delta_ns = (rem == 0) ? grid_ns : (grid_ns - rem);  /* next future boundary */
-			u64 delta_ticks = ceil_div_u64(delta_ns, 100ULL);       /* 100 ns per tick */
-
-			/* Constrain to a sane window: 1x .. 3x period to avoid huge gaps */
-			u32 min_inc = PERIOD_TICKS_BASE;
-			u32 max_inc = PERIOD_TICKS_BASE * 3;
-			u32 inc = (delta_ticks < min_inc) ? min_inc :
-				  (delta_ticks > max_inc) ? max_inc : (u32)delta_ticks;
-
-			g->frac = 0;                               /* restart 3333/3333/3334 cadence after align */
-			g->next_ocr1 = g->last32 + inc;
-			wrl(g, g->next_ocr1, GPT_OCR1);
-
-            WRITE_ONCE(g->phc_aligned, true);          /* only once */
-            pr_info("fusion_gpt: phc aligned to 1/3ms grid\n");
-
-			clr |= SR_OF1;                              /* clear the latched OF1 */
-			if (clr) wrl(g, clr, GPT_SR);
-
-			/* Still notify the client for this tick */
-			gpt_tick_direct(g);
-
-			return IRQ_HANDLED;                         /* skip normal schedule this time */
-		}
-
-		/* Normal path once aligned (or if no epoch yet) */
 		gpt_program_next_compare(g);
 		clr |= SR_OF1;
 		gpt_tick_direct(g);

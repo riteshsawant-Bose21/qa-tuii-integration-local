@@ -264,7 +264,6 @@ int fusion_cn_alsa_remove_substream(struct fusion_cn_substream *stream)
 
 static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
 {
-    struct fusion_cn_chip *chip = snd_pcm_substream_chip(substream);
     struct snd_pcm_runtime *runtime = substream->runtime;
     unsigned long flags;
     char stream_name[FUSION_CN_NAME_MAX];
