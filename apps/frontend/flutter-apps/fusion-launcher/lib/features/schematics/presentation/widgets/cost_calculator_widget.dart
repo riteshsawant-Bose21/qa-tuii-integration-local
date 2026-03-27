@@ -211,66 +211,70 @@ class _CostCalculatorScreenState extends State<CostCalculatorScreen> with Ticker
     return SemanticHelper.toggle(
       testId: SemanticHelper.createTestId(SemanticTypes.toggle, "${title}_cost_calculator"),
       value: _expansionStates[title] ?? true,
-      child: ExpansionTile(
-        childrenPadding: EdgeInsets.zero,
-        minTileHeight: 0,
-        collapsedBackgroundColor: Colors.transparent,
-        backgroundColor: Colors.transparent,
-        collapsedIconColor: CostCalculatorScreen.primaryText,
-        iconColor: CostCalculatorScreen.accentColor,
-        onExpansionChanged: (bool expanded) => _handleExpansionChanged(title, expanded),
-        tilePadding: EdgeInsets.zero,
-        showTrailingIcon: false, // Hide default trailing icon since we're using custom one
-        initiallyExpanded: true, // Start expanded by default
-        title: Row(
-          children: <Widget>[
-            _RotatingIcon(animation: _rotationAnimations[title] ?? _rotationAnimations.values.first, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 4),
-            Expanded(
-              child: FusionAppText(
-                text: title,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 11,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          childrenPadding: EdgeInsets.zero,
+          minTileHeight: 0,
+          collapsedBackgroundColor: Colors.transparent,
+          backgroundColor: Colors.transparent,
+          collapsedIconColor: CostCalculatorScreen.primaryText,
+          iconColor: CostCalculatorScreen.accentColor,
+
+          onExpansionChanged: (bool expanded) => _handleExpansionChanged(title, expanded),
+          tilePadding: EdgeInsets.zero,
+          showTrailingIcon: false, // Hide default trailing icon since we're using custom one
+          initiallyExpanded: true, // Start expanded by default
+          title: Row(
+            children: <Widget>[
+              _RotatingIcon(animation: _rotationAnimations[title] ?? _rotationAnimations.values.first, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 4),
+              Expanded(
+                child: FusionAppText(
+                  text: title,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 11,
+                  ),
                 ),
               ),
-            ),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Container(
-              width: 40,
-              alignment: Alignment.centerRight,
-              child: FusionAppText(
-                text: items.length.toString().padLeft(2, '0'),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 11,
-                ),
-              ),
-            ),
-            Container(
-              width: 70,
-              color: Colors.red,
-              alignment: Alignment.centerRight,
-              child: FusionAppText(
-                maxLine: 1,
-                text: '\$${items.totalPrice.toStringAsFixed(2)}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 11,
-                ),
-              ),
-            ),
-          ],
-        ),
-        children: <Widget>[
-          Container(
-            margin: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
-            child: Column(
-              children: groupedItems.entries.map((MapEntry<String, List<HardwareComponent>> entry) => _buildHardwareItemRow(entry.key, entry.value)).toList(),
-            ),
+            ],
           ),
-        ],
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Container(
+                width: 40,
+                alignment: Alignment.centerRight,
+                child: FusionAppText(
+                  text: items.length.toString().padLeft(2, '0'),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+              Container(
+                width: 70,
+                color: Colors.red,
+                alignment: Alignment.centerRight,
+                child: FusionAppText(
+                  maxLine: 1,
+                  text: '\$${items.totalPrice.toStringAsFixed(2)}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          children: <Widget>[
+            Container(
+              margin: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+              child: Column(
+                children: groupedItems.entries.map((MapEntry<String, List<HardwareComponent>> entry) => _buildHardwareItemRow(entry.key, entry.value)).toList(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

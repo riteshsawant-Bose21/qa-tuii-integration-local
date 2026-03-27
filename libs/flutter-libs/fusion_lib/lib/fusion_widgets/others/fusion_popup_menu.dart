@@ -7,6 +7,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
     required this.items,
     required this.onSelected,
     this.itemBuilder,
+    this.popupwidth,
     this.itemLabels,
     this.matchChildWidth = true,
     required this.child,
@@ -14,6 +15,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
     this.popupOffset = const Offset(10, 10),
     this.semanticsId,
   });
+  final double? popupwidth;
   final List<T> items;
   final ValueChanged<T> onSelected;
   final Widget Function(BuildContext, T)? itemBuilder;
@@ -42,16 +44,20 @@ class FusionPopupMenu<T> extends StatelessWidget {
         offset: popupOffset,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.0),
-          side: BorderSide(color: context.colorScheme.strokeLight, width: 2),
+          side: BorderSide(color: context.colorScheme.strokeLight, width: 1),
         ),
         color: context.colorScheme.elevation2,
+        constraints: matchChildWidth
+            ? null
+            : popupwidth != null
+            ? BoxConstraints(minWidth: popupwidth!, maxWidth: popupwidth!)
+            : null,
         itemBuilder: (context) => List<PopupMenuEntry<T>>.generate(
           items.length,
           (index) {
             final T item = items[index];
-            var findRenderObject =
-                (childKey.currentContext?.findRenderObject() as RenderBox?);
-            var width2 = matchChildWidth ? findRenderObject?.size.width : null;
+            var findRenderObject = (childKey.currentContext?.findRenderObject() as RenderBox?);
+            var width2 = matchChildWidth ? findRenderObject?.size.width : popupwidth;
             return PopupMenuItem<T>(
               value: item,
 
@@ -69,11 +75,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
                     child: itemBuilder != null
                         ? itemBuilder!(context, item)
                         : FusionAppText(
-                            text:
-                                itemLabels != null &&
-                                    itemLabels!.containsKey(item)
-                                ? itemLabels![item]!
-                                : item.toString(),
+                            text: itemLabels != null && itemLabels!.containsKey(item) ? itemLabels![item]! : item.toString(),
                             style: context.textTheme.bodySmall,
                           ),
                   ),
@@ -353,8 +355,7 @@ class CustomPopupMenuButton<T> extends StatefulWidget {
   final bool? requestFocus;
 
   @override
-  _CustomPopupMenuButtonState<T> createState() =>
-      _CustomPopupMenuButtonState<T>();
+  _CustomPopupMenuButtonState<T> createState() => _CustomPopupMenuButtonState<T>();
 }
 
 /// The [State] for a [CustomPopupMenuButton].
@@ -371,8 +372,7 @@ class _CustomPopupMenuButtonState<T> extends State<CustomPopupMenuButton<T>> {
       // Even after the button has been unmounted and the context becomes invalid,
       // the route might keep displaying, and `_positionBuilder` must continue to
       // work in that case.
-      return _lastPosition ??
-          RelativeRect.fromSize(Rect.zero, constraints.biggest);
+      return _lastPosition ?? RelativeRect.fromSize(Rect.zero, constraints.biggest);
     }
 
     final PopupMenuThemeData popupMenuTheme = PopupMenuTheme.of(context);
@@ -383,8 +383,7 @@ class _CustomPopupMenuButtonState<T> extends State<CustomPopupMenuButton<T>> {
               rootNavigator: widget.useRootNavigator,
             ).overlay!.context.findRenderObject()!
             as RenderBox;
-    final PopupMenuPosition popupMenuPosition =
-        widget.position ?? popupMenuTheme.position ?? PopupMenuPosition.over;
+    final PopupMenuPosition popupMenuPosition = widget.position ?? popupMenuTheme.position ?? PopupMenuPosition.over;
     late Offset offset;
     switch (popupMenuPosition) {
       case PopupMenuPosition.over:
@@ -418,26 +417,71 @@ class _CustomPopupMenuButtonState<T> extends State<CustomPopupMenuButton<T>> {
   ///
   /// You would access your [_CustomPopupMenuButtonState] using a [GlobalKey] and
   /// show the menu of the button with `globalKey.currentState.showButtonMenu`.
+  // void showButtonMenu() {
+  //   final PopupMenuThemeData popupMenuTheme = PopupMenuTheme.of(context);
+  //   final List<PopupMenuEntry<T>> items = widget.itemBuilder(context);
+  //   // Only show the menu if there is something to show
+  //   if (items.isNotEmpty) {
+  //     widget.onOpened?.call();
+  //     _isMenuExpanded = true;
+  //     showMenu<T?>(
+  //       context: context,
+  //       elevation: widget.elevation ?? popupMenuTheme.elevation,
+  //       shadowColor: widget.shadowColor ?? popupMenuTheme.shadowColor,
+  //       surfaceTintColor: widget.surfaceTintColor ?? popupMenuTheme.surfaceTintColor,
+  //       items: items,
+  //       initialValue: widget.initialValue,
+  //       positionBuilder: _positionBuilder,
+  //       shape: widget.shape ?? popupMenuTheme.shape,
+  //       menuPadding: widget.menuPadding ?? popupMenuTheme.menuPadding,
+  //       color: widget.color ?? popupMenuTheme.color,
+  //       constraints: widget.constraints,
+  //       clipBehavior: widget.clipBehavior,
+  //       useRootNavigator: widget.useRootNavigator,
+  //       popUpAnimationStyle: widget.popUpAnimationStyle,
+  //       routeSettings: widget.routeSettings,
+  //       semanticLabel: widget.menuSemanticLabel,
+  //       requestFocus: widget.requestFocus,
+  //     ).then<void>((T? newValue) {
+  //       if (!mounted) {
+  //         return null;
+  //       }
+  //       if (newValue == null) {
+  //         widget.onCanceled?.call();
+  //         return null;
+  //       }
+  //       widget.onSelected?.call(newValue);
+  //       _isMenuExpanded = false;
+  //     });
+  //   }
+  // }
+
   void showButtonMenu() {
     final PopupMenuThemeData popupMenuTheme = PopupMenuTheme.of(context);
+
+    final RenderBox button = context.findRenderObject() as RenderBox;
+    final double buttonWidth = button.size.width;
+    final BoxConstraints? finalConstraints =
+        widget.constraints ?? (widget.constraints == null ? BoxConstraints(minWidth: buttonWidth, maxWidth: buttonWidth) : null);
+
     final List<PopupMenuEntry<T>> items = widget.itemBuilder(context);
-    // Only show the menu if there is something to show
+
     if (items.isNotEmpty) {
       widget.onOpened?.call();
       _isMenuExpanded = true;
+
       showMenu<T?>(
         context: context,
         elevation: widget.elevation ?? popupMenuTheme.elevation,
         shadowColor: widget.shadowColor ?? popupMenuTheme.shadowColor,
-        surfaceTintColor:
-            widget.surfaceTintColor ?? popupMenuTheme.surfaceTintColor,
+        surfaceTintColor: widget.surfaceTintColor ?? popupMenuTheme.surfaceTintColor,
         items: items,
         initialValue: widget.initialValue,
         positionBuilder: _positionBuilder,
         shape: widget.shape ?? popupMenuTheme.shape,
         menuPadding: widget.menuPadding ?? popupMenuTheme.menuPadding,
         color: widget.color ?? popupMenuTheme.color,
-        constraints: widget.constraints,
+        constraints: finalConstraints,
         clipBehavior: widget.clipBehavior,
         useRootNavigator: widget.useRootNavigator,
         popUpAnimationStyle: widget.popUpAnimationStyle,
@@ -445,12 +489,10 @@ class _CustomPopupMenuButtonState<T> extends State<CustomPopupMenuButton<T>> {
         semanticLabel: widget.menuSemanticLabel,
         requestFocus: widget.requestFocus,
       ).then<void>((T? newValue) {
-        if (!mounted) {
-          return null;
-        }
+        if (!mounted) return;
         if (newValue == null) {
           widget.onCanceled?.call();
-          return null;
+          return;
         }
         widget.onSelected?.call(newValue);
         _isMenuExpanded = false;
@@ -459,8 +501,7 @@ class _CustomPopupMenuButtonState<T> extends State<CustomPopupMenuButton<T>> {
   }
 
   bool get _canRequestFocus {
-    final NavigationMode mode =
-        MediaQuery.maybeNavigationModeOf(context) ?? NavigationMode.traditional;
+    final NavigationMode mode = MediaQuery.maybeNavigationModeOf(context) ?? NavigationMode.traditional;
     return switch (mode) {
       NavigationMode.traditional => widget.enabled,
       NavigationMode.directional => true,
@@ -472,17 +513,13 @@ class _CustomPopupMenuButtonState<T> extends State<CustomPopupMenuButton<T>> {
   Widget build(BuildContext context) {
     final IconThemeData iconTheme = IconTheme.of(context);
     final PopupMenuThemeData popupMenuTheme = PopupMenuTheme.of(context);
-    final bool enableFeedback =
-        widget.enableFeedback ??
-        PopupMenuTheme.of(context).enableFeedback ??
-        true;
+    final bool enableFeedback = widget.enableFeedback ?? PopupMenuTheme.of(context).enableFeedback ?? true;
 
     assert(debugCheckHasMaterialLocalizations(context));
 
     if (widget.child != null) {
       final Widget child = Tooltip(
-        message:
-            widget.tooltip ?? MaterialLocalizations.of(context).showMenuTooltip,
+        message: widget.tooltip ?? MaterialLocalizations.of(context).showMenuTooltip,
         child: InkWell(
           borderRadius: widget.borderRadius,
           onTap: widget.enabled ? showButtonMenu : null,
@@ -492,8 +529,7 @@ class _CustomPopupMenuButtonState<T> extends State<CustomPopupMenuButton<T>> {
           child: widget.child,
         ),
       );
-      final MaterialTapTargetSize tapTargetSize =
-          widget.style?.tapTargetSize ?? MaterialTapTargetSize.shrinkWrap;
+      final MaterialTapTargetSize tapTargetSize = widget.style?.tapTargetSize ?? MaterialTapTargetSize.shrinkWrap;
       if (tapTargetSize == MaterialTapTargetSize.padded) {
         return ConstrainedBox(
           constraints: const BoxConstraints(
@@ -517,8 +553,7 @@ class _CustomPopupMenuButtonState<T> extends State<CustomPopupMenuButton<T>> {
         splashRadius: widget.splashRadius,
         iconSize: widget.iconSize ?? popupMenuTheme.iconSize ?? iconTheme.size,
         color: widget.iconColor ?? popupMenuTheme.iconColor ?? iconTheme.color,
-        tooltip:
-            widget.tooltip ?? MaterialLocalizations.of(context).showMenuTooltip,
+        tooltip: widget.tooltip ?? MaterialLocalizations.of(context).showMenuTooltip,
         onPressed: widget.enabled ? showButtonMenu : null,
         enableFeedback: enableFeedback,
         style: widget.style,

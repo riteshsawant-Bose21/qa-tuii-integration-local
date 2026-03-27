@@ -139,12 +139,14 @@ class ProductPortData {
 
             _ => PortType.analogInput,
           };
+
+          final int portNumber = productType == ProductType.dsps ? index + 3 : index + 1;
           return PortData(
             id: FusionUtils.shortStringUUID(),
-            name: '${index + 1}',
+            name: '$portNumber',
             type: type,
-            portNumber: index + 1,
-            description: "${(type).description} ${index + 1}",
+            portNumber: portNumber,
+            description: "${(type).description} $portNumber",
             position: PortPosition.topLeft,
             compatibleTypes: switch (type) {
               PortType.analogOutput => [PortType.analogInput],

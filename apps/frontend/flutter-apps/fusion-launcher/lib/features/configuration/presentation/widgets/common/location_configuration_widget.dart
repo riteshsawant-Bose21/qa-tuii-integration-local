@@ -264,7 +264,7 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                             final String areaName = "Area ${serviceLocator<ProjectViewModel>().listeningAreas.length + 1}";
                                             final ListeningArea newListeningArea = ListeningArea(
                                               name: areaName,
-                                              vertices: <Offset>[],
+                                              vertices: <FusionCanvasPoint>[],
                                               isDrawn: false,
                                             );
 
@@ -651,7 +651,7 @@ class NewFloorRoomEntryState extends State<NewFloorRoomEntry> {
       final ListeningArea newListeningArea = ListeningArea(
         name: area,
         //small Square at center, calculate default vertices for that
-        vertices: <Offset>[],
+        vertices: <FusionCanvasPoint>[],
         isDrawn: false,
       );
 
