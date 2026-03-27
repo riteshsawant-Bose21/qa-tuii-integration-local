@@ -304,3 +304,17 @@ type WebSocketStats struct {
 	LastReset      time.Time        `json:"last_reset"`                 // Stats last reset
 	MessagesByType map[string]int64 `json:"messages_by_type,omitempty"` // Messages by type
 }
+
+// firmwareUploadResponse is the JSON body returned after a successful firmware upload.
+type FirmwareUploadResponse struct {
+	Filename  string    `json:"filename"`
+	Checksum  string    `json:"checksum"`
+	SizeBytes int64     `json:"size_bytes"`
+	Uploaded  time.Time `json:"uploaded"`
+}
+
+// firmwareErrorResponse is the JSON body returned on firmware upload errors.
+type FirmwareErrorResponse struct {
+	Error   string `json:"error"`
+	Message string `json:"message,omitempty"`
+}

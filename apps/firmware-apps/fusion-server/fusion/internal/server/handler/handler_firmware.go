@@ -1,10 +1,10 @@
 package handler
 
 import (
-	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
+	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/utils"
@@ -14,85 +14,19 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	json "github.com/goccy/go-json"
 )
 
-const (
-	maxFirmwareUploadBytes = 900 << 20 // 900 MB
-	minAvailableMemoryMB   = 175       // Minimum 200MB available memory required
-)
-
-// firmwareUploadResponse is the JSON body returned after a successful firmware upload.
-type firmwareUploadResponse struct {
-	Filename  string    `json:"filename"`
-	Checksum  string    `json:"checksum"`
-	SizeBytes int64     `json:"size_bytes"`
-	Uploaded  time.Time `json:"uploaded"`
-}
-
-// firmwareErrorResponse is the JSON body returned on firmware upload errors.
-type firmwareErrorResponse struct {
-	Error   string `json:"error"`
-	Message string `json:"message,omitempty"`
-}
-
 // writeFirmwareError writes a JSON error response for firmware endpoints.
 func writeFirmwareError(w http.ResponseWriter, statusCode int, errMsg, detail string) {
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	w.WriteHeader(statusCode)
-	_ = json.NewEncoder(w).Encode(firmwareErrorResponse{Error: errMsg, Message: detail})
-}
-
-// checkMemoryAvailable verifies sufficient memory is available for upload
-func checkMemoryAvailable(logger *logging.Logger, uploadSizeMB int64) error {
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-
-	// Check available memory from /proc/meminfo if on Linux
-	if memInfo, err := os.ReadFile("/proc/meminfo"); err == nil {
-		lines := strings.Split(string(memInfo), "\n")
-		for _, line := range lines {
-			if strings.HasPrefix(line, "MemAvailable:") {
-				fields := strings.Fields(line)
-				if len(fields) >= 2 {
-					availKB, err := strconv.ParseInt(fields[1], 10, 64)
-					if err == nil {
-						availMB := availKB / 1024
-						requiredMB := uploadSizeMB + minAvailableMemoryMB
-
-						logger.Debug("Memory check: available=%dMB, required=%dMB (upload=%dMB + buffer=%dMB)",
-							availMB, requiredMB, uploadSizeMB, minAvailableMemoryMB)
-
-						if availMB < requiredMB {
-							logger.Error("Insufficient memory: available %dMB, required %dMB", availMB, requiredMB)
-							return errors.New("insufficient memory for upload")
-						}
-						return nil
-					}
-				}
-				break
-			}
-		}
-	}
-
-	// Fallback: check Go runtime stats
-	gcMemMB := int64(m.Sys-m.HeapReleased) / (1024 * 1024)
-	requiredMB := uploadSizeMB + minAvailableMemoryMB
-
-	logger.Debug("Memory check (fallback): Go mem=%dMB, required=%dMB", gcMemMB, requiredMB)
-
-	// Conservative check: if we're using more than 80% of available memory
-	if gcMemMB > 100 && requiredMB > gcMemMB/5 { // More than 20% of current usage
-		logger.Error("Insufficient memory for upload: current usage %dMB, upload requires %dMB", gcMemMB, requiredMB)
-		return errors.New("insufficient memory for upload")
-	}
-
-	return nil
+	_ = json.NewEncoder(w).Encode(api.FirmwareErrorResponse{Error: errMsg, Message: detail})
 }
 
 // HandleFirmwareUpload handles POST /firmware/upload.
@@ -101,13 +35,6 @@ func checkMemoryAvailable(logger *logging.Logger, uploadSizeMB int64) error {
 //
 //	firmware: The firmware bundle as a .swu file (required).
 //	checksum: Expected SHA-256 hex digest for integrity validation (required).
-//
-// Workflow on the receiving (VIP) node:
-//  1. Write incoming bundle to /mnt/ota/<filename>.*.part (temp staging path).
-//  2. Validate the SHA-256 checksum against the provided expected value.
-//  3. Atomic rename from .part file to /mnt/ota/<original-filename>.
-//  4. Broadcast a firmware_available gossip notification so every non-VIP follower
-//     can initiate an HTTP download from this node via /firmware/download/{filename}.
 func (h *Handler) HandleFirmwareUpload(w http.ResponseWriter, r *http.Request) {
 	logger := logging.GetLogger()
 	start := time.Now()
@@ -120,24 +47,18 @@ func (h *Handler) HandleFirmwareUpload(w http.ResponseWriter, r *http.Request) {
 
 	logger.Info("firmware upload: processing upload on node %s", h.clusterTransport.LocalNode().Name)
 
-	// Check available memory based on Content-Length header
-	// COMMENTED OUT: Memory check disabled
-	// if contentLength := r.ContentLength; contentLength > 0 {
-	// 	uploadSizeMB := contentLength / (1024 * 1024)
-	// 	if err := checkMemoryAvailable(logger, uploadSizeMB); err != nil {
-	// 		logger.Error("firmware upload: pre-flight memory check failed: %v", err)
-	// 		writeFirmwareError(w, http.StatusInsufficientStorage, "insufficient_memory",
-	// 			"Upload rejected due to memory constraints")
-	// 		return
-	// 	}
-	// 	logger.Debug("firmware upload: memory check passed for %dMB upload", uploadSizeMB)
-	// }
+	// Check available disk space based on Content-Length header
+	if contentLength := r.ContentLength; contentLength > 0 {
+		if err := checkDiskSpace(contentLength, logger); err != nil {
+			logger.Error("firmware upload: disk space check failed: %v", err)
+			writeFirmwareError(w, http.StatusInsufficientStorage, "insufficient_storage", err.Error())
+			return
+		}
+		logger.Debug("firmware upload: disk space check passed for %d bytes upload", contentLength)
+	}
 
-	// Log upload start for performance monitoring
+	r.Body = http.MaxBytesReader(w, r.Body, api.MaxFirmwareUploadBytes)
 
-	r.Body = http.MaxBytesReader(w, r.Body, maxFirmwareUploadBytes)
-
-	// Use streaming multipart reader for better memory efficiency
 	contentType := r.Header.Get("Content-Type")
 	_, params, err := mime.ParseMediaType(contentType)
 	if err != nil {
@@ -155,9 +76,12 @@ func (h *Handler) HandleFirmwareUpload(w http.ResponseWriter, r *http.Request) {
 
 	multipartReader := multipart.NewReader(r.Body, boundary)
 
-	var firmwareData []byte
 	var origName string
 	var expectedChecksum string
+	var actualChecksum string
+	var written int64
+	var tmpPath string
+	var finalPath string
 
 	// Stream through multipart parts and collect required fields
 	for {
@@ -181,12 +105,12 @@ func (h *Handler) HandleFirmwareUpload(w http.ResponseWriter, r *http.Request) {
 			}
 			origName = filepath.Base(filename)
 
-			// Read firmware data - we need to buffer it since multipart is sequential
-			firmwareData, err = io.ReadAll(part)
+			// Process firmware data immediately to avoid memory buffering
+			actualChecksum, written, tmpPath, err = h.processFirmwareStream(part, origName, ctx)
 			part.Close()
 			if err != nil {
-				logger.Error("firmware upload: read firmware data: %v", err)
-				writeFirmwareError(w, http.StatusBadRequest, "invalid_form", "Error reading firmware file")
+				logger.Error("firmware upload: process firmware stream: %v", err)
+				writeFirmwareError(w, http.StatusBadRequest, "invalid_form", "Error processing firmware file")
 				return
 			}
 		case "checksum":
@@ -204,161 +128,86 @@ func (h *Handler) HandleFirmwareUpload(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if firmwareData == nil || origName == "" {
-		logger.Error("firmware upload: firmware file not found in multipart data")
-		writeFirmwareError(w, http.StatusBadRequest, "missing_field", `Missing "firmware" field (.swu file required)`)
+	// Validate required fields and filename
+	if err := validateUploadFields(origName, expectedChecksum, logger); err != nil {
+		cleanupTempFile(tmpPath, logger)
+		switch err.Error() {
+		case "missing_firmware":
+			writeFirmwareError(w, http.StatusBadRequest, "missing_field", `Missing "firmware" field (.swu file required)`)
+		case "missing_checksum":
+			writeFirmwareError(w, http.StatusBadRequest, "missing_field", `Missing "checksum" field (SHA-256 hex required)`)
+		case "invalid_filename":
+			writeFirmwareError(w, http.StatusBadRequest, "invalid_filename", "Filename is missing or invalid")
+		case "invalid_file_type":
+			writeFirmwareError(w, http.StatusBadRequest, "invalid_file_type", "Only .swu firmware files are allowed")
+		default:
+			writeFirmwareError(w, http.StatusBadRequest, "validation_error", "Upload validation failed")
+		}
 		return
 	}
 
-	if expectedChecksum == "" {
-		writeFirmwareError(w, http.StatusBadRequest, "missing_field", `Missing "checksum" field (SHA-256 hex required)`)
-		return
-	}
-
+	// Sanitize filename
 	origName = filepath.Base(origName)
-	if origName == "" || origName == "." {
-		writeFirmwareError(w, http.StatusBadRequest, "invalid_filename", "Filename is missing or invalid")
+
+	// Validate checksum
+	if err := validateChecksum(actualChecksum, expectedChecksum); err != nil {
+		cleanupTempFile(tmpPath, logger)
+		logger.Error("firmware upload: checksum validation failed: %v", err)
+		writeFirmwareError(w, http.StatusBadRequest, "checksum_mismatch", err.Error())
 		return
 	}
 
-	// Validate file extension for security
-	if !strings.HasSuffix(strings.ToLower(origName), ".swu") {
-		writeFirmwareError(w, http.StatusBadRequest, "invalid_file_type", "Only .swu firmware files are allowed")
-		return
-	}
-
-	// ------------------------------------------------------------------
-	// Duplicate check – if the file already sits at /mnt/ota/<filename>
-	// with the same checksum, reject the upload immediately.
-	// ------------------------------------------------------------------
-	finalPath := filepath.Join(api.FirmwareOTAPath, origName)
+	// Check for existing file with same name and checksum to prevent duplicates
+	finalPath = filepath.Join(api.FirmwareOTAPath, origName)
 	logger.Debug("firmware upload: checking for existing file at %s", finalPath)
 	if _, statErr := os.Stat(finalPath); statErr == nil {
 		existingChecksum, csErr := utils.FileChecksum(finalPath)
 		if csErr != nil {
 			logger.Warn("firmware upload: could not checksum existing file %s: %v — proceeding with overwrite", finalPath, csErr)
-		} else if strings.EqualFold(existingChecksum, expectedChecksum) {
+		} else if strings.EqualFold(existingChecksum, actualChecksum) {
 			logger.Info("firmware upload: %s already present with matching checksum %s — rejecting duplicate", origName, existingChecksum)
+			// Clean up temp file
+			os.Remove(tmpPath)
 			writeFirmwareError(w, http.StatusConflict, "already_exists",
 				"firmware file is already present on this node with the same checksum")
 			return
 		} else {
 			// Different checksum — the bundle has been updated; allow overwrite.
-			logger.Info("firmware upload: %s exists (checksum %s) but request checksum differs (%s) — overwriting", origName, existingChecksum, expectedChecksum)
+			logger.Info("firmware upload: %s exists (checksum %s) but actual checksum differs (%s) — overwriting", origName, existingChecksum, actualChecksum)
 		}
 	} else {
 		logger.Debug("firmware upload: no existing file at %s (%v) — proceeding", finalPath, statErr)
 	}
 
-	// ------------------------------------------------------------------
-	// Cross-filename duplicate check – scan existing files in FirmwareOTAPath
-	// and reject if any file (under a different name) already has the same
-	// checksum. This prevents re-uploading identical content with a new name.
-	// ------------------------------------------------------------------
-	if entries, readErr := os.ReadDir(api.FirmwareOTAPath); readErr == nil {
-		for _, entry := range entries {
-			if entry.IsDir() || entry.Name() == origName {
-				continue
-			}
-			candidate := filepath.Join(api.FirmwareOTAPath, entry.Name())
-			candidateChecksum, csErr := utils.FileChecksum(candidate)
-			if csErr != nil {
-				continue
-			}
-			if strings.EqualFold(candidateChecksum, expectedChecksum) {
-				logger.Info("firmware upload: identical content (checksum %s) already exists as %s — rejecting duplicate %s",
-					expectedChecksum, entry.Name(), origName)
-				writeFirmwareError(w, http.StatusConflict, "already_exists",
-					"firmware content is already present with this checksum")
-				return
-			}
-		}
-	}
-
-	// ------------------------------------------------------------------
-	// Step 1 – write bundle to /mnt/ota/<filename>.*.part
-	// Temp file is in the same directory as the final path, so os.Rename
-	// is always atomic — no cross-device copy needed.
-	// Random suffix from os.CreateTemp prevents concurrent upload collision.
-	// SHA-256 computed inline via io.TeeReader — no second file-read pass.
-	// ------------------------------------------------------------------
-	if err := os.MkdirAll(api.FirmwareOTAPath, 0755); err != nil {
-		logger.Error("firmware upload: mkdir %s: %v", api.FirmwareOTAPath, err)
-		writeFirmwareError(w, http.StatusInternalServerError, "server_error", "Failed to create OTA directory")
+	if duplicateFile, err := checkForCrossFilenameDuplicates(api.FirmwareOTAPath, actualChecksum, origName, logger); err != nil {
+		cleanupTempFile(tmpPath, logger)
+		writeFirmwareError(w, http.StatusInternalServerError, "server_error", "Failed to scan for duplicate content")
+		return
+	} else if duplicateFile != "" {
+		logger.Info("firmware upload: identical content (checksum %s) already exists as %s — rejecting duplicate %s",
+			actualChecksum, duplicateFile, origName)
+		cleanupTempFile(tmpPath, logger)
+		writeFirmwareError(w, http.StatusConflict, "already_exists",
+			fmt.Sprintf("firmware content is already present with this checksum as file '%s'", duplicateFile))
 		return
 	}
 
-	tmpFile, err := os.CreateTemp(api.FirmwareOTAPath, origName+".*.part")
-	if err != nil {
-		logger.Error("firmware upload: create temp: %v", err)
-		writeFirmwareError(w, http.StatusInternalServerError, "server_error", "Failed to create staging file")
-		return
-	}
-	tempPath := tmpFile.Name()
-
-	// Check context cancellation
-	if err := ctx.Err(); err != nil {
-		tmpFile.Close()
-		os.Remove(tempPath)
-		writeFirmwareError(w, http.StatusRequestTimeout, "upload_cancelled", "Upload was cancelled")
+	// Finalize upload by renaming from temp .part path to final filename in OTA directory
+	if err := os.Rename(tmpPath, finalPath); err != nil {
+		cleanupTempFile(tmpPath, logger)
+		logger.Error("firmware upload: rename %s → %s failed: %v", tmpPath, finalPath, err)
+		writeFirmwareError(w, http.StatusInternalServerError, "server_error", "Failed to finalize firmware file")
 		return
 	}
 
-	initializer := strings.NewReader("")
-	_ = initializer // Avoid unused variable
-
-	hasher := sha256.New()
-	// Write firmware data to temp file and compute hash simultaneously
-	firmwareReader := bytes.NewReader(firmwareData)
-	written, copyErr := io.CopyBuffer(tmpFile, io.TeeReader(firmwareReader, hasher), make([]byte, 1024*1024))
-	// Skip explicit sync for performance - close() will ensure data is written
-	closeErr := tmpFile.Close()
-
-	if copyErr != nil {
-		os.Remove(tempPath)
-		logger.Error("firmware upload: write %s: %v", tempPath, copyErr)
-		writeFirmwareError(w, http.StatusInternalServerError, "server_error", "Failed to write firmware to staging path")
-		return
-	}
-	if closeErr != nil {
-		os.Remove(tempPath)
-		logger.Error("firmware upload: close %s: %v", tempPath, closeErr)
-		writeFirmwareError(w, http.StatusInternalServerError, "server_error", "Failed to close staging file")
-		return
-	}
-
-	// ------------------------------------------------------------------
-	// Step 2 – validate SHA-256 checksum (computed inline during write)
-	// ------------------------------------------------------------------
-	actualChecksum := hex.EncodeToString(hasher.Sum(nil))
-	if !strings.EqualFold(actualChecksum, expectedChecksum) {
-		os.Remove(tempPath)
-		logger.Error("firmware upload: checksum mismatch: got %s, want %s", actualChecksum, expectedChecksum)
-		writeFirmwareError(w, http.StatusBadRequest, "checksum_mismatch",
-			"checksum validation failed")
-		return
-	}
-
-	// ------------------------------------------------------------------
-	// Step 3 – atomic rename: .part → /mnt/ota/<filename>
-	// Same filesystem as temp file — always succeeds without copy.
-	// ------------------------------------------------------------------
-	if err := os.Rename(tempPath, finalPath); err != nil {
-		os.Remove(tempPath)
-		logger.Error("firmware upload: rename %s → %s: %v", tempPath, finalPath, err)
-		writeFirmwareError(w, http.StatusInternalServerError, "server_error", "Failed to move firmware to OTA path")
-		return
-	}
-
-	logger.Info("firmware upload: bundle stored at %s (%.1f MB, sha256=%s, duration=%v)",
+	logger.Info("firmware upload: bundle finalized at %s (%.1f MB, sha256=%s, duration=%v)",
 		finalPath, float64(written)/(1<<20), actualChecksum, time.Since(start))
 
-	// Log performance metrics
 	uploadRate := float64(written) / (1024 * 1024) / time.Since(start).Seconds()
 	logger.Info("firmware upload: upload rate: %.1f MB/s", uploadRate)
 
 	uploaded := time.Now().UTC()
-	resp := firmwareUploadResponse{
+	resp := api.FirmwareUploadResponse{
 		Filename:  origName,
 		Checksum:  actualChecksum,
 		SizeBytes: written,
@@ -373,12 +222,7 @@ func (h *Handler) HandleFirmwareUpload(w http.ResponseWriter, r *http.Request) {
 
 	logger.Info("[FirmwareUpload] Upload successful - now broadcasting to cluster for automatic distribution")
 
-	// ------------------------------------------------------------------
-	// Step 4 – broadcast firmware_available gossip to cluster followers
-	//
-	// The gossip carries this node's IP so that followers know where to
-	// HTTP download from (this node is expected to be the VIP).
-	// ------------------------------------------------------------------
+	// Broadcast firmware availability to cluster so followers can initiate download
 	go func() {
 		sourceIP := h.clusterTransport.LocalNode().Addr.String()
 
@@ -451,7 +295,7 @@ func (h *Handler) HandleFirmwareDownload(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Length", strconv.FormatInt(info.Size(), 10))
 
 	if _, err := io.Copy(w, f); err != nil {
-		logging.GetLogger().Error("firmware download: stream %s: %v", filePath, err)
+		logger.Error("firmware download: stream %s: %v", filePath, err)
 	}
 }
 
@@ -516,4 +360,221 @@ func (h *Handler) HandleFirmwareList(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(bundles); err != nil {
 		logger.Error("firmware list: json encode: %v", err)
 	}
+}
+
+// processFirmwareStream processes a firmware file stream directly to disk without buffering in memory
+func (h *Handler) processFirmwareStream(part *multipart.Part, origName string, ctx context.Context) (checksum string, written int64, tmpPath string, err error) {
+	logger := logging.GetLogger()
+
+	// Create OTA directory for staging uploads directly
+	if err = os.MkdirAll(api.FirmwareOTAPath, 0755); err != nil {
+		logger.Error("firmware upload: mkdir %s: %v", api.FirmwareOTAPath, err)
+		return "", 0, "", fmt.Errorf("failed to create OTA directory: %w", err)
+	}
+
+	// Clean up any existing stale .part files in OTA directory
+	cleanupStalePartFiles(api.FirmwareOTAPath, logger)
+
+	tmpFile, err := os.CreateTemp(api.FirmwareOTAPath, origName+".*.part")
+	if err != nil {
+		logger.Error("firmware upload: create temp file: %v", err)
+		return "", 0, "", fmt.Errorf("failed to create temp file: %w", err)
+	}
+	tmpPath = tmpFile.Name()
+
+	// Check context cancellation
+	if err := ctx.Err(); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpPath)
+		return "", 0, "", fmt.Errorf("context cancelled: %w", err)
+	}
+
+	hasher := sha256.New()
+	// Stream from multipart part directly to temp file with hash calculation
+	bufferSize := 1024 * 1024 // 1MB buffer
+	written, copyErr := io.CopyBuffer(tmpFile, io.TeeReader(part, hasher), make([]byte, bufferSize))
+
+	// Close file first to ensure data is written
+	closeErr := tmpFile.Close()
+
+	if copyErr != nil {
+		os.Remove(tmpPath)
+		logger.Error("firmware upload: write to %s failed: %v", tmpPath, copyErr)
+		return "", 0, "", fmt.Errorf("failed to write firmware data: %w", copyErr)
+	}
+	if closeErr != nil {
+		os.Remove(tmpPath)
+		logger.Error("firmware upload: close %s failed: %v", tmpPath, closeErr)
+		return "", 0, "", fmt.Errorf("failed to close temp file: %w", closeErr)
+	}
+
+	// Validate written size
+	if written == 0 {
+		os.Remove(tmpPath)
+		return "", 0, "", fmt.Errorf("no data written to temp file")
+	}
+
+	checksum = hex.EncodeToString(hasher.Sum(nil))
+	logger.Debug("firmware upload: streaming completed to OTA directory - %d bytes written, checksum: %s", written, checksum)
+	return checksum, written, tmpPath, nil
+}
+
+// Helper functions for improved error handling and validation
+
+// validateChecksum validates the computed checksum against expected value
+func validateChecksum(actual, expected string) error {
+	if actual == "" {
+		return fmt.Errorf("computed checksum is empty")
+	}
+	if expected == "" {
+		return fmt.Errorf("expected checksum is empty")
+	}
+	if len(expected) != 64 {
+		return fmt.Errorf("invalid checksum format - expected 64 hex characters, got %d", len(expected))
+	}
+	// Validate hex format
+	if _, err := hex.DecodeString(expected); err != nil {
+		return fmt.Errorf("invalid checksum format - not valid hex: %w", err)
+	}
+	if !strings.EqualFold(actual, expected) {
+		return fmt.Errorf("checksum mismatch: computed=%s, expected=%s", actual, expected)
+	}
+	return nil
+}
+
+// validateUploadFields validates all required fields for firmware upload
+func validateUploadFields(origName, expectedChecksum string, logger *logging.Logger) error {
+	if origName == "" {
+		logger.Error("firmware upload: firmware file not found in multipart data")
+		return fmt.Errorf("missing_firmware")
+	}
+
+	if expectedChecksum == "" {
+		logger.Error("firmware upload: checksum field not found")
+		return fmt.Errorf("missing_checksum")
+	}
+
+	origName = filepath.Base(origName)
+	if origName == "" || origName == "." {
+		logger.Error("firmware upload: invalid filename after sanitization")
+		return fmt.Errorf("invalid_filename")
+	}
+
+	// Validate file extension for security
+	if !strings.HasSuffix(strings.ToLower(origName), ".swu") {
+		logger.Error("firmware upload: invalid file type - only .swu files allowed")
+		return fmt.Errorf("invalid_file_type")
+	}
+
+	return nil
+}
+
+// checkForCrossFilenameDuplicates scans for duplicate content across different filenames
+func checkForCrossFilenameDuplicates(otaPath, actualChecksum, origName string, logger *logging.Logger) (string, error) {
+	entries, readErr := os.ReadDir(otaPath)
+	if readErr != nil {
+		if os.IsNotExist(readErr) {
+			return "", nil // Directory doesn't exist yet - no duplicates
+		}
+		return "", fmt.Errorf("failed to read OTA directory: %w", readErr)
+	}
+
+	logger.Debug("firmware upload: scanning %d entries in %s for duplicate content", len(entries), otaPath)
+	for _, entry := range entries {
+		if entry.IsDir() || entry.Name() == origName {
+			continue
+		}
+		// Skip temporary .part files - these should already be cleaned up
+		if strings.HasSuffix(entry.Name(), ".part") {
+			logger.Debug("firmware upload: skipping temp file %s", entry.Name())
+			continue
+		}
+		candidate := filepath.Join(otaPath, entry.Name())
+		logger.Debug("firmware upload: checking candidate %s", candidate)
+		candidateChecksum, csErr := utils.FileChecksum(candidate)
+		if csErr != nil {
+			logger.Debug("firmware upload: failed to checksum %s: %v", candidate, csErr)
+			continue
+		}
+		logger.Debug("firmware upload: candidate %s has checksum %s, comparing against upload %s", entry.Name(), candidateChecksum, actualChecksum)
+		if strings.EqualFold(candidateChecksum, actualChecksum) {
+			return entry.Name(), nil // Found duplicate
+		}
+	}
+	logger.Debug("firmware upload: no duplicate content found in %d existing files", len(entries))
+	return "", nil
+}
+
+// cleanupTempFile safely removes temporary files
+func cleanupTempFile(tmpPath string, logger *logging.Logger) {
+	if tmpPath != "" {
+		if err := os.Remove(tmpPath); err != nil && !os.IsNotExist(err) {
+			logger.Warn("firmware upload: failed to cleanup temp file %s: %v", tmpPath, err)
+		} else {
+			logger.Debug("firmware upload: cleaned up temp file %s", tmpPath)
+		}
+	}
+}
+
+// cleanupStalePartFiles removes any stale .part files from directory
+func cleanupStalePartFiles(dirPath string, logger *logging.Logger) {
+	entries, readErr := os.ReadDir(dirPath)
+	if readErr != nil {
+		return // Directory might not exist yet
+	}
+
+	for _, entry := range entries {
+		if strings.HasSuffix(entry.Name(), ".part") {
+			staleFile := filepath.Join(dirPath, entry.Name())
+			logger.Debug("firmware upload: cleaning up stale temp file %s", entry.Name())
+			os.Remove(staleFile)
+		}
+	}
+}
+
+// getDiskUsage returns available bytes and filesystem ID for the given path
+func getDiskUsage(path string) (availableBytes uint64, fsid syscall.Fsid, err error) {
+	var stat syscall.Statfs_t
+	if err := syscall.Statfs(path, &stat); err != nil {
+		return 0, syscall.Fsid{}, fmt.Errorf("failed to get disk usage for %s: %w", path, err)
+	}
+
+	// Calculate available bytes
+	availableBytes = stat.Bavail * uint64(stat.Bsize)
+	fsid = stat.Fsid
+	return availableBytes, fsid, nil
+}
+
+// checkDiskSpace validates disk space for OTA directory upload
+func checkDiskSpace(uploadSize int64, logger *logging.Logger) error {
+	if uploadSize <= 0 {
+		return nil
+	}
+
+	requiredBytes := uint64(uploadSize)
+	bufferBytes := uint64(api.MinFreeSpaceBuffer)
+	totalRequired := requiredBytes + bufferBytes
+
+	// Get filesystem info for OTA directory
+	otaAvailable, _, err := getDiskUsage(api.FirmwareOTAPath)
+	if err != nil {
+		if parent := filepath.Dir(api.FirmwareOTAPath); parent != api.FirmwareOTAPath {
+			otaAvailable, _, err = getDiskUsage(parent)
+		}
+		if err != nil {
+			return fmt.Errorf("cannot determine disk space for OTA directory: %w", err)
+		}
+	}
+
+	logger.Debug("firmware upload: space check - ota: %.1f MB available, required: %.1f MB",
+		float64(otaAvailable)/(1<<20), float64(totalRequired)/(1<<20))
+
+	if otaAvailable < totalRequired {
+		return fmt.Errorf("insufficient space on OTA filesystem: %.1f MB available, %.1f MB required",
+			float64(otaAvailable)/(1<<20), float64(totalRequired)/(1<<20))
+	}
+
+	logger.Info("firmware upload: disk space validation passed - %.1f MB available in OTA directory",
+		float64(otaAvailable)/(1<<20))
+	return nil
 }

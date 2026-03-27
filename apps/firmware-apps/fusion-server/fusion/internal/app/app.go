@@ -245,6 +245,7 @@ func (app *App) setupPublicRoutes() {
 	// Firmware
 	app.registerPublicPOST(routes.FirmwareUploadEndpoint, app.ConnectionHandler.HandleFirmwareUpload)
 	app.registerPublicGET(routes.FirmwareDownloadEndpoint, app.ConnectionHandler.HandleFirmwareDownload)
+	app.registerPublicGET(routes.FirmwarelistEndpoint, app.ConnectionHandler.HandleFirmwareList)
 
 	app.registerPublicPUT(routes.PAVAMessageTriggerEndpoint, app.TaskManager.TriggerMessage)
 	// app.registerPublicGET(routes.PAVAZonesEndpoint, app.Server.ListZones)

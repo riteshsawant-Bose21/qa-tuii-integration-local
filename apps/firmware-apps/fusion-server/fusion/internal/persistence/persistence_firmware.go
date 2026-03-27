@@ -35,8 +35,7 @@ var (
 //     advertised in the gossip notification.
 //
 //  3. Atomic rename from .part file to final /mnt/ota/<filename>.
-//     Temp file is in the same directory as final path, ensuring atomic operation
-//     with no cross-device copy needed.
+//     Temp file is in the same directory as final path
 func (p *Persistence) SyncFirmwareFile(update *api.FirmwareSyncUpdate) error {
 	logger := logging.GetLogger()
 
@@ -59,8 +58,7 @@ func (p *Persistence) SyncFirmwareFile(update *api.FirmwareSyncUpdate) error {
 	// ------------------------------------------------------------------
 	// Step 1 – stream bundle from VIP into /mnt/ota/<filename>.*.part
 	// Temp file is in the same directory as the final path, so os.Rename
-	// is always atomic — no cross-device copy needed.
-	// SHA-256 computed inline via io.TeeReader — no second file-read pass.
+	// SHA-256 computed inline via io.TeeReader
 	// ------------------------------------------------------------------
 	if err := os.MkdirAll(api.FirmwareOTAPath, 0755); err != nil {
 		return fmt.Errorf("%w: failed to create OTA directory %s: %w", ErrInstallFailed, api.FirmwareOTAPath, err)
@@ -111,7 +109,7 @@ func (p *Persistence) SyncFirmwareFile(update *api.FirmwareSyncUpdate) error {
 	}
 
 	// ------------------------------------------------------------------
-	// Step 2 – verify SHA-256 checksum (computed inline during write)
+	// Step 2 – verify SHA-256 checksum
 	// ------------------------------------------------------------------
 	actualChecksum := hex.EncodeToString(hasher.Sum(nil))
 	if !strings.EqualFold(actualChecksum, update.Checksum) {
@@ -122,7 +120,6 @@ func (p *Persistence) SyncFirmwareFile(update *api.FirmwareSyncUpdate) error {
 
 	// ------------------------------------------------------------------
 	// Step 3 – atomic rename: .part → /mnt/ota/<filename>
-	// Same filesystem as temp file — always succeeds without copy.
 	// ------------------------------------------------------------------
 	if err := os.Rename(tempPath, finalPath); err != nil {
 		os.Remove(tempPath)

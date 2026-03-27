@@ -3,8 +3,10 @@ package api
 import "time"
 
 const (
-	FirmwareUnknown = "Unknown"
-	FirmwareOTAPath = "/mnt/ota"
+	FirmwareUnknown        = "Unknown"
+	FirmwareOTAPath        = "/mnt/ota"
+	MaxFirmwareUploadBytes = 300 << 20 // 300 MB
+	MinFreeSpaceBuffer     = 100 << 20 // 100 MB minimum free space buffer
 
 	FusionEpoch     = "_fusion_epoch"
 	FusionVersion   = "_fusion_version"

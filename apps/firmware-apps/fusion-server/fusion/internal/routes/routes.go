@@ -64,6 +64,7 @@ const (
 	FirmwareEndpoint         = "/firmware"
 	FirmwareUploadEndpoint   = FirmwareEndpoint + "/upload"
 	FirmwareDownloadEndpoint = FirmwareEndpoint + "/download/{filename}"
+	FirmwarelistEndpoint     = FirmwareEndpoint + "/list"
 
 	HealthEndpoint = "/health"
 

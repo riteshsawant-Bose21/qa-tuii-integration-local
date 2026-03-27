@@ -29,6 +29,13 @@ Fusion Server can be run:
 - UDP broadcast of message triggers
 - Scheduling of message playback (`/pava/schedule`)
 
+## Firmware Management
+- Secure upload of `.swu` firmware bundles (`/firmware/upload`)
+- SHA-256 checksum validation and integrity verification
+- Automatic cluster-wide distribution via gossip protocol
+- Version control with duplicate detection
+- REST endpoints for download and listing (`/firmware/download`, `/firmware/list`)
+
 ## Scheduler & Tasks
 - Cron-based recurring tasks
 - One-shot and scheduled operations
@@ -252,6 +259,19 @@ Run a subset:
 ```bash
 ./scripts/multipass/run-tests --snapshot
 ```
+
+# Documentation
+
+For detailed information on specific functionality:
+
+- [Local Development & Debugging](docs/Local.md) - Building and running locally, BLE testing
+- [Cluster Setup & Operations](docs/Cluster.md) - Distributed deployment and management  
+- [Snapshots](docs/Snapshots.md) - State consistency and snapshot management
+- [Tasks & Scheduling](docs/Tasks.md) - Cron jobs and task automation
+- [Persistence](docs/Persistence.md) - BoltDB storage and data management
+- [WebSocket API](docs/WebSocket.md) - Real-time streaming endpoints
+- [Setup & Configuration](docs/Setup.md) - Initial setup and configuration
+- [Firmware Management](docs/Firmware.md) - Firmware upload, distribution, and management
 
 # Troubleshooting macOS [ Tahoe ] and Multipass Issues
 
