@@ -1,0 +1,111 @@
+name: "Build Flutter Windows App Automation Build"
+description: "Build Flutter Windows App"
+inputs:
+  flutter_apps_sonar_token:
+    description: 'SonarQube server token'
+    required: true
+  nexus_password:
+    description: 'Nexus repository password'
+    required: true
+  keychain_password:
+    description: 'Keychain password for iOS build'
+    required: true
+  nexus_url:
+    description: 'Nexus repository URL'
+    required: true
+  cert_thumbprint:
+    description: 'Certificate thumbprint for code signing'
+    required: true  
+  SM_API_KEY:
+    description: 'Secure Mail API Key for code signing'
+    required: true
+  SM_CLIENT_CERT_PASSWORD:
+    description: 'Secure Mail Client Certificate Password for code signing'
+    required: true
+  branch_name:
+    description: 'Name of the branch from which automation build will be triggered'
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Read version manually
+      id: get_version
+      shell: powershell
+      working-directory: apps/frontend/flutter-apps/fusion-launcher
+      run: |
+        $content = Get-Content pubspec.yaml
+        $versionLine = $content | Where-Object { $_ -match '^version:' }
+        $version = $versionLine -replace '^version:\s*', '' -replace '\+.*$', ''
+        echo "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+    # - name: SonarQube Scan
+    #   uses: SonarSource/sonarqube-scan-action@v5
+    #   env:
+    #     SONAR_TOKEN: ${{ inputs.flutter_apps_sonar_token }}
+    #   with:
+    #     projectBaseDir: 'apps/frontend/flutter-apps'
+    #     args: >
+    #       -Dsonar.c.file.suffixes=-
+    #       -Dsonar.cpp.file.suffixes=-
+    #       -Dsonar.objc.file.suffixes=-
+    #       -Dsonar.exclusions=build/**
+    #       -Dsonar.inclusions=lib/**,android/**,ios/**
+
+
+    - name: Clone project
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch_name }}
+        path: C:\Users\Administrator\actions-runner\_work\fusion-monorepo\fusion-monorepo\fusion-automation-build
+        sparse-checkout: |
+          apps/frontend/flutter-apps/fusion-launcher
+          libs/
+        fetch-depth: 0 
+
+    - name: Flutter Windows Automation build
+      shell: powershell
+      working-directory: apps/frontend/flutter-apps/fusion-launcher
+      run: |
+        robocopy C:\Users\Administrator\actions-runner\_work\fusion-monorepo\fusion-monorepo\fusion-automation-build C:\Users\Administrator\Documents\fusion-monorepo /E /NFL /NDL /NJH /NJS /NC /NS | Out-Null
+        cd C:\Users\Administrator\Documents\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher
+
+        $sourceEnv = "C:\Users\Administrator\Documents\env"
+        $destEnv = ".\.env"
+
+        if (Test-Path $sourceEnv) {
+            Copy-Item $sourceEnv $destEnv -Force
+            Write-Output ".env file copied to project root."
+        } else {
+            Write-Output "ERROR: .env not found!"
+            exit 1
+        }
+
+        flutter pub get --suppress-analytics *> $null
+        moon run flutter-apps:win-automation-build
+        E:\'Program Files (x86)'\NSIS\makensis.exe C:\Users\Administrator\Documents\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher\windows\Installer\NSIS\fusion_launcher_automation_build.nsi
+
+        echo "SM_API_KEY=${{ inputs.SM_API_KEY }}" >> $env:GITHUB_ENV
+        echo "SM_CLIENT_CERT_PASSWORD=${{ inputs.SM_CLIENT_CERT_PASSWORD }}" >> $env:GITHUB_ENV
+        echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools\smctl.exe" >> $env:GITHUB_PATH
+
+        $thumbprint = "${{ inputs.cert_thumbprint }}"
+        smctl.exe sign --fingerprint $thumbprint --input C:\Users\Administrator\Documents\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher\windows\Installer\NSIS\FusionLauncherAutomationBuildInstaller.exe --config-file "C:\Program Files\DigiCert\DigiCert/ One/ Signing/ Manager/ Tools\pkcs11properties.cfg" --description "Fusion Launcher" --timestamp http://timestamp.digicert.com?alg=sha256
+        
+        $runNumber = $env:GITHUB_RUN_NUMBER
+        $branchName = if ($env:GITHUB_HEAD_REF) { $env:GITHUB_HEAD_REF } else { $env:GITHUB_REF_NAME }
+        $version = "${{ steps.get_version.outputs.version }}-$runNumber+$(git rev-parse --short=8 HEAD)"
+        Write-Output "VERSION: $version"
+
+        $buildPath = "./windows/Installer/NSIS/FusionLauncherAutomationBuildInstaller.exe"
+        $nexusUrl = "${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-Automation-Build-$version.exe"
+        $username = "github-actions-uploader"
+        $password = "${{ inputs.nexus_password }}"
+        
+        curl.exe -k --ssl-no-revoke -f -u "$username`:$password" -T $buildPath $nexusUrl
+        Write-Output "flutter-windows: https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-$version.exe"
+        Write-Output "flutter-automation-build-windows: https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-Automation-Build-$version.exe"
+
+        Write-Output "Cleaning up C:\Users\Administrator\Documents\fusion-monorepo"
+        robocopy C:\temp\empty C:\Users\Administrator\Documents\fusion-monorepo /MIR /XD .moon
+        if ($LASTEXITCODE -le 7) { exit 0 } else { exit $LASTEXITCODE }
+        
