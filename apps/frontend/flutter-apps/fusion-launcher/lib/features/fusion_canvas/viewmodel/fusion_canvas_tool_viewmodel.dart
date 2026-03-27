@@ -75,7 +75,7 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
     // Delegate to tool-specific helpers based on current state
     final FusionToolState? newState = _transformWithHelper(inputState, context);
     if (newState != null && newState != state) {
-      print("State changed: $state   ==> $newState. on inputState: $inputState");
+      // print("State changed: $state   ==> $newState. on inputState: $inputState");
       emit(newState);
       return true;
     }
