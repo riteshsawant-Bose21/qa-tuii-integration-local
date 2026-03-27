@@ -328,9 +328,9 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     hw.channels_max = stream->channels;
     hw.period_bytes_min = stream->rtp_frame_size * stream->channels * stream->sample_width;
     hw.period_bytes_max = (stream->rtp_frame_size * 4 * 4) * stream->channels * stream->sample_width;
-    hw.buffer_bytes_max = hw.period_bytes_max * 256 / 4;
+    hw.buffer_bytes_max = stream->rtp_frame_size * 16 * stream->channels * stream->sample_width;
     hw.periods_min = 2;
-    hw.periods_max = 128;
+    hw.periods_max = 16;
 
     runtime->hw = hw;
     runtime->private_data = stream;
@@ -358,7 +358,7 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     }
 
     err = snd_pcm_hw_constraint_minmax(runtime, SNDRV_PCM_HW_PARAM_BUFFER_SIZE, 
-                                       stream->rtp_frame_size * 2, stream->rtp_frame_size * 256);
+                                       stream->rtp_frame_size * 2, stream->rtp_frame_size * 16);
     if (err < 0) {
         stream->substream = NULL;
         kref_put(&stream->ref, fusion_cn_alsa_substream_release);
