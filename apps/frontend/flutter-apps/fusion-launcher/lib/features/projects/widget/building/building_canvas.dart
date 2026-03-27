@@ -193,6 +193,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 buildingPageViewModel.state.selectedListeningAreaId!,
                                               if (buildingPageViewModel.state.selectedSpeakerId != null) buildingPageViewModel.state.selectedSpeakerId!,
                                             },
+                                            // selectionToolParams: const SelectionToolParams(enableMarqueeSelection: false, enableMultiSelect: false),
                                             elements: <FusionBasePainter>[
                                               if (buildingPageViewModel.isSplMode)
                                                 SplPainter(

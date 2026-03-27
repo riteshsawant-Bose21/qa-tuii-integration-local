@@ -222,9 +222,11 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
                 painters.where((FusionBasePainter p) => state.layerIds.contains(p.id)).toList(),
               );
             } else if (state is SelectToolState) {
-              toolbarEvents?.onLayerSelected?.call(
-                painters.where((FusionBasePainter p) => state.selectedLayerIds.contains(p.id)).toList(),
-              );
+              if (state is! MarqueeSelectToolState) {
+                toolbarEvents?.onLayerSelected?.call(
+                  painters.where((FusionBasePainter p) => state.selectedLayerIds.contains(p.id)).toList(),
+                );
+              }
             }
           },
         ),

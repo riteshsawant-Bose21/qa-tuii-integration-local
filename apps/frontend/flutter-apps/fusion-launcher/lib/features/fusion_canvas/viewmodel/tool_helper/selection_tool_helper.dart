@@ -9,6 +9,9 @@ import 'package:fusion_lib/fusion_lib.dart';
 import '../../state/fusion_canvas_input_state.dart';
 import '../../view/painters/elements/mixin/fusion_canvas_interactable_mixin.dart';
 import '../fusion_canvas_tool_viewmodel.dart';
+import '../usecase/fc_interaction_resolver_usecase.dart';
+import '../usecase/fc_layer_interaction_support_usecase.dart';
+import '../usecase/fc_selectable_layers_in_rect_usecase.dart';
 
 class SelectionToolHelper {
   FusionToolState transform({
@@ -16,6 +19,8 @@ class SelectionToolHelper {
     required FusionCanvasInputContext context,
     required SelectToolState currentState,
   }) {
+    final bool selectionEnabled = context.selectionToolParams.enableSelect;
+
     if (inputState is FusionCanvasInputTapDownState) {
       return _handleTapDown(context, currentState);
     }
@@ -25,8 +30,15 @@ class SelectionToolHelper {
     }
 
     if (inputState is FusionCanvasInputTapUpState) {
+      if (currentState is MarqueeSelectToolState && inputState.gestureOrigin == FusionGestureOrigin.drag && inputState.button == FusionMouseButton.left) {
+        return IdleSelectToolState(
+          selectedLayerIds: currentState.selectedLayerIds,
+          selectedElementIds: <String>{},
+        );
+      }
+
       // Handle click gestures for selection
-      if (inputState.gestureOrigin == FusionGestureOrigin.click && inputState.button == FusionMouseButton.left) {
+      if (selectionEnabled && inputState.gestureOrigin == FusionGestureOrigin.click && inputState.button == FusionMouseButton.left) {
         return _handleClick(context, currentState);
       }
     }
@@ -43,6 +55,19 @@ class SelectionToolHelper {
     FusionCanvasInputContext context,
     SelectToolState currentState,
   ) {
+    if (context.inputState is! FusionCanvasInputTapDownState) {
+      return currentState;
+    }
+
+    final FusionCanvasInputTapDownState tapDownState = context.inputState as FusionCanvasInputTapDownState;
+    if (tapDownState.button != FusionMouseButton.left) {
+      return currentState;
+    }
+
+    final bool selectionEnabled = context.selectionToolParams.enableSelect;
+    final bool multiSelectEnabled = context.selectionToolParams.enableMultiSelect;
+    final bool marqueeSelectionEnabled = context.selectionToolParams.enableMarqueeSelection;
+
     final String? hoveredPainterId = context.hoverState.hoveredPainterId;
 
     if (hoveredPainterId != null && context.hoverState.supportsInteraction(FusionCanvasLayerInteraction.drag)) {
@@ -51,30 +76,47 @@ class SelectionToolHelper {
           context.hoverState.hoveredElement != null ? <FusionCanvasElement>[context.hoverState.hoveredElement!] : <FusionCanvasElement>[];
 
       final Set<String> draggedLayerIds =
-          context.inputState.isShiftPressed ? <String>{...currentState.selectedLayerIds, hoveredPainterId} : <String>{hoveredPainterId};
+          (multiSelectEnabled && context.inputState.isShiftPressed) ? <String>{...currentState.selectedLayerIds, hoveredPainterId} : <String>{hoveredPainterId};
       if (elements.isNotEmpty) {
         final Set<String> draggableLayerIds =
-            draggedLayerIds
-                .where(
-                  (String layerId) => layerId == hoveredPainterId || context.supportsLayerInteraction(layerId, FusionCanvasLayerInteraction.drag),
-                )
-                .toSet();
+            draggedLayerIds.where(
+              (String layerId) {
+                final bool supportsDrag = FusionCanvasLayerInteractionSupportUseCase(
+                  painter: context.fusionCanvasPainter,
+                ).call(layerId, FusionCanvasLayerInteraction.drag);
+                return layerId == hoveredPainterId || supportsDrag;
+              },
+            ).toSet();
         if (draggableLayerIds.isEmpty) {
           return currentState;
         }
         return PointsDragStartState(layerIds: draggableLayerIds, elements: elements);
       } else {
         final Set<String> draggableLayerIds =
-            draggedLayerIds.where((String layerId) => context.supportsLayerInteraction(layerId, FusionCanvasLayerInteraction.drag)).toSet();
+            draggedLayerIds
+                .where(
+                  (String layerId) => FusionCanvasLayerInteractionSupportUseCase(
+                    painter: context.fusionCanvasPainter,
+                  ).call(layerId, FusionCanvasLayerInteraction.drag),
+                )
+                .toSet();
         if (draggableLayerIds.isEmpty) {
           return currentState;
         }
         return LayerDragStartState(layerIds: draggableLayerIds);
       }
     } else {
-      // Tapped on empty canvas - start panning
-      return currentState;
-      // CanvasPanningState(delta: Offset.zero);
+      // Tapped on empty canvas - start marquee selection.
+      if (!selectionEnabled || !marqueeSelectionEnabled) {
+        return currentState;
+      }
+
+      return MarqueeSelectToolState(
+        startPosition: tapDownState.tapPosition,
+        currentPosition: tapDownState.tapPosition,
+        selectedLayerIds: currentState.selectedLayerIds,
+        selectedElementIds: currentState.selectedElementIds,
+      );
     }
   }
 
@@ -83,11 +125,36 @@ class SelectionToolHelper {
     FusionCanvasInputContext context,
     SelectToolState currentState,
   ) {
+    if (inputState.button != FusionMouseButton.left) {
+      return currentState;
+    }
+
+    if (currentState is MarqueeSelectToolState) {
+      final Rect selectionRect = Rect.fromPoints(
+        currentState.startPosition,
+        inputState.currentPosition,
+      );
+      final Set<String> boxSelectedLayerIds = FusionCanvasSelectableLayersInRectUseCase(
+        painter: context.fusionCanvasPainter,
+      ).call(selectionRect);
+      final bool multiSelectEnabled = context.selectionToolParams.enableMultiSelect;
+      final Set<String> effectiveSelectedLayerIds =
+          (multiSelectEnabled && inputState.isShiftPressed) ? <String>{...currentState.selectedLayerIds, ...boxSelectedLayerIds} : boxSelectedLayerIds;
+
+      return currentState.copyWith(
+        currentPosition: inputState.currentPosition,
+        selectedLayerIds: effectiveSelectedLayerIds,
+        selectedElementIds: <String>{},
+      );
+    }
+
     final Offset delta = inputState.delta;
 
     // If we have selected layers, drag the first one
-    if (currentState.selectedLayerIds.isNotEmpty && inputState.button == FusionMouseButton.left) {
-      final FusionCanvasInteractionTarget? dragTarget = context.resolveInteractionTargetAt(
+    if (currentState.selectedLayerIds.isNotEmpty) {
+      final FusionCanvasInteractionTarget? dragTarget = FusionCanvasInteractionResolverUseCase(
+        painter: context.fusionCanvasPainter,
+      ).call(
         inputState.startPosition,
         FusionCanvasLayerInteraction.drag,
       );
@@ -97,7 +164,13 @@ class SelectionToolHelper {
       }
 
       final Set<String> draggableLayerIds =
-          currentState.selectedLayerIds.where((String layerId) => context.supportsLayerInteraction(layerId, FusionCanvasLayerInteraction.drag)).toSet();
+          currentState.selectedLayerIds
+              .where(
+                (String layerId) => FusionCanvasLayerInteractionSupportUseCase(
+                  painter: context.fusionCanvasPainter,
+                ).call(layerId, FusionCanvasLayerInteraction.drag),
+              )
+              .toSet();
       if (draggableLayerIds.isEmpty) {
         return currentState;
       }
@@ -113,6 +186,11 @@ class SelectionToolHelper {
     FusionCanvasInputContext context,
     SelectToolState currentState,
   ) {
+    if (!context.selectionToolParams.enableSelect) {
+      return currentState;
+    }
+
+    final bool multiSelectEnabled = context.selectionToolParams.enableMultiSelect;
     final String? hoveredPainterId = context.hoverState.hoveredPainterId;
     final String? hoveredElementId = context.hoverState.hoveredElement?.id;
 
@@ -121,14 +199,14 @@ class SelectionToolHelper {
         return currentState;
       }
       final Set<String> effectiveSelectedLayerIds =
-          context.inputState.isShiftPressed
+          (multiSelectEnabled && context.inputState.isShiftPressed)
               ? (currentState.selectedLayerIds.contains(hoveredPainterId)
                   ? (<String>{...currentState.selectedLayerIds}..remove(hoveredPainterId))
                   : (<String>{...currentState.selectedLayerIds}..add(hoveredPainterId)))
               : <String>{hoveredPainterId};
 
       final Set<String> effectiveSelectedElementIds =
-          context.inputState.isShiftPressed
+          (multiSelectEnabled && context.inputState.isShiftPressed)
               ? (currentState.selectedElementIds.contains(hoveredElementId)
                   ? (<String>{...currentState.selectedElementIds}..remove(hoveredElementId))
                   : hoveredElementId != null

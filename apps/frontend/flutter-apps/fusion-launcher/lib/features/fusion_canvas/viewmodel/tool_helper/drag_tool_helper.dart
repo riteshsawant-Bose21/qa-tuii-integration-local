@@ -9,6 +9,8 @@ import '../../state/fusion_snap_state.dart';
 import '../../state/tools/select_tool_state.dart';
 import '../../view/painters/elements/mixin/fusion_canvas_interactable_mixin.dart';
 import '../fusion_canvas_tool_viewmodel.dart';
+import '../usecase/fc_bounded_delta_resolver_usecase.dart';
+import '../usecase/fc_layer_interaction_support_usecase.dart';
 
 class DragToolHelper {
   FusionToolState transform({
@@ -77,18 +79,27 @@ class DragToolHelper {
           context.inputState.isShiftPressed ? <String>{...currentState.selectedLayerIds, hoveredPainterId} : <String>{hoveredPainterId};
       if (elements.isNotEmpty) {
         final Set<String> draggableLayerIds =
-            draggedLayerIds
-                .where(
-                  (String layerId) => layerId == hoveredPainterId || context.supportsLayerInteraction(layerId, FusionCanvasLayerInteraction.drag),
-                )
-                .toSet();
+            draggedLayerIds.where(
+              (String layerId) {
+                final bool supportsDrag = FusionCanvasLayerInteractionSupportUseCase(
+                  painter: context.fusionCanvasPainter,
+                ).call(layerId, FusionCanvasLayerInteraction.drag);
+                return layerId == hoveredPainterId || supportsDrag;
+              },
+            ).toSet();
         if (draggableLayerIds.isEmpty) {
           return currentState;
         }
         return PointsDragStartState(layerIds: draggableLayerIds, elements: elements);
       } else {
         final Set<String> draggableLayerIds =
-            draggedLayerIds.where((String layerId) => context.supportsLayerInteraction(layerId, FusionCanvasLayerInteraction.drag)).toSet();
+            draggedLayerIds
+                .where(
+                  (String layerId) => FusionCanvasLayerInteractionSupportUseCase(
+                    painter: context.fusionCanvasPainter,
+                  ).call(layerId, FusionCanvasLayerInteraction.drag),
+                )
+                .toSet();
         if (draggableLayerIds.isEmpty) {
           return currentState;
         }
@@ -211,7 +222,10 @@ class DragToolHelper {
     double boundedDy = proposedDelta.dy;
 
     for (final String layerId in layerIds) {
-      final Offset boundedForLayer = context.resolveBoundedDeltaForLayer(layerId, proposedDelta);
+      final Offset boundedForLayer = FusionCanvasBoundedDeltaResolverUseCase(
+        painter: context.fusionCanvasPainter,
+      ).call(layerId, proposedDelta);
+
       if (proposedDelta.dx >= 0) {
         boundedDx = boundedForLayer.dx < boundedDx ? boundedForLayer.dx : boundedDx;
       } else {

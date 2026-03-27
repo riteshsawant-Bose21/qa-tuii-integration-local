@@ -28,6 +28,25 @@ class SelectionToolPainter extends FusionBasePainter {
 
   @override
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter) {
+    if (state is MarqueeSelectToolState) {
+      final Rect marqueeRect = (state as MarqueeSelectToolState).selectionRect;
+      if (marqueeRect.width > 0 && marqueeRect.height > 0) {
+        canvas.drawRect(
+          marqueeRect,
+          Paint()
+            ..color = selectionColor.withValues(alpha: 0.15)
+            ..style = PaintingStyle.fill,
+        );
+        canvas.drawRect(
+          marqueeRect,
+          Paint()
+            ..color = selectionColor.withValues(alpha: 0.9)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = nonScaling(strokeWidth, painter),
+        );
+      }
+    }
+
     if (state.selectedLayerIds.isEmpty) return;
     // print("Painting selection for layers: ${state.selectedLayerIds}, elements: ${state.selectedElementIds}");
     Rect? rect;

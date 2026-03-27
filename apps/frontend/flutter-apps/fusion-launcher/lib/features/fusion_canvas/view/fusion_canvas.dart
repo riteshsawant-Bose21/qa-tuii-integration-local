@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/select_tool_state.dart';
+import 'package:fusion_launcher/features/fusion_canvas/state/tools/selection_tool_params.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/fusion_canvas_element_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/widgets/canvas_control_wrapper.dart';
@@ -37,6 +38,7 @@ class FusionCanvas extends StatelessWidget {
     this.toolbarEvents,
     this.selectedIds,
     this.cursorBuilder,
+    this.selectionToolParams = const SelectionToolParams(),
   });
   final List<FusionBasePainter> elements;
   final Widget Function(BuildContext context)? builder;
@@ -46,6 +48,8 @@ class FusionCanvas extends StatelessWidget {
 
   /// Set of selected layer IDs to sync with selection state
   final Set<String>? selectedIds;
+
+  final SelectionToolParams selectionToolParams;
 
   @override
   Widget build(BuildContext context) {
@@ -173,9 +177,8 @@ class FusionCanvas extends StatelessWidget {
                                   hoverState: hoverState,
                                   snapState: context.read<FusionSnapViewModel>().state,
                                   inputState: inputState,
-                                  resolveInteractionTargetAt: fusionCanvasPainter.getInteractionTargetAt,
-                                  resolveBoundedDeltaForLayer: fusionCanvasPainter.getBoundedDeltaForLayer,
-                                  supportsLayerInteraction: fusionCanvasPainter.supportsLayerInteraction,
+                                  selectionToolParams: selectionToolParams,
+                                  fusionCanvasPainter: fusionCanvasPainter,
                                 );
 
                                 // Delegate all input handling to the tool viewmodel
