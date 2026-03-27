@@ -172,8 +172,10 @@ class FusionCanvas extends StatelessWidget {
                                 final FusionCanvasInputContext inputContext = FusionCanvasInputContext(
                                   hoverState: hoverState,
                                   snapState: context.read<FusionSnapViewModel>().state,
+                                  inputState: inputState,
                                   resolveInteractionTargetAt: fusionCanvasPainter.getInteractionTargetAt,
                                   resolveBoundedDeltaForLayer: fusionCanvasPainter.getBoundedDeltaForLayer,
+                                  supportsLayerInteraction: fusionCanvasPainter.supportsLayerInteraction,
                                 );
 
                                 // Delegate all input handling to the tool viewmodel
@@ -273,7 +275,7 @@ class FusionCanvas extends StatelessWidget {
 class FusionCanvasEvents {
   final FusionPenToolEvents? penToolEvents;
   final FusionCanvasInputEvents? inputEvents;
-  final ValueChanged<FusionBasePainter?>? onLayerSelected;
+  final ValueChanged<List<FusionBasePainter>?>? onLayerSelected;
   final void Function(FusionBasePainter painter, Offset offset)? onMoveLayer;
 
   final void Function(FusionBasePainter painter, List<FusionCanvasPoint> points, FusionCanvasLine line)? onAddPoints;

@@ -181,7 +181,7 @@ abstract class FusionBasePainter {
 
     if (painter.toolState is LayerDraggingState) {
       final LayerDraggingState draggingState = painter.toolState as LayerDraggingState;
-      if (draggingState.layerId == layerId) {
+      if (draggingState.layerIds.contains(layerId)) {
         return point.position + draggingState.delta + _getSnapAdjustment(painter);
       }
     }
@@ -191,13 +191,13 @@ abstract class FusionBasePainter {
   ui.Offset transformOffsetForLayer(Offset offset, FusionCanvasPainter painter, String? layerId) {
     if (painter.toolState is LayerDraggingState) {
       final LayerDraggingState draggingState = painter.toolState as LayerDraggingState;
-      if (draggingState.layerId == layerId) {
+      if (draggingState.layerIds.contains(layerId)) {
         return offset + draggingState.delta + _getSnapAdjustment(painter);
       }
     }
     if (painter.toolState is PointsDraggingState) {
       final PointsDraggingState draggingState = painter.toolState as PointsDraggingState;
-      if (draggingState.layerId == layerId) {
+      if (draggingState.selectedLayerIds.contains(layerId)) {
         return offset + draggingState.delta + _getSnapAdjustment(painter);
       }
     }

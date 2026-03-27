@@ -21,8 +21,8 @@ import 'package:pdfrx/pdfrx.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../fusion_canvas/state/fusion_canvas_input_state.dart';
 import '../../../fusion_canvas/view/fusion_canvas.dart';
-import '../../../fusion_canvas/view/painters/elements/derived/floor_plan_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/hardware_component_painter.dart';
+import '../../../fusion_canvas/view/painters/elements/derived/hardware_painter/floor_plan_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/listening_area_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/spl_painter.dart';
 import '../../presentation/project_work_area.dart';
@@ -216,7 +216,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 ),
                                             ],
                                             toolbarEvents: FusionCanvasEvents(
-                                              onLayerSelected: (FusionBasePainter? value) {
+                                              onLayerSelected: (List<FusionBasePainter>? values) {
+                                                final FusionBasePainter? value = values != null && values.isNotEmpty ? values.first : null;
                                                 if (value is ListeningAreaPainter) {
                                                   serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.listeningArea.id);
                                                   serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);

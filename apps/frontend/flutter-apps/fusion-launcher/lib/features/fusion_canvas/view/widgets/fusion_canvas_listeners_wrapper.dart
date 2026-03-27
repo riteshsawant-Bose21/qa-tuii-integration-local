@@ -43,43 +43,50 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
 
             // Handle layer dragging - apply drag delta to all polygon points
             if (fusionToolState is LayerDraggingState) {
-              final FusionBasePainter? painter = painters.cast<FusionBasePainter?>().firstWhere(
-                (FusionBasePainter? p) => p?.id == fusionToolState.layerId,
-                orElse: () => null,
+              context.read<FusionSnapViewModel>().updateCursorPositions(
+                <Offset>[
+                  for (final FusionBasePainter painter in painters)
+                    if (fusionToolState.layerIds.contains(painter.id) && painter is FusionPolygonPainter)
+                      ...painter.polygon.points.map((FusionCanvasPoint e) => e.position + fusionToolState.delta)
+                    else if (fusionToolState.layerIds.contains(painter.id) && painter is FusionCanvasElementPainter)
+                      painter.getRect().center + fusionToolState.delta,
+                ],
               );
-              if (painter is FusionPolygonPainter) {
-                context.read<FusionSnapViewModel>().updateCursorPositions(
-                  painter.polygon.points.map((FusionCanvasPoint e) => e.position + fusionToolState.delta).toList(),
-                );
-                return;
-              } else if (painter is FusionCanvasElementPainter) {
-                context.read<FusionSnapViewModel>().updateCursorPositions(
-                  <Offset>[painter.getRect().center + fusionToolState.delta],
-                );
-                return;
-              }
+              return;
             }
 
             // Handle points dragging - apply drag delta to specific points
             if (fusionToolState is PointsDraggingState) {
-              final FusionBasePainter? painter = painters.cast<FusionBasePainter?>().firstWhere(
-                (FusionBasePainter? p) => p?.id == fusionToolState.layerId,
-                orElse: () => null,
+              context.read<FusionSnapViewModel>().updateCursorPositions(
+                <Offset>[
+                  for (final FusionBasePainter painter in painters)
+                    if (fusionToolState.layerIds.contains(painter.id) && painter is FusionPolygonPainter)
+                      ...painter.polygon.points
+                          .where((FusionCanvasPoint p) => fusionToolState.pointIds.contains(p.id))
+                          .map((FusionCanvasPoint e) => e.position + fusionToolState.delta)
+                    else if (fusionToolState.layerIds.contains(painter.id) && painter is FusionCanvasElementPainter)
+                      painter.getRect().center + fusionToolState.delta,
+                ],
               );
-              if (painter is FusionPolygonPainter) {
-                context.read<FusionSnapViewModel>().updateCursorPositions(
-                  painter.polygon.points
-                      .where((FusionCanvasPoint p) => fusionToolState.pointIds.contains(p.id))
-                      .map((FusionCanvasPoint e) => e.position + fusionToolState.delta)
-                      .toList(),
-                );
-                return;
-              } else if (painter is FusionCanvasElementPainter) {
-                context.read<FusionSnapViewModel>().updateCursorPositions(
-                  <Offset>[painter.getRect().center + fusionToolState.delta],
-                );
-                return;
-              }
+              return;
+              // final FusionBasePainter? painter = painters.cast<FusionBasePainter?>().firstWhere(
+              //   (FusionBasePainter? p) => p?.id == fusionToolState.layerId,
+              //   orElse: () => null,
+              // );
+              // if (painter is FusionPolygonPainter) {
+              //   context.read<FusionSnapViewModel>().updateCursorPositions(
+              //     painter.polygon.points
+              //         .where((FusionCanvasPoint p) => fusionToolState.pointIds.contains(p.id))
+              //         .map((FusionCanvasPoint e) => e.position + fusionToolState.delta)
+              //         .toList(),
+              //   );
+              //   return;
+              // } else if (painter is FusionCanvasElementPainter) {
+              //   context.read<FusionSnapViewModel>().updateCursorPositions(
+              //     <Offset>[painter.getRect().center + fusionToolState.delta],
+              //   );
+              //   return;
+              // }
             }
 
             if (fusionToolState is SelectToolState && fusionToolState.selectedLayerIds.isNotEmpty) {
@@ -130,34 +137,29 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
           },
           listener: (BuildContext context, FusionToolState state) {
             if (state is LayerDraggingState) {
-              final FusionBasePainter? painter = painters.cast<FusionBasePainter?>().firstWhere(
-                (FusionBasePainter? p) => p?.id == state.layerId,
-                orElse: () => null,
+              context.read<FusionSnapViewModel>().updateCursorPositions(
+                <Offset>[
+                  for (final FusionBasePainter painter in painters)
+                    if (state.layerIds.contains(painter.id) && painter is FusionPolygonPainter)
+                      ...painter.polygon.points.map((FusionCanvasPoint e) => e.position + state.delta)
+                    else if (state.layerIds.contains(painter.id) && painter is FusionCanvasElementPainter)
+                      painter.getRect().center + state.delta,
+                ],
               );
-              if (painter is FusionPolygonPainter) {
-                context.read<FusionSnapViewModel>().updateCursorPositions(
-                  painter.polygon.points.map((FusionCanvasPoint e) => e.position + state.delta).toList(),
-                );
-              } else if (painter is FusionCanvasElementPainter) {
-                context.read<FusionSnapViewModel>().updateCursorPositions(
-                  <Offset>[painter.getRect().center + state.delta],
-                );
-              }
             } else if (state is PointsDraggingState) {
-              final FusionBasePainter? painter = painters.cast<FusionBasePainter?>().firstWhere(
-                (FusionBasePainter? p) => p?.id == state.layerId,
-                orElse: () => null,
-              );
-              if (painter is FusionPolygonPainter) {
-                context.read<FusionSnapViewModel>().addTempPolygonPoints(
-                  painter.polygon.points.where((FusionCanvasPoint p) => !state.pointIds.contains(p.id)).map((FusionCanvasPoint e) => e.position).toList(),
-                );
-                context.read<FusionSnapViewModel>().updateCursorPositions(
-                  painter.polygon.points
-                      .where((FusionCanvasPoint p) => state.pointIds.contains(p.id))
-                      .map((FusionCanvasPoint e) => e.position + state.delta)
-                      .toList(),
-                );
+              for (final FusionBasePainter painter in painters) {
+                if (!state.layerIds.contains(painter.id)) continue;
+                if (painter is FusionPolygonPainter) {
+                  context.read<FusionSnapViewModel>().addTempPolygonPoints(
+                    painter.polygon.points.where((FusionCanvasPoint p) => !state.pointIds.contains(p.id)).map((FusionCanvasPoint e) => e.position).toList(),
+                  );
+                  context.read<FusionSnapViewModel>().updateCursorPositions(
+                    painter.polygon.points
+                        .where((FusionCanvasPoint p) => state.pointIds.contains(p.id))
+                        .map((FusionCanvasPoint e) => e.position + state.delta)
+                        .toList(),
+                  );
+                }
               }
             }
           },
@@ -181,53 +183,47 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
         ),
 
         BlocListener<FusionCanvasToolViewModel, FusionToolState>(
-          // listenWhen: (FusionToolState previous, FusionToolState current) {
-          //   return current is DragToolState || previous is DragToolState;
-          // },
           listener: (BuildContext context, FusionToolState state) {
             if (state is LayerDragEndState) {
-              toolbarEvents?.onMoveLayer?.call(
-                painters.firstWhere(
-                  (FusionBasePainter p) => p.id == state.layerId,
-                  orElse: () => throw Exception('Painter with id ${state.layerId} not found'),
-                ),
-                state.delta,
-              );
+              for (final String layerId in state.layerIds) {
+                toolbarEvents?.onMoveLayer?.call(
+                  painters.firstWhere(
+                    (FusionBasePainter p) => p.id == layerId,
+                    orElse: () => throw Exception('Painter with id $layerId not found'),
+                  ),
+                  state.delta,
+                );
+              }
             } else if (state is PointsDragEndState) {
-              final FusionBasePainter basePainter = painters.firstWhere(
-                (FusionBasePainter p) => p.id == state.layerId,
-                orElse: () => throw Exception('Painter with id ${state.layerId} not found'),
-              );
-              toolbarEvents?.onMovePoints?.call(
-                basePainter,
-                basePainter is FusionPolygonPainter
-                    ? basePainter.polygon.points.where((FusionCanvasPoint p) => state.pointIds.contains(p.id)).toList()
-                    : <FusionCanvasPoint>[],
-                state.delta,
-              );
+              // final FusionBasePainter basePainter = painters.firstWhere(
+              //   (FusionBasePainter p) => p.id == state.layerId,
+              //   orElse: () => throw Exception('Painter with id ${state.layerId} not found'),
+              // );
+              for (final FusionBasePainter basePainter in painters) {
+                if (!state.layerIds.contains(basePainter.id)) continue;
+                toolbarEvents?.onMovePoints?.call(
+                  basePainter,
+                  basePainter is FusionPolygonPainter
+                      ? basePainter.polygon.points.where((FusionCanvasPoint p) => state.pointIds.contains(p.id)).toList()
+                      : <FusionCanvasPoint>[],
+                  state.delta,
+                );
+              }
             } else if (state is LayerDragStartState) {
               toolbarEvents?.onLayerSelected?.call(
-                painters.firstWhere(
-                  (FusionBasePainter p) => p.id == state.layerId,
-                  orElse: () => throw Exception('Painter with id ${state.layerId} not found'),
-                ),
+                painters.where((FusionBasePainter p) => state.layerIds.contains(p.id)).toList(),
               );
+              // for (final FusionBasePainter basePainter in painters) {
+              //   if (!state.layerIds.contains(basePainter.id)) continue;
+              //   ;
+              // }
             } else if (state is PointsDragStartState) {
               toolbarEvents?.onLayerSelected?.call(
-                painters.firstWhere(
-                  (FusionBasePainter p) => p.id == state.layerId,
-                  orElse: () => throw Exception('Painter with id ${state.layerId} not found'),
-                ),
+                painters.where((FusionBasePainter p) => state.layerIds.contains(p.id)).toList(),
               );
             } else if (state is SelectToolState) {
-              final String? id = state.selectedLayerIds.firstOrNull;
               toolbarEvents?.onLayerSelected?.call(
-                id != null
-                    ? painters.firstWhere(
-                      (FusionBasePainter p) => p.id == id,
-                      orElse: () => throw Exception('Painter with id $id not found'),
-                    )
-                    : null,
+                painters.where((FusionBasePainter p) => state.selectedLayerIds.contains(p.id)).toList(),
               );
             }
           },

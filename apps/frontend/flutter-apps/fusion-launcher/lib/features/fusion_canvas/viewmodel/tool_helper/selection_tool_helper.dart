@@ -50,10 +50,26 @@ class SelectionToolHelper {
       final List<FusionCanvasElement> elements =
           context.hoverState.hoveredElement != null ? <FusionCanvasElement>[context.hoverState.hoveredElement!] : <FusionCanvasElement>[];
 
+      final Set<String> draggedLayerIds =
+          context.inputState.isShiftPressed ? <String>{...currentState.selectedLayerIds, hoveredPainterId} : <String>{hoveredPainterId};
       if (elements.isNotEmpty) {
-        return PointsDragStartState(layerId: hoveredPainterId, elements: elements);
+        final Set<String> draggableLayerIds =
+            draggedLayerIds
+                .where(
+                  (String layerId) => layerId == hoveredPainterId || context.supportsLayerInteraction(layerId, FusionCanvasLayerInteraction.drag),
+                )
+                .toSet();
+        if (draggableLayerIds.isEmpty) {
+          return currentState;
+        }
+        return PointsDragStartState(layerIds: draggableLayerIds, elements: elements);
       } else {
-        return LayerDragStartState(layerId: hoveredPainterId);
+        final Set<String> draggableLayerIds =
+            draggedLayerIds.where((String layerId) => context.supportsLayerInteraction(layerId, FusionCanvasLayerInteraction.drag)).toSet();
+        if (draggableLayerIds.isEmpty) {
+          return currentState;
+        }
+        return LayerDragStartState(layerIds: draggableLayerIds);
       }
     } else {
       // Tapped on empty canvas - start panning
@@ -80,10 +96,13 @@ class SelectionToolHelper {
         return currentState;
       }
 
-      return LayerDraggingState(
-        layerId: dragTargetLayerId,
-        delta: delta,
-      );
+      final Set<String> draggableLayerIds =
+          currentState.selectedLayerIds.where((String layerId) => context.supportsLayerInteraction(layerId, FusionCanvasLayerInteraction.drag)).toSet();
+      if (draggableLayerIds.isEmpty) {
+        return currentState;
+      }
+
+      return LayerDraggingState(layerIds: draggableLayerIds, delta: delta);
     }
 
     // Otherwise, pan the canvas
@@ -101,10 +120,26 @@ class SelectionToolHelper {
       if (!context.hoverState.supportsInteraction(FusionCanvasLayerInteraction.select)) {
         return currentState;
       }
+      final Set<String> effectiveSelectedLayerIds =
+          context.inputState.isShiftPressed
+              ? (currentState.selectedLayerIds.contains(hoveredPainterId)
+                  ? (<String>{...currentState.selectedLayerIds}..remove(hoveredPainterId))
+                  : (<String>{...currentState.selectedLayerIds}..add(hoveredPainterId)))
+              : <String>{hoveredPainterId};
+
+      final Set<String> effectiveSelectedElementIds =
+          context.inputState.isShiftPressed
+              ? (currentState.selectedElementIds.contains(hoveredElementId)
+                  ? (<String>{...currentState.selectedElementIds}..remove(hoveredElementId))
+                  : hoveredElementId != null
+                  ? (<String>{...currentState.selectedElementIds}..add(hoveredElementId))
+                  : <String>{...currentState.selectedElementIds})
+              : (hoveredElementId != null ? <String>{hoveredElementId} : <String>{});
+
       // Clicked on a layer - select it
       return IdleSelectToolState(
-        selectedLayerIds: <String>{hoveredPainterId},
-        selectedElementIds: hoveredElementId != null ? <String>{hoveredElementId} : <String>{},
+        selectedLayerIds: effectiveSelectedLayerIds,
+        selectedElementIds: effectiveSelectedElementIds,
       );
     } else {
       // Clicked on empty canvas - clear selection

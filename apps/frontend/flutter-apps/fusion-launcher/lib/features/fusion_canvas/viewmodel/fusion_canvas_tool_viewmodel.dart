@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/fusion_hover_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/drag_tool_state.dart';
@@ -29,18 +30,28 @@ typedef FusionCanvasBoundedDeltaResolver =
       Offset delta,
     );
 
+typedef FusionCanvasLayerInteractionSupportResolver =
+    bool Function(
+      String layerId,
+      FusionCanvasLayerInteraction interaction,
+    );
+
 /// Context containing all information needed for input state handling
 class FusionCanvasInputContext {
   final FusionHoverState hoverState;
   final FusionSnapState snapState;
+  final FusionCanvasInputState inputState;
   final FusionCanvasInteractionResolver resolveInteractionTargetAt;
   final FusionCanvasBoundedDeltaResolver resolveBoundedDeltaForLayer;
+  final FusionCanvasLayerInteractionSupportResolver supportsLayerInteraction;
 
   const FusionCanvasInputContext({
     required this.hoverState,
     required this.snapState,
+    required this.inputState,
     required this.resolveInteractionTargetAt,
     required this.resolveBoundedDeltaForLayer,
+    required this.supportsLayerInteraction,
   });
 }
 
@@ -64,6 +75,7 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
     // Delegate to tool-specific helpers based on current state
     final FusionToolState? newState = _transformWithHelper(inputState, context);
     if (newState != null && newState != state) {
+      print("State changed: $state   ==> $newState. on inputState: $inputState");
       emit(newState);
       return true;
     }
@@ -138,7 +150,11 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
   /// Update selection from external source (sync with provided IDs)
   void syncSelection(Set<String> layerIds) {
     if (state is SelectToolState) {
-      emit(IdleSelectToolState(selectedLayerIds: layerIds));
+      final Set<String> existing = (state as SelectToolState).selectedLayerIds;
+      if (!setEquals(existing, layerIds)) {
+        print("Syncing selection with external source: $layerIds");
+        emit(IdleSelectToolState(selectedLayerIds: layerIds));
+      }
     }
   }
 }

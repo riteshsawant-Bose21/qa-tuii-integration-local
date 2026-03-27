@@ -121,6 +121,18 @@ class FusionCanvasPainter extends CustomPainter {
     return delta;
   }
 
+  bool supportsLayerInteraction(
+    String layerId,
+    FusionCanvasLayerInteraction interaction,
+  ) {
+    final FusionBasePainter? painter = layers.cast<FusionBasePainter?>().firstWhere(
+      (FusionBasePainter? p) => p?.id == layerId,
+      orElse: () => null,
+    );
+
+    return painter is FusionCanvasInteractibleMixin && painter.supportsInteraction(interaction);
+  }
+
   FusionCanvasInputState get inputViewModel => context.read<FusionCanvasInputViewModel>().state;
 
   Offset? get cursor => inputViewModel.mousePosition;
