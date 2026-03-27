@@ -922,6 +922,13 @@ class _ZoneCardState extends State<ZoneCard> {
   }
 
   /// Multi-select source selection for zone (checkboxes)
+  void _initializeTempSelection() {
+    _tempSelectedItems = {
+      ..._zonesViewmodel.getSourcesInZone(zoneId: widget.zoneId),
+      ..._zonesViewmodel.getSourceSetsInZone(zoneId: widget.zoneId),
+    };
+  }
+
   Widget buildSourceSelectionForZone() {
     /// Get current selections from the zone
     final List<Source> currentZoneSources = _zonesViewmodel.getSourcesInZone(zoneId: widget.zoneId);
@@ -944,7 +951,7 @@ class _ZoneCardState extends State<ZoneCard> {
       ),
       child: Builder(
         builder: (BuildContext context) {
-          _initializeTempSelection(); // 🔥 CRITICAL
+          _initializeTempSelection();
 
           return FusionMultiSelectPopupMenu<dynamic>(
             maxHeight: 450,
@@ -959,11 +966,10 @@ class _ZoneCardState extends State<ZoneCard> {
             ],
 
             selectedItems: <dynamic>{
-              ..._zonesViewmodel.getSourcesInZone(zoneId: widget.zoneId),
-              ..._zonesViewmodel.getSourceSetsInZone(zoneId: widget.zoneId),
+              ...currentZoneSources,
+              ...currentZoneSourceSets,
             },
 
-            // ✅ SAVE ONLY HERE
             onSave: (Set<dynamic> _) {
               final List<String> priorityIds = _zonesViewmodel.getPrioritySourcesInZone(zoneId: widget.zoneId);
 
@@ -982,7 +988,7 @@ class _ZoneCardState extends State<ZoneCard> {
               );
 
               setState(() {
-                _tempSelectedItems.clear(); // 🔥 reset for next open
+                _tempSelectedItems.clear(); // optional cleanup
               });
             },
 
@@ -1021,9 +1027,9 @@ class _ZoneCardState extends State<ZoneCard> {
 
                           const SizedBox(height: 10),
 
-                          ...availableSources.asMap().entries.map((MapEntry<int, Source> entry) {
-                            final int index = entry.key;
+                          ...availableSources.asMap().entries.map((entry) {
                             final Source src = entry.value;
+
                             final bool isPrioritySource = _zonesViewmodel.getPrioritySourcesInZone(zoneId: widget.zoneId).contains(src.id);
 
                             final bool isSelected = _tempSelectedItems.contains(src);
@@ -1044,7 +1050,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                   child: Row(
                                     children: <Widget>[
                                       FusionCheckbox(
-                                        semanticId: "${FusionTestKeys.instance.srcSetListCheckbox}_${index}",
+                                        semanticId: FusionTestKeys.instance.srcSetListCheckbox,
                                         value: isSelected,
                                         onChanged: () {
                                           if (isPrioritySource) return;
@@ -1060,7 +1066,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                           children: <Widget>[
                                             Expanded(
                                               child: FusionAppText(
-                                                semanticId: "${FusionTestKeys.instance.srcListTxt}_${index}",
+                                                semanticId: FusionTestKeys.instance.srcListTxt,
                                                 text: src.name,
                                                 maxLine: 1,
                                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
@@ -1113,9 +1119,9 @@ class _ZoneCardState extends State<ZoneCard> {
 
                           const SizedBox(height: 10),
 
-                          ...sourceSetList.asMap().entries.map((MapEntry<int, SourceSet> entry) {
-                            final int index = entry.key;
+                          ...sourceSetList.asMap().entries.map((entry) {
                             final SourceSet setItem = entry.value;
+
                             final List<Source> sourcesInSet = _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: setItem.id);
 
                             final bool isSelected = _tempSelectedItems.contains(setItem);
@@ -1132,7 +1138,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                 child: Row(
                                   children: <Widget>[
                                     FusionCheckbox(
-                                      semanticId: "${FusionTestKeys.instance.sourceSetListCheckbox}_$index",
+                                      semanticId: FusionTestKeys.instance.sourceSetListCheckbox,
                                       value: isSelected,
                                       onChanged: () {
                                         isSelected ? _tempSelectedItems.remove(setItem) : _tempSelectedItems.add(setItem);
@@ -1143,7 +1149,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                     const SizedBox(width: 6),
                                     Expanded(
                                       child: FusionAppText(
-                                        semanticId: "${FusionTestKeys.instance.srcSetListTxt}_$index",
+                                        semanticId: FusionTestKeys.instance.srcSetListTxt,
                                         text: '${setItem.name} (${sourcesInSet.length} sources)',
                                         maxLine: 1,
                                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
@@ -1164,7 +1170,6 @@ class _ZoneCardState extends State<ZoneCard> {
               return const SizedBox();
             },
 
-            // -------- BUTTON --------
             child: SemanticHelper.button(
               testId: SemanticHelper.createTestId(
                 SemanticTypes.container,
@@ -1203,6 +1208,7 @@ class _ZoneCardState extends State<ZoneCard> {
                               borderRadius: BorderRadius.circular(3),
                             ),
                             child: FusionAppText(
+                              semanticId: FusionTestKeys.instance.selectSourceText,
                               text: _zonesViewmodel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 fontSize: 8,
@@ -1394,15 +1400,6 @@ class _ZoneCardState extends State<ZoneCard> {
         ),
       ),
     );
-  }
-
-  void _initializeTempSelection() {
-    if (_tempSelectedItems.isEmpty) {
-      _tempSelectedItems = <dynamic>{
-        ..._zonesViewmodel.getSourcesInZone(zoneId: widget.zoneId),
-        ..._zonesViewmodel.getSourceSetsInZone(zoneId: widget.zoneId),
-      };
-    }
   }
 }
 
