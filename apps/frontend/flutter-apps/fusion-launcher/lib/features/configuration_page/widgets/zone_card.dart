@@ -231,7 +231,7 @@ class _ZoneCardState extends State<ZoneCard> {
                           ),
                         ),
                         width: MediaQuery.of(context).size.width * 0.14,
-                        height: MediaQuery.of(context).size.height * 0.290,
+                        height: MediaQuery.of(context).size.height * 0.240,
                         padding: const EdgeInsets.all(16),
                         child: _buildZoneFunctionsPanel(),
                       ),
@@ -1078,59 +1078,128 @@ class _ZoneCardState extends State<ZoneCard> {
               return const SizedBox();
             },
 
+            // child: SemanticHelper.button(
+            //   testId: SemanticHelper.createTestId(
+            //     SemanticTypes.container,
+            //     FusionTestKeys.instance.selectSourceButton,
+            //   ),
+            //   child: Container(
+            //     height: 22,
+            //     width: 160,
+            //     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            //     decoration: BoxDecoration(
+            //       border: Border.all(
+            //         color: hasSelection ? context.colorScheme.elevation5 : context.colorScheme.elevation5.withAlpha(150),
+            //       ),
+            //       borderRadius: BorderRadius.circular(3),
+            //     ),
+            //     child: Row(
+            //       children: <Widget>[
+            //         Expanded(
+            //           child: FusionAppText(
+            //             text: hasSelection ? 'Sources selected' : 'Select sources',
+            //             maxLine: 1,
+            //             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            //               fontSize: 11,
+            //               color: hasSelection ? context.colorScheme.primaryWhite : context.colorScheme.primaryWhite.withAlpha(150),
+            //             ),
+            //           ),
+            //         ),
+            //         hasSelection
+            //             ? IntrinsicWidth(
+            //               child: Container(
+            //                 height: 14,
+            //                 padding: const EdgeInsets.symmetric(horizontal: 4),
+            //                 alignment: Alignment.center,
+            //                 decoration: BoxDecoration(
+            //                   color: context.colorScheme.primaryWhite,
+            //                   borderRadius: BorderRadius.circular(3),
+            //                 ),
+            //                 child: FusionAppText(
+            //                   semanticId: FusionTestKeys.instance.selectSourceText,
+            //                   text: _zonesViewmodel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
+            //                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            //                     fontSize: 8,
+            //                     color: context.colorScheme.primaryBlack,
+            //                     fontWeight: FontWeight.w600,
+            //                   ),
+            //                 ),
+            //               ),
+            //             )
+            //             : Icon(
+            //               Icons.add,
+            //               color: context.colorScheme.primaryWhite.withAlpha(150),
+            //               size: 16,
+            //             ),
+            //       ],
+            //     ),
+            //   ),
+            // ),
             child: SemanticHelper.button(
               testId: SemanticHelper.createTestId(
                 SemanticTypes.container,
                 FusionTestKeys.instance.selectSourceButton,
               ),
               child: Container(
-                height: 22,
-                width: 160,
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                width: MediaQuery.of(context).size.width * 0.3,
+                height: 30,
+                padding: const EdgeInsets.only(right: 9, left: 8, top: 4, bottom: 4),
+
                 decoration: BoxDecoration(
-                  border: Border.all(
-                    color: hasSelection ? context.colorScheme.elevation5 : context.colorScheme.elevation5.withAlpha(150),
-                  ),
-                  borderRadius: BorderRadius.circular(3),
+                  color: context.colorScheme.elevation1,
+                  borderRadius: BorderRadius.circular(6),
+
+                  boxShadow: <BoxShadow>[
+                    BoxShadow(color: context.colorScheme.shadowDark, offset: const Offset(1.5, 1.5), blurRadius: 7),
+                    BoxShadow(
+                      color: context.colorScheme.shadowLight,
+                      offset: const Offset(-1.5, -1.5),
+                      blurRadius: 5,
+                      blurStyle: BlurStyle.solid,
+                    ),
+                  ],
                 ),
+
                 child: Row(
                   children: <Widget>[
                     Expanded(
                       child: FusionAppText(
-                        text: hasSelection ? 'Sources selected' : 'Select sources',
+                        text: hasSelection ? 'Selected' : 'Select sources',
                         maxLine: 1,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 11,
-                          color: hasSelection ? context.colorScheme.primaryWhite : context.colorScheme.primaryWhite.withAlpha(150),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w500,
+                          color: hasSelection ? context.colorScheme.primaryWhite : context.colorScheme.primaryWhite.withAlpha(140),
                         ),
                       ),
                     ),
-                    hasSelection
-                        ? IntrinsicWidth(
-                          child: Container(
-                            height: 14,
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: context.colorScheme.primaryWhite,
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                            child: FusionAppText(
-                              semanticId: FusionTestKeys.instance.selectSourceText,
-                              text: _zonesViewmodel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                fontSize: 8,
-                                color: context.colorScheme.primaryBlack,
-                                fontWeight: FontWeight.w600,
+
+                    Container(
+                      height: 24,
+                      width: 24,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: hasSelection ? context.colorScheme.elevation3 : context.colorScheme.elevation2,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child:
+                          hasSelection
+                              ? Center(
+                                child: FusionAppText(
+                                  semanticId: FusionTestKeys.instance.selectSourceText,
+                                  text: _zonesViewmodel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: context.colorScheme.primaryWhite,
+                                  ),
+                                ),
+                              )
+                              : const Center(
+                                child: Icon(
+                                  Icons.add,
+                                  size: 16,
+                                ),
                               ),
-                            ),
-                          ),
-                        )
-                        : Icon(
-                          Icons.add,
-                          color: context.colorScheme.primaryWhite.withAlpha(150),
-                          size: 16,
-                        ),
+                    ),
                   ],
                 ),
               ),
