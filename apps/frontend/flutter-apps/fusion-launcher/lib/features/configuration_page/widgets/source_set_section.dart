@@ -1,20 +1,10 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/section_header.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/source_set_item.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_sources.dart';
-import 'package:fusion_lib/constants/semantics/test_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/buttons/fusion_button.dart';
-import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
-import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
-import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
-import 'package:fusion_lib/models/project_entities/source_model.dart';
-import 'package:fusion_lib/models/project_entities/source_set_model.dart';
+
 import '../viewModel/source_sets_viewmodel/config_source_sets_state.dart';
 import '../viewModel/source_sets_viewmodel/config_source_sets_viewmodel.dart';
 import '../viewModel/sources_viewmodel/config_sources_viewmodel.dart';
@@ -458,12 +448,10 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                               physics: const ClampingScrollPhysics(),
                                               child: Column(
                                                 children:
-                                                    widget.availableSources.map<Widget>((Source source) {
+                                                    widget.availableSources.asMap().entries.map<Widget>((MapEntry<int, Source> entry) {
+                                                      final Source source = entry.value;
+                                                      final int index = entry.key;
                                                       final bool isSelected = widget.selectedSources.any(
-                                                        (SelectedSource selectedSource) => selectedSource.id == source.id,
-                                                      );
-
-                                                      final int index = widget.selectedSources.indexWhere(
                                                         (SelectedSource selectedSource) => selectedSource.id == source.id,
                                                       );
 

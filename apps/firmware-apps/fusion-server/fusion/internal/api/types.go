@@ -114,15 +114,16 @@ type ConfigValue struct {
 
 // DeviceInfo represents device configuration data.
 type DeviceInfo struct {
-	Address         string `json:"address"`
-	Id              string `json:"id"`
-	Location        string `json:"location"`
-	Name            string `json:"name"`
-	ModelName       string `json:"model_name"`
-	MacAddress      string `json:"mac_address"`
-	SerialNumber    string `json:"serial_number"`
-	IsPrimaryNode   bool   `json:"is_primary"`
-	FirmwareVersion string `json:"firmware_version"`
+	Address                  string `json:"address"`
+	Id                       string `json:"id"`
+	Location                 string `json:"location"`
+	Name                     string `json:"name"`
+	ModelName                string `json:"model_name"`
+	MacAddress               string `json:"mac_address"`
+	SerialNumber             string `json:"serial_number"`
+	IsPrimaryNode            bool   `json:"is_primary"`
+	FirmwareVersion          string `json:"firmware_version"`
+	IsDeviceCertificateValid bool   `json:"is_device_certificate_valid"`
 }
 
 // DevicePatch represents patchable device configuration data.
@@ -243,12 +244,6 @@ type StatusMessage struct {
 	VIP string `json:"vip"`
 }
 
-// VersionUpdate contains the version update type and data
-type VersionUpdate struct {
-	Type    string          `json:"type"`
-	Payload json.RawMessage `json:"payload"`
-}
-
 type ControllerTCPMessage struct {
 	Action  string          `json:"action"`
 	Payload json.RawMessage `json:"payload"`
@@ -292,4 +287,10 @@ type WebSocketStats struct {
 	Uptime         time.Duration    `json:"uptime"`                     // Server uptime
 	LastReset      time.Time        `json:"last_reset"`                 // Stats last reset
 	MessagesByType map[string]int64 `json:"messages_by_type,omitempty"` // Messages by type
+}
+
+type FirmwareInfo struct {
+	BuildConfiguration struct {
+		FirmwareBundleVersion string `json:"FIRMWARE_BUNDLE_VERSION"`
+	} `json:"build_configuration"`
 }

@@ -77,7 +77,10 @@ def configure(conf):
     # by default we compile out all TRACE logs as they may affect performance
     conf.env.append_value('CXXFLAGS',
                           ['-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG'])
-    
+
+    # This greatly reduces binary size.  Comment out to include symbols for gdb.
+    conf.env.append_value('LDFLAGS', ['-Wl,-s'])
+
     # #to define USE_WEIGHTS_FILE
     # conf.env.append_value('CXXFLAGS', ['-DUSE_WEIGHTS_FILE'])
 
@@ -112,12 +115,13 @@ def configure(conf):
     conf.env.append_value('INCLUDES', [onnx_path+'/include'])
     conf.env.append_value('LIBPATH', [onnx_path+'/lib'])
     conf.env.append_value('LIBPATH', [conf.path.abspath() + '/../../../libs/firmware-libs/fusion-embedded-interface/build'])
+    conf.env.append_value('LIBPATH', [conf.path.abspath() + '/../../../libs/firmware-libs/fusion-embedded-framework/build'])
 
 def build(bld):
-    bld(export_includes=['../../../libs/firmware-libs/fusion-embedded-interface/include', './external/doctest', './include'], name='common-include')
+    bld(export_includes=['../fusion-server/tools', '../../../libs/firmware-libs/fusion-embedded-interface/include', '../../../libs/firmware-libs/fusion-embedded-framework/include', './external/doctest', './include'], name='common-include')
 
     excludes = []
-    libs = ['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime', 'jsoncpp', 'samplerate', 'curl', 'fusion_embedded_interface']
+    libs = ['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime', 'jsoncpp', 'samplerate', 'curl', 'fusion_embedded_interface', 'fusion_embedded_framework']
 
     if bld.env['IS_MACOS']:
         excludes.append('src/alsa.cpp')
@@ -137,4 +141,3 @@ def build(bld):
                                          excl=excludes),
                 use=['common-include'],
                 lib=libs)
-

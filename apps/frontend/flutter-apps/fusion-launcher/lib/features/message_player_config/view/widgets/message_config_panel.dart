@@ -6,7 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/message_player_config/viewmodel/message_player_config_cubit.dart';
 import 'package:fusion_lib/constants/semantics/features/message_player/messageplayerKeys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_widgets/form_fields/text_fleld.dart';
+import 'package:fusion_lib/fusion_widgets/form_fields/fusion_custom_textfield.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Center panel for configuring message details
@@ -158,7 +158,7 @@ class _MessageNameFieldState extends State<_MessageNameField> {
         //   ),
         // ),
         // const SizedBox(height: 8),
-        CustomTextField(
+        FusionCustomTextField(
           width: 400,
           height: 40,
           semanticId: FusionTestKeys.instance.messageconfigpaneltxtfield,

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 
 /// Coverage preference options for speaker overlap (aligned with ceiling/pendant placement).
@@ -83,6 +84,22 @@ class SpeakerPosition {
   
   /// Returns a formatted string for display purposes.
   String toDisplayString() => 'X: ${x.toStringAsFixed(1)}m, Y: ${y.toStringAsFixed(1)}m, Z: ${z.toStringAsFixed(1)}m';
+
+  Map<String, dynamic> toJson() {
+    return {
+      'x': x,
+      'y': y,
+      'z': z,
+    };
+  }
+
+  factory SpeakerPosition.fromJson(Map<String, dynamic> map) {
+    return SpeakerPosition(
+      map['x']?.toDouble() ?? 0.0,
+      map['y']?.toDouble() ?? 0.0,
+      map['z']?.toDouble() ?? 0.0,
+    );
+  }
 }
 
 /// Represents a room zone with physical dimensions and listener characteristics.
@@ -366,6 +383,38 @@ class SurfacePlacementResult {
   @override
   String toString() {
     return 'PlacementResult(totalSpeakers: $totalSpeakers, mountingHeight: ${mountingHeight.toStringAsFixed(1)}m, downAngle: ${downAngle.toStringAsFixed(1)}°)';
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'positions': positions.map((x) => x.toJson()).toList(),
+      'mountingHeight': mountingHeight,
+      'downAngle': downAngle,
+      'distanceToListenerPlane': distanceToListenerPlane,
+      'coverageWidth': coverageWidth,
+      'effectiveCoverage': effectiveCoverage,
+      'speakersOnLength': speakersOnLength,
+      'speakersOnWidth': speakersOnWidth,
+      'horizontalCoverageAngle': horizontalCoverageAngle,
+      'roomLength': roomLength,
+      'roomWidth': roomWidth,
+    };
+  }
+
+  factory SurfacePlacementResult.fromJson(Map<String, dynamic> map) {
+    return SurfacePlacementResult(
+      positions: List<SpeakerPosition>.from(map['positions']?.map((x) => SpeakerPosition.fromJson(x))), 
+      mountingHeight: map['mountingHeight']?.toDouble() ?? 0.0,
+      downAngle: map['downAngle']?.toDouble() ?? 0.0,
+      distanceToListenerPlane: map['distanceToListenerPlane']?.toDouble() ?? 0.0,
+      coverageWidth: map['coverageWidth']?.toDouble() ?? 0.0,
+      effectiveCoverage: map['effectiveCoverage']?.toDouble() ?? 0.0,
+      speakersOnLength: map['speakersOnLength']?.toInt() ?? 0,
+      speakersOnWidth: map['speakersOnWidth']?.toInt() ?? 0,
+      horizontalCoverageAngle: map['horizontalCoverageAngle']?.toDouble() ?? 0.0,
+      roomLength: map['roomLength']?.toDouble() ?? 0.0,
+      roomWidth: map['roomWidth']?.toDouble() ?? 0.0,
+    );
   }
 }
 

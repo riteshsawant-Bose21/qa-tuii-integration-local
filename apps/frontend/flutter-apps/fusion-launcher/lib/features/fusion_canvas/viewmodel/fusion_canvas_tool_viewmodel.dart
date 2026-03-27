@@ -137,6 +137,8 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
 
   /// Update selection from external source (sync with provided IDs)
   void syncSelection(Set<String> layerIds) {
-    emit(IdleSelectToolState(selectedLayerIds: layerIds));
+    if (state is SelectToolState) {
+      emit(IdleSelectToolState(selectedLayerIds: layerIds));
+    }
   }
 }

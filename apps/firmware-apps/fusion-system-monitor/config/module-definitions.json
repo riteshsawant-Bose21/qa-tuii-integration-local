@@ -1,7 +1,7 @@
 {
     "modules": [
         {
-            "name": "cpu_usage",
+            "name": "system_info",
             "telemetry": [
                 { 
                     "name": "cpu", 
@@ -16,12 +16,7 @@
                     "value_type": "bool", 
                     "telemetry_type": "event",
                     "period_type": "N/A"
-                }
-            ]
-        },
-        {
-            "name": "space_usage",
-            "telemetry": [
+                },
                 { 
                     "name": "ram", 
                     "value_type": "float", 
@@ -63,6 +58,14 @@
                     "value_type": "bool", 
                     "telemetry_type": "event",
                     "period_type": "N/A"
+                },
+                {
+                    "name": "temperature",
+                    "value_type": "float",
+                    "minimum_value": -40.0,
+                    "maximum_value": 150.0,
+                    "telemetry_type": "meter",
+                    "period_type": "MED"
                 }
             ]
         },
@@ -90,6 +93,11 @@
                 },
                 {
                     "name": "php_paths",
+                    "value_type": "string",
+                    "default_value": ""
+                },
+                {
+                    "name": "php_led",
                     "value_type": "string",
                     "default_value": ""
                 },

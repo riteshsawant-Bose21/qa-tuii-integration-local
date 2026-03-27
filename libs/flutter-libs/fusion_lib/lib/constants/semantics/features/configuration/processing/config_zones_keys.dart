@@ -48,4 +48,14 @@ extension ConfigZoneKeys on FusionTestKeys {
   String get sorcprioityindex => "zones_sources_priority_index";
   String get sorcprioitydeletebutton => "zones_sources_priority_delete_button";
   String get subzoneitem => "zones_subzone_item";
+  String get srcSection => "select_sources_popup_sources_section";
+  String get srcSetSection => "select_sources_popup_sources_set_section";
+  String get selectSourceButton => "select_sources_popup_sources_section_button";
+  String get srcListTxt => "source_list_item_text";
+  String get srcSetListTxt => "source_set_list_item_text";
+  String get srcSetListCheckbox => "source_list_item_checkbox";
+  String get sourceSetListCheckbox => "source_set_list_item_checkbox";
+  String get sourceSetText => "source_set_header_text";
+  String get sourceText => "source_header_text";
+  String get selectSourceText => "select_sources_text";
 }

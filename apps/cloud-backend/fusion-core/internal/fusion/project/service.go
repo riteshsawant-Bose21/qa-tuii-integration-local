@@ -2,18 +2,18 @@ package project
 
 import (
 	"context"
-	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
 	"go.uber.org/zap"
 )
 
 // Service provides methods to interact with the project database
 type Service struct {
 	dbService DatabaseService
-	presigner PresignerService
+	presigner cloudfs.PresignHandle
 }
 
 // DatabaseService defines the interface for database operations related to projects.
@@ -44,14 +44,8 @@ type DatabaseService interface {
 	GetUserEmailByID(ctx context.Context, userID string) (string, error)
 }
 
-// PresignerService defines the interface for generating presigned URLs.
-type PresignerService interface {
-	PresignGet(ctx context.Context, objectKey string, ttl time.Duration, logger *zap.Logger) (string, error)
-	PresignPut(ctx context.Context, objectKey string, ttl time.Duration, logger *zap.Logger) (string, error)
-}
-
 // NewService creates a new project service.
-func NewService(dbService DatabaseService, presigner PresignerService) *Service {
+func NewService(dbService DatabaseService, presigner cloudfs.PresignHandle) *Service {
 	if dbService == nil {
 		panic("dbService cannot be nil")
 	}
