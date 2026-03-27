@@ -1,0 +1,8 @@
+name: dev
+variables:
+  - name: api_url
+    value: 192.168.2.100:8080
+  - name: metrics_url
+    value: 192.168.2.100:8080
+  - name: admin_url
+    value: 192.168.2.100:9090

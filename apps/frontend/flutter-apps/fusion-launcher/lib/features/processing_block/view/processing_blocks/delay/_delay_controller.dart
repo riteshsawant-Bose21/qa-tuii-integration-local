@@ -2,7 +2,11 @@ part of 'delay_block.dart';
 
 enum _UnitsType {
   milliseconds('milliseconds', "Milliseconds", "ms"),
-  seconds("seconds", "Seconds", 'sec');
+  seconds("seconds", "Seconds", 'sec'),
+  samples("samples", "Samples", "sample"),
+  meter("meter", "Meter", "m"),
+  feet("feet", "Feet", "ft"),
+  inches("inches", "Inches", "in");
 
   const _UnitsType(this.value, this.label, this.shortLabel);
   final String value;
