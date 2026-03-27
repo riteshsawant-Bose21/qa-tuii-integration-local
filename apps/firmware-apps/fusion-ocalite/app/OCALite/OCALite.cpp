@@ -31,7 +31,7 @@
 #include "../common/workers/ZoneGroup.h"
 #include "OcaLiteControllerConfigManager.h"
 #include "../common/FusionOCAConstants.h" // For custom ONO constants
-#include "Observer.h"                     // Add the UDP JSON Observer
+#include "observer.h"                     // Add the UDP JSON Observer
 #include "../common/models/ControlSystemConfigParser.h"
 #include "../common/UDPSender.h"         // UDP JSON sender
 #include "../common/FusionAudioBridge.h" // Centralized Fusion communication
@@ -411,8 +411,7 @@ bool InitializeFusionAudioBridge(const std::string &serverIP, unsigned int serve
             // Setup UDP observer for configuration and audio updates
             g_udpObserver = std::unique_ptr<UDPValueMonitor>(new UDPValueMonitor(
                 serverIP,
-                serverPort,
-                false)); // verbose = false
+                serverPort));
 
             OCA_LOG_INFO_PARAMS("✓ UDP Observer started - monitoring from %s:%u", serverIP.c_str(), serverPort);
 

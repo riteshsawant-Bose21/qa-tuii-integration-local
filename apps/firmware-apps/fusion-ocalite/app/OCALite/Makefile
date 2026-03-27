@@ -10,9 +10,10 @@ ifeq ($(UNAME_S),Darwin)
     PKG_LIBS :=
     LDFLAGS :=
 else ifeq ($(ARCH),arm64)
-    PKG_LIBS   := -L ${SDK_DIR}/sysroots/cortexa53-crypto-poky-linux/usr/lib
-    PKG_CFLAGS := -I ${SDK_DIR}/sysroots/cortexa53-crypto-poky-linux/usr/include
-    PKG_CDEFS  := -DFUSION
+    PKG_LIBS   := -L ${SDK_DIR}/sysroots/armv8a-poky-linux/usr/lib
+    PKG_CFLAGS := -I${SDK_DIR}/sysroots/armv8a-poky-linux/usr/include
+    PKG_CFLAGS := -I${SDK_DIR}/sysroots/armv8a-poky-linux/usr/linux/include
+    PKG_CDEFS  := -DFUSION -DSPDLOG_FMT_EXTERNAL -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE -DFMT_HEADER_ONLY
 #     LDFLAGS    := -ldns_sd
 else
     CXX=g++
@@ -34,7 +35,7 @@ else ifeq ($(ARCH),arm64)
     # Cross-compile ARM64: Use SDK paths if available, otherwise standard Linux
     ifneq ($(SDK_DIR),)
         JSONCPP_LIBS := -ljsoncpp
-        JSONCPP_CFLAGS := -I${SDK_DIR}/sysroots/cortexa53-crypto-poky-linux/usr/include/jsoncpp
+        JSONCPP_CFLAGS := -I${SDK_DIR}/sysroots/armv8a-poky-linux/usr/include/jsoncpp
     else
         JSONCPP_LIBS := -ljsoncpp
         JSONCPP_CFLAGS := -I/usr/include/jsoncpp
@@ -71,7 +72,7 @@ else ifeq ($(ARCH),arm64)
     # Cross-compile ARM64: Use SDK paths if available
     ifneq ($(SDK_DIR),)
         BOOST_LIBS := -lboost_system
-        BOOST_CFLAGS := -I${SDK_DIR}/sysroots/cortexa53-crypto-poky-linux/usr/include
+        BOOST_CFLAGS := -I${SDK_DIR}/sysroots/armv8a-poky-linux/usr/include
     else
         BOOST_LIBS := -lboost_system
         BOOST_CFLAGS := -I/usr/include
@@ -81,6 +82,8 @@ else
     BOOST_LIBS := -lboost_system
     BOOST_CFLAGS := -I/usr/include
 endif
+
+OBSRVR_CFLAGS := -I../../../fusion-server/tools/observer
 
 # Add boost flags to existing variables
 PKG_CFLAGS += $(BOOST_CFLAGS)
@@ -133,7 +136,7 @@ $(TARGET): $(ALL_OBJECTS)
 # App source files
 $(BUILD_DIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(OBSRVR_CFLAGS) -c $< -o $@
 
 # App-common source files
 $(BUILD_DIR)/app-common/%.o: ../common/%.cpp
