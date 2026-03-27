@@ -233,7 +233,7 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr,
     stream->rtp_packet_base.ip.protocol = IPPROTO_UDP;
     stream->rtp_packet_base.ip.saddr    = info->source_ip;
     stream->rtp_packet_base.ip.daddr    = info->dest_ip;
-    stream->rtp_packet_base.ip.tos      = 0xB8; /* EF; adjust per stream if needed */
+    stream->rtp_packet_base.ip.tos      = 0x88; /* AF; adjust per stream if needed */
     stream->rtp_packet_base.ip.ttl      = 64;
 
     stream->rtp_packet_base.udp.source  = cpu_to_be16(info->source_port);
