@@ -29,6 +29,20 @@ const (
 	serverPrefix = "fusion"
 )
 
+type masterPriorityMode string
+
+const (
+	masterPriorityModeLow     masterPriorityMode = api.VIPLowPriority
+	masterPriorityModeDefault masterPriorityMode = api.VIPDefaultPriority
+	masterPriorityModeHigh    masterPriorityMode = api.VIPHighPriority
+)
+
+var masterPriorityModeToValue = map[masterPriorityMode]int{
+	masterPriorityModeLow:     api.VIPvrrpLowPriority,
+	masterPriorityModeDefault: api.VIPvrrpDefaultPriority,
+	masterPriorityModeHigh:    api.VIPvrrpHighPriority,
+}
+
 // VIPEventType represents the type of VIP state change
 type VIPEventType string
 
@@ -120,16 +134,13 @@ func NewVIPMonitor(netIface string, isLocal bool, cluster transport.ClusterInter
 
 func parseMasterPriorityMode(modeValue string) (int, error) {
 	normalized := strings.TrimSpace(strings.ToLower(modeValue))
-	switch normalized {
-	case "high":
-		return api.VIPHighPriority, nil
-	case "default":
-		return api.VIPDefaultPriority, nil
-	case "low":
-		return api.VIPLowPriority, nil
-	default:
+	mode := masterPriorityMode(normalized)
+	priority, ok := masterPriorityModeToValue[mode]
+	if !ok {
 		return 0, fmt.Errorf("invalid mode value %q; expected low|default|high", modeValue)
 	}
+
+	return priority, nil
 }
 
 func (m *VIPMonitor) setMasterPriority(priority int, modeValue string) error {

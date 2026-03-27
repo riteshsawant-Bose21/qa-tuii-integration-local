@@ -26,9 +26,12 @@ const (
 
 	SnapshotIDKey = "snapshot_id"
 
-	VIPHighPriority    = 120
-	VIPDefaultPriority = 100
-	VIPLowPriority     = 90
+	VIPHighPriority        = "high"
+	VIPvrrpHighPriority    = 120
+	VIPDefaultPriority     = "default"
+	VIPvrrpDefaultPriority = 100
+	VIPLowPriority         = "low"
+	VIPvrrpLowPriority     = 90
 
 	// Request types
 	WSMsgTypeDevices            = "devices"
