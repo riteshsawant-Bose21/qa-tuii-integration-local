@@ -137,7 +137,7 @@ func parseMasterPriorityMode(modeValue string) (int, error) {
 	mode := masterPriorityMode(normalized)
 	priority, ok := masterPriorityModeToValue[mode]
 	if !ok {
-		return 0, fmt.Errorf("invalid mode value %q; expected low|default|high", modeValue)
+		return 0, fmt.Errorf("invalid mode value %q; expected %s|%s|%s", modeValue, api.VIPLowPriority, api.VIPDefaultPriority, api.VIPHighPriority)
 	}
 
 	return priority, nil
