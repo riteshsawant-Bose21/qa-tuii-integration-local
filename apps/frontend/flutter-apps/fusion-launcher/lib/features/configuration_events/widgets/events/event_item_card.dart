@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/events/configation_events_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 
@@ -68,7 +69,8 @@ class _EventItemCardState extends State<EventItemCard> {
                   index: widget.index,
                   child: Opacity(
                     opacity: 0.4,
-                    child: Icon(
+                    child: FusionIcon.icon(
+                      semanticId: "${FusionTestKeys.instance.events_itm_card_drag_icon}_${widget.index}",
                       Icons.drag_indicator,
                       size: 16,
                       color: context.colorScheme.textPlaceholder,
@@ -77,6 +79,8 @@ class _EventItemCardState extends State<EventItemCard> {
                 ),
                 const SizedBox(width: 8),
                 FusionImage.asset(
+                  semanticId: "${FusionTestKeys.instance.events_itm_card_play_icon}_${widget.index}",
+
                   Assets.playIcon,
                   width: 24,
                   height: 24,
@@ -101,7 +105,7 @@ class _EventItemCardState extends State<EventItemCard> {
 
                 const SizedBox(width: 8),
                 SemanticHelper.toggle(
-                  testId: SemanticHelper.createTestId(SemanticTypes.toggle, "event_switch"),
+                  testId: SemanticHelper.createTestId(SemanticTypes.toggle, "${FusionTestKeys.instance.eventsswitch}_${widget.index}"),
                   value: widget.eventData.isEnabled,
                   child: FusionSwitch(
                     height: 22,
@@ -118,38 +122,36 @@ class _EventItemCardState extends State<EventItemCard> {
 
                 Tooltip(
                   message: 'Delete Event',
-                  child: SemanticHelper.button(
-                    testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_event"),
-                    child: GestureDetector(
-                      onTap: () {
-                        showDialog(
-                          context: context,
-                          builder:
-                              (_) => FusionDialog(
-                                title: 'Delete Event?',
-                                description: "This will remove '${widget.eventData.name}' from the Event list.",
-                                primaryButtonLabel: 'Delete',
-                                secondaryButtonLabel: 'Cancel',
-                                onSecondaryPressed: () {
+                  child: GestureDetector(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder:
+                            (_) => FusionDialog(
+                              title: 'Delete Event?',
+                              description: "This will remove '${widget.eventData.name}' from the Event list.",
+                              primaryButtonLabel: 'Delete',
+                              secondaryButtonLabel: 'Cancel',
+                              onSecondaryPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              onPrimaryPressed: () {
+                                if (widget.onDelete != null) {
+                                  widget.onDelete!();
                                   Navigator.of(context).pop();
-                                },
-                                onPrimaryPressed: () {
-                                  if (widget.onDelete != null) {
-                                    widget.onDelete!();
-                                    Navigator.of(context).pop();
-                                  }
-                                },
-                              ),
-                        );
-                      },
-                      child: FusionImage.asset(
-                        Assets.deleteIcon,
-                        width: 17,
-                        height: 17,
-                        assetColor: context.colorScheme.iconWhite,
+                                }
+                              },
+                            ),
+                      );
+                    },
+                    child: FusionImage.asset(
+                      semanticId: "${FusionTestKeys.instance.deletevent}_${widget.index}",
+                      Assets.deleteIcon,
+                      width: 17,
+                      height: 17,
+                      assetColor: context.colorScheme.iconWhite,
 
-                        fit: BoxFit.contain,
-                      ),
+                      fit: BoxFit.contain,
                     ),
                   ),
                 ),

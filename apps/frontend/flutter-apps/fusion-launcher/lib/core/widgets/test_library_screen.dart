@@ -73,7 +73,7 @@ class TestLibraryScreen extends StatelessWidget {
             child: TabBar(
               isScrollable: true,
               unselectedLabelColor: context.colorScheme.textGrey,
-              
+
               tabs: <Widget>[
                 const Tab(text: 'SPL Calculation'),
                 const Tab(text: 'Tap Setting'),

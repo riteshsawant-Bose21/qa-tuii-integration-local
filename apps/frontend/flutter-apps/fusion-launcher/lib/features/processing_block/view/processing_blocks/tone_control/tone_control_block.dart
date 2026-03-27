@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/add_source_popup/view_model/add_source_viewmodel.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_blocks/widgets/out_meter.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
@@ -15,8 +14,8 @@ class ToneControlBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AlgorithmDataViewmodel watch =
-        context.watch<AlgorithmDataViewmodel>();
+    final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
+    final String targetBlockId = watch.processingBlock.id;
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,
@@ -27,12 +26,7 @@ class ToneControlBlock extends StatelessWidget {
         create: (BuildContext context) {
           return ToneController(watch);
         },
-        update:
-            (
-              BuildContext context,
-              AlgorithmDataViewmodel valueHandler,
-              ToneController? previous,
-            ) => ToneController(valueHandler),
+        update: (BuildContext context, AlgorithmDataViewmodel valueHandler, ToneController? previous) => ToneController(valueHandler),
         child: Builder(
           builder: (BuildContext context) {
             final ToneController controller = context.watch<ToneController>();
@@ -85,7 +79,9 @@ class ToneControlBlock extends StatelessWidget {
                       context.read<ToneController>().updateHighBypass(value);
                     },
                   ),
-                  const OutMeter(),
+                  OutMeter(
+                    blockId: targetBlockId,
+                  ),
                 ],
               ),
               // children: <Widget>[

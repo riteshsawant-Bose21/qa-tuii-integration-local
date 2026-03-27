@@ -24,13 +24,21 @@ extension HardwareService on ProjectService {
           bool isSameSku = hw.speakerSKU == skuOfExistingHardware;
 
           if (!isSameSku) {
-            FusionLogger.log(
-              tag: LogTag.project,
-              message:
-                  'Warning: Adding speaker with SKU ${hw.speakerSKU} to listening area ${loc.listeningAreaId} which already has speakers with SKU $skuOfExistingHardware. This may lead to configuration issues.',
-            );
+            // In withSubwoofer mode, two different speaker types (mid-high + subwoofer) coexist.
+            // Skip auto-migration so adding a subwoofer doesn't convert existing mid-highs.
+            final ListeningArea? la = getListeningAreaById(loc.listeningAreaId!);
+            final bool isWithSubwooferMode = la?.lowFrequency == LowFrequency.withSubwoofer;
 
-            migrateAllSpeakersTo(speaker: hw, targetListeningAreaId: loc.listeningAreaId!);
+            if (!isWithSubwooferMode) {
+              FusionLogger.log(
+                tag: LogTag.project,
+                message:
+                    'Adding speaker with SKU ${hw.speakerSKU} to listening area ${loc.listeningAreaId}'
+                    'which already has speakers with SKU $skuOfExistingHardware. This may lead to configuration issues.',
+              );
+
+              migrateAllSpeakersTo(speaker: hw, targetListeningAreaId: loc.listeningAreaId!);
+            }
           }
         }
       }
