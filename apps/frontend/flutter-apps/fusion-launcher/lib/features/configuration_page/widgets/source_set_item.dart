@@ -4,6 +4,7 @@ import 'package:fusion_launcher/features/configuration_page/widgets/source_item.
 import 'package:fusion_launcher/features/processing_block/view/processing_chain_view.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_sources.dart';
 import 'package:fusion_lib/constants/semantics/test_keys.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_button.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
@@ -137,9 +138,18 @@ class _SourceSetItemState extends State<SourceSetItem> {
                     },
                     child: Container(
                       margin: const EdgeInsets.only(top: 8, left: 8, right: 8),
-                      padding: const EdgeInsets.only(left: 12, right: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       height: 36,
                       decoration: BoxDecoration(
+                        boxShadow: <BoxShadow>[
+                          BoxShadow(color: context.colorScheme.black, offset: const Offset(1.5, 1.5), blurRadius: 7),
+                          BoxShadow(
+                            color: context.colorScheme.shadowLight,
+                            offset: const Offset(-1.5, -1.5),
+                            blurRadius: 5,
+                            blurStyle: BlurStyle.solid,
+                          ),
+                        ],
                         border: Border.all(
                           color: widget.isDragHovered ? Theme.of(context).colorScheme.primary : Colors.transparent,
                           width: 1.0,
@@ -148,41 +158,32 @@ class _SourceSetItemState extends State<SourceSetItem> {
                         color:
                             widget.isDragHovered
                                 ? Theme.of(context).colorScheme.primary.withAlpha(50)
-                                : (_isHovered ? context.colorScheme.elevation3 : context.colorScheme.elevation2),
+                                : (_isHovered ? context.colorScheme.elevation2 : context.colorScheme.elevation1),
                       ),
                       child: SemanticHelper.container(
                         testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.sourcesetdataitmheader),
                         child: Row(
                           children: <Widget>[
                             /// Expand/collapse icon
-                            SemanticHelper.button(
-                              testId: SemanticHelper.createTestId(
-                                SemanticTypes.button,
-                                FusionTestKeys.instance.sourcesetdataitmheaderexpandcollapse,
-                              ),
-                              child: Icon(
-                                _isSourcesSetExpanded.value ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
-                                color: Theme.of(context).colorScheme.iconWhite,
-                              ),
+                            FusionIcon.icon(
+                              semanticId: FusionTestKeys.instance.sourcesetdataitmheaderexpandcollapse,
+                              size: 16,
+                              _isSourcesSetExpanded.value ? Icons.keyboard_arrow_up_outlined : Icons.keyboard_arrow_down_outlined,
+                              color: Theme.of(context).colorScheme.iconWhite,
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 8),
 
                             /// Source set name
                             Expanded(
-                              child: SemanticHelper.staticText(
-                                testId: SemanticHelper.createTestId(
-                                  SemanticTypes.text,
-                                  FusionTestKeys.instance.sourcesetdataitmheadername,
-                                ),
-                                child: FusionAppText(
-                                  text: widget.sourceSet.name,
-                                  maxLine: 1,
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.bodyMedium?.copyWith(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                              child: FusionAppText(
+                                semanticId: FusionTestKeys.instance.sourcesetdataitmheadername,
+                                text: widget.sourceSet.name,
+                                maxLine: 1,
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.bodyMedium?.copyWith(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
@@ -295,6 +296,9 @@ class _SourceSetItemState extends State<SourceSetItem> {
                     ),
                   ),
                 ),
+                const SizedBox(
+                  height: 8,
+                ),
                 if (subZoneExpanded) _buildSourcesList(),
               ],
             );
@@ -381,9 +385,18 @@ class _SourceSetItemState extends State<SourceSetItem> {
       builder: (BuildContext context, ConfigSourceSetsState state) {
         final List<Source> sourceList = _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: widget.sourceSet.id);
         return Container(
-          padding: const EdgeInsets.only(top: 12, bottom: 12),
-          margin: const EdgeInsets.only(left: 12, right: 12),
-          color: context.colorScheme.elevation2.withAlpha(100),
+          padding: const EdgeInsets.symmetric(
+            vertical: 8,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(4),
+            color: context.colorScheme.elevation2,
+          ),
+          margin: const EdgeInsets.only(
+            left: 12,
+            right: 12,
+          ),
+
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxHeight: 250),
             child: ReorderableListView.builder(

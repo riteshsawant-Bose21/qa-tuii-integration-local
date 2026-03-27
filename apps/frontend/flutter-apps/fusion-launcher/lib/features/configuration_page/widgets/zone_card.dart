@@ -211,52 +211,53 @@ class _ZoneCardState extends State<ZoneCard> {
                 SemanticTypes.container,
                 FusionTestKeys.instance.zonelistcontent,
               ),
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 12),
-                color: context.colorScheme.elevation2.withAlpha(100),
+              child: SingleChildScrollView(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 12),
+                  color: context.colorScheme.elevation2.withAlpha(100),
 
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    /// Functions Panel
-                    SemanticHelper.container(
-                      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.zonelistfunctionspanel),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          //left border
-                          border: Border(
-                            right: BorderSide(
-                              color: context.colorScheme.elevation2,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      /// Functions Panel
+                      SemanticHelper.container(
+                        testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.zonelistfunctionspanel),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            //left border
+                            border: Border(
+                              right: BorderSide(
+                                color: context.colorScheme.elevation2,
+                              ),
                             ),
                           ),
+                          width: MediaQuery.of(context).size.width * 0.14,
+                          padding: const EdgeInsets.all(16),
+                          child: _buildZoneFunctionsPanel(),
                         ),
-                        width: MediaQuery.of(context).size.width * 0.14,
-                        height: MediaQuery.of(context).size.height * 0.240,
-                        padding: const EdgeInsets.all(16),
-                        child: _buildZoneFunctionsPanel(),
                       ),
-                    ),
 
-                    /// Subzone Panel
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          //left border
-                          border: Border(
-                            left: BorderSide(
-                              color: context.colorScheme.elevation2,
+                      /// Subzone Panel
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            //left border
+                            border: Border(
+                              left: BorderSide(
+                                color: context.colorScheme.elevation2,
+                              ),
                             ),
                           ),
+                          child:
+                              isInControlMode
+                                  ? ConfigZoneControlModePanel(
+                                    zone: widget.zoneData,
+                                  )
+                                  : _buildSubZonePanel(subZonesForZone),
                         ),
-                        child:
-                            isInControlMode
-                                ? ConfigZoneControlModePanel(
-                                  zone: widget.zoneData,
-                                )
-                                : _buildSubZonePanel(subZonesForZone),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );
@@ -831,7 +832,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
   /// Multi-select source selection for zone (checkboxes)
   void _initializeTempSelection() {
-    _tempSelectedItems = {
+    _tempSelectedItems = <dynamic>{
       ..._zonesViewmodel.getSourcesInZone(zoneId: widget.zoneId),
       ..._zonesViewmodel.getSourceSetsInZone(zoneId: widget.zoneId),
     };
@@ -935,7 +936,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
                           const SizedBox(height: 10),
 
-                          ...availableSources.asMap().entries.map((entry) {
+                          ...availableSources.asMap().entries.map((MapEntry<int, Source> entry) {
                             final Source src = entry.value;
 
                             final bool isPrioritySource = _zonesViewmodel.getPrioritySourcesInZone(zoneId: widget.zoneId).contains(src.id);
@@ -1027,7 +1028,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
                           const SizedBox(height: 10),
 
-                          ...sourceSetList.asMap().entries.map((entry) {
+                          ...sourceSetList.asMap().entries.map((MapEntry<int, SourceSet> entry) {
                             final SourceSet setItem = entry.value;
 
                             final List<Source> sourcesInSet = _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: setItem.id);
@@ -1077,64 +1078,6 @@ class _ZoneCardState extends State<ZoneCard> {
 
               return const SizedBox();
             },
-
-            // child: SemanticHelper.button(
-            //   testId: SemanticHelper.createTestId(
-            //     SemanticTypes.container,
-            //     FusionTestKeys.instance.selectSourceButton,
-            //   ),
-            //   child: Container(
-            //     height: 22,
-            //     width: 160,
-            //     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            //     decoration: BoxDecoration(
-            //       border: Border.all(
-            //         color: hasSelection ? context.colorScheme.elevation5 : context.colorScheme.elevation5.withAlpha(150),
-            //       ),
-            //       borderRadius: BorderRadius.circular(3),
-            //     ),
-            //     child: Row(
-            //       children: <Widget>[
-            //         Expanded(
-            //           child: FusionAppText(
-            //             text: hasSelection ? 'Sources selected' : 'Select sources',
-            //             maxLine: 1,
-            //             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            //               fontSize: 11,
-            //               color: hasSelection ? context.colorScheme.primaryWhite : context.colorScheme.primaryWhite.withAlpha(150),
-            //             ),
-            //           ),
-            //         ),
-            //         hasSelection
-            //             ? IntrinsicWidth(
-            //               child: Container(
-            //                 height: 14,
-            //                 padding: const EdgeInsets.symmetric(horizontal: 4),
-            //                 alignment: Alignment.center,
-            //                 decoration: BoxDecoration(
-            //                   color: context.colorScheme.primaryWhite,
-            //                   borderRadius: BorderRadius.circular(3),
-            //                 ),
-            //                 child: FusionAppText(
-            //                   semanticId: FusionTestKeys.instance.selectSourceText,
-            //                   text: _zonesViewmodel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
-            //                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            //                     fontSize: 8,
-            //                     color: context.colorScheme.primaryBlack,
-            //                     fontWeight: FontWeight.w600,
-            //                   ),
-            //                 ),
-            //               ),
-            //             )
-            //             : Icon(
-            //               Icons.add,
-            //               color: context.colorScheme.primaryWhite.withAlpha(150),
-            //               size: 16,
-            //             ),
-            //       ],
-            //     ),
-            //   ),
-            // ),
             child: SemanticHelper.button(
               testId: SemanticHelper.createTestId(
                 SemanticTypes.container,
