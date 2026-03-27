@@ -474,9 +474,26 @@ static u64 gpt_read_ticks64(struct fusion_gpt *g)
 	return (hi | lo);
 }
 
+static bool gpt_client_tick_ready(struct fusion_gpt *g)
+{
+	unsigned long flags;
+	bool epoch_valid;
+	bool aligned;
+
+	if (!READ_ONCE(g->discipline_ready))
+		return false;
+
+	raw_spin_lock_irqsave(&g->pps_lock, flags);
+	epoch_valid = g->phc_epoch_valid;
+	aligned = g->phc_aligned;
+	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
+
+	return epoch_valid && aligned;
+}
+
 static inline void gpt_tick_direct(struct fusion_gpt *g)
 {
-	if (!READ_ONCE(g->discipline_ready))
+	if (!gpt_client_tick_ready(g))
 		return;
 
 	const struct fusion_gpt_client_ops *ops = READ_ONCE(g->ops);

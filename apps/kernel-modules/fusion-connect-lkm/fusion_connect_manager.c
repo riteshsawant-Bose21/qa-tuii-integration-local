@@ -374,12 +374,7 @@ static inline void fusion_cn_queue_process(void)
 static void fusion_cn_gpt_tick(void *ctx, u64 tick64)
 {
     struct fusion_cn_manager *mgr = ctx;
-    struct fusion_gpt_timing_status timing_status;
     u64  now_ns;
-
-    if (fusion_gpt_get_timing_status(&timing_status) ||
-        !timing_status.epoch_valid || !timing_status.aligned)
-        return; /* hard gate: no PHC, no work */
 
     now_ns = fusion_gpt_read_phc_ns();
     if (!now_ns)
