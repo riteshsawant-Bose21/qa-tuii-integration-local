@@ -44,6 +44,9 @@ const (
 // ErrNotFound is returned when a record or bucket doesn't exist.
 var ErrNotFound = errors.New("not found")
 
+// ErrNotMember is returned when a scene is not a member of the given scene set.
+var ErrNotMember = errors.New("not a member of scene set")
+
 // Persistence handles state persistence and metadata management.
 type Persistence struct {
 	dbPath       string

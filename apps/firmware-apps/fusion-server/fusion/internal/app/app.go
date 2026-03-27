@@ -245,6 +245,21 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.TimeMachineNameEndpoint, app.Server.GetTimeMachine)
 	app.registerPublicDELETE(routes.TimeMachineNameEndpoint, app.Server.DeleteTimeMachine)
 
+	// Snapshots
+	app.registerPublicPOST(routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
+	app.registerPublicGET(routes.SnapshotsListEndpoint, app.Server.ListSnapshotDefinitions)
+
+	// Scenes
+	app.registerPublicGET(routes.ScenesListEndpoint, app.Server.ListScenes)
+
+	// Scene Sets
+	app.registerPublicPOST(routes.SceneSetsActivateEndpoint, app.Server.ActivateSceneSet)
+	app.registerPublicPOST(routes.SceneSetsCurrentEndpoint, app.Server.GetCurrentScene)
+	app.registerPublicGET(routes.SceneSetsListEndpoint, app.Server.ListSceneSets)
+
+	// Scene Catalog
+	app.registerPublicGET(routes.SceneCatalogListEndpoint, app.Server.ListSceneCatalog)
+
 	// Tasks
 	app.registerPublicGET(routes.TasksHistoryEndpoint, app.TaskManager.GetHistory)
 	app.registerPublicDELETE(routes.TasksHistoryEndpoint, app.TaskManager.ClearHistory)

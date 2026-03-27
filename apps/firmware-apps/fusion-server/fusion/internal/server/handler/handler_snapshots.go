@@ -2,10 +2,37 @@ package handler
 
 import (
 	"fmt"
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"time"
 )
+
+// HandleListSnapshotDefinitions returns all stored snapshot definitions.
+func (h *Handler) HandleListSnapshotDefinitions() ([]api.SnapshotDefinition, error) {
+	return h.persistence.ListSnapshotDefinitions()
+}
+
+// HandleListSceneSets returns all stored scene sets.
+func (h *Handler) HandleListSceneSets() ([]api.SceneSet, error) {
+	return h.persistence.ListSceneSets()
+}
+
+// HandleGetSceneSet returns a single scene set by set_id.
+func (h *Handler) HandleGetSceneSet(setID string) (*api.SceneSet, error) {
+	return h.persistence.GetSceneSet(setID)
+}
+
+// HandleActivateSnapshotByID patches the snapshot data onto DB State.
+// Full implementation in Step 6.
+func (h *Handler) HandleActivateSnapshotByID(id string) error {
+	return fmt.Errorf("not implemented")
+}
+
+// HandleActivateScene activates a scene within a scene set and patches its data onto DB State.
+// Full implementation in Step 6.
+func (h *Handler) HandleActivateScene(setID, sceneID string) error {
+	return fmt.Errorf("not implemented")
+}
 
 // HandleListSnapshots returns a list of all available snapshot names.
 func (h *Handler) HandleListSnapshots() ([]string, error) {

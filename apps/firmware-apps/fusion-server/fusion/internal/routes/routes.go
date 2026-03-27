@@ -88,6 +88,17 @@ const (
 	TimeMachineActivateEndpoint = TimeMachineEndpoint + "/activate/{name}"
 	TimeMachineUpdateEndpoint   = TimeMachineEndpoint + "/update/{name}"
 
+	SnapshotsActivateEndpoint = "/snapshots/activate"
+	SnapshotsListEndpoint     = "/snapshots/list"
+
+	ScenesListEndpoint = "/scenes/list"
+
+	SceneSetsActivateEndpoint = "/scene-sets/activate"
+	SceneSetsCurrentEndpoint  = "/scene-sets/current-scene"
+	SceneSetsListEndpoint     = "/scene-sets/list"
+
+	SceneCatalogListEndpoint = "/scene-catalog-list"
+
 	TasksEndpoint          = "/tasks"
 	TasksHistoryEndpoint   = TasksEndpoint + "/history"
 	TasksIdEndpoint        = TasksEndpoint + "/{id}"
