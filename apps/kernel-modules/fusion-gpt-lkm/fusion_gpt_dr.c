@@ -94,12 +94,16 @@ enum cal_state {
 #define CAL_DEFAULT_PRE_E0_ABS_MAX 1000U
 #define CAL_DEFAULT_PRE_E0_MAX_WAIT 12U
 
-#define CAL_LOCK_ERR_THRESH 1U
 #define CAL_LOCK_CONSECUTIVE 5U
 
 static bool pps_diag_enable;
 module_param(pps_diag_enable, bool, 0644);
 MODULE_PARM_DESC(pps_diag_enable, "Enable periodic 1PPS diagnostic logging");
+
+static uint discipline_ready_abs_error_param = 1;
+module_param(discipline_ready_abs_error_param, uint, 0644);
+MODULE_PARM_DESC(discipline_ready_abs_error_param,
+		 "Raise discipline_ready after 5 PPS samples with abs_error < this threshold");
 
 struct fusion_gpt_cal_config {
 	s32 k1_q16;
@@ -809,7 +813,7 @@ static inline bool cal_active(const struct fusion_gpt *g)
 static void gpt_update_discipline_ready(struct fusion_gpt *g, long freq_error)
 {
 	long abs_err = (freq_error < 0) ? -freq_error : freq_error;
-	u32 thresh = CAL_LOCK_ERR_THRESH;
+	u32 thresh = READ_ONCE(discipline_ready_abs_error_param);
 	u32 needed = max_t(u32, 1, CAL_LOCK_CONSECUTIVE);
 
 	if (READ_ONCE(g->discipline_ready))
@@ -820,7 +824,7 @@ static void gpt_update_discipline_ready(struct fusion_gpt *g, long freq_error)
 		return;
 	}
 
-	if (abs_err > thresh) {
+	if (abs_err >= thresh) {
 		g->lock_streak = 0;
 		return;
 	}
@@ -830,7 +834,7 @@ static void gpt_update_discipline_ready(struct fusion_gpt *g, long freq_error)
 
 	if (g->lock_streak >= needed) {
 		WRITE_ONCE(g->discipline_ready, true);
-		pr_info("fusion_gpt: discipline ready (|err| <= %u ticks for %u PPS)\n",
+		pr_info("fusion_gpt: discipline ready (|err| < %u ticks for %u PPS)\n",
 			thresh, needed);
 	}
 }
