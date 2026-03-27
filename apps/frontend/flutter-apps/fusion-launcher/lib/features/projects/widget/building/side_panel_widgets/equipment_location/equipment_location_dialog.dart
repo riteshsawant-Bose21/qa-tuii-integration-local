@@ -15,8 +15,7 @@ import 'package:recase/recase.dart';
 
 import '../../../../viewmodel/equipment_location_selection_viewmodel.dart';
 import '../../../../viewmodel/equipment_location_viewmodel.dart';
-import '../../speaker_selection_section/view_model/product_query_view_model.dart'
-    show ProductQueryViewModel;
+import '../../../../../speaker_selection_popup/viewmodel/product_query_view_model.dart' show ProductQueryViewModel;
 import '../../widgets/drop_down.dart';
 import '../../widgets/grid_view.dart';
 
@@ -93,13 +92,9 @@ class EquipmentLocationDialog extends StatelessWidget {
                       ),
                       child: Column(
                         children: <Widget>[
-                          if (equipmentLocationId == null)
-                            const _EquipmentLocationDropdown(),
+                          if (equipmentLocationId == null) const _EquipmentLocationDropdown(),
                           Expanded(
-                            child: BlocBuilder<
-                              EquipmentLocationSelectionViewmodel,
-                              String?
-                            >(
+                            child: BlocBuilder<EquipmentLocationSelectionViewmodel, String?>(
                               builder: (
                                 BuildContext context,
                                 String? equipmentId,
@@ -130,17 +125,15 @@ class EquipmentLocationDialog extends StatelessWidget {
                                         ),
                                         child: Icon(
                                           LucideIcons.search200,
-                                          color:
-                                              context.colorScheme.iconDefault,
+                                          color: context.colorScheme.iconDefault,
                                         ),
                                       ),
                                       borderRadius: 8,
                                       contentPadding: const EdgeInsets.all(10),
                                       hintText: "Search devices...",
-                                      hintStyle: context.textTheme.labelSmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.normal,
-                                          ),
+                                      hintStyle: context.textTheme.labelSmall?.copyWith(
+                                        fontWeight: FontWeight.normal,
+                                      ),
                                       onChanged: (String value) {
                                         vm.updateFilters(
                                           state.filters.copyWith(
@@ -156,14 +149,10 @@ class EquipmentLocationDialog extends StatelessWidget {
                                       Expanded(
                                         child: FusionAppText(
                                           text: "Recently Viewed",
-                                          style: context.textTheme.bodySmall
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.normal,
-                                                color:
-                                                    context
-                                                        .colorScheme
-                                                        .onSurface,
-                                              ),
+                                          style: context.textTheme.bodySmall?.copyWith(
+                                            fontWeight: FontWeight.normal,
+                                            color: context.colorScheme.onSurface,
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(width: 8),
@@ -176,65 +165,44 @@ class EquipmentLocationDialog extends StatelessWidget {
                                           child: Icon(
                                             LucideIcons.refreshCw200,
                                             size: 16,
-                                            color:
-                                                context.colorScheme.textPrimary,
+                                            color: context.colorScheme.textPrimary,
                                           ),
                                         ),
                                       ),
                                       const SizedBox(width: 8),
                                       FusionArrowPopup(
-                                        semanticId:
-                                            'equipment_location_sort_products',
+                                        semanticId: 'equipment_location_sort_products',
                                         blurAmount: 1,
                                         content: SizedBox(
                                           width: 220,
                                           child: Padding(
                                             padding: const EdgeInsets.all(16.0),
 
-                                            child: BlocProvider<
-                                              EqlProductsVm
-                                            >.value(
+                                            child: BlocProvider<EqlProductsVm>.value(
                                               value: vm,
-                                              child: BlocBuilder<
-                                                EqlProductsVm,
-                                                EQLProductsState
-                                              >(
+                                              child: BlocBuilder<EqlProductsVm, EQLProductsState>(
                                                 builder: (
                                                   BuildContext context,
                                                   EQLProductsState state,
                                                 ) {
-                                                  final EqlProductsSort? sort =
-                                                      state.sortBy;
+                                                  final EqlProductsSort? sort = state.sortBy;
                                                   return Column(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
                                                     children: <Widget>[
                                                       FusionAppText(
                                                         text: 'Sort by',
-                                                        style: context
-                                                            .textTheme
-                                                            .bodySmall
-                                                            ?.copyWith(
-                                                              color:
-                                                                  context
-                                                                      .colorScheme
-                                                                      .onSurface,
-                                                            ),
+                                                        style: context.textTheme.bodySmall?.copyWith(
+                                                          color: context.colorScheme.onSurface,
+                                                        ),
                                                       ),
                                                       const SizedBox(height: 8),
 
                                                       ...EqlProductsSort.values.map(
                                                         (
-                                                          EqlProductsSort
-                                                          sortOption,
+                                                          EqlProductsSort sortOption,
                                                         ) {
-                                                          final bool
-                                                          isSelected =
-                                                              sortOption ==
-                                                              sort;
+                                                          final bool isSelected = sortOption == sort;
                                                           return InkWell(
                                                             onTap: () {
                                                               vm.updateSort(
@@ -245,36 +213,25 @@ class EquipmentLocationDialog extends StatelessWidget {
                                                               ).pop();
                                                             },
                                                             child: Padding(
-                                                              padding:
-                                                                  const EdgeInsets.symmetric(
-                                                                    vertical:
-                                                                        8.0,
-                                                                  ),
+                                                              padding: const EdgeInsets.symmetric(
+                                                                vertical: 8.0,
+                                                              ),
                                                               child: Row(
-                                                                children: <
-                                                                  Widget
-                                                                >[
+                                                                children: <Widget>[
                                                                   SemanticHelper.toggle(
                                                                     testId: SemanticHelper.createTestId(
-                                                                      SemanticTypes
-                                                                          .toggle,
+                                                                      SemanticTypes.toggle,
                                                                       "eql_sort_option_toggle_${sortOption.index}",
                                                                     ),
-                                                                    value:
-                                                                        isSelected,
+                                                                    value: isSelected,
                                                                     child: Icon(
-                                                                      isSelected
-                                                                          ? Icons
-                                                                              .circle
-                                                                          : Icons
-                                                                              .radio_button_unchecked,
+                                                                      isSelected ? Icons.circle : Icons.radio_button_unchecked,
                                                                       size: 14,
                                                                       color:
                                                                           isSelected
                                                                               ? context.colorScheme.primary
                                                                               : context.colorScheme.onSurface.withValues(
-                                                                                alpha:
-                                                                                    0.5,
+                                                                                alpha: 0.5,
                                                                               ),
                                                                     ),
                                                                   ),
@@ -285,16 +242,10 @@ class EquipmentLocationDialog extends StatelessWidget {
                                                                     width: 8,
                                                                   ),
                                                                   FusionAppText(
-                                                                    text:
-                                                                        sortOption
-                                                                            .label,
-                                                                    style: context
-                                                                        .textTheme
-                                                                        .bodySmall
-                                                                        ?.copyWith(
-                                                                          color:
-                                                                              context.colorScheme.onSurface,
-                                                                        ),
+                                                                    text: sortOption.label,
+                                                                    style: context.textTheme.bodySmall?.copyWith(
+                                                                      color: context.colorScheme.onSurface,
+                                                                    ),
                                                                   ),
                                                                 ],
                                                               ),
@@ -312,18 +263,11 @@ class EquipmentLocationDialog extends StatelessWidget {
 
                                         child: Tooltip(
                                           message: "Sort",
-                                          child: SemanticHelper.button(
-                                            testId: SemanticHelper.createTestId(
-                                              SemanticTypes.button,
-                                              "equipment_location_dialog_sort_button",
-                                            ),
-                                            child: FusionSvgIcon(
-                                              icon: "assets/svg/sort.svg",
-                                              color:
-                                                  context
-                                                      .colorScheme
-                                                      .textPrimary,
-                                            ),
+
+                                          child: FusionIcon.svg(
+                                            semanticId: "equipment_location_dialog_sort_button",
+                                            "assets/svg/sort.svg",
+                                            color: context.colorScheme.textPrimary,
                                           ),
                                         ),
                                       ),
@@ -343,17 +287,14 @@ class EquipmentLocationDialog extends StatelessWidget {
                                           child: CupertinoActivityIndicator(),
                                         ),
                                       ),
-                                      EQLProductsError(:final String message) =>
-                                        Center(
-                                          child: FusionAppText(
-                                            text: 'Error: $message',
-                                            style: context.textTheme.bodyMedium
-                                                ?.copyWith(
-                                                  color:
-                                                      context.colorScheme.error,
-                                                ),
+                                      EQLProductsError(:final String message) => Center(
+                                        child: FusionAppText(
+                                          text: 'Error: $message',
+                                          style: context.textTheme.bodyMedium?.copyWith(
+                                            color: context.colorScheme.error,
                                           ),
                                         ),
+                                      ),
                                       EQLProductsLoaded(
                                         :final List<EQLProduct> products,
                                       ) =>
@@ -363,22 +304,17 @@ class EquipmentLocationDialog extends StatelessWidget {
                                             BuildContext context,
                                             int index,
                                           ) {
-                                            final EQLProduct product =
-                                                products[index];
+                                            final EQLProduct product = products[index];
 
                                             return _ProductTile(
                                               index: index,
                                               product: product,
                                               addProduct: () {
-                                                final String? state2 =
-                                                    BlocProvider.of<
-                                                      EquipmentLocationSelectionViewmodel
-                                                    >(context).state;
+                                                final String? state2 = BlocProvider.of<EquipmentLocationSelectionViewmodel>(context).state;
                                                 if (state2 == null) {
                                                   FusionToast.error(
                                                     context,
-                                                    message:
-                                                        "Please select an equipment location to add devices.",
+                                                    message: "Please select an equipment location to add devices.",
                                                   );
                                                   return;
                                                 }
@@ -488,12 +424,7 @@ class EquipmentLocationDialog extends StatelessWidget {
                                           width: 89,
                                           padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
-                                            color:
-                                                isSelected
-                                                    ? context
-                                                        .colorScheme
-                                                        .elevation3
-                                                    : null,
+                                            color: isSelected ? context.colorScheme.elevation3 : null,
                                             borderRadius: BorderRadius.circular(
                                               8,
                                             ),
@@ -501,8 +432,7 @@ class EquipmentLocationDialog extends StatelessWidget {
                                           child: Center(
                                             child: FusionAppText(
                                               text: mode,
-                                              style:
-                                                  context.textTheme.bodySmall,
+                                              style: context.textTheme.bodySmall,
                                             ),
                                           ),
                                         ),

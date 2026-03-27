@@ -1,4 +1,4 @@
-#include <bosepro/observer.h>
+#include <observer/observer.h>
 
 #include <bosepro/configuration.h>
 #include <bosepro/definition.h>
@@ -22,6 +22,8 @@
 
 
 std::atomic<bool> g_running{true};
+
+std::string server_device_id = "";
 
 void signal_handler(int signum)
 {
@@ -69,6 +71,70 @@ static void handle_amp_control_update(const std::string &path,
     Json::StreamWriterBuilder writer;
     writer["indentation"] = "";
     handle_update(Json::writeString(writer, message_json));
+}
+
+
+static void handle_device_id(const std::string &new_device_id)
+{
+    server_device_id = new_device_id;
+}
+
+
+static void handle_streams(const std::string & /*path*/,
+                           const Json::Value & /*old_value*/,
+                           const Json::Value &new_value)
+{
+    Json::Value message_json;
+    message_json["target"] = "fusion_connect_client";
+    message_json["name"] = "audio_streams_update";
+
+    // Serialize new_val to a string and remove the trailing newline
+    Json::FastWriter writer;
+    std::string value_str = writer.write(new_value);
+    if (!value_str.empty() && value_str.back() == '\n') {
+        value_str.pop_back(); // Remove trailing newline
+    }
+    message_json["value"] = value_str;
+
+    // Convert the message to a string
+    std::string message = writer.write(message_json);
+    if (!message.empty() && message.back() == '\n') {
+        message.pop_back(); // Remove trailing newline from message
+    }
+
+    handle_update(message);
+}
+
+
+static void handle_parameter(const std::string &path,
+                             const Json::Value &old_value,
+                             const Json::Value &new_value)
+{
+    if (old_value == new_value)
+    {
+        return;
+    }
+
+    std::vector<PathComponent> path_parts = JsonMonitor::splitPath(path);
+
+    Json::Value message_json;
+    message_json["target"] = path_parts[2].key;
+    message_json["name"] = path_parts[3].key;
+
+    if (path_parts.size() > 4 && path_parts[4].isArrayAccess)
+    {
+        Json::Value index_array(Json::arrayValue);
+        index_array.append(static_cast<Json::Int>(path_parts[4].arrayIndex + 1));
+        message_json["index"] = index_array;
+    }
+
+    // Preserve the full JSON type of new_value instead of coercing to string
+    message_json["value"] = new_value;
+
+    Json::StreamWriterBuilder writer;
+    writer["indentation"] = "";
+    std::string message = Json::writeString(writer, message_json);
+    handle_update(message);
 }
 
 
@@ -222,24 +288,21 @@ int main(int argc, char *argv[])
     UDPValueMonitor *client = nullptr;
     psession = &session;
 
-    std::vector<std::string> target_paths;
-
-    // Path for networked audio streams
-    target_paths.push_back("audio_streams");
-    // Path for dynamic parameter setttings
-    target_paths.push_back("settings.fw.*.*[*]");
-    target_paths.push_back("settings.fw.*.*");
-    
     if (vm.count("serverip"))
     {
         SPDLOG_INFO("server ip {}", vm["serverip"].as<std::string>());
-        client = new UDPValueMonitor(vm["serverip"].as<std::string>(), 7947,
-                                        target_paths, handle_update);
+        client = new UDPValueMonitor(vm["serverip"].as<std::string>(), 7947);
+
+        client->watchDeviceID(handle_device_id);
+        client->watch("audio_streams", handle_streams);
+        client->watchPattern("settings.fw.*.*[*]", handle_parameter);
+        client->watchPattern("settings.fw.*.*", handle_parameter);
+
         client->watch("settings.firmware.amp_control",
-                      [](const std::string &path, const Json::Value &old_val,
-                         const Json::Value &new_val) {
-                          handle_amp_control_update(path, old_val, new_val);
-                      });
+                  [](const std::string &path, const Json::Value &old_val,
+                     const Json::Value &new_val) {
+                      handle_amp_control_update(path, old_val, new_val);
+                  });
     }
 
     // if we boot up on empty config, no need to start up telemetry

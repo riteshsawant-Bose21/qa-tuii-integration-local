@@ -318,3 +318,9 @@ type FirmwareErrorResponse struct {
 	Error   string `json:"error"`
 	Message string `json:"message,omitempty"`
 }
+
+type FirmwareInfo struct {
+	BuildConfiguration struct {
+		FirmwareBundleVersion string `json:"FIRMWARE_BUNDLE_VERSION"`
+	} `json:"build_configuration"`
+}

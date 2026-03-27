@@ -11,23 +11,24 @@ import (
 type NotifyOp string
 
 const (
-	NotifyOpAck               NotifyOp = "ack"
-	NotifyOpAudioRemove       NotifyOp = "audio_remove"
-	NotifyOpAudioSync         NotifyOp = "audio_sync"
-	NotifyOpConfigUpdate      NotifyOp = "config_update"
-	NotifyOpDeviceUpdate      NotifyOp = "device_update"
-	NotifyOpNoop              NotifyOp = "no_op"
-	NotifyOpSnapActivate      NotifyOp = "snapshot_activate"
-	NotifyOpSnapCreate        NotifyOp = "snapshot_create"
-	NotifyOpSnapDelete        NotifyOp = "snapshot_delete"
-	NotifyOpSnapSave          NotifyOp = "snapshot_save"
-	NotifyOpTaskCreate        NotifyOp = "task_create"
-	NotifyOpTaskDelete        NotifyOp = "task_delete"
-	NotifyOpTaskUpdate        NotifyOp = "task_update"
-	NotifyOpFirmwareAvailable NotifyOp = "firmware_available"
-	NotifyOpVIPStatus         NotifyOp = "vip_status"
-	NotifyOpValueGet          NotifyOp = "get"
-	NotifyOpValueSet          NotifyOp = "set"
+	NotifyOpAck                       NotifyOp = "ack"
+	NotifyOpAudioRemove               NotifyOp = "audio_remove"
+	NotifyOpAudioSync                 NotifyOp = "audio_sync"
+	NotifyOpConfigUpdate              NotifyOp = "config_update"
+	NotifyOpDeviceUpdate              NotifyOp = "device_update"
+	NotifyOpGetLocalDeviceInformation NotifyOp = "get_local_device_information"
+	NotifyOpNoop                      NotifyOp = "no_op"
+	NotifyOpSnapActivate              NotifyOp = "snapshot_activate"
+	NotifyOpSnapCreate                NotifyOp = "snapshot_create"
+	NotifyOpSnapDelete                NotifyOp = "snapshot_delete"
+	NotifyOpSnapSave                  NotifyOp = "snapshot_save"
+	NotifyOpTaskCreate                NotifyOp = "task_create"
+	NotifyOpTaskDelete                NotifyOp = "task_delete"
+	NotifyOpTaskUpdate                NotifyOp = "task_update"
+	NotifyOpVIPStatus                 NotifyOp = "vip_status"
+	NotifyOpValueGet                  NotifyOp = "get"
+	NotifyOpValueSet                  NotifyOp = "set"
+  NotifyOpFirmwareAvailable NotifyOp = "firmware_available"
 )
 
 // NotifyMessage holds information about a cross-node message
@@ -117,7 +118,8 @@ func (msg *NotifyMessage) IsPublic() bool {
 	return msg.Operation == NotifyOpConfigUpdate ||
 		msg.Operation == NotifyOpSnapActivate ||
 		msg.Operation == NotifyOpAck ||
-		msg.Operation == NotifyOpVIPStatus
+		msg.Operation == NotifyOpVIPStatus ||
+		msg.Operation == NotifyOpDeviceUpdate
 }
 
 func WithAudioRemove(update *AudioRemoveUpdate) func(*NotifyMessage) {
@@ -159,5 +161,10 @@ func WithFirmwareUpdate(update *FirmwareSyncUpdate) func(*NotifyMessage) {
 func WithVersionUpdate(update *VersionUpdate) func(*NotifyMessage) {
 	return func(m *NotifyMessage) {
 		m.VersionUpdate = update
+  }
+}
+func WithDeviceInfo(info *DeviceInfo) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.DeviceInfo = info
 	}
 }

@@ -149,6 +149,7 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
       locationEntity: LocationModel(listeningAreaId: selectedAreaId, floorId: floorId),
       sku: selectedItem.id,
       price: selectedItem.price,
+      pagingSourceType: selectedItem.pagingSourceType,
       portData: HardwarePortData(
         inputPorts: 0,
         outputPorts: 1,

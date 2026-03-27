@@ -1,0 +1,18 @@
+info:
+  name: Delete
+  type: http
+  seq: 3
+
+http:
+  method: DELETE
+  url: "{{api_url}}/tasks/:id"
+  params:
+    - name: id
+      value: Config
+      type: path
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
