@@ -75,7 +75,10 @@ runs:
             Write-Output "ERROR: .env not found!"
             exit 1
         }
-        "y" | flutter pub cache clean && flutter pub get --suppress-analytics *> $null
+        "y" | flutter pub cache clean
+        if ($LASTEXITCODE -eq 0) {
+            flutter pub get --suppress-analytics *> $null
+        }
         moon run flutter-apps:win-automation-build
         E:\'Program Files (x86)'\NSIS\makensis.exe C:\Users\Administrator\Documents\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher\windows\Installer\NSIS\fusion_launcher_automation_build.nsi
 
