@@ -22,9 +22,6 @@ inputs:
   SM_CLIENT_CERT_PASSWORD:
     description: 'Secure Mail Client Certificate Password for code signing'
     required: true
-  branch_name:
-    description: 'Name of the branch from which automation build will be triggered'
-    required: true
 runs:
   using: "composite"
   steps:
@@ -55,7 +52,6 @@ runs:
     - name: Clone project
       uses: actions/checkout@v4
       with:
-        ref: ${{ inputs.branch_name }}
         path: C:\Users\Administrator\actions-runner\_work\fusion-monorepo\fusion-monorepo\fusion-automation-build
         sparse-checkout: |
           apps/frontend/flutter-apps/fusion-launcher
@@ -79,7 +75,7 @@ runs:
             Write-Output "ERROR: .env not found!"
             exit 1
         }
-
+        flutter pub cache clean
         flutter pub get --suppress-analytics *> $null
         moon run flutter-apps:win-automation-build
         E:\'Program Files (x86)'\NSIS\makensis.exe C:\Users\Administrator\Documents\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher\windows\Installer\NSIS\fusion_launcher_automation_build.nsi
