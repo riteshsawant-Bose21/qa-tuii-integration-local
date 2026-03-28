@@ -3,10 +3,6 @@ name: Fusion-App-Windows-Automation-Build
 # Only run on commits, not when tags added
 on:
   workflow_dispatch:
-    inputs:
-      branch_name:
-        description: 'Name of the branch from which automation build will be triggered'
-        required: true
 
 permissions:
   actions: read
@@ -23,8 +19,6 @@ jobs:
     steps:
       - name: Clone project
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.branch_name }}
 
       - name: Build Windows desktop automation app
         uses: ./.github/reusable-actions/build-flutter-windows-automation
@@ -36,4 +30,3 @@ jobs:
           cert_thumbprint: ${{ secrets.CERT_THUMBPRINT }}
           SM_API_KEY: ${{ secrets.SM_API_KEY }}
           SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
-          branch_name: ${{ github.event.inputs.branch_name }}
