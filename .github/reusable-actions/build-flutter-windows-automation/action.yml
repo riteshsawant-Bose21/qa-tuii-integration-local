@@ -76,7 +76,10 @@ runs:
             exit 1
         }
         robocopy C:\temp\empty C:\Users\Administrator\AppData\Local\Pub\Cache /MIR | Out-Null
-        if ($LASTEXITCODE -le 7) { exit 0 } else { exit $LASTEXITCODE }
+        if ($LASTEXITCODE -gt 7) {
+            exit $LASTEXITCODE
+        }
+        $global:LASTEXITCODE = 0
         flutter pub get --suppress-analytics *> $null
         moon run flutter-apps:win-automation-build
         E:\'Program Files (x86)'\NSIS\makensis.exe C:\Users\Administrator\Documents\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher\windows\Installer\NSIS\fusion_launcher_automation_build.nsi
