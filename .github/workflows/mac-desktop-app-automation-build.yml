@@ -1,4 +1,4 @@
-name: Fusion-App-Windows-Automation-Build
+name: Fusion-App-Mac-Automation-Build
 
 # Only run on commits, not when tags added
 on:
@@ -10,23 +10,25 @@ permissions:
   pull-requests: write
 
 jobs:
-  flutter-windows-build:
+  flutter-mac-automation-build:
     concurrency:
-      group: flutter-windows-build
-    runs-on: windows-actions-build-agent
+      group: flutter-mac-automation-build
+    runs-on: mac-agent-actions-runner
     timeout-minutes: 30
 
     steps:
       - name: Clone project
         uses: actions/checkout@v4
 
-      - name: Build Windows desktop automation app
-        uses: ./.github/reusable-actions/build-flutter-windows-automation
+      - name: Setup Monorepo Toolchain
+        uses: ./.github/reusable-actions/setup-toolchain
+
+      - name: Build Apps
+        uses: ./.github/reusable-actions/build-flutter-mac-automation
         with:
           flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
           nexus_password: ${{ secrets.NEXUS_PASSWORD }}
           nexus_url: ${{ secrets.NEXUS_BASE_URL }}
           keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
-          cert_thumbprint: ${{ secrets.CERT_THUMBPRINT }}
-          SM_API_KEY: ${{ secrets.SM_API_KEY }}
-          SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
+          notarize_apple_id: ${{ secrets.NOTARIZE_APPLE_ID }}
+          notarize_app_password: ${{ secrets.NOTARIZE_APP_PASSWORD }}
