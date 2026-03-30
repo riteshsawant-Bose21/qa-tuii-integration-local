@@ -414,7 +414,7 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
     bool marker, malformed, duplicate, reorder = false, late;
     u16 metrics_flags = 0;
 
-    current_phc_ns = rtp_mgr->ops->get_phc_ns();
+    current_phc_ns = rtp_mgr->ops->get_tick_ns(rtp_mgr->cn_mgr);
 
     if (unlikely(!packet))
         return NF_ACCEPT;

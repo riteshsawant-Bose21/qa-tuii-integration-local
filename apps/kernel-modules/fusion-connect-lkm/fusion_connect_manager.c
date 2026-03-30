@@ -104,6 +104,13 @@ u64 fusion_cn_get_phc_ns(void)
     return fusion_gpt_read_phc_ns();
 }
 
+static u64 fusion_cn_get_tick_ns(void *cn_mgr)
+{
+    struct fusion_cn_manager *mgr = cn_mgr;
+
+    return READ_ONCE(mgr->tick_ns);
+}
+
 /* helpers: compute how many interrupts are due, and advance state */
 static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u64 tick_ns)
 { 
@@ -354,6 +361,7 @@ static int fusion_cn_state_init(struct fusion_cn_manager *mgr)
 
 static struct fusion_cn_rtp_ops rtp_ops = {
     .get_phc_ns = fusion_cn_get_phc_ns,
+    .get_tick_ns = fusion_cn_get_tick_ns,
     .get_buffer = fusion_cn_rtp_ops_get_buffer,
     .get_buffer_size_in_frames = fusion_cn_rtp_ops_get_buffer_size_in_frames,
     .get_buffer_offset = fusion_cn_rtp_ops_get_buffer_offset

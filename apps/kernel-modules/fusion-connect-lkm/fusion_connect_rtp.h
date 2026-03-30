@@ -40,6 +40,7 @@ struct fusion_cn_stream_config {
 
 struct fusion_cn_rtp_ops {
     u64  (*get_phc_ns)(void);
+    u64  (*get_tick_ns)(void *cn_mgr);
     void *(*get_buffer)(void *alsa_stream);
     u32  (*get_buffer_size_in_frames)(void *alsa_stream);
     u32  (*get_buffer_offset)(void *alsa_stream);

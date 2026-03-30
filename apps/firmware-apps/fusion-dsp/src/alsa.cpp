@@ -146,6 +146,9 @@ private:
     static std::vector<AlsaFormat> alsa_formats;
     std::string device_name;
     bool is_input;
+    int playback_start_threshold_frames;
+    int queued_before_start = 0;
+    bool playback_started = false;
     State current_state = DEVICE_STATE_CLOSED;
     bosepro::AudioSubtask deferred_open_task;
     static pthread_mutex_t open_mutex;
@@ -253,6 +256,7 @@ AlsaDevice::AlsaDevice(const std::string &device_name, int channels,
       period_size(period_size), max_transfer_size(max_transfer_size),
       hw_params(nullptr), sw_params(nullptr), device_name(device_name),
       is_input(is_input),
+      playback_start_threshold_frames(period_size),
       deferred_open_task(deferred_open, this, sample_rate, 500 * period_size,
                          period_size)
 {
@@ -313,6 +317,9 @@ void AlsaDevice::open_device()
     {
         SPDLOG_ERROR("Failed to prepare ALSA device: {}", snd_strerror(error));
     }
+
+    queued_before_start = 0;
+    playback_started = false;
     pthread_mutex_unlock(&open_mutex);
 
     ALSA_DEVICE_SET_STATE(DEVICE_STATE_STREAMING, "Opened device {}",
@@ -510,19 +517,6 @@ void AlsaDevice::write(const float *buffer, int samples)
 
     convert_write(buffer, sample_buffer.get(), channels, samples);
 
-    if (snd_pcm_state(alsa) == SND_PCM_STATE_PREPARED)
-    {
-        int start = snd_pcm_start(alsa);
-
-        if (start < 0)
-        {
-            ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
-                                  "Unable to start {}: {}",
-                                  device_name.c_str(), snd_strerror(start));
-            return;
-        }
-    }
-
     int res = snd_pcm_writei(alsa, sample_buffer.get(), samples);
 
     if (res < 0)
@@ -547,6 +541,34 @@ void AlsaDevice::write(const float *buffer, int samples)
     {
         ALSA_DEVICE_SET_STATE(DEVICE_STATE_STREAMING,
                               "Device {} resumed writing", device_name.c_str());
+    }
+
+    if (!is_input)
+    {
+        snd_pcm_state_t state = snd_pcm_state(alsa);
+
+        if (state != SND_PCM_STATE_PREPARED)
+        {
+            playback_started = true;
+        }
+        else if (!playback_started && res > 0)
+        {
+            queued_before_start += res;
+            if (queued_before_start >= playback_start_threshold_frames)
+            {
+                int start = snd_pcm_start(alsa);
+
+                if (start < 0)
+                {
+                    ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                                          "Unable to start {}: {}",
+                                          device_name.c_str(), snd_strerror(start));
+                    return;
+                }
+
+                playback_started = true;
+            }
+        }
     }
 }
 
