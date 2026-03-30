@@ -201,6 +201,67 @@ const struct base_device bd_fusion_powersmart = {
     }
 };
 
+const struct base_device bd_fusion_powersmart-rev2 = {
+    .data = {
+        .model = "powersmart-rev2",
+        .sn = "tbd",
+        .type = BD_TYPE_FUSION_POWERSMART
+    },
+    .num_eps = 1,
+    .endpoints = (struct endpoint[]) {
+        SI5351B_ENDPOINT_INIT
+    },
+    .num_gpios = 7,
+    .gpios = (struct endpoint_gpio[]) {
+        {
+            .name = "gpio_GPIO1_IO5",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .num = 5 // GPIO1_IO5
+        },
+        {
+            .name = "gpio_amp_mute",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .num = 10 // GPIO1_IO10
+        },
+        {
+            .name = "gpio_amp_net_wake",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .num = 11, // GPIO1_IO11
+            .dir = EP_GPIO_DIR_I
+        },
+        {
+            .name = "GPIO1_IO14",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .num = 14 // GPIO1_IO14
+        },
+        {
+            .name = "gpio_uv_warn",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .num = 133, // GPIO5_IO5
+            .dir = EP_GPIO_DIR_I
+        }
+    },
+    .cfg_seq = {
+        .num_pwrup_cmds = 1,
+        .pwrup_cmds = (struct config_sequence_cmd[]) {
+            {
+                .name = "si5351b_config",
+                .parent_ep_name = "ep_clk_si5351b",
+                .num_msgs = SI5351B_NUM_MSGS,
+                .msgs = (struct endpoint_cmd_msg[]) {
+                    SI5351B_CONFIG_MSGS
+                },
+                .seq_delay_ms = SI5351B_SEQ_DELAY_MS
+            }
+        }
+    }
+};
+
 const struct base_device bd_fusion_c1_evk = {
     .data = {
         .model = "c1-evk",
@@ -2200,6 +2261,7 @@ const struct base_device bd_fusion_blue_pal = {
 
 const enum base_device_type default_bd_types[] = {
     BD_TYPE_FUSION_POWERSMART,
+    BD_TYPE_FUSION_POWERSMART_REV2
     BD_TYPE_FUSION_C1_EVK,
     BD_TYPE_FUSION_FM6,
     BD_TYPE_FUSION_FM8Y,
@@ -2210,6 +2272,7 @@ const enum base_device_type default_bd_types[] = {
 
 const struct base_device *default_bds[] = {
     &bd_fusion_powersmart,
+    &bd_fusion_powersmart-rev2,
     &bd_fusion_c1_evk,
     &bd_fusion_fm6,
     &bd_fusion_fm8y,
