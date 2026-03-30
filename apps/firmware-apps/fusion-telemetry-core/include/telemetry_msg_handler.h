@@ -16,6 +16,8 @@ struct HandlerContext;
 
 #define REQ_RESP_ARG_SIZE 256
 
+void set_device_id(const std::string &device_id);
+
 int process_pub_register_req(bosepro::telemetryManager& telm_mgr,
                              const bosepro::Telemetry_configuration& proc_pkt,
                              uint64_t& pkt_id, std::string& req_name,
