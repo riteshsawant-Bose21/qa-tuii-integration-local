@@ -105,7 +105,7 @@ u64 fusion_cn_get_phc_ns(void)
 }
 
 /* helpers: compute how many interrupts are due, and advance state */
-static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u64 now_ns)
+static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u64 tick_ns)
 { 
     int count = 0;
 
@@ -117,7 +117,7 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u6
 
         // we may want to catch up and playback a bunch of frames, up to buf_size_in_packets worth
         while (count < s->buf_size_in_packets) {
-            s64 delta = (s64)now_ns - (s64)s->next_action_times[s->playback_index];
+            s64 delta = (s64)tick_ns - (s64)s->next_action_times[s->playback_index];
             // If packet is little bit in the future, play it back
             if (delta < 0 && (u64)-(delta) > EARLY_SLACK_NS) {
                 break;
@@ -126,7 +126,7 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u6
                 break;
             }
 
-            if (g_fusion_cn_mgr->debug) pr_debug("fusion_cn: compute_sink: stream %s playback_idx=%u count=%u now=%llu\n", s->info.stream_name, s->playback_index, count, now);
+            if (g_fusion_cn_mgr->debug) pr_debug("fusion_cn: compute_sink: stream %s playback_idx=%u count=%u now=%llu\n", s->info.stream_name, s->playback_index, count, tick_ns);
 
             if (++s->playback_index >= s->buf_size_in_packets)
                 s->playback_index = 0;
@@ -137,20 +137,20 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u6
     return count;
 }
 
-static inline int rtp_compute_source_interrupts(struct fusion_cn_rtp_stream *s, u64 now_ns)
+static inline int rtp_compute_source_interrupts(struct fusion_cn_rtp_stream *s, u64 tick_ns)
 {
     int count = 0;
     u64 action_time;
 
     spin_lock(&s->lock);
     if (s->next_action_time == 0)
-        s->next_action_time = now_ns;
-
+        s->next_action_time = tick_ns;
+        
     action_time = s->next_action_time;
 
     // loop for packet times less than 1/3ms
     // 1/3 ms packet time streams are on grid--otherwise they're not
-    while (action_time <= (now_ns + EARLY_SLACK_NS)) {
+    while (action_time <= (tick_ns + EARLY_SLACK_NS)) {
         action_time += s->packet_time;
         count++;
     }
@@ -162,6 +162,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
 {
     struct stream_node *node, *tmp;
     unsigned long flags;
+    u64 tick_ns;
 
     struct {
         struct fusion_cn_rtp_stream *rtp;
@@ -172,6 +173,8 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
 
     if (!atomic_read(&mgr->state.is_started))
         return;
+
+    tick_ns = READ_ONCE(mgr->tick_ns);
 
     /* -------- Phase 1: FusionConnect sinks (low latency priority) -------- */
     read_lock_irqsave(&mgr->rtp.lock, flags);
@@ -186,7 +189,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
 
         /* compute due interrupts with stream->lock, still under mgr->rtp.lock */
         {
-            int n = rtp_compute_sink_interrupts(r, mgr->tick_ns);
+            int n = rtp_compute_sink_interrupts(r, tick_ns);
             if (n > 0 && fn_sink_cnt < 32) {
                 if (!kref_get_unless_zero(&r->ref))
                     continue;
@@ -222,7 +225,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         if (!r || !a) continue;
         if (!atomic_read(&r->is_running) || !r->info.is_source || !r->info.is_fusion_connect) continue;
 
-        int n = rtp_compute_source_interrupts(r, mgr->tick_ns);
+        int n = rtp_compute_source_interrupts(r, tick_ns);
         if (n > 0 && other_cnt < 32) {
             if (!kref_get_unless_zero(&r->ref)) continue;
             if (!kref_get_unless_zero(&a->ref)) { kref_put(&r->ref, fusion_cn_rtp_stream_release); continue; }
@@ -237,7 +240,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         if (!r || !a) continue;
         if (!atomic_read(&r->is_running) || r->info.is_source || r->info.is_fusion_connect) continue;
 
-        int n = rtp_compute_sink_interrupts(r, mgr->tick_ns);
+        int n = rtp_compute_sink_interrupts(r, tick_ns);
         if (n > 0 && other_cnt < 32) {
             if (!kref_get_unless_zero(&r->ref)) continue;
             if (!kref_get_unless_zero(&a->ref)) { kref_put(&r->ref, fusion_cn_rtp_stream_release); continue; }
@@ -252,7 +255,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         if (!r || !a) continue;
         if (!atomic_read(&r->is_running) || !r->info.is_source || r->info.is_fusion_connect) continue;
 
-        int n = rtp_compute_source_interrupts(r, mgr->tick_ns);
+        int n = rtp_compute_source_interrupts(r, tick_ns);
         if (n > 0 && other_cnt < 32) {
             if (!kref_get_unless_zero(&r->ref)) continue;
             if (!kref_get_unless_zero(&a->ref)) { kref_put(&r->ref, fusion_cn_rtp_stream_release); continue; }
@@ -381,7 +384,7 @@ static void fusion_cn_gpt_tick(void *ctx, u64 tick_ns)
 {
     struct fusion_cn_manager *mgr = ctx;
 
-    mgr->tick_ns = tick_ns;
+    WRITE_ONCE(mgr->tick_ns, tick_ns);
 
     fusion_cn_queue_process();
 }
@@ -914,7 +917,6 @@ struct fc_get_timing_status_reply
     bool discipline_ready;
     bool epoch_valid;
     bool aligned;
-    bool pps_rebasing_active;
     u32  pps_seq;
 } __packed;
 
@@ -932,7 +934,6 @@ static int handle_get_timing_status(struct fusion_cn_manager *mgr,
     r.discipline_ready = status.discipline_ready;
     r.epoch_valid = status.epoch_valid;
     r.aligned = status.aligned;
-    r.pps_rebasing_active = status.pps_rebasing_active;
     r.pps_seq = status.pps_seq;
 
     reply->data = kmemdup(&r, sizeof(r), GFP_KERNEL);

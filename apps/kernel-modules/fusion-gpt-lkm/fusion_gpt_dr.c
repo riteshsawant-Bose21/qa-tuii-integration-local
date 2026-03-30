@@ -157,7 +157,9 @@ struct fusion_gpt
 	bool phc_epoch_valid;
 	raw_spinlock_t pps_lock;      /* protects the PPS/epoch fields */
 
-	bool phc_aligned;             /* true after one-shot phase align */
+	bool phc_aligned;             /* true after PPS has phased OF1 onto the PHC grid */
+	u64  next_tick_phc_ns;        /* PHC time corresponding to the next OF1 client tick */
+	u8   tick_phase;              /* 0/1/2 modulo-3 phase for 333333/333333/333334 ns cadence */
 
 	/* "Arm-next-PPS" anchor from userspace (pps_seq == 0 mode) */
 	bool pending_future_anchor;
@@ -439,6 +441,8 @@ static void gpt_reset_timing_state_locked(struct fusion_gpt *g)
 	g->pps_epoch_cnt64 = 0;
 	g->phc_epoch_valid = false;
 	g->phc_aligned = false;
+	g->next_tick_phc_ns = 0;
+	g->tick_phase = 0;
 	g->pending_future_anchor = false;
 	g->pending_future_phc_ns = 0;
 	g->latest_freq_error = 0;
@@ -478,30 +482,39 @@ static u64 gpt_read_ticks64(struct fusion_gpt *g)
 	return (hi | lo);
 }
 
-static bool gpt_client_tick_ready(struct fusion_gpt *g)
-{
-	unsigned long flags;
-	bool discipline_ready;
-	bool epoch_valid;
-	bool aligned;
-
-	raw_spin_lock_irqsave(&g->pps_lock, flags);
-	discipline_ready = g->discipline_ready;
-	epoch_valid = g->phc_epoch_valid;
-	aligned = g->phc_aligned;
-	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
-
-	return discipline_ready && epoch_valid && aligned;
-}
-
 static inline void gpt_fusion_cn_tick(struct fusion_gpt *g)
 {
-	if (!gpt_client_tick_ready(g))
+	unsigned long flags;
+	bool ready;
+	u64 tick_phc_ns = 0;
+	u64 step_ns;
+	u8 next_phase;
+	const struct fusion_gpt_client_ops *ops;
+	void *ops_ctx;
+
+	raw_spin_lock_irqsave(&g->pps_lock, flags);
+	ready = g->discipline_ready && g->phc_epoch_valid && g->phc_aligned;
+	if (ready) {
+		tick_phc_ns = g->next_tick_phc_ns;
+		next_phase = g->tick_phase + 1;
+		if (next_phase == 3) {
+			next_phase = 0;
+			step_ns = 333334ULL;
+		} else {
+			step_ns = 333333ULL;
+		}
+		g->next_tick_phc_ns += step_ns;
+		g->tick_phase = next_phase;
+	}
+	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
+
+	if (!ready)
 		return;
 
-	const struct fusion_gpt_client_ops *ops = READ_ONCE(g->ops);
+	ops = READ_ONCE(g->ops);
+	ops_ctx = READ_ONCE(g->ops_ctx);
 	if (ops && ops->tick)
-		ops->tick(g->ops_ctx, gpt_read_ticks64(g));
+		ops->tick(ops_ctx, tick_phc_ns);
 }
 
 static void gpt_rephase_of1_from_pps_locked(struct fusion_gpt *g, u64 cap64)
@@ -516,6 +529,8 @@ static void gpt_rephase_of1_from_pps_locked(struct fusion_gpt *g, u64 cap64)
 	g->next_ocr1 = next;
 	wrl(g, g->next_ocr1, GPT_OCR1);
 	g->phc_aligned = true;
+	g->next_tick_phc_ns = g->phc_epoch_ns + 333333ULL;
+	g->tick_phase = 1;
 }
 
 static void gpt_rebase_phc_epoch_locked(struct fusion_gpt *g, u64 cap64,
@@ -684,7 +699,6 @@ int fusion_gpt_get_timing_status(struct fusion_gpt_timing_status *status)
 	status->discipline_ready = READ_ONCE(g->discipline_ready);
 	status->epoch_valid = g->phc_epoch_valid;
 	status->aligned = READ_ONCE(g->phc_aligned);
-	status->pps_rebasing_active = g->phc_epoch_valid && !g->pending_future_anchor;
 	status->pps_seq = g->pps_seq;
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 	rcu_read_unlock();

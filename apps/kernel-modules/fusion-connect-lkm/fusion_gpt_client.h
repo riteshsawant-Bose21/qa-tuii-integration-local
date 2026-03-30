@@ -3,16 +3,15 @@
 #include <linux/types.h>
 #include <linux/module.h>
 
-/* Called once per GPT compare (1/3 ms). Softirq context (irq_work). */
+/* Called once per GPT compare (1/3 ms) with the grid-locked PHC time for that tick. Direct IRQ context. */
 struct fusion_gpt_client_ops {
-    void (*tick)(void *ctx, u64 gpt_tick64);
+    void (*tick)(void *ctx, u64 tick_phc_ns);
 };
 
 struct fusion_gpt_timing_status {
 	bool discipline_ready;
 	bool epoch_valid;
 	bool aligned;
-	bool pps_rebasing_active;
 	u32 pps_seq;
 };
 

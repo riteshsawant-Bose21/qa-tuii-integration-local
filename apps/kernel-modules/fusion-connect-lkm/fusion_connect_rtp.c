@@ -684,7 +684,26 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
                scheduled_send_ns);
     }
 
-    stream->next_action_time += stream->packet_time;
+    if (stream->packet_time == TIMER_BASE_INTERVAL_NS) {
+        u64 phc_now_ns = rtp_mgr->ops->get_phc_ns();
+        u64 ms_base_ns = div_u64(phc_now_ns, NSEC_PER_MSEC) * NSEC_PER_MSEC;
+        u64 ns_from_ms_boundary = phc_now_ns - ms_base_ns;
+
+        /*
+         * Placeholder: resnap 1/3 ms sources to the next future PHC grid slot
+         * each send so they cannot drift off-grid from 333333 ns truncation.
+         */
+        if (ns_from_ms_boundary < TIMER_BASE_INTERVAL_NS) {
+            stream->next_action_time = ms_base_ns + TIMER_BASE_INTERVAL_NS;
+        } else if (ns_from_ms_boundary < (2 * TIMER_BASE_INTERVAL_NS)) {
+            stream->next_action_time = ms_base_ns + (2 * TIMER_BASE_INTERVAL_NS);
+        } else {
+            stream->next_action_time = ms_base_ns + NSEC_PER_MSEC;
+        }
+    } else {
+        stream->next_action_time += stream->packet_time;
+    }
+    
     spin_unlock(&stream->lock);
 
     fc_tx_metrics_note(rtp_mgr, stream, payload_len, scheduled_send_ns);
