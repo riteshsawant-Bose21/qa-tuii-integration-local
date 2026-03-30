@@ -46,7 +46,7 @@ class ListeningAreaPainter extends FusionPolygonPainter {
     return null;
   }
 
-  Color getColor(FusionCanvasPainter painter) => painter.context.colorScheme.elevation4;
+  Color getColor(FusionCanvasPainter painter) =>   painter.context.colorScheme.elevation4;
 
   @override
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter) {

@@ -147,6 +147,9 @@ class FusionCanvas extends StatelessWidget {
                                 );
 
                                 final FusionHoverState hoverState = context.read<FusionCanvasHoverViewModel>().state;
+                                print(
+                                  "Hover update: ${hoverState.hoveredPainterId}, element: ${hoverState.hoveredElement}, centerHandle: ${hoverState.isCenterHandleHovered}",
+                                );
                                 if (inputState is FusionCanvasInputTapUpState &&
                                     inputState.gestureOrigin == FusionGestureOrigin.click &&
                                     hoverState.isCenterHandleHovered &&

@@ -20,6 +20,7 @@ import 'package:pdfrx/pdfrx.dart';
 
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../fusion_canvas/state/fusion_canvas_input_state.dart';
+import '../../../fusion_canvas/state/tools/selection_tool_params.dart';
 import '../../../fusion_canvas/view/fusion_canvas.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/hardware_component_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/hardware_painter/floor_plan_painter.dart';
@@ -193,7 +194,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 buildingPageViewModel.state.selectedListeningAreaId!,
                                               if (buildingPageViewModel.state.selectedSpeakerId != null) buildingPageViewModel.state.selectedSpeakerId!,
                                             },
-                                            // selectionToolParams: const SelectionToolParams(enableMarqueeSelection: false, enableMultiSelect: false),
+                                            selectionToolParams: const SelectionToolParams(enableMarqueeSelection: false, enableMultiSelect: false),
                                             elements: <FusionBasePainter>[
                                               if (buildingPageViewModel.isSplMode)
                                                 SplPainter(

@@ -4,7 +4,9 @@ import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canvas_painter.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-class WiringSourcePainter extends FusionCanvasElementPainter {
+import 'port_painter.dart';
+
+class WiringSourcePainter extends FusionCanvasElementPainter with PortPainter {
   final Source source;
   WiringSourcePainter({required this.source}) : super(item: FusionCanvasItem(id: source.id));
 
@@ -16,6 +18,11 @@ class WiringSourcePainter extends FusionCanvasElementPainter {
   @override
   Size getSize() {
     return const Size(400, 150);
+  }
+
+  @override
+  List<WiringPortData> getPorts(Rect rect, FusionCanvasPainter painter) {
+    return source.outputPortsData.map((PortData port) => WiringPortData(position: rect.centerRight - Offset(portRadius + 20, 0), port: port)).toList();
   }
 
   @override
@@ -58,6 +65,8 @@ class WiringSourcePainter extends FusionCanvasElementPainter {
         fontSize: imageRect.height * 0.2,
       ),
     );
+
+    paintPorts(canvas, size, painter);
   }
 
   @override
