@@ -14,13 +14,15 @@ import '../../viewModel/output_stream_viewmodel/output_stream_viewmodel.dart';
 class OutputStreamDialog extends StatelessWidget {
   final void Function(Aes67Config stream)? onSave;
   final Aes67Config? existingStream;
+  final bool isEditing;
 
-  const OutputStreamDialog({super.key, this.onSave, this.existingStream});
+  const OutputStreamDialog({super.key, this.onSave, this.existingStream, this.isEditing = false});
 
   static Future<void> show(
     BuildContext context, {
     void Function(Aes67Config stream)? onSave,
     Aes67Config? existingStream,
+    bool isEditing = false,
   }) {
     return showGeneralDialog(
       context: context,
@@ -28,7 +30,7 @@ class OutputStreamDialog extends StatelessWidget {
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       barrierColor: Colors.black87,
       transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (BuildContext ctx, _, __) => OutputStreamDialog(onSave: onSave, existingStream: existingStream),
+      pageBuilder: (BuildContext ctx, _, __) => OutputStreamDialog(onSave: onSave, existingStream: existingStream, isEditing: isEditing),
     );
   }
 
@@ -37,8 +39,8 @@ class OutputStreamDialog extends StatelessWidget {
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
 
     return BlocProvider<OutputStreamViewmodel>(
-      create: (_) => OutputStreamViewmodel(projectViewModel: projectViewModel)..init(existingStream: existingStream),
-      child: _DialogContent(onSave: onSave),
+      create: (_) => OutputStreamViewmodel(projectViewModel: projectViewModel, streamId: existingStream?.id)..init(existingStream: existingStream),
+      child: _DialogContent(onSave: onSave, isEditing: isEditing),
     );
   }
 }
@@ -47,8 +49,9 @@ class OutputStreamDialog extends StatelessWidget {
 
 class _DialogContent extends StatelessWidget {
   final void Function(Aes67Config stream)? onSave;
+  final bool isEditing;
 
-  const _DialogContent({this.onSave});
+  const _DialogContent({this.onSave, this.isEditing = false});
 
   void _close(BuildContext context) => Navigator.of(context).pop();
 
@@ -92,7 +95,7 @@ class _DialogContent extends StatelessWidget {
                               padding: const EdgeInsets.all(24),
                               child: FusionAppText(text: message),
                             ),
-                            OutputStreamLoaded() => _LoadedBody(state: state, onSave: onSave),
+                            OutputStreamLoaded() => _LoadedBody(state: state, onSave: onSave, isEditing: isEditing),
                           },
                     ),
                   ),
@@ -155,8 +158,9 @@ class _Header extends StatelessWidget {
 class _LoadedBody extends StatelessWidget {
   final OutputStreamLoaded state;
   final void Function(Aes67Config stream)? onSave;
+  final bool isEditing;
 
-  const _LoadedBody({required this.state, this.onSave});
+  const _LoadedBody({required this.state, this.onSave, this.isEditing = false});
 
   // Fixed measurement constants — shared by every row so columns align
   static const double _labelW = 100.0; // "Name", "Session ID", etc.
@@ -233,6 +237,7 @@ class _LoadedBody extends StatelessWidget {
             }
             Navigator.of(context).pop();
           },
+          isEditing: isEditing,
         ),
       ],
     );
@@ -462,8 +467,14 @@ class _AdvancedSection extends StatelessWidget {
 class _Footer extends StatelessWidget {
   final VoidCallback onExport;
   final VoidCallback onSave;
+  final bool isEditing;
 
-  const _Footer({required this.onExport, required this.onSave});
+  const _Footer({required this.onExport, required this.onSave, this.isEditing = false});
+
+  /// Determine the button text based on mode:
+  /// - When editing: "Edit"
+  /// - When adding new: "Save"
+  String get _buttonText => isEditing ? 'Edit' : 'Save';
 
   @override
   Widget build(BuildContext context) {
@@ -495,7 +506,7 @@ class _Footer extends StatelessWidget {
             ),
           ),
 
-          // Save — filled
+          // Save/Edit — filled
           ElevatedButton(
             onPressed: onSave,
             style: ElevatedButton.styleFrom(
@@ -505,7 +516,7 @@ class _Footer extends StatelessWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             child: FusionAppText(
-              text: 'Save',
+              text: _buttonText,
               style: context.textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: context.colorScheme.primaryBlack,

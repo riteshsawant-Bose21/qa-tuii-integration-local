@@ -132,6 +132,17 @@ class _ConfigurationAes67View extends StatelessWidget {
                   context,
                   onSave: cubit.addInputStream,
                 ),
+            onRowTap: (String streamId) {
+              final Aes67Config? stream = cubit.getInputStreamById(streamId);
+              if (stream != null) {
+                InputStreamDialog.show(
+                  context,
+                  existingStream: stream,
+                  isEditing: true,
+                  onSave: cubit.updateInputStream,
+                );
+              }
+            },
             columns: _inputColumns(),
             rows: _buildInputRows(context, state.inputStreams, cubit),
           ),
@@ -148,6 +159,17 @@ class _ConfigurationAes67View extends StatelessWidget {
                   context,
                   onSave: cubit.addOutputStream,
                 ),
+            onRowTap: (String streamId) {
+              final Aes67Config? stream = cubit.getOutputStreamById(streamId);
+              if (stream != null) {
+                OutputStreamDialog.show(
+                  context,
+                  existingStream: stream,
+                  isEditing: true,
+                  onSave: cubit.updateOutputStream,
+                );
+              }
+            },
             columns: _outputColumns(),
             rows: _buildOutputRows(context, state.outputStreams, cubit),
           ),
@@ -304,6 +326,7 @@ class _StreamSection extends StatelessWidget {
   final List<FusionTableColumn> columns;
   final List<FusionTableRow> rows;
   final void Function(BuildContext context) onAdd;
+  final void Function(String rowKey)? onRowTap;
   final String emptyMessage;
 
   const _StreamSection({
@@ -313,6 +336,7 @@ class _StreamSection extends StatelessWidget {
     required this.columns,
     required this.rows,
     required this.emptyMessage,
+    this.onRowTap,
   });
 
   @override
@@ -422,6 +446,7 @@ class _StreamSection extends StatelessWidget {
               child: FusionTable(
                 columns: columns,
                 rows: rows,
+                onRowTap: onRowTap,
               ),
             ),
         ],

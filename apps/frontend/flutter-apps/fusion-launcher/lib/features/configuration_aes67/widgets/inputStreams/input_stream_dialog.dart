@@ -12,13 +12,15 @@ import 'header.dart';
 class InputStreamDialog extends StatelessWidget {
   final void Function(Aes67Config stream)? onSave;
   final Aes67Config? existingStream;
+  final bool isEditing;
 
-  const InputStreamDialog({super.key, this.onSave, this.existingStream});
+  const InputStreamDialog({super.key, this.onSave, this.existingStream, this.isEditing = false});
 
   static Future<void> show(
     BuildContext context, {
     void Function(Aes67Config stream)? onSave,
     Aes67Config? existingStream,
+    bool isEditing = false,
   }) {
     return showGeneralDialog(
       context: context,
@@ -26,7 +28,7 @@ class InputStreamDialog extends StatelessWidget {
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       barrierColor: Colors.black87,
       transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (BuildContext ctx, _, __) => InputStreamDialog(onSave: onSave, existingStream: existingStream),
+      pageBuilder: (BuildContext ctx, _, __) => InputStreamDialog(onSave: onSave, existingStream: existingStream, isEditing: isEditing),
     );
   }
 
@@ -35,16 +37,17 @@ class InputStreamDialog extends StatelessWidget {
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
 
     return BlocProvider<InputStreamViewmodel>(
-      create: (_) => InputStreamViewmodel(projectViewModel: projectViewModel)..init(existingStream: existingStream),
-      child: _InputStreamDialogContent(onSave: onSave),
+      create: (_) => InputStreamViewmodel(projectViewModel: projectViewModel, streamId: existingStream?.id)..init(existingStream: existingStream),
+      child: _InputStreamDialogContent(onSave: onSave, isEditing: isEditing),
     );
   }
 }
 
 class _InputStreamDialogContent extends StatelessWidget {
   final void Function(Aes67Config stream)? onSave;
+  final bool isEditing;
 
-  const _InputStreamDialogContent({this.onSave});
+  const _InputStreamDialogContent({this.onSave, this.isEditing = false});
 
   void _close(BuildContext context) => Navigator.of(context).pop();
 
@@ -88,7 +91,7 @@ class _InputStreamDialogContent extends StatelessWidget {
                               padding: const EdgeInsets.all(24),
                               child: FusionAppText(text: message),
                             ),
-                            InputStreamLoaded() => _DialogContent(state: state, onSave: onSave),
+                            InputStreamLoaded() => _DialogContent(state: state, onSave: onSave, isEditing: isEditing),
                           },
                     ),
                   ),
@@ -105,8 +108,9 @@ class _InputStreamDialogContent extends StatelessWidget {
 class _DialogContent extends StatelessWidget {
   final InputStreamLoaded state;
   final void Function(Aes67Config stream)? onSave;
+  final bool isEditing;
 
-  const _DialogContent({required this.state, this.onSave});
+  const _DialogContent({required this.state, this.onSave, this.isEditing = false});
 
   /// ── Fixed column measurements (shared by header rows AND every channel row
   ///    so every element lines up in a perfect two-column grid) ──────────────
@@ -245,7 +249,8 @@ class _DialogContent extends StatelessWidget {
           ),
         ),
 
-        if (isControl)
+        // Show footer when in control mode OR when editing in non-control mode (to allow name editing)
+        if (isControl || isEditing)
           _Footer(
             onImport: cubit.importSdp,
             onConfirm: () {
@@ -257,6 +262,8 @@ class _DialogContent extends StatelessWidget {
               }
               Navigator.of(context).pop();
             },
+            isEditing: isEditing,
+            isControlMode: isControl,
           ),
       ],
     );
@@ -625,8 +632,20 @@ class _SessionTableRow extends StatelessWidget {
 class _Footer extends StatelessWidget {
   final VoidCallback onImport;
   final VoidCallback onConfirm;
+  final bool isEditing;
+  final bool isControlMode;
 
-  const _Footer({required this.onImport, required this.onConfirm});
+  const _Footer({
+    required this.onImport,
+    required this.onConfirm,
+    this.isEditing = false,
+    this.isControlMode = false,
+  });
+
+  /// Determine the button text based on mode:
+  /// - When editing: "Edit"
+  /// - When adding new: "Save"
+  String get _buttonText => isEditing ? 'Edit' : 'Save';
 
   @override
   Widget build(BuildContext context) {
@@ -640,25 +659,28 @@ class _Footer extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
-          // Import SDP
-          OutlinedButton(
-            onPressed: onImport,
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: context.colorScheme.strokeLight),
-              foregroundColor: context.colorScheme.textPrimary,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: FusionAppText(
-              text: 'Import SDP Configuration',
-              style: context.textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w500,
-                color: context.colorScheme.textPrimary,
+          // Import SDP - only show in control mode
+          if (isControlMode)
+            OutlinedButton(
+              onPressed: onImport,
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: context.colorScheme.strokeLight),
+                foregroundColor: context.colorScheme.textPrimary,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-            ),
-          ),
+              child: FusionAppText(
+                text: 'Import SDP Configuration',
+                style: context.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: context.colorScheme.textPrimary,
+                ),
+              ),
+            )
+          else
+            const SizedBox.shrink(),
 
-          // Select Session
+          // Save button
           ElevatedButton(
             onPressed: onConfirm,
             style: ElevatedButton.styleFrom(
@@ -668,7 +690,7 @@ class _Footer extends StatelessWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             child: FusionAppText(
-              text: 'Select Session',
+              text: _buttonText,
               style: context.textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: context.colorScheme.primaryBlack,
