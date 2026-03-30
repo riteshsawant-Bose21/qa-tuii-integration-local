@@ -22,9 +22,8 @@ class SemanticHelper {
       container: true,
       enabled: isEnabled,
       label: label,
-      selected: isSelected,
       child: child,
-      checked: isEnabled,
+      checked: isSelected,
     );
   }
 
