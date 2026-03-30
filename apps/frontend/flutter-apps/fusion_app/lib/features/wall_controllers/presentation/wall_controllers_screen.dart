@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_app/core/router/routes.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/app_bar/app_bar.dart';
-import 'package:fusion_app/features/shared/presentation/widgets/common/button.dart';
+import 'package:fusion_app/features/shared/presentation/widgets/common/button/button.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/empty_state.dart';
 import 'package:fusion_app/features/wall_controllers/models/wall_controller_model.dart';
 import 'package:fusion_app/features/wall_controllers/widgets/wall_controller_card.dart';

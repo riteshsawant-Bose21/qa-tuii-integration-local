@@ -22,6 +22,7 @@ class StatsSection extends StatelessWidget {
     return GridView.builder(
       padding: EdgeInsets.only(left: 16,right: 16),
       itemCount: items.length,
+      physics: NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,      // columns

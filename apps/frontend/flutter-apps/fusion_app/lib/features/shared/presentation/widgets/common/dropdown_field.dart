@@ -24,7 +24,7 @@ class CommonDropdownField extends StatelessWidget {
         children: [
           Text(
             label,
-            style:Theme.of(context).textTheme.l1Medium!.copyWith(
+            style:Theme.of(context).textTheme.l1Medium.copyWith(
               fontWeight: FontWeight.w500,
               color: context.colorScheme.textPrimary,
             ),
@@ -49,33 +49,6 @@ class CommonDropdownField extends StatelessWidget {
 
           ),
         ],
-      ),
-    );
-  }
-  InputDecoration _inputDecoration(String? hint,BuildContext context) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: TextStyle(
-        color: context.colorScheme.textSecondary.withValues(alpha: 0.4),
-      ),
-
-      filled: true,
-      fillColor: context.colorScheme.primaryBlack,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 16,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide:  BorderSide(
-          color:context.colorScheme.strokeDark,
-        ),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide:  BorderSide(
-          color:  context.colorScheme.primary,
-        ),
       ),
     );
   }

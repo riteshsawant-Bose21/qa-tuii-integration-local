@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_app/features/commission/models/bluetooth_device_model.dart';
 import 'package:fusion_app/features/commission/widgets/hardware_item.dart';
-import 'package:fusion_app/features/shared/presentation/widgets/common/button.dart';
+import 'package:fusion_app/features/shared/presentation/widgets/common/button/button.dart';
 import 'package:fusion_app/features/zones/models/zone_source_model.dart';
 import 'package:fusion_app/features/zones/widgets/source_item.dart';
 import 'package:fusion_lib/fusion_lib.dart';

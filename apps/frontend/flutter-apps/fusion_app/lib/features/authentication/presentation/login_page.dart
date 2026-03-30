@@ -3,7 +3,7 @@ import 'package:fusion_app/core/router/routes.dart';
 import 'package:fusion_app/core/service_locator.dart';
 import 'package:fusion_app/core/utils/fusion_utils.dart';
 import 'package:fusion_app/features/authentication/viewmodel/auth_view_model.dart';
-import 'package:fusion_app/features/shared/presentation/widgets/common/button.dart';
+import 'package:fusion_app/features/shared/presentation/widgets/common/button/button.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/divider.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide FusionContainer;

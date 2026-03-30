@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+
 class WifiBanner extends StatelessWidget {
   const WifiBanner({super.key});
 
@@ -18,7 +19,7 @@ class WifiBanner extends StatelessWidget {
           Expanded(
             child: Text(
               "Join the building's Wi-Fi network to continue",
-              style: Theme.of(context).textTheme.b3Regular!.copyWith(
+              style: Theme.of(context).textTheme.b3Regular.copyWith(
                 fontWeight: FontWeight.w400,
                 color: context.colorScheme.textPrimary,
               ),

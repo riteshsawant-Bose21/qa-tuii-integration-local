@@ -131,7 +131,7 @@ class _NotificationsAllTabState extends State<NotificationsAllTab> {
               ),
               const SizedBox(height: 12),
             ]),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
           ],
         );
       },

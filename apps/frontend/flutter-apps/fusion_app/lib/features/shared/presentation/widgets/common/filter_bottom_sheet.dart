@@ -1,45 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/app_bar/app_bar_search.dart';
+import 'package:fusion_app/features/shared/presentation/widgets/common/button/button.dart';
+import 'package:fusion_app/features/shared/presentation/widgets/common/button/outline_button.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/divider.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/text_field/text_field.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
-/// A reusable filter bottom sheet widget that displays filter options
-/// with categories and checkboxes.
-///
-/// The widget supports:
-/// - Multiple filter categories (e.g., Zones, Type, Alerts)
-/// - Search functionality across filters
-/// - Select All / Deselect functionality per category
-/// - Custom actions (Clear Filters, Apply)
-/// - Dark theme styling matching the app theme
 class FilterBottomSheet extends StatefulWidget {
-  /// Categories for the filters
-  /// Each category contains a name and list of filter options
   final List<FilterCategory> categories;
-
-  /// Callback when Apply button is pressed
-  /// Passes back the selected filters
   final Function(Map<String, List<String>>) onApply;
-
-  /// Callback when Clear Filters button is pressed
   final VoidCallback? onClearFilters;
-
-  /// Initial selected filters
-  /// Format: {'categoryName': ['option1', 'option2']}
   final Map<String, List<String>>? initialSelectedFilters;
 
-  /// Title of the bottom sheet
   final String title;
+  final bool focus;
 
-  const FilterBottomSheet({
-    Key? key,
+  const FilterBottomSheet({super.key,
     required this.categories,
     required this.onApply,
+    required this.focus,
     this.onClearFilters,
     this.initialSelectedFilters,
     this.title = 'FILTERS',
-  }) : super(key: key);
+  });
 
   @override
   State<FilterBottomSheet> createState() => _FilterBottomSheetState();
@@ -48,9 +31,10 @@ class FilterBottomSheet extends StatefulWidget {
 class _FilterBottomSheetState extends State<FilterBottomSheet> {
   late Map<String, List<String>> selectedFilters;
   late List<FilterCategory> categories;
-  String searchQuery = '';
   late String activeCategoryName;
   TextEditingController controller = TextEditingController();
+  bool searchEnabled=false;
+  FocusNode focusNode = FocusNode();
   @override
   void initState() {
     super.initState();
@@ -61,6 +45,29 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     }
     categories = widget.categories;
     activeCategoryName = categories.isNotEmpty ? categories[0].name : '';
+
+    focusNode.addListener(() {
+      print("Has focus: ${focusNode.hasFocus}");
+
+      if(focusNode.hasFocus){
+        if(!searchEnabled){
+          searchEnabled = true;
+          setState(() {
+          });
+        }
+      }else{
+        if(searchEnabled){
+          searchEnabled = false;
+          setState(() {
+          });
+        }
+      }
+
+    });
+      if(widget.focus){
+        focusNode.requestFocus();
+      }
+
   }
 
   void _toggleFilter(String categoryName, String optionName) {
@@ -115,12 +122,12 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
 
   List<FilterOption> _getFilteredOptions(String categoryName) {
     final category = categories.firstWhere((c) => c.name == categoryName);
-    if (searchQuery.isEmpty) {
+    if (controller.text.isEmpty) {
       return category.options;
     }
     return category.options
         .where((option) =>
-            option.name.toLowerCase().contains(searchQuery.toLowerCase()))
+            option.name.toLowerCase().contains(controller.text.toLowerCase()))
         .toList();
   }
 
@@ -129,86 +136,175 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.65,
-      decoration: BoxDecoration(
-        color: colorScheme.elevation1,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      child: Column(
-        children: [
-          // Header with title
-          SizedBox(height: 24,),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+    return Stack(
+      alignment: Alignment.topCenter,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 48),
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.55,
+            decoration: BoxDecoration(
+              color: colorScheme.elevation1,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      widget.title,
-                      style: textTheme.l1SemiBold.copyWith(
-                        color: colorScheme.textPrimary,
+                // Header with title
+                SizedBox(height: 24,),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            widget.title,
+                            style: textTheme.l1Regular.copyWith(
+                              color: colorScheme.textBody,
+                            ),
+                          ),
+
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // Search field
+                      Container(
+                          child:AppTextField(
+                            controller: controller,
+                            focusNode: focusNode,
+                            borderColor: colorScheme.elevation3,
+                            filledColor: colorScheme.elevation2,
+                            hint: 'Search across filters...',
+                            onChanges: (String text){
+                              setState(() {
+
+                              });
+                            },
+                            suffixIcon: controller.text.isNotEmpty ? GestureDetector(
+                              onTap: (){
+                                controller.clear();
+                                setState(() {
+
+                                });
+                              },
+                              child: Icon(
+                                  Icons.close,
+                                  color: context.colorScheme.iconDefault),
+                            ):null,
+                            prefixIcon:searchEnabled ? GestureDetector(
+                              onTap: (){
+                                focusNode.unfocus();
+                              },
+                              child: Icon(
+                                  Icons.chevron_left,
+                                  color: context.colorScheme.iconDefault),
+                            ): GestureDetector(
+                              onTap: (){
+
+                              },
+                              child: Icon(
+                                  Icons.search,
+                                  color: context.colorScheme.iconDefault),
+                            ),
+                          )),
+                    ],
+                  ),
+                ),
+                // Filter content
+                Expanded(
+                  child: Container(
+                    margin: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: colorScheme.elevation2,
+                      borderRadius: const BorderRadius.all( Radius.circular(16),
                       ),
                     ),
-
-                  ],
+                    child: buildFilterView(colorScheme, textTheme),
+                  ),
                 ),
-                const SizedBox(height: 16),
-                // Search field
-                Container(
-                    child:AppTextField(
-                      controller: controller,
-                      filledColor: colorScheme.elevation2,
-                      hint: 'Search across filters...',
-                      prefixIcon: GestureDetector(
-                        onTap: (){
-                          Navigator.pop(context);
-                        },
-                        child: Icon(
-                            Icons.search,
-                            color: context.colorScheme.iconDefault),
-                      ),
-                    )),
+                // Bottom action buttons
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _buildActionButtons(context, colorScheme, textTheme),
+                ),
+                SizedBox(height: 40,)
               ],
             ),
           ),
-          // Filter content
-          Expanded(
-            child: Container(
-              margin: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: colorScheme.elevation2,
-                borderRadius: const BorderRadius.all( Radius.circular(16),
+        ),
+        GestureDetector(
+          onTap:() =>  Navigator.pop(context),
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color:context.colorScheme.elevation1,
+              shape: BoxShape.circle,
+              boxShadow:  [
+                BoxShadow(
+                  color: context.colorScheme.elevation1,
+                  blurRadius: 12,
                 ),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Left sidebar - Category labels
-                  _buildCategorySidebar(colorScheme, textTheme),
-                  // Right side - Filter options
-                  Expanded(
-                    child: _buildFilterOptions(colorScheme, textTheme),
-                  ),
-                ],
-              ),
+              ],
             ),
+            child:  Icon(Icons.close, color:  context.colorScheme.onPrimary),
           ),
-          // Bottom action buttons
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _buildActionButtons(context, colorScheme, textTheme),
+        )
+      ],
+    );
+  }
+
+  Widget emptySearchView(){
+    return Container(
+      width: double.infinity,
+      child: Column(
+        children: [
+          SizedBox(height: 64,),
+          Text(
+            'Start searching for filters',
+            style: context.textTheme.h5BoldMobile.copyWith(
+              fontWeight: FontWeight.w700,
+              fontSize: 20,
+              color: context.colorScheme.textPrimary,
+            )
+            ),
+          SizedBox(height: 8,),
+          Text(
+              'Type and find the filter you need',
+              style: context.textTheme.b3Regular.copyWith(
+                color: context.colorScheme.textBody,
+              )
           ),
-          SizedBox(height: 40,)
         ],
       ),
     );
+  }
+
+  Widget buildFilterView(ColorScheme colorScheme, TextTheme textTheme) {
+
+    if(searchEnabled && controller.text.isEmpty){
+      return emptySearchView();
+    }else if(searchEnabled && controller.text.isNotEmpty){
+      return _buildFilterOptions(colorScheme, textTheme);
+    }
+
+
+    return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Left sidebar - Category labels
+                _buildCategorySidebar(colorScheme, textTheme),
+                // Right side - Filter options
+                Expanded(
+                  child: _buildFilterOptions(colorScheme, textTheme),
+                ),
+              ],
+            );
   }
 
 
@@ -427,44 +523,26 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     return Row(
       children: [
         Expanded(
-          child: OutlinedButton(
+          child: CustomOutlineButton(
+            enabled: ValueNotifier(controller.text.isNotEmpty ? true:false),
+            backGroundColor:  colorScheme.elevation1,
+            buttonText: 'Clear Filters',
             onPressed: _clearAllFilters,
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: colorScheme.elevation2),
-              backgroundColor: colorScheme.elevation1,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(
-              'Clear Filters',
-              style: textTheme.b2SemiBold.copyWith(
-                color: colorScheme.textSecondary,
-              ),
-            ),
           ),
+
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: ElevatedButton(
+          child:
+          CustomButton(
+            enabled: ValueNotifier(controller.text.isNotEmpty ? true:false),
+            buttonText: 'Apply',
+            bottomPadding: 0,
+            padding: EdgeInsetsGeometry.zero,
             onPressed: () {
-              widget.onApply(selectedFilters);
-              Navigator.pop(context);
+                  widget.onApply(selectedFilters);
+                  Navigator.pop(context);
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: colorScheme.elevation3,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(
-              'Apply',
-              style: textTheme.b2SemiBold.copyWith(
-                color: colorScheme.textSecondary,
-              ),
-            ),
           ),
         ),
       ],

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fusion_app/core/router/routes.dart';
 import 'package:fusion_app/features/commission/models/bluetooth_device_model.dart';
 import 'package:fusion_app/features/commission/widgets/bluetooth_device_item.dart';
-import 'package:fusion_app/features/shared/presentation/widgets/common/button.dart';
+import 'package:fusion_app/features/shared/presentation/widgets/common/button/button.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 class BluetoothAvailableScreen extends StatefulWidget {

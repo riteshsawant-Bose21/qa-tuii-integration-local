@@ -12,6 +12,8 @@ class AppTextField extends StatelessWidget {
   final Widget? suffixIcon;
   final Widget? prefixIcon;
   final Color? filledColor;
+  final Color? borderColor;
+  final FocusNode? focusNode;
 
   const AppTextField({
     required this.controller,
@@ -19,10 +21,12 @@ class AppTextField extends StatelessWidget {
     this.suffixIcon,
     this.prefixIcon,
     this.onChanges,
+    this.focusNode,
     this.enabled =true,
     this.hint,
     this.maxLines = 1,
     this.filledColor,
+    this.borderColor,
     super.key,
   });
 
@@ -33,6 +37,7 @@ class AppTextField extends StatelessWidget {
       obscureText: obscureText,
       maxLines: maxLines,
       enabled: enabled,
+      focusNode: focusNode,
       onChanged: (String data){
         if(onChanges!=null){
            onChanges!(data);
@@ -71,7 +76,7 @@ class AppTextField extends StatelessWidget {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide:  BorderSide(
-          color:  context.colorScheme.primary,
+          color:  borderColor ?? context.colorScheme.primary,
         ),
       ),
     );

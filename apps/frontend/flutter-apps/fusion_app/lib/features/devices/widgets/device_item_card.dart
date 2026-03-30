@@ -59,13 +59,20 @@ class DeviceCard extends StatelessWidget {
                 children: [
                   Icon(
                     isCritical ? Icons.shield_outlined : Icons.warning_amber,
-                    color: context.colorScheme.iconWhite,
+                    color:isCritical
+                        ? context.colorScheme.errorText
+                        : context.colorScheme.warningText,
                     size: 18,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     device.alertText,
-                    style:  TextStyle(color: context.colorScheme.textPrimary),
+                    style:  Theme.of(context).textTheme.l2Regular.copyWith(
+                      fontWeight: FontWeight.w400,
+                      color:isCritical
+                          ? context.colorScheme.errorText
+                          : context.colorScheme.warningText,
+                    )
                   ),
                 ],
               ),

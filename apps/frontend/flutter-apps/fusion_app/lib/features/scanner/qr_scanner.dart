@@ -8,7 +8,7 @@ import 'package:fusion_app/features/scanner/widgets/scan_instruction.dart';
 import 'package:fusion_app/features/scanner/widgets/scanner_painter.dart';
 import 'package:fusion_app/features/scanner/widgets/wifi_banner.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/app_bar/app_bar.dart';
-import 'package:fusion_app/features/shared/presentation/widgets/common/button.dart';
+import 'package:fusion_app/features/shared/presentation/widgets/common/button/button.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 

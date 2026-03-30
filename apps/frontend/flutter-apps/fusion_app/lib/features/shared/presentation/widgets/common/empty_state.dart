@@ -52,7 +52,7 @@ class CommonEmptyState extends StatelessWidget {
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.b3Regular!.copyWith(
+              style: Theme.of(context).textTheme.b3Regular.copyWith(
                 fontWeight: FontWeight.w400,
                 color: context.colorScheme.textBody,
               ),

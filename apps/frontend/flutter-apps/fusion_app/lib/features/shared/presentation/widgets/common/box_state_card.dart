@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_app/features/shared/presentation/widgets/common/button.dart';
+import 'package:fusion_app/features/shared/presentation/widgets/common/button/button.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'circle_icon.dart';

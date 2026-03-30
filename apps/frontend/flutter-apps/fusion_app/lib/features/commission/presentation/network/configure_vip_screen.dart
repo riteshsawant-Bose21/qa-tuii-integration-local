@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fusion_app/core/router/routes.dart';
 import 'package:fusion_app/core/services/loader_service.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/app_bar/app_bar.dart';
-import 'package:fusion_app/features/shared/presentation/widgets/common/button.dart';
+import 'package:fusion_app/features/shared/presentation/widgets/common/button/button.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/text_field/info_field.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 

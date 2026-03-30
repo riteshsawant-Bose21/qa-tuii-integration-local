@@ -65,7 +65,7 @@ class CustomButton extends StatelessWidget {
                 style: TextStyle(
                   fontSize: context.textTheme.b2SemiBold.fontSize,
                   fontWeight: FontWeight.w600,
-                  color: context.colorScheme.textPrimary,
+                  color:notifier.value == true ? context.colorScheme.textPrimary: context.colorScheme.textDisabled,
                 ),
               ),
             );

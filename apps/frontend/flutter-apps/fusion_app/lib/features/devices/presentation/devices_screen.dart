@@ -51,24 +51,30 @@ class DevicesScreen extends StatelessWidget {
       appBar: CommonAppBar(title: "Devices",actions: [
         GestureDetector(
             onTap: (){
-              _openFilter(context);
+              _openFilter(context,true);
             },
             child: Icon(Icons.search,color: context.colorScheme.textPrimary))
       ],),
       body: Column(
         children: [
-          FusionMultiFilterChips<String>(
-            items: const <String> [
-              "Filter",
-              "Equipment Location",
-              "Reception",
-              "Cardio",
-              "Weights",
-            ],
-            labelBuilder: (item) => item,
-            onChanged: (Set<dynamic> selected) {
-              print(selected);
-            },
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: FusionMultiFilterChips<String>(
+              filterLabel: "Filter",
+              items: const <String> [
+                "Equipment Location",
+                "Reception",
+                "Cardio",
+                "Weights",
+              ],
+              labelBuilder: (item) => item,
+              labelTapped: (){
+                _openFilter(context,false);
+              },
+              onChanged: (Set<dynamic> selected) {
+                print(selected);
+              },
+            ),
           ),
           Expanded(
             child: ListView.builder(
@@ -88,13 +94,14 @@ class DevicesScreen extends StatelessWidget {
     );
   }
 
-  void _openFilter(context) {
+  void _openFilter(context,bool focus) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => FilterBottomSheet(
         title: 'FILTERS',
+        focus: focus,
         categories: [
           FilterCategory(
             name: 'Zones',

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_app/features/profile/widgets/setting_switch_tile.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/app_bar/app_bar.dart';
-import 'package:fusion_app/features/shared/presentation/widgets/common/button.dart';
+import 'package:fusion_app/features/shared/presentation/widgets/common/button/button.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/divider.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/dropdown_field.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/text_field/phone_field.dart';
