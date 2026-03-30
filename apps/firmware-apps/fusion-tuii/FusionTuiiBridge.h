@@ -16,11 +16,10 @@
 #include <map>
 #include <vector>
 #include <atomic>
+#include <cstdint>
 #include <json/json.h>
 
 // ---- Include local include files ----
-#include <OCC/ControlDataTypes/OcaLiteWorkerDataTypes.h>
-#include <OCC/ControlDataTypes/OcaLiteFrameworkDataTypes.h>
 #include "TuiiConfigModels.h"
 
 // ---- Forward declarations ----
@@ -48,8 +47,8 @@ public:
     void sendMuteToFusion(const std::string &gainID, bool muteState);
     void handleFusionMuteUpdate(const std::string &gainID, bool muteState);
 
-    void sendSourceToFusion(const std::string &zoneID, ::OcaUint16 sourceIndex);
-    void handleFusionSourceUpdate(const std::string &zoneID, ::OcaUint16 sourceIndex);
+    void sendSourceToFusion(const std::string &zoneID, uint16_t sourceIndex);
+    void handleFusionSourceUpdate(const std::string &zoneID, uint16_t sourceIndex);
 
     void shutdown();
     bool isInitialized() const noexcept;
@@ -60,7 +59,7 @@ private:
 
     bool processGainUpdate(const std::string &gainID, double value);
     bool processMuteUpdate(const std::string &gainID, bool muteState);
-    bool processSourceUpdate(const std::string &zoneID, ::OcaUint16 sourceIndex);
+    bool processSourceUpdate(const std::string &zoneID, uint16_t sourceIndex);
 
     std::shared_ptr<const std::map<std::string, int>> getObjectTrackerSnapshot() const;
     bool checkInitialized() const;
@@ -68,7 +67,7 @@ private:
 
     static std::string createGainMessage(const std::string &gainID, double value);
     static std::string createMuteMessage(const std::string &gainID, bool muteState);
-    static std::string createSourceMessage(const std::string &zoneID, ::OcaUint16 sourceIndex);
+    static std::string createSourceMessage(const std::string &zoneID, uint16_t sourceIndex);
 
     const std::string &findGainZoneConfig(const std::string &gainID) const;
     const std::string &findMuteZoneConfig(const std::string &gainID) const;

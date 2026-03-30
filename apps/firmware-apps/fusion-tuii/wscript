@@ -1,0 +1,106 @@
+import sys
+
+from waflib import Options
+
+APPNAME = 'fusion-tuii'
+
+top = '.'
+out = 'build'
+
+
+def options(opt):
+    opt.load('compiler_cxx')
+
+    opt.add_option(
+        '--platform',
+        type=str,
+        default=sys.platform,
+        help='Target platform for cross-compiling'
+    )
+
+
+
+def detect_platform(conf):
+    platforms = [
+        # FLAG          name       strings                is-cross-compile
+        ('IS_VARMINI', 'varmini', ['varmini'],            True),
+        ('IS_LINUX',   'Linux',   ['linux'],              False),
+        ('IS_MACOS',   'macOS',   ['darwin'],             False),
+        ('IS_WIN',     'Windows', ['win32', 'windows'],   False),
+    ]
+
+    conf.env['is_cross_compile'] = False
+    for key, _, _, _ in platforms:
+        conf.env[key] = False
+
+    conf.start_msg('Detecting platform')
+    platform = Options.options.platform
+    for key, name, strings, is_cross in platforms:
+        for s in strings:
+            if platform.startswith(s):
+                conf.env[key] = True
+                conf.env['platform'] = name
+                conf.env['is_cross_compile'] = is_cross
+                conf.end_msg(name, color='CYAN')
+                return
+
+    conf.end_msg(platform, color='YELLOW')
+
+
+def configure(conf):
+    conf.load('compiler_cxx')
+
+    detect_platform(conf)
+
+    if conf.env.is_cross_compile:
+        conf.load(conf.env.platform, tooldir='wafconf')
+
+    # Match telemetry-core's style: modern C++ + warnings.
+    conf.env.append_value('CXXFLAGS', ['-std=c++17', '-Wall'])
+
+    # Hardening flags only for non-cross builds (same rationale as telemetry-core).
+    if not conf.env['is_cross_compile'] and not conf.env.get('IS_WIN', False):
+        conf.env.append_unique('CXXFLAGS', [
+            '-fstack-protector-strong',
+            '-O2',
+            '-D_FORTIFY_SOURCE=2',
+            '-Wformat',
+            '-Wformat-security',
+            '-Werror=format-security',
+        ])
+
+    # spdlog is often configured with external fmt.
+    conf.env.append_value('CXXFLAGS', ['-DSPDLOG_FMT_EXTERNAL'])
+
+    # Threading
+    if not conf.env.get('IS_WIN', False):
+        conf.env.append_value('LDFLAGS', '-lpthread')
+
+    # This greatly reduces binary size. Comment out to include symbols for gdb.
+    if not conf.env.get('IS_WIN', False):
+        conf.env.append_value('LDFLAGS', ['-Wl,-s'])
+
+    # Fail early for common dependencies
+    conf.check_cxx(header_name='boost/asio.hpp', mandatory=True)
+    conf.check_cxx(header_name='spdlog/spdlog.h', mandatory=True)
+    conf.check_cxx(header_name='json/json.h', mandatory=True)
+
+    # observer header (matches telemetry-core usage)
+    conf.check_cxx(header_name='observer/observer.h', mandatory=True)
+
+def build(bld):
+    bld(
+        export_includes=[
+            '.',
+            '../fusion-server/tools',
+        ],
+        name='default-include'
+    )
+
+    bld.program(
+        target=APPNAME,
+        source=bld.path.ant_glob(['*.cc', '*.cpp']),
+        use=['default-include'],
+        # Libraries are environment-specific; keep the list minimal and aligned with usage.
+        lib=(['boost_system', 'fmt', 'jsoncpp'] + ([] if bld.env['IS_MACOS'] else ['spdlog'])),
+    )
