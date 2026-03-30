@@ -214,20 +214,6 @@ BLE service identifiers for mobile provisioning:
 
 Used by the `fusion-setup` Flutter app to scan, connect, and bridge REST operations.
 
-# Binary Updates
-
-Upload:
-
-```bash
-curl -X POST   -F "binary=@build/fusion-server_linux_arm64"   -F "checksum=$(shasum -a 256 build/fusion-server_linux_arm64 | cut -d ' ' -f 1)"   http://192.168.2.100:8080/version
-```
-
-Rollback:
-
-```
-POST /version
-```
-
 # Metrics & Monitoring
 
 - `GET /metrics`

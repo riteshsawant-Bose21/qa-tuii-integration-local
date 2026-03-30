@@ -223,9 +223,10 @@ func (suite *ProductIntegrationTestSuite) setupAPI() error {
 
 	// Create mock auth service and middleware
 	authSvc := &mockAuthService{}
+	firmwareSvc := &mockFirmwareService{}
 	authMiddleware := &mockMiddlewareStruct{}
 
-	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC, authSvc, authMiddleware, loggers)
+	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC, authSvc, firmwareSvc, authMiddleware, loggers)
 	if err != nil {
 		return fmt.Errorf("failed to initialize API server: %w", err)
 	}

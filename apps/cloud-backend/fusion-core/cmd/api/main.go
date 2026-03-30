@@ -35,6 +35,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/firmware"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
@@ -49,6 +50,8 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user"
 	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
+
+	firmwaredb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/firmware/db"
 
 	authZero "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/auth/authzero"
 )
@@ -193,6 +196,20 @@ func main() {
 	}
 	loggers.AppLogger.Info("Initialized Auth Service.")
 
+	// initiate firmware service
+	firmwareDBSvc := firmwaredb.NewService(pgs)
+	if firmwareDBSvc == nil {
+		loggers.AppLogger.Fatal("Failed to initialize firmware service")
+	}
+	loggers.AppLogger.Info("Initialized Firmware DB Service.")
+
+	// Initialize Firmware Service
+	firmwareSVC := firmware.NewService(firmwareDBSvc, s3Handler.Bucket(cfg.S3.FirmwareBundleBucket))
+	if firmwareSVC == nil {
+		loggers.AppLogger.Fatal("Failed to initialize firmware service")
+	}
+	loggers.AppLogger.Info("Initialized Firmware Service.")
+
 	// Initialize Auth middleware using Auth service (consolidates all authentication functionality)
 	authMiddleware := middleware.NewAuth0Middleware(authSVC)
 	loggers.AppLogger.Info("Initialized Auth0 middleware")
@@ -201,7 +218,7 @@ func main() {
 	server, err := api.New(&api.Config{
 		Host: cfg.Server.APIHost,
 		Port: cfg.Server.APIPort,
-	}, productSVC, projectSVC, userSVC, authSVC, authMiddleware, loggers)
+	}, productSVC, projectSVC, userSVC, authSVC, firmwareSVC, authMiddleware, loggers)
 	if err != nil {
 		loggers.AppLogger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}

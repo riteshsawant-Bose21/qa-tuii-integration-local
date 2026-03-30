@@ -14,6 +14,10 @@ SSH_OPTS=(
   -o StrictHostKeyChecking=accept-new
 )
 
+OUTPUT_ROOT="./debug_logs"
+RUN_TIMESTAMP=""
+SSH_FAILURE_REASON=""
+
 print_info() {
   echo -e "${BLUE}[INFO]${NC} $1"
 }
@@ -66,7 +70,7 @@ command_exists() {
 
 require_tools() {
   local missing=0
-  for tool in ssh awk sed grep; do
+  for tool in ssh awk sed grep mkdir; do
     if ! command_exists "$tool"; then
       print_error "Required command not found: $tool"
       missing=1
@@ -76,6 +80,15 @@ require_tools() {
   if [[ $missing -ne 0 ]]; then
     exit 1
   fi
+}
+
+write_error_file() {
+  local path="$1"
+  local msg="$2"
+  {
+    echo "ERROR"
+    echo "$msg"
+  } >"$path"
 }
 
 prompt_action() {
@@ -131,24 +144,44 @@ prompt_service() {
 
 check_connectivity() {
   local device="$1"
+  local ssh_output ssh_code
   print_info "[$device] Checking SSH connectivity"
-  if ssh "${SSH_OPTS[@]}" "$device" 'exit 0' >/dev/null 2>&1; then
+  ssh_output=$(ssh "${SSH_OPTS[@]}" "$device" 'exit 0' 2>&1)
+  ssh_code=$?
+
+  if [[ $ssh_code -eq 0 ]]; then
+    SSH_FAILURE_REASON=""
     return 0
   fi
+
+  if [[ -z "$ssh_output" ]]; then
+    SSH_FAILURE_REASON="SSH exited with code $ssh_code and returned no diagnostic output"
+  else
+    SSH_FAILURE_REASON="$ssh_output"
+  fi
+
   return 1
 }
 
 process_device() {
   local device="$1"
+  local ip outdir
   local remote_script
   local output
   local rc=0
 
+  ip="${device#*@}"
+  outdir="$OUTPUT_ROOT/device_${ip}"
+  mkdir -p "$outdir"
+
   print_info "[$device] Processing service ${SERVICE_NAME} (${ACTION})"
 
   if ! check_connectivity "$device"; then
-    print_error "[$device] SSH connection failed. Skipping device."
-    FAILED_DEVICES+=("${device#*@}")
+    write_error_file "$outdir/device_error.txt" "SSH connection failure to $device
+Details: ${SSH_FAILURE_REASON}"
+    print_error "[$device] SSH connection failed: ${SSH_FAILURE_REASON}"
+    print_error "[$device] Skipping device."
+    FAILED_DEVICES+=("${ip}")
     return 1
   fi
 
@@ -259,23 +292,24 @@ EOS
 )
 
 output=$(ssh "${SSH_OPTS[@]}" "$device" "bash -s -- '$UNIT_FILE' '$SERVICE_UNIT' '$ACTION' '$VERBOSE_FLAG'" <<<"$remote_script" 2>&1) || rc=$?
+echo "$output" >"$outdir/operation_output.txt"
 
 if [[ $rc -ne 0 ]]; then
     print_error "[$device] Failed while modifying service"
-    echo "$output"
-    FAILED_DEVICES+=("${device#*@}")
+    write_error_file "$outdir/device_error.txt" "$output"
+    FAILED_DEVICES+=("${ip}")
     return 1
   fi
 
 if grep -q '^NO_CHANGE$' <<<"$output"; then
   print_warn "[$device] No change needed; requested state already present"
-  NO_CHANGE_DEVICES+=("${device#*@}")
+  NO_CHANGE_DEVICES+=("${ip}")
 else
   print_success "[$device] Service file updated and service restarted"
-  CHANGED_DEVICES+=("${device#*@}")
+  CHANGED_DEVICES+=("${ip}")
 fi
 
-echo "Device: ${device#*@}"
+echo "Device: ${ip}"
 echo "${SERVICE_UNIT} ExecStart:"
 grep -E '^ExecStart=' <<<"$output" | head -n 1
 echo
@@ -294,10 +328,14 @@ main() {
   require_tools
   prompt_action
   prompt_service
+  RUN_TIMESTAMP="$(date '+%Y-%m-%d_%H-%M-%S')"
+  OUTPUT_ROOT="./debug_logs/enable_log_${RUN_TIMESTAMP}"
+  mkdir -p "$OUTPUT_ROOT"
 
   print_info "Action selected: ${ACTION}"
   print_info "Service selected: ${SERVICE_NAME}"
   print_info "Devices to process: ${total}"
+  print_info "Output root: ${OUTPUT_ROOT}"
 
   for device in "${DEVICES[@]}"; do
     if ! process_device "$device"; then
@@ -327,6 +365,9 @@ main() {
   echo "***************************************************************"
   echo "* Please reboot the device(s)  for a healthy operation.       *"
   echo "***************************************************************"
+  echo
+  echo "Operation logs stored at:"
+  echo "${OUTPUT_ROOT}/"
 }
 
 main
