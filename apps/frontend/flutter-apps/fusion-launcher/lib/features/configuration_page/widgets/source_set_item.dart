@@ -142,12 +142,10 @@ class _SourceSetItemState extends State<SourceSetItem> {
                       height: 32,
                       decoration: BoxDecoration(
                         boxShadow: <BoxShadow>[
-                          BoxShadow(color: context.colorScheme.black, offset: const Offset(1.5, 1.5), blurRadius: 7),
                           BoxShadow(
                             color: context.colorScheme.shadowLight,
-                            offset: const Offset(-1.5, -1.5),
-                            blurRadius: 5,
-                            blurStyle: BlurStyle.solid,
+                            blurRadius: 2,
+                            offset: const Offset(-2, -2),
                           ),
                         ],
                         border: Border.all(

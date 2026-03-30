@@ -80,7 +80,7 @@ class _ZoneCardState extends State<ZoneCard> {
     return FadeTransition(
       opacity: animation.drive(Tween<double>(begin: 0.95, end: 1.0)),
       child: Material(
-        color: context.colorScheme.elevation2.withAlpha(100),
+        color: Colors.transparent,
         child: MultiBlocProvider(
           providers: <BlocProvider<dynamic>>[
             BlocProvider<ConfigZonesViewmodel>.value(value: _zonesViewmodel),
@@ -617,7 +617,8 @@ class _ZoneCardState extends State<ZoneCard> {
                           child: FusionAppText(
                             text: selectedSource ?? 'Select',
                             maxLine: 1,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 10,
                               color: isSelected ? context.colorScheme.primaryWhite : context.colorScheme.primaryWhite.withAlpha(120),
                             ),
                           ),
@@ -635,7 +636,7 @@ class _ZoneCardState extends State<ZoneCard> {
                           ),
                           child: FusionAppText(
                             text: 'P$priorityIndex',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
                               color: isSelected ? context.colorScheme.textPrimary : context.colorScheme.textDisabled,
@@ -817,7 +818,7 @@ class _ZoneCardState extends State<ZoneCard> {
                         semanticId: FusionTestKeys.instance.functionselecttext,
                         text: selectedFunction?.displayName ?? '',
                         maxLine: 1,
-                        style: context.textTheme.bodySmall?.withColor(context.colorScheme.textPrimary),
+                        style: context.textTheme.bodyMedium?.copyWith(color: context.colorScheme.textPrimary, fontSize: 10),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1126,13 +1127,12 @@ class _ZoneCardState extends State<ZoneCard> {
                       child: FusionAppText(
                         text: hasSelection ? 'Selected' : 'Select sources',
                         maxLine: 1,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w500,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontSize: 10,
                           color: hasSelection ? context.colorScheme.primaryWhite : context.colorScheme.primaryWhite.withAlpha(140),
                         ),
                       ),
                     ),
-
                     Container(
                       height: 24,
                       width: 24,
@@ -1147,8 +1147,9 @@ class _ZoneCardState extends State<ZoneCard> {
                                 child: FusionAppText(
                                   semanticId: FusionTestKeys.instance.selectSourceText,
                                   text: _zonesViewmodel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     fontWeight: FontWeight.w600,
+                                    fontSize: 10,
                                     color: context.colorScheme.primaryWhite,
                                   ),
                                 ),
