@@ -59,6 +59,7 @@ class ProjectService {
   final EventsRepository events;
   final MediaFileRepository mediaFiles;
   final MessageRepository messages;
+  final Aes67Repository aes67Devices;
 
   final RelationshipManager relationships;
 
@@ -124,6 +125,7 @@ class ProjectService {
     EventsRepository? events,
     MediaFileRepository? mediaFiles,
     MessageRepository? messages,
+    Aes67Repository? aes67Devices,
   }) : floors = floors ?? FloorRepository(),
        listeningAreas = listeningAreas ?? ListeningAreaRepository(),
        zones = zones ?? ZoneRepository(),
@@ -147,7 +149,8 @@ class ProjectService {
        schedulerConfig = schedulerConfig ?? SchedulerRepository(),
        events = events ?? EventsRepository(),
        mediaFiles = mediaFiles ?? MediaFileRepository(),
-       messages = messages ?? MessageRepository();
+       messages = messages ?? MessageRepository(),
+       aes67Devices = aes67Devices ?? Aes67Repository();
 
   ProjectService updateVip(String? vip) {
     ProjectService projectService = ProjectService(
@@ -203,6 +206,7 @@ class ProjectService {
       mediaFiles: mediaFiles,
       messages: messages,
       metadata: metadata,
+      aes67Devices: aes67Devices,
     );
 
     // Preserve undo/redo stacks
@@ -265,6 +269,7 @@ class ProjectService {
     EventsRepository? events,
     MediaFileRepository? mediaFiles,
     MessageRepository? messages,
+    Aes67Repository? aes67Devices,
   }) {
     ProjectService projectService = ProjectService(
       id: id ?? this.id,
@@ -319,6 +324,7 @@ class ProjectService {
       mediaFiles: mediaFiles ?? this.mediaFiles,
       messages: messages ?? this.messages,
       metadata: metadata ?? this.metadata,
+      aes67Devices: aes67Devices ?? this.aes67Devices,
     );
 
     // Preserve undo/redo stacks
@@ -394,6 +400,7 @@ class ProjectService {
       "events": events.toJson((e) => e.toJson()),
       "mediaFiles": mediaFiles.toJson((m) => m.toJson()),
       "messages": messages.toJson((m) => m.toJson()),
+      "aes67Devices": aes67Devices.toJson((a) => a.toJson()),
       'metadata': metadata.toJson(),
     };
   }
@@ -476,6 +483,7 @@ class ProjectService {
     service.events.fromJsonList(json["events"], (m) => FusionEvent.fromJson(m), "id");
     service.mediaFiles.fromJsonList(json["mediaFiles"], (m) => MediaFileModel.fromJson(m), "id");
     service.messages.fromJsonList(json["messages"], (m) => MessageModel.fromJson(m), "id");
+    service.aes67Devices.fromJsonList(json["aes67Devices"], (m) => Aes67Config.fromJson(m), "id");
 
     service.relationships.fromJson(json["relationships"]);
 

@@ -29,6 +29,8 @@ enum RelationshipType {
   playerMessages,
   sourceMessages,
   messageMediaMapping,
+  aes67InputStreams,
+  aes67OutputStreams,
 }
 
 class RelationshipManager {

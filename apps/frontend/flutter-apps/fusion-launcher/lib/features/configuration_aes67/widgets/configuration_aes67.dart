@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration_aes67/widgets/outputStreams/output_stream_dialog.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
 import '../viewModel/config_aes67_viewmodel.dart';
-import '../viewModel/input_stream_viewmodel/input_stream_viewmodel.dart';
 import 'inputStreams/input_stream_dialog.dart';
 
 /// Top-level screen — provides the Cubit
@@ -15,8 +16,13 @@ class ConfigurationAes67Screen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+
     return BlocProvider<ConfigAes67Viewmodel>(
-      create: (_) => ConfigAes67Viewmodel(),
+      create:
+          (_) => ConfigAes67Viewmodel(
+            projectViewModel: projectViewModel,
+          ),
       child: const _ConfigurationAes67View(),
     );
   }
@@ -124,7 +130,6 @@ class _ConfigurationAes67View extends StatelessWidget {
             onAdd:
                 (BuildContext context) => InputStreamDialog.show(
                   context,
-                  mode: Aes67AppMode.control,
                   onSave: cubit.addInputStream,
                 ),
             columns: _inputColumns(),
@@ -181,12 +186,12 @@ class _ConfigurationAes67View extends StatelessWidget {
 
   List<FusionTableRow> _buildInputRows(
     BuildContext context,
-    List<Aes67Stream> streams,
+    List<Aes67Config> streams,
     ConfigAes67Viewmodel cubit,
   ) {
     return streams
         .map(
-          (Aes67Stream s) => FusionTableRow(
+          (Aes67Config s) => FusionTableRow(
             key: s.id,
             cells: <String, FusionTableCell>{
               'toggle': FusionTableCell(
@@ -209,8 +214,8 @@ class _ConfigurationAes67View extends StatelessWidget {
                 child: _CellText(text: s.streamOrAdvertisement, context: context),
               ),
               'address': FusionTableCell(
-                value: s.addressPort,
-                child: _CellText(text: s.addressPort, context: context),
+                value: '${s.ipAddress}:${s.port}',
+                child: _CellText(text: '${s.ipAddress}:${s.port}', context: context),
               ),
               'channels': FusionTableCell(
                 value: s.channels,
@@ -236,12 +241,12 @@ class _ConfigurationAes67View extends StatelessWidget {
 
   List<FusionTableRow> _buildOutputRows(
     BuildContext context,
-    List<Aes67Stream> streams,
+    List<Aes67Config> streams,
     ConfigAes67Viewmodel cubit,
   ) {
     return streams
         .map(
-          (Aes67Stream s) => FusionTableRow(
+          (Aes67Config s) => FusionTableRow(
             key: s.id,
             cells: <String, FusionTableCell>{
               'toggle': FusionTableCell(
@@ -264,8 +269,8 @@ class _ConfigurationAes67View extends StatelessWidget {
                 child: _CellText(text: s.streamOrAdvertisement, context: context),
               ),
               'address': FusionTableCell(
-                value: s.addressPort,
-                child: _CellText(text: s.addressPort, context: context),
+                value: '${s.ipAddress}:${s.port}',
+                child: _CellText(text: '${s.ipAddress}:${s.port}', context: context),
               ),
               'channels': FusionTableCell(
                 value: s.channels,

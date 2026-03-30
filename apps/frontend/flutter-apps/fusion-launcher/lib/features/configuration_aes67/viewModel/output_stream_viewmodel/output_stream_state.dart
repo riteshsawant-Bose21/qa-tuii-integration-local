@@ -1,22 +1,5 @@
 part of 'output_stream_viewmodel.dart';
 
-// ── Channel name model ────────────────────────────────────────────────────────
-
-class OutputChannelConfig {
-  final int channelNumber;
-  final String name; // e.g. 'Channel 1', 'Channel 2'
-
-  const OutputChannelConfig({
-    required this.channelNumber,
-    required this.name,
-  });
-
-  OutputChannelConfig copyWith({String? name}) => OutputChannelConfig(
-    channelNumber: channelNumber,
-    name: name ?? this.name,
-  );
-}
-
 // ── Sealed states ─────────────────────────────────────────────────────────────
 
 sealed class OutputStreamState {
@@ -37,50 +20,31 @@ class OutputStreamError extends OutputStreamState {
 }
 
 class OutputStreamLoaded extends OutputStreamState {
-  // ── Basic fields ─────────────────────────────────────────────────────
-  final String name;
-  final int channelCount;
-  final List<OutputChannelConfig> channelConfigs;
-
-  // ── Advanced section ─────────────────────────────────────────────────
+  final Aes67Config stream;
   final bool isAdvancedExpanded;
-  final String sessionId;
-  final String ipAddress;
-  final String bitDepth; // e.g. '24 bit'
-  final String sampleRate; // e.g. '48 kHz'
-  final String packetTime; // e.g. '1 ms'
 
   const OutputStreamLoaded({
-    required this.name,
-    required this.channelCount,
-    required this.channelConfigs,
-    required this.isAdvancedExpanded,
-    required this.sessionId,
-    required this.ipAddress,
-    required this.bitDepth,
-    required this.sampleRate,
-    required this.packetTime,
+    required this.stream,
+    this.isAdvancedExpanded = false,
   });
 
+  // Convenience getters from stream
+  String get name => stream.name;
+  int get channelCount => stream.channels;
+  List<Aes67ChannelConfig> get channelConfigs => stream.channelConfigs;
+  String get sessionId => stream.streamOrAdvertisement;
+  String get ipAddress => stream.ipAddress;
+  String get bitDepth => stream.bitDepth;
+  String get sampleRate => stream.sampleRate;
+  String get packetTime => stream.packetTime;
+
   OutputStreamLoaded copyWith({
-    String? name,
-    int? channelCount,
-    List<OutputChannelConfig>? channelConfigs,
+    Aes67Config? stream,
     bool? isAdvancedExpanded,
-    String? sessionId,
-    String? ipAddress,
-    String? bitDepth,
-    String? sampleRate,
-    String? packetTime,
-  }) => OutputStreamLoaded(
-    name: name ?? this.name,
-    channelCount: channelCount ?? this.channelCount,
-    channelConfigs: channelConfigs ?? this.channelConfigs,
-    isAdvancedExpanded: isAdvancedExpanded ?? this.isAdvancedExpanded,
-    sessionId: sessionId ?? this.sessionId,
-    ipAddress: ipAddress ?? this.ipAddress,
-    bitDepth: bitDepth ?? this.bitDepth,
-    sampleRate: sampleRate ?? this.sampleRate,
-    packetTime: packetTime ?? this.packetTime,
-  );
+  }) {
+    return OutputStreamLoaded(
+      stream: stream ?? this.stream,
+      isAdvancedExpanded: isAdvancedExpanded ?? this.isAdvancedExpanded,
+    );
+  }
 }

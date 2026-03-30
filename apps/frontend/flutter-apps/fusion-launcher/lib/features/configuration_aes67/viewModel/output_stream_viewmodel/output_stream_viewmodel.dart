@@ -1,39 +1,58 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 part 'output_stream_state.dart';
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-List<OutputChannelConfig> _buildChannels(int count) => List<OutputChannelConfig>.generate(
-  count,
-  (int i) => OutputChannelConfig(
-    channelNumber: i + 1,
-    name: 'Channel ${i + 1}',
-  ),
-);
 
 // ── Cubit ─────────────────────────────────────────────────────────────────────
 
 class OutputStreamViewmodel extends Cubit<OutputStreamState> {
-  OutputStreamViewmodel() : super(const OutputStreamInitial());
+  final ProjectViewModel _projectViewModel;
+  final String? _streamId;
 
-  void init() {
+  OutputStreamViewmodel({
+    required ProjectViewModel projectViewModel,
+    String? streamId,
+  }) : _projectViewModel = projectViewModel,
+       _streamId = streamId,
+       super(const OutputStreamInitial());
+
+  void init({Aes67Config? existingStream}) {
     emit(const OutputStreamLoading());
 
-    // Mock initial data — replace with repo call
-    emit(
-      OutputStreamLoaded(
-        name: 'Stage Inputs',
-        channelCount: 2,
-        channelConfigs: _buildChannels(2),
-        isAdvancedExpanded: false,
-        sessionId: 'Fusion External System AES',
-        ipAddress: '239.69.1.21',
-        bitDepth: '24 bit',
-        sampleRate: '48 kHz',
-        packetTime: '1 ms',
-      ),
-    );
+    try {
+      Aes67Config stream;
+
+      if (existingStream != null) {
+        // Editing existing stream
+        stream = existingStream;
+      } else if (_streamId != null) {
+        // Load from ProjectViewModel
+        final Aes67Config? loadedStream = _projectViewModel.getAes67OutputStreamById(_streamId!);
+        if (loadedStream == null) {
+          emit(const OutputStreamError(message: 'Stream not found'));
+          return;
+        }
+        stream = loadedStream;
+      } else {
+        // Create new stream with defaults
+        stream = Aes67Config(
+          name: 'New Output Stream',
+          streamType: Aes67StreamType.output,
+          streamOrAdvertisement: 'Fusion External System AES',
+          ipAddress: '239.69.1.21',
+        );
+      }
+
+      emit(
+        OutputStreamLoaded(
+          stream: stream,
+          isAdvancedExpanded: false,
+        ),
+      );
+    } catch (e) {
+      emit(OutputStreamError(message: e.toString()));
+    }
   }
 
   // ── Name ──────────────────────────────────────────────────────────────────
@@ -41,7 +60,7 @@ class OutputStreamViewmodel extends Cubit<OutputStreamState> {
   void updateName(String name) {
     final OutputStreamLoaded? s = _loaded;
     if (s == null) return;
-    emit(s.copyWith(name: name));
+    emit(s.copyWith(stream: s.stream.copyWith(name: name)));
   }
 
   // ── Channel count ─────────────────────────────────────────────────────────
@@ -51,8 +70,10 @@ class OutputStreamViewmodel extends Cubit<OutputStreamState> {
     if (s == null) return;
     emit(
       s.copyWith(
-        channelCount: count,
-        channelConfigs: _buildChannels(count),
+        stream: s.stream.copyWith(
+          channels: count,
+          channelConfigs: Aes67Config.buildDefaultChannels(count),
+        ),
       ),
     );
   }
@@ -62,11 +83,11 @@ class OutputStreamViewmodel extends Cubit<OutputStreamState> {
   void updateChannelName(int channelNumber, String name) {
     final OutputStreamLoaded? s = _loaded;
     if (s == null) return;
-    final List<OutputChannelConfig> updated =
-        s.channelConfigs.map((OutputChannelConfig c) {
-          return c.channelNumber == channelNumber ? c.copyWith(name: name) : c;
+    final List<Aes67ChannelConfig> updated =
+        s.channelConfigs.map((Aes67ChannelConfig c) {
+          return c.channelNumber == channelNumber ? c.copyWith(label: name) : c;
         }).toList();
-    emit(s.copyWith(channelConfigs: updated));
+    emit(s.copyWith(stream: s.stream.copyWith(channelConfigs: updated)));
   }
 
   // ── Advanced section ──────────────────────────────────────────────────────
@@ -80,31 +101,31 @@ class OutputStreamViewmodel extends Cubit<OutputStreamState> {
   void updateSessionId(String value) {
     final OutputStreamLoaded? s = _loaded;
     if (s == null) return;
-    emit(s.copyWith(sessionId: value));
+    emit(s.copyWith(stream: s.stream.copyWith(streamOrAdvertisement: value)));
   }
 
   void updateIpAddress(String value) {
     final OutputStreamLoaded? s = _loaded;
     if (s == null) return;
-    emit(s.copyWith(ipAddress: value));
+    emit(s.copyWith(stream: s.stream.copyWith(ipAddress: value)));
   }
 
   void updateBitDepth(String? value) {
     final OutputStreamLoaded? s = _loaded;
     if (s == null || value == null) return;
-    emit(s.copyWith(bitDepth: value));
+    emit(s.copyWith(stream: s.stream.copyWith(bitDepth: value)));
   }
 
   void updateSampleRate(String? value) {
     final OutputStreamLoaded? s = _loaded;
     if (s == null || value == null) return;
-    emit(s.copyWith(sampleRate: value));
+    emit(s.copyWith(stream: s.stream.copyWith(sampleRate: value)));
   }
 
   void updatePacketTime(String? value) {
     final OutputStreamLoaded? s = _loaded;
     if (s == null || value == null) return;
-    emit(s.copyWith(packetTime: value));
+    emit(s.copyWith(stream: s.stream.copyWith(packetTime: value)));
   }
 
   // ── Actions ───────────────────────────────────────────────────────────────
@@ -114,7 +135,27 @@ class OutputStreamViewmodel extends Cubit<OutputStreamState> {
   }
 
   void save() {
-    // Hook: persist to repo / emit success
+    final OutputStreamLoaded? s = _loaded;
+    if (s == null) return;
+
+    try {
+      if (_streamId != null) {
+        // Update existing stream
+        _projectViewModel.updateAes67OutputStream(stream: s.stream);
+      } else {
+        // Add new stream
+        _projectViewModel.addAes67OutputStream(stream: s.stream);
+      }
+    } catch (e) {
+      emit(OutputStreamError(message: 'Failed to save: ${e.toString()}'));
+    }
+  }
+
+  // ── Get current stream ────────────────────────────────────────────────────
+
+  Aes67Config? getCurrentStream() {
+    final OutputStreamLoaded? s = _loaded;
+    return s?.stream;
   }
 
   // ── Private helper ────────────────────────────────────────────────────────

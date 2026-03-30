@@ -168,6 +168,16 @@ class MessageRepository extends Repository<MessageModel> {
   }
 }
 
+// repository for aes67
+
+class Aes67Repository extends Repository<Aes67Config> {
+  Aes67Repository copyWith(Map<String, Aes67Config> items) {
+    final newRepo = Aes67Repository();
+    newRepo._items.addAll(items);
+    return newRepo;
+  }
+}
+
 class ZoneFunctionRepository extends Repository<ZoneFunctions> {
   // Get ZoneFunction by function id
   ZoneFunctions? getByFunctionId({required String functionId}) {

@@ -1,23 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../viewModel/config_aes67_viewmodel.dart';
 import '../../viewModel/output_stream_viewmodel/output_stream_viewmodel.dart';
 
 // ── Entry point ──────────────────────────────────────────────────────────────
 
 class OutputStreamDialog extends StatelessWidget {
-  final void Function(Aes67Stream stream)? onSave;
+  final void Function(Aes67Config stream)? onSave;
+  final Aes67Config? existingStream;
 
-  const OutputStreamDialog({super.key, this.onSave});
+  const OutputStreamDialog({super.key, this.onSave, this.existingStream});
 
   static Future<void> show(
     BuildContext context, {
-    void Function(Aes67Stream stream)? onSave,
+    void Function(Aes67Config stream)? onSave,
+    Aes67Config? existingStream,
   }) {
     return showGeneralDialog(
       context: context,
@@ -25,14 +28,16 @@ class OutputStreamDialog extends StatelessWidget {
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       barrierColor: Colors.black87,
       transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (BuildContext ctx, _, __) => OutputStreamDialog(onSave: onSave),
+      pageBuilder: (BuildContext ctx, _, __) => OutputStreamDialog(onSave: onSave, existingStream: existingStream),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+
     return BlocProvider<OutputStreamViewmodel>(
-      create: (_) => OutputStreamViewmodel()..init(),
+      create: (_) => OutputStreamViewmodel(projectViewModel: projectViewModel)..init(existingStream: existingStream),
       child: _DialogContent(onSave: onSave),
     );
   }
@@ -41,7 +46,7 @@ class OutputStreamDialog extends StatelessWidget {
 // ── Dialog shell ─────────────────────────────────────────────────────────────
 
 class _DialogContent extends StatelessWidget {
-  final void Function(Aes67Stream stream)? onSave;
+  final void Function(Aes67Config stream)? onSave;
 
   const _DialogContent({this.onSave});
 
@@ -149,7 +154,7 @@ class _Header extends StatelessWidget {
 
 class _LoadedBody extends StatelessWidget {
   final OutputStreamLoaded state;
-  final void Function(Aes67Stream stream)? onSave;
+  final void Function(Aes67Config stream)? onSave;
 
   const _LoadedBody({required this.state, this.onSave});
 
@@ -221,19 +226,11 @@ class _LoadedBody extends StatelessWidget {
         _Footer(
           onExport: cubit.exportSdp,
           onSave: () {
-            final Aes67Stream stream = Aes67Stream(
-              id: 'out_${DateTime.now().millisecondsSinceEpoch}',
-              name: state.name,
-              device: state.sessionId,
-              streamOrAdvertisement: 'Dante (mDNS)',
-              addressPort: '${state.ipAddress}:5004',
-              channels: state.channelCount,
-              bitDepth: state.bitDepth,
-              packetTime: state.packetTime,
-              isEnabled: true,
-            );
-            onSave?.call(stream);
-            cubit.save();
+            final Aes67Config? stream = cubit.getCurrentStream();
+            if (stream != null) {
+              onSave?.call(stream);
+              cubit.save();
+            }
             Navigator.of(context).pop();
           },
         ),
@@ -304,11 +301,11 @@ class _ChannelSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children:
-                state.channelConfigs.map((OutputChannelConfig ch) {
+                state.channelConfigs.map((Aes67ChannelConfig ch) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: _DarkTextField(
-                      value: ch.name,
+                      value: ch.label ?? 'Channel ${ch.channelNumber}',
                       onChanged: (String v) => cubit.updateChannelName(ch.channelNumber, v),
                     ),
                   );
