@@ -137,6 +137,7 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
       SourceConnectionType.audioJack => PortType.audioJackOutput,
       SourceConnectionType.xlr => PortType.xlrOutput,
       SourceConnectionType.hdmi => PortType.hdmiOut,
+      SourceConnectionType.rca => PortType.rcaOutput,
     };
 
     final Source source = Source(
@@ -166,6 +167,7 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
           SourceConnectionType.audioJack => <PortType>[PortType.audioJackInput],
           SourceConnectionType.xlr => <PortType>[PortType.xlrInput],
           SourceConnectionType.hdmi => <PortType>[PortType.hdmiIn],
+          SourceConnectionType.rca => <PortType>[PortType.rcaInput],
         },
         portPosition: PortPosition.topLeft,
       ),
