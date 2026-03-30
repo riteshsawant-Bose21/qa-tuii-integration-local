@@ -3,11 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration_aes67/widgets/outputStreams/output_stream_dialog.dart';
+import 'package:fusion_launcher/features/configuration_aes67/widgets/status_dot.dart';
+import 'package:fusion_launcher/features/configuration_aes67/widgets/stream_section.dart';
+import 'package:fusion_launcher/features/configuration_aes67/widgets/stream_toggle.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
-
 import '../viewModel/config_aes67_viewmodel.dart';
+import 'cell_text.dart';
+import 'delete_button.dart';
 import 'inputStreams/input_stream_dialog.dart';
 
 /// Top-level screen — provides the Cubit
@@ -116,7 +118,7 @@ class _ConfigurationAes67View extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              _StatusDot(active: state.globalStatus),
+              StatusDot(active: state.globalStatus),
             ],
           ),
 
@@ -124,7 +126,7 @@ class _ConfigurationAes67View extends StatelessWidget {
 
           // ── Input Streams Section ────────────────────────────────────
           Expanded(
-            child: _StreamSection(
+            child: StreamSection(
               title: 'AES 67 Input Streams',
               addLabel: 'Add Input Stream',
               emptyMessage: 'No input streams configured',
@@ -153,7 +155,7 @@ class _ConfigurationAes67View extends StatelessWidget {
 
           // ── Output Streams Section ───────────────────────────────────
           Expanded(
-            child: _StreamSection(
+            child: StreamSection(
               title: 'AES 67 Output Streams',
               addLabel: 'Add Output Stream',
               emptyMessage: 'No output streams configured',
@@ -224,46 +226,46 @@ class _ConfigurationAes67View extends StatelessWidget {
             cells: <String, FusionTableCell>{
               'toggle': FusionTableCell(
                 value: s.isEnabled,
-                child: _StreamToggle(
+                child: StreamToggle(
                   value: s.isEnabled,
                   onChanged: (_) => cubit.toggleInputStreamEnabled(s.id),
                 ),
               ),
               'name': FusionTableCell(
                 value: s.name,
-                child: _CellText(text: s.name, bold: true, context: context),
+                child: CellText(text: s.name, bold: true, context: context),
               ),
               'device': FusionTableCell(
                 value: s.device,
-                child: _CellText(text: s.device, context: context),
+                child: CellText(text: s.device, context: context),
               ),
               'stream': FusionTableCell(
                 value: s.streamOrAdvertisement,
-                child: _CellText(text: s.streamOrAdvertisement, context: context),
+                child: CellText(text: s.streamOrAdvertisement, context: context),
               ),
               'address': FusionTableCell(
                 value: '${s.ipAddress}:${s.port}',
-                child: _CellText(text: '${s.ipAddress}:${s.port}', context: context),
+                child: CellText(text: '${s.ipAddress}:${s.port}', context: context),
               ),
               'channels': FusionTableCell(
                 value: s.channels,
-                child: _CellText(text: s.channels.toString(), context: context),
+                child: CellText(text: s.channels.toString(), context: context),
               ),
               'bitDepth': FusionTableCell(
                 value: s.bitDepth,
-                child: _CellText(text: s.bitDepth, context: context),
+                child: CellText(text: s.bitDepth, context: context),
               ),
               'packetTime': FusionTableCell(
                 value: s.packetTime,
-                child: _CellText(text: s.packetTime, context: context),
+                child: CellText(text: s.packetTime, context: context),
               ),
               'status': FusionTableCell(
                 value: s.isEnabled,
-                child: _StatusDot(active: s.isEnabled),
+                child: StatusDot(active: s.isEnabled),
               ),
               'delete': FusionTableCell(
                 value: null,
-                child: _DeleteButton(
+                child: DeleteButton(
                   onDelete: () => cubit.deleteInputStream(s.id),
                 ),
               ),
@@ -285,46 +287,46 @@ class _ConfigurationAes67View extends StatelessWidget {
             cells: <String, FusionTableCell>{
               'toggle': FusionTableCell(
                 value: s.isEnabled,
-                child: _StreamToggle(
+                child: StreamToggle(
                   value: s.isEnabled,
                   onChanged: (_) => cubit.toggleOutputStreamEnabled(s.id),
                 ),
               ),
               'name': FusionTableCell(
                 value: s.name,
-                child: _CellText(text: s.name, bold: true, context: context),
+                child: CellText(text: s.name, bold: true, context: context),
               ),
               'device': FusionTableCell(
                 value: s.device,
-                child: _CellText(text: s.device, context: context),
+                child: CellText(text: s.device, context: context),
               ),
               'advertisement': FusionTableCell(
                 value: s.streamOrAdvertisement,
-                child: _CellText(text: s.streamOrAdvertisement, context: context),
+                child: CellText(text: s.streamOrAdvertisement, context: context),
               ),
               'address': FusionTableCell(
                 value: '${s.ipAddress}:${s.port}',
-                child: _CellText(text: '${s.ipAddress}:${s.port}', context: context),
+                child: CellText(text: '${s.ipAddress}:${s.port}', context: context),
               ),
               'channels': FusionTableCell(
                 value: s.channels,
-                child: _CellText(text: s.channels.toString(), context: context),
+                child: CellText(text: s.channels.toString(), context: context),
               ),
               'bitDepth': FusionTableCell(
                 value: s.bitDepth,
-                child: _CellText(text: s.bitDepth, context: context),
+                child: CellText(text: s.bitDepth, context: context),
               ),
               'packetTime': FusionTableCell(
                 value: s.packetTime,
-                child: _CellText(text: s.packetTime, context: context),
+                child: CellText(text: s.packetTime, context: context),
               ),
               'status': FusionTableCell(
                 value: s.isEnabled,
-                child: _StatusDot(active: s.isEnabled),
+                child: StatusDot(active: s.isEnabled),
               ),
               'delete': FusionTableCell(
                 value: null,
-                child: _DeleteButton(
+                child: DeleteButton(
                   onDelete: () => cubit.deleteOutputStream(s.id),
                 ),
               ),
@@ -332,231 +334,5 @@ class _ConfigurationAes67View extends StatelessWidget {
           ),
         )
         .toList();
-  }
-}
-
-// ── Reusable sub-widgets ────────────────────────────────────────────────────
-
-/// Section card: title bar + FusionTable
-class _StreamSection extends StatelessWidget {
-  final String title;
-  final String addLabel;
-  final List<FusionTableColumn> columns;
-  final List<FusionTableRow> rows;
-  final void Function(BuildContext context) onAdd;
-  final void Function(String rowKey)? onRowTap;
-  final String emptyMessage;
-
-  const _StreamSection({
-    required this.title,
-    required this.addLabel,
-    required this.onAdd,
-    required this.columns,
-    required this.rows,
-    required this.emptyMessage,
-    this.onRowTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation2,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: context.colorScheme.elevation2),
-      ),
-      child: Column(
-        children: <Widget>[
-          // Section header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                FusionAppText(
-                  text: title,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: context.colorScheme.textPrimary,
-                  ),
-                ),
-                InkWell(
-                  onTap: () => onAdd(context),
-                  borderRadius: BorderRadius.circular(6),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        Icon(Icons.add, size: 14, color: context.colorScheme.iconWhite),
-                        const SizedBox(width: 4),
-                        FusionAppText(
-                          text: addLabel,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: context.colorScheme.textPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Show empty state or table
-          if (rows.isEmpty)
-            Expanded(
-              child: Container(
-                color: context.colorScheme.elevation1,
-                width: double.infinity,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    FusionAppText(
-                      text: emptyMessage,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: context.colorScheme.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    InkWell(
-                      onTap: () => onAdd(context),
-                      borderRadius: BorderRadius.circular(6),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            Icon(Icons.add, size: 16, color: context.colorScheme.primaryColor),
-                            const SizedBox(width: 4),
-                            FusionAppText(
-                              text: addLabel,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: context.colorScheme.primaryColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else
-            // FusionTable with calculated height
-            Expanded(
-              child: Container(
-                color: context.colorScheme.elevation1,
-                child: FusionTable(
-                  columns: columns,
-                  rows: rows,
-                  onRowTap: onRowTap,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Toggle switch styled to match the green pill in the screenshot
-class _StreamToggle extends StatelessWidget {
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  const _StreamToggle({required this.value, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Transform.scale(
-      scale: 0.75,
-      child: Switch(
-        value: value,
-        onChanged: onChanged,
-        activeColor: Colors.white,
-        activeTrackColor: context.colorScheme.primaryColor,
-        inactiveThumbColor: Colors.white,
-        inactiveTrackColor: context.colorScheme.strokeLight,
-      ),
-    );
-  }
-}
-
-/// Small filled circle indicating active/inactive status
-class _StatusDot extends StatelessWidget {
-  final bool active;
-  const _StatusDot({required this.active});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 10,
-      height: 10,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: active ? context.colorScheme.primaryColor : context.colorScheme.textSecondary,
-      ),
-    );
-  }
-}
-
-/// Standard table cell text
-class _CellText extends StatelessWidget {
-  final String text;
-  final bool bold;
-  final BuildContext context;
-
-  const _CellText({
-    required this.text,
-    required this.context,
-    this.bold = false,
-  });
-
-  @override
-  Widget build(BuildContext _) {
-    final String displayText = text.isEmpty ? '-' : text;
-    return FusionAppText(
-      text: displayText,
-      maxLine: 1,
-      textOverflow: TextOverflow.ellipsis,
-      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-        fontSize: 12,
-        fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
-        color: bold ? context.colorScheme.textPrimary : context.colorScheme.textSecondary,
-      ),
-    );
-  }
-}
-
-/// Delete button for table rows
-class _DeleteButton extends StatelessWidget {
-  final VoidCallback onDelete;
-
-  const _DeleteButton({required this.onDelete});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onDelete,
-      customBorder: const CircleBorder(),
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: Icon(
-          Icons.delete_outline,
-          size: 18,
-          color: context.colorScheme.textSecondary,
-        ),
-      ),
-    );
   }
 }
