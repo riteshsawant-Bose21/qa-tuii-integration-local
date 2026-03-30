@@ -231,7 +231,7 @@ class _ZoneCardState extends State<ZoneCard> {
                               ),
                             ),
                           ),
-                          width: MediaQuery.of(context).size.width * 0.14,
+                          width: MediaQuery.of(context).size.width * 0.12,
                           padding: const EdgeInsets.all(16),
                           child: _buildZoneFunctionsPanel(),
                         ),
@@ -322,57 +322,54 @@ class _ZoneCardState extends State<ZoneCard> {
       return const SizedBox.shrink();
     }
 
-    return SizedBox(
-      width: MediaQuery.of(context).size.width * 0.2,
-      child: Material(
-        color: Colors.transparent,
-        child: ReorderableListView.builder(
-          proxyDecorator: _defaultProxyDecorator,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          buildDefaultDragHandles: false,
-          itemCount: 2,
-          onReorder: (int oldIndex, int newIndex) {
-            if (oldIndex < newIndex) newIndex -= 1;
+    return Material(
+      color: Colors.transparent,
+      child: ReorderableListView.builder(
+        proxyDecorator: _defaultProxyDecorator,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        buildDefaultDragHandles: false,
+        itemCount: 2,
+        onReorder: (int oldIndex, int newIndex) {
+          if (oldIndex < newIndex) newIndex -= 1;
 
-            /// Handle the reordering logic - swap sources using reOrderPrioritySourcesInZone
-            if (oldIndex != newIndex) {
-              /// Get current source IDs directly from view model
-              final List<String> prioritySources = _zonesViewmodel.getPrioritySourcesInZone(zoneId: widget.zoneId);
-              final String? source1 = prioritySources.isNotEmpty ? prioritySources[0] : null;
-              final String? source2 = prioritySources.length > 1 ? prioritySources[1] : null;
+          /// Handle the reordering logic - swap sources using reOrderPrioritySourcesInZone
+          if (oldIndex != newIndex) {
+            /// Get current source IDs directly from view model
+            final List<String> prioritySources = _zonesViewmodel.getPrioritySourcesInZone(zoneId: widget.zoneId);
+            final String? source1 = prioritySources.isNotEmpty ? prioritySources[0] : null;
+            final String? source2 = prioritySources.length > 1 ? prioritySources[1] : null;
 
-              /// Create new order list with swapped sources
-              final List<String> newOrder = <String>[];
-              if (oldIndex == 0 && newIndex == 1) {
-                /// P1 moved to P2 position
-                newOrder.add(source2 ?? '');
-                newOrder.add(source1 ?? '');
-              } else if (oldIndex == 1 && newIndex == 0) {
-                /// P2 moved to P1 position
-                newOrder.add(source2 ?? '');
-                newOrder.add(source1 ?? '');
-              }
-
-              /// Use the new reOrderPrioritySourcesInZone method
-              _zonesViewmodel.reOrderPrioritySourcesInZone(
-                zoneId: widget.zoneId,
-                newOrder: newOrder,
-              );
+            /// Create new order list with swapped sources
+            final List<String> newOrder = <String>[];
+            if (oldIndex == 0 && newIndex == 1) {
+              /// P1 moved to P2 position
+              newOrder.add(source2 ?? '');
+              newOrder.add(source1 ?? '');
+            } else if (oldIndex == 1 && newIndex == 0) {
+              /// P2 moved to P1 position
+              newOrder.add(source2 ?? '');
+              newOrder.add(source1 ?? '');
             }
-          },
-          itemBuilder: (BuildContext context, int index) {
-            final int priorityIndex = index + 1;
-            return ReorderableDragStartListener(
-              key: ValueKey<String>('priority_widget_$index'),
-              index: index,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 12.0),
-                child: buildPriorityFunctionWidget(priorityIndex: priorityIndex),
-              ),
+
+            /// Use the new reOrderPrioritySourcesInZone method
+            _zonesViewmodel.reOrderPrioritySourcesInZone(
+              zoneId: widget.zoneId,
+              newOrder: newOrder,
             );
-          },
-        ),
+          }
+        },
+        itemBuilder: (BuildContext context, int index) {
+          final int priorityIndex = index + 1;
+          return ReorderableDragStartListener(
+            key: ValueKey<String>('priority_widget_$index'),
+            index: index,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: buildPriorityFunctionWidget(priorityIndex: priorityIndex),
+            ),
+          );
+        },
       ),
     );
   }

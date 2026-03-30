@@ -147,6 +147,12 @@ class _SourceSetItemState extends State<SourceSetItem> {
                             blurRadius: 2,
                             offset: const Offset(-2, -2),
                           ),
+                          BoxShadow(
+                            color: context.colorScheme.shadowDark,
+                            blurRadius: 4,
+                            offset: const Offset(2, 2),
+                          ),
+                          BoxShadow(color: context.colorScheme.elevation1),
                         ],
                         border: Border.all(
                           color: widget.isDragHovered ? Theme.of(context).colorScheme.primary : Colors.transparent,
@@ -385,7 +391,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
           ),
           decoration: BoxDecoration(
             borderRadius: const BorderRadius.vertical(bottom: Radius.circular(4)),
-            color: context.colorScheme.elevation2.withAlpha(100),
+            color: context.colorScheme.elevation2.withAlpha(80),
           ),
           margin: const EdgeInsets.only(
             left: 12,
