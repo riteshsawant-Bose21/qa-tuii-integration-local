@@ -7,6 +7,7 @@ import 'package:fusion_launcher/features/wiring_design/controller/helpers/connec
 import 'package:fusion_launcher/features/wiring_design/controller/helpers/project_manager_methods.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/state/canvas_state.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/state/wiring_state.dart';
+import 'package:fusion_launcher/features/wiring_design/usecase/connection_usecase.dart';
 import 'package:fusion_lib/di/service_locator.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
@@ -22,8 +23,7 @@ import 'wiring_state_cache.dart';
 
 part 'helpers/canvas_elements_handler_mixin.dart';
 
-class CircuitController extends ChangeNotifier
-    with CanvasHandlerMixin, _CanvasElementsHandlerMixin {
+class CircuitController extends ChangeNotifier with CanvasHandlerMixin, _CanvasElementsHandlerMixin {
   final ProjectViewModel projectManager;
   CircuitController(this.projectManager) {
     loadFromPM();
@@ -273,13 +273,11 @@ class CircuitController extends ChangeNotifier
     if (diffMap.containsKey("modified")) {
       final Map<String, dynamic> modified = diffMap["modified"];
       for (final String id in modified.keys) {
-        final CircuitComponent? component =
-            componentDB.getComponent(id) as CircuitComponent?;
+        final CircuitComponent? component = componentDB.getComponent(id) as CircuitComponent?;
         if (component != null) {
           switch (component.data) {
             case DeviceSchematicComponentData():
-              final HardwareComponent hardware =
-                  (component.data as DeviceSchematicComponentData).data;
+              final HardwareComponent hardware = (component.data as DeviceSchematicComponentData).data;
               projectManager.updateHardware(
                 hardware: hardware.copyWith(
                   wiringPos: component.position,
@@ -287,8 +285,7 @@ class CircuitController extends ChangeNotifier
               );
               break;
             case SourceComponentData():
-              final Source source =
-                  (component.data as SourceComponentData).source;
+              final Source source = (component.data as SourceComponentData).source;
               projectManager.updateHardware(
                 hardware: source.copyWith(
                   wiringPos: component.position,
@@ -296,8 +293,7 @@ class CircuitController extends ChangeNotifier
               );
               break;
             case SpeakerComponentData():
-              final Speaker speaker =
-                  (component.data as SpeakerComponentData).speaker;
+              final Speaker speaker = (component.data as SpeakerComponentData).speaker;
               projectManager.updateHardware(
                 hardware: speaker.copyWith(
                   wiringPos: component.position,
@@ -329,13 +325,11 @@ class CircuitController extends ChangeNotifier
         final CanvasElement? toPort = componentDB.getComponent(toPortId);
         if (fromPort is CircuitPort && toPort is CircuitPort) {
           projectManager.addWiringConnection(
-            connection: WiringConnectionModel(
-              id: map['id'],
-              deviceId: fromPort.parent.id,
-              portId: fromPort.id,
-              targetDeviceId: toPort.parent.id,
-              targetPortId: toPort.id,
-              type: ConnectionType.data,
+            connection: ConnectionUseCase().createConnection(
+              fromDeviceId: fromPort.parent.id,
+              fromPort: fromPort.toPortData(),
+              toDeviceId: toPort.parent.id,
+              toPort: toPort.toPortData(),
             ),
           );
         }

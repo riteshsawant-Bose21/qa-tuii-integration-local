@@ -74,7 +74,7 @@ abstract class HardwareComponent {
                  portNumber: index + 1,
                  description: "${(portData?.inputPortType ?? PortType.analogInput).description} ${index + 1}",
                  position: portData?.portPosition ?? PortPosition.topLeft,
-                 compatibleTypes: portData?.compatibleInputTypes ?? [],
+
                );
              },
            ),
@@ -89,7 +89,7 @@ abstract class HardwareComponent {
                type: portData?.outputPortType ?? PortType.analogOutput,
                portNumber: index + 1,
                position: portData?.portPosition ?? PortPosition.topRight,
-               compatibleTypes: portData?.compatibleOutputTypes ?? [],
+
              ),
            );
   @override

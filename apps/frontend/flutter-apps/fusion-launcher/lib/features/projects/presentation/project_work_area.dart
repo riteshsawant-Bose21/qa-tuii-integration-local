@@ -19,6 +19,7 @@ import '../../configuration_snapshot/widgets/configuration_snapshots.dart';
 import '../../control_dashboard/presentation/pages/fusion_control_dashboard.dart';
 import '../../devices/presentation/pages/fusion_devices_page.dart';
 import '../../gpio/view/gpio_page.dart';
+import '../../wiring_design/view/wiring_page.dart';
 import '../view_model/spl_viewmodel.dart';
 import '../widget/configuration/side_panel_widgets/configuration_tab_switcher.dart';
 import 'widgets/appbar/project_work_area_appbar.dart';
@@ -41,6 +42,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
   final List<Widget> _designTabs = const <Widget>[
     Tab(text: 'Building'),
     Tab(text: 'System'),
+    Tab(text: 'Connections'),
     // Tab(text: 'Cost'),
     Tab(text: 'Configuration'),
     // Tab(text: 'Cloud'),
@@ -174,6 +176,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
 
       /// Schematics tab
       const WorkSafeAreaContent(child: SystemPage()),
+      const WiringPage(),
 
       WorkSafeAreaContent(child: configurationPage),
     ];
