@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/schematic_properties.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/service_locator.dart';
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../../viewmodel/building_page_viewmodel.dart';
 
 class BuildingPlan extends StatefulWidget {
   const BuildingPlan({super.key});
@@ -22,8 +22,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
 
   // Add editing state tracking
   int? _editingFloorIndex;
-  final Map<int, TextEditingController> _editControllers =
-      <int, TextEditingController>{};
+  final Map<int, TextEditingController> _editControllers = <int, TextEditingController>{};
   final Map<int, FocusNode> _editFocusNodes = <int, FocusNode>{};
 
   @override
@@ -57,13 +56,11 @@ class _BuildingPlanState extends State<BuildingPlan> {
     _errorMessage = null;
   }
 
-  /// Check if floor name already exists
-  bool _floorNameExists(String name) {
-    final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
-    return viewModel.floors.any(
-      (FloorModel floor) => floor.name.toLowerCase() == name.toLowerCase(),
-    );
-  }
+  // /// Check if floor name already exists
+  // bool _floorNameExists(String name) {
+  //   final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
+  //   return viewModel.floors.any((FloorModel floor) => floor.name.toLowerCase() == name.toLowerCase());
+  // }
 
   /// Add a new floor to the project
   void _addFloor() {
@@ -76,13 +73,13 @@ class _BuildingPlanState extends State<BuildingPlan> {
       return;
     }
 
-    // Check if floor name already exists
-    if (_floorNameExists(floorName)) {
-      setState(() {
-        _errorMessage = "Floor name already exists";
-      });
-      return;
-    }
+    // // Check if floor name already exists
+    // if (_floorNameExists(floorName)) {
+    //   setState(() {
+    //     _errorMessage = "Floor name already exists";
+    //   });
+    //   return;
+    // }
 
     final FloorModel model = FloorModel(
       name: floorName,
@@ -102,6 +99,9 @@ class _BuildingPlanState extends State<BuildingPlan> {
     viewModel.setCurrentFloorIndex(selectedIndex);
 
     _clearFields();
+
+    // Set toolbar mode to acoustics mode for new floor.
+    context.read<BuildingPageViewModel>().toggleMode(ToolbarMode.acoustics);
   }
 
   /// Delete the selected floor
@@ -160,9 +160,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
 
     // Check if the new name already exists (excluding current floor)
     final bool nameExists = viewModel.floors.asMap().entries.any(
-      (MapEntry<int, FloorModel> entry) =>
-          entry.key != index &&
-          entry.value.name.toLowerCase() == newName.toLowerCase(),
+      (MapEntry<int, FloorModel> entry) => entry.key != index && entry.value.name.toLowerCase() == newName.toLowerCase(),
     );
 
     if (!nameExists) {
@@ -193,13 +191,13 @@ class _BuildingPlanState extends State<BuildingPlan> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: <Widget>[
-          Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
@@ -226,47 +224,47 @@ class _BuildingPlanState extends State<BuildingPlan> {
               ),
             ],
           ),
+        ),
 
-          const SizedBox(height: 10),
+        /// List view for floors
+        BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+          builder: (BuildContext context, ProjectViewModelState state) {
+            final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
+            final List<FloorModel> floors = viewModel.floors;
 
-          /// List view for floors
-          BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-            builder: (BuildContext context, ProjectViewModelState state) {
-              final ProjectViewModel viewModel =
-                  serviceLocator<ProjectViewModel>();
-              final List<FloorModel> floors = viewModel.floors;
+            // Synchronize selectedIndex with ProjectViewModel's current floor index
+            if (selectedIndex != viewModel.currentFloorIndex) {
+              selectedIndex = viewModel.currentFloorIndex;
+            }
 
-              // Synchronize selectedIndex with ProjectViewModel's current floor index
-              if (selectedIndex != viewModel.currentFloorIndex) {
-                selectedIndex = viewModel.currentFloorIndex;
-              }
+            // Ensure selectedIndex is within bounds
+            if (selectedIndex >= floors.length) {
+              selectedIndex = floors.isNotEmpty ? floors.length - 1 : 0;
+              viewModel.setCurrentFloorIndex(selectedIndex);
+            }
 
-              // Ensure selectedIndex is within bounds
-              if (selectedIndex >= floors.length) {
-                selectedIndex = floors.isNotEmpty ? floors.length - 1 : 0;
-                viewModel.setCurrentFloorIndex(selectedIndex);
-              }
-
-              if (floors.isEmpty) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: FusionAppText(
-                      text: "No floors available",
-                      textAlign: TextAlign.center,
-                      style: context.textTheme.bodySmall?.copyWith(
-                        color: context.colorScheme.primaryWhite,
-                      ),
+            if (floors.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: FusionAppText(
+                    text: "No floors available",
+                    textAlign: TextAlign.center,
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: context.colorScheme.primaryWhite,
                     ),
                   ),
-                );
-              }
+                ),
+              );
+            }
 
-              return Column(
-                children:
-                    floors.asMap().entries.map((
-                      MapEntry<int, FloorModel> entry,
-                    ) {
+            return Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                physics: const ClampingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                child: Column(
+                  children: <Widget>[
+                    ...floors.asMap().entries.map((MapEntry<int, FloorModel> entry) {
                       final int index = entry.key;
                       final FloorModel floor = entry.value;
                       final bool isSelected = index == selectedIndex;
@@ -281,10 +279,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
                         child: Container(
                           margin: const EdgeInsets.symmetric(vertical: 2),
                           decoration: BoxDecoration(
-                            color:
-                                isSelected
-                                    ? context.colorScheme.elevation2
-                                    : Colors.transparent,
+                            color: isSelected ? context.colorScheme.elevation2 : Colors.transparent,
                             borderRadius: BorderRadius.circular(
                               FusionSizes.borderRadius8,
                             ),
@@ -296,9 +291,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                   isEditing
                                       ? null
                                       : () {
-                                        setState(() {
-                                          selectedIndex = index;
-                                        });
+                                        setState(() => selectedIndex = index);
                                         viewModel.setCurrentFloorIndex(index);
                                       },
                               borderRadius: BorderRadius.circular(
@@ -319,31 +312,20 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                           height: 20,
                                           alignment: Alignment.center,
                                           decoration: BoxDecoration(
-                                            color:
-                                                context
-                                                    .colorScheme
-                                                    .primaryWhite,
+                                            color: context.colorScheme.primaryWhite,
                                             borderRadius: BorderRadius.circular(
                                               4,
                                             ),
                                           ),
                                           child: FusionAppText(
-                                            text:
-                                                floor.name.length >= 2
-                                                    ? floor.name
-                                                        .substring(0, 2)
-                                                        .toUpperCase()
-                                                    : floor.name.toUpperCase(),
+                                            text: floor.name.length >= 2 ? floor.name.substring(0, 2).toUpperCase() : floor.name.toUpperCase(),
                                             textAlign: TextAlign.center,
                                             style: Theme.of(
                                               context,
                                             ).textTheme.bodyMedium?.copyWith(
                                               fontSize: 8,
                                               fontWeight: FontWeight.w600,
-                                              color:
-                                                  context
-                                                      .colorScheme
-                                                      .primaryBlack,
+                                              color: context.colorScheme.primaryBlack,
                                             ),
                                           ),
                                         ),
@@ -359,12 +341,9 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                                     "floor_name_edit_input_$index",
                                                   ),
                                                   child: PropertyTextField(
-                                                    hintText:
-                                                        "Enter floor name",
-                                                    controller:
-                                                        _editControllers[index],
-                                                    focusNode:
-                                                        _editFocusNodes[index],
+                                                    hintText: "Enter floor name",
+                                                    controller: _editControllers[index],
+                                                    focusNode: _editFocusNodes[index],
                                                     maxLength: 24,
                                                     // decoration: InputDecoration(
                                                     //   counterText: "",
@@ -377,8 +356,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                                     //       _errorMessage != null ? const UnderlineInputBorder(borderSide: BorderSide(color: Colors.red)) : null,
                                                     // ),
                                                     onChanged: (_) {
-                                                      if (_errorMessage !=
-                                                          null) {
+                                                      if (_errorMessage != null) {
                                                         setState(() {
                                                           _errorMessage = null;
                                                         });
@@ -398,22 +376,11 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                                 return FusionAppText(
                                                   text: floor.name,
                                                   maxLine: 2,
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .bodyMedium
-                                                      ?.copyWith(
-                                                        fontSize: 12,
-                                                        fontWeight:
-                                                            isSelected
-                                                                ? FontWeight
-                                                                    .w600
-                                                                : FontWeight
-                                                                    .normal,
-                                                        color:
-                                                            Theme.of(context)
-                                                                .colorScheme
-                                                                .textPrimary,
-                                                      ),
+                                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                    fontSize: 12,
+                                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                                    color: Theme.of(context).colorScheme.textPrimary,
+                                                  ),
                                                 );
                                               }
                                             },
@@ -432,25 +399,19 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                                   icon: Icon(
                                                     Icons.check,
                                                     size: 16,
-                                                    color:
-                                                        Theme.of(context)
-                                                            .colorScheme
-                                                            .textPrimary,
+                                                    color: Theme.of(context).colorScheme.textPrimary,
                                                   ),
                                                   onPressed: () async {
                                                     // Prevent multiple rapid taps
-                                                    if (_editingFloorIndex !=
-                                                        index)
-                                                      return;
+                                                    if (_editingFloorIndex != index) return;
 
                                                     _saveFloorName(index);
                                                   },
                                                   padding: EdgeInsets.zero,
-                                                  constraints:
-                                                      const BoxConstraints(
-                                                        minWidth: 24,
-                                                        minHeight: 24,
-                                                      ),
+                                                  constraints: const BoxConstraints(
+                                                    minWidth: 24,
+                                                    minHeight: 24,
+                                                  ),
                                                 ),
                                               )
                                               : Container(),
@@ -464,16 +425,11 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                                   icon: Icon(
                                                     Icons.edit,
                                                     size: 16,
-                                                    color:
-                                                        Theme.of(context)
-                                                            .colorScheme
-                                                            .textPrimary,
+                                                    color: Theme.of(context).colorScheme.textPrimary,
                                                   ),
                                                   onPressed: () {
                                                     // Prevent starting edit if already editing
-                                                    if (_editingFloorIndex !=
-                                                        null)
-                                                      return;
+                                                    if (_editingFloorIndex != null) return;
 
                                                     _startEditingFloor(
                                                       index,
@@ -481,28 +437,25 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                                     );
                                                   },
                                                   padding: EdgeInsets.zero,
-                                                  constraints:
-                                                      const BoxConstraints(
-                                                        minWidth: 24,
-                                                        minHeight: 24,
-                                                      ),
+                                                  constraints: const BoxConstraints(
+                                                    minWidth: 24,
+                                                    minHeight: 24,
+                                                  ),
                                                 ),
                                               )
                                               : Container(),
                                           // Only show delete if there's more than one floor and not editing
                                           if (floors.length > 1 && !isEditing)
                                             SemanticHelper.button(
-                                              testId:
-                                                  SemanticHelper.createTestId(
-                                                    SemanticTypes.button,
-                                                    "delete_floor_button_$index",
-                                                  ),
+                                              testId: SemanticHelper.createTestId(
+                                                SemanticTypes.button,
+                                                "delete_floor_button_$index",
+                                              ),
                                               child: GestureDetector(
                                                 onTap:
-                                                    () =>
-                                                        _showDeleteConfirmDialog(
-                                                          index,
-                                                        ),
+                                                    () => _showDeleteConfirmDialog(
+                                                      index,
+                                                    ),
                                                 child: const Icon(
                                                   LucideIcons.trash200,
                                                   size: 16,
@@ -512,17 +465,15 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                             ),
                                           if (floors.length == 1 && !isEditing)
                                             SemanticHelper.button(
-                                              testId:
-                                                  SemanticHelper.createTestId(
-                                                    SemanticTypes.button,
-                                                    "delete_floor_button_$index",
-                                                  ),
+                                              testId: SemanticHelper.createTestId(
+                                                SemanticTypes.button,
+                                                "delete_floor_button_$index",
+                                              ),
                                               child: GestureDetector(
                                                 onTap:
-                                                    () =>
-                                                        _showRestConfirmDialog(
-                                                          index,
-                                                        ),
+                                                    () => _showRestConfirmDialog(
+                                                      index,
+                                                    ),
                                                 child: const Icon(
                                                   LucideIcons.trash200,
                                                   size: 16,
@@ -534,8 +485,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                       ],
                                     ),
                                     // Show error message below the text field when editing
-                                    if (isEditing &&
-                                        _errorMessage != null) ...<Widget>[
+                                    if (isEditing && _errorMessage != null) ...<Widget>[
                                       const SizedBox(height: 4),
                                       Align(
                                         alignment: Alignment.centerLeft,
@@ -562,12 +512,14 @@ class _BuildingPlanState extends State<BuildingPlan> {
                           ),
                         ),
                       );
-                    }).toList(),
-              );
-            },
-          ),
-        ],
-      ),
+                    }),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -605,8 +557,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
           ),
           content: FusionAppText(
             semanticId: "dialog_delete_floor_confirmation",
-            text:
-                'Are you sure you want to delete "$floorName"? This action cannot be undone.',
+            text: 'Are you sure you want to delete "$floorName"? This action cannot be undone.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           actions: <Widget>[
@@ -709,8 +660,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
     _clearFields(); // Clear any previous error messages
 
     final RenderBox button = context.findRenderObject() as RenderBox;
-    final RenderBox overlay =
-        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromPoints(
         button.localToGlobal(const Offset(50, 18), ancestor: overlay),
@@ -826,8 +776,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
                             color: context.colorScheme.primaryBlack,
                           ),
                           label: "Add Floor",
-                          activeBackgroundColor:
-                              context.colorScheme.primaryWhite,
+                          activeBackgroundColor: context.colorScheme.primaryWhite,
                           onTap: () {
                             _addFloor();
                             if (_errorMessage == null) {

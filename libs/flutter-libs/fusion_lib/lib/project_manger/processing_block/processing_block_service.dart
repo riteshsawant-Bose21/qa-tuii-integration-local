@@ -42,9 +42,13 @@ extension ProcessingBlockService on ProjectService {
     return processingBlocks.getAll();
   }
 
-  List<ProcessingBlockModel> getProcessingBlockFor(String parentId) {
+  List<ProcessingBlockModel> getProcessingBlockFor({required String parentId, bool includeUserBlocks = false}) {
     final processingBlockIds = relationships.getChildren(RelationshipType.processingBlock, parentId);
-    return processingBlockIds.map((id) => processingBlocks.get(id)).whereType<ProcessingBlockModel>().toList();
+    return processingBlockIds
+        .map((id) => processingBlocks.get(id))
+        .whereType<ProcessingBlockModel>()
+        .where((block) => (includeUserBlocks || !block.isforUser))
+        .toList();
   }
 
   void reOrderProcessingBlocks(String parentId, int oldIndex, int newIndex) {

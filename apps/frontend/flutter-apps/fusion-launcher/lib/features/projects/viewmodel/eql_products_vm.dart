@@ -9,7 +9,7 @@ import 'package:fusion_lib/product_data/models/dsp_product.dart';
 import 'package:fusion_lib/product_data/models/io_endpoint_product.dart';
 import 'package:fusion_lib/product_data/models/product_port_data.dart';
 
-import '../widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
+import '../../speaker_selection_popup/viewmodel/product_query_view_model.dart';
 
 class EqlProductsVm extends Cubit<EQLProductsState> {
   final ProjectViewModel projectViewModel;

@@ -5,13 +5,9 @@ import 'package:archive/archive.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
-
-import '../../features/configuration/presentation/viewmodel/project_view_model.dart';
-import '../service_locator.dart';
 
 /// Shows a popup dialog with Share, Download, and Submit Feedback options
 /// Returns 'share', 'download', 'feedback', or null if dismissed
@@ -219,10 +215,9 @@ Future<bool> downloadFilesLocally(
 }) async {
   try {
     // Let user pick a directory to save files
-    final String? selectedDirectory = await FilePicker.platform
-        .getDirectoryPath(
-          dialogTitle: 'Select Download Location',
-        );
+    final String? selectedDirectory = await FilePicker.platform.getDirectoryPath(
+      dialogTitle: 'Select Download Location',
+    );
 
     if (selectedDirectory == null) {
       // User cancelled
@@ -232,8 +227,7 @@ Future<bool> downloadFilesLocally(
     final Directory downloadDir = Directory(selectedDirectory);
 
     // Create a timestamped folder for this export
-    final String timestamp =
-        DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
+    final String timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
     final String exportFolderName = 'fusion_export_$timestamp';
     final Directory exportDir = Directory(
       p.join(downloadDir.path, exportFolderName),
@@ -386,60 +380,6 @@ Future<bool> downloadAsZip(
     }
 
     return false;
-  }
-}
-
-// Usage example in your code:
-Future<void> handleExportLogs(BuildContext context) async {
-  final String? choice = await showShareDownloadPopup(context);
-
-  if (choice == null) return; // User cancelled
-
-  if (choice == 'feedback') {
-    // Show feedback webview
-    await showFeedbackWebView(context);
-    return;
-  }
-
-  FusionUiUtils.showLoader(context);
-
-  try {
-    final List<XFile> logsList = await FusionUtils.generateSharableLogsFiles();
-    File? projectFile;
-
-    // Get project file for download option
-    projectFile =
-        await serviceLocator<ProjectViewModel>().getCurrentProjectFile();
-    if (projectFile != null) {
-      logsList.add(FusionUtils.generateXFile(projectFile));
-    }
-
-    if (context.mounted) FusionUiUtils.hideLoader(context);
-
-    if (choice == 'share') {
-      // Share logs only (Notes will be available on macOS)
-      await SharePlus.instance.share(
-        ShareParams(
-          text: "Fusion Logs ${DateTime.now()}",
-          files: logsList,
-        ),
-      );
-    } else if (choice == 'download') {
-      // Download locally - choose your preferred method:
-
-      // Option 1: Download as separate files in a folder
-      if (context.mounted)
-        await downloadFilesLocally(context, logsList, projectFile: projectFile);
-
-      // Option 2: Download as a single ZIP file
-      // await downloadAsZip(context, logsList, projectFile: projectFile);
-    }
-  } catch (e, st) {
-    if (context.mounted) FusionUiUtils.hideLoader(context);
-    FusionLogger.log(
-      tag: LogTag.exceptions,
-      message: "Export failed: $e\n$st",
-    );
   }
 }
 
