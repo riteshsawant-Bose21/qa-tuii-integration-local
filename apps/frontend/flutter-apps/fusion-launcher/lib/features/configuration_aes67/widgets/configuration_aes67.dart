@@ -190,6 +190,7 @@ class _ConfigurationAes67View extends StatelessWidget {
     FusionTableColumn(key: 'bitDepth', header: 'Bit Depth', flex: 2, alignment: Alignment.center),
     FusionTableColumn(key: 'packetTime', header: 'Packet Time', flex: 2, alignment: Alignment.center),
     FusionTableColumn(key: 'status', header: 'Status', flex: 1, sortable: false, alignment: Alignment.center),
+    FusionTableColumn(key: 'delete', header: '', flex: 1, sortable: false, alignment: Alignment.center),
   ];
 
   List<FusionTableColumn> _outputColumns() => const <FusionTableColumn>[
@@ -202,6 +203,7 @@ class _ConfigurationAes67View extends StatelessWidget {
     FusionTableColumn(key: 'bitDepth', header: 'Bit Depth', flex: 2, alignment: Alignment.center),
     FusionTableColumn(key: 'packetTime', header: 'Packet Time', flex: 2, alignment: Alignment.center),
     FusionTableColumn(key: 'status', header: 'Status', flex: 1, sortable: false, alignment: Alignment.center),
+    FusionTableColumn(key: 'delete', header: '', flex: 1, sortable: false, alignment: Alignment.center),
   ];
 
   // ── Row builders ────────────────────────────────────────────────────
@@ -254,6 +256,12 @@ class _ConfigurationAes67View extends StatelessWidget {
               'status': FusionTableCell(
                 value: s.isEnabled,
                 child: _StatusDot(active: s.isEnabled),
+              ),
+              'delete': FusionTableCell(
+                value: null,
+                child: _DeleteButton(
+                  onDelete: () => cubit.deleteInputStream(s.id),
+                ),
               ),
             },
           ),
@@ -309,6 +317,12 @@ class _ConfigurationAes67View extends StatelessWidget {
               'status': FusionTableCell(
                 value: s.isEnabled,
                 child: _StatusDot(active: s.isEnabled),
+              ),
+              'delete': FusionTableCell(
+                value: null,
+                child: _DeleteButton(
+                  onDelete: () => cubit.deleteOutputStream(s.id),
+                ),
               ),
             },
           ),
@@ -519,6 +533,29 @@ class _CellText extends StatelessWidget {
         fontSize: 12,
         fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
         color: bold ? context.colorScheme.textPrimary : context.colorScheme.textSecondary,
+      ),
+    );
+  }
+}
+
+/// Delete button for table rows
+class _DeleteButton extends StatelessWidget {
+  final VoidCallback onDelete;
+
+  const _DeleteButton({required this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onDelete,
+      customBorder: const CircleBorder(),
+      child: Padding(
+        padding: const EdgeInsets.all(6),
+        child: Icon(
+          Icons.delete_outline,
+          size: 18,
+          color: context.colorScheme.textSecondary,
+        ),
       ),
     );
   }
