@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/color_pallette.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
 import 'package:fusion_web/core/presentation/base_viewmodel.dart';
 import 'package:fusion_web/core/services/service_locator.dart';
@@ -113,7 +116,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                   ..loadDevices(),
 
             child: Container(
-              color: const Color(0xFFF7F7F7),
+              // color: const Color(0xFFF7F7F7),
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
               child: SingleChildScrollView(
                 child: Column(
@@ -122,25 +125,26 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                     /// BACK
                     TextButton.icon(
                       onPressed: () => context.go(AppConstants.projectsRoute),
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.arrow_back,
                         size: 18,
-                        color: Colors.black,
+                        color: context.colorScheme.elevation6,
                       ),
-                      label: Text(
-                        "Back to Projects",
-                        style: GoogleFonts.montserrat(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black,
-                        ),
+                      label: FusionAppText(
+                        text: "Back to Projects",
+                        // style: GoogleFonts.montserrat(
+                        //   fontSize: 14,
+                        //   fontWeight: FontWeight.w500,
+                        // ),
                       ),
                       style: ButtonStyle(
                         backgroundColor: WidgetStateProperty.resolveWith((
                           states,
                         ) {
                           if (states.contains(WidgetState.hovered)) {
-                            return Colors.grey[200]; // hover background
+                            return context
+                                .colorScheme
+                                .elevation3; // hover background
                           }
                           return Colors.transparent;
                         }),
@@ -171,8 +175,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                               Row(
                                 children: [
                                   Expanded(
-                                    child: Text(
-                                      p.name,
+                                    child: FusionAppText(
+                                      text: p.name,
                                       style: GoogleFonts.montserrat(
                                         fontSize: 28,
                                         fontWeight: FontWeight.w700,
@@ -399,7 +403,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                                       description:
                                           "Devices will appear here once added to this project.",
                                       icon: Icons.devices_outlined,
-                                      
                                     );
                                   }
 
@@ -539,15 +542,16 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
   Widget _card({required Widget child}) => Container(
     padding: const EdgeInsets.all(24),
     decoration: BoxDecoration(
-      color: Colors.white,
+      // color: Colors.white,
+      color: context.colorScheme.elevation2,
       borderRadius: BorderRadius.circular(16),
     ),
     child: child,
   );
 
-  Widget _cardTitle(String text) => Text(
-    text,
-    style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w600),
+  Widget _cardTitle(String text) => FusionAppText(
+    text: text,
+    // style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w600),
   );
 
   Widget _detail(String label, String value) => Padding(
@@ -555,17 +559,12 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.montserrat(fontSize: 13, color: Colors.grey[500]),
+        FusionAppText(
+          text: label,
         ),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: GoogleFonts.montserrat(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
+        FusionAppText(
+          text: value,
         ),
       ],
     ),
@@ -575,22 +574,18 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
     child: Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFF2F2F2),
+        color: context.colorScheme.elevation3,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: GoogleFonts.montserrat(
-              fontSize: 13,
-              color: Colors.grey[600],
-            ),
+          FusionAppText(
+            text: label,
           ),
           const SizedBox(height: 8),
-          Text(
-            value,
+          FusionAppText(
+            text: value,
             style: GoogleFonts.montserrat(
               fontSize: 28,
               fontWeight: FontWeight.w700,
@@ -605,7 +600,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
     child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(.08),
+        color: context.colorScheme.elevation3,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -645,31 +640,21 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
           color: selected ? Colors.grey[300] : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Text(
-          text,
-          style: GoogleFonts.montserrat(
-            fontSize: 13,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-          ),
+        child: FusionAppText(
+          text: text
         ),
       ),
     );
   }
 
-  Widget _placeholder(String text) => Padding(
-    padding: const EdgeInsets.all(24),
-    child: Text(
-      text,
-      style: GoogleFonts.montserrat(fontSize: 14, color: Colors.grey),
-    ),
-  );
-
   Widget _smallPill(String text) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
     decoration: BoxDecoration(
-      color: Colors.grey[200],
+      color: context.colorScheme.elevation6,
       borderRadius: BorderRadius.circular(20),
     ),
-    child: Text(text, style: GoogleFonts.montserrat(fontSize: 12)),
+    child: FusionAppText(
+      text: text,
+    ),
   );
 }

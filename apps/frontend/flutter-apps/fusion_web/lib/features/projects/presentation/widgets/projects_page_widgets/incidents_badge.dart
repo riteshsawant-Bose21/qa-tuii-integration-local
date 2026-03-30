@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class IncidentsBadge extends StatelessWidget {
   final int count;
 
-  const IncidentsBadge({
-    super.key,
-    required this.count,
-  });
+  const IncidentsBadge({super.key, required this.count});
 
   @override
   Widget build(BuildContext context) {
@@ -20,8 +18,8 @@ class IncidentsBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFFED7AA)),
       ),
-      child: Text(
-        label,
+      child: FusionAppText(
+        text: label,
         style: GoogleFonts.montserrat(
           fontSize: 12,
           fontWeight: FontWeight.w500,

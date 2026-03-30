@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_container.dart';
 import 'package:fusion_web/features/devices/presentation/handlers/devices_action_handler.dart';
 import '../../../data/models/devices_model.dart';
 import 'device_row.dart';
@@ -8,16 +10,23 @@ class DevicesListView extends StatelessWidget {
   final List<Device> devices;
   final Function(Device) onDeviceTap;
 
-  const DevicesListView({super.key, required this.devices,required this.onDeviceTap,});
+  const DevicesListView({
+    super.key,
+    required this.devices,
+    required this.onDeviceTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-        color: Colors.white,
-      ),
+    return FusionContainer(
+      color: context.colorScheme.elevation2,
+      raised: true,
+
+      // decoration: BoxDecoration(
+      //   borderRadius: BorderRadius.circular(12),
+      //   border: Border.all(color: Colors.grey[200]!),
+      //   color: Colors.white,
+      // ),
       child: Column(
         children: [
           const DeviceTableHeader(),
@@ -27,14 +36,14 @@ class DevicesListView extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             itemCount: devices.length,
             separatorBuilder: (_, __) =>
-                Divider(height: 1, color: Colors.grey[200]),
-             itemBuilder: (context, index) {
-              final device = devices[index]; 
+                  Divider(height: 1, color:  context.colorScheme.elevation3),
+            itemBuilder: (context, index) {
+              final device = devices[index];
 
               return DeviceRow(
                 device: device,
                 isLast: index == devices.length - 1,
-                onTap: onDeviceTap, 
+                onTap: onDeviceTap,
               );
             },
           ),

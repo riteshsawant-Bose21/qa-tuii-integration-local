@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fusion_web/core/services/service_locator.dart';
 import 'package:fusion_web/features/projects/presentation/handlers/project_actions_handler.dart';
@@ -36,9 +37,9 @@ class ProjectGridCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
+            color: context.colorScheme.onSurface.withValues(alpha: 0.05),
+
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey[200]!),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

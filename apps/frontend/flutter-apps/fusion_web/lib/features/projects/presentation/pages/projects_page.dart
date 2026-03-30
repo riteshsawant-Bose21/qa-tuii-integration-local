@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/color_pallette.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:google_fonts/google_fonts.dart';
 //Routes
 import 'package:go_router/go_router.dart';
@@ -24,6 +27,9 @@ class ProjectsPage extends StatefulWidget {
 
 class _ProjectsPageState extends State<ProjectsPage> {
   late final ProjectsViewModel _viewModel = ServiceLocator().projectsViewModel;
+  // Make it scalable for larger screens
+  double get headlineFontSize => MediaQuery.of(context).size.width * 0.07;
+  double get subHeadingFontSize => MediaQuery.of(context).size.width * 0.02;
 
   @override
   void initState() {
@@ -41,7 +47,6 @@ class _ProjectsPageState extends State<ProjectsPage> {
     return BlocProvider.value(
       value: _viewModel,
       child: Scaffold(
-        backgroundColor: Colors.grey[50],
         body: Padding(
           padding: const EdgeInsets.all(24),
           child: BlocBuilder<ProjectsViewModel, BaseState<List<ProjectModel>>>(
@@ -55,7 +60,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
                     child: Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: context.colorScheme.elevation2,
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
@@ -99,21 +104,16 @@ class _ProjectsPageState extends State<ProjectsPage> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Projects',
-              style: GoogleFonts.montserrat(
-                fontSize: 32,
-                fontWeight: FontWeight.w700,
-                color: Colors.black87,
+            FusionAppText(
+              text: 'Projects',
+              style: context.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
               ),
+              maxLine: 2,
             ),
             const SizedBox(height: 4),
-            Text(
-              'Manage and monitor all projects across your organization',
-              style: GoogleFonts.montserrat(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
+            FusionAppText(
+              text: 'Manage and monitor all projects across your organization',
             ),
           ],
         ),
@@ -136,7 +136,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
     }
 
     if (state is ErrorState<List<ProjectModel>>) {
-      return Center(child: Text(state.message));
+      return Center(child: FusionAppText(text: state.message));
     }
 
     final projects = (state as LoadedState<List<ProjectModel>>).data;

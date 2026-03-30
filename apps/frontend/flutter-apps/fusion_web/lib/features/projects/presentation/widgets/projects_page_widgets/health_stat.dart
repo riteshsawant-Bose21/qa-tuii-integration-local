@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class HealthStat extends StatelessWidget {
@@ -20,12 +21,12 @@ class HealthStat extends StatelessWidget {
       children: [
         Icon(icon, color: color, size: 17),
         const SizedBox(width: 4),
-        Text(
+        FusionAppText(
+              text:
           '$count',
           style: GoogleFonts.montserrat(
             fontSize: 13,
             fontWeight: FontWeight.w500,
-            color: Colors.grey[700],
           ),
         ),
       ],

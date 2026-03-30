@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
 class StatusIndicator extends StatelessWidget {
   final String status;
@@ -19,11 +20,12 @@ class StatusIndicator extends StatelessWidget {
             color: bgColor,
             borderRadius: BorderRadius.circular(20),
           ),
-          child: Text(
+          child: FusionAppText(
+            text:
             _capitalize(status),
             style: TextStyle(
               color: textColor,
-              fontWeight: FontWeight.w500,
+              // fontWeight: FontWeight.w500,
               fontSize: 12,
             ),
           ),

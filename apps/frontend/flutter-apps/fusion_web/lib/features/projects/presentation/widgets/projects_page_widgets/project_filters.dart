@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/form_fields/text_fleld.dart';
+import 'package:fusion_lib/fusion_widgets/others/hover_dropdown.dart';
 import 'package:fusion_web/features/projects/presentation/viewmodels/projects_viewmodel.dart';
 import 'package:fusion_web/features/projects/presentation/widgets/filter_dropdown.dart';
 import 'package:fusion_web/features/projects/presentation/widgets/projects_page_widgets/view_toggle_button.dart';
@@ -12,10 +15,8 @@ class ProjectsFilters extends StatelessWidget {
     final vm = context.watch<ProjectsViewModel>();
 
     return Container(
-
       child: Row(
         children: [
-
           Expanded(
             flex: 2,
             child: TextFormField(
@@ -34,6 +35,7 @@ class ProjectsFilters extends StatelessWidget {
             ),
           ),
 
+          
           const SizedBox(width: 16),
 
           Expanded(
@@ -68,10 +70,10 @@ class ProjectsFilters extends StatelessWidget {
 
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(icon, color: Colors.grey[400]),
-      filled: true,
-      fillColor: Colors.grey[50],
+      // labelText: label,
+      // prefixIcon: Icon(icon, color: Colors.grey[400]),
+      // filled: true,
+      // fillColor: Colors.grey[50],
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
     );
   }

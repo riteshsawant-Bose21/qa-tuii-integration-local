@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_web/core/services/service_locator.dart';
 import 'package:fusion_web/features/projects/presentation/widgets/project_actions_menu.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:fusion_web/features/projects/presentation/handlers/project_actions_handler.dart';
 import '../../../data/models/project_model.dart';
 import '../projects_page_widgets/status_badge.dart';
@@ -27,14 +28,13 @@ class ProjectRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: context.colorScheme.elevation2,
       child: InkWell(
-        hoverColor: Colors.grey[100],
+        hoverColor: context.colorScheme.elevation3,
         onTap: () => onTap(project),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
           decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
             borderRadius: isLast
                 ? const BorderRadius.vertical(bottom: Radius.circular(12))
                 : BorderRadius.zero,
@@ -44,12 +44,9 @@ class ProjectRow extends StatelessWidget {
               /// PROJECT
               Expanded(
                 flex: 3,
-                child: Text(
-                  project.name,
-                  style: GoogleFonts.montserrat(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
+                child: FusionAppText(
+                  text: project.name,
+                  style: context.textTheme.bodyMedium
                 ),
               ),
 
@@ -57,13 +54,10 @@ class ProjectRow extends StatelessWidget {
 
               /// Client
               Expanded(
-                flex: 3,
-                child: Text(
-                  project.clientName,
-                  style: GoogleFonts.montserrat(
-                    fontWeight: FontWeight.w400,
-                    fontSize: 14,
-                  ),
+                flex: 2,
+                child: FusionAppText(
+                  text: project.clientName,
+                  style: context.textTheme.bodyMedium
                 ),
               ),
 
@@ -82,17 +76,14 @@ class ProjectRow extends StatelessWidget {
 
               /// status (region) - indoor / outdoor / hybrid
               SizedBox(
-            width: 70,
+                width: 70,
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Text(
-                    project.region,
-                    style: GoogleFonts.montserrat(
-                      fontSize: 14,
-                      color: Colors.grey[700],
-                    ),
-                    maxLines: 2,
+                  child: FusionAppText(
+                    maxLine: 2,
                     softWrap: true,
+                    text: project.region,
+                    style: context.textTheme.bodyMedium
                   ),
                 ),
               ),
@@ -116,19 +107,19 @@ class ProjectRow extends StatelessWidget {
                   children: [
                     HealthStat(
                       icon: Icons.check_circle_outline,
-                      color: Colors.green,
+                      color: context.colorScheme.volumeGreen,
                       count: project.healthyDevices,
                     ),
                     const SizedBox(width: 8),
                     HealthStat(
                       icon: Icons.warning,
-                      color: Colors.orange,
+                      color: context.colorScheme.volumeYellow,
                       count: project.warningDevices,
                     ),
                     const SizedBox(width: 8),
                     HealthStat(
                       icon: Icons.cancel,
-                      color: Colors.red,
+                      color: context.colorScheme.volumeRed,
                       count: project.criticalDevices,
                     ),
                   ],
@@ -138,19 +129,16 @@ class ProjectRow extends StatelessWidget {
               const SizedBox(width: 12),
 
               /// UPDATED
-             SizedBox(
-            width: 65,
-                child: Text(
-                  _formatDate(project.lastUpdated),
-                  style: GoogleFonts.montserrat(
-                    fontSize: 13,
-                    color: Colors.grey[500],
-                  ),
+              SizedBox(
+                width: 70,
+                child: FusionAppText(
+                  text: _formatDate(project.lastUpdated),
+                  style: context.textTheme.bodyMedium
                 ),
               ),
 
               SizedBox(
-                width: 48, 
+                width: 48,
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: ProjectActionsMenu(

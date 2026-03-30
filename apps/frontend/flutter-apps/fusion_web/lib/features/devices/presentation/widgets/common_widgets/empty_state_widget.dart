@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class EmptyStateWidget extends StatelessWidget {
@@ -23,7 +24,7 @@ class EmptyStateWidget extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(

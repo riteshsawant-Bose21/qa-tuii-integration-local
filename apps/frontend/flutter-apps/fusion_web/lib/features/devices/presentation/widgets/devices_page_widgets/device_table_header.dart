@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
 class DeviceTableHeader extends StatelessWidget {
   const DeviceTableHeader({super.key});
@@ -8,11 +10,10 @@ class DeviceTableHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
         borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-        border: Border.all(color: Colors.grey[200]!),
+        border: Border(bottom: BorderSide(color: context.colorScheme.elevation3)),
       ),
-      child: const Row(
+      child: Row(
         children: [
 
           /// DEVICE
@@ -20,54 +21,52 @@ class DeviceTableHeader extends StatelessWidget {
             flex: 3,
             child: Row(
               children: [
-                // SizedBox(width: 42), // image space
-                // SizedBox(width: 12), // gap after image
-                Text(
-                  "Device",
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                FusionAppText(
+                  text: "Device",
+                  style: context.textTheme.labelLarge
                 ),
               ],
             ),
           ),
       
 
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
 
           /// PROJECT
           Expanded(
             flex: 2,
-            child: Text(
-              "Project",
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
+            child: FusionAppText(
+                  text: "Project",
+                  style: context.textTheme.labelLarge
+                ),
           ),
 
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
 
           // /// LOCATION
           Expanded(
             flex: 2,
-            child: Text(
-              "Location",
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
+            child: FusionAppText(
+                  text: "Location",
+                  style: context.textTheme.labelLarge
+                ),
           ),
 
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
 
           /// STATUS
           Expanded(
             flex: 2,
-            child: Text(
-              "Status",
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
+            child: FusionAppText(
+                  text: "Status",
+                  style: context.textTheme.labelLarge
+                ),
           ),
 
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
 
           /// ACTION COLUMN SPACE
-          SizedBox(width: 48), // matches icon width area
+          const SizedBox(width: 48), // matches icon width area
         ],
       ),
     );

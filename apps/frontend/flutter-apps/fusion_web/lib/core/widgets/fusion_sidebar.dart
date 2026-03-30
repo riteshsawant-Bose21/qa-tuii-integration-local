@@ -33,7 +33,9 @@ class FusionSidebar extends StatelessWidget {
           return Container(
             width: AppConstants.sidebarWidth,
             height: double.infinity,
-            decoration: BoxDecoration(color: Theme.of(context).cardColor),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor
+              ),
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
@@ -41,17 +43,17 @@ class FusionSidebar extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     /// LOGO
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      child: Center(
-                        child: Image.asset(
-                          'assets/images/bose_professional_logo.png',
-                          height: 32,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ),
+                    // Container(
+                    //   width: double.infinity,
+                    //   padding: const EdgeInsets.all(16),
+                    //   child: Center(
+                    //     child: Image.asset(
+                    //       'assets/images/bose_professional_logo.png',
+                    //       height: 32,
+                    //       fit: BoxFit.contain,
+                    //     ),
+                    //   ),
+                    // ),
 
                     const SizedBox(height: 16),
 
@@ -79,7 +81,8 @@ class FusionSidebar extends StatelessWidget {
   Widget _buildUserSection(BuildContext context, SidebarViewModel viewModel) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        // color: Colors.white,
+        color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.circular(AppConstants.borderRadius),
         boxShadow: [BoxShadow(blurRadius: 6, color: Colors.black12)],
       ),
@@ -101,7 +104,7 @@ class FusionSidebar extends StatelessWidget {
                     height: 36,
                     width: 36,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      // color: Colors.white,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(LucideIcons.bell, size: 16),
@@ -117,7 +120,7 @@ class FusionSidebar extends StatelessWidget {
                 child: FusionAppText(
                   text: viewModel.appName,
                   style: context.textTheme.labelMedium?.copyWith(
-                    color: FusionDarkColorPallette.medium50,
+                    color: context.colorScheme.elevation6,
                   ),
                 ),
               ),
@@ -125,7 +128,8 @@ class FusionSidebar extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          Text(viewModel.userName, style: context.textTheme.titleMedium),
+          FusionAppText(
+                  text:viewModel.userName, style: context.textTheme.titleMedium),
         ],
       ),
     );
@@ -141,7 +145,8 @@ class FusionSidebar extends StatelessWidget {
   ) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        // color: Colors.white,
+        color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.circular(AppConstants.borderRadius),
         boxShadow: [BoxShadow(blurRadius: 6, color: Colors.black12)],
       ),

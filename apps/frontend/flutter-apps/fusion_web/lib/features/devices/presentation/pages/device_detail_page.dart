@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_web/features/devices/presentation/widgets/common_widgets/status_indicator.dart';
 import 'package:fusion_web/features/devices/presentation/widgets/device_detail_page_widgets/device_activity_tab.dart';
 import 'package:fusion_web/features/devices/presentation/widgets/device_detail_page_widgets/device_incidents_tab.dart';
@@ -26,7 +28,6 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFFF7F7F7),
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
       child: SingleChildScrollView(
         child: Column(
@@ -38,8 +39,8 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 context.pop();
               },
               icon: const Icon(Icons.arrow_back, size: 18, color: Colors.black),
-              label: Text(
-                "Back to Devices",
+              label: FusionAppText(
+                text: "Back to Devices",
                 style: GoogleFonts.montserrat(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
@@ -66,16 +67,17 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        widget.device.name,
+                      FusionAppText(
+                        text: widget.device.name,
                         style: GoogleFonts.montserrat(
                           fontSize: 28,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        "Serial: ${widget.device.serialNumber}  •  ID: ${widget.device.deviceId}",
+                      FusionAppText(
+                        text:
+                            "Serial: ${widget.device.serialNumber}  •  ID: ${widget.device.deviceId}",
                         style: GoogleFonts.montserrat(fontSize: 15),
                       ),
                     ],
@@ -159,7 +161,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
     return Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-        color: const Color(0xFFE9E9E9),
+        color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
@@ -186,12 +188,12 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
           color: selected ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Text(
-          text,
-          style: GoogleFonts.montserrat(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
+        child: FusionAppText(
+          text: text,
+          // style: GoogleFonts.montserrat(
+          //   fontSize: 13,
+          //   fontWeight: FontWeight.w600,
+          // ),
         ),
       ),
     );
@@ -201,35 +203,38 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        // color: Colors.white,
+        color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E5E5)),
+        // border: Border.all(color: const Color(0xFFE5E5E5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: GoogleFonts.montserrat(
-              fontSize: 13,
-              color: Colors.grey[600],
-            ),
+          FusionAppText(
+            text: title,
+            // style: GoogleFonts.montserrat(
+            //   fontSize: 13,
+            //   color: Colors.grey[600],
+            // ),
           ),
           const SizedBox(height: 8),
-          Text(
+          FusionAppText(
+            text:
             value,
-            style: GoogleFonts.montserrat(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-            ),
+            // style: GoogleFonts.montserrat(
+            //   fontSize: 20,
+            //   fontWeight: FontWeight.w700,
+            // ),
           ),
           const SizedBox(height: 4),
-          Text(
+          FusionAppText(
+            text:
             subtitle,
-            style: GoogleFonts.montserrat(
-              fontSize: 12,
-              color: Colors.grey[500],
-            ),
+            // style: GoogleFonts.montserrat(
+            //   fontSize: 12,
+            //   color: Colors.grey[500],
+            // ),
           ),
         ],
       ),

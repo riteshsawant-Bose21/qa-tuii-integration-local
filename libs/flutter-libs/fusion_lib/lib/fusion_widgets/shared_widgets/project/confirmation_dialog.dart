@@ -34,6 +34,7 @@ class ConfirmationDialog extends StatelessWidget {
         ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: confirmColor,
+            foregroundColor: Colors.white,
           ),
           onPressed: () {
             onConfirm();

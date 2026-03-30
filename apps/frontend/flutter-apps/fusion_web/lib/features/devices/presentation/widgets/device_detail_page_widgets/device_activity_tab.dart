@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class DeviceActivityTab extends StatelessWidget {
@@ -9,15 +10,13 @@ class DeviceActivityTab extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E5E5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Activity Timeline",
+          FusionAppText(
+            text: "Activity Timeline",
             style: GoogleFonts.montserrat(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -57,7 +56,6 @@ class DeviceActivityTab extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFE7F0FF),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.monitor_heart, size: 18),
@@ -75,8 +73,8 @@ class DeviceActivityTab extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
+              FusionAppText(
+                text: title,
                 style: GoogleFonts.montserrat(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -85,8 +83,8 @@ class DeviceActivityTab extends StatelessWidget {
 
               const SizedBox(height: 4),
 
-              Text(
-                time,
+              FusionAppText(
+                text: time,
                 style: GoogleFonts.montserrat(
                   fontSize: 12,
                   color: Colors.grey[600],

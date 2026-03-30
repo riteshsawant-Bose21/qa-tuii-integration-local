@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fusion_web/features/devices/data/models/devices_model.dart';
 import 'package:fusion_web/features/devices/presentation/widgets/common_widgets/status_indicator.dart';
@@ -22,6 +24,7 @@ class DeviceOverviewTab extends StatelessWidget {
                 child: _card(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+
                     children: [
                       _cardTitle("Device Identity"),
                       const SizedBox(height: 20),
@@ -76,13 +79,13 @@ class DeviceOverviewTab extends StatelessWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.black,
+                              color: context.colorScheme.primary,
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: Text(
-                              "Online",
+                            child: FusionAppText(
+                              text: "Online",
                               style: GoogleFonts.montserrat(
-                                color: Colors.white,
+                                // color: Colors.white,
                                 fontSize: 12,
                               ),
                             ),
@@ -152,9 +155,7 @@ class DeviceOverviewTab extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E5E5)),
       ),
       child: child,
     );
@@ -162,8 +163,8 @@ class DeviceOverviewTab extends StatelessWidget {
 
   /// CARD TITLE
   Widget _cardTitle(String text) {
-    return Text(
-      text,
+    return FusionAppText(
+      text: text,
       style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w600),
     );
   }
@@ -173,13 +174,13 @@ class DeviceOverviewTab extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
+        FusionAppText(
+          text: label,
           style: GoogleFonts.montserrat(fontSize: 13, color: Colors.grey[500]),
         ),
         const SizedBox(height: 4),
-        Text(
-          value,
+        FusionAppText(
+          text: value,
           style: GoogleFonts.montserrat(
             fontSize: 14,
             fontWeight: FontWeight.w500,
@@ -194,18 +195,18 @@ class DeviceOverviewTab extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Text(
-            label,
+          child: FusionAppText(
+            text: label,
             style: GoogleFonts.montserrat(
               fontSize: 14,
-              color: Colors.grey[700],
+              // color: Colors.grey[700],
             ),
           ),
         ),
         value is Widget
             ? value
-            : Text(
-                value.toString(),
+            : FusionAppText(
+                text: value.toString(),
                 style: GoogleFonts.montserrat(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
@@ -221,14 +222,14 @@ class DeviceOverviewTab extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E5E5)),
+        // border: Border.all(color: const Color(0xFFE5E5E5)),
       ),
       child: Row(
         children: [
           Icon(icon, size: 20),
           const SizedBox(width: 12),
-          Text(
-            text,
+          FusionAppText(
+            text: text,
             style: GoogleFonts.montserrat(
               fontSize: 14,
               fontWeight: FontWeight.w500,

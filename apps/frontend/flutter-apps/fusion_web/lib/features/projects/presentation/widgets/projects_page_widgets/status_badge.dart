@@ -16,7 +16,7 @@ class StatusBadge extends StatelessWidget {
     Color bg;
     Color fg;
 
-    if (lower == 'planning') {
+    if (lower == 'commissioned') {
       bg = const Color(0xFFDCFCE7);
       fg = const Color(0xFF16A34A);
     } else if (lower == 'proposal') {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
 class DevicesHeader extends StatelessWidget {
   const DevicesHeader({super.key});
@@ -9,24 +10,16 @@ class DevicesHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-
-        Text(
-          "Devices",
-          style: GoogleFonts.montserrat(
-            fontSize: 32,
-            fontWeight: FontWeight.w700,
-            color: Colors.black87,
+        FusionAppText(
+          text: 'Devices',
+          style: context.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.bold,
           ),
+          maxLine: 2,
         ),
-
-        const SizedBox(height: 6),
-
-        Text(
-          "Monitor and manage all devices across your ecosystem",
-          style: GoogleFonts.montserrat(
-            fontSize: 16,
-            color: Colors.grey[600],
-          ),
+        const SizedBox(height: 4),
+        FusionAppText(
+          text: 'Monitor and manage all devices across your ecosystem',
         ),
       ],
     );

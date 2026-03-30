@@ -1,92 +1,102 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_flat_container.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
 class ProjectTableHeader extends StatelessWidget {
   const ProjectTableHeader({super.key});
 
+
+          
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        // color: Colors.grey[50],
+        // color: context.colorScheme.elevation3,
+
         borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-        border: Border.all(color: Colors.grey[200]!),
+        border: Border(bottom: BorderSide(color: context.colorScheme.elevation3)),
       ),
-      child: const Row(
+      child: Row(
         children: [
           /// PROJECT
           Expanded(
             flex: 3,
-            child: Text(
-              "Project",
-              style: TextStyle(fontWeight: FontWeight.w600),
+            child: FusionAppText(
+              text: 'project',
+              style: context.textTheme.labelLarge
             ),
           ),
 
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
 
           /// client name
           Expanded(
-            flex: 3,
-            child: Text(
-              "Client",
-              style: TextStyle(fontWeight: FontWeight.w600),
+            flex: 2,
+            child: FusionAppText(
+              text: 'client',
+              style: context.textTheme.labelLarge
             ),
           ),
 
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
 
           /// PHASE (renamed)
           Expanded(
             flex: 2,
-            child: Text("Phase", style: TextStyle(fontWeight: FontWeight.w600)),
-          ),
-
-          SizedBox(width: 12),
-
-          /// STATUS 
-          SizedBox(
-            width: 70,
-            child: Text(
-              "Status",
-              style: TextStyle(fontWeight: FontWeight.w600),
+            child: FusionAppText(
+              text: 'Phase',
+              style: context.textTheme.labelLarge
             ),
           ),
 
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
+
+          /// STATUS
+          SizedBox(
+            width: 70,
+            child: FusionAppText(
+              text: 'Status',
+              style: context.textTheme.labelLarge
+            ),
+          ),
+
+          const SizedBox(width: 12),
 
           /// INCIDENTS
           Expanded(
             flex: 2,
-            child: Text(
-              "Incidents",
-              style: TextStyle(fontWeight: FontWeight.w600),
+            child: FusionAppText(
+              text: 'Incidents',
+              style: context.textTheme.labelLarge
             ),
           ),
 
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
 
           /// HEALTH
           Expanded(
             flex: 2,
-            child: Text(
-              "Health",
-              style: TextStyle(fontWeight: FontWeight.w600),
+            child: FusionAppText(
+              text: 'Health',
+              style: context.textTheme.labelLarge
             ),
           ),
 
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
 
           /// UPDATED
-         SizedBox(
-            width: 65,
-            child: Text(
-              "Updated",
-              style: TextStyle(fontWeight: FontWeight.w600),
+          SizedBox(
+            width: 70,
+            child: FusionAppText(
+              text: 'Updated',
+              style: context.textTheme.labelLarge
             ),
           ),
 
-          SizedBox(width: 48),
+          const SizedBox(width: 48),
         ],
       ),
     );

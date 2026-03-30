@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
 class ProjectActionsMenu extends StatelessWidget {
   final VoidCallback onInvite;
@@ -37,7 +38,7 @@ class ProjectActionsMenu extends StatelessWidget {
             children: [
               Icon(Icons.person_add_outlined, size: 16),
               SizedBox(width: 8),
-              Text('Invite User'),
+              FusionAppText(text:'Invite User'),
             ],
           ),
         ),
@@ -47,7 +48,7 @@ class ProjectActionsMenu extends StatelessWidget {
             children: [
               Icon(Icons.archive_outlined, size: 16),
               SizedBox(width: 8),
-              Text('Archive'),
+              FusionAppText(text:'Archive'),
             ],
           ),
         ),
@@ -57,7 +58,7 @@ class ProjectActionsMenu extends StatelessWidget {
             children: [
               Icon(Icons.delete_outline, size: 16, color: Colors.red),
               SizedBox(width: 8),
-              Text('Delete', style: TextStyle(color: Colors.red)),
+              FusionAppText(text:'Delete', style: TextStyle(color: Colors.red)),
             ],
           ),
         ),

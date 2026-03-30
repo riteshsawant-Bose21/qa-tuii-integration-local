@@ -46,7 +46,7 @@ class MyApp extends StatelessWidget {
           FusionAppTheme.darkTheme.textTheme,
         ),
       ),
-      themeMode: ThemeMode.light,
+      themeMode: ThemeMode.dark,
       routerConfig: appRouter,
     );
   }

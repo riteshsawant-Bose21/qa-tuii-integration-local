@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_container.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_web/features/devices/presentation/handlers/devices_action_handler.dart';
 import 'package:fusion_web/features/devices/presentation/widgets/common_widgets/status_indicator.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -19,14 +22,13 @@ class DeviceRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: context.colorScheme.elevation2,
       child: InkWell(
-        hoverColor: Colors.grey[100],
+        hoverColor: context.colorScheme.elevation3,
         onTap: () => onTap(device),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
           decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
             borderRadius: isLast
                 ? const BorderRadius.vertical(bottom: Radius.circular(12))
                 : BorderRadius.zero,
@@ -54,19 +56,16 @@ class DeviceRow extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            device.name,
+                          FusionAppText(
+                            text: device.name,
                             softWrap: true,
-                            style: GoogleFonts.montserrat(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
+                            style: context.textTheme.bodyMedium,
                           ),
-                          Text(
-                            "ID: ${device.deviceId}",
+                          FusionAppText(
+                            text: "ID: ${device.deviceId}",
                             style: GoogleFonts.montserrat(
                               fontSize: 12,
-                              color: Colors.grey[500],
+                              color: context.colorScheme.elevation6,
                             ),
                           ),
                         ],
@@ -81,12 +80,9 @@ class DeviceRow extends StatelessWidget {
               /// PROJECT
               Expanded(
                 flex: 2,
-                child: Text(
-                  device.project,
-                  style: GoogleFonts.montserrat(
-                    color: Colors.blue,
-                    fontSize: 14,
-                  ),
+                child: FusionAppText(
+                  text: device.project,
+                  style: context.textTheme.bodyMedium,
                 ),
               ),
 
@@ -98,10 +94,9 @@ class DeviceRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(device.location),
-                    Text(
-                      device.type,
-                      style: TextStyle(color: Colors.grey[500]),
+                    FusionAppText(
+                      text: device.location,
+                      style: context.textTheme.bodyMedium,
                     ),
                   ],
                 ),
@@ -129,8 +124,9 @@ class DeviceRow extends StatelessWidget {
                             color: Colors.grey[200],
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: Text(
-                            "${device.incidents} incident${device.incidents > 1 ? 's' : ''}",
+                          child: FusionAppText(
+                            text:
+                                "${device.incidents} incident${device.incidents > 1 ? 's' : ''}",
                             style: const TextStyle(fontSize: 12),
                           ),
                         ),
@@ -156,7 +152,7 @@ class DeviceRow extends StatelessWidget {
                         children: [
                           Icon(Icons.visibility_outlined),
                           SizedBox(width: 8),
-                          Text("View Details"),
+                          FusionAppText(text: "View Details"),
                         ],
                       ),
                     ),
