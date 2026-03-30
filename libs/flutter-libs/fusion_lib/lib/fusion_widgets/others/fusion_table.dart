@@ -131,32 +131,36 @@ class _FusionTableState extends State<FusionTable> {
                 // FLEX HEADER
                 return Expanded(
                   flex: column.flex,
-                  child: InkWell(
-                    onTap: column.sortable ? () => _onSort(column.key) : null,
-                    child: Row(
-                      children: <Widget>[
-                        Flexible(
-                          child: FusionAppText(
-                            text: column.header.toUpperCase(),
-                            maxLine: 1,
-                            textOverflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: context.colorScheme.textSecondary,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                  child: Align(
+                    alignment: column.alignment,
+                    child: InkWell(
+                      onTap: column.sortable ? () => _onSort(column.key) : null,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Flexible(
+                            child: FusionAppText(
+                              text: column.header.toUpperCase(),
+                              maxLine: 1,
+                              textOverflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: context.colorScheme.textSecondary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
-                        ),
-                        if (column.sortable && _sortColumnKey == column.key)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 4),
-                            child: Icon(
-                              _sortAscending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
-                              size: 14,
-                              color: context.colorScheme.primaryColor,
+                          if (column.sortable && _sortColumnKey == column.key)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Icon(
+                                _sortAscending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                                size: 14,
+                                color: context.colorScheme.primaryColor,
+                              ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 );
