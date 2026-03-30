@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+
+"""fusion-tuii Waf launcher.
+
+This repo already vendors Waf in the sibling project `fusion-telemetry-core`.
+To keep fusion-tuii lightweight but still runnable with:
+
+    python3 waf configure
+
+we delegate to that existing entrypoint when present.
+
+If you are using fusion-tuii standalone (without fusion-telemetry-core),
+either vendor a full waf script here or set up Waf via WAFDIR/waflib.
+"""
+
+from __future__ import annotations
+
+import os
+import runpy
+import sys
+
+
+def main() -> int:
+    here = os.path.abspath(os.path.dirname(__file__))
+    delegate = os.path.abspath(os.path.join(here, '..', 'fusion-telemetry-core', 'waf'))
+
+    if os.path.exists(delegate):
+        # Execute the delegated waf entrypoint as if it was invoked directly.
+        runpy.run_path(delegate, run_name='__main__')
+        return 0
+
+    sys.stderr.write(
+        "Error: waf entrypoint not found. Expected: {}\n"
+        "You can either:\n"
+        "  - run waf from a monorepo checkout that contains fusion-telemetry-core, or\n"
+        "  - vendor a full waf script in this folder, or\n"
+        "  - set WAFDIR to a folder containing waflib.\n".format(delegate)
+    )
+    return 2
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
