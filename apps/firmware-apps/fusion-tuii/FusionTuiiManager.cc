@@ -143,12 +143,6 @@ bool ValidateDeviceConfig(const Json::Value &device, Json::Value &deviceConfigOu
 bool IsValidMacAddress(const std::string &macAddress);
 bool IsValidIPv4Address(const std::string &ipAddress);
 bool SendJsonPacket(const Json::Value &packet);
-void HandleSerialProtocolMessage(const char *buf, std::size_t len);
-void StartProtocolWorker();
-void StopProtocolWorker();
-void QueueDeviceConfigForProtocol(const Json::Value &deviceConfig);
-void QueueZoneConfigForProtocol(const std::vector<TuiiZoneConfig> &zoneConfigs);
-void QueueAudioSettingsForProtocol(const Json::Value &newSettings);
 
 namespace {
 constexpr int PROTOCOL_ACK_TIMEOUT_MS      = 100;
@@ -187,6 +181,12 @@ bool SendRealtimeCommand(const std::string &action,
                          const Json::Value &payload,
                          int zoneIndex = -1);
 void ProtocolWorkerLoop();
+void StartProtocolWorker();
+void StopProtocolWorker();
+void QueueDeviceConfigForProtocol(const Json::Value &deviceConfig);
+void QueueZoneConfigForProtocol(const std::vector<TuiiZoneConfig> &zoneConfigs);
+void QueueAudioSettingsForProtocol(const Json::Value &newSettings);
+void HandleSerialProtocolMessage(const char *buf, std::size_t len);
 bool WaitForReadyAck();
 ZoneEndWaitResult WaitForZoneEndResult();
 bool PerformInitializationCycle(Json::Value &deviceSnapshot,
@@ -353,8 +353,7 @@ bool InitializeFusionTUIIBridge(const std::string &serverIP,
         {
             g_udpObserver = std::unique_ptr<UDPValueMonitor>(new UDPValueMonitor(
                 serverIP,
-                serverPort,
-                false));
+                static_cast<int>(serverPort)));
 
             spdlog::info("UDP Observer started - monitoring from {}:{}", serverIP, serverPort);
 
@@ -429,6 +428,8 @@ bool SendJsonPacket(const Json::Value &packet)
     SerialManager &serial = SerialManager::getInstance();
     return serial.send(serialized.c_str(), serialized.size());
 }
+
+namespace {
 
 bool SendNackWithRetry(const std::string &failedAction, int zoneIndex)
 {
@@ -1127,6 +1128,8 @@ void ProtocolWorkerLoop()
 
     spdlog::info("[Protocol] Worker stopped");
 }
+
+} // namespace
 
 bool IsValidMacAddress(const std::string &macAddress)
 {
