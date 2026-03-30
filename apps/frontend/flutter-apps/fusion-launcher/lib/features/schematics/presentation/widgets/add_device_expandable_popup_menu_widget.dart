@@ -20,8 +20,7 @@ import 'create_new_location_widget.dart';
 ///
 class AddDeviceExpandablePopupMenuWidget extends StatefulWidget {
   final String sectionTitle;
-  final void Function(dynamic item, String areaId, String floorId)?
-  onTapAddDevice;
+  final void Function(dynamic item, String areaId, String floorId)? onTapAddDevice;
   final List<ListeningArea> listeningAreas;
 
   // final List<Zone> zones;
@@ -35,12 +34,10 @@ class AddDeviceExpandablePopupMenuWidget extends StatefulWidget {
   });
 
   @override
-  State<AddDeviceExpandablePopupMenuWidget> createState() =>
-      _AddDeviceExpandablePopupMenuWidgetState();
+  State<AddDeviceExpandablePopupMenuWidget> createState() => _AddDeviceExpandablePopupMenuWidgetState();
 }
 
-class _AddDeviceExpandablePopupMenuWidgetState
-    extends State<AddDeviceExpandablePopupMenuWidget> {
+class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandablePopupMenuWidget> {
   final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
   final TextEditingController _zoneNameController = TextEditingController();
 
@@ -185,8 +182,7 @@ class _AddDeviceExpandablePopupMenuWidgetState
           },
           child: Builder(
             builder: (BuildContext context) {
-              if ((widget.sectionTitle == "Processors & Amplifiers" ||
-                  widget.sectionTitle == "Sources & Endpoints")) {
+              if ((widget.sectionTitle == "Processors & Amplifiers" || widget.sectionTitle == "Sources & Endpoints")) {
                 return const SizedBox();
               } else {
                 return SemanticHelper.button(
@@ -324,8 +320,7 @@ class _AddDeviceExpandablePopupMenuWidgetState
     required StateSetter setMenuState,
   }) {
     final bool isExpanded = _isSectionExpanded(sectionKey);
-    final bool canAddDevice =
-        _selectedPopupDevice != null && _selectedListeningAreaIds.isNotEmpty;
+    final bool canAddDevice = _selectedPopupDevice != null && _selectedListeningAreaIds.isNotEmpty;
 
     return SemanticHelper.button(
       testId: SemanticHelper.createTestId(SemanticTypes.container, title),
@@ -352,8 +347,8 @@ class _AddDeviceExpandablePopupMenuWidgetState
                   children: <Widget>[
                     RotatedBox(
                       quarterTurns: isExpanded ? 0 : 2,
-                      child: FusionSvgIcon(
-                        icon: AssetSvg.expandUp,
+                      child: FusionIcon.svg(
+                        AssetSvg.expandUp,
                         size: FusionSizes.iconSize12,
                         color: context.colorScheme.iconWhite,
                       ),
@@ -397,15 +392,9 @@ class _AddDeviceExpandablePopupMenuWidgetState
                         borderRadius: BorderRadius.circular(4),
                         border: Border.all(
                           color: context.colorScheme.elevation2,
-                          width:
-                              _isDeviceSelected(_selectedPopupDevice, item)
-                                  ? 1
-                                  : 1,
+                          width: _isDeviceSelected(_selectedPopupDevice, item) ? 1 : 1,
                         ),
-                        color:
-                            _isDeviceSelected(_selectedPopupDevice, item)
-                                ? context.colorScheme.primaryBlack
-                                : null,
+                        color: _isDeviceSelected(_selectedPopupDevice, item) ? context.colorScheme.primaryBlack : null,
                       ),
                       child: Row(
                         children: <Widget>[
@@ -429,9 +418,7 @@ class _AddDeviceExpandablePopupMenuWidgetState
                             )
                           else if (item is ProductQueryModel)
                             FusionImage.asset(
-                              item.image.isNotEmpty
-                                  ? item.image
-                                  : _getDefaultImageForProductType(item.type),
+                              item.image.isNotEmpty ? item.image : _getDefaultImageForProductType(item.type),
                               height: 14,
                               width: 14,
                               fit: BoxFit.contain,
@@ -499,8 +486,7 @@ class _AddDeviceExpandablePopupMenuWidgetState
                       width: double.infinity,
                       child: ListeningAreaDropdownWidget(
                         key: UniqueKey(),
-                        listeningAreas:
-                            serviceLocator<ProjectViewModel>().listeningAreas,
+                        listeningAreas: serviceLocator<ProjectViewModel>().listeningAreas,
                         selectedListeningAreaIds: _selectedListeningAreaIds,
                         onSelectionChanged: (
                           List<String> selectedIds,
@@ -680,8 +666,7 @@ class _AddDeviceExpandablePopupMenuWidgetState
                                       ),
                                     ),
                                     child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: <Widget>[
                                         FusionAppText(
                                           text: "Select Locations",
@@ -718,29 +703,19 @@ class _AddDeviceExpandablePopupMenuWidgetState
                                   /// Scrollable list of listening areas
                                   Flexible(
                                     child:
-                                        serviceLocator<ProjectViewModel>()
-                                                .getAllListeningAreas()
-                                                .isNotEmpty
+                                        serviceLocator<ProjectViewModel>().getAllListeningAreas().isNotEmpty
                                             ? SingleChildScrollView(
-                                              physics:
-                                                  const ClampingScrollPhysics(),
+                                              physics: const ClampingScrollPhysics(),
                                               child: Column(
                                                 children:
                                                     serviceLocator<ProjectViewModel>().getAllListeningAreas().map((
                                                       ListeningArea area,
                                                     ) {
-                                                      final int
-                                                      index = serviceLocator<
-                                                            ProjectViewModel
-                                                          >()
-                                                          .getAllListeningAreas()
-                                                          .indexOf(area);
+                                                      final int index = serviceLocator<ProjectViewModel>().getAllListeningAreas().indexOf(area);
 
-                                                      final FloorModel?
-                                                      floorName = projectViewModel
-                                                          .getFloorForListeningArea(
-                                                            areaId: area.id,
-                                                          );
+                                                      final FloorModel? floorName = projectViewModel.getFloorForListeningArea(
+                                                        areaId: area.id,
+                                                      );
 
                                                       String? zoneName =
                                                           projectViewModel
@@ -748,58 +723,42 @@ class _AddDeviceExpandablePopupMenuWidgetState
                                                                 areaId: area.id,
                                                               )
                                                               ?.name;
-                                                      if (zoneName == null ||
-                                                          zoneName
-                                                              .trim()
-                                                              .isEmpty) {
+                                                      if (zoneName == null || zoneName.trim().isEmpty) {
                                                         zoneName =
                                                             projectViewModel
                                                                 .getSubZoneForListeningArea(
-                                                                  areaId:
-                                                                      area.id,
+                                                                  areaId: area.id,
                                                                 )
                                                                 ?.name;
                                                       }
 
                                                       /// Get available areas for the current zone/sub-zone
-                                                      final List<ListeningArea>
-                                                      availableListeningAreas =
-                                                          projectViewModel
-                                                              .getAvailableListeningAreasForZone();
+                                                      final List<ListeningArea> availableListeningAreas = projectViewModel.getAvailableListeningAreasForZone();
 
                                                       /// Check availability
-                                                      final bool isAvailable =
-                                                          availableListeningAreas
-                                                              .any(
-                                                                (
-                                                                  ListeningArea
-                                                                  a,
-                                                                ) =>
-                                                                    a.id ==
-                                                                    area.id,
-                                                              );
+                                                      final bool isAvailable = availableListeningAreas.any(
+                                                        (
+                                                          ListeningArea a,
+                                                        ) => a.id == area.id,
+                                                      );
 
                                                       /// Whether this area is selected
-                                                      final bool isSelected =
-                                                          _selectedListeningAreaIds
-                                                              .contains(
-                                                                area.id,
-                                                              );
+                                                      final bool isSelected = _selectedListeningAreaIds.contains(
+                                                        area.id,
+                                                      );
 
                                                       return InkWell(
                                                         onTap:
                                                             isAvailable
                                                                 ? () {
                                                                   if (isSelected) {
-                                                                    _selectedListeningAreaIds
-                                                                        .remove(
-                                                                          area.id,
-                                                                        );
+                                                                    _selectedListeningAreaIds.remove(
+                                                                      area.id,
+                                                                    );
                                                                   } else {
-                                                                    _selectedListeningAreaIds
-                                                                        .add(
-                                                                          area.id,
-                                                                        );
+                                                                    _selectedListeningAreaIds.add(
+                                                                      area.id,
+                                                                    );
                                                                   }
                                                                   setPopupState(
                                                                     () {},
@@ -811,61 +770,41 @@ class _AddDeviceExpandablePopupMenuWidgetState
                                                                 : null,
                                                         child: SemanticHelper.toggle(
                                                           testId: SemanticHelper.createTestId(
-                                                            SemanticTypes
-                                                                .toggle,
+                                                            SemanticTypes.toggle,
                                                             "select_location_card_$index",
                                                           ),
-                                                          value:
-                                                              isAvailable
-                                                                  ? isSelected
-                                                                  : true,
+                                                          value: isAvailable ? isSelected : true,
                                                           child: Container(
-                                                            padding:
-                                                                const EdgeInsets.symmetric(
-                                                                  horizontal:
-                                                                      10,
-                                                                  vertical: 10,
-                                                                ),
+                                                            padding: const EdgeInsets.symmetric(
+                                                              horizontal: 10,
+                                                              vertical: 10,
+                                                            ),
                                                             color:
                                                                 isAvailable
-                                                                    ? Colors
-                                                                        .transparent
-                                                                    : Colors
-                                                                        .grey
-                                                                        .withOpacity(
-                                                                          0.05,
-                                                                        ),
+                                                                    ? Colors.transparent
+                                                                    : Colors.grey.withOpacity(
+                                                                      0.05,
+                                                                    ),
                                                             child: Row(
-                                                              children: <
-                                                                Widget
-                                                              >[
+                                                              children: <Widget>[
                                                                 /// Checkbox for selection
                                                                 SizedBox(
                                                                   width: 14,
                                                                   height: 14,
                                                                   child: SemanticHelper.toggle(
                                                                     testId: SemanticHelper.createTestId(
-                                                                      SemanticTypes
-                                                                          .toggle,
+                                                                      SemanticTypes.toggle,
                                                                       "select_location_checkbox_$index",
                                                                     ),
-                                                                    value:
-                                                                        isAvailable
-                                                                            ? isSelected
-                                                                            : true,
+                                                                    value: isAvailable ? isSelected : true,
                                                                     child: Checkbox(
-                                                                      value:
-                                                                          isAvailable
-                                                                              ? isSelected
-                                                                              : true,
+                                                                      value: isAvailable ? isSelected : true,
                                                                       onChanged:
                                                                           isAvailable
                                                                               ? (
-                                                                                bool?
-                                                                                checked,
+                                                                                bool? checked,
                                                                               ) {
-                                                                                if (checked ==
-                                                                                    true) {
+                                                                                if (checked == true) {
                                                                                   _selectedListeningAreaIds.add(
                                                                                     area.id,
                                                                                   );
@@ -882,22 +821,13 @@ class _AddDeviceExpandablePopupMenuWidgetState
                                                                                 );
                                                                               }
                                                                               : null,
-                                                                      activeColor:
-                                                                          context
-                                                                              .colorScheme
-                                                                              .primaryBlack,
-                                                                      materialTapTargetSize:
-                                                                          MaterialTapTargetSize
-                                                                              .shrinkWrap,
-                                                                      visualDensity:
-                                                                          VisualDensity
-                                                                              .compact,
+                                                                      activeColor: context.colorScheme.primaryBlack,
+                                                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                                      visualDensity: VisualDensity.compact,
                                                                       shape: const RoundedRectangleBorder(
-                                                                        borderRadius:
-                                                                            BorderRadius.zero,
+                                                                        borderRadius: BorderRadius.zero,
                                                                         side: BorderSide(
-                                                                          width:
-                                                                              0.5,
+                                                                          width: 0.5,
                                                                         ),
                                                                       ),
                                                                     ),
@@ -910,18 +840,12 @@ class _AddDeviceExpandablePopupMenuWidgetState
                                                                 /// Area and zone names
                                                                 Expanded(
                                                                   child: FusionAppText(
-                                                                    text:
-                                                                        area.name.isNotEmpty
-                                                                            ? "${floorName?.name}/${area.name}"
-                                                                            : 'Unnamed Area',
+                                                                    text: area.name.isNotEmpty ? "${floorName?.name}/${area.name}" : 'Unnamed Area',
                                                                     style: Theme.of(
                                                                       context,
                                                                     ).textTheme.bodySmall?.copyWith(
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .w500,
-                                                                      fontSize:
-                                                                          10,
+                                                                      fontWeight: FontWeight.w500,
+                                                                      fontSize: 10,
                                                                       color:
                                                                           isAvailable
                                                                               ? Theme.of(
@@ -934,9 +858,7 @@ class _AddDeviceExpandablePopupMenuWidgetState
 
                                                                 /// Zone name
                                                                 FusionAppText(
-                                                                  text:
-                                                                      zoneName ??
-                                                                      "No zone",
+                                                                  text: zoneName ?? "No zone",
                                                                   style: Theme.of(
                                                                     context,
                                                                   ).textTheme.bodySmall?.copyWith(
@@ -949,9 +871,7 @@ class _AddDeviceExpandablePopupMenuWidgetState
                                                                             : Theme.of(
                                                                               context,
                                                                             ).colorScheme.outline,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w600,
+                                                                    fontWeight: FontWeight.w600,
                                                                   ),
                                                                 ),
                                                               ],
@@ -989,29 +909,23 @@ class _AddDeviceExpandablePopupMenuWidgetState
                                       required String floorName,
                                       required String locationName,
                                     }) {
-                                      if (areaNameController.text
-                                              .trim()
-                                              .isNotEmpty &&
-                                          floorId.isNotEmpty) {
+                                      if (areaNameController.text.trim().isNotEmpty && floorId.isNotEmpty) {
                                         // todo: Replace with actual area creation logic (e.g., user-defined vertices)
-                                        final ListeningArea
-                                        newListeningArea = ListeningArea(
+                                        final ListeningArea newListeningArea = ListeningArea(
                                           name: areaNameController.text.trim(),
-                                          vertices: <Offset>[],
+                                          vertices: <FusionCanvasPoint>[],
                                           isDrawn: false,
                                         );
 
                                         try {
-                                          serviceLocator<ProjectViewModel>()
-                                              .addListeningArea(
-                                                area: newListeningArea,
-                                                floorId: floorId,
-                                              );
+                                          serviceLocator<ProjectViewModel>().addListeningArea(
+                                            area: newListeningArea,
+                                            floorId: floorId,
+                                          );
 
                                           /// Automatically select the newly created area and refresh UI
                                           setState(() {
-                                            _selectedListeningAreaIds =
-                                                <String>[newListeningArea.id];
+                                            _selectedListeningAreaIds = <String>[newListeningArea.id];
                                             isCreateAreaExpanded = false;
                                           });
                                           setPopupState(() {});
@@ -1022,21 +936,18 @@ class _AddDeviceExpandablePopupMenuWidgetState
                                           /// Show success message
                                           FusionToast.success(
                                             context,
-                                            message:
-                                                "Listening area '${newListeningArea.name}' created successfully",
+                                            message: "Listening area '${newListeningArea.name}' created successfully",
                                           );
                                         } catch (e) {
                                           FusionToast.error(
                                             context,
-                                            message:
-                                                "Failed to create listening area: $e",
+                                            message: "Failed to create listening area: $e",
                                           );
                                         }
                                       } else {
                                         FusionToast.error(
                                           context,
-                                          message:
-                                              "Please enter location name and select a floor",
+                                          message: "Please enter location name and select a floor",
                                         );
                                       }
                                     },
@@ -1135,8 +1046,7 @@ class _AddDeviceExpandablePopupMenuWidgetState
                             isSelected
                                 ? Container(
                                   decoration: BoxDecoration(
-                                    color: context.colorScheme.primaryBlack
-                                        .withOpacity(0.2),
+                                    color: context.colorScheme.primaryBlack.withOpacity(0.2),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: const Icon(
@@ -1207,11 +1117,10 @@ class _AddDeviceExpandablePopupMenuWidgetState
                             zone: newZone,
                             autoSave: false,
                           );
-                          serviceLocator<ProjectViewModel>()
-                              .updateListeningAreasInZone(
-                                zoneId: newZone.id,
-                                listeningAreaIds: _selectedListeningAreaIds,
-                              );
+                          serviceLocator<ProjectViewModel>().updateListeningAreasInZone(
+                            zoneId: newZone.id,
+                            listeningAreaIds: _selectedListeningAreaIds,
+                          );
                           Navigator.of(context).pop();
                           _selectedColorHex = null;
                           _selectedListeningAreaIds.clear();
@@ -1239,10 +1148,7 @@ class _AddDeviceExpandablePopupMenuWidgetState
 
   /// Get display name for different item types
   String _getDisplayName(dynamic item) {
-    if (item is SourceData ||
-        item is RackData ||
-        item is SwitchData ||
-        item is ProductQueryModel) {
+    if (item is SourceData || item is RackData || item is SwitchData || item is ProductQueryModel) {
       return item.name;
     } else if (item is String) {
       return item;
