@@ -214,8 +214,8 @@ class _ZoneCardState extends State<ZoneCard> {
               child: SingleChildScrollView(
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 12),
-                  color: context.colorScheme.elevation2.withAlpha(100),
 
+                  color: context.colorScheme.elevation1,
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
@@ -596,13 +596,17 @@ class _ZoneCardState extends State<ZoneCard> {
                       boxShadow:
                           isSelected
                               ? <BoxShadow>[
-                                BoxShadow(color: context.colorScheme.shadowDark, offset: const Offset(1.5, 1.5), blurRadius: 7),
                                 BoxShadow(
                                   color: context.colorScheme.shadowLight,
-                                  offset: const Offset(-1.5, -1.5),
-                                  blurRadius: 5,
-                                  blurStyle: BlurStyle.solid,
+                                  blurRadius: 2,
+                                  offset: const Offset(-2, -2),
                                 ),
+                                BoxShadow(
+                                  color: context.colorScheme.shadowDark,
+                                  blurRadius: 4,
+                                  offset: const Offset(2, 2),
+                                ),
+                                BoxShadow(color: context.colorScheme.elevation1),
                               ]
                               : <BoxShadow>[],
                     ),
@@ -789,8 +793,17 @@ class _ZoneCardState extends State<ZoneCard> {
                 decoration: BoxDecoration(
                   color: context.colorScheme.elevation1,
                   boxShadow: <BoxShadow>[
-                    BoxShadow(color: context.colorScheme.shadowDark, offset: const Offset(1.5, 1.5), blurRadius: 7),
-                    BoxShadow(color: context.colorScheme.shadowLight, offset: const Offset(-1.5, -1.5), blurRadius: 5, blurStyle: BlurStyle.solid),
+                    BoxShadow(
+                      color: context.colorScheme.shadowLight,
+                      blurRadius: 2,
+                      offset: const Offset(-2, -2),
+                    ),
+                    BoxShadow(
+                      color: context.colorScheme.shadowDark,
+                      blurRadius: 4,
+                      offset: const Offset(2, 2),
+                    ),
+                    BoxShadow(color: context.colorScheme.elevation1),
                   ],
                   borderRadius: BorderRadius.circular(6),
                 ),
@@ -1093,13 +1106,17 @@ class _ZoneCardState extends State<ZoneCard> {
                   borderRadius: BorderRadius.circular(6),
 
                   boxShadow: <BoxShadow>[
-                    BoxShadow(color: context.colorScheme.shadowDark, offset: const Offset(1.5, 1.5), blurRadius: 7),
                     BoxShadow(
                       color: context.colorScheme.shadowLight,
-                      offset: const Offset(-1.5, -1.5),
-                      blurRadius: 5,
-                      blurStyle: BlurStyle.solid,
+                      blurRadius: 2,
+                      offset: const Offset(-2, -2),
                     ),
+                    BoxShadow(
+                      color: context.colorScheme.shadowDark,
+                      blurRadius: 4,
+                      offset: const Offset(2, 2),
+                    ),
+                    BoxShadow(color: context.colorScheme.elevation1),
                   ],
                 ),
 
