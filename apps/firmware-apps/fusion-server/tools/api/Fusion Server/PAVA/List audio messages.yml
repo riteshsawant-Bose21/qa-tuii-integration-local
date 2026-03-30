@@ -1,0 +1,19 @@
+info:
+  name: List audio messages
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{api_url}}/pava/messages"
+  params:
+    - name: tag
+      value: Emergencies
+      type: query
+      disabled: true
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

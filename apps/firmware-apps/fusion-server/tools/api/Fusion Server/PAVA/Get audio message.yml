@@ -1,0 +1,18 @@
+info:
+  name: Get audio message
+  type: http
+  seq: 5
+
+http:
+  method: GET
+  url: http://192.168.2.4:8080/pava/messages/:id
+  params:
+    - name: id
+      value: 01K9XCJ816RJFQWM506HXKWQVV
+      type: path
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
