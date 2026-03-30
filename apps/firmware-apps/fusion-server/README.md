@@ -29,12 +29,12 @@ Fusion Server can be run:
 - UDP broadcast of message triggers
 - Scheduling of message playback (`/pava/schedule`)
 
-## Firmware Management
-- Secure upload of `.swu` firmware bundles (`/firmware/upload`)
+## Software Update Management
+- Secure upload of `.swu` software Update bundles (`/softwareUpdate/upload`)
 - SHA-256 checksum validation and integrity verification
 - Automatic cluster-wide distribution via gossip protocol
 - Version control with duplicate detection
-- REST endpoints for download and listing (`/firmware/download`, `/firmware/list`)
+- REST endpoints for download and listing (`/softwareUpdate/download`, `/softwareUpdate/list`)
 
 ## Scheduler & Tasks
 - Cron-based recurring tasks
@@ -271,7 +271,7 @@ For detailed information on specific functionality:
 - [Persistence](docs/Persistence.md) - BoltDB storage and data management
 - [WebSocket API](docs/WebSocket.md) - Real-time streaming endpoints
 - [Setup & Configuration](docs/Setup.md) - Initial setup and configuration
-- [Firmware Management](docs/Firmware.md) - Firmware upload, distribution, and management
+- [softwareUpdate Management](docs/softwareUpdate.md) - softwareUpdate upload, distribution, and management
 
 # Troubleshooting macOS [ Tahoe ] and Multipass Issues
 

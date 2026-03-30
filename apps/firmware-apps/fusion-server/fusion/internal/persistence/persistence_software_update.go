@@ -13,22 +13,21 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 var (
-	ErrInvalidUpdate    = errors.New("firmware sync update validation failed")
-	ErrDownloadFailed   = errors.New("firmware download failed")
-	ErrChecksumMismatch = errors.New("firmware checksum validation failed")
-	ErrInstallFailed    = errors.New("firmware installation failed")
+	ErrInvalidUpdate    = errors.New("software update sync validation failed")
+	ErrDownloadFailed   = errors.New("software update download failed")
+	ErrChecksumMismatch = errors.New("software update checksum validation failed")
+	ErrInstallFailed    = errors.New("software update installation failed")
 )
 
-// SyncFirmwareFile pulls the firmware bundle from the VIP node via HTTP,
+// SyncSoftwareUpdateFile pulls the software update bundle from the VIP node via HTTP,
 // validates the SHA-256 checksum, and installs the bundle to /mnt/ota.
 //
 // Follower workflow:
 //
-//  1. HTTP-GET the bundle from the VIP node's /firmware/download/{filename}
+//  1. HTTP-GET the bundle from the VIP node's /softwareUpdate/download/{filename}
 //     endpoint and stream it directly into /mnt/ota/<filename>.*.part via io.Copy.
 //
 //  2. Verify the SHA-256 checksum of the received file against the value
@@ -36,7 +35,7 @@ var (
 //
 //  3. Atomic rename from .part file to final /mnt/ota/<filename>.
 //     Temp file is in the same directory as final path
-func (p *Persistence) SyncFirmwareFile(update *api.FirmwareSyncUpdate) error {
+func (p *Persistence) SyncSoftwareUpdateFile(update *api.SoftwareUpdateSync) error {
 	logger := logging.GetLogger()
 
 	// Validate required fields
@@ -50,31 +49,31 @@ func (p *Persistence) SyncFirmwareFile(update *api.FirmwareSyncUpdate) error {
 		return fmt.Errorf("%w: Checksum cannot be empty", ErrInvalidUpdate)
 	}
 
-	logger.Info("[FirmwareSync] Starting sync: filename=%s, sourceIP=%s, checksum=%s",
+	logger.Info("[SoftwareUpdateSync] Starting sync: filename=%s, sourceIP=%s, checksum=%s",
 		update.Filename, update.SourceIP, update.Checksum)
 
-	finalPath := filepath.Join(api.FirmwareOTAPath, update.Filename)
+	finalPath := filepath.Join(api.SoftwareUpdateOTAPath, update.Filename)
 
 	// ------------------------------------------------------------------
 	// Step 1 – stream bundle from VIP into /mnt/ota/<filename>.*.part
 	// Temp file is in the same directory as the final path, so os.Rename
 	// SHA-256 computed inline via io.TeeReader
 	// ------------------------------------------------------------------
-	if err := os.MkdirAll(api.FirmwareOTAPath, 0755); err != nil {
-		return fmt.Errorf("%w: failed to create OTA directory %s: %w", ErrInstallFailed, api.FirmwareOTAPath, err)
+	if err := os.MkdirAll(api.SoftwareUpdateOTAPath, 0755); err != nil {
+		return fmt.Errorf("%w: failed to create OTA directory %s: %w", ErrInstallFailed, api.SoftwareUpdateOTAPath, err)
 	}
 
-	downloadPath := strings.Replace(routes.FirmwareDownloadEndpoint, "{filename}", update.Filename, 1)
+	downloadPath := strings.Replace(routes.SoftwareUpdateDownloadEndpoint, "{filename}", update.Filename, 1)
 	downloadURL := fmt.Sprintf("http://%s:%s%s", update.SourceIP, api.HTTPPort, downloadPath)
 
 	// Create HTTP client with timeout
 	client := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout: api.HTTPUploadTimeout,
 	}
 
 	resp, err := client.Get(downloadURL)
 	if err != nil {
-		logger.Error("[Firmware] HTTP GET failed for %s: %v", downloadURL, err)
+		logger.Error("[SoftwareUpdate] HTTP GET failed for %s: %v", downloadURL, err)
 		return fmt.Errorf("%w: failed to download from %s: %w", ErrDownloadFailed, downloadURL, err)
 	}
 	defer resp.Body.Close()
@@ -85,7 +84,7 @@ func (p *Persistence) SyncFirmwareFile(update *api.FirmwareSyncUpdate) error {
 			ErrDownloadFailed, resp.StatusCode, downloadURL, string(body))
 	}
 
-	tmp, err := os.CreateTemp(api.FirmwareOTAPath, update.Filename+".*.part")
+	tmp, err := os.CreateTemp(api.SoftwareUpdateOTAPath, update.Filename+".*.part")
 	if err != nil {
 		return fmt.Errorf("%w: failed to create temp file: %w", ErrInstallFailed, err)
 	}
@@ -99,7 +98,7 @@ func (p *Persistence) SyncFirmwareFile(update *api.FirmwareSyncUpdate) error {
 	}
 
 	if _, err := io.Copy(tmp, io.TeeReader(resp.Body, hasher)); err != nil {
-		return cleanup(fmt.Errorf("failed to copy firmware data to %s: %w", tempPath, err))
+		return cleanup(fmt.Errorf("failed to copy software update data to %s: %w", tempPath, err))
 	}
 	if err := tmp.Sync(); err != nil {
 		return cleanup(fmt.Errorf("failed to sync temp file %s: %w", tempPath, err))
@@ -123,7 +122,7 @@ func (p *Persistence) SyncFirmwareFile(update *api.FirmwareSyncUpdate) error {
 	// ------------------------------------------------------------------
 	if err := os.Rename(tempPath, finalPath); err != nil {
 		os.Remove(tempPath)
-		return fmt.Errorf("%w: failed to install firmware %s → %s: %w",
+		return fmt.Errorf("%w: failed to install software update %s → %s: %w",
 			ErrInstallFailed, tempPath, finalPath, err)
 	}
 

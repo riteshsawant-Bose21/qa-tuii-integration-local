@@ -61,10 +61,10 @@ const (
 	DevicesResetEndpoint           = DevicesEndpoint + "/reset"
 	EndpointsEndpoint              = "/endpoints"
 
-	FirmwareEndpoint         = "/firmware"
-	FirmwareUploadEndpoint   = FirmwareEndpoint + "/upload"
-	FirmwareDownloadEndpoint = FirmwareEndpoint + "/download/{filename}"
-	FirmwarelistEndpoint     = FirmwareEndpoint + "/list"
+	SoftwareUpdateEndpoint         = "/softwareUpdate"
+	SoftwareUpdateUploadEndpoint   = SoftwareUpdateEndpoint + "/upload"
+	SoftwareUpdateDownloadEndpoint = SoftwareUpdateEndpoint + "/download/{filename}"
+	SoftwareUpdateListEndpoint     = SoftwareUpdateEndpoint + "/list"
 
 	HealthEndpoint = "/health"
 
