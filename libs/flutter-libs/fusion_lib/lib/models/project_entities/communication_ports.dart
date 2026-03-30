@@ -22,18 +22,24 @@ enum PortType {
   usb('Usb'),
   usbIn('Usb'),
   usbOut('Usb'),
-  serial('Serial'),
-  ble('Ble'),
-  wifi('Wifi'),
-  hdmi('Hdmi'),
+  // serial('Serial'),
+  // ble('Ble'),
+  // wifi('Wifi'),
+  // hdmi('Hdmi'),
   bleIn('Ble'),
   bleOut('Ble'),
   wifiIn('Wifi'),
   wifiOut('Wifi'),
   hdmiIn('Hdmi'),
   hdmiOut('Hdmi'),
+
   audioJackInput('RCA/Jack'),
   audioJackOutput('RCA/Jack'),
+
+  rcaInput('RCA'),
+  rcaOutput('RCA'),
+
+
   amplifierInput('Input'),
   amplifierOutput('Output'),
   dspAnalogInput('Input'),
@@ -72,7 +78,7 @@ class PortData {
   final String name; // "Ethernet", "USB"
   final String? description;
   final PortType type;
-  final List<PortType> compatibleTypes;
+  // final List<PortType> compatibleTypes;
 
   /// Layout info
   final PortPosition position;
@@ -85,7 +91,7 @@ class PortData {
     required this.position,
     required this.portNumber,
     required this.type,
-    required this.compatibleTypes,
+    // required this.compatibleTypes,
   }) : id = id ?? FusionUtils.shortStringUUID();
 
   //from json
@@ -99,7 +105,7 @@ class PortData {
       ),
       portNumber: json['portNumber'] as int,
       type: PortType.values.firstWhere((e) => e.name == json['type']),
-      compatibleTypes: (json['compatibleTypes'] as List<dynamic>).map((e) => PortType.values.firstWhere((pt) => pt.name == e)).toList(),
+      // compatibleTypes: (json['compatibleTypes'] as List<dynamic>).map((e) => PortType.values.firstWhere((pt) => pt.name == e)).toList(),
     );
   }
 
@@ -111,7 +117,7 @@ class PortData {
       'position': position.name,
       'portNumber': portNumber,
       'type': type.name,
-      'compatibleTypes': compatibleTypes.map((e) => e.name).toList(),
+      // 'compatibleTypes': compatibleTypes.map((e) => e.name).toList(),
     };
   }
 }
