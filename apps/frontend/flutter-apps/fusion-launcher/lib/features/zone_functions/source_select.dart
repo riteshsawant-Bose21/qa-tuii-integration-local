@@ -79,6 +79,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
                         child: FusionAppText(
+                          semanticId: "zone_control_panel_heading",
                           text: "ZONE CONTROL PANEL - SOURCE SELECT",
                           style: context.textTheme.titleSmall,
                           maxLine: 1,
@@ -94,14 +95,17 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                         color: Colors.transparent,
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
-                          child: InkWell(
-                            onTap: Navigator.of(context).pop,
-                            customBorder: const CircleBorder(),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Icon(
-                                LucideIcons.x200,
-                                color: context.colorScheme.iconDefault,
+                          child: SemanticHelper.button(
+                            testId: SemanticHelper.createTestId(SemanticTypes.button, "zone_control_panel_close_button"),
+                            child: InkWell(
+                              onTap: Navigator.of(context).pop,
+                              customBorder: const CircleBorder(),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Icon(
+                                  LucideIcons.x200,
+                                  color: context.colorScheme.iconDefault,
+                                ),
                               ),
                             ),
                           ),
@@ -208,6 +212,15 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                           color: context.colorScheme.primaryWhite,
                                                         ),
                                                       ),
+                                                    );
+                                                  }
+
+                                                  final bool anyOneSelected = sources.any((Source source) => source.id == zoneFunction?.selectedSourceId);
+                                                  if (!anyOneSelected && zoneFunction != null) {
+                                                    // If nothing is selected, select the first one by default.
+                                                    projectViewModel.selectSourceForFunction(
+                                                      functionId: zoneFunction!.id,
+                                                      sourceId: sources.first.id,
                                                     );
                                                   }
 

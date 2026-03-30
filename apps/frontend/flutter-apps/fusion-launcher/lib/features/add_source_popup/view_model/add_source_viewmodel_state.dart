@@ -51,20 +51,6 @@ class AddSourceViewModelState extends Equatable {
   ];
 }
 
-extension ListExtension<T> on List<T> {
-  T? firstWhereOrNull(bool Function(T element) test) {
-    for (final T element in this) {
-      if (test(element)) return element;
-    }
-    return null;
-  }
-
-  T? elementAtOrNull(int index) {
-    if (index < 0 || index >= length) return null;
-    return this[index];
-  }
-}
-
 enum SourceSelectionOption {
   singleSource("Single Source"),
   multipleSources("Multiple Sources");
@@ -75,7 +61,8 @@ enum SourceSelectionOption {
 
 enum SourceSectionType {
   microPhone("Microphones"),
-  mediaSources("Media Sources");
+  mediaSources("Media Sources"),
+  paging("Paging");
 
   const SourceSectionType(this.displayName);
   final String displayName;
@@ -86,6 +73,8 @@ enum SourceSectionType {
         return SourceData.microphoneItems;
       case SourceSectionType.mediaSources:
         return SourceData.mediaSourceItems;
+      case SourceSectionType.paging:
+        return SourceData.pagingItems;
     }
   }
 
@@ -107,6 +96,9 @@ enum SourceSectionType {
           // SourceConnectionType.wired,
           // SourceConnectionType.rca,
         ];
+
+      case SourceSectionType.paging:
+        return <SourceConnectionType>[];
     }
   }
 }

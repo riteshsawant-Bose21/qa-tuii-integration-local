@@ -445,4 +445,36 @@ extension ZoneService on ProjectService {
 
     return result;
   }
+
+  /// Get all zones where a source is assigned
+  /// This includes zones where the source is:
+  /// - Added as a normal source (via zoneSources relationship)
+  /// - Added as a priority 1 or priority 2 source (via zonePriorities relationship)
+  List<Zone> getZonesWhereSourceIsAssigned(String sourceId) {
+    final Set<String> zoneIds = <String>{};
+
+    // Get all zones
+    final allZones = zones.getAll();
+
+    for (final zone in allZones) {
+      // Check if source is assigned as a normal source
+      final sourceIds = relationships.getChildren(RelationshipType.zoneSources, zone.id);
+      if (sourceIds.contains(sourceId)) {
+        zoneIds.add(zone.id);
+        continue;
+      }
+
+      // Check if source is assigned as a priority source
+      final prioritySourceIds = relationships.getChildren(RelationshipType.zonePriorities, zone.id);
+      for (final priorityId in prioritySourceIds) {
+        final priorityData = prioritySourceData.get(priorityId);
+        if (priorityData?.sourceId == sourceId) {
+          zoneIds.add(zone.id);
+          break;
+        }
+      }
+    }
+
+    return zoneIds.map((id) => zones.get(id)).where((zone) => zone != null).cast<Zone>().toList();
+  }
 }

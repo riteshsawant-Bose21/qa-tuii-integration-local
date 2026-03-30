@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 class FusionRadio<T> extends StatelessWidget {
   final T? selected;
@@ -41,13 +40,11 @@ class FusionRadio<T> extends StatelessWidget {
                 onTap: () => onChanged?.call(option),
                 behavior: HitTestBehavior.translucent,
                 child: Row(
-                  spacing: 10,
+                  spacing: 5,
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     Icon(
-                      isSelected
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_off,
+                      isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
                       size: 16,
                       color: context.colorScheme.onSurface,
                     ),
