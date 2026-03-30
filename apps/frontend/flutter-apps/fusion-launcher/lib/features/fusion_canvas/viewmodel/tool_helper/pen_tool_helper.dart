@@ -6,8 +6,11 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../state/fusion_canvas_input_state.dart';
 import '../fusion_canvas_tool_viewmodel.dart';
+import '../tools/fusion_canvas_tool.dart';
 
-class PenToolHelper {
+class PenToolHelper extends FusionCanvasToolTransformer<PenToolState> {
+  const PenToolHelper();
+  @override
   FusionToolState transform({
     required FusionCanvasInputState inputState,
     required FusionCanvasInputContext context,

@@ -22,6 +22,7 @@ import '../viewmodel/fusion_canvas_image_viewmodel.dart';
 import '../viewmodel/fusion_canvas_input_viewmodel.dart';
 import '../viewmodel/fusion_canvas_state_viewmodel.dart';
 import '../viewmodel/fusion_snap_viewmodel.dart';
+import '../viewmodel/tools/fusion_canvas_tool.dart';
 import 'painters/elements/fusion_rect_painter.dart';
 import 'painters/fusion_canvas_painter.dart';
 import 'painters/snap_painter.dart';
@@ -39,10 +40,17 @@ class FusionCanvas extends StatelessWidget {
     this.selectedIds,
     this.cursorBuilder,
     this.selectionToolParams = const SelectionToolParams(),
+    this.tools = const <FusionCanvasTool<FusionToolState>>[
+      FusionCanvasTool.measureTool,
+      FusionCanvasTool.penTool,
+      FusionCanvasTool.dragTool,
+      FusionCanvasTool.singleSelectionTool,
+    ],
   });
   final List<FusionBasePainter> elements;
   final Widget Function(BuildContext context)? builder;
   final FusionCanvasEvents? toolbarEvents;
+  final List<FusionCanvasTool<FusionToolState>> tools;
 
   final CursorBuilder? cursorBuilder;
 
@@ -147,9 +155,7 @@ class FusionCanvas extends StatelessWidget {
                                 );
 
                                 final FusionHoverState hoverState = context.read<FusionCanvasHoverViewModel>().state;
-                                print(
-                                  "Hover update: ${hoverState.hoveredPainterId}, element: ${hoverState.hoveredElement}, centerHandle: ${hoverState.isCenterHandleHovered}",
-                                );
+
                                 if (inputState is FusionCanvasInputTapUpState &&
                                     inputState.gestureOrigin == FusionGestureOrigin.click &&
                                     hoverState.isCenterHandleHovered &&
@@ -180,13 +186,13 @@ class FusionCanvas extends StatelessWidget {
                                   hoverState: hoverState,
                                   snapState: context.read<FusionSnapViewModel>().state,
                                   inputState: inputState,
-                                  selectionToolParams: selectionToolParams,
+                                  // selectionToolParams: selectionToolParams,
                                   fusionCanvasPainter: fusionCanvasPainter,
                                 );
 
                                 // Delegate all input handling to the tool viewmodel
                                 final FusionCanvasToolViewModel toolVm = context.read<FusionCanvasToolViewModel>();
-                                final bool isHandled = toolVm.onInputStateChanged(inputState, inputContext);
+                                final bool isHandled = toolVm.onInputStateChanged(inputState, inputContext, tools);
 
                                 if (!isHandled) {
                                   if (inputState is FusionCanvasInputDraggingState && inputState.button != FusionMouseButton.left) {

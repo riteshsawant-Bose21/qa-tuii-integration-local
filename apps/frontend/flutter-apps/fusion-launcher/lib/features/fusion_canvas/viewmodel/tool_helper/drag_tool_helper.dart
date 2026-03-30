@@ -9,10 +9,13 @@ import '../../state/fusion_snap_state.dart';
 import '../../state/tools/select_tool_state.dart';
 import '../../view/painters/elements/mixin/fusion_canvas_interactable_mixin.dart';
 import '../fusion_canvas_tool_viewmodel.dart';
+import '../tools/fusion_canvas_tool.dart';
 import '../usecase/fc_bounded_delta_resolver_usecase.dart';
 import '../usecase/fc_layer_interaction_support_usecase.dart';
 
-class DragToolHelper {
+class DragToolHelper extends FusionCanvasToolTransformer<DragToolState> {
+  const DragToolHelper();
+  @override
   FusionToolState transform({
     required FusionCanvasInputState inputState,
     required FusionCanvasInputContext context,

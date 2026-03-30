@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart' show FusionBasePainter;
 import 'package:fusion_launcher/features/wiring_design/controller/circuit_controller.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/helpers/initialization_handler_mixin.dart';
@@ -11,6 +12,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../fusion_canvas/view/fusion_canvas.dart';
 import '../../fusion_canvas/view/painters/elements/wiring/wiring_source_painter.dart' show WiringSourcePainter;
+import '../../fusion_canvas/viewmodel/tools/fusion_canvas_tool.dart';
 import 'circuit_view.dart';
 
 class WiringPage extends StatefulWidget {
@@ -51,6 +53,12 @@ class _WiringPageState extends State<WiringPage> {
       builder: (BuildContext context, ProjectViewModelState state) {
         final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
         return FusionCanvas(
+          tools: <FusionCanvasTool<FusionToolState>>[
+            FusionCanvasTool.measureTool,
+            FusionCanvasTool.penTool,
+            FusionCanvasTool.dragTool,
+            FusionCanvasTool.multiSelectionTool,
+          ],
           elements: <FusionBasePainter>[
             for (Source source in projectViewModel.sources) WiringSourcePainter(source: source),
           ],
@@ -62,7 +70,6 @@ class _WiringPageState extends State<WiringPage> {
                 projectViewModel.updateHardware(hardware: source.copyWith(wiringPos: (source.wiringPos ?? Offset.zero) + offset));
               }
             },
-            
           ),
         );
         // if (state is DeviceSelectionChanged) {

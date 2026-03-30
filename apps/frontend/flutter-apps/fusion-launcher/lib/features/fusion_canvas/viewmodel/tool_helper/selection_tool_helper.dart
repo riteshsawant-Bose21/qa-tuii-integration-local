@@ -7,19 +7,26 @@ import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canv
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../state/fusion_canvas_input_state.dart';
+import '../../state/tools/selection_tool_params.dart';
 import '../../view/painters/elements/mixin/fusion_canvas_interactable_mixin.dart';
 import '../fusion_canvas_tool_viewmodel.dart';
+import '../tools/fusion_canvas_tool.dart';
 import '../usecase/fc_interaction_resolver_usecase.dart';
 import '../usecase/fc_layer_interaction_support_usecase.dart';
 import '../usecase/fc_selectable_layers_in_rect_usecase.dart';
 
-class SelectionToolHelper {
+class SelectionToolHelper extends FusionCanvasToolTransformer<SelectToolState> {
+  final SelectionToolParams selectionToolParams;
+  const SelectionToolHelper({
+    required this.selectionToolParams,
+  });
+  @override
   FusionToolState transform({
     required FusionCanvasInputState inputState,
     required FusionCanvasInputContext context,
     required SelectToolState currentState,
   }) {
-    final bool selectionEnabled = context.selectionToolParams.enableSelect;
+    final bool selectionEnabled = selectionToolParams.enableSelect;
 
     if (inputState is FusionCanvasInputTapDownState) {
       return _handleTapDown(context, currentState);
@@ -64,9 +71,9 @@ class SelectionToolHelper {
       return currentState;
     }
 
-    final bool selectionEnabled = context.selectionToolParams.enableSelect;
-    final bool multiSelectEnabled = context.selectionToolParams.enableMultiSelect;
-    final bool marqueeSelectionEnabled = context.selectionToolParams.enableMarqueeSelection;
+    final bool selectionEnabled = selectionToolParams.enableSelect;
+    final bool multiSelectEnabled = selectionToolParams.enableMultiSelect;
+    final bool marqueeSelectionEnabled = selectionToolParams.enableMarqueeSelection;
 
     final String? hoveredPainterId = context.hoverState.hoveredPainterId;
 
@@ -137,7 +144,7 @@ class SelectionToolHelper {
       final Set<String> boxSelectedLayerIds = FusionCanvasSelectableLayersInRectUseCase(
         painter: context.fusionCanvasPainter,
       ).call(selectionRect);
-      final bool multiSelectEnabled = context.selectionToolParams.enableMultiSelect;
+      final bool multiSelectEnabled = selectionToolParams.enableMultiSelect;
       final Set<String> effectiveSelectedLayerIds =
           (multiSelectEnabled && inputState.isShiftPressed) ? <String>{...currentState.selectedLayerIds, ...boxSelectedLayerIds} : boxSelectedLayerIds;
 
@@ -186,11 +193,11 @@ class SelectionToolHelper {
     FusionCanvasInputContext context,
     SelectToolState currentState,
   ) {
-    if (!context.selectionToolParams.enableSelect) {
+    if (!selectionToolParams.enableSelect) {
       return currentState;
     }
 
-    final bool multiSelectEnabled = context.selectionToolParams.enableMultiSelect;
+    final bool multiSelectEnabled = selectionToolParams.enableMultiSelect;
     final String? hoveredPainterId = context.hoverState.hoveredPainterId;
     final String? hoveredElementId = context.hoverState.hoveredElement?.id;
 

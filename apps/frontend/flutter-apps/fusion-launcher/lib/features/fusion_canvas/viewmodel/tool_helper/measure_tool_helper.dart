@@ -5,8 +5,11 @@ import 'package:fusion_launcher/features/fusion_canvas/state/tools/measure_tool_
 
 import '../../state/fusion_canvas_input_state.dart';
 import '../fusion_canvas_tool_viewmodel.dart';
+import '../tools/fusion_canvas_tool.dart';
 
-class MeasureToolHelper {
+class MeasureToolHelper extends FusionCanvasToolTransformer<MeasureToolState> {
+  const MeasureToolHelper();
+  @override
   FusionToolState transform({
     required FusionCanvasInputState inputState,
     required FusionCanvasInputContext context,
