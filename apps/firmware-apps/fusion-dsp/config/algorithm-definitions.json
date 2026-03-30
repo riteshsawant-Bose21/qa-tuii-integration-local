@@ -1683,7 +1683,7 @@
                     "default_value": false
                 },
                 {
-                    "name": "output_mute",
+                    "name": "out_mute",
                     "dimensions": ["out"],
                     "value_type": "bool",
                     "default_value": false
