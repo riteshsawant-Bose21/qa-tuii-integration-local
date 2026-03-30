@@ -117,10 +117,11 @@ def configure(conf):
     conf.env.append_value('LIBPATH', [conf.path.abspath() + '/../../../libs/firmware-libs/fusion-embedded-interface/build'])
     conf.env.append_value('LIBPATH', [conf.path.abspath() + '/../../../libs/firmware-libs/fusion-embedded-framework/build'])
 
-    # attach runtime lib paths
-    conf.env.append_value('LDFLAGS', [f'-Wl,-rpath,{onnx_path}/lib'])
-    conf.env.append_value('LDFLAGS', [f'-Wl,-rpath,{conf.path.abspath()}/../../../libs/firmware-libs/fusion-embedded-interface/build'])
-    conf.env.append_value('LDFLAGS', [f'-Wl,-rpath,{conf.path.abspath()}/../../../libs/firmware-libs/fusion-embedded-framework/build'])
+    # attach runtime lib paths for local builds
+    if not conf.env['is_cross_compile']:
+        conf.env.append_value('LDFLAGS', [f'-Wl,-rpath,{onnx_path}/lib'])
+        conf.env.append_value('LDFLAGS', [f'-Wl,-rpath,{conf.path.abspath()}/../../../libs/firmware-libs/fusion-embedded-interface/build'])
+        conf.env.append_value('LDFLAGS', [f'-Wl,-rpath,{conf.path.abspath()}/../../../libs/firmware-libs/fusion-embedded-framework/build'])
 
 def build(bld):
     bld(export_includes=['../fusion-server/tools', '../../../libs/firmware-libs/fusion-embedded-interface/include', '../../../libs/firmware-libs/fusion-embedded-framework/include', './external/doctest', './include'], name='common-include')
