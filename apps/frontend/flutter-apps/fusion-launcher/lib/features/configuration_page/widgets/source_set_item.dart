@@ -139,7 +139,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                     child: Container(
                       margin: const EdgeInsets.only(top: 8, left: 8, right: 8),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      height: 36,
+                      height: 32,
                       decoration: BoxDecoration(
                         boxShadow: <BoxShadow>[
                           BoxShadow(color: context.colorScheme.black, offset: const Offset(1.5, 1.5), blurRadius: 7),
@@ -296,9 +296,6 @@ class _SourceSetItemState extends State<SourceSetItem> {
                     ),
                   ),
                 ),
-                const SizedBox(
-                  height: 8,
-                ),
                 if (subZoneExpanded) _buildSourcesList(),
               ],
             );
@@ -389,8 +386,8 @@ class _SourceSetItemState extends State<SourceSetItem> {
             vertical: 8,
           ),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(4),
-            color: context.colorScheme.elevation2,
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(4)),
+            color: context.colorScheme.elevation2.withAlpha(100),
           ),
           margin: const EdgeInsets.only(
             left: 12,
