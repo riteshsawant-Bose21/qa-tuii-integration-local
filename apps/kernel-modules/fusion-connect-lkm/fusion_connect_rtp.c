@@ -594,6 +594,7 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
                                                void *alsa_stream)
 {
     struct sk_buff *skb;
+    u64 scheduled_send_ns;
     const u32 phys_bits = snd_pcm_format_physical_width(stream->info.format);
 
     if (!stream->info.is_source)
@@ -619,11 +620,12 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
     struct udphdr *udph = &stream->rtp_packet_base.udp;
 
     spin_lock(&stream->lock);
+    scheduled_send_ns = stream->next_action_time;
 
     /* ---------- Per-packet RTP fields ---------- */
     {
         /* sac = phc*Fs/1e9 (48k: (ns>>2)*3/15625 ; 96k: (ns>>1)*3/15625) */
-        u64 sac = (((stream->next_action_time >>
+        u64 sac = (((scheduled_send_ns >>
                     (stream->info.sample_rate == 48000 ? 2 : 1)) * 3) / 15625);
 
         stream->rtp_packet_base.rtp.timestamp = cpu_to_be32((u32)(sac + stream->info.timestamp_offset));
@@ -679,12 +681,13 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
                stream->info.stream_name,
                (u32)(be16_to_cpu(stream->rtp_packet_base.rtp.seq_num)),
                total_len, off_frames,
-               stream->next_action_time);
+               scheduled_send_ns);
     }
 
+    stream->next_action_time += stream->packet_time;
     spin_unlock(&stream->lock);
 
-    fc_tx_metrics_note(rtp_mgr, stream, payload_len, stream->next_action_time);
+    fc_tx_metrics_note(rtp_mgr, stream, payload_len, scheduled_send_ns);
 
     if (fusion_cn_nf_tx_packet(rtp_mgr, skb, total_len) < 0) {
         kfree_skb(skb);

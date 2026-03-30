@@ -1,7 +1,6 @@
 #pragma once
 
 #include <linux/kernel.h>
-#include <linux/hrtimer.h>
 #include <linux/list.h>
 #include <sound/pcm.h>
 #include "fusion_connect_alsa.h"
@@ -33,12 +32,6 @@ struct fusion_cn_alsa {
     const struct fusion_cn_alsa_ops *alsa_callbacks;
 };
 
-struct fusion_cn_timer {
-    u64 last_tick_ns;
-    u64 next_tick_ns;
-    u8 tick_count;
-};
-
 struct fusion_cn_netlink {
     struct sock *nl_sock;
     int nl_family;
@@ -64,11 +57,11 @@ struct fusion_cn_manager {
     struct fusion_cn_state state;
     struct fusion_cn_alsa alsa;
     struct fusion_cn_rtp_manager rtp;
-    struct fusion_cn_timer timer;
     struct fusion_cn_netfilter netfilter;
     struct fusion_cn_netlink netlink;
     struct platform_device *pdev;
     struct active_streams active_streams;
+    u64 tick_ns;
     bool debug;
 };
 

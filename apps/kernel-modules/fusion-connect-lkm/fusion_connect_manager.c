@@ -105,19 +105,23 @@ u64 fusion_cn_get_phc_ns(void)
 }
 
 /* helpers: compute how many interrupts are due, and advance state */
-static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u64 now)
+static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u64 now_ns)
 { 
     int count = 0;
 
     spin_lock(&s->lock);
-
+    // playback_index == buf_size_in_packets is invalid init value 
     if (s->playback_index < s->buf_size_in_packets) {
+        // window after the action_time to still include the frame
         u64 window = 2 * s->packet_time;
 
+        // we may want to catch up and playback a bunch of frames, up to buf_size_in_packets worth
         while (count < s->buf_size_in_packets) {
-            s64 delta = (s64)now - (s64)s->next_action_times[s->playback_index];
+            s64 delta = (s64)now_ns - (s64)s->next_action_times[s->playback_index];
+            // If packet is little bit in the future, play it back
             if (delta < 0 && (u64)-(delta) > EARLY_SLACK_NS) {
                 break;
+            // if packet is too far in the past, don't play it
             } else if (abs64(delta) > window) {
                 break;
             }
@@ -133,19 +137,21 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u6
     return count;
 }
 
-static inline int rtp_compute_source_interrupts(struct fusion_cn_rtp_stream *s, u64 now, u64 next_tick)
+static inline int rtp_compute_source_interrupts(struct fusion_cn_rtp_stream *s, u64 now_ns)
 {
     int count = 0;
+    u64 action_time;
 
     spin_lock(&s->lock);
     if (s->next_action_time == 0)
-        s->next_action_time = now;
+        s->next_action_time = now_ns;
 
-    while (s->next_action_time <= (now + EARLY_SLACK_NS)) {
-        if (s->packet_time == TIMER_BASE_INTERVAL_NS)
-            s->next_action_time = next_tick;
-        else
-            s->next_action_time += s->packet_time;
+    action_time = s->next_action_time;
+
+    // loop for packet times less than 1/3ms
+    // 1/3 ms packet time streams are on grid--otherwise they're not
+    while (action_time <= (now_ns + EARLY_SLACK_NS)) {
+        action_time += s->packet_time;
         count++;
     }
     spin_unlock(&s->lock);
@@ -180,7 +186,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
 
         /* compute due interrupts with stream->lock, still under mgr->rtp.lock */
         {
-            int n = rtp_compute_sink_interrupts(r, mgr->timer.last_tick_ns);
+            int n = rtp_compute_sink_interrupts(r, mgr->tick_ns);
             if (n > 0 && fn_sink_cnt < 32) {
                 if (!kref_get_unless_zero(&r->ref))
                     continue;
@@ -216,7 +222,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         if (!r || !a) continue;
         if (!atomic_read(&r->is_running) || !r->info.is_source || !r->info.is_fusion_connect) continue;
 
-        int n = rtp_compute_source_interrupts(r, mgr->timer.last_tick_ns, mgr->timer.next_tick_ns);
+        int n = rtp_compute_source_interrupts(r, mgr->tick_ns);
         if (n > 0 && other_cnt < 32) {
             if (!kref_get_unless_zero(&r->ref)) continue;
             if (!kref_get_unless_zero(&a->ref)) { kref_put(&r->ref, fusion_cn_rtp_stream_release); continue; }
@@ -231,7 +237,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         if (!r || !a) continue;
         if (!atomic_read(&r->is_running) || r->info.is_source || r->info.is_fusion_connect) continue;
 
-        int n = rtp_compute_sink_interrupts(r, mgr->timer.last_tick_ns);
+        int n = rtp_compute_sink_interrupts(r, mgr->tick_ns);
         if (n > 0 && other_cnt < 32) {
             if (!kref_get_unless_zero(&r->ref)) continue;
             if (!kref_get_unless_zero(&a->ref)) { kref_put(&r->ref, fusion_cn_rtp_stream_release); continue; }
@@ -246,7 +252,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         if (!r || !a) continue;
         if (!atomic_read(&r->is_running) || !r->info.is_source || r->info.is_fusion_connect) continue;
 
-        int n = rtp_compute_source_interrupts(r, mgr->timer.last_tick_ns, mgr->timer.next_tick_ns);
+        int n = rtp_compute_source_interrupts(r, mgr->tick_ns);
         if (n > 0 && other_cnt < 32) {
             if (!kref_get_unless_zero(&r->ref)) continue;
             if (!kref_get_unless_zero(&a->ref)) { kref_put(&r->ref, fusion_cn_rtp_stream_release); continue; }
@@ -370,23 +376,12 @@ static inline void fusion_cn_queue_process(void)
         kthread_queue_work(worker, &process_work);
 }
 
-/* --- GPT client callback (softirq via irq_work) --- */
-static void fusion_cn_gpt_tick(void *ctx, u64 tick64)
+/* --- GPT client callback --- */
+static void fusion_cn_gpt_tick(void *ctx, u64 tick_ns)
 {
     struct fusion_cn_manager *mgr = ctx;
-    u64  now_ns;
 
-    now_ns = fusion_gpt_read_phc_ns();
-    if (!now_ns)
-        return; /* extremely defensive; should not happen if epoch_ok */
-
-    mgr->timer.last_tick_ns = now_ns;
-    mgr->timer.next_tick_ns = now_ns + TIMER_BASE_INTERVAL_NS;
-
-    if (++mgr->timer.tick_count == 3) {
-        mgr->timer.tick_count = 0;
-        mgr->timer.next_tick_ns += 1; /* 3333/3333/3334 cadence */
-    }
+    mgr->tick_ns = tick_ns;
 
     fusion_cn_queue_process();
 }
@@ -395,13 +390,9 @@ static const struct fusion_gpt_client_ops fusion_cn_gpt_ops = {
     .tick = fusion_cn_gpt_tick,
 };
 
-static int fusion_cn_timer_init(struct fusion_cn_manager *mgr)
+static int fusion_cn_gpt_init(struct fusion_cn_manager *mgr)
 {
     int ret;
-    struct fusion_gpt_timing_status timing_status;
-    u64  now_ns = 0;
-
-    mgr->timer.tick_count = 0;
 
     ret = fusion_gpt_register_client(&fusion_cn_gpt_ops, mgr, THIS_MODULE);
     if (ret) {
@@ -409,20 +400,7 @@ static int fusion_cn_timer_init(struct fusion_cn_manager *mgr)
         return ret;
     }
 
-    if (!fusion_gpt_get_timing_status(&timing_status) && timing_status.epoch_valid) {
-        now_ns = fusion_gpt_read_phc_ns();
-    }
-
-    if (now_ns) {
-        mgr->timer.last_tick_ns = now_ns;
-        mgr->timer.next_tick_ns = now_ns + TIMER_BASE_INTERVAL_NS;
-        pr_info("fusion_cn: GPT timing active (PHC-aligned%s)\n",
-                timing_status.aligned ? ", aligned" : ", waiting alignment");
-    } else {
-        mgr->timer.last_tick_ns = 0;
-        mgr->timer.next_tick_ns = 0;
-        pr_info("fusion_cn: waiting for PHC epoch/alignment before processing\n");
-    }
+    pr_info("fusion_cn: GPT client registered\n");
 
     return 0;
 }
@@ -463,7 +441,7 @@ int fusion_cn_mgr_init(struct fusion_cn_manager *mgr)
     if ((ret = fusion_cn_alsa_init(mgr)) < 0) goto err;
     if ((ret = fusion_cn_rtp_init(&mgr->rtp, &mgr->netfilter, &rtp_ops, mgr)) < 0) goto err_rtp;
     if ((ret = fusion_cn_nf_init(&mgr->rtp)) < 0) goto err_nf;
-    if ((ret = fusion_cn_timer_init(mgr)) < 0) goto err_timer;
+    if ((ret = fusion_cn_gpt_init(mgr)) < 0) goto err_timer;
     if ((ret = fusion_cn_nl_init(mgr)) < 0) goto err_nl;
 
     return 0;
@@ -527,7 +505,6 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
         pr_debug("fusion_cn: mgr already started\n");
         return -MGR_START_ERRNO_RUNNING;
     }
-
     
     /* Initialize PREEMPT_RT-friendly TX worker once */
     if (!process_worker) {

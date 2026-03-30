@@ -100,7 +100,7 @@ static bool pps_diag_enable;
 module_param(pps_diag_enable, bool, 0644);
 MODULE_PARM_DESC(pps_diag_enable, "Enable periodic 1PPS diagnostic logging");
 
-static uint discipline_ready_abs_error_param = 1;
+static uint discipline_ready_abs_error_param = 20;
 module_param(discipline_ready_abs_error_param, uint, 0644);
 MODULE_PARM_DESC(discipline_ready_abs_error_param,
 		 "Raise discipline_ready after 5 PPS samples with abs_error < this threshold");
@@ -481,21 +481,20 @@ static u64 gpt_read_ticks64(struct fusion_gpt *g)
 static bool gpt_client_tick_ready(struct fusion_gpt *g)
 {
 	unsigned long flags;
+	bool discipline_ready;
 	bool epoch_valid;
 	bool aligned;
 
-	if (!READ_ONCE(g->discipline_ready))
-		return false;
-
 	raw_spin_lock_irqsave(&g->pps_lock, flags);
+	discipline_ready = g->discipline_ready;
 	epoch_valid = g->phc_epoch_valid;
 	aligned = g->phc_aligned;
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
-	return epoch_valid && aligned;
+	return discipline_ready && epoch_valid && aligned;
 }
 
-static inline void gpt_tick_direct(struct fusion_gpt *g)
+static inline void gpt_fusion_cn_tick(struct fusion_gpt *g)
 {
 	if (!gpt_client_tick_ready(g))
 		return;
@@ -504,21 +503,6 @@ static inline void gpt_tick_direct(struct fusion_gpt *g)
 	if (ops && ops->tick)
 		ops->tick(g->ops_ctx, gpt_read_ticks64(g));
 }
-
-u64 fusion_gpt_read_ticks64(void)
-{
-	struct fusion_gpt *g;
-	u64 ret = 0;
-
-	rcu_read_lock();
-	g = rcu_dereference(gpt_singleton);
-	if (g)
-		ret = gpt_read_ticks64(g);
-	rcu_read_unlock();
-
-	return ret;
-}
-EXPORT_SYMBOL(fusion_gpt_read_ticks64);
 
 static void gpt_rephase_of1_from_pps_locked(struct fusion_gpt *g, u64 cap64)
 {
@@ -788,21 +772,6 @@ u64 fusion_gpt_read_phc_ns(void)
 	return ns;
 }
 EXPORT_SYMBOL(fusion_gpt_read_phc_ns);
-
-bool fusion_gpt_clock_ready(void)
-{
-	struct fusion_gpt *g;
-	bool ready = false;
-
-	rcu_read_lock();
-	g = rcu_dereference(gpt_singleton);
-	if (g)
-		ready = READ_ONCE(g->discipline_ready);
-	rcu_read_unlock();
-
-	return ready;
-}
-EXPORT_SYMBOL(fusion_gpt_clock_ready);
 
 static void gpt_program_next_compare(struct fusion_gpt *g)
 {
@@ -1323,7 +1292,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 	if (sr & SR_OF1) {
 		gpt_program_next_compare(g);
 		clr |= SR_OF1;
-		gpt_tick_direct(g);
+		gpt_fusion_cn_tick(g);
 	}
 
 	if (clr) wrl(g, clr, GPT_SR);
