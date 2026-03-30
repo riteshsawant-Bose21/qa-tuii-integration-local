@@ -250,21 +250,21 @@ class _DialogContent extends StatelessWidget {
         ),
 
         // Show footer when in control mode OR when editing in non-control mode (to allow name editing)
-        if (isControl || isEditing)
-          _Footer(
-            onImport: cubit.importSdp,
-            onConfirm: () {
-              // Get the current stream from the viewmodel
-              final Aes67Config? stream = cubit.getCurrentStream();
-              if (stream != null) {
-                onSave?.call(stream);
-                cubit.save();
-              }
-              Navigator.of(context).pop();
-            },
-            isEditing: isEditing,
-            isControlMode: isControl,
-          ),
+        // if (isControl || isEditing)
+        _Footer(
+          onImport: cubit.importSdp,
+          onConfirm: () {
+            // Get the current stream from the viewmodel
+            final Aes67Config? stream = cubit.getCurrentStream();
+            if (stream != null) {
+              onSave?.call(stream);
+              cubit.save();
+            }
+            Navigator.of(context).pop();
+          },
+          isEditing: isEditing,
+          isControlMode: isControl,
+        ),
       ],
     );
   }
@@ -660,25 +660,25 @@ class _Footer extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
           // Import SDP - only show in control mode
-          if (isControlMode)
-            OutlinedButton(
-              onPressed: onImport,
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: context.colorScheme.strokeLight),
-                foregroundColor: context.colorScheme.textPrimary,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          // if (isControlMode)
+          OutlinedButton(
+            onPressed: onImport,
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: context.colorScheme.strokeLight),
+              foregroundColor: context.colorScheme.textPrimary,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: FusionAppText(
+              text: 'Import SDP Configuration',
+              style: context.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w500,
+                color: context.colorScheme.textPrimary,
               ),
-              child: FusionAppText(
-                text: 'Import SDP Configuration',
-                style: context.textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: context.colorScheme.textPrimary,
-                ),
-              ),
-            )
-          else
-            const SizedBox.shrink(),
+            ),
+          ),
+          // else
+          //   const SizedBox.shrink(),
 
           // Save button
           ElevatedButton(

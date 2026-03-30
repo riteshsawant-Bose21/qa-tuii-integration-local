@@ -179,7 +179,7 @@ extension Aes67ViewModel on ProjectViewModel {
       if (autoSave) {
         recordSnapshot();
       }
-      final duplicated = projectManager.duplicateAes67Stream(streamId);
+      final Aes67Config duplicated = projectManager.duplicateAes67Stream(streamId);
       if (autoSave) {
         saveProject();
       }

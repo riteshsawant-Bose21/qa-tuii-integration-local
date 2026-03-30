@@ -74,7 +74,7 @@ class _ConfigurationAes67View extends StatelessWidget {
   Widget _buildLoaded(BuildContext context, ConfigAes67Loaded state) {
     final ConfigAes67Viewmodel cubit = context.read<ConfigAes67Viewmodel>();
 
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -123,55 +123,59 @@ class _ConfigurationAes67View extends StatelessWidget {
           const SizedBox(height: 24),
 
           // ── Input Streams Section ────────────────────────────────────
-          _StreamSection(
-            title: 'AES 67 Input Streams',
-            addLabel: 'Add Input Stream',
-            emptyMessage: 'No input streams configured',
-            onAdd:
-                (BuildContext context) => InputStreamDialog.show(
-                  context,
-                  onSave: cubit.addInputStream,
-                ),
-            onRowTap: (String streamId) {
-              final Aes67Config? stream = cubit.getInputStreamById(streamId);
-              if (stream != null) {
-                InputStreamDialog.show(
-                  context,
-                  existingStream: stream,
-                  isEditing: true,
-                  onSave: cubit.updateInputStream,
-                );
-              }
-            },
-            columns: _inputColumns(),
-            rows: _buildInputRows(context, state.inputStreams, cubit),
+          Expanded(
+            child: _StreamSection(
+              title: 'AES 67 Input Streams',
+              addLabel: 'Add Input Stream',
+              emptyMessage: 'No input streams configured',
+              onAdd:
+                  (BuildContext context) => InputStreamDialog.show(
+                    context,
+                    onSave: cubit.addInputStream,
+                  ),
+              onRowTap: (String streamId) {
+                final Aes67Config? stream = cubit.getInputStreamById(streamId);
+                if (stream != null) {
+                  InputStreamDialog.show(
+                    context,
+                    existingStream: stream,
+                    isEditing: true,
+                    onSave: cubit.updateInputStream,
+                  );
+                }
+              },
+              columns: _inputColumns(),
+              rows: _buildInputRows(context, state.inputStreams, cubit),
+            ),
           ),
 
           const SizedBox(height: 24),
 
           // ── Output Streams Section ───────────────────────────────────
-          _StreamSection(
-            title: 'AES 67 Output Streams',
-            addLabel: 'Add Output Stream',
-            emptyMessage: 'No output streams configured',
-            onAdd:
-                (BuildContext context) => OutputStreamDialog.show(
-                  context,
-                  onSave: cubit.addOutputStream,
-                ),
-            onRowTap: (String streamId) {
-              final Aes67Config? stream = cubit.getOutputStreamById(streamId);
-              if (stream != null) {
-                OutputStreamDialog.show(
-                  context,
-                  existingStream: stream,
-                  isEditing: true,
-                  onSave: cubit.updateOutputStream,
-                );
-              }
-            },
-            columns: _outputColumns(),
-            rows: _buildOutputRows(context, state.outputStreams, cubit),
+          Expanded(
+            child: _StreamSection(
+              title: 'AES 67 Output Streams',
+              addLabel: 'Add Output Stream',
+              emptyMessage: 'No output streams configured',
+              onAdd:
+                  (BuildContext context) => OutputStreamDialog.show(
+                    context,
+                    onSave: cubit.addOutputStream,
+                  ),
+              onRowTap: (String streamId) {
+                final Aes67Config? stream = cubit.getOutputStreamById(streamId);
+                if (stream != null) {
+                  OutputStreamDialog.show(
+                    context,
+                    existingStream: stream,
+                    isEditing: true,
+                    onSave: cubit.updateOutputStream,
+                  );
+                }
+              },
+              columns: _outputColumns(),
+              rows: _buildOutputRows(context, state.outputStreams, cubit),
+            ),
           ),
         ],
       ),
@@ -355,12 +359,6 @@ class _StreamSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Fixed row height * count + header + bottom padding
-    const double headerHeight = 44;
-    const double rowHeight = 48;
-    final double tableHeight = // half of the screen or enough to show all rows, whichever is smaller;
-        (rows.length * rowHeight + headerHeight + 16).clamp(0, MediaQuery.sizeOf(context).height * 0.5);
-
     return Container(
       decoration: BoxDecoration(
         color: context.colorScheme.elevation2,
@@ -371,7 +369,7 @@ class _StreamSection extends StatelessWidget {
         children: <Widget>[
           // Section header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
@@ -411,56 +409,58 @@ class _StreamSection extends StatelessWidget {
 
           // Show empty state or table
           if (rows.isEmpty)
-            Container(
-              color: context.colorScheme.elevation1,
-              padding: const EdgeInsets.symmetric(vertical: 48),
-              width: double.infinity,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  FusionAppText(
-                    text: emptyMessage,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: context.colorScheme.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  InkWell(
-                    onTap: () => onAdd(context),
-                    borderRadius: BorderRadius.circular(6),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Icon(Icons.add, size: 16, color: context.colorScheme.primaryColor),
-                          const SizedBox(width: 4),
-                          FusionAppText(
-                            text: addLabel,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: context.colorScheme.primaryColor,
-                            ),
-                          ),
-                        ],
+            Expanded(
+              child: Container(
+                color: context.colorScheme.elevation1,
+                width: double.infinity,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    FusionAppText(
+                      text: emptyMessage,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: context.colorScheme.textSecondary,
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: () => onAdd(context),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(Icons.add, size: 16, color: context.colorScheme.primaryColor),
+                            const SizedBox(width: 4),
+                            FusionAppText(
+                              text: addLabel,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: context.colorScheme.primaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             )
           else
-            // FusionTable with fixed height so it doesn't need Expanded inside scroll
-            Container(
-              color: context.colorScheme.elevation1,
-              height: tableHeight,
-              child: FusionTable(
-                columns: columns,
-                rows: rows,
-                onRowTap: onRowTap,
+            // FusionTable with calculated height
+            Expanded(
+              child: Container(
+                color: context.colorScheme.elevation1,
+                child: FusionTable(
+                  columns: columns,
+                  rows: rows,
+                  onRowTap: onRowTap,
+                ),
               ),
             ),
         ],
