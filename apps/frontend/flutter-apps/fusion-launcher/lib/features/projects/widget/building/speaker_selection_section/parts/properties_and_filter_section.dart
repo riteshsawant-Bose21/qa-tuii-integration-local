@@ -4,31 +4,31 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/constant_enums.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/select_listening_area.dart';
-import 'package:fusion_launcher/features/projects/widget/building/widgets/drop_down.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/text_field.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/product_data/models/speaker_product.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../view_model/add_speaker_view_model.dart';
+import '../view_model/product_query_view_model.dart';
 
 class SpeakerListeningAreaProperties extends StatefulWidget {
   const SpeakerListeningAreaProperties({super.key});
 
   @override
-  State<SpeakerListeningAreaProperties> createState() =>
-      SpeakerListeningAreaPropertiesState();
+  State<SpeakerListeningAreaProperties> createState() => SpeakerListeningAreaPropertiesState();
 }
 
-class SpeakerListeningAreaPropertiesState
-    extends State<SpeakerListeningAreaProperties> {
+class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProperties> {
   final TextEditingController listeningAreaController = TextEditingController();
   final TextEditingController ceilingHeightController = TextEditingController();
-  final TextEditingController customListeningHeightController =
-      TextEditingController();
+  final TextEditingController floorHeightController = TextEditingController(text: '0.0');
+  final TextEditingController customListeningHeightController = TextEditingController();
 
   @override
   void dispose() {
     ceilingHeightController.dispose();
+    floorHeightController.dispose();
     listeningAreaController.dispose();
     customListeningHeightController.dispose();
     super.dispose();
@@ -43,15 +43,10 @@ class SpeakerListeningAreaPropertiesState
       ),
       child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
         builder: (BuildContext context, ProjectViewModelState state) {
-          final SpeakerSelectionViewModel speakerSelectionViewModel =
-              context.watch<SpeakerSelectionViewModel>();
-          final ListeningArea? selectedListeningArea =
-              speakerSelectionViewModel.selectedListeningArea;
+          final SpeakerSelectionViewModel speakerSelectionViewModel = context.watch<SpeakerSelectionViewModel>();
+          final ListeningArea? selectedListeningArea = speakerSelectionViewModel.selectedListeningArea;
 
-          final ProjectViewModel projectViewModel =
-              context.watch<ProjectViewModel>();
-          final bool isFromBuildingPage =
-              speakerSelectionViewModel.isFromBuildingPage;
+          final bool isFromBuildingPage = speakerSelectionViewModel.isFromBuildingPage;
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,10 +64,7 @@ class SpeakerListeningAreaPropertiesState
                       ),
                     ),
                     SemanticHelper.button(
-                      testId: SemanticHelper.createTestId(
-                        SemanticTypes.button,
-                        "close_dropdown_button",
-                      ),
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, "close_dropdown_button"),
                       child: MouseRegion(
                         cursor: SystemMouseCursors.click,
                         child: GestureDetector(
@@ -99,9 +91,7 @@ class SpeakerListeningAreaPropertiesState
                   child: Column(
                     children: <Widget>[
                       if (!isFromBuildingPage) ...<Widget>[
-                        SelectListeningArea(
-                          speakerSelectionViewModel: speakerSelectionViewModel,
-                        ),
+                        SelectListeningArea(speakerSelectionViewModel: speakerSelectionViewModel),
                         const SizedBox(height: 10),
                       ],
 
@@ -112,18 +102,13 @@ class SpeakerListeningAreaPropertiesState
                               children: <Widget>[
                                 Center(
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 60,
-                                    ),
+                                    padding: const EdgeInsets.symmetric(vertical: 60),
                                     child: FusionAppText(
-                                      text:
-                                          "Select listening area\nto view properties",
+                                      text: "Select listening area\nto view properties",
                                       textAlign: TextAlign.center,
-                                      style: context.textTheme.labelSmall
-                                          ?.copyWith(
-                                            color: context.colorScheme.onSurface
-                                                .withAlpha(100),
-                                          ),
+                                      style: context.textTheme.labelSmall?.copyWith(
+                                        color: context.colorScheme.onSurface.withAlpha(100),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -131,25 +116,17 @@ class SpeakerListeningAreaPropertiesState
                             );
                           }
 
-                          ceilingHeightController.text =
-                              selectedListeningArea.ceilingHeight;
-                          listeningAreaController.text =
-                              selectedListeningArea.name;
+                          ceilingHeightController.text = selectedListeningArea.ceilingHeight.toString() ?? '';
+                          listeningAreaController.text = selectedListeningArea.name;
 
-                          final ListeningHeightOption listeningHeightOption =
-                              ListeningHeightOption.getOptionByValue(
-                                selectedListeningArea.listeningHeight,
-                              );
+                          final ListeningHeightOption listeningHeightOption = ListeningHeightOption.getOptionByValue(
+                            selectedListeningArea.listeningHeight,
+                          );
 
                           return SemanticHelper.container(
-                            testId: SemanticHelper.createTestId(
-                              SemanticTypes.container,
-                              "listening_area_properties_section",
-                            ),
+                            testId: SemanticHelper.createTestId(SemanticTypes.container, "listening_area_properties_section"),
                             child: Padding(
-                              padding: const EdgeInsets.all(
-                                16.0,
-                              ).copyWith(top: 0),
+                              padding: const EdgeInsets.all(16.0).copyWith(top: 0),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,63 +141,33 @@ class SpeakerListeningAreaPropertiesState
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: SemanticHelper.formControl(
-                                          testId: SemanticHelper.createTestId(
-                                            SemanticTypes.textInput,
-                                            "listening_area_name_input",
-                                          ),
+                                          testId: SemanticHelper.createTestId(SemanticTypes.textInput, "listening_area_name_input"),
                                           child: TextFormField(
                                             controller: listeningAreaController,
                                             maxLength: 24,
                                             decoration: InputDecoration(
                                               counterText: '',
                                               hintText: 'Enter area name',
-                                              hintStyle: context
-                                                  .textTheme
-                                                  .bodySmall
-                                                  ?.copyWith(
-                                                    color: context
-                                                        .colorScheme
-                                                        .onSurface
-                                                        .withAlpha(100),
-                                                  ),
+                                              hintStyle: context.textTheme.bodySmall?.copyWith(
+                                                color: context.colorScheme.onSurface.withAlpha(100),
+                                              ),
                                               border: InputBorder.none,
                                               enabledBorder: InputBorder.none,
                                               focusedBorder: InputBorder.none,
-                                              focusedErrorBorder:
-                                                  InputBorder.none,
+                                              focusedErrorBorder: InputBorder.none,
                                               errorBorder: InputBorder.none,
                                               disabledBorder: InputBorder.none,
                                               focusColor: Colors.transparent,
                                               hoverColor: Colors.transparent,
-                                              contentPadding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 4,
-                                                    vertical: 10,
-                                                  ),
+                                              contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
                                               isDense: true,
                                               fillColor: Colors.transparent,
                                             ),
-                                            style: context.textTheme.bodySmall
-                                                ?.copyWith(
-                                                  color:
-                                                      context
-                                                          .colorScheme
-                                                          .onSurface,
-                                                ),
+                                            style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
                                             onFieldSubmitted: (String value) {
-                                              if (value.trim().isNotEmpty) {
-                                                final ListeningArea updatedLA =
-                                                    selectedListeningArea
-                                                        .copyWith(
-                                                          name: value.trim(),
-                                                        );
-                                                projectViewModel
-                                                    .updateListeningArea(
-                                                      area: updatedLA,
-                                                    );
-                                              } else {
-                                                listeningAreaController.text =
-                                                    selectedListeningArea.name;
+                                              speakerSelectionViewModel.updateListeningAreaName(value);
+                                              if (value.trim().isEmpty) {
+                                                listeningAreaController.text = selectedListeningArea.name;
                                               }
                                             },
                                           ),
@@ -229,287 +176,107 @@ class SpeakerListeningAreaPropertiesState
                                     ],
                                   ),
 
-                                  BuildRowPropertyWidget<String>(
-                                    label: "Type",
-                                    value:
-                                        selectedListeningArea.venuType?.name ??
-                                        '',
-                                    options:
-                                        VenueType.values
-                                            .map(
-                                              (VenueType option) => option.name,
-                                            )
-                                            .toList(),
-                                    labelBuilder: (String option) {
-                                      return FusionAppText(
-                                        text: option,
-                                        style:
-                                            Theme.of(
-                                              context,
-                                            ).textTheme.labelMedium,
-                                      );
-                                    },
-
-                                    onOptionSelected: (
-                                      int selectedIndex,
-                                      String newValue,
-                                    ) {
-                                      final VenueType selectedType =
-                                          VenueType.values[selectedIndex];
-                                      final ListeningArea updatedLA =
-                                          selectedListeningArea.copyWith(
-                                            venuType: selectedType,
-                                          );
-                                      projectViewModel.updateListeningArea(
-                                        area: updatedLA,
-                                      );
-                                    },
-                                  ),
                                   const SizedBox(height: 5),
                                   BuildRowPropertyWidget<String>(
-                                    label: "Listening Ht",
+                                    label: "Listener Height",
                                     value: listeningHeightOption.displayName,
-                                    labelBuilder: (String option) {
-                                      return FusionAppText(
-                                        text: option,
-                                        style:
-                                            Theme.of(
-                                              context,
-                                            ).textTheme.labelMedium,
+                                    labelBuilder: (String option) => option,
+                                    options: ListeningHeightOption.values.map((ListeningHeightOption e) => e.displayName).toList(),
+                                    onOptionSelected: (int selectedIndex, String newValue) {
+                                      final ListeningHeightOption? selectedOption = ListeningHeightOption.values.firstWhereOrNull(
+                                        (ListeningHeightOption e) => e.displayName == newValue,
                                       );
-                                    },
-                                    options:
-                                        ListeningHeightOption.values
-                                            .map(
-                                              (ListeningHeightOption option) =>
-                                                  option.displayName,
-                                            )
-                                            .toList(),
-                                    onOptionSelected: (
-                                      int selectedIndex,
-                                      String newValue,
-                                    ) {
-                                      final ListeningHeightOption
-                                      selectedOption =
-                                          ListeningHeightOption
-                                              .values[selectedIndex];
-                                      final double heightValue =
-                                          ListeningHeightOption.getValue(
-                                            selectedOption,
-                                          ) ??
-                                          3.0;
-                                      final ListeningArea updatedLA =
-                                          selectedListeningArea.copyWith(
-                                            listeningHeight: heightValue,
-                                          );
-                                      projectViewModel.updateListeningArea(
-                                        area: updatedLA,
-                                      );
+                                      if (selectedOption != null) {
+                                        speakerSelectionViewModel.setListenerHeight(selectedOption);
+                                      }
                                     },
                                   ),
 
-                                  if (listeningHeightOption ==
-                                      ListeningHeightOption.custom) ...<Widget>[
+                                  if (listeningHeightOption == ListeningHeightOption.custom) ...<Widget>[
                                     const SizedBox(height: 5),
                                     BuildingPageTextField(
                                       label: "Custom Height",
-                                      controller:
-                                          customListeningHeightController,
-                                      hintText: "e.g. 4.5",
+                                      controller: customListeningHeightController,
+                                      hintText: "e.g. ${ListeningHeightOption.maxListeningHeight}",
                                       inputFormatters: <TextInputFormatter>[
-                                        FilteringTextInputFormatter.allow(
-                                          RegExp(r'^\d*\.?\d*$'),
-                                        ),
+                                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
                                         LengthLimitingTextInputFormatter(8),
                                       ],
                                       validator: (String? value) {
-                                        if (value == null || value.isEmpty)
-                                          return 'Required';
-                                        final double? parsed = double.tryParse(
-                                          value,
-                                        );
-                                        if (parsed == null)
-                                          return 'Invalid decimal';
+                                        if (value == null || value.isEmpty) return 'Required';
+                                        final double? parsed = double.tryParse(value);
+                                        if (parsed == null) return 'Invalid decimal';
                                         if (parsed <= 0) return 'Must be > 0';
-                                        if (parsed > 1000) return 'Too large';
+                                        if (parsed > ListeningHeightOption.maxListeningHeight) return 'Too large';
                                         return null;
                                       },
                                       onFieldSubmitted: (String newValue) {
-                                        final double? parsed = double.tryParse(
-                                          newValue,
-                                        );
-                                        if (parsed != null &&
-                                            parsed > 0 &&
-                                            parsed <= 1000) {
-                                          final double? customHeight =
-                                              double.tryParse(newValue);
-                                          if (customHeight != null &&
-                                              customHeight > 0) {
-                                            final ListeningArea updatedLA =
-                                                selectedListeningArea.copyWith(
-                                                  listeningHeight: customHeight,
-                                                );
-                                            projectViewModel
-                                                .updateListeningArea(
-                                                  area: updatedLA,
-                                                );
-                                          }
+                                        final double? parsed = double.tryParse(newValue);
+                                        if (parsed != null && parsed > 0 && parsed <= ListeningHeightOption.maxListeningHeight) {
+                                          speakerSelectionViewModel.setCustomListeningHeight(parsed);
                                         } else {
-                                          customListeningHeightController.text =
-                                              selectedListeningArea
-                                                  .listeningHeight
-                                                  .toString();
-                                          ScaffoldMessenger.of(
+                                          customListeningHeightController.text = selectedListeningArea.listeningHeight.toString();
+                                          FusionToast.error(
                                             context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                'Please enter a valid decimal value between 0.1 and 1000',
-                                                style: Theme.of(
-                                                  context,
-                                                ).textTheme.bodySmall?.copyWith(
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                              backgroundColor:
-                                                  Theme.of(
-                                                    context,
-                                                  ).colorScheme.error,
-                                              duration: const Duration(
-                                                seconds: 2,
-                                              ),
-                                            ),
+                                            message: 'Please enter a valid listening height between 0 and ${ListeningHeightOption.maxListeningHeight} meters',
                                           );
                                         }
                                       },
                                       onChanged: (String value) {
-                                        final double? parsed = double.tryParse(
-                                          value,
-                                        );
-                                        if (value.isNotEmpty &&
-                                            (parsed == null ||
-                                                parsed <= 0 ||
-                                                parsed > 1000)) {
-                                          customListeningHeightController
-                                                  .selection =
-                                              TextSelection.fromPosition(
-                                                TextPosition(
-                                                  offset:
-                                                      customListeningHeightController
-                                                          .text
-                                                          .length,
-                                                ),
-                                              );
+                                        final double? parsed = double.tryParse(value);
+                                        if (value.isNotEmpty && (parsed == null || parsed <= 0 || parsed > ListeningHeightOption.maxListeningHeight)) {
+                                          customListeningHeightController.selection = TextSelection.fromPosition(
+                                            TextPosition(offset: customListeningHeightController.text.length),
+                                          );
                                         }
                                       },
                                     ),
                                   ],
                                   const SizedBox(height: 5),
                                   BuildingPageTextField(
-                                    label: "Ceiling Ht",
+                                    label: "Ceiling Height (m)",
                                     controller: ceilingHeightController,
-                                    hintText: "e.g., 10 ft",
+                                    hintText: "e.g. ${ListeningHeightOption.maxListeningHeight}",
                                     fillColor: context.colorScheme.elevation1,
                                     inputFormatters: <TextInputFormatter>[
-                                      FilteringTextInputFormatter.allow(
-                                        RegExp(r'^\d*\.?\d*'),
-                                      ),
+                                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                                     ],
                                     onFieldSubmitted: (String newValue) {
-                                      final ListeningArea updatedLA =
-                                          selectedListeningArea.copyWith(
-                                            ceilingHeight: newValue,
-                                          );
-                                      projectViewModel.updateListeningArea(
-                                        area: updatedLA,
-                                      );
+                                      speakerSelectionViewModel.setCeilingHeight(newValue);
+                                    },
+                                  ),
+                                  const SizedBox(height: 5),
+                                  BuildingPageTextField(
+                                    label: "Floor Height (m)",
+                                    controller: floorHeightController,
+                                    hintText: "e.g. 0.0",
+                                    fillColor: context.colorScheme.elevation1,
+                                    inputFormatters: <TextInputFormatter>[
+                                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                                    ],
+                                    onFieldSubmitted: (String newValue) {
+                                      setState(() {});
                                     },
                                   ),
                                   const SizedBox(height: 5),
                                   BuildRowPropertyWidget<String>(
-                                    label: "SPL Range",
-                                    value:
-                                        selectedListeningArea.splRange?.name ??
-                                        "",
-                                    options:
-                                        SplRange.values
-                                            .map(
-                                              (SplRange option) => option.name,
-                                            )
-                                            .toList(),
-                                    labelBuilder: (String option) {
-                                      return FusionAppText(
-                                        text: option,
-                                        style:
-                                            Theme.of(
-                                              context,
-                                            ).textTheme.labelMedium,
-                                      );
-                                    },
-                                    onOptionSelected: (
-                                      int selectedIndex,
-                                      String newValue,
-                                    ) {
-                                      final Map<String, double> splRangeValues =
-                                          SplRange
-                                              .values[selectedIndex]
-                                              .splRangeValues;
-                                      final double minSPL =
-                                          splRangeValues["min"]!;
-                                      final double maxSPL =
-                                          splRangeValues["max"]!;
-                                      final ListeningArea updatedLA =
-                                          selectedListeningArea.copyWith(
-                                            minSPL: minSPL,
-                                            maxSPL: maxSPL,
-                                            splRange:
-                                                SplRange.values[selectedIndex],
-                                          );
-                                      projectViewModel.updateListeningArea(
-                                        area: updatedLA,
-                                      );
+                                    label: "Environment",
+                                    value: selectedListeningArea.environmentType?.displayName,
+                                    options: SpeakerEnvironmentType.values.map((SpeakerEnvironmentType option) => option.displayName).toList(),
+                                    labelBuilder: (String option) => option,
+                                    onOptionSelected: (int selectedIndex, String newValue) {
+                                      speakerSelectionViewModel.setEnvironmentType(selectedIndex);
                                     },
                                   ),
-                                  const SizedBox(height: 10),
-
-                                  SemanticHelper.container(
-                                    testId: SemanticHelper.createTestId(
-                                      SemanticTypes.container,
-                                      "listening_area_signal_type_radio",
-                                    ),
-                                    child: MouseRegion(
-                                      cursor: SystemMouseCursors.forbidden,
-                                      child: IgnorePointer(
-                                        child: FusionRadio<SignalType>(
-                                          selected:
-                                              speakerSelectionViewModel
-                                                  .state
-                                                  .selectedSignalType,
-                                          options: SignalType.values,
-                                          labelBuilder: (
-                                            SignalType signalType,
-                                          ) {
-                                            return FusionAppText(
-                                              text: signalType.name,
-                                              style: context.textTheme.bodySmall
-                                                  ?.copyWith(
-                                                    color:
-                                                        context
-                                                            .colorScheme
-                                                            .onSurface,
-                                                  ),
-                                            );
-                                          },
-                                          onChanged: (SignalType value) {
-                                            // if (value != null) {
-                                            //   setState(() {
-                                            //     _selectedSignalType = value;
-                                            //   });
-                                            // }
-                                          },
-                                        ),
-                                      ),
-                                    ),
+                                  const SizedBox(height: 5),
+                                  BuildRowPropertyWidget<String>(
+                                    label: "Background Noise",
+                                    value: selectedListeningArea.backgroundNoise?.displayName,
+                                    options: BackgroundNoise.values.map((BackgroundNoise option) => option.displayName).toList(),
+                                    labelBuilder: (String option) => option,
+                                    onOptionSelected: (int selectedIndex, String newValue) {
+                                      speakerSelectionViewModel.setBackgroundNoise(selectedIndex);
+                                    },
                                   ),
                                 ],
                               ),
@@ -525,90 +292,52 @@ class SpeakerListeningAreaPropertiesState
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            BlocBuilder<
-                              SpeakerSelectionViewModel,
-                              SpeakerSelectionViewModelState
-                            >(
-                              builder: (
-                                BuildContext context,
-                                SpeakerSelectionViewModelState vmState,
-                              ) {
+                            BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
+                              builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
                                 return SemanticHelper.container(
-                                  testId: SemanticHelper.createTestId(
-                                    SemanticTypes.container,
-                                    "speaker_selection_mode_section",
-                                  ),
+                                  testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_selection_mode_section"),
                                   child: Center(
-                                    child: MouseRegion(
-                                      cursor: SystemMouseCursors.forbidden,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(8.0),
-                                        decoration: BoxDecoration(
-                                          color: context.colorScheme.elevation1,
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          spacing: 10,
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: <Widget>[
-                                            ...SpeakerSelectionMode.values.map((
-                                              SpeakerSelectionMode mode,
-                                            ) {
-                                              final bool isSelected =
-                                                  vmState.mode == mode;
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4.0),
+                                      decoration: BoxDecoration(
+                                        color: context.colorScheme.elevation1,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Row(
+                                        spacing: 10,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: <Widget>[
+                                          ...SpeakerSelectionMode.values.map((SpeakerSelectionMode mode) {
+                                            final bool isSelected = selectedListeningArea?.speakerSelectionMode == mode;
 
-                                              return GestureDetector(
-                                                onTap: () {
-                                                  // setState(() {
-                                                  //   SpeakerselectionMode = mode;
-                                                  // });
-                                                },
-                                                child: SemanticHelper.container(
-                                                  testId: SemanticHelper.createTestId(
-                                                    SemanticTypes.container,
-                                                    "speaker_selection_mode_${mode.name}",
+                                            return GestureDetector(
+                                              onTap: () {
+                                                final List<SpeakerProduct> speakers = context.read<ProductQueryViewModel>().speakers;
+                                                speakerSelectionViewModel.setSpeakerSelectionMode(context, mode, speakers);
+                                              },
+                                              child: SemanticHelper.container(
+                                                testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_selection_mode_${mode.name}"),
+                                                child: Container(
+                                                  width: 89,
+                                                  padding: const EdgeInsets.all(8),
+                                                  decoration: BoxDecoration(
+                                                    color: isSelected ? context.colorScheme.elevation3 : null,
+                                                    borderRadius: BorderRadius.circular(8),
                                                   ),
-                                                  child: Container(
-                                                    width: 89,
-                                                    padding:
-                                                        const EdgeInsets.all(8),
-                                                    decoration: BoxDecoration(
-                                                      color:
-                                                          isSelected
-                                                              ? context
-                                                                  .colorScheme
-                                                                  .elevation3
-                                                              : null,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            8,
-                                                          ),
-                                                    ),
-                                                    child: Center(
-                                                      child: FusionAppText(
-                                                        text: mode.displayName,
-                                                        style: context
-                                                            .textTheme
-                                                            .bodySmall
-                                                            ?.copyWith(
-                                                              color:
-                                                                  context
-                                                                      .colorScheme
-                                                                      .onSurface,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .normal,
-                                                            ),
+                                                  child: Center(
+                                                    child: FusionAppText(
+                                                      text: mode.displayName,
+                                                      style: context.textTheme.bodySmall?.copyWith(
+                                                        color: context.colorScheme.onSurface,
+                                                        fontWeight: FontWeight.normal,
                                                       ),
                                                     ),
                                                   ),
                                                 ),
-                                              );
-                                            }),
-                                          ],
-                                        ),
+                                              ),
+                                            );
+                                          }),
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -616,214 +345,235 @@ class SpeakerListeningAreaPropertiesState
                               },
                             ),
 
-                            const SizedBox(height: 10),
-                            FusionAppText(
-                              text: 'Mounting',
-                              style: context.textTheme.bodySmall?.copyWith(
-                                fontWeight: FontWeight.normal,
-                                color: context.colorScheme.onSurface,
+                            if (selectedListeningArea != null) ...<Widget>[
+                              const SizedBox(height: 10),
+                              // Target SPL
+                              BuildRowPropertyWidget<String>(
+                                label: "Target SPL",
+                                value: selectedListeningArea.splRange?.name,
+                                options: SplRange.values.map((SplRange option) => option.name).toList(),
+                                labelBuilder: (String option) => option,
+                                onOptionSelected: (int selectedIndex, String newValue) {
+                                  speakerSelectionViewModel.setSplRange(selectedIndex);
+                                },
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            BlocBuilder<
-                              SpeakerSelectionViewModel,
-                              SpeakerSelectionViewModelState
-                            >(
-                              builder: (
-                                BuildContext context,
-                                SpeakerSelectionViewModelState vmState,
-                              ) {
-                                return SemanticHelper.container(
-                                  testId: SemanticHelper.createTestId(
-                                    SemanticTypes.container,
-                                    "speaker_selection_mounting_checkbox_group",
-                                  ),
-                                  child: FusionCheckboxGroup<MountingType>(
-                                    semanticId:
-                                        'speaker_selection_mounting_checkbox_group',
-                                    options: MountingType.values.toList(),
-                                    selected:
-                                        (selectedListeningArea?.mountingTypes ??
-                                                <MountingType>{})
-                                            .toList(),
-                                    labelBuilder: (
-                                      BuildContext context,
-                                      MountingType option,
-                                    ) {
-                                      return FusionAppText(
-                                        semanticId:
-                                            "speaker_selection_section_mounting_type_${option.name}",
-                                        text: option.name,
-                                        style: context.textTheme.bodySmall
-                                            ?.copyWith(
-                                              color:
-                                                  context.colorScheme.onSurface,
-                                            ),
-                                      );
-                                    },
-                                    onChanged:
-                                        (List<MountingType> updated) =>
-                                            speakerSelectionViewModel
-                                                .setMountingTypes(updated),
-                                  ),
-                                );
-                              },
-                            ),
+                              const SizedBox(height: 20),
 
-                            const SizedBox(height: 24),
-                            FusionAppText(
-                              text: 'Low Frequency',
-                              style: context.textTheme.bodySmall?.copyWith(
-                                fontWeight: FontWeight.normal,
-                                color: context.colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            BlocBuilder<
-                              SpeakerSelectionViewModel,
-                              SpeakerSelectionViewModelState
-                            >(
-                              builder: (
-                                BuildContext context,
-                                SpeakerSelectionViewModelState vmState,
-                              ) {
-                                return SemanticHelper.container(
-                                  testId: SemanticHelper.createTestId(
-                                    SemanticTypes.container,
-                                    "speaker_selection_low_frequency_checkbox_group",
+                              // ── SUGGEST MODE ──
+                              if (speakerSelectionViewModel.isSuggestMode) ...<Widget>[
+                                // Mounting
+                                FusionAppText(
+                                  text: 'Mounting',
+                                  style: context.textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.normal,
+                                    color: context.colorScheme.elevation5,
                                   ),
-                                  child: FusionCheckboxGroup<LowFrequency>(
-                                    semanticId:
-                                        'speaker_selection_low_frequency_checkbox_group',
-                                    options: LowFrequency.values,
-                                    selected:
-                                        (selectedListeningArea
-                                                    ?.lowFrequencies ??
-                                                <LowFrequency>{})
-                                            .toList(),
-                                    labelBuilder: (
-                                      BuildContext context,
-                                      LowFrequency option,
-                                    ) {
-                                      return FusionAppText(
-                                        text: option.name,
-                                        semanticId:
-                                            "speaker_selection_section_low_frequency_${option.name}",
-                                        style: context.textTheme.bodySmall
-                                            ?.copyWith(
-                                              color:
-                                                  context.colorScheme.onSurface,
-                                            ),
-                                      );
-                                    },
-                                    onChanged:
-                                        (List<LowFrequency> updated) =>
-                                            speakerSelectionViewModel
-                                                .setLowFrequencies(updated),
-                                  ),
-                                );
-                              },
-                            ),
+                                ),
+                                const SizedBox(height: 8),
+                                BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
+                                  builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
+                                    return SemanticHelper.container(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_selection_mounting_checkbox_group"),
+                                      child: FusionRadio<MountingType>(
+                                        semanticId: 'speaker_selection_mounting_checkbox_group',
+                                        options: MountingType.values.toList(),
+                                        selected: selectedListeningArea.mountingType,
+                                        labelBuilder: (MountingType option) {
+                                          return FusionAppText(
+                                            semanticId: "speaker_selection_section_mounting_type_${option.name}",
+                                            text: option.displayName,
+                                            style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
+                                          );
+                                        },
+                                        onChanged: (MountingType? updated) => speakerSelectionViewModel.setMountingType(updated),
+                                      ),
+                                    );
+                                  },
+                                ),
 
-                            const SizedBox(height: 24),
-                            FusionAppText(
-                              text: 'Color',
-                              style: context.textTheme.bodySmall?.copyWith(
-                                fontWeight: FontWeight.normal,
-                                color: context.colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            BlocBuilder<
-                              SpeakerSelectionViewModel,
-                              SpeakerSelectionViewModelState
-                            >(
-                              builder: (
-                                BuildContext context,
-                                SpeakerSelectionViewModelState vmState,
-                              ) {
-                                return SemanticHelper.container(
-                                  testId: SemanticHelper.createTestId(
-                                    SemanticTypes.container,
-                                    "speaker_selection_color_checkbox_group",
+                                // Low Frequency (no Mono in suggest mode)
+                                const SizedBox(height: 24),
+                                FusionAppText(
+                                  text: 'Low Frequency',
+                                  style: context.textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.normal,
+                                    color: context.colorScheme.onSurface,
                                   ),
-                                  child: FusionCheckboxGroup<SpeakerColor>(
-                                    semanticId:
-                                        'speaker_selection_color_checkbox_group',
-                                    options: SpeakerColor.values,
-                                    selected: vmState.selectedColors.toList(),
-                                    labelBuilder: (
-                                      BuildContext context,
-                                      SpeakerColor option,
-                                    ) {
-                                      return FusionAppText(
-                                        text: option.displayName,
-                                        semanticId:
-                                            "speaker_selection_section_color_${option.name}",
-                                        style: context.textTheme.bodySmall
-                                            ?.copyWith(
-                                              color:
-                                                  context.colorScheme.onSurface,
-                                            ),
-                                      );
-                                    },
-                                    onChanged:
-                                        (List<SpeakerColor> updated) =>
-                                            speakerSelectionViewModel.setColors(
-                                              updated,
-                                            ),
+                                ),
+                                const SizedBox(height: 8),
+                                BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
+                                  builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
+                                    final List<LowFrequency> suggestOptions = speakerSelectionViewModel.getLowFrequencyOptions();
+                                    return SemanticHelper.container(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_selection_low_frequency_checkbox_group"),
+                                      child: FusionRadio<LowFrequency>(
+                                        semanticId: 'speaker_selection_low_frequency_checkbox_group',
+                                        options: suggestOptions,
+                                        selected: selectedListeningArea.lowFrequency,
+                                        labelBuilder: (LowFrequency option) {
+                                          return FusionAppText(
+                                            text: option.displayName,
+                                            semanticId: "speaker_selection_section_low_frequency_${option.name}",
+                                            style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
+                                          );
+                                        },
+                                        onChanged: (LowFrequency? updated) => speakerSelectionViewModel.setLowFrequency(updated),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ]
+                              // ── SELECT MODE ──
+                              else ...<Widget>[
+                                // Signal Type (Mono / Stereo)
+                                MouseRegion(
+                                  cursor: SystemMouseCursors.forbidden,
+                                  child: SemanticHelper.container(
+                                    testId: SemanticHelper.createTestId(SemanticTypes.container, "listening_area_signal_type_radio"),
+                                    child: MouseRegion(
+                                      cursor: SystemMouseCursors.forbidden,
+                                      child: IgnorePointer(
+                                        child: FusionRadio<SignalType>(
+                                          // selected: selectedListeningArea.signalType,
+                                          selected: SignalType.mono,
+                                          options: SignalType.values,
+                                          labelBuilder: (SignalType signalType) {
+                                            return FusionAppText(
+                                              text: signalType.name,
+                                              style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
+                                            );
+                                          },
+                                          // onChanged: (SignalType? updated) => speakerSelectionViewModel.setSignalType(updated),
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                );
-                              },
-                            ),
+                                ),
 
-                            const SizedBox(height: 24),
-                            FusionAppText(
-                              text: 'Wiring',
-                              style: context.textTheme.bodySmall?.copyWith(
-                                fontWeight: FontWeight.normal,
-                                color: context.colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            BlocBuilder<
-                              SpeakerSelectionViewModel,
-                              SpeakerSelectionViewModelState
-                            >(
-                              builder: (
-                                BuildContext context,
-                                SpeakerSelectionViewModelState vmState,
-                              ) {
-                                final WiringType? wiringType =
-                                    selectedListeningArea?.wiringType;
+                                // Mounting
+                                const SizedBox(height: 20),
+                                FusionAppText(
+                                  text: 'Mounting',
+                                  style: context.textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.normal,
+                                    color: context.colorScheme.elevation5,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
+                                  builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
+                                    return SemanticHelper.container(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_selection_mounting_checkbox_group"),
+                                      child: FusionRadio<MountingType>(
+                                        semanticId: 'speaker_selection_mounting_checkbox_group',
+                                        options: MountingType.values.toList(),
+                                        selected: selectedListeningArea.mountingType,
+                                        labelBuilder: (MountingType option) {
+                                          return FusionAppText(
+                                            semanticId: "speaker_selection_section_mounting_type_${option.name}",
+                                            text: option.displayName,
+                                            style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
+                                          );
+                                        },
+                                        onChanged: (MountingType? updated) => speakerSelectionViewModel.setMountingType(updated),
+                                      ),
+                                    );
+                                  },
+                                ),
 
-                                return SemanticHelper.container(
-                                  testId: SemanticHelper.createTestId(
-                                    SemanticTypes.container,
-                                    "speaker_selection_section_wiring_radio_group",
+                                // Low Frequency (Mono only when Subwoofer is selected)
+                                const SizedBox(height: 24),
+                                FusionAppText(
+                                  text: 'Low Frequency',
+                                  style: context.textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.normal,
+                                    color: context.colorScheme.onSurface,
                                   ),
-                                  child: FusionRadio<WiringType>(
-                                    selected: wiringType,
-                                    options: WiringType.values,
-                                    labelBuilder: (WiringType wiring) {
-                                      return FusionAppText(
-                                        text: wiring.name,
-                                        style: context.textTheme.bodySmall
-                                            ?.copyWith(
-                                              color:
-                                                  context.colorScheme.onSurface,
-                                            ),
-                                      );
-                                    },
-                                    onChanged: (WiringType value) {
-                                      speakerSelectionViewModel.setWiringType(
-                                        value,
-                                      );
-                                    },
+                                ),
+                                const SizedBox(height: 8),
+                                BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
+                                  builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
+                                    final List<LowFrequency> selectOptions = speakerSelectionViewModel.getLowFrequencyOptions();
+                                    return SemanticHelper.container(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_selection_low_frequency_checkbox_group"),
+                                      child: FusionRadio<LowFrequency>(
+                                        semanticId: 'speaker_selection_low_frequency_checkbox_group',
+                                        options: selectOptions,
+                                        selected: selectedListeningArea.lowFrequency,
+                                        labelBuilder: (LowFrequency option) {
+                                          return FusionAppText(
+                                            text: option.displayName,
+                                            semanticId: "speaker_selection_section_low_frequency_${option.name}",
+                                            style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
+                                          );
+                                        },
+                                        onChanged: (LowFrequency? updated) => speakerSelectionViewModel.setLowFrequency(updated),
+                                      ),
+                                    );
+                                  },
+                                ),
+
+                                // Color
+                                const SizedBox(height: 24),
+                                FusionAppText(
+                                  text: 'Color',
+                                  style: context.textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.normal,
+                                    color: context.colorScheme.onSurface,
                                   ),
-                                );
-                              },
-                            ),
+                                ),
+                                const SizedBox(height: 8),
+                                BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
+                                  builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
+                                    return SemanticHelper.container(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_selection_color_checkbox_group"),
+                                      child: FusionRadio<SpeakerColor>(
+                                        semanticId: 'speaker_selection_color_checkbox_group',
+                                        options: SpeakerColor.values,
+                                        selected: vmState.selectedColor,
+                                        labelBuilder: (SpeakerColor option) {
+                                          return FusionAppText(
+                                            text: option.displayName,
+                                            semanticId: "speaker_selection_section_color_${option.name}",
+                                            style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
+                                          );
+                                        },
+                                        onChanged: (SpeakerColor? updated) => speakerSelectionViewModel.setColor(updated),
+                                      ),
+                                    );
+                                  },
+                                ),
+
+                                // Wiring
+                                const SizedBox(height: 24),
+                                FusionAppText(
+                                  text: 'Wiring',
+                                  style: context.textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.normal,
+                                    color: context.colorScheme.onSurface,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
+                                  builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
+                                    return SemanticHelper.container(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_selection_section_wiring_radio_group"),
+                                      child: FusionRadio<WiringType>(
+                                        selected: selectedListeningArea.wiringType,
+                                        options: WiringType.values,
+                                        labelBuilder: (WiringType wiring) {
+                                          return FusionAppText(
+                                            text: wiring.name,
+                                            style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
+                                          );
+                                        },
+                                        onChanged: (WiringType value) => speakerSelectionViewModel.setWiringType(value),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ],
                           ],
                         ),
                       ),
@@ -845,8 +595,9 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
   final List<T> options;
   // final ValueChanged<int, T> onOptionSelected;
   final void Function(int selectedIndex, T value) onOptionSelected;
-  final Widget Function(T option) labelBuilder;
+  final String Function(T option) labelBuilder;
   final Widget Function(T option)? valueBuilder;
+  final String hint;
 
   const BuildRowPropertyWidget({
     super.key,
@@ -856,6 +607,7 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
     required this.onOptionSelected,
     required this.labelBuilder,
     this.valueBuilder,
+    this.hint = "Select",
   });
 
   @override
@@ -866,24 +618,67 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
         Expanded(
           child: FusionAppText(
             text: label,
-            style: context.textTheme.bodyMedium?.copyWith(
-              color: context.colorScheme.onSurface,
-              fontWeight: FontWeight.normal,
+            style: context.textTheme.b3Regular.copyWith(
+              color: context.colorScheme.textPrimary,
             ),
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: BuildingPageDronDown<T>(
-            value: value,
-            hintText: "Select ${label.toLowerCase()}",
-            items: options,
-            onSelect: (T newValue) {
+          child: FusionNeumorphicDropdown<T>(
+            popupOffset: const Offset(2, 4),
+            popupWidth: 150,
+            onChanged: (T newValue) {
               final int selectedIndex = options.indexOf(newValue);
               onOptionSelected(selectedIndex, newValue);
             },
-            labelBuilder: labelBuilder,
-            valueBuilder: valueBuilder,
+            matchChildWidth: false,
+            items: options,
+            itemBuilder: (BuildContext context, T option) {
+              if (valueBuilder != null) {
+                return valueBuilder!(option);
+              } else {
+                return FusionAppText(
+                  text: labelBuilder(option),
+                  style: context.textTheme.bodySmall,
+                );
+              }
+            },
+            child: FusionContainer(
+              borderRadius: 8,
+              raised: true,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Expanded(
+                      child: Builder(
+                        builder: (BuildContext context) {
+                          if (valueBuilder != null && value != null) {
+                            return valueBuilder!(value as T);
+                          } else {
+                            return FusionAppText(
+                              text: value != null ? labelBuilder(value as T) : hint,
+                              maxLine: 1,
+                              style: context.textTheme.bodySmall?.copyWith(
+                                color: value != null ? context.colorScheme.textPrimary : context.colorScheme.textPlaceholder,
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    Icon(
+                      LucideIcons.chevronDown200,
+                      color: context.colorScheme.textPrimary,
+                      size: 16,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ],

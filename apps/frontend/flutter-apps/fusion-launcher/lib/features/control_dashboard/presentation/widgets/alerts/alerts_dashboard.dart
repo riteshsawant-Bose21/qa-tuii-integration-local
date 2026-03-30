@@ -41,38 +41,38 @@ class _AlertsDashboardState extends State<AlertsDashboard> {
 
   // Sample Data
   final List<AlertItem> _allAlerts = <AlertItem>[
-    AlertItem(
-      title: "Open Circuit Fault Channel...",
-      description: "Zone: Reception, Circuit: DM5S",
-      time: "10:00 PM",
-      deviceId: "PSM8300-1",
-      location: "Reception",
-      type: AlertType.critical,
-    ),
-    AlertItem(
-      title: "High Temperature Warning",
-      description: "High Temperature Warning",
-      time: "10:00 PM",
-      deviceId: "PSM8300-1",
-      location: "Equipment Location",
-      type: AlertType.warning,
-    ),
-    AlertItem(
-      title: "Battery Low Voltage",
-      description: "Backup battery requires replacement",
-      time: "09:45 PM",
-      deviceId: "PSM8300-2",
-      location: "Server Room",
-      type: AlertType.warning,
-    ),
-    AlertItem(
-      title: "Fire Alarm Triggered",
-      description: "Smoke detected in Hallway B",
-      time: "08:15 PM",
-      deviceId: "FA-202",
-      location: "Hallway B",
-      type: AlertType.critical,
-    ),
+    // AlertItem(
+    //   title: "Open Circuit Fault Channel...",
+    //   description: "Zone: Reception, Circuit: DM5S",
+    //   time: "10:00 PM",
+    //   deviceId: "PSM8300-1",
+    //   location: "Reception",
+    //   type: AlertType.critical,
+    // ),
+    // AlertItem(
+    //   title: "High Temperature Warning",
+    //   description: "High Temperature Warning",
+    //   time: "10:00 PM",
+    //   deviceId: "PSM8300-1",
+    //   location: "Equipment Location",
+    //   type: AlertType.warning,
+    // ),
+    // AlertItem(
+    //   title: "Battery Low Voltage",
+    //   description: "Backup battery requires replacement",
+    //   time: "09:45 PM",
+    //   deviceId: "PSM8300-2",
+    //   location: "Server Room",
+    //   type: AlertType.warning,
+    // ),
+    // AlertItem(
+    //   title: "Fire Alarm Triggered",
+    //   description: "Smoke detected in Hallway B",
+    //   time: "08:15 PM",
+    //   deviceId: "FA-202",
+    //   location: "Hallway B",
+    //   type: AlertType.critical,
+    // ),
   ];
 
   @override

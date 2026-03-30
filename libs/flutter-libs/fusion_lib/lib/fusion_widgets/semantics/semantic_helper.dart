@@ -24,11 +24,25 @@ class SemanticHelper {
       label: label,
       selected: isSelected,
       child: child,
-      checked: isSelected,
+      checked: isEnabled,
     );
   }
 
   // Container sections with boundary control
+
+  static Widget slider({
+    required String testId,
+    required Widget child,
+    double? value,
+  }) {
+    return Semantics(
+      identifier: testId,
+      slider: true,
+      value: value.toString(),
+      child: child,
+    );
+  }
+
   static Widget container({
     required String testId,
     required Widget child,
@@ -55,6 +69,7 @@ class SemanticHelper {
     String? label,
   }) {
     return Semantics(
+      container: true,
       identifier: testId,
       image: true,
       explicitChildNodes: explicitChildNodes,
@@ -136,6 +151,7 @@ class SemanticHelper {
     String? hint,
   }) {
     return Semantics(
+      container: true,
       identifier: testId,
       textField: true,
       label: label,
@@ -203,6 +219,7 @@ class SemanticHelper {
     bool? blur,
   }) {
     return Semantics(
+      container: true,
       button: true,
       identifier: testId,
       enabled: enabled,
