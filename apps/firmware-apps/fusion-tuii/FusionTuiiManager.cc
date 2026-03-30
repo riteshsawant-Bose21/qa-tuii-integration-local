@@ -27,7 +27,7 @@
 #include "FusionTuiiBridge.h"
 #include "SerialManager.h"
 #include "TuiiConfigModels.h"
-#include "observer.h"
+#include <observer/observer.h>
 
 static bool g_bSuccess = false;
 static std::unique_ptr<UDPValueMonitor> g_udpObserver;
@@ -568,7 +568,7 @@ void HandleClientSetCommand(const std::string &action, const Json::Value &msg)
             SendNackWithRetry(action, zoneIndex);
             return;
         }
-        bridge.sendSourceToFusion(zone.zoneId, static_cast<::OcaUint16>(sourceIndex));
+        bridge.sendSourceToFusion(zone.zoneId, static_cast<uint16_t>(sourceIndex));
     }
 }
 
@@ -1454,7 +1454,7 @@ void HandleTUIIAudioSettingsUpdate(const Json::Value &newSettings)
 
         if (settings.isMember("input") && settings["input"].isInt())
         {
-            ::OcaUint16 sourceIndex = static_cast<::OcaUint16>(settings["input"].asInt());
+            uint16_t sourceIndex = static_cast<uint16_t>(settings["input"].asInt());
             bridge.handleFusionSourceUpdate(settingID, sourceIndex);
         }
     }

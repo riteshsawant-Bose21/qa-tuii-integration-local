@@ -13,7 +13,7 @@
 #include <spdlog/spdlog.h>
 
 // ---- Include local include files ----
-#include "FusionTUIIBridge.h"
+#include "FusionTuiiBridge.h"
 #include "UDPSender.h"
 
 // ---- Class Implementation ----
@@ -148,7 +148,7 @@ void FusionTUIIBridge::handleFusionMuteUpdate(const std::string &gainID, bool mu
     }
 }
 
-void FusionTUIIBridge::sendSourceToFusion(const std::string &zoneID, ::OcaUint16 sourceIndex)
+void FusionTUIIBridge::sendSourceToFusion(const std::string &zoneID, uint16_t sourceIndex)
 {
     if (!checkInitialized())
         return;
@@ -157,7 +157,7 @@ void FusionTUIIBridge::sendSourceToFusion(const std::string &zoneID, ::OcaUint16
     sendMessageToFusion(message);
 }
 
-void FusionTUIIBridge::handleFusionSourceUpdate(const std::string &zoneID, ::OcaUint16 sourceIndex)
+void FusionTUIIBridge::handleFusionSourceUpdate(const std::string &zoneID, uint16_t sourceIndex)
 {
     if (!checkInitialized())
         return;
@@ -270,7 +270,7 @@ std::string FusionTUIIBridge::createMuteMessage(const std::string &gainID, bool 
     return jsonStream.str();
 }
 
-std::string FusionTUIIBridge::createSourceMessage(const std::string &zoneID, ::OcaUint16 sourceIndex)
+std::string FusionTUIIBridge::createSourceMessage(const std::string &zoneID, uint16_t sourceIndex)
 {
     std::ostringstream jsonStream;
     jsonStream << "{\"action\":\"set\",\"payload\":{\"settings\":{\"audio\":{\""
@@ -454,7 +454,7 @@ bool FusionTUIIBridge::processMuteUpdate(const std::string &gainID, bool muteSta
     return true;
 }
 
-bool FusionTUIIBridge::processSourceUpdate(const std::string &zoneID, ::OcaUint16 sourceIndex)
+bool FusionTUIIBridge::processSourceUpdate(const std::string &zoneID, uint16_t sourceIndex)
 {
     std::lock_guard<std::mutex> lock(m_initMutex);
 
