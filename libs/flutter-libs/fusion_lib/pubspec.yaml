@@ -45,6 +45,8 @@ dependencies:
   #For mdns device searching
   multicast_dns: 0.3.3
 
+  web_socket_channel: ^3.0.3
+
 
 dev_dependencies:
   flutter_test:
@@ -61,6 +63,7 @@ flutter:
   assets:
     - lib/assets/icons/processing_blocks/
     - lib/assets/images/
+    - lib/assets/svgs/
     # - images/a_dot_burr.jpeg
     # - images/a_dot_ham.jpeg
   #

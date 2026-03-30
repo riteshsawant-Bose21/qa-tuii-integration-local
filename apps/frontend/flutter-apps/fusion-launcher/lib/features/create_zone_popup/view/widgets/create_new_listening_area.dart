@@ -27,7 +27,7 @@ class __CreateNewListeningAreaWidgetState extends State<_CreateNewListeningAreaW
 
     final ListeningArea newListeningArea = ListeningArea(
       name: locationName,
-      vertices: <Offset>[],
+      vertices: <FusionCanvasPoint>[],
       isDrawn: false,
     );
 
@@ -97,7 +97,7 @@ class __CreateNewListeningAreaWidgetState extends State<_CreateNewListeningAreaW
                 const SizedBox(height: 4),
 
                 /// Floor dropdown
-                BuildingPageDronDown<FloorModel>(
+                BuildingPageDropDown<FloorModel>(
                   value: _selectedFloor,
                   items: serviceLocator<ProjectViewModel>().getAllFloors(),
                   onSelect: (FloorModel selectedValue) {

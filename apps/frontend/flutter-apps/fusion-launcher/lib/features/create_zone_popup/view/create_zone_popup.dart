@@ -247,7 +247,7 @@ class _NewWidgetState extends State<NewWidget> {
                             ),
                             Expanded(
                               flex: 2,
-                              child: BuildingPageDronDown<ZoneFunctionsType>(
+                              child: BuildingPageDropDown<ZoneFunctionsType>(
                                 value: state.zoneFunctionType,
                                 items: ZoneFunctionsType.values,
                                 labelBuilder: (ZoneFunctionsType option) {
