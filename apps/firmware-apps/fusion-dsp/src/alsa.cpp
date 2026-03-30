@@ -510,6 +510,19 @@ void AlsaDevice::write(const float *buffer, int samples)
 
     convert_write(buffer, sample_buffer.get(), channels, samples);
 
+    if (snd_pcm_state(alsa) == SND_PCM_STATE_PREPARED)
+    {
+        int start = snd_pcm_start(alsa);
+
+        if (start < 0)
+        {
+            ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                                  "Unable to start {}: {}",
+                                  device_name.c_str(), snd_strerror(start));
+            return;
+        }
+    }
+
     int res = snd_pcm_writei(alsa, sample_buffer.get(), samples);
 
     if (res < 0)

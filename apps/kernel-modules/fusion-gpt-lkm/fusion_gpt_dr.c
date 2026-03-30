@@ -96,14 +96,13 @@ enum cal_state {
 
 #define CAL_LOCK_CONSECUTIVE 5U
 
-static bool pps_diag_enable;
-module_param(pps_diag_enable, bool, 0644);
-MODULE_PARM_DESC(pps_diag_enable, "Enable periodic 1PPS diagnostic logging");
+static bool pps_debug_param;
+module_param(pps_debug_param, bool, 0644);
+MODULE_PARM_DESC(pps_debug_param, "Enable periodic 1PPS diagnostic logging");
 
-static uint discipline_ready_abs_error_param = 20;
-module_param(discipline_ready_abs_error_param, uint, 0644);
-MODULE_PARM_DESC(discipline_ready_abs_error_param,
-		 "Raise discipline_ready after 5 PPS samples with abs_error < this threshold");
+static uint error_thresh_param = 20;
+module_param(error_thresh_param, uint, 0644);
+MODULE_PARM_DESC(error_thresh_param, "Raise discipline_ready after 5 PPS samples with abs_error < this threshold");
 
 struct fusion_gpt_cal_config {
 	s32 k1_q16;
@@ -571,10 +570,9 @@ static void gpt_rebase_phc_epoch_locked(struct fusion_gpt *g, u64 cap64,
 		g->phc_epoch_ns += intervals * 1000000000ULL;
 		g->pps_epoch_cnt64 = cap64;
 
-		if (pps_diag_enable)
-			pr_info("fusion_gpt: rebase kind=pps prev_epoch=%llu prev_cnt=%llu cap=%llu delta_ticks=%llu intervals=%llu tick_err=%lld new_epoch=%llu new_cnt=%llu\n",
-				prev_epoch_ns, prev_epoch_cnt64, cap64, delta_ticks, intervals,
-				(long long)tick_error, g->phc_epoch_ns, g->pps_epoch_cnt64);
+		pr_debug("fusion_gpt: rebase kind=pps prev_epoch=%llu prev_cnt=%llu cap=%llu delta_ticks=%llu intervals=%llu tick_err=%lld new_epoch=%llu new_cnt=%llu\n",
+			prev_epoch_ns, prev_epoch_cnt64, cap64, delta_ticks, intervals,
+			(long long)tick_error, g->phc_epoch_ns, g->pps_epoch_cnt64);
 	}
 }
 
@@ -810,7 +808,7 @@ static inline bool cal_active(const struct fusion_gpt *g)
 static void gpt_update_discipline_ready(struct fusion_gpt *g, long freq_error)
 {
 	long abs_err = (freq_error < 0) ? -freq_error : freq_error;
-	u32 thresh = READ_ONCE(discipline_ready_abs_error_param);
+	u32 thresh = READ_ONCE(error_thresh_param);
 	u32 needed = max_t(u32, 1, CAL_LOCK_CONSECUTIVE);
 
 	if (READ_ONCE(g->discipline_ready))
@@ -1214,11 +1212,11 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
                   if (sat_high || sat_low) {
                       if (sat_high) {
                           g->dac_target = 255;
-                          pr_debug_ratelimited("fusion_gpt: DAC saturated high (freq_err=%ld tick, integ=%ld)\n",
+                          pr_debug("fusion_gpt: DAC saturated high (freq_err=%ld tick, integ=%ld)\n",
                                                freq_error, g->error_integrator);
                       } else {
                           g->dac_target = 0;
-                          pr_debug_ratelimited("fusion_gpt: DAC saturated low (freq_err=%ld tick, integ=%ld)\n",
+                          pr_debug("fusion_gpt: DAC saturated low (freq_err=%ld tick, integ=%ld)\n",
                                                freq_error, g->error_integrator);
                       }
 
@@ -1232,15 +1230,15 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
                               if (next_gain > g->si_gain_current) {
                                   WRITE_ONCE(g->si_gain_target, next_gain);
                                   WRITE_ONCE(g->si_gain_pending, true);
-                                  pr_debug_ratelimited("fusion_gpt: queued Si5351b gain increase to %u\n",
+                                  pr_debug("fusion_gpt: queued Si5351b gain increase to %u\n",
                                                        next_gain);
                               } else {
-                                  pr_debug_ratelimited("fusion_gpt: DAC saturated at max Si5351b gain (%u)\n",
+                                  pr_debug("fusion_gpt: DAC saturated at max Si5351b gain (%u)\n",
                                                        g->si_gain_current);
                               }
                           }
                       } else {
-                          pr_debug_ratelimited("fusion_gpt: Si5351b client missing, cannot adjust gain\n");
+                          pr_debug("fusion_gpt: Si5351b client missing, cannot adjust gain\n");
                       }
                   }
               }
@@ -1265,7 +1263,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 	              rms_jitter = int_sqrt(g->sq_err_sum / g->err_count);
           }
 
-	          if (pps_diag_enable) {
+	          if (pps_debug_param) {
 	              if (time_after_eq(jiffies, g->pps_diag_next_jiffies)) {
 	                      pr_info("fusion_gpt: [PPS] diff=%llu ticks err=%ld ticks rms=%u ticks 48k_off=%ldns dac=%d rebase=%d\n",
 	                              diff, freq_error, rms_jitter,
@@ -1335,7 +1333,7 @@ static int fusion_write_dac(struct fusion_gpt *g, int target, bool ratelimited_l
 
 	g->current_dac_value = target;
 	if (ratelimited_log)
-		pr_debug_ratelimited("fusion_gpt: updated DAC to %u (integrator move)\n",
+		pr_debug("fusion_gpt: updated DAC to %u (integrator move)\n",
 				     target);
 
 	return 0;
@@ -1520,9 +1518,9 @@ static void fusion_dac_work_handler(struct work_struct *work)
 
     ret = fusion_write_dac(g, target, true);
     if (ret == -ENODEV) {
-        pr_debug_ratelimited("fusion_gpt: DAC client missing\n");
+        pr_debug("fusion_gpt: DAC client missing\n");
     } else if (ret < 0) {
-        pr_debug_ratelimited("fusion_gpt: I2C DAC write failed: %d\n", ret);
+        pr_debug("fusion_gpt: I2C DAC write failed: %d\n", ret);
     }
 
     if (gain_pending) {
@@ -1531,7 +1529,7 @@ static void fusion_dac_work_handler(struct work_struct *work)
             if (si5351b_write_gain(g, gain_target) >= 0) {
                 g->si_gain_current = gain_target;
                 WRITE_ONCE(g->si_gain_pending, false);
-                pr_debug_ratelimited("fusion_gpt: Si5351b gain increased to %u\n",
+                pr_debug("fusion_gpt: Si5351b gain increased to %u\n",
                                      g->si_gain_current);
             }
         } else {
@@ -1555,7 +1553,7 @@ static int si5351b_write_gain(struct fusion_gpt *g, u32 gain)
 
     ret = i2c_master_send(g->si5351b_client, buf, 4);
     if (ret < 0)
-        pr_debug_ratelimited("fusion_gpt: Si5351b gain write failed: %d\n", ret);
+        pr_debug("fusion_gpt: Si5351b gain write failed: %d\n", ret);
 
     return ret;
 }
