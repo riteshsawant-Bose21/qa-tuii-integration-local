@@ -19,7 +19,7 @@ class CreateNewProjectViewmodel extends Cubit<NewProjectDetails> {
       emit(
         NewProjectDetails(
           name: currentProjectName,
-          metadata: currentProjectMetaData ?? ProjectMetaData.empty().copyWith(),
+          metadata: currentProjectMetaData ?? ProjectMetaData.empty(),
         ),
       );
     }

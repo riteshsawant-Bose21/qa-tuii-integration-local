@@ -158,12 +158,6 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                           final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
                           final FloorModel floor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
 
-                          /// If no floor plan image,
-                          /// show upload floor plan widget
-                          if (floor.floorPlan.imagePath.isEmpty) {
-                            return _buildEmptyFloorWidget();
-                          }
-
                           return ValueListenableBuilder<bool>(
                             valueListenable: widget.floorCanvasController.isDrawing,
                             builder: (BuildContext context, bool isDrawingValue, Widget? child) {
@@ -181,10 +175,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             for (final ListeningArea area in serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
                                               floorId: floor.id,
                                             ))
-                                              ListeningAreaPainter(
-                                                listeningArea: area,
-                                                isShowingSpl: buildingPageViewModel.isSplMode,
-                                              ),
+                                              ListeningAreaPainter(listeningArea: area, isShowingSpl: buildingPageViewModel.isSplMode),
                                           ];
 
                                           return FusionCanvas(
@@ -456,7 +447,13 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       ),
                                     ),
                                   ),
-                                  // ),
+
+                                  if (floor.floorPlan.imagePath.isEmpty) ...<Widget>[
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(245, 65, 2, 16),
+                                      child: _buildEmptyFloorWidget(),
+                                    ),
+                                  ],
                                 ],
                               );
                             },
