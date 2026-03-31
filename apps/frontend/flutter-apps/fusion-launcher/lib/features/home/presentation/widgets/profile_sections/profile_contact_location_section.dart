@@ -33,7 +33,7 @@ class ProfileContactAndLocationTab extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            FusionDarkDropdown<FusionTimeZones>(
+            FusionDropdown2<FusionTimeZones>(
               selectedValue: FusionTimeZones.fromString(address.timezone),
               onChanged: (FusionTimeZones value) {
                 // TODO: Implement onChanged to update UserProfileManager

@@ -109,4 +109,30 @@ extension ProjectPropertiesManager on ProjectManager {
     }
     return null;
   }
+
+  void updateDroResponse(Map<String, dynamic> droResponse) {
+    try {
+      if (projectService == null) {
+        FusionLogger.log(tag: LogTag.exceptions, message: "No project is currently loaded. Cannot update DRO response.");
+        return;
+      }
+      projectService = projectService!.copyWith(
+        droResponse: droResponse,
+      );
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error updating DRO response: $e");
+    }
+  }
+
+  Map<String, dynamic>? getDroResponse() {
+    try {
+      if (projectService == null) {
+        FusionLogger.log(tag: LogTag.exceptions, message: "No project is currently loaded. Cannot get DRO response.");
+      }
+      return projectService?.droResponse;
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error getting DRO response: $e");
+    }
+    return null;
+  }
 }

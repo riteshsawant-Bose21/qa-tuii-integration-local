@@ -6,6 +6,7 @@
 #include <vector>
 #include <list>
 #include <algorithm>
+#include <mutex>
 #include <boost/program_options.hpp>
 #include <boost/json/src.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -14,6 +15,14 @@
 #include "telemetry_msg_handler.h"
 
 namespace {
+static std::mutex g_device_id_mutex;
+static std::string g_device_id;
+}
+
+void set_device_id(const std::string &device_id)
+{
+    std::lock_guard<std::mutex> lock(g_device_id_mutex);
+    g_device_id = device_id;
 }
 
 // Message Format:
@@ -351,8 +360,19 @@ int process_meter_data(bosepro::telemetryManager& telm_mgr,
 
             if (ret_val == 0)
             {
+                std::string device_id;
+
+                {
+                    std::lock_guard<std::mutex> locl(g_device_id_mutex);
+                    device_id = g_device_id;
+                }
+
                 message << "{";
                 message << "\"message_name\":\"meter_data\",";
+                if (!device_id.empty())
+                {
+                    message << "\"device_id\":\"" << device_id   << "\",";
+                }
                 message << "\"packet_id\":" << tx_pkt_id << ",";
                 message << "\"parameters\":{";
 

@@ -17,6 +17,9 @@ class FusionKeyboardWrapper extends StatefulWidget {
   final VoidCallback? onUndo;
   final VoidCallback? onRedo;
   final VoidCallback? onDelete;
+  final ValueChanged<LogicalKeyboardKey>? onKeyDown;
+  final ValueChanged<LogicalKeyboardKey>? onKeyUp;
+  final ValueChanged<KeyEvent>? onKeyEvent;
 
   final String? semanticId;
 
@@ -35,6 +38,9 @@ class FusionKeyboardWrapper extends StatefulWidget {
     this.onShiftDown,
     this.onControlUp,
     this.onControlDown,
+    this.onKeyDown,
+    this.onKeyUp,
+    this.onKeyEvent,
   });
 
   @override
@@ -55,9 +61,15 @@ class _FusionKeyboardWrapperState extends State<FusionKeyboardWrapper> {
       return;
       // print("Key event: ${event.logicalKey.debugName}, isMeta: ${HardwareKeyboard.instance.isMetaPressed}, isControl: ${HardwareKeyboard.instance.isControlPressed}, isShift: ${HardwareKeyboard.instance.isShiftPressed}");
     }
-    final bool isMeta =
-        HardwareKeyboard.instance.isMetaPressed ||
-        HardwareKeyboard.instance.isControlPressed;
+
+    if (event is KeyDownEvent) {
+      widget.onKeyDown?.call(event.logicalKey);
+    } else if (event is KeyUpEvent) {
+      widget.onKeyUp?.call(event.logicalKey);
+    }
+    widget.onKeyEvent?.call(event);
+
+    final bool isMeta = HardwareKeyboard.instance.isMetaPressed || HardwareKeyboard.instance.isControlPressed;
 
     final LogicalKeyboardKey logicalKey = event.logicalKey;
     if (logicalKey == LogicalKeyboardKey.shiftLeft ||
