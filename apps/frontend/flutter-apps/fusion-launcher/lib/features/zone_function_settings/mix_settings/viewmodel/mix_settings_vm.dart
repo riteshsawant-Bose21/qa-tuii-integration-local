@@ -26,6 +26,12 @@ class SourceMixAdditionalSettingsViewmodel extends Cubit<SourceMixAdditionalSett
           (Source source) => SourceVolumneRangeModel(sourceId: source.id),
         ),
       ],
+
+      priorityAdditionalSettingsModel: const <PriorityAdditionalSettingsModel>[
+        // INITIALIZE with 2 models as we have 2 priority behaviors, if more are added in the future, this needs to be updated
+        PriorityAdditionalSettingsModel(),
+        PriorityAdditionalSettingsModel(),
+      ],
     );
 
     // ===============================================================================================
@@ -144,5 +150,113 @@ class SourceMixAdditionalSettingsViewmodel extends Cubit<SourceMixAdditionalSett
       if (zoneVolumeRange != null) return zoneVolumeRange.allowMute;
     }
     return false;
+  }
+
+  bool enableBehaviorSettingsFields(int index) {
+    final List<PriorityAdditionalSettingsModel> priorityAdditionalSettingsModel = <PriorityAdditionalSettingsModel>[
+      ...state.priorityAdditionalSettingsModel,
+    ];
+
+    if (index < priorityAdditionalSettingsModel.length) {
+      final AdditionalSettingPriorityBehavior? priorityBehavior = priorityAdditionalSettingsModel[index].priorityBehavior;
+      return priorityBehavior != null && priorityBehavior == AdditionalSettingPriorityBehavior.custom;
+    }
+
+    return false;
+  }
+
+  double getThresholdValue(int index) {
+    final List<PriorityAdditionalSettingsModel> priorityAdditionalSettingsModel = <PriorityAdditionalSettingsModel>[
+      ...state.priorityAdditionalSettingsModel,
+    ];
+    if (index < priorityAdditionalSettingsModel.length) {
+      return priorityAdditionalSettingsModel[index].thresholdValue ?? 0;
+    }
+    return 0;
+  }
+
+  double getReductionValue(int index) {
+    final List<PriorityAdditionalSettingsModel> priorityAdditionalSettingsModel = <PriorityAdditionalSettingsModel>[
+      ...state.priorityAdditionalSettingsModel,
+    ];
+    if (index < priorityAdditionalSettingsModel.length) {
+      return priorityAdditionalSettingsModel[index].reductionValue ?? 0;
+    }
+    return 0;
+  }
+
+  bool isPriorityStateActive(int index) {
+    final List<PriorityAdditionalSettingsModel> priorityAdditionalSettingsModel = <PriorityAdditionalSettingsModel>[
+      ...state.priorityAdditionalSettingsModel,
+    ];
+    if (index < priorityAdditionalSettingsModel.length) {
+      return priorityAdditionalSettingsModel[index].isStateActive;
+    }
+    return false;
+  }
+
+  double? getDepth(int index) => state.priorityAdditionalSettingsModel[index].depth;
+  double? getAttack(int index) => state.priorityAdditionalSettingsModel[index].attack;
+  double? getHold(int index) => state.priorityAdditionalSettingsModel[index].hold;
+  double? getRelease(int index) => state.priorityAdditionalSettingsModel[index].release;
+  AdditionalSettingPriorityBehavior? getPriorityBehavior(int index) => state.priorityAdditionalSettingsModel[index].priorityBehavior;
+
+  AdditionalSettingsPriorityControlType? getPriorityControlType(int index) => state.priorityAdditionalSettingsModel[index].priorityControlType;
+
+  void setPriorityControlType(int index, AdditionalSettingsPriorityControlType? priorityControlType) {
+    final List<PriorityAdditionalSettingsModel> priorityAdditionalSettingsModel = <PriorityAdditionalSettingsModel>[
+      ...state.priorityAdditionalSettingsModel,
+    ];
+
+    if (index < priorityAdditionalSettingsModel.length) {
+      priorityAdditionalSettingsModel[index] = priorityAdditionalSettingsModel[index].copyWith(priorityControlType: priorityControlType);
+      emit(
+        state.copyWith(
+          priorityAdditionalSettingsModel: priorityAdditionalSettingsModel,
+        ),
+      );
+    }
+  }
+
+  bool isPriorityControlTypePTT(int index) => getPriorityControlType(index) == AdditionalSettingsPriorityControlType.pttControler;
+  bool isPriorityControlTypeThreshold(int index) => getPriorityControlType(index) == AdditionalSettingsPriorityControlType.threshold;
+
+  void updatePriorityProperties({
+    required String zoneOrSubzoneId,
+    required int index,
+    bool? isStateActive,
+    double? thresholdValue,
+    double? reductionValue,
+    double? depthValue,
+    double? attackValue,
+    double? holdValue,
+    double? releaseValue,
+    AdditionalSettingPriorityBehavior? priorityBehavior,
+    AdditionalSettingsPriorityControlType? priorityControlType,
+  }) {
+    final List<PriorityAdditionalSettingsModel> priorityAdditionalSettingsModel = <PriorityAdditionalSettingsModel>[
+      ...state.priorityAdditionalSettingsModel,
+    ];
+
+    if (index < priorityAdditionalSettingsModel.length) {
+      final PriorityAdditionalSettingsModel model = priorityAdditionalSettingsModel[index];
+      priorityAdditionalSettingsModel[index] = model.copyWith(
+        isStateActive: isStateActive,
+        thresholdValue: thresholdValue,
+        reductionValue: reductionValue,
+        depth: depthValue,
+        attack: attackValue,
+        hold: holdValue,
+        release: releaseValue,
+        priorityBehavior: priorityBehavior,
+        priorityControlType: priorityControlType,
+      );
+
+      emit(
+        state.copyWith(
+          priorityAdditionalSettingsModel: priorityAdditionalSettingsModel,
+        ),
+      );
+    }
   }
 }
