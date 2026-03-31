@@ -119,7 +119,14 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u6
 
         // we may want to catch up and playback a bunch of frames, up to buf_size_in_packets worth
         while (count < s->buf_size_in_packets) {
-            s64 delta = (s64)tick_ns - (s64)s->next_action_times[s->playback_index];
+            u32 slot = s->playback_index;
+            u64 action_time = s->next_action_times[slot];
+            s64 delta;
+
+            if (action_time == 0)
+                break;
+
+            delta = (s64)tick_ns - (s64)action_time;
             // If packet is little bit in the future, play it back
             if (delta < 0 && (u64)-(delta) > EARLY_SLACK_NS) {
                 break;
@@ -130,6 +137,7 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u6
 
             if (g_fusion_cn_mgr->debug) pr_debug("fusion_cn: compute_sink: stream %s playback_idx=%u count=%u now=%llu\n", s->info.stream_name, s->playback_index, count, tick_ns);
 
+            s->next_action_times[slot] = 0;
             if (++s->playback_index >= s->buf_size_in_packets)
                 s->playback_index = 0;
             count++;
