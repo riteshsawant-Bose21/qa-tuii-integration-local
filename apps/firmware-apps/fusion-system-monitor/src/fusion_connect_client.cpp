@@ -464,14 +464,14 @@ static bool nl_set_phc_anchor(NetlinkClient& c, uint64_t phc_ns_at_pps) {
     return reply.err == 0;
 }
 
-static bool nl_set_debug(NetlinkClient& c, bool enable) {
-    fusion_cn_ctrl_msg reply{};
-    uint8_t v = enable ? 1 : 0;
-    if (!c.send_message(FUSION_CN_CTRL_CMD_SET_DEBUG, &v, sizeof(v), &reply)) return false;
-    if (reply.err != 0) SPDLOG_ERROR("SET_DEBUG({}) err={}", (int)enable, reply.err);
-    if (reply.data) free(reply.data);
-    return reply.err == 0;
-}
+// static bool nl_set_debug(NetlinkClient& c, bool enable) {
+//     fusion_cn_ctrl_msg reply{};
+//     uint8_t v = enable ? 1 : 0;
+//     if (!c.send_message(FUSION_CN_CTRL_CMD_SET_DEBUG, &v, sizeof(v), &reply)) return false;
+//     if (reply.err != 0) SPDLOG_ERROR("SET_DEBUG({}) err={}", (int)enable, reply.err);
+//     if (reply.data) free(reply.data);
+//     return reply.err == 0;
+// }
 
 static bool nl_set_eth_iface(NetlinkClient& c, const std::string& iface) {
     fusion_cn_ctrl_msg reply{};
@@ -756,7 +756,6 @@ private:
     bool debug_enabled;
     bool debug_sent;
     bool iface_sent;
-    bool phc_anchor_logged;
     bool gpt_discipline_ready_logged;
     SAPAnnouncer sap_announcer;
 
@@ -784,7 +783,6 @@ private:
     void join_multicast_group(uint32_t multicast_ip);
     void audio_streams_update_func();
     void maybe_start_manager();
-    void maybe_set_debug();
     void update_ptp_state();
     void start_timing_session();
     void reset_timing_session(const char *reason);
@@ -798,7 +796,7 @@ MODULE_REGISTER(FusionConnectClient, "fusion_connect_client");
 FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &configuration)
     : bosepro::Module(configuration), mgr_started(false), device_id(""),
       enet_iface("lan1"), period_ms(1000), debug_enabled(false),
-      debug_sent(false), iface_sent(false), phc_anchor_logged(false),
+      debug_sent(false), iface_sent(false),
       gpt_discipline_ready_logged(false), sap_announcer(""),
       ptp_sync_good(false), ptp_anchor_pending(false), ptp_good_streak(0),
       ptp_bad_streak(0), ptp_role_flag(-1), ptp_false_streak(0), mgr_start_failures(0),
@@ -1286,16 +1284,6 @@ void FusionConnectClient::maybe_start_manager()
     if (reply.data) free(reply.data);
 }
 
-void FusionConnectClient::maybe_set_debug()
-{
-    if (debug_sent) return;
-    if (!nl_set_debug(client, debug_enabled)) {
-        SPDLOG_ERROR("Failed to set debug to {}", debug_enabled ? "true" : "false");
-        return;
-    }
-    debug_sent = true;
-}
-
 void FusionConnectClient::reset_timing_session(const char *reason)
 {
     if (!nl_reset_timing_state(client)) {
@@ -1306,7 +1294,6 @@ void FusionConnectClient::reset_timing_session(const char *reason)
     }
 
     ptp_anchor_pending = false;
-    phc_anchor_logged = false;
     gpt_discipline_ready_logged = false;
 
     SPDLOG_INFO("Timing state reset due to {}", reason);
@@ -1324,7 +1311,6 @@ void FusionConnectClient::start_timing_session()
     }
 
     ptp_anchor_pending = true;
-    phc_anchor_logged = false;
     gpt_discipline_ready_logged = false;
 }
 
@@ -1463,19 +1449,22 @@ void FusionConnectClient::update_ptp_state()
                 }
                 if (best_abs > OFFSET_LOSS_NS) {
                     ptp_bad_streak++;
+                    if (ptp_bad_streak >= LOSS_CONSEC) {
+                        if (ptp_sync_good) {
+                            SPDLOG_WARN("PTP sync degraded ({}x > {} ns); keeping timing session active",
+                                        LOSS_CONSEC, OFFSET_LOSS_NS);
+                        } else {
+                            SPDLOG_WARN("PTP still out of sync: offset={} ns streak={} (keeping timing session active)",
+                                        master_offset, ptp_bad_streak);
+                        }
+                        ptp_sync_good = false;
+                    }
                 } else {
+                    if (!ptp_sync_good && ptp_bad_streak >= LOSS_CONSEC) {
+                        SPDLOG_INFO("PTP sync recovered; resuming in-sync state");
+                    }
                     ptp_bad_streak = 0;
-                }
-                if (ptp_bad_streak >= LOSS_CONSEC) {
-                    ptp_state = PtpState::RESET;
-                    ptp_state_since = now;
-                    ptp_sync_good = false;
-                    ptp_good_streak = 0;
-                    ptp_bad_streak = 0;
-                    ptp_anchor_pending = false;
-                    SPDLOG_WARN("PTP sync lost ({}x > {} ns); resetting",
-                                LOSS_CONSEC, OFFSET_LOSS_NS);
-                    reset_timing_session("PTP lock loss");
+                    ptp_sync_good = true;
                 }
             } else {
                 ptp_bad_streak = 0;
@@ -1525,7 +1514,6 @@ void FusionConnectClient::maybe_set_phc_anchor()
 
     if (st.epoch_valid) {
         ptp_anchor_pending = false;
-        SPDLOG_DEBUG("PHC epoch already valid (aligned={}); skipping re-arm", st.aligned);
         return;
     }
 
@@ -1544,12 +1532,7 @@ void FusionConnectClient::maybe_set_phc_anchor()
     if (nl_set_phc_anchor(client, next_pps_ns)) {
         ptp_anchor_pending = false;
         ptp_last_anchor = std::chrono::steady_clock::now();
-        if (!phc_anchor_logged) {
-            SPDLOG_INFO("Armed PHC anchor for next PPS at {} ns (lead {} ns)", next_pps_ns, delta);
-            phc_anchor_logged = true;
-        } else if (debug_enabled) {
-            SPDLOG_DEBUG("Armed PHC anchor for next PPS at {} ns (lead {} ns)", next_pps_ns, delta);
-        }
+        SPDLOG_INFO("Armed PHC anchor for next PPS at {} ns (lead {} ns)", next_pps_ns, delta);
     }
 }
 
@@ -1566,7 +1549,6 @@ void FusionConnectClient::process() {
         if (!mgr_started) return;
     }
 
-    maybe_set_debug();
     update_ptp_state();
     maybe_set_phc_anchor();
     

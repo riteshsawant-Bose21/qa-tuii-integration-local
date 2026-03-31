@@ -174,7 +174,7 @@ static inline void fusion_cn_metrics_rx_stash(struct fusion_cn_stream_metrics *m
 
 static inline void fusion_cn_metrics_tx_stash(struct fusion_cn_stream_metrics *m,
                                               u64 send_phc_ns, u16 payload_len,
-                                              u64 scheduled_send_ns /* 0 if unknown */)
+                                              u64 scheduled_send_ns)
 {
     struct fusion_cn_metrics_pcpu *p = this_cpu_ptr(m->pcpu);
 

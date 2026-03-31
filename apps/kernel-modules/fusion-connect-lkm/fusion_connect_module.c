@@ -13,6 +13,10 @@ static bool debug = false;
 module_param_named(debug, debug, bool, 0444);
 MODULE_PARM_DESC(debug, "Enable Fusion Connect debug logging");
 
+static bool trace_debug = false;
+module_param_named(trace_debug, trace_debug, bool, 0444);
+MODULE_PARM_DESC(trace_debug, "Enable high-volume Fusion Connect trace logging");
+
 static struct fusion_cn_manager fusion_cn_mgr;
 
 static int __init fusion_cn_init(void)
@@ -21,7 +25,9 @@ static int __init fusion_cn_init(void)
 
     strscpy(fusion_cn_mgr.netfilter.iface_name, eth_iface, IFNAMSIZ);
     fusion_cn_mgr.debug = debug;
+    fusion_cn_mgr.trace_debug = trace_debug;
     fusion_cn_mgr.rtp.debug = debug;
+    fusion_cn_mgr.rtp.trace_debug = trace_debug;
 
     ret = fusion_cn_mgr_init(&fusion_cn_mgr);
     if (ret)

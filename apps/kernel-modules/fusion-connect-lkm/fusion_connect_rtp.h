@@ -103,6 +103,7 @@ struct fusion_cn_rtp_manager {
     struct fusion_cn_rtp_ops *ops;
     void *cn_mgr;
     bool debug;
+    bool trace_debug;
 };
 
 /* Function prototypes */

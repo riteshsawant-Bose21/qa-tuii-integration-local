@@ -48,6 +48,7 @@ static int alsa_ops_register_alsa_driver(void *cn_mgr, struct fusion_cn_chip *al
     if (!alsa_chip) return -EINVAL;
     mgr->alsa.alsa_chip = alsa_chip;
     mgr->alsa.alsa_chip->debug = mgr->debug;
+    mgr->alsa.alsa_chip->trace_debug = mgr->trace_debug;
     return 0;
 }
 
@@ -976,7 +977,9 @@ static int handle_set_debug(struct fusion_cn_manager *mgr,
     if (mgr->alsa.alsa_chip)
         mgr->alsa.alsa_chip->debug = mgr->debug;
 
-    pr_info("fusion_cn: debug %s\n", mgr->debug ? "on" : "off");
+    pr_info("fusion_cn: debug %s (trace_debug %s)\n",
+            mgr->debug ? "on" : "off",
+            mgr->trace_debug ? "on" : "off");
     reply->err = 0;
     return 0;
 }

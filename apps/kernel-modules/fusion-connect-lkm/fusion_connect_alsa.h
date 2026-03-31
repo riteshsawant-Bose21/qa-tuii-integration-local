@@ -21,6 +21,7 @@ struct fusion_cn_chip {
     struct hlist_head streams[1 << FUSION_CN_ALSA_HASH_BITS];
     struct snd_card *card;
     bool debug;
+    bool trace_debug;
     DECLARE_BITMAP(stream_indices, FUSION_CN_MAX_STREAMS);
 };
 

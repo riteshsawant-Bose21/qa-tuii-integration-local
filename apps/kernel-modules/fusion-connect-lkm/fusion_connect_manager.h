@@ -63,6 +63,7 @@ struct fusion_cn_manager {
     struct active_streams active_streams;
     u64 tick_ns;
     bool debug;
+    bool trace_debug;
 };
 
 struct fusion_cn_ctrl_msg {

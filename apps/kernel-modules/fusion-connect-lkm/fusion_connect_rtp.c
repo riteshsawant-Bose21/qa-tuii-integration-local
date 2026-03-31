@@ -552,7 +552,7 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
             stream->next_action_times[write_slot] = sched_playout_ns;
             stream->current_seq_num = seq_num;
 
-            if (rtp_mgr->debug) {
+            if (rtp_mgr->trace_debug) {
                 printk(KERN_DEBUG "fusion_cn_rtp: process_packet: %s slot=%u seq=%u now=%llu reconstructed=%llu playout=%llu\n",
                        stream->info.stream_name, write_slot, seq_num,
                        current_phc_ns, reconstructed_phc_ns, stream->next_action_times[write_slot]);
@@ -676,7 +676,7 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
     skb->protocol  = cpu_to_be16(ETH_P_IP);
     skb->ip_summed = CHECKSUM_NONE;
 
-    if (rtp_mgr->debug) {
+    if (rtp_mgr->trace_debug) {
         printk(KERN_DEBUG "fusion_cn_rtp: send_packet %s seq=%u len=%u off_frames=%u action_time=%llu \n",
                stream->info.stream_name,
                (u32)(be16_to_cpu(stream->rtp_packet_base.rtp.seq_num)),

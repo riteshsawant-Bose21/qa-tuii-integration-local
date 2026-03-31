@@ -135,7 +135,7 @@ int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, struct fusion
     if (stream->buffer_pos >= rt->buffer_size)
         stream->buffer_pos -= rt->buffer_size;
 
-    if (chip->debug) printk(KERN_DEBUG "fusion_cn_alsa: pcm_interrupt: stream %s buffer_pos=%d interrupt_idx=%u\n", stream->stream_name, stream->buffer_pos, stream->interrupt_idx);
+    if (chip->trace_debug) printk(KERN_DEBUG "fusion_cn_alsa: pcm_interrupt: stream %s buffer_pos=%d interrupt_idx=%u\n", stream->stream_name, stream->buffer_pos, stream->interrupt_idx);
 
     if (++stream->interrupt_idx >= stream->interrupts_per_period) {
         stream->interrupt_idx = 0;
