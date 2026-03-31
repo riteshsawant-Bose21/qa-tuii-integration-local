@@ -211,39 +211,33 @@ const struct base_device bd_fusion_powersmart-rev2 = {
     .endpoints = (struct endpoint[]) {
         SI5351B_ENDPOINT_INIT
     },
-    .num_gpios = 7,
+    .num_gpios = 4,
     .gpios = (struct endpoint_gpio[]) {
         {
-            .name = "gpio_GPIO1_IO5",
-            .type = EP_GPIO_TYPE_PHYS,
-            .export = true,
-            .num = 5 // GPIO1_IO5
-        },
-        {
             .name = "gpio_amp_mute",
-            .type = EP_GPIO_TYPE_PHYS,
-            .export = true,
-            .num = 10 // GPIO1_IO10
-        },
-        {
-            .name = "gpio_amp_net_wake",
-            .type = EP_GPIO_TYPE_PHYS,
-            .export = true,
-            .num = 11, // GPIO1_IO11
-            .dir = EP_GPIO_DIR_I
-        },
-        {
-            .name = "GPIO1_IO14",
             .type = EP_GPIO_TYPE_PHYS,
             .export = true,
             .num = 14 // GPIO1_IO14
         },
         {
-            .name = "gpio_uv_warn",
+            .name = "gpio_ui_rstn",
             .type = EP_GPIO_TYPE_PHYS,
             .export = true,
-            .num = 133, // GPIO5_IO5
-            .dir = EP_GPIO_DIR_I
+            .default_val = EP_GPIO_VAL_HI,
+            .num = 7 // GPIO1_IO7
+        },
+        {
+            .name = "gpio_ui_boot0",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .num = 8 // GPIO1_IO8
+        },
+        {
+            .name = "gpio_amp_mute",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .default_val = EP_GPIO_VAL_HI,
+            .num = 14 // GPIO1_IO14
         }
     },
     .cfg_seq = {
