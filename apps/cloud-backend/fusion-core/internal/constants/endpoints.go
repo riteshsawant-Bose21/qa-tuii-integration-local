@@ -53,6 +53,13 @@ const (
 	// EndpointAuthTokens is the endpoint for automation token operations.
 	EndpointAuthTokens = "/automation/tokens" //nolint:gosec // G101: False positive - this is just an endpoint path, not credentials
 
+	// EndpointOrganizations is the base endpoint for organizations management.
+	EndpointOrganizations = "/organizations"
+	// EndpointOrganizationByID is the endpoint for operations on specific organizations.
+	EndpointOrganizationByID = "/:organizationId"
+	// EndpointOrganizationInviteUsers is the endpoint for inviting users to an organization.
+	EndpointOrganizationInviteUsers = "/:organizationId/invite-users"
+
 	// EndpointOrganization is the base endpoint for organization operations.
 	EndpointOrganization = "/organization"
 	// EndpointRoleManagement is the endpoint for role management operations.

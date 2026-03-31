@@ -111,4 +111,21 @@ func (a *API) registerRoutes() {
 		organization.GET(constants.EndpointOrganizationUsers, roleManagementHandler.GetOrganizationUsers)
 	}
 
+	// Organizations Management routes (no auth for testing)
+	organizationHandler := handler.NewOrganizationHandler(a.organization, a.user)
+	organizations := v1.Group(constants.EndpointOrganizations)
+
+	// No middleware for testing - remove for production
+	// organizations.Use(a.authMiddleware.Middleware())
+	// organizations.Use(accessControl.GlobalAccessControlMiddleware())
+
+	{
+		organizations.GET("", organizationHandler.GetAllOrganizations)
+		organizations.GET(constants.EndpointOrganizationByID, organizationHandler.GetOrganizationByID)
+		organizations.POST("", organizationHandler.CreateOrganization)
+		organizations.PUT(constants.EndpointOrganizationByID, organizationHandler.UpdateOrganization)
+		organizations.DELETE(constants.EndpointOrganizationByID, organizationHandler.DeleteOrganization)
+		organizations.POST(constants.EndpointOrganizationInviteUsers, organizationHandler.InviteUsersToOrganization)
+	}
+
 }

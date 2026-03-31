@@ -22,6 +22,7 @@ type API struct {
 	product        fusion.Product
 	project        fusion.Project
 	user           fusion.User
+	organization   fusion.Organization
 	auth           fusion.Auth
 	authMiddleware middleware.AuthMiddleware
 	appLog         *zap.Logger
@@ -39,6 +40,7 @@ func New(cfg *Config,
 	productSvc fusion.Product,
 	project fusion.Project,
 	userSvc fusion.User,
+	organizationSvc fusion.Organization,
 	authSvc fusion.Auth,
 	authMiddleware middleware.AuthMiddleware,
 	loggers *log.Loggers,
@@ -69,6 +71,10 @@ func New(cfg *Config,
 		return nil, errors.New("missing user service")
 	}
 
+	if organizationSvc == nil {
+		return nil, errors.New("missing organization service")
+	}
+
 	if authSvc == nil {
 		return nil, errors.New("missing auth service")
 	}
@@ -82,6 +88,7 @@ func New(cfg *Config,
 		product:        productSvc,
 		project:        project,
 		user:           userSvc,
+		organization:   organizationSvc,
 		auth:           authSvc,
 		authMiddleware: authMiddleware,
 		appLog:         loggers.AppLogger,
