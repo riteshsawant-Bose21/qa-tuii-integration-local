@@ -47,12 +47,14 @@ class FusionTable extends StatefulWidget {
   final List<FusionTableColumn> columns;
   final List<FusionTableRow> rows;
   final String? semanticId;
+  final void Function(String rowKey)? onRowTap;
 
   const FusionTable({
     super.key,
     this.semanticId,
     required this.columns,
     required this.rows,
+    this.onRowTap,
   });
 
   @override
@@ -98,10 +100,8 @@ class _FusionTableState extends State<FusionTable> {
     }
     _sortedRows = List<FusionTableRow>.from(widget.rows);
     _sortedRows.sort((FusionTableRow a, FusionTableRow b) {
-      final String aVal =
-          a.cells[_sortColumnKey]?.value?.toString().toLowerCase() ?? '';
-      final String bVal =
-          b.cells[_sortColumnKey]?.value?.toString().toLowerCase() ?? '';
+      final String aVal = a.cells[_sortColumnKey]?.value?.toString().toLowerCase() ?? '';
+      final String bVal = b.cells[_sortColumnKey]?.value?.toString().toLowerCase() ?? '';
       if (aVal == '--' || aVal == 'unassigned') return 1;
       if (bVal == '--' || bVal == 'unassigned') return -1;
       return _sortAscending ? aVal.compareTo(bVal) : -aVal.compareTo(bVal);
@@ -131,34 +131,36 @@ class _FusionTableState extends State<FusionTable> {
                 // FLEX HEADER
                 return Expanded(
                   flex: column.flex,
-                  child: InkWell(
-                    onTap: column.sortable ? () => _onSort(column.key) : null,
-                    child: Row(
-                      children: <Widget>[
-                        Flexible(
-                          child: FusionAppText(
-                            text: column.header.toUpperCase(),
-                            maxLine: 1,
-                            textOverflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: context.colorScheme.textSecondary,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                  child: Align(
+                    alignment: column.alignment,
+                    child: InkWell(
+                      onTap: column.sortable ? () => _onSort(column.key) : null,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Flexible(
+                            child: FusionAppText(
+                              text: column.header.toUpperCase(),
+                              maxLine: 1,
+                              textOverflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: context.colorScheme.textSecondary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
-                        ),
-                        if (column.sortable && _sortColumnKey == column.key)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 4),
-                            child: Icon(
-                              _sortAscending
-                                  ? Icons.arrow_upward_rounded
-                                  : Icons.arrow_downward_rounded,
-                              size: 14,
-                              color: context.colorScheme.primaryColor,
+                          if (column.sortable && _sortColumnKey == column.key)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Icon(
+                                _sortAscending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                                size: 14,
+                                color: context.colorScheme.primaryColor,
+                              ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -194,15 +196,13 @@ class _FusionTableState extends State<FusionTable> {
             List<dynamic> rejectedData,
           ) {
             final bool isDragOver = candidateData.isNotEmpty;
-            return Container(
+            final Widget rowContent = Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 16,
                 vertical: 8,
               ), // The 32px padding
               decoration: BoxDecoration(
-                color: isDragOver
-                    ? context.colorScheme.primaryColor.withOpacity(0.1)
-                    : Colors.transparent,
+                color: isDragOver ? context.colorScheme.primaryColor.withOpacity(0.1) : Colors.transparent,
                 border: Border(
                   bottom: BorderSide(
                     color: context.colorScheme.strokeLight.withOpacity(0.5),
@@ -222,6 +222,15 @@ class _FusionTableState extends State<FusionTable> {
                 }).toList(),
               ),
             );
+
+            // Wrap with InkWell if onRowTap callback is provided
+            if (widget.onRowTap != null) {
+              return InkWell(
+                onTap: () => widget.onRowTap!(row.key),
+                child: rowContent,
+              );
+            }
+            return rowContent;
           },
     );
   }

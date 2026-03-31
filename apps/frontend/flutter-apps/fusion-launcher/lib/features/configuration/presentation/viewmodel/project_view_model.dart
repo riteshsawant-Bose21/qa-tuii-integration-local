@@ -28,6 +28,7 @@ export 'subzones/subzone_view_model.dart';
 export 'undo_redo/undo_redo_view_model.dart';
 export 'wiring_connection/wiring_connection_view_model.dart';
 export 'zone/zone_view_model.dart';
+export 'aes67/aes67_view_model.dart';
 
 part 'project_view_model_state.dart';
 
