@@ -1345,7 +1345,6 @@ void FusionConnectClient::update_ptp_state()
 {
     constexpr auto GM_WAIT = std::chrono::seconds(25);
     constexpr long long OFFSET_LOCK_NS = 1000; // 1 us lock window
-    constexpr long long OFFSET_REPORT_NS = 1000; // report above 1 us
     constexpr long long OFFSET_LOSS_NS = 10000; // 10 us loss threshold
     constexpr int LOCK_CONSEC = 3;
     constexpr int LOSS_CONSEC = 3;
