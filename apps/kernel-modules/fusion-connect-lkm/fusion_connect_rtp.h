@@ -76,6 +76,8 @@ struct fusion_cn_rtp_stream {
     u64 next_action_time;
     u64 *next_action_times;
     u32 playback_index; 
+    u32 startup_packets_received;
+    bool playback_armed;
     u64 packet_time;
     u64 ns_per_sample;
     bool rtp_phc_offset_valid;

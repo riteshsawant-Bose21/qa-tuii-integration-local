@@ -1424,9 +1424,6 @@ void FusionConnectClient::update_ptp_state()
             }
             if (master_offset_valid) {
                 long long best_abs = master_offset ? std::llabs(master_offset) : 0;
-                if (best_abs > OFFSET_REPORT_NS) {
-                    SPDLOG_WARN("PTP offset {} ns exceeds {} ns", master_offset, OFFSET_REPORT_NS);
-                }
                 if (best_abs <= OFFSET_LOCK_NS) {
                     ptp_good_streak++;
                 } else {
@@ -1471,9 +1468,6 @@ void FusionConnectClient::update_ptp_state()
 
             if (master_offset_valid) {
                 long long best_abs = master_offset ? std::llabs(master_offset) : 0;
-                if (best_abs > OFFSET_REPORT_NS) {
-                    SPDLOG_WARN("PTP offset {} ns exceeds {} ns", master_offset, OFFSET_REPORT_NS);
-                }
                 if (best_abs > OFFSET_LOSS_NS) {
                     ptp_bad_streak++;
                     if (ptp_bad_streak >= LOSS_CONSEC) {

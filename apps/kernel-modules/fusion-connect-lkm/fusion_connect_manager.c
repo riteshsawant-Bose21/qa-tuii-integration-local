@@ -118,8 +118,7 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u6
     int count = 0;
 
     spin_lock(&s->lock);
-    // playback_index == buf_size_in_packets is invalid init value 
-    if (s->playback_index < s->buf_size_in_packets) {
+    if (s->playback_armed) {
         // window after the action_time to still include the frame
         u64 window = 2 * s->packet_time;
 
@@ -157,7 +156,6 @@ static inline int rtp_compute_source_interrupts(struct fusion_cn_rtp_stream *s, 
     action_time = s->next_action_time;
 
     // loop for packet times less than 1/3ms
-    // 1/3 ms packet time streams are on grid--otherwise they're not
     while (action_time <= (tick_ns + EARLY_SLACK_NS)) {
         action_time += s->packet_time;
         count++;

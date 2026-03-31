@@ -14,6 +14,7 @@
 #include "fusion_connect_metrics.h"
 
 #define TIMER_BASE_INTERVAL_NS 333333
+#define SINK_STARTUP_PACKETS 2
 
 #define HASH_KEY(handle) hash_64(handle, FUSION_CN_RTP_HASH_BITS)
 #define PACKET_MAP_KEY_UC(ip, port) hash_64(((u64)(ip) << 16) | (port), FUSION_CN_RTP_HASH_BITS)
@@ -451,6 +452,12 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
             if (stream->ssrc == 0 || packet_ssrc != stream->ssrc) {
                 stream->ssrc = packet_ssrc;
                 stream->current_seq_num = 0;
+                stream->startup_packets_received = 0;
+                stream->playback_armed = false;
+                if (stream->next_action_times && stream->buf_size_in_packets)
+                    memset(stream->next_action_times, 0,
+                           sizeof(u64) * stream->buf_size_in_packets);
+                stream->playback_index = 0;
                 printk(KERN_DEBUG "fusion_cn_rtp: process_packet: Stashed SSRC 0x%08x for stream %s\n",
                        stream->ssrc, stream->info.stream_name);
             }
@@ -506,10 +513,6 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
                 }
             } 
 
-            /* catch initial condition */
-            if (stream->playback_index >= stream->buf_size_in_packets)
-                stream->playback_index = 0;
-
             sched_playout_ns = reconstructed_phc_ns + stream->info.playout_delay;
 
             late = (sched_playout_ns <= current_phc_ns);
@@ -549,7 +552,22 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
                 reorder = true;
             }
 
-            stream->next_action_times[write_slot] = sched_playout_ns;
+            {
+                // defensive against messy startup environment... ?
+                bool slot_was_empty = (stream->next_action_times[write_slot] == 0);
+
+                stream->next_action_times[write_slot] = sched_playout_ns;
+
+                if (!stream->playback_armed && slot_was_empty) {
+                    stream->startup_packets_received++;
+                    if (stream->startup_packets_received >= SINK_STARTUP_PACKETS) {
+                        stream->playback_index =
+                            (write_slot + stream->buf_size_in_packets - (SINK_STARTUP_PACKETS - 1)) %
+                            stream->buf_size_in_packets;
+                        stream->playback_armed = true;
+                    }
+                }
+            }
             stream->current_seq_num = seq_num;
 
             if (rtp_mgr->trace_debug) {
@@ -755,7 +773,9 @@ int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, u64 
             }
             memset(stream->next_action_times, 0, sizeof(u64) * (stream->buf_size_in_packets));
         }
-        stream->playback_index = (stream->buf_size_in_packets); // set to a invalid value i can check for on first process_packet
+        stream->playback_index = 0;
+        stream->startup_packets_received = 0;
+        stream->playback_armed = false;
         stream->next_action_time = 0;
         stream->current_seq_num = 0;
     }
