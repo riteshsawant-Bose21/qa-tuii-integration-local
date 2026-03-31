@@ -30,7 +30,12 @@ sequenceDiagram
     Note over TS: Triggered by <br>touchui_zone_config.json
     loop For all Zones
       TS->>TC: zone (payload)
-      Note over TC: Process event
+      alt SUCCESS
+        Note over TC: Process event
+      else FAILURE
+        TC-->>TS: zoneEndNack
+        Note over TS: Restart initialization from ready
+      end
     end
 
     TS->>TC: zoneEnd (Zone count)
