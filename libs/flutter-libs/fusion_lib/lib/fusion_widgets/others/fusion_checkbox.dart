@@ -22,13 +22,12 @@ class FusionCheckbox extends StatelessWidget {
   Widget build(BuildContext context) {
     final isActive = value == true;
 
-    return SemanticHelper.button(
+    return SemanticHelper.toggle(
       testId: SemanticHelper.createTestId(
-        SemanticTypes.button,
+        SemanticTypes.toggle,
         "fusion_checkbox${semanticId ?? ''}",
       ),
-      isEnabled: enabled,
-      isSelected: isActive,
+      value: isActive,
       child: MouseRegion(
         cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
         child: GestureDetector(

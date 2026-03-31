@@ -1,0 +1,606 @@
+/*  By downloading or using this file, the user agrees to be bound by the terms of the license 
+ *  agreement located in the LICENSE file in the root of this project
+ *  as an original contracting party.
+ *
+ *  Description         : The OcaLiteCommandHandler.
+ *
+ */
+
+// ---- Include system wide include files ----
+#include <assert.h>
+#include <stdlib.h>
+#include <HostInterfaceLite/OCA/OCF/OcfLiteHostInterface.h>
+#include <OCC/ControlClasses/Agents/OcaLiteNetwork.h>
+#include <OCC/ControlClasses/Managers/OcaLiteDeviceManager.h>
+#include <OCC/ControlClasses/Managers/OcaLiteNetworkManager.h>
+#include <OCC/ControlClasses/Workers/BlocksAndMatrices/OcaLiteBlock.h>
+#include <OCC/ControlClasses/Workers/Actuators/OcaLiteGain.h>  //DEBUG
+#include <OCC/ControlDataTypes/OcaLiteEventData.h>
+#include <OCC/ControlDataTypes/OcaLiteList.h>
+
+
+// ---- FileInfo Macro ----
+
+// ---- Include local include files ----
+#include "OcaLiteCommandHandler.h"
+#include "Messages/OcaLiteMessageCommand.h"
+#include "Messages/OcaLiteMessageNotification.h"
+
+// ---- Helper types and constants ----
+
+/** The singleton reference to the server. */
+::OcaLiteCommandHandler* OcaLiteCommandHandler::m_pSingleton(NULL);
+
+// ---- Helper functions ----
+
+// ---- Local data ----
+
+// ---- Class Implementation ----
+
+OcaLiteCommandHandler::OcaLiteCommandHandler()
+    : m_ocaNetworkSessions(),
+      m_pResponseBuffer(new UINT8[OCA_BUFFER_SIZE]),
+      m_responseBufferSize(0),
+      m_sessionId(OCA_INVALID_SESSIONID),
+      m_pConnectionEstablishedDelegate(NULL),
+      m_pConnectionLostDelegate(NULL),
+#ifdef OCA_TRACK_KEEPALIVE_RECEIVED
+      m_pKeepAliveReceivedDelegate(NULL),
+#endif //OCA_TRACK_KEEPALIVE_RECEIVED
+      m_sessionList()
+{
+}
+
+OcaLiteCommandHandler::~OcaLiteCommandHandler()
+{
+    m_pConnectionEstablishedDelegate = NULL;
+    m_pConnectionLostDelegate = NULL;
+#ifdef OCA_TRACK_KEEPALIVE_RECEIVED
+    m_pKeepAliveReceivedDelegate = NULL;
+#endif //OCA_TRACK_KEEPALIVE_RECEIVED
+}
+
+::OcaLiteCommandHandler& OcaLiteCommandHandler::GetInstance()
+{
+    if (NULL == OcaLiteCommandHandler::m_pSingleton)
+    {
+        OcaLiteCommandHandler::m_pSingleton = new OcaLiteCommandHandler();
+    }
+
+    return *OcaLiteCommandHandler::m_pSingleton;
+}
+
+void OcaLiteCommandHandler::FreeInstance()
+{
+    if (OcaLiteCommandHandler::m_pSingleton != NULL)
+    {
+        delete m_pSingleton;
+        m_pSingleton = NULL;
+    }
+}
+
+::OcaBoolean OcaLiteCommandHandler::Initialize()
+{
+    return static_cast< ::OcaBoolean>(true);
+}
+
+void OcaLiteCommandHandler::Shutdown()
+{
+    // Clear connected controller list
+    m_ocaNetworkSessions.clear();
+}
+
+void OcaLiteCommandHandler::RunWithTimeout(::OcaUint32 timeout)
+{
+    // Handle networks
+    HandleNetworks(timeout);
+
+    // Handle messages from networks
+    HandleMessages();
+
+}
+
+bool OcaLiteCommandHandler::AddSelectables(INT32& highest, OcfLiteSelectableSet& readSet, OcfLiteSelectableSet& writeSet, OcfLiteSelectableSet& exceptSet)
+{
+    bool bPending(false);
+
+    ::OcaLiteList< ::OcaONo> networks;
+    if (OCASTATUS_OK == ::OcaLiteNetworkManager::GetInstance().GetNetworks(networks))
+    {
+        for (::OcaUint16 counter(0); counter < networks.GetCount(); counter++)
+        {
+            ::OcaLiteNetwork* pNetwork(::OcaLiteNetworkManager::GetInstance().GetNetwork(networks.GetItem(counter)));
+            // Let the network add the selectables to the sets
+            if (NULL != pNetwork)
+            {
+                pNetwork->AddSelectables(highest, readSet, writeSet, exceptSet);
+
+                bPending = pNetwork->HasPendingMessage() || bPending;
+            }
+        }
+    }
+
+    return bPending;
+}
+
+void OcaLiteCommandHandler::RunWithSelectSet(OcfLiteSelectableSet readSet, OcfLiteSelectableSet writeSet, OcfLiteSelectableSet exceptSet)
+{
+    ::OcaLiteList< ::OcaONo> networks;
+    if (OCASTATUS_OK == ::OcaLiteNetworkManager::GetInstance().GetNetworks(networks))
+    {
+        for (::OcaUint16 counter(0); counter < networks.GetCount(); counter++)
+        {
+            ::OcaLiteNetwork* pNetwork(::OcaLiteNetworkManager::GetInstance().GetNetwork(networks.GetItem(counter)));
+
+            // Let the network add the selectables to the sets
+            if (NULL != pNetwork)
+            {
+                // Let the network handle the selected objects
+                pNetwork->HandleSelectables(readSet, writeSet, exceptSet);
+
+                // Update controller list with new connections
+                pNetwork->GetNewConnections(m_sessionList);
+                for (::OcaSessionList::iterator sessionIter(m_sessionList.begin()); sessionIter != m_sessionList.end(); ++sessionIter)
+                {
+                    // Add to session administration (if not already present)
+                    if (m_ocaNetworkSessions.end() == std::find(m_ocaNetworkSessions.begin(), m_ocaNetworkSessions.end(), *sessionIter))
+                    {
+                        static_cast<void>(m_ocaNetworkSessions.push_back(*sessionIter));
+                    }
+
+                    // Raise the ConnectionEstablished event
+                    ConnectionEstablished(*sessionIter);
+                }
+
+                // Update controller list with lost connections
+                pNetwork->GetConnectionsLost(m_sessionList);
+                for (::OcaSessionList::iterator sessionIter(m_sessionList.begin()); sessionIter != m_sessionList.end(); ++sessionIter)
+                {
+                    // Notify OcaLiteDeviceManager and OcaLiteBlock
+                    ::OcaLiteDeviceManager::GetInstance().SessionLost(*sessionIter);
+                    ::OcaLiteBlock::GetRootBlock().SessionLost(*sessionIter);
+
+                    // Raise the ConnectionLost event
+                    ConnectionLost(*sessionIter);
+
+                    // Remove from session administration
+                    static_cast<void>(m_ocaNetworkSessions.erase(std::find(m_ocaNetworkSessions.begin(), m_ocaNetworkSessions.end(), *sessionIter)));
+                }
+#ifdef OCA_TRACK_KEEPALIVE_RECEIVED
+                pNetwork->GetReceivedKeepAlives(m_sessionList);
+                for (::OcaSessionList::iterator sessionIter(m_sessionList.begin()); sessionIter != m_sessionList.end(); ++sessionIter)
+                {
+                    // Raise the ConnectionLost event
+                    KeepAliveReceived(*sessionIter);
+                }
+#endif //OCA_TRACK_KEEPALIVE_RECEIVED
+            }
+        }
+    }
+
+    // Handle messages from networks
+    HandleMessages();
+}
+
+void OcaLiteCommandHandler::HandleNetworks(::OcaUint32 timeout)
+{
+    OcfLiteSelectableSet readSet;
+    OcfLiteSelectableSet writeSet;
+    OcfLiteSelectableSet exceptSet;
+    bool pendingMessageAvailable(false);
+
+    FD_ZERO(&readSet);
+    FD_ZERO(&writeSet);
+    FD_ZERO(&exceptSet);
+
+    ::OcaLiteList< ::OcaONo> networks;
+    if (OCASTATUS_OK == ::OcaLiteNetworkManager::GetInstance().GetNetworks(networks))
+    {
+        INT32 highest(0);
+        for (::OcaUint16 counter(0); counter < networks.GetCount(); counter++)
+        {
+            ::OcaLiteNetwork* pNetwork(::OcaLiteNetworkManager::GetInstance().GetNetwork(networks.GetItem(counter)));
+
+            // Let the network add the selectables to the sets
+            if (NULL != pNetwork)
+            {
+                
+                pNetwork->AddSelectables(highest, readSet, writeSet, exceptSet);
+                pendingMessageAvailable = static_cast<bool>(pNetwork->HasPendingMessage());
+            }
+        }
+
+        // Perform a select on all the selectable objects. We are not interested in the actual result
+        // and will always call the network to handle the selected objects. This is done so the network
+        // can perform processing that needs to be done on a regular basis.
+        if (::OcfLiteHostInterfaceSelect(highest + 1,
+                                         readSet,
+                                         writeSet,
+                                         exceptSet,
+                                         pendingMessageAvailable ? 0 : static_cast<INT32>(timeout)) >= 0)
+        {
+            RunWithSelectSet(readSet, writeSet, exceptSet);
+        }
+        else
+        {
+            OCA_LOG_ERROR("Select failed!");
+        }
+    }
+}
+
+
+
+::OcaBoolean OcaLiteCommandHandler::SendNotification(::OcaLiteNotificationDeliveryMode deliveryMode,
+                                                     ::OcaSessionID sessionID,
+                                                     const ::OcaLiteNotificationData& notification,
+                                                     const ::OcaLiteNetworkAddress& networkAddress) const
+{
+    bool bSuccess(false);
+
+#ifndef OCA_LITE_CONTROLLER
+    ::OcaLiteList< ::OcaONo> networks;
+    if (OCASTATUS_OK == ::OcaLiteNetworkManager::GetInstance().GetNetworks(networks))
+    {
+        for (::OcaUint16 counter(0); counter < networks.GetCount(); counter++)
+        {
+            ::OcaLiteNetwork* pOcaLiteNetwork(::OcaLiteNetworkManager::GetInstance().GetNetwork(networks.GetItem(counter)));
+
+            // Find network and send notification
+            if (NULL != pOcaLiteNetwork)
+            {
+                // Retrieve a notification message
+                ::OcaLiteMessageGeneral* pMsg(pOcaLiteNetwork->RetrieveMessage(::OcaLiteHeader::OCA_MSG_NTF));
+
+                if (NULL != pMsg)
+                {
+                    ::OcaLiteMessageNotification* pMsgNotification(static_cast< ::OcaLiteMessageNotification*>(pMsg));
+                    if (pMsgNotification->WriteParameters(notification.GetTargetONo(), notification.GetMethodID(),
+                        notification.GetContext(), *(notification.GetEventData()),
+                        pOcaLiteNetwork->GetWriter()))
+                    {
+                        bSuccess = (OCASTATUS_OK == pOcaLiteNetwork->SendNotification(deliveryMode, sessionID,
+                            networkAddress, pMsgNotification));
+                    }
+                    pOcaLiteNetwork->ReturnMessage(const_cast< ::OcaLiteMessageNotification*>(pMsgNotification));
+                }
+            }
+            else
+            {
+                OCA_LOG_ERROR_PARAMS("Unable to find network for sessionID %d", sessionID);
+            }
+        }
+    }
+    
+#endif
+    return static_cast< ::OcaBoolean>(bSuccess);
+}
+
+void OcaLiteCommandHandler::HandleMessages()
+{
+    // Check if new data is available to read
+    ::OcaLiteList< ::OcaONo> networks;
+    if (OCASTATUS_OK == ::OcaLiteNetworkManager::GetInstance().GetNetworks(networks))
+    {
+        for (::OcaUint16 counter(0); counter < networks.GetCount(); counter++)
+        {
+            ::OcaLiteNetwork* pNetwork(::OcaLiteNetworkManager::GetInstance().GetNetwork(networks.GetItem(counter)));
+
+            if (NULL != pNetwork)
+            {
+                ::OcaBoolean bContinue(static_cast< ::OcaBoolean>(true));
+                ::OcaLiteMessageSessionID ocaMessageSessionID;
+                while (bContinue)
+                {
+                    pNetwork->GetFirstPendingMessage(ocaMessageSessionID, bContinue);
+                    if (NULL != ocaMessageSessionID.message)
+                    {
+                        // One or more messages were received
+                        ::OcaLiteMessageGeneral* msg(ocaMessageSessionID.message);
+                        ::OcaSessionID sessionID(ocaMessageSessionID.sessionID);
+
+                        if (NULL != msg)
+                        {
+                            switch (msg->GetMessageType())
+                            {
+                                case ::OcaLiteHeader::OCA_MSG_CMD:
+                                    {
+                                        ::OcaLiteMessageCommand* cmdMess(static_cast< ::OcaLiteMessageCommand*>(msg));
+
+                                        // Find the object to execute the command on
+                                        ::OcaLiteRoot* pOcaLiteRoot(GetDeviceObject(cmdMess->GetTargetONo()));
+
+                                        if (NULL != pOcaLiteRoot)
+                                        {
+                                            // Ignore return value, no response expected/required
+                                            OcaUint8* response(NULL);
+
+                                            ::OcaLiteStatus rc(pOcaLiteRoot->Execute(pNetwork->GetReader(),
+                                                        pNetwork->GetWriter(),
+                                                        sessionID,
+                                                        cmdMess->GetMethodID(),
+                                                        cmdMess->GetParametersSize(),
+                                                        cmdMess->GetParameters(),
+                                                        &response));
+
+                                            if ((OCASTATUS_OK != rc) && (OCASTATUS_NOT_IMPLEMENTED != rc)) // Not implemented is not an actual failure. Don't log this.
+                                            {
+                                                OCA_LOG_ERROR_PARAMS("OCA_MSG_CMD failure execution rc = %i", rc);
+                                            }
+                                        }
+                                    }
+                                    break;
+                                case ::OcaLiteHeader::OCA_MSG_CMD_RRQ:
+                                    {
+                                        const ::OcaLiteMessageCommand* cmdMess(static_cast< ::OcaLiteMessageCommand*>(msg));
+
+                                        // Find the object to execute the command on
+                                        ::OcaLiteRoot* pOcaLiteRoot(GetDeviceObject(cmdMess->GetTargetONo()));
+
+                                        // Retrieve a new response message
+                                        ::OcaLiteMessageResponse* pMsgResponse(static_cast< ::OcaLiteMessageResponse*>(pNetwork->RetrieveMessage(::OcaLiteHeader::OCA_MSG_RSP)));
+
+                                        if (NULL != pMsgResponse)
+                                        {
+                                            if (NULL != pOcaLiteRoot)
+                                            {
+                                                OcaUint8* response(NULL);
+
+                                                ::OcaLiteStatus rc(pOcaLiteRoot->Execute(pNetwork->GetReader(),
+                                                            pNetwork->GetWriter(),
+                                                            sessionID,
+                                                            cmdMess->GetMethodID(),
+                                                            cmdMess->GetParametersSize(),
+                                                            cmdMess->GetParameters(),
+                                                            &response));
+                                                if ((OCASTATUS_OK != rc) &&
+                                                        (OCASTATUS_NOT_IMPLEMENTED != rc))
+                                                {
+                                                    OCA_LOG_ERROR_PARAMS("OCA_MSG_CMD_RRQ failure execution rc = %d (targetONo %d, method %d, %d)",
+                                                            rc, cmdMess->GetTargetONo(), cmdMess->GetMethodID().GetDefLevel(), cmdMess->GetMethodID().GetMethodIndex());
+                                                }
+
+                                                // Clear the response parameters
+                                                if (OCASTATUS_OK != rc)
+                                                {
+                                                    pMsgResponse->WriteParameters(cmdMess->GetHandle(), NULL, 0, rc);
+                                                }
+                                                else
+                                                {
+                                                    pMsgResponse->WriteParameters(cmdMess->GetHandle(), response, m_responseBufferSize, rc);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                pMsgResponse->WriteParameters(cmdMess->GetHandle(), NULL, 0, OCASTATUS_BAD_ONO);
+                                            }
+
+                                            ::OcaLiteStatus responseStatus(pNetwork->SendOcaMessage(sessionID, *pMsgResponse));
+                                            if (OCASTATUS_OK != responseStatus)
+                                            {
+                                                OCA_LOG_ERROR_PARAMS("Sending response for command with handle %u failed (rc = %d)",
+                                                        cmdMess->GetHandle(), responseStatus);
+                                            }
+
+                                            pNetwork->ReturnMessage(pMsgResponse);
+                                        }
+                                    }
+                                    break;
+#ifdef OCA_LITE_CONTROLLER
+                                case ::OcaLiteHeader::OCA_MSG_NTF:
+                                    {
+                                        ::OcaLiteMessageNotification* ntfMesg(static_cast< ::OcaLiteMessageNotification*>(msg));
+
+                                        // Find the object to execute the command on
+                                        ::OcaLiteRoot* pOcaLiteRoot(GetDeviceObject(ntfMesg->GetTargetONo())); // <=== RIght here we have the object and 
+                                                                                                               //      can be executed once we have the 
+                                                                                                               //      value (and type)
+                                        if (NULL != pOcaLiteRoot)
+                                        {
+                                            ::OcaONo                  destONo(ntfMesg->GetTargetONo());
+                                            ::OcaLiteMethodID         destMethodId(ntfMesg->GetMethodID());
+                                            const ::OcaLiteEventData* srcEventData(ntfMesg->GetEventData());
+
+                                            // Ignore return value, no response expected/required
+                                            OcaUint8* response(NULL);
+                                            const ::OcaUint8* dummy(NULL);
+
+                                            ::OcaLiteStatus rc(pOcaLiteRoot->Execute(pNetwork->GetReader(),
+                                                        pNetwork->GetWriter(),
+                                                        sessionID,
+                                                        ntfMesg->GetMethodID(),
+                                                        ntfMesg->GetParametersSize(),
+                                                        ntfMesg->GetParameters(),
+                                                        &response));
+                                        }
+                                        else
+                                        {
+                                            OCA_LOG_ERROR("Notification Error ..");
+                                        }
+                                    }
+                                    break;
+#endif
+                                case ::OcaLiteHeader::OCA_MSG_RSP:
+                                    {
+                                        const ::OcaLiteMessageResponse* rspMsg(static_cast< ::OcaLiteMessageResponse*>(msg));
+                                        assert(NULL != rspMsg);
+                                        HandleResponse(*rspMsg);
+                                    }
+                                    break;
+                                default:
+                                    break;
+                            }
+
+                            pNetwork->ReturnMessage(msg);
+                        }
+                    }
+                    else
+                    {
+                        bContinue = static_cast< ::OcaBoolean>(false);
+                    }
+                }
+            }
+        }
+    }
+}
+
+::OcaUint8* OcaLiteCommandHandler::GetResponseBuffer(::OcaUint32 bufferSize)
+{
+    if (bufferSize <= OCA_BUFFER_SIZE)
+    {
+        m_responseBufferSize = bufferSize;
+        return m_pResponseBuffer;
+    }
+    else
+    {
+        // Response does not fit into response buffer.
+        return NULL;
+    }
+}
+
+::OcaSessionID OcaLiteCommandHandler::CreateSessionID()
+{
+    ::OcaSessionID lastSessionId(m_sessionId);
+    m_sessionId++;
+    while (((OCA_INVALID_SESSIONID == m_sessionId) ||
+           ((m_ocaNetworkSessions.end() != std::find(m_ocaNetworkSessions.begin(), m_ocaNetworkSessions.end(), m_sessionId)))) &&
+           (m_sessionId != lastSessionId))
+    {
+        m_sessionId++;
+    }
+
+    ::OcaSessionID newSessionId(OCA_INVALID_SESSIONID);
+    if (m_sessionId != lastSessionId)
+    {
+        newSessionId = m_sessionId;
+    }
+    else
+    {
+        OCA_LOG_ERROR("No available session IDs");
+    }
+
+    return newSessionId;
+}
+
+void OcaLiteCommandHandler::ConnectionEstablished(::OcaSessionID sessionID)
+{
+    if (NULL != m_pConnectionEstablishedDelegate)
+    {
+        IConnectionEstablishedDelegate* pDelegate(m_pConnectionEstablishedDelegate);
+        pDelegate->OnConnectionEstablished(sessionID);
+    }
+}
+
+bool OcaLiteCommandHandler::RegisterConnectionEstablishedEventHandler(IConnectionEstablishedDelegate* connEstablishedDelegate)
+{
+    bool bSuccess(false);
+
+    if (NULL == m_pConnectionEstablishedDelegate)
+    {
+        m_pConnectionEstablishedDelegate = connEstablishedDelegate;
+        bSuccess = true;
+    }
+    return bSuccess;
+}
+
+bool OcaLiteCommandHandler::UnregisterConnectionEstablishedEventHandler(const IConnectionEstablishedDelegate* connEstablishedDelegate)
+{
+    bool bSuccess(false);
+
+    if (m_pConnectionEstablishedDelegate == connEstablishedDelegate)
+    {
+        m_pConnectionEstablishedDelegate = NULL;
+        bSuccess = true;
+    }
+
+    return bSuccess;
+}
+
+void OcaLiteCommandHandler::ConnectionLost(::OcaSessionID sessionID)
+{
+    if (NULL != m_pConnectionLostDelegate)
+    {
+        IConnectionLostDelegate* pDelegate(m_pConnectionLostDelegate);
+
+        pDelegate->OnConnectionLost(sessionID);
+    }
+}
+
+#ifdef OCA_TRACK_KEEPALIVE_RECEIVED
+void OcaLiteCommandHandler::KeepAliveReceived(::OcaSessionID sessionID)
+{
+    if (NULL != m_pKeepAliveReceivedDelegate)
+    {
+        IKeepAliveReceivedDelegate* pDelegate(m_pKeepAliveReceivedDelegate);
+
+        pDelegate->OnKeepAliveReceived(sessionID);
+    }
+}
+#endif //OCA_TRACK_KEEPALIVE_RECEIVED
+
+bool OcaLiteCommandHandler::RegisterConnectionLostEventHandler(IConnectionLostDelegate* connLostDelegate)
+{
+    bool bSuccess(false);
+
+    if (NULL == m_pConnectionLostDelegate)
+    {
+        m_pConnectionLostDelegate = connLostDelegate;
+        bSuccess = true;
+    }
+
+    return bSuccess;
+}
+
+bool OcaLiteCommandHandler::UnregisterConnectionLostEventHandler(const IConnectionLostDelegate* connLostDelegate)
+{
+    bool bSuccess(false);
+    if (m_pConnectionLostDelegate == connLostDelegate)
+    {
+        m_pConnectionLostDelegate = NULL;
+        bSuccess = true;
+    }
+    return bSuccess;
+}
+
+#ifdef OCA_TRACK_KEEPALIVE_RECEIVED
+bool OcaLiteCommandHandler::RegisterKeepAliveReceivedEventHandler(IKeepAliveReceivedDelegate* keepAliveDelegate)
+{
+    bool bSuccess(false);
+
+    if (NULL == m_pKeepAliveReceivedDelegate)
+    {
+        m_pKeepAliveReceivedDelegate = keepAliveDelegate;
+        bSuccess = true;
+    }
+
+    return bSuccess;
+}
+
+bool OcaLiteCommandHandler::UnregisterKeepAliveReceivedEventHandler(const IKeepAliveReceivedDelegate* keepAliveDelegate)
+{
+    bool bSuccess(false);
+    if (m_pKeepAliveReceivedDelegate == keepAliveDelegate)
+    {
+        m_pKeepAliveReceivedDelegate = NULL;
+        bSuccess = true;
+    }
+    return bSuccess;
+}
+#endif //OCA_TRACK_KEEPALIVE_RECEIVED
+
+::OcaLiteRoot* OcaLiteCommandHandler::GetDeviceObject(::OcaONo ocaONo)
+{
+    ::OcaLiteRoot* pOcaLiteRoot(NULL);
+
+    if ((ocaONo == OCA_ROOT_BLOCK_ONO) ||
+        (ocaONo >= OCA_MINIMUM_DEVICE_OBJECT_ONO))
+    {
+        pOcaLiteRoot = OcaLiteBlock::GetRootBlock().GetObject(ocaONo);
+    }
+    else
+    {
+        pOcaLiteRoot = OcaLiteDeviceManager::GetInstance().GetManager(ocaONo);
+    }
+
+    return pOcaLiteRoot;
+}
+

@@ -1,0 +1,14 @@
+info:
+  name: Get system status
+  type: http
+  seq: 11
+
+http:
+  method: GET
+  url: "{{api_url}}/pava/status"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
