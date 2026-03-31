@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'package:http/http.dart' as http;
 import 'package:fusion_web/core/config/environment_config.dart';
 
@@ -12,13 +13,13 @@ class ApiService {
 
   void setBearerToken(String token) {
     _bearerToken = token;
-    print('API Service: Bearer token set (length: ${token.length})');
-    print('API Service: Token preview: ${token.substring(0, 50)}...');
+    log('API Service: Bearer token set (length: ${token.length})');
+    log('API Service: Token preview: ${token.substring(0, 50)}...');
   }
 
   void clearToken() {
     _bearerToken = null;
-    print('🔐 API Service: Bearer token cleared');
+    log('🔐 API Service: Bearer token cleared');
   }
 
   void _handleUnauthorized() {
@@ -27,7 +28,7 @@ class ApiService {
 
     // Import and redirect to login will be handled by the calling code
     // throwing the exception will trigger error handling in the UI layer
-    print('🔄 API Service: Cleared token due to 401 Unauthorized');
+    log('🔄 API Service: Cleared token due to 401 Unauthorized');
   }
 
   Map<String, String> get _headers {
@@ -46,16 +47,16 @@ class ApiService {
   Future<Map<String, dynamic>> get(String endpoint) async {
     try {
       final url = Uri.parse('$baseUrl$endpoint');
-      print('API GET Request: $url');
-      print('API Headers: ${_headers.keys.join(', ')}');
-      print('Has Authorization: ${_headers.containsKey('Authorization')}');
+      log('API GET Request: $url');
+      log('API Headers: ${_headers.keys.join(', ')}');
+      log('Has Authorization: ${_headers.containsKey('Authorization')}');
 
       final response = await _client.get(url, headers: _headers);
-      print('API Response Status: ${response.statusCode}');
+      log('API Response Status: ${response.statusCode}');
 
       return _handleResponse(response);
     } catch (e) {
-      print('API GET Error: $e');
+      log('API GET Error: $e');
       throw ApiException('GET request failed: $e');
     }
   }
@@ -118,8 +119,8 @@ class ApiService {
     try {
       final url = Uri.parse('$baseUrl/$endpoint');
 
-      print('API PATCH Request: $url');
-      print('PATCH Body: $data');
+      log('API PATCH Request: $url');
+      log('PATCH Body: $data');
 
       final response = await _client.patch(
         url,
@@ -127,7 +128,7 @@ class ApiService {
         body: jsonEncode(data),
       );
 
-      print('API PATCH Status: ${response.statusCode}');
+      log('API PATCH Status: ${response.statusCode}');
 
       return _handleResponse(response);
     } catch (e) {
@@ -136,7 +137,7 @@ class ApiService {
   }
 
   Map<String, dynamic> _handleResponse(http.Response response) {
-    print('Response body: ${response.body}');
+    log('Response body: ${response.body}');
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isEmpty) {
@@ -150,7 +151,7 @@ class ApiService {
         }
         return decoded as Map<String, dynamic>;
       } catch (e) {
-        print('JSON decode error: $e');
+        log('JSON decode error: $e');
         return {};
       }
     } else {
@@ -170,7 +171,7 @@ class ApiService {
 
       // Handle 401 Unauthorized - token expired/invalid
       if (response.statusCode == 401) {
-        print('🚨 API Service: 401 Unauthorized - Token expired/invalid');
+        log('🚨 API Service: 401 Unauthorized - Token expired/invalid');
         _handleUnauthorized();
       }
 

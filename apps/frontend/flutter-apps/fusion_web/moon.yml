@@ -1,0 +1,32 @@
+project:
+  name: "fusion-web-portal"
+  description: "A web portal for managing the Fusion ecosystem."
+
+tasks:
+  install-deps:
+    command: "flutter"
+    args: ["pub", "get"]
+    options:
+      cache: false
+
+  analyze:
+    command: "flutter"
+    args: ["analyze", "--fatal-warnings", "--fatal-infos"]
+    options:
+      cache: false
+
+  format-check:
+    command: "dart"
+    args: ["format", "--set-exit-if-changed", "lib", "test"]
+    options:
+      cache: false
+
+  build-web:
+    command: "flutter"
+    args: ["build", "web", "--release", "--web-renderer=html"]
+    deps:
+      # - "install-deps"
+      # - "analyze"
+      # - "format-check"
+    options:
+      cache: false

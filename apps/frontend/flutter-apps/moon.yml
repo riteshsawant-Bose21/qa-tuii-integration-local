@@ -27,3 +27,7 @@ tasks:
   macos-automation-build:
     deps:
       - "fusion-launcher:build-macos-automation"
+
+  build-web-portal:
+    deps:
+      - "fusion_web:build-web"
