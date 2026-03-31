@@ -242,3 +242,20 @@ func (p *Persistence) SetCurrentScene(setID, sceneID string) error {
 
 	return p.updateHash()
 }
+
+// GetSceneInSet returns the scene by ID if it belongs to the specified scene set.
+func (p *Persistence) GetSceneInSet(setID, sceneID string) (*api.Scene, error) {
+	set, err := p.GetSceneSet(setID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, scene := range set.Scenes {
+		if scene.ID == sceneID {
+			found := scene
+			return &found, nil
+		}
+	}
+
+	return nil, ErrNotMember
+}

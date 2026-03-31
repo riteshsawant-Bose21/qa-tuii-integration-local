@@ -23,15 +23,45 @@ func (h *Handler) HandleGetSceneSet(setID string) (*api.SceneSet, error) {
 }
 
 // HandleActivateSnapshotByID patches the snapshot data onto DB State.
-// Full implementation in Step 6.
 func (h *Handler) HandleActivateSnapshotByID(id string) error {
-	return fmt.Errorf("not implemented")
+	def, err := h.persistence.GetSnapshotDefinition(id)
+	if err != nil {
+		return err
+	}
+
+	afterPtr, err := h.StateManager.Patch(def.Data)
+	if err != nil {
+		return err
+	}
+
+	if afterPtr == nil {
+		return nil
+	}
+
+	return h.handleConfigUpdate(*afterPtr, false)
 }
 
 // HandleActivateScene activates a scene within a scene set and patches its data onto DB State.
-// Full implementation in Step 6.
 func (h *Handler) HandleActivateScene(setID, sceneID string) error {
-	return fmt.Errorf("not implemented")
+	scene, err := h.persistence.GetSceneInSet(setID, sceneID)
+	if err != nil {
+		return err
+	}
+
+	afterPtr, err := h.StateManager.Patch(scene.Data)
+	if err != nil {
+		return err
+	}
+
+	if err := h.persistence.SetCurrentScene(setID, sceneID); err != nil {
+		return err
+	}
+
+	if afterPtr == nil {
+		return nil
+	}
+
+	return h.handleConfigUpdate(*afterPtr, false)
 }
 
 // HandleListSnapshots returns a list of all available snapshot names.
