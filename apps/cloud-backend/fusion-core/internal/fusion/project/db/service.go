@@ -147,7 +147,7 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 	var err error
 	if userAuth.Role.RoleName == constants.AdminRoleName {
 		query = fmt.Sprintf(`
-			SELECT p.id, p.name, p.description, p.venue, 
+			SELECT ON (p.id) p.id, p.name, p.description, p.venue, 
 		       p.environment_type, p.project_phase, p.application, p.budget_amount, 
 		       p.currency, p.is_archived, p.is_deleted, p.locked_by_user_id, 
 		       p.created_at, p.updated_at, pu.is_starred, u.email as locked_by_user_email
@@ -155,7 +155,7 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 			INNER JOIN project_user pu ON p.id = pu.project_id
 			LEFT JOIN app_user u ON p.locked_by_user_id = u.id
 			WHERE p.primary_owner_account_id = $1 AND p.is_archived = $2 AND p.is_deleted = $3
-			ORDER BY p.%s %s`, queryParams.SortBy, order)
+			ORDER BY p.id, p.%s %s`, queryParams.SortBy, order)
 		rows, err = s.db.QueryContext(ctx, query, userAuth.Account.ID, queryParams.IsArchived, false)
 
 	} else {

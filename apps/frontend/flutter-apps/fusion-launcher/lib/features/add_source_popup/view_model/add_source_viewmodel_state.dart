@@ -92,6 +92,7 @@ enum SourceSectionType {
           SourceConnectionType.hdmi,
           SourceConnectionType.bluetooth,
           SourceConnectionType.audioJack,
+          SourceConnectionType.rca,
           // SourceConnectionType.ethernet,
           // SourceConnectionType.wired,
           // SourceConnectionType.rca,

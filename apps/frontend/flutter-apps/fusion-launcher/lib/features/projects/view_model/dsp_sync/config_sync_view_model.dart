@@ -65,7 +65,7 @@ class ConfigSyncViewModel extends Cubit<ConfigSyncState> {
                 // This would be determined based on your DSP configuration
                 portId: ioDevice.outputPortsData.first.id,
                 // This would also be determined based on your DSP configuration
-                type: ConnectionType.signal,
+                type: ConnectionType.analog,
               );
               serviceLocator<ProjectViewModel>().addWiringConnection(connection: wiringConnection);
             }

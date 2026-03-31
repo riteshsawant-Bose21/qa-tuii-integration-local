@@ -20,10 +20,10 @@
                     "property_settings": [
                         { "name": "frame_size", "value": 32},
                         { "name": "sample_rate", "value": 48000 },
-                        { "name": "filename", "value": "in1.wav" }
+                        { "name": "filename", "value": "in1_stereo.wav" }
                     ],
                     "terminal_channels": [
-                        { "name": "out", "channels": 1 }
+                        { "name": "out", "channels": 2 }
                     ]
                 },
                 {
@@ -32,10 +32,10 @@
                     "property_settings": [
                         { "name": "frame_size", "value": 32},
                         { "name": "sample_rate", "value": 48000 },
-                        { "name": "filename", "value": "in2.wav" }
+                        { "name": "filename", "value": "in2_stereo.wav" }
                     ],
                     "terminal_channels": [
-                        { "name": "out", "channels": 1 }
+                        { "name": "out", "channels": 2 }
                     ]
                 },
                 {
@@ -43,10 +43,11 @@
                     "algorithm": "source_selector",
                     "property_settings": [
                         { "name": "frame_size", "value": 32 },
-                        { "name": "sample_rate", "value": 48000 }
+                        { "name": "sample_rate", "value": 48000 },
+                        { "name": "source_channels", "value": 2 }
                     ],
                     "terminal_channels": [
-                        { "name": "in", "channels": 2 }
+                        { "name": "in", "channels": 4 }
                     ]
                 },
                 {
@@ -58,7 +59,7 @@
                         { "name": "filename", "value": "out.wav" }
                     ],
                     "terminal_channels": [
-                        { "name": "in", "channels": 1 }
+                        { "name": "in", "channels": 2 }
                     ]
                 }
             ],
@@ -72,12 +73,28 @@
                     "input_channel": 1
                 },
                 {
+                    "source_block": "infile1",
+                    "output_terminal": "out",
+                    "output_channel": 2,
+                    "destination_block": "source_selector",
+                    "input_terminal": "in",
+                    "input_channel": 2
+                },
+                {
                     "source_block": "infile2",
                     "output_terminal": "out",
                     "output_channel": 1,
                     "destination_block": "source_selector",
                     "input_terminal": "in",
-                    "input_channel": 2
+                    "input_channel": 3
+                },
+                {
+                    "source_block": "infile2",
+                    "output_terminal": "out",
+                    "output_channel": 2,
+                    "destination_block": "source_selector",
+                    "input_terminal": "in",
+                    "input_channel": 4
                 },
                 {
                     "source_block": "source_selector",
@@ -86,6 +103,14 @@
                     "destination_block": "outfile",
                     "input_terminal": "in",
                     "input_channel": 1
+                },
+                {
+                    "source_block": "source_selector",
+                    "output_terminal": "out",
+                    "output_channel": 2,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 2
                 }
             ]
         }
