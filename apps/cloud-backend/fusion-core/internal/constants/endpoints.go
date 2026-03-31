@@ -72,4 +72,12 @@ const (
 	EndpointRolePermissions = "/roles/:roleID/permissions"
 	// EndpointOrganizationUsers is the endpoint for organization user operations.
 	EndpointOrganizationUsers = "/users"
+
+	// Device Update endpoints
+	EndpointFirmware              = "/firmware"
+	EndpointFirmwareBundles       = EndpointFirmware + "/bundles"
+	EndpointApproveBundle         = EndpointFirmwareBundles + "/:bundleID/approve"
+	EndpointFirmwareUpdateCheck   = EndpointFirmware + "/updates/check"
+	EndpointBundleDownload        = EndpointFirmwareBundles + "/:bundleID/request-download-url"
+	EndpointLogBundleUpdateStatus = EndpointFirmware + "/updates/status"
 )

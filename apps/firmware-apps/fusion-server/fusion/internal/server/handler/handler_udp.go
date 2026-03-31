@@ -5,12 +5,17 @@ import (
 
 	json "github.com/goccy/go-json"
 
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 )
 
 // HandleUDPMessage handles and decodes UDP messages
 func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
+	type udpResponse struct {
+		FusionOp api.NotifyOp `json:"_fusion_op"`
+		Status   string       `json:"status"`
+		Payload  any          `json:"payload,omitempty"`
+	}
 	var msg struct {
 		Action  api.NotifyOp    `json:"action"`
 		Payload json.RawMessage `json:"payload,omitempty"`
@@ -26,17 +31,16 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 	switch msg.Action {
 	case api.NotifyOpNoop:
 		// For profiling: no state change, no broadcast, no gossip.
-		return map[string]any{
-			"status": "ok",
-		}, nil
+		return udpResponse{FusionOp: msg.Action, Status: "ok"}, nil
 
 	case api.NotifyOpValueGet:
 		state := h.StateManager.GetStateMap()
 		state[api.FusionVersion] = h.StateManager.GetVersion().Counter
 		state[api.FusionEpoch] = h.StateManager.GetVersion().Epoch
-		return map[string]any{
-			"status": "success",
-			"data":   state,
+		return udpResponse{
+			FusionOp: msg.Action,
+			Status:   "success",
+			Payload:  state,
 		}, nil
 
 	case api.NotifyOpValueSet:
@@ -50,9 +54,18 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 			logger.Error("HandleUDPMessage handleConfigUpdate error: %v", err)
 			return nil, fmt.Errorf("failed to handle update: %w", err)
 		}
-		return map[string]any{
-			"status":  "success",
-			"message": "Update applied successfully",
+		return udpResponse{
+			FusionOp: msg.Action,
+			Status:   "success",
+		}, nil
+
+	case api.NotifyOpGetLocalDeviceInformation:
+		info := h.HandleGetDeviceInfo()
+
+		return udpResponse{
+			FusionOp: msg.Action,
+			Status:   "success",
+			Payload:  info,
 		}, nil
 
 	default:

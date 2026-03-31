@@ -138,6 +138,7 @@ class __CreateNewListeningAreaWidgetState extends State<_CreateNewListeningAreaW
                   alignment: Alignment.centerRight,
 
                   child: FusionButton(
+                    accessLabel: 'create_new_listening_area_add_button',
                     height: 28,
                     width: 60,
                     label: "Add",

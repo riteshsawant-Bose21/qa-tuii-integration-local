@@ -1,6 +1,6 @@
 project:
   name: fusion-core
-  description: Core services for Fusion Cloud Backend
+  description: Core services for Fusion Cloud Backend Web Services
 
 tasks:
   lint:

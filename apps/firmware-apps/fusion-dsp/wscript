@@ -70,14 +70,17 @@ def configure(conf):
 
     conf.env.append_value('CXXFLAGS', ['-std=c++17'])
     conf.env.append_value('CXXFLAGS', ['-Wall', '-Wextra', '-Werror'])
-    conf.env.append_value('CXXFLAGS', ['-Ofast'])
+    conf.env.append_value('CXXFLAGS', ['-O3', '-ffast-math', '-fno-finite-math-only'])
 
     # spdlog from the Yocto SDK is configured for an external 'fmt' lib.
     conf.env.append_value('CXXFLAGS', ['-DSPDLOG_FMT_EXTERNAL'])
     # by default we compile out all TRACE logs as they may affect performance
     conf.env.append_value('CXXFLAGS',
                           ['-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG'])
-    
+
+    # This greatly reduces binary size.  Comment out to include symbols for gdb.
+    conf.env.append_value('LDFLAGS', ['-Wl,-s'])
+
     # #to define USE_WEIGHTS_FILE
     # conf.env.append_value('CXXFLAGS', ['-DUSE_WEIGHTS_FILE'])
 
@@ -91,6 +94,8 @@ def configure(conf):
         # This is needed because of warnings in Boost property trees.
         conf.env.append_value('CXXFLAGS',
                            ['-Wno-deprecated-copy-with-user-provided-copy'])
+        conf.env.append_value('CXXFLAGS',
+                           ['-Wno-vla-cxx-extension'])
 
         onnx_path = conf.path.abspath() + '/libs/onnxruntime-osx-universal2-1.17.0'
     else:
@@ -109,12 +114,14 @@ def configure(conf):
     # add onnxruntime library
     conf.env.append_value('INCLUDES', [onnx_path+'/include'])
     conf.env.append_value('LIBPATH', [onnx_path+'/lib'])
+    conf.env.append_value('LIBPATH', [conf.path.abspath() + '/../../../libs/firmware-libs/fusion-embedded-interface/build'])
+    conf.env.append_value('LIBPATH', [conf.path.abspath() + '/../../../libs/firmware-libs/fusion-embedded-framework/build'])
 
 def build(bld):
-    bld(export_includes=['./external/doctest', './include'], name='common-include')
+    bld(export_includes=['../fusion-server/tools', '../../../libs/firmware-libs/fusion-embedded-interface/include', '../../../libs/firmware-libs/fusion-embedded-framework/include', './external/doctest', './include'], name='common-include')
 
     excludes = []
-    libs = ['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime', 'jsoncpp', 'samplerate', 'curl']
+    libs = ['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime', 'jsoncpp', 'samplerate', 'curl', 'fusion_embedded_interface', 'fusion_embedded_framework']
 
     if bld.env['IS_MACOS']:
         excludes.append('src/alsa.cpp')
@@ -134,4 +141,3 @@ def build(bld):
                                          excl=excludes),
                 use=['common-include'],
                 lib=libs)
-

@@ -853,7 +853,7 @@ func TestConcurrentPatchRequests(t *testing.T) {
 		wg.Add(1)
 		go func(worker int) {
 			defer wg.Done()
-			for i := 0; i < numRequests; i++ {
+			for i := range numRequests {
 				updateData := map[string]any{
 					"value": float64(100 + worker + i),
 				}

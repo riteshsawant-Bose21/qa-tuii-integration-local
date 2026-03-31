@@ -40,8 +40,14 @@ class ProductSearchWidget extends StatelessWidget {
       clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1),
-          top: BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1),
+          bottom: BorderSide(
+            color: Theme.of(context).colorScheme.primaryBlack,
+            width: 1,
+          ),
+          top: BorderSide(
+            color: Theme.of(context).colorScheme.primaryBlack,
+            width: 1,
+          ),
         ),
       ),
       child: Column(
@@ -53,11 +59,19 @@ class ProductSearchWidget extends StatelessWidget {
               children: <Widget>[
                 Expanded(
                   child: SemanticHelper.formControl(
-                    testId: SemanticHelper.createTestId(SemanticTypes.textInput, 'product_search_field'),
+                    testId: SemanticHelper.createTestId(
+                      SemanticTypes.textInput,
+                      'product_search_field',
+                    ),
                     child: FusionTextField(
+                      semanticFieldId: 'product_search_field',
                       controller: searchController,
                       hintText: 'Search by name, series or type...',
-                      prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 16),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: Colors.grey[400],
+                        size: 16,
+                      ),
                       onChanged: (String value) {
                         /// If search is cleared, call onClearSearch to reset filters
                         value.isEmpty ? onClearSearch?.call() : null;
@@ -65,9 +79,16 @@ class ProductSearchWidget extends StatelessWidget {
                       suffixIcon:
                           searchController.text.isNotEmpty
                               ? SemanticHelper.button(
-                                testId: SemanticHelper.createTestId(SemanticTypes.button, 'product_query_search_clear'),
+                                testId: SemanticHelper.createTestId(
+                                  SemanticTypes.button,
+                                  'product_query_search_clear',
+                                ),
                                 child: IconButton(
-                                  icon: Icon(Icons.clear, color: Colors.grey[400], size: 16),
+                                  icon: Icon(
+                                    Icons.clear,
+                                    color: Colors.grey[400],
+                                    size: 16,
+                                  ),
                                   onPressed: onClearSearch,
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(),
@@ -103,11 +124,14 @@ class ProductSearchWidget extends StatelessWidget {
                   context: context,
                   image: "assets/images/sort_descending.png",
                   tooltip: 'Sort',
-                  hasActiveFilters: selectedSortOption != null, // Show active state when sort is selected
+                  hasActiveFilters:
+                      selectedSortOption !=
+                      null, // Show active state when sort is selected
                   dropdownBuilder:
                       (BuildContext context) => SortDropdownContent(
                         selectedSortOption: selectedSortOption,
-                        onSortOptionChanged: onSortOptionChanged ?? (SortOption? option) {},
+                        onSortOptionChanged:
+                            onSortOptionChanged ?? (SortOption? option) {},
                       ),
                 ),
 
@@ -267,20 +291,25 @@ class ProductSearchWidget extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 12),
               itemCount: chips.length,
-              separatorBuilder: (BuildContext context, int index) => const SizedBox(width: 8),
+              separatorBuilder:
+                  (BuildContext context, int index) => const SizedBox(width: 8),
               itemBuilder: (BuildContext context, int index) => chips[index],
             ),
           ),
 
           /// Clear all button
           /// Only show if there are active filters and product type is speaker
-          if (chips.isNotEmpty && selectedProductTypes.contains(ProductType.speaker))
+          if (chips.isNotEmpty &&
+              selectedProductTypes.contains(ProductType.speaker))
             Container(
               padding: const EdgeInsets.only(right: 12),
               child: TextButton(
                 onPressed: _clearAllFilters,
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 4,
+                  ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),

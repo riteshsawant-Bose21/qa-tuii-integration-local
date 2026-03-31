@@ -37,6 +37,9 @@ const (
 	ClusterNTPSkewEndpoint                     = ClusterEndpoint + "/ntp-skew"
 	ClusterStatusEndpoint                      = ClusterEndpoint + "/status"
 
+	ClusterRebootEndpoint      = ClusterEndpoint + "/reboot"
+	ClusterRebootLocalEndpoint = ClusterRebootEndpoint
+
 	ControllersEndpoint       = "/controllers"
 	ControllersIDEndpoint     = ControllersEndpoint + "/{id}"
 	ControllersIDWinkEndpoint = ControllersEndpoint + "/wink" + "/{id}"
@@ -46,12 +49,17 @@ const (
 	DeviceReloadVIPEndpoint = DeviceReloadEndpoint + "/vip"
 	DeviceIDEndpoint        = DeviceEndpoint + "/{id}"
 
-	DevicesEndpoint       = "/devices"
-	DevicesIDEndpoint     = DevicesEndpoint + "/{id}"
-	DevicesVIPEndpoint    = DevicesEndpoint + "/vip"
-	DevicesSetVIPEndpoint = DevicesVIPEndpoint + "/{vip}"
-
-	EndpointsEndpoint = "/endpoints"
+	DevicesEndpoint                = "/devices"
+	DevicesIDEndpoint              = DevicesEndpoint + "/{id}"
+	DevicesVIPEndpoint             = DevicesEndpoint + "/vip"
+	DevicesSetVIPEndpoint          = DevicesVIPEndpoint + "/{vip}"
+	DevicesGetCSREndpoint          = DevicesIDEndpoint + "/csr"
+	DevicesGetCSRForDeviceEndpoint = DevicesEndpoint + "/csr"
+	DevicesIDCertificateEndpoint   = DevicesIDEndpoint + "/certificate"
+	DevicesCertificateEndpoint     = DevicesEndpoint + "/certificate"
+	DevicesIDResetEndpoint         = DevicesIDEndpoint + "/reset"
+	DevicesResetEndpoint           = DevicesEndpoint + "/reset"
+	EndpointsEndpoint              = "/endpoints"
 
 	HealthEndpoint = "/health"
 
@@ -125,6 +133,10 @@ func RegisterPublicEndpoint(router *mux.Router, method string, pattern string, h
 	RegisterEndpoint(router, method, pattern, handler, true)
 }
 
+func RegisterPrivateDELETE(router *mux.Router, pattern string, handler http.HandlerFunc) {
+	RegisterPrivateEndpoint(router, "DELETE", pattern, handler)
+}
+
 func RegisterPublicDELETE(router *mux.Router, pattern string, handler http.HandlerFunc) {
 	RegisterPublicEndpoint(router, "DELETE", pattern, handler)
 }
@@ -158,6 +170,10 @@ func RegisterEndpoint(router *mux.Router, method string, pattern string, handler
 }
 
 func ListRegisteredEndpoints(w http.ResponseWriter, r *http.Request) {
+	type routesResponse struct {
+		Routes []string `json:"routes"`
+	}
+
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(map[string]any{"routes": Endpoints})
+	json.NewEncoder(w).Encode(routesResponse{Routes: Endpoints})
 }

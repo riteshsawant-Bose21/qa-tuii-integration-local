@@ -17,3 +17,11 @@ linters:
         linters:
           - errcheck
           - gosec
+      - path: internal/fusion/product/validation/field_validator\.go
+        linters:
+          - staticcheck
+        text: QF1012
+      - path: internal/environment/constants\.go
+        linters:
+          - gosec
+        text: G101

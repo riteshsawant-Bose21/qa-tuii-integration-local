@@ -54,7 +54,11 @@ class _CalenderViewState extends State<CalenderView> {
   HoveredEventInfo? _hoveredEventInfo;
   void onHover(CalendarEvent event, Offset position, Size size) {
     setState(() {
-      _hoveredEventInfo = HoveredEventInfo(event: event, position: position, size: size);
+      _hoveredEventInfo = HoveredEventInfo(
+        event: event,
+        position: position,
+        size: size,
+      );
     });
   }
 
@@ -67,7 +71,10 @@ class _CalenderViewState extends State<CalenderView> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final int daysInMonth = DateUtils.getDaysInMonth(widget.viewingMonth.year, widget.viewingMonth.month);
+    final int daysInMonth = DateUtils.getDaysInMonth(
+      widget.viewingMonth.year,
+      widget.viewingMonth.month,
+    );
     const double hourLabelWidth = 100;
     const double dayLabelHeight = 50;
     const double dayWidth = 100;
@@ -103,28 +110,55 @@ class _CalenderViewState extends State<CalenderView> {
                     ),
                     // Events
                     ...widget.events.map((CalendarEvent event) {
-                      final double top = dayLabelHeight + (event.startTime.hour * hourHeight) + (event.startTime.minute / 60 * hourHeight);
-                      final double left = hourLabelWidth + (event.startTime.day - 1) * dayWidth;
+                      final double top =
+                          dayLabelHeight +
+                          (event.startTime.hour * hourHeight) +
+                          (event.startTime.minute / 60 * hourHeight);
+                      final double left =
+                          hourLabelWidth + (event.startTime.day - 1) * dayWidth;
 
                       final List<CalendarEvent> todaysEvents =
-                          widget.eventsByDate[DateTime(event.startTime.year, event.startTime.month, event.startTime.day)] ?? <CalendarEvent>[];
-                      final List<CalendarEvent> overlappingEvents = <CalendarEvent>[];
+                          widget.eventsByDate[DateTime(
+                            event.startTime.year,
+                            event.startTime.month,
+                            event.startTime.day,
+                          )] ??
+                          <CalendarEvent>[];
+                      final List<CalendarEvent> overlappingEvents =
+                          <CalendarEvent>[];
                       for (final CalendarEvent otherEvent in todaysEvents) {
                         final DateTime eventStartTime = event.startTime;
                         final DateTime otherStartTime = otherEvent.startTime;
-                        final DateTime eventEndTime = eventStartTime.add(const Duration(hours: 1));
-                        final DateTime otherEndTime = otherStartTime.add(const Duration(hours: 1));
+                        final DateTime eventEndTime = eventStartTime.add(
+                          const Duration(hours: 1),
+                        );
+                        final DateTime otherEndTime = otherStartTime.add(
+                          const Duration(hours: 1),
+                        );
 
-                        if (eventStartTime.isBefore(otherEndTime) && otherStartTime.isBefore(eventEndTime)) {
+                        if (eventStartTime.isBefore(otherEndTime) &&
+                            otherStartTime.isBefore(eventEndTime)) {
                           overlappingEvents.add(otherEvent);
                         }
                       }
-                      overlappingEvents.sort((CalendarEvent a, CalendarEvent b) => a.startTime.compareTo(b.startTime));
-                      final int currentEventPosition = overlappingEvents.indexOf(event);
+                      overlappingEvents.sort(
+                        (CalendarEvent a, CalendarEvent b) =>
+                            a.startTime.compareTo(b.startTime),
+                      );
+                      final int currentEventPosition = overlappingEvents
+                          .indexOf(event);
 
-                      final double perEventWidth = (dayWidth * 0.95) / (overlappingEvents.isEmpty ? 1 : overlappingEvents.length);
-                      final double left2 = left + (currentEventPosition * perEventWidth);
-                      final double clamp = perEventWidth.clamp(dayWidth * 0.1, dayWidth);
+                      final double perEventWidth =
+                          (dayWidth * 0.95) /
+                          (overlappingEvents.isEmpty
+                              ? 1
+                              : overlappingEvents.length);
+                      final double left2 =
+                          left + (currentEventPosition * perEventWidth);
+                      final double clamp = perEventWidth.clamp(
+                        dayWidth * 0.1,
+                        dayWidth,
+                      );
                       return Positioned(
                         top: top,
                         left: left2,
@@ -138,7 +172,11 @@ class _CalenderViewState extends State<CalenderView> {
                           },
                           child: InkWell(
                             onTap: () {
-                              onHover(event, Offset(left2, top), Size(clamp, hourHeight));
+                              onHover(
+                                event,
+                                Offset(left2, top),
+                                Size(clamp, hourHeight),
+                              );
                               // SchedulerForm.show(context, context.read<SchedulerViewmodel>(), initial: event.schedule);
                             },
                             child: Container(
@@ -147,13 +185,17 @@ class _CalenderViewState extends State<CalenderView> {
                                 // borderRadius: BorderRadius.circular(10),
                                 border: Border(
                                   top: BorderSide(
-                                    color: ColorUtils.hexToColor(event.schedule.colorHex),
+                                    color: ColorUtils.hexToColor(
+                                      event.schedule.colorHex,
+                                    ),
                                     width: 5,
                                   ),
                                 ),
                               ),
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8.0,
+                                ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   spacing: 5,
@@ -165,10 +207,13 @@ class _CalenderViewState extends State<CalenderView> {
                                       textAlign: TextAlign.start,
                                     ),
                                     FusionAppText(
-                                      text: "At ${DateFormat('hh:mm a').format(event.startTime)}",
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        color: context.colorScheme.elevation5,
-                                      ),
+                                      text:
+                                          "At ${DateFormat('hh:mm a').format(event.startTime)}",
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color:
+                                                context.colorScheme.elevation5,
+                                          ),
                                       textAlign: TextAlign.start,
                                       maxLine: 1,
                                     ),
@@ -197,7 +242,10 @@ class _CalenderViewState extends State<CalenderView> {
                       ),
                       Positioned(
                         top: _hoveredEventInfo!.position.dy,
-                        left: _hoveredEventInfo!.position.dx + _hoveredEventInfo!.size.width + 10,
+                        left:
+                            _hoveredEventInfo!.position.dx +
+                            _hoveredEventInfo!.size.width +
+                            10,
                         child: Container(
                           padding: const EdgeInsets.all(8.0),
                           decoration: BoxDecoration(
@@ -205,7 +253,9 @@ class _CalenderViewState extends State<CalenderView> {
                             borderRadius: BorderRadius.circular(8),
                             border: Border(
                               left: BorderSide(
-                                color: ColorUtils.hexToColor(_hoveredEventInfo!.event.schedule.colorHex),
+                                color: ColorUtils.hexToColor(
+                                  _hoveredEventInfo!.event.schedule.colorHex,
+                                ),
                                 width: 5,
                               ),
                             ),
@@ -224,15 +274,19 @@ class _CalenderViewState extends State<CalenderView> {
                             children: <Widget>[
                               FusionAppText(
                                 text: _hoveredEventInfo?.event.title ?? "----",
-                                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                               const SizedBox(height: 4),
                               FusionAppText(
-                                text: "Scheduled at ${DateFormat('dd MMM yyyy, hh:mm a').format(_hoveredEventInfo?.event.startTime ?? DateTime.now())}",
+                                text:
+                                    "Scheduled at ${DateFormat('dd MMM yyyy, hh:mm a').format(_hoveredEventInfo?.event.startTime ?? DateTime.now())}",
                                 style: theme.textTheme.bodySmall,
                               ),
 
                               FusionTextButton(
+                                accessLabel: 'timeline_section_edit_button',
                                 label: "",
                                 foregroundColor: context.colorScheme.iconWhite,
                                 prefixIcon: Icons.edit,
@@ -240,7 +294,11 @@ class _CalenderViewState extends State<CalenderView> {
                                 width: 50,
                                 height: 25,
                                 onTap: () {
-                                  SchedulerForm.show(context, context.read<SchedulerViewmodel>(), initial: _hoveredEventInfo?.event.schedule);
+                                  SchedulerForm.show(
+                                    context,
+                                    context.read<SchedulerViewmodel>(),
+                                    initial: _hoveredEventInfo?.event.schedule,
+                                  );
                                 },
                               ),
                             ],
@@ -268,7 +326,12 @@ class _CalenderViewState extends State<CalenderView> {
                 for (int i = 1; i <= daysInMonth; i++)
                   Positioned(
                     top: 0,
-                    left: hourLabelWidth + ((i - 1) * dayWidth) - (_horizontalController.hasClients ? _horizontalController.offset : 0),
+                    left:
+                        hourLabelWidth +
+                        ((i - 1) * dayWidth) -
+                        (_horizontalController.hasClients
+                            ? _horizontalController.offset
+                            : 0),
                     child: Container(
                       alignment: Alignment.center,
                       // padding: EdgeInsets.only(top: 17),
@@ -277,8 +340,14 @@ class _CalenderViewState extends State<CalenderView> {
                       decoration: BoxDecoration(
                         // color: Colors.red,
                         border: Border(
-                          right: BorderSide(color: context.colorScheme.elevation4, width: 0.5),
-                          left: BorderSide(color: context.colorScheme.elevation4, width: 0.5),
+                          right: BorderSide(
+                            color: context.colorScheme.elevation4,
+                            width: 0.5,
+                          ),
+                          left: BorderSide(
+                            color: context.colorScheme.elevation4,
+                            width: 0.5,
+                          ),
                         ),
                       ),
                       child: Text(
@@ -304,14 +373,22 @@ class _CalenderViewState extends State<CalenderView> {
               children: <Widget>[
                 for (int i = 0; i < 24; i++)
                   Positioned(
-                    top: dayLabelHeight + (i * hourHeight) - (_verticalController.hasClients ? _verticalController.offset : 0),
+                    top:
+                        dayLabelHeight +
+                        (i * hourHeight) -
+                        (_verticalController.hasClients
+                            ? _verticalController.offset
+                            : 0),
                     left: 0,
                     height: hourHeight,
                     width: hourLabelWidth,
                     child: Container(
                       decoration: BoxDecoration(
                         border: Border.symmetric(
-                          horizontal: BorderSide(color: context.colorScheme.elevation4, width: 0.5),
+                          horizontal: BorderSide(
+                            color: context.colorScheme.elevation4,
+                            width: 0.5,
+                          ),
                         ),
                       ),
                       child: Center(
@@ -335,8 +412,14 @@ class _CalenderViewState extends State<CalenderView> {
             decoration: BoxDecoration(
               color: theme.colorScheme.elevation1,
               border: Border(
-                right: BorderSide(color: context.colorScheme.elevation4, width: 0.5),
-                bottom: BorderSide(color: context.colorScheme.elevation4, width: 0.5),
+                right: BorderSide(
+                  color: context.colorScheme.elevation4,
+                  width: 0.5,
+                ),
+                bottom: BorderSide(
+                  color: context.colorScheme.elevation4,
+                  width: 0.5,
+                ),
               ),
             ),
           ),

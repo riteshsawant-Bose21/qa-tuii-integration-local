@@ -35,6 +35,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/firmware"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
@@ -52,6 +53,8 @@ import (
 	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
 
+	firmwaredb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/firmware/db"
+
 	authZero "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/auth/authzero"
 )
 
@@ -63,12 +66,20 @@ func main() {
 	envName := flag.String("e", "local", "application environment (e.g. local, dev, staging, prod)")
 	flag.Parse()
 
+	// Check for environment variable first, then fallback to command line flag
+	actualEnvName := *envName
+	if envFromVar := os.Getenv("FUSION_ENVIRONMENT"); envFromVar != "" {
+		actualEnvName = envFromVar
+	}
+
 	env := environment.New(environment.DefaultLoadLookuper)
 
-	fmt.Println("Loading environment file", *envFile)
-	if *envName == "local" {
+	fmt.Printf("Running in %s environment\n", actualEnvName)
+
+	if actualEnvName == "local" {
 		if err := env.Load(*envFile); err != nil {
-			fmt.Println("error loading environment vars", zap.String("file", *envName), zap.Error(err))
+			fmt.Printf("Error loading environment file %s: %v\n", *envFile, err)
+			os.Exit(1)
 		}
 	}
 
@@ -201,6 +212,20 @@ func main() {
 	}
 	loggers.AppLogger.Info("Initialized Auth Service.")
 
+	// initiate firmware service
+	firmwareDBSvc := firmwaredb.NewService(pgs)
+	if firmwareDBSvc == nil {
+		loggers.AppLogger.Fatal("Failed to initialize firmware service")
+	}
+	loggers.AppLogger.Info("Initialized Firmware DB Service.")
+
+	// Initialize Firmware Service
+	firmwareSVC := firmware.NewService(firmwareDBSvc, s3Handler.Bucket(cfg.S3.FirmwareBundleBucket))
+	if firmwareSVC == nil {
+		loggers.AppLogger.Fatal("Failed to initialize firmware service")
+	}
+	loggers.AppLogger.Info("Initialized Firmware Service.")
+
 	// Initialize Auth middleware using Auth service (consolidates all authentication functionality)
 	authMiddleware := middleware.NewAuth0Middleware(authSVC)
 	loggers.AppLogger.Info("Initialized Auth0 middleware")
@@ -209,7 +234,7 @@ func main() {
 	server, err := api.New(&api.Config{
 		Host: cfg.Server.APIHost,
 		Port: cfg.Server.APIPort,
-	}, productSVC, projectSVC, userSVC, organizationSVC, authSVC, authMiddleware, loggers)
+	}, productSVC, projectSVC, userSVC, organizationSVC, authSVC, firmwareSVC, authMiddleware, loggers)
 	if err != nil {
 		loggers.AppLogger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}

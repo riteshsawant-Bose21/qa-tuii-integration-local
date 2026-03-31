@@ -172,7 +172,7 @@ func (a *Auth0Validator) fetchJWKS() (*JWKS, error) {
 	}
 
 	defer func() {
-		if err :=resp.Body.Close(); err != nil {
+		if err := resp.Body.Close(); err != nil {
 			_ = err
 		}
 	}()
