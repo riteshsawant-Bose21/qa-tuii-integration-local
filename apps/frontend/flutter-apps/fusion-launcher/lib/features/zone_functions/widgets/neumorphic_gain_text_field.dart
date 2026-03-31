@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'
-    show TextInputFormatter, FilteringTextInputFormatter;
+import 'package:flutter/services.dart' show TextInputFormatter, FilteringTextInputFormatter;
 import 'package:fusion_lib/fusion_lib.dart';
 
 class NeumorphicGainTextField extends StatefulWidget {
@@ -34,8 +33,7 @@ class NeumorphicGainTextField extends StatefulWidget {
   });
 
   @override
-  State<NeumorphicGainTextField> createState() =>
-      _NeumorphicGainTextFieldState();
+  State<NeumorphicGainTextField> createState() => _NeumorphicGainTextFieldState();
 }
 
 class _NeumorphicGainTextFieldState extends State<NeumorphicGainTextField> {
@@ -47,8 +45,7 @@ class _NeumorphicGainTextFieldState extends State<NeumorphicGainTextField> {
   @override
   void initState() {
     super.initState();
-    if (widget.controllerValue != null)
-      controller.text = widget.controllerValue!.toString();
+    if (widget.controllerValue != null) controller.text = widget.controllerValue!.toString();
     _focusNode = FocusNode();
     _focusNode.addListener(() {
       setState(() {
@@ -107,10 +104,7 @@ class _NeumorphicGainTextFieldState extends State<NeumorphicGainTextField> {
             textAlign: TextAlign.center,
             focusNode: _focusNode,
             style: Theme.of(context).textTheme.labelLarge,
-            mouseCursor:
-                widget.enabled
-                    ? SystemMouseCursors.text
-                    : SystemMouseCursors.forbidden,
+            mouseCursor: widget.enabled ? SystemMouseCursors.text : SystemMouseCursors.forbidden,
             inputFormatters: <TextInputFormatter>[
               FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}$')),
             ],
@@ -131,34 +125,37 @@ class _NeumorphicGainTextFieldState extends State<NeumorphicGainTextField> {
                 0,
               ).copyWith(right: hasValue && widget.showDbSuffix ? 6 : 0),
             ),
-            onSubmitted: (String value) {
-              final double? gain = double.tryParse(value);
-
-              if (gain != null) {
-                if (gain > widget.maxGain) {
-                  if (widget.controllerValue != null)
-                    controller.text = widget.controllerValue.toString();
-
-                  return FusionToast.error(
-                    context,
-                    message: "Gain cannot be greater than ${widget.maxGain}db",
-                  );
-                } else if (gain < widget.minGain) {
-                  if (widget.controllerValue != null)
-                    controller.text = widget.controllerValue.toString();
-                  return FusionToast.error(
-                    context,
-                    message: "Gain cannot be less than ${widget.minGain}db",
-                  );
-                } else {
-                  widget.onSubmitted?.call(gain);
-                }
-              }
+            onSubmitted: submit,
+            onTapOutside: (PointerDownEvent event) {
+              submit(controller.text);
             },
           ),
         ),
       ),
     );
+  }
+
+  void submit(String value) {
+    final double? gain = double.tryParse(value);
+
+    if (gain != null) {
+      if (gain > widget.maxGain) {
+        if (widget.controllerValue != null) controller.text = widget.controllerValue.toString();
+
+        return FusionToast.error(
+          context,
+          message: "Gain cannot be greater than ${widget.maxGain}db",
+        );
+      } else if (gain < widget.minGain) {
+        if (widget.controllerValue != null) controller.text = widget.controllerValue.toString();
+        return FusionToast.error(
+          context,
+          message: "Gain cannot be less than ${widget.minGain}db",
+        );
+      } else {
+        widget.onSubmitted?.call(gain);
+      }
+    }
   }
 }
 
@@ -199,8 +196,7 @@ class _UnitNumberTextFieldState extends State<UnitNumberTextField> {
   @override
   void initState() {
     super.initState();
-    if (widget.controllerValue != null)
-      controller.text = widget.controllerValue!.toString();
+    if (widget.controllerValue != null) controller.text = widget.controllerValue!.toString();
     _focusNode = FocusNode();
     _focusNode.addListener(() {
       setState(() {
@@ -253,10 +249,7 @@ class _UnitNumberTextFieldState extends State<UnitNumberTextField> {
           borderRadius: widget.borderRadius,
           child: TextField(
             enabled: widget.enabled,
-            mouseCursor:
-                widget.enabled
-                    ? SystemMouseCursors.text
-                    : SystemMouseCursors.forbidden,
+            mouseCursor: widget.enabled ? SystemMouseCursors.text : SystemMouseCursors.forbidden,
             controller: controller,
             textAlign: TextAlign.center,
             focusNode: _focusNode,
@@ -286,21 +279,17 @@ class _UnitNumberTextFieldState extends State<UnitNumberTextField> {
 
               if (gain != null) {
                 if (widget.max != null && gain > widget.max!) {
-                  if (widget.controllerValue != null)
-                    controller.text = widget.controllerValue.toString();
+                  if (widget.controllerValue != null) controller.text = widget.controllerValue.toString();
 
                   return FusionToast.error(
                     context,
-                    message:
-                        "Value cannot be greater than ${widget.max}${widget.unit}",
+                    message: "Value cannot be greater than ${widget.max}${widget.unit}",
                   );
                 } else if (widget.min != null && gain < widget.min!) {
-                  if (widget.controllerValue != null)
-                    controller.text = widget.controllerValue.toString();
+                  if (widget.controllerValue != null) controller.text = widget.controllerValue.toString();
                   return FusionToast.error(
                     context,
-                    message:
-                        "Value cannot be less than ${widget.min}${widget.unit}",
+                    message: "Value cannot be less than ${widget.min}${widget.unit}",
                   );
                 } else {
                   widget.onSubmitted?.call(gain);
