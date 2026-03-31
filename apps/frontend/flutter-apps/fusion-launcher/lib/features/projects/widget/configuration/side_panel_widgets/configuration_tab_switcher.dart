@@ -57,6 +57,11 @@ class _ConfigurationTabSwitcherState extends State<ConfigurationTabSwitcher> {
       label: 'Media Files',
       semantic: 'Media Files',
     ),
+    ConfigurationMenuMode.controllers: TabConfig(
+      assetsName: Assets.processingIcon,
+      label: 'Controllers',
+      semantic: 'Controllers',
+    ),
   };
 
   @override

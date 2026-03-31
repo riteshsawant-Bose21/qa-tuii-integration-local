@@ -13,6 +13,7 @@ import '../../../core/service_locator.dart';
 import '../../authentication/viewmodel/session_view_model.dart';
 import '../../commission/presentation/pages/network_config_trigger_page.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../configuration_control/widgets/configuration_control_page.dart';
 import '../../configuration_events/widgets/configuration_events.dart';
 import '../../configuration_page/pages/configuration_processing_page.dart';
 import '../../configuration_snapshot/widgets/configuration_snapshots.dart';
@@ -146,6 +147,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
               create: (_) => MediaFilesViewModel(),
               child: const ConfigurationMediaFilesPage(),
             ),
+
+            ConfigurationMenuMode.controllers => const ConfigurationControlPage(),
           };
         },
       ),

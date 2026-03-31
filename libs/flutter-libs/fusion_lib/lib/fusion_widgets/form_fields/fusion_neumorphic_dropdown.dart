@@ -19,6 +19,8 @@ class FusionNeumorphicDropdown<T> extends StatefulWidget {
     this.borderRadius,
     this.child,
     this.popupOffset = const Offset(-1, 6),
+    this.isItemEnabled,
+    this.itemPadding,
   });
 
   final String? displayValue;
@@ -37,6 +39,8 @@ class FusionNeumorphicDropdown<T> extends StatefulWidget {
   final Widget Function(BuildContext, T)? itemBuilder;
   final Widget Function(BuildContext, T, bool isSelected)? itemBuilderWithSelection;
   final Widget? child;
+  final bool Function(T)? isItemEnabled;
+  final EdgeInsets? itemPadding;
 
   @override
   State<FusionNeumorphicDropdown<T>> createState() => _FusionNeumorphicDropdownState<T>();
@@ -97,6 +101,8 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
       onSelected: _handleChange,
       popupOffset: widget.popupOffset,
       matchChildWidth: widget.matchChildWidth,
+      isItemEnabled: widget.isItemEnabled,
+      itemPadding: widget.itemPadding,
       itemBuilder: (context, item) {
         final bool isSelected = item == _selectedValue;
         if (widget.itemBuilderWithSelection != null) {
@@ -132,22 +138,22 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
           ),
         );
       },
-      child:
-          widget.child ??
-          Container(
-            key: ValueKey(_selectedValue ?? widget.displayValue),
-            width: widget.width,
-            height: widget.height,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: context.colorScheme.elevation1,
-              borderRadius: widget.borderRadius ?? BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(color: context.colorScheme.elevation2, blurRadius: 1, offset: const Offset(-2, -3)),
-                BoxShadow(color: context.colorScheme.black, blurRadius: 1, offset: const Offset(2, 3)),
-              ],
-            ),
-            child: Center(
+      child: Container(
+        key: ValueKey(_selectedValue ?? widget.displayValue),
+        width: widget.width,
+        height: widget.height,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: context.colorScheme.elevation1,
+          borderRadius: widget.borderRadius ?? BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(color: context.colorScheme.elevation2, blurRadius: 1, offset: const Offset(-2, -3)),
+            BoxShadow(color: context.colorScheme.black, blurRadius: 1, offset: const Offset(2, 3)),
+          ],
+        ),
+        child:
+            widget.child ??
+            Center(
               child: Row(
                 children: [
                   Expanded(
@@ -170,7 +176,7 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
                 ],
               ),
             ),
-          ),
+      ),
     );
   }
 }
