@@ -736,6 +736,20 @@ bool WaitForReadyAck()
         []() { return g_protocolStop || g_readyAckReceived; }) && g_readyAckReceived;
 }
 
+bool checkForZoneEndNack()
+{
+    std::unique_lock<std::mutex> lock(g_protocolMutex);
+    bool nackStatus = false;
+
+    if (g_zoneEndWaitResult == ZoneEndWaitResult::nack)
+    {
+        g_zoneEndWaitResult = ZoneEndWaitResult::none;
+        nackStatus = true;
+    }
+
+    return nackStatus;
+}
+
 ZoneEndWaitResult WaitForZoneEndResult()
 {
     std::unique_lock<std::mutex> lock(g_protocolMutex);
@@ -791,6 +805,12 @@ bool PerformInitializationCycle(Json::Value &deviceSnapshot,
         if (!SendJsonPacket(packet))
         {
             spdlog::warn("[Protocol] Failed to send zone packet for '{}'", zoneConfig.zoneName);
+            return false;
+        }
+
+        if (checkForZoneEndNack())
+        {
+            // zoneEndNack received, restart
             return false;
         }
     }
