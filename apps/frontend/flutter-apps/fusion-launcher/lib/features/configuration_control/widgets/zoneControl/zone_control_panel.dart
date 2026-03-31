@@ -32,6 +32,7 @@ class ZoneControlPanel extends StatelessWidget {
                   subZonesInZones: state.subZonesInZones,
                   selectedZoneIds: state.selectedZoneIds,
                   selectedZoneId: state.selectedZoneId,
+                  isProController: state.isProController,
                 ),
               ),
               const SizedBox(width: 16),

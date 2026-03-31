@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 
-/// Card widget displaying a single controller with its zones
+/// Card widget displaying a single controller with its location
 class ControllerCard extends StatelessWidget {
   final FusionController controller;
   final bool isSelected;
-  final List<Zone> zones;
-  final Map<String, List<SubZone>> subZonesInZones;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
 
@@ -15,23 +15,25 @@ class ControllerCard extends StatelessWidget {
     super.key,
     required this.controller,
     this.isSelected = false,
-    this.zones = const <Zone>[],
-    this.subZonesInZones = const <String, List<SubZone>>{},
     this.onTap,
     this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
+    final ConfigurationControlViewmodel viewModel = context.read<ConfigurationControlViewmodel>();
+    final String locationName = viewModel.getControllerLocation(controller);
+    final Zone? zone = viewModel.getZoneForController(controller);
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isSelected ? context.colorScheme.elevation2 : context.colorScheme.elevation1,
+          color: isSelected ? context.colorScheme.elevation3 : context.colorScheme.elevation1,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? context.colorScheme.primary : context.colorScheme.elevation2,
+            color: isSelected ? context.colorScheme.strokeDark : context.colorScheme.strokeLight,
             width: 1,
           ),
         ),
@@ -54,8 +56,8 @@ class ControllerCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
 
-            /// Zones list
-            ..._buildZonesList(context),
+            /// Location display
+            _buildLocationDisplay(context, locationName, zone),
           ],
         ),
       ),
@@ -92,16 +94,14 @@ class ControllerCard extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildZonesList(BuildContext context) {
-    // Show zones associated with this controller
-    // For now, showing a few sample zones from the project
-    final List<Zone> displayZones = zones.take(3).toList();
+  Widget _buildLocationDisplay(BuildContext context, String locationName, Zone? zone) {
+    final bool hasLocation = locationName != '--';
 
-    return displayZones.map((Zone zone) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Row(
-          children: <Widget>[
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: <Widget>[
+          if (zone != null) ...<Widget>[
             Container(
               width: 8,
               height: 8,
@@ -111,18 +111,26 @@ class ControllerCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Expanded(
-              child: FusionAppText(
-                text: zone.name,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: context.colorScheme.textSecondary,
-                  fontSize: 11,
-                ),
+          ] else if (hasLocation) ...<Widget>[
+            Icon(
+              Icons.location_on_outlined,
+              size: 12,
+              color: context.colorScheme.textSecondary,
+            ),
+            const SizedBox(width: 6),
+          ],
+          Expanded(
+            child: FusionAppText(
+              text: locationName,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: hasLocation ? context.colorScheme.textSecondary : context.colorScheme.textPlaceholder,
+                fontSize: 11,
+                fontStyle: hasLocation ? FontStyle.normal : FontStyle.italic,
               ),
             ),
-          ],
-        ),
-      );
-    }).toList();
+          ),
+        ],
+      ),
+    );
   }
 }

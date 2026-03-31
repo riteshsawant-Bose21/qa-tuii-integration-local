@@ -61,16 +61,16 @@ class _ConfigurationControlBody extends StatelessWidget {
   }
 
   Widget _buildLoadedState(BuildContext context, ConfigControlLoaded state) {
-    return const Row(
+    return Row(
       children: <Widget>[
         /// Controllers sidebar
         SizedBox(
-          width: 200,
-          child: ControllersSidebar(),
+          width: MediaQuery.of(context).size.width * 0.17,
+          child: const ControllersSidebar(),
         ),
 
         /// Main content panel
-        Expanded(
+        const Expanded(
           child: ControlContentPanel(),
         ),
       ],

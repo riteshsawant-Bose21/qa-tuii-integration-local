@@ -136,6 +136,15 @@ class ConfigControlLoaded extends ConfigurationControlState {
     }
   }
 
+  /// Check if the selected controller is a Pro type
+  bool get isProController {
+    final FusionController? controller = selectedController;
+    if (controller == null) return false;
+    final String sku = controller.sku.toLowerCase();
+    final String name = controller.name.toLowerCase();
+    return sku.contains('pro') || name.contains('pro');
+  }
+
   /// Get zones associated with the selected controller
   List<Zone> get controllerZones {
     // For now, return all zones. In future, this can be filtered based on controller-zone mapping

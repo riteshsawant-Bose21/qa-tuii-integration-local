@@ -51,22 +51,21 @@ class ControlTabBar extends StatelessWidget {
     );
   }
 
+  /// Check if the controller is a Pro type
+  bool _isProController(FusionController? controller) {
+    if (controller == null) return false;
+    final String sku = controller.sku.toLowerCase();
+    final String name = controller.name.toLowerCase();
+    return sku.contains('pro') || name.contains('pro');
+  }
+
   List<ConfigControlTab> _getTabsForController(FusionController? controller) {
-    // Different controllers may have different tabs
-    // For ControlPal Pro, show all tabs
-    // For ControlPal LT, show limited tabs
-    if (controller == null) {
-      return <ConfigControlTab>[ConfigControlTab.zoneControl, ConfigControlTab.settings];
-    }
-
-    // Check if it's a Pro controller (has more features)
-    final bool isPro = controller.name.toLowerCase().contains('pro');
-
-    if (isPro) {
+    // If controller is Pro type, show all tabs
+    if (_isProController(controller)) {
       return ConfigControlTab.values;
     }
 
-    // For LT or basic controllers
+    // For LT or basic controllers, show limited tabs
     return <ConfigControlTab>[
       ConfigControlTab.zoneControl,
       ConfigControlTab.settings,
@@ -115,7 +114,7 @@ class _TabItem extends StatelessWidget {
       case ConfigControlTab.zoneControl:
         return 'Zone Control';
       case ConfigControlTab.snapshotsScenes:
-        return 'Snapshots/Scenes';
+        return 'Snapshot / Scene Set';
       case ConfigControlTab.schedule:
         return 'Schedule';
       case ConfigControlTab.message:

@@ -19,7 +19,6 @@ class ControllersSidebarHeader extends StatelessWidget {
         color: context.colorScheme.elevation1,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(12),
-          topRight: Radius.circular(12),
         ),
         border: Border.all(
           width: 1,

@@ -214,9 +214,18 @@ class AddControllerCubit extends Cubit<AddControllerState> {
     final String assetImagePath = _getAssetImagePath();
     final double price = _getPrice();
 
+    // Set locationEntity based on location type
+    LocationModel? locationEntity;
+    if (state.locationType == LocationType.zone) {
+      // Use subzone ID if selected, otherwise use zone ID
+      final String? listeningAreaId = state.selectedSubZoneId ?? state.selectedZoneId;
+      locationEntity = LocationModel(listeningAreaId: listeningAreaId);
+    }
+
     return FusionController(
       name: state.name.trim().isEmpty ? 'Untitled Controller' : state.name.trim(),
       assetImagePath: assetImagePath,
+      locationEntity: locationEntity,
       price: price,
       sku: state.controllerType?.displayName ?? 'Controller',
       addedFromBuildingPage: false,

@@ -7,6 +7,7 @@ class ZoneItemWidget extends StatefulWidget {
   final List<SubZone> subZones;
   final bool isSelected;
   final bool isActiveZone;
+  final bool isProController;
   final VoidCallback? onToggleSelection;
   final VoidCallback? onSelectZone;
 
@@ -16,6 +17,7 @@ class ZoneItemWidget extends StatefulWidget {
     this.subZones = const <SubZone>[],
     this.isSelected = false,
     this.isActiveZone = false,
+    this.isProController = false,
     this.onToggleSelection,
     this.onSelectZone,
   });
@@ -99,34 +101,8 @@ class _ZoneItemWidgetState extends State<ZoneItemWidget> {
               ),
             ),
 
-            /// Radio button (for single selection)
-            GestureDetector(
-              onTap: widget.onSelectZone,
-              child: Container(
-                width: 18,
-                height: 18,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: widget.isActiveZone ? context.colorScheme.primary : context.colorScheme.iconDefault,
-                    width: 2,
-                  ),
-                ),
-                child:
-                    widget.isActiveZone
-                        ? Center(
-                          child: Container(
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: context.colorScheme.primary,
-                            ),
-                          ),
-                        )
-                        : null,
-              ),
-            ),
+            /// Selection control: Checkbox for Pro, Radio button for LT
+            _buildSelectionControl(context),
             const SizedBox(width: 8),
 
             /// Settings icon
@@ -144,6 +120,65 @@ class _ZoneItemWidgetState extends State<ZoneItemWidget> {
         ),
       ),
     );
+  }
+
+  /// Build the selection control based on controller type
+  Widget _buildSelectionControl(BuildContext context) {
+    if (widget.isProController) {
+      // Checkbox for Pro controllers (multi-select)
+      return GestureDetector(
+        onTap: widget.onToggleSelection,
+        child: Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(3),
+            border: Border.all(
+              color: widget.isSelected ? context.colorScheme.primary : context.colorScheme.iconDefault,
+              width: 2,
+            ),
+            color: widget.isSelected ? context.colorScheme.primary : Colors.transparent,
+          ),
+          child:
+              widget.isSelected
+                  ? Icon(
+                    Icons.check,
+                    size: 12,
+                    color: context.colorScheme.textPrimary,
+                  )
+                  : null,
+        ),
+      );
+    } else {
+      // Radio button for LT controllers (single-select)
+      return GestureDetector(
+        onTap: widget.onSelectZone,
+        child: Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: widget.isActiveZone ? context.colorScheme.primary : context.colorScheme.iconDefault,
+              width: 2,
+            ),
+          ),
+          child:
+              widget.isActiveZone
+                  ? Center(
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: context.colorScheme.primary,
+                      ),
+                    ),
+                  )
+                  : null,
+        ),
+      );
+    }
   }
 
   Widget _buildSubZoneRow(BuildContext context, SubZone subZone) {
@@ -171,7 +206,7 @@ class _ZoneItemWidgetState extends State<ZoneItemWidget> {
             ),
           ),
 
-          /// Checkbox
+          /// Checkbox for subzone
           SizedBox(
             width: 24,
             height: 24,

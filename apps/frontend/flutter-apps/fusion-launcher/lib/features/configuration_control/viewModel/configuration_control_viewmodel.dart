@@ -15,6 +15,65 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
     _loadData();
   }
 
+  /// Get location name for a controller (same pattern as device location)
+  String getControllerLocation(FusionController controller) {
+    if (controller.locationEntity.listeningAreaId != null) {
+      final String locationId = controller.locationEntity.listeningAreaId!;
+
+      // Try to get zone by ID directly
+      final Zone? zone = projectViewModel.getZone(zoneId: locationId);
+      if (zone != null) return zone.name;
+
+      // Try to get subzone by ID
+      final SubZone? subZone = projectViewModel.getSubZone(subZoneId: locationId);
+      if (subZone != null) {
+        final Zone? parentZone = projectViewModel.getZoneForSubZone(subZoneId: subZone.id);
+        return parentZone != null ? "${parentZone.name} > ${subZone.name}" : subZone.name;
+      }
+
+      // Fallback: Try the listening area lookup methods
+      final Zone? zoneFromLA = projectViewModel.getZonesForListeningArea(areaId: locationId);
+      if (zoneFromLA != null) return zoneFromLA.name;
+
+      final SubZone? subZoneFromLA = projectViewModel.getSubZoneForListeningArea(areaId: locationId);
+      if (subZoneFromLA != null) {
+        final Zone? parentZone = projectViewModel.getZoneForSubZone(subZoneId: subZoneFromLA.id);
+        return parentZone != null ? "${parentZone.name} > ${subZoneFromLA.name}" : subZoneFromLA.name;
+      }
+    }
+
+    // Check equipment location
+    final EquipLocation? equipLocation = projectViewModel.getEquipLocationForHardware(hardwareId: controller.id);
+    return equipLocation?.name ?? '--';
+  }
+
+  /// Get zone for a controller (for color display)
+  Zone? getZoneForController(FusionController controller) {
+    if (controller.locationEntity.listeningAreaId != null) {
+      final String locationId = controller.locationEntity.listeningAreaId!;
+
+      // Try to get zone by ID directly
+      final Zone? zone = projectViewModel.getZone(zoneId: locationId);
+      if (zone != null) return zone;
+
+      // Try to get subzone and return parent zone
+      final SubZone? subZone = projectViewModel.getSubZone(subZoneId: locationId);
+      if (subZone != null) {
+        return projectViewModel.getZoneForSubZone(subZoneId: subZone.id);
+      }
+
+      // Fallback: Try the listening area lookup methods
+      final Zone? zoneFromLA = projectViewModel.getZonesForListeningArea(areaId: locationId);
+      if (zoneFromLA != null) return zoneFromLA;
+
+      final SubZone? subZoneFromLA = projectViewModel.getSubZoneForListeningArea(areaId: locationId);
+      if (subZoneFromLA != null) {
+        return projectViewModel.getZoneForSubZone(subZoneId: subZoneFromLA.id);
+      }
+    }
+    return null;
+  }
+
   /// Load controllers and zones data
   void _loadData() {
     emit(const ConfigControlLoading());

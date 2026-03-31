@@ -10,6 +10,7 @@ class ZonesListPanel extends StatelessWidget {
   final Map<String, List<SubZone>> subZonesInZones;
   final Set<String> selectedZoneIds;
   final String? selectedZoneId;
+  final bool isProController;
 
   const ZonesListPanel({
     super.key,
@@ -17,6 +18,7 @@ class ZonesListPanel extends StatelessWidget {
     this.subZonesInZones = const <String, List<SubZone>>{},
     this.selectedZoneIds = const <String>{},
     this.selectedZoneId,
+    this.isProController = false,
   });
 
   @override
@@ -99,6 +101,7 @@ class ZonesListPanel extends StatelessWidget {
           subZones: subZones,
           isSelected: isSelected,
           isActiveZone: isActiveZone,
+          isProController: isProController,
           onToggleSelection: () {
             context.read<ConfigurationControlViewmodel>().toggleZoneSelection(zone.id);
           },
