@@ -1,9 +1,12 @@
 package config
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 )
 
 // CloudConfig holds the configuration settings for connecting to a cloud service.
@@ -16,6 +19,7 @@ type CloudConfig struct {
 	IoTEndpoint          string
 	IoTCommandTopic      string
 	IoTDevicePolicy      string
+	AWSConfig            aws.Config
 }
 
 // Cloud retrieves the cloud configuration from the store.
@@ -60,6 +64,12 @@ func (s *Service) Cloud() (*CloudConfig, error) {
 		return nil, fmt.Errorf("failed to get IoT device policy: %w", err)
 	}
 
+	// Load AWS configuration
+	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(region))
+	if err != nil {
+		return nil, fmt.Errorf("failed to load AWS config: %w", err)
+	}
+
 	return &CloudConfig{
 		PriceS3Bucket:        priceBucket,
 		ProductS3Bucket:      productBucket,
@@ -69,5 +79,6 @@ func (s *Service) Cloud() (*CloudConfig, error) {
 		IoTEndpoint:          iotEndpoint,
 		IoTCommandTopic:      iotCommandTopic,
 		IoTDevicePolicy:      iotDevicePolicy,
+		AWSConfig:            cfg,
 	}, nil
 }

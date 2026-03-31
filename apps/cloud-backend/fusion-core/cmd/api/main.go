@@ -147,7 +147,7 @@ func main() {
 		loggers.AppLogger.Fatal("Failed to get processing config", zap.Error(err))
 	}
 
-	s3Handler, err := cloudfs.NewS3Client(ctx, cfg.Cloud.Region)
+	s3Handler, err := cloudfs.NewS3Client(ctx, cfg.Cloud.AWSConfig)
 	if err != nil {
 		loggers.AppLogger.Fatal("Failed to initialize S3 client", zap.Error(err))
 	}
@@ -172,6 +172,7 @@ func main() {
 		loggers.AppLogger.Fatal("Failed to initialize project service")
 	}
 	loggers.AppLogger.Info("Initialized Project Service.")
+	
 	// Initialize User DB Service
 	userDBSvc := userdb.NewService(pgs)
 	if userDBSvc == nil {
@@ -218,7 +219,7 @@ func main() {
 	authMiddleware := middleware.NewAuth0Middleware(authSVC)
 	loggers.AppLogger.Info("Initialized Auth0 middleware")
 
-	iothandler, err := cloudIot.NewIoTClient(ctx, cfg.Cloud.Region, cfg.Cloud.IoTEndpoint, loggers.AppLogger)
+	iothandler, err := cloudIot.NewIoTClient(ctx, cfg.Cloud.AWSConfig, cfg.Cloud.IoTEndpoint, loggers.AppLogger)
 	if err != nil {
 		loggers.AppLogger.Fatal("Failed to initialize IoT client", zap.Error(err))
 	}

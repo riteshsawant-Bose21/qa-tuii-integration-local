@@ -29,6 +29,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user"
 	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -214,7 +215,20 @@ func (suite *BaseIntegrationSuite) setupServices() error {
 		RetryDelay:    "5s",
 	}
 
-	s3Client, err := cloudfs.NewS3Client(context.Background(), testAWSRegion)
+	// Initialize test cloud configuration
+	cloudCfg := config.CloudConfig{
+		PriceS3Bucket:   "test-price-bucket",
+		ProductS3Bucket: "test-product-bucket",
+		ProjectS3Bucket: "test-project-bucket",
+		Region:          testAWSRegion,
+		IoTEndpoint:     "test-iot-endpoint.iot." + testAWSRegion + ".amazonaws.com",
+		IoTCommandTopic: "test/commands",
+		AWSConfig: aws.Config{
+			Region: testAWSRegion,
+		},
+	}
+
+	s3Client, err := cloudfs.NewS3Client(context.Background(), cloudCfg.AWSConfig)
 	require.NoError(suite.T(), err, "Failed to create S3 client for testing")
 
 	suite.ProductSVC = product.NewService(productDBSvc, "v1", validationCfg, processingCfg, s3Client, loggers.AppLogger)
@@ -234,18 +248,8 @@ func (suite *BaseIntegrationSuite) setupServices() error {
 	suite.UserSVC = user.NewService(userDBSvc)
 	require.NotNil(suite.T(), suite.UserSVC, "Failed to initialize user service")
 
-	// Initialize test cloud configuration
-	cloudCfg := config.CloudConfig{
-		PriceS3Bucket:   "test-price-bucket",
-		ProductS3Bucket: "test-product-bucket",
-		ProjectS3Bucket: "test-project-bucket",
-		Region:          testAWSRegion,
-		IoTEndpoint:     "test-iot-endpoint.iot." + testAWSRegion + ".amazonaws.com",
-		IoTCommandTopic: "test/commands",
-	}
-
 	// Initialize IoT handler for device service
-	iotHandler, err := cloudIot.NewIoTClient(context.Background(), testAWSRegion, cloudCfg.IoTEndpoint, loggers.AppLogger)
+	iotHandler, err := cloudIot.NewIoTClient(context.Background(), cloudCfg.AWSConfig, cloudCfg.IoTEndpoint, loggers.AppLogger)
 	require.NoError(suite.T(), err, "Failed to initialize IoT client")
 
 	// Initialize Device services

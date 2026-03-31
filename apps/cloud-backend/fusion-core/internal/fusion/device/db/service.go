@@ -39,6 +39,12 @@ func (s *Service) GetDB(_ context.Context) model.DBWithTransactions {
 // GetDeviceByID retrieves a device by its serial_number field.
 // Returns nil, nil if the device is not found.
 func (s *Service) GetDeviceByID(ctx context.Context, deviceID string, logger *zap.Logger) (*models.Device, error) {
+
+	// Guard against empty deviceID to prevent unnecessary DB query
+	if deviceID == "" {
+		return nil, nil
+	}
+
 	device, err := models.Devices(models.DeviceWhere.SerialNumber.EQ(deviceID)).One(ctx, s.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

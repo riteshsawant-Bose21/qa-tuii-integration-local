@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iot"
 	"github.com/aws/aws-sdk-go-v2/service/iot/types"
 	"github.com/aws/aws-sdk-go-v2/service/iotdataplane"
@@ -32,16 +32,10 @@ type IoTClient struct {
 }
 
 // NewIoTClient creates a new instance of the IoTClient with the provided AWS region, IoT endpoint, and logger
-func NewIoTClient(ctx context.Context, region string, iotEndpoint string, logger *zap.Logger) (IoTClient, error) {
-	// Load default AWS configuration (handles authentication and region from environment variables, etc.)
-	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
-	if err != nil {
-		logger.Error("failed to load SDK config", zap.Error(err))
-		return IoTClient{}, err
-	}
+func NewIoTClient(ctx context.Context, awsConfig aws.Config, iotEndpoint string, logger *zap.Logger) (IoTClient, error) {
 
 	// Create an AWS IoT client (control plane)
-	client := iot.NewFromConfig(cfg)
+	client := iot.NewFromConfig(awsConfig)
 
 	// Ensure the IoT endpoint has the https:// prefix
 	if !strings.HasPrefix(iotEndpoint, "https://") && !strings.HasPrefix(iotEndpoint, "http://") {
@@ -49,7 +43,7 @@ func NewIoTClient(ctx context.Context, region string, iotEndpoint string, logger
 	}
 
 	// Create an AWS IoT Data Plane client (for MQTT publish)
-	dataClient := iotdataplane.NewFromConfig(cfg, func(o *iotdataplane.Options) {
+	dataClient := iotdataplane.NewFromConfig(awsConfig, func(o *iotdataplane.Options) {
 		o.BaseEndpoint = &iotEndpoint
 	})
 
