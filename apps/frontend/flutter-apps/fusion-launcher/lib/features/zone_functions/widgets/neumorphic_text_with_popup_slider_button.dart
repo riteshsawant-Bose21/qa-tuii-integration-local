@@ -26,12 +26,10 @@ class NeumorphicTextWithPopupSliderButton extends StatefulWidget {
   });
 
   @override
-  State<NeumorphicTextWithPopupSliderButton> createState() =>
-      _NeumorphicTextWithPopupSliderButtonState();
+  State<NeumorphicTextWithPopupSliderButton> createState() => _NeumorphicTextWithPopupSliderButtonState();
 }
 
-class _NeumorphicTextWithPopupSliderButtonState
-    extends State<NeumorphicTextWithPopupSliderButton> {
+class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWithPopupSliderButton> {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
@@ -44,117 +42,129 @@ class _NeumorphicTextWithPopupSliderButtonState
         alignment: Alignment.center,
         borderRadius: widget.borderRadius,
         color: context.colorScheme.elevation2,
-        child: Row(
+        child: Stack(
           children: <Widget>[
-            Expanded(
-              child: GestureDetector(
-                // onTapDown: (_) => setState(() => _isPressed = true),
-                // onTapCancel: () => setState(() => _isPressed = false),
-                onTap: widget.onTap,
-                behavior: HitTestBehavior.opaque,
-                child: SizedBox(
-                  height: widget.height ?? 32,
-                  width: widget.width ?? double.infinity,
-                  child: Center(
-                    child: FusionAppText(
-                      text: "${widget.value ?? 0.0}db",
-                      maxLine: 1,
-                      style: Theme.of(context).textTheme.labelSmall,
+            Positioned.fill(
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: GestureDetector(
+                      // onTapDown: (_) => setState(() => _isPressed = true),
+                      // onTapCancel: () => setState(() => _isPressed = false),
+                      onTap: widget.onTap,
+                      behavior: HitTestBehavior.opaque,
+                      child: SizedBox(
+                        height: widget.height ?? 32,
+                        width: widget.width ?? double.infinity,
+                        child: Center(
+                          child: FusionAppText(
+                            text: "${widget.value ?? 0.0}db",
+                            maxLine: 1,
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ),
 
-            VerticalDivider(
-              color: context.colorScheme.strokeLight,
-              thickness: 1,
-              width: 1,
-            ),
-            Theme(
-              data: Theme.of(context).copyWith(
-                popupMenuTheme: PopupMenuThemeData(
-                  color: context.colorScheme.elevation2,
-                  elevation: 0,
-                  shadowColor: Colors.transparent,
-                  surfaceTintColor: Colors.transparent,
-                ),
-                splashColor: Colors.transparent, // Disable ripple
-                highlightColor: Colors.transparent, // Disable tap highlight
-                hoverColor: Colors.transparent, // Disable hover color
-              ),
-              child: PopupMenuButton<String>(
-                color: context.colorScheme.elevation2,
-                shadowColor: Colors.transparent,
-                position: PopupMenuPosition.under,
-                tooltip: '',
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(9),
-                  side: BorderSide(
+                  VerticalDivider(
                     color: context.colorScheme.strokeLight,
+                    thickness: 1,
                     width: 1,
                   ),
-                ),
-                offset: const Offset(0, 10),
-                padding: EdgeInsets.zero,
-                menuPadding: EdgeInsets.zero,
-                clipBehavior: Clip.none,
-                elevation: 2,
-                constraints: const BoxConstraints(
-                  maxWidth: 60,
-                  maxHeight: 250,
-                ),
-                itemBuilder: (BuildContext context) {
-                  return <PopupMenuEntry<String>>[
-                    PopupMenuItem<String>(
-                      enabled: false,
-                      padding: const EdgeInsets.all(8).copyWith(right: 0),
-                      child: SizedBox(
-                        width: 60,
-                        height: 200,
-                        child: Center(
-                          child: SemanticHelper.button(
-                            testId: SemanticHelper.createTestId(
-                              SemanticTypes.button,
-                              "neumorphic_text_with_popup_slider_button",
+                  Theme(
+                    data: Theme.of(context).copyWith(
+                      popupMenuTheme: PopupMenuThemeData(
+                        color: context.colorScheme.elevation2,
+                        elevation: 0,
+                        shadowColor: Colors.transparent,
+                        surfaceTintColor: Colors.transparent,
+                      ),
+                      splashColor: Colors.transparent, // Disable ripple
+                      highlightColor: Colors.transparent, // Disable tap highlight
+                      hoverColor: Colors.transparent, // Disable hover color
+                    ),
+                    child: PopupMenuButton<String>(
+                      color: context.colorScheme.elevation2,
+                      shadowColor: Colors.transparent,
+                      position: PopupMenuPosition.under,
+                      tooltip: '',
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(9),
+                        side: BorderSide(
+                          color: context.colorScheme.strokeLight,
+                          width: 1,
+                        ),
+                      ),
+                      offset: const Offset(0, 10),
+                      padding: EdgeInsets.zero,
+                      menuPadding: EdgeInsets.zero,
+                      clipBehavior: Clip.none,
+                      elevation: 2,
+                      constraints: const BoxConstraints(
+                        maxWidth: 60,
+                        maxHeight: 250,
+                      ),
+                      itemBuilder: (BuildContext context) {
+                        return <PopupMenuEntry<String>>[
+                          PopupMenuItem<String>(
+                            enabled: false,
+                            padding: const EdgeInsets.all(8).copyWith(right: 0),
+                            child: SizedBox(
+                              width: 60,
+                              height: 200,
+                              child: Center(
+                                child: SemanticHelper.button(
+                                  testId: SemanticHelper.createTestId(
+                                    SemanticTypes.button,
+                                    "neumorphic_text_with_popup_slider_button",
+                                  ),
+                                  child: VerticalSlider(
+                                    semanticId: 'neumorphic_text_with_popup_slider_button',
+                                    value: widget.value ?? 0.0,
+                                    min: -60,
+                                    max: 12,
+                                    intervalGap: 12,
+                                    onChanged: (num value) {
+                                      widget.onChanged?.call(
+                                        value.toDouble(),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
                             ),
-                            child: VerticalSlider(
-                              semanticId:
-                                  'neumorphic_text_with_popup_slider_button',
-                              value: widget.value ?? 0.0,
-                              min: -60,
-                              max: 12,
-                              intervalGap: 12,
-                              onChanged: (num value) {
-                                widget.onChanged?.call(
-                                  value.toDouble(),
-                                );
-                              },
+                          ),
+                        ];
+                      },
+                      child: SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(
+                          SemanticTypes.button,
+                          "neumorphic_text_with_popup_slider_button",
+                        ),
+                        child: AbsorbPointer(
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 2),
+                            child: Icon(
+                              Icons.keyboard_arrow_down,
+                              color: Colors.grey[600],
+                              size: 16,
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ];
-                },
-                child: SemanticHelper.button(
-                  testId: SemanticHelper.createTestId(
-                    SemanticTypes.button,
-                    "neumorphic_text_with_popup_slider_button",
                   ),
-                  child: AbsorbPointer(
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 2),
-                      child: Icon(
-                        Icons.keyboard_arrow_down,
-                        color: Colors.grey[600],
-                        size: 16,
-                      ),
-                    ),
-                  ),
-                ),
+                ],
               ),
             ),
+            if (widget.isActive) ...<Widget>[
+              Positioned.fill(
+                child: Container(
+                  color: context.colorScheme.primaryColor.withAlpha(128),
+                ),
+              ),
+            ],
           ],
         ),
       ),

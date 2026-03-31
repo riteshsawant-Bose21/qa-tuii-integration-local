@@ -192,14 +192,7 @@ class _SourceMatrixAdditionalSettingsState extends State<SourceMatrixAdditionalS
                                         ),
                                         PrioritySettingsWidget(
                                           zoneId: widget.zoneID,
-                                          isStateActive:
-                                              (int index) =>
-                                                  vm.isPriorityControlTypeThreshold(
-                                                    index,
-                                                  ) ||
-                                                  vm.isPriorityStateActive(
-                                                    index,
-                                                  ),
+                                          isStateActive: (int index) => vm.isPriorityControlTypeThreshold(index) || vm.isPriorityStateActive(index),
                                           onStateActivePressAndHoldChanged: (int index, bool isPressed) {
                                             vm.updatePriorityProperties(
                                               zoneOrSubzoneId: widget.zoneID,
