@@ -956,7 +956,34 @@ static int handle_reset_timing_state(struct fusion_cn_manager *mgr,
                                      struct fusion_cn_ctrl_msg *msg,
                                      struct fusion_cn_ctrl_msg *reply)
 {
+    struct fusion_cn_rtp_stream *stream;
+    int bkt;
+    unsigned long flags;
+
     reply->err = fusion_gpt_reset_timing_state();
+    if (reply->err)
+        return 0;
+
+    if (process_worker)
+        kthread_flush_worker(process_worker);
+
+    read_lock_irqsave(&mgr->rtp.lock, flags);
+    hash_for_each(mgr->rtp.streams, bkt, stream, hnode) {
+        spin_lock(&stream->lock);
+        stream->next_action_time = 0;
+        stream->current_seq_num = 0;
+        if (!stream->info.is_source) {
+            stream->playback_index = 0;
+            stream->startup_packets_received = 0;
+            stream->playback_armed = false;
+            if (stream->next_action_times && stream->buf_size_in_packets)
+                memset(stream->next_action_times, 0,
+                       sizeof(u64) * stream->buf_size_in_packets);
+        }
+        spin_unlock(&stream->lock);
+    }
+    read_unlock_irqrestore(&mgr->rtp.lock, flags);
+
     return 0;
 }
 
