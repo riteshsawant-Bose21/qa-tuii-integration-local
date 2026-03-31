@@ -441,22 +441,22 @@ class AddSourcePopup extends StatelessWidget {
                                 );
                               },
                             ),
-                            // const SizedBox(height: 16),
-                            //
-                            // BuildRowPropertyWidget<SourceConnectionType>(
-                            //   label: "Stream",
-                            //   value: state.selectedConnectionType,
-                            //   options: state.selectedSourceSectionType.connectionTypes,
-                            //   labelBuilder: (SourceConnectionType option) => option.displayName,
-                            //   onOptionSelected: (
-                            //     int value,
-                            //     SourceConnectionType option,
-                            //   ) {
-                            //     addSourceViewModel.setSelectedConnectionType(
-                            //       option,
-                            //     );
-                            //   },
-                            // ),
+                            const SizedBox(height: 16),
+
+                            BuildRowPropertyWidget<Aes67Config>(
+                              label: "Stream",
+                              value: state.selectedStream,
+                              options: projectViewModel.getAllAes67InputStreams(),
+                              labelBuilder: (Aes67Config stream) => stream.name,
+                              onOptionSelected: (
+                                int index,
+                                Aes67Config stream,
+                              ) {
+                                addSourceViewModel.setSelectedStream(
+                                  stream,
+                                );
+                              },
+                            ),
                             // const SizedBox(height: 16),
                             //
                             // BuildRowPropertyWidget<SourceConnectionType>(
