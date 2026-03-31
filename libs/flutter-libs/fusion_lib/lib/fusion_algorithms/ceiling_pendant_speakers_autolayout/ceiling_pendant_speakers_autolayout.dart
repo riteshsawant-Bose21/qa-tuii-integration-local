@@ -29,6 +29,20 @@ class Point2D {
   
   @override
   int get hashCode => x.hashCode ^ y.hashCode;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'x': x,
+      'y': y,
+    };
+  }
+
+  factory Point2D.fromJson(Map<String, dynamic> map) {
+    return Point2D(
+      map['x']?.toDouble() ?? 0.0,
+      map['y']?.toDouble() ?? 0.0,
+    );
+  }
 }
 
 /// Represents a rectangular or asymmetrical room
@@ -382,6 +396,32 @@ PlacementResult:
 Calculation Steps:
 ${calculationSteps.map((step) => '  $step').join('\n')}
 ''';
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'speakerPositions': speakerPositions.map((x) => x.toJson()).toList(),
+      'gridSpacing': gridSpacing,
+      'centroid': centroid.toJson(),
+      'baseCentroid': baseCentroid.toJson(),
+      'customOriginOffset': customOriginOffset?.toJson(),
+      'distance': distance,
+      'calculationSteps': calculationSteps,
+    };
+  }
+
+  factory PlacementResult.fromJson(Map<String, dynamic> map) {
+    final List<Map<String, dynamic>> speakerPositions = List<Map<String, dynamic>>.from(map['speakerPositions'] ?? []);
+
+    return PlacementResult(
+      speakerPositions: List<Point2D>.from(speakerPositions.map((x) => Point2D.fromJson(x))),
+      gridSpacing: double.tryParse(map['gridSpacing'].toString()) ?? 0.0,
+      centroid: Point2D.fromJson(map['centroid']),
+      baseCentroid: Point2D.fromJson(map['baseCentroid']),
+      customOriginOffset: map['customOriginOffset'] != null ? Point2D.fromJson(map['customOriginOffset']) : null,
+      distance: double.tryParse(map['distance'].toString()) ?? 0.0,
+      calculationSteps: List<String>.from(map['calculationSteps'] ?? <String>[]),
+    );
   }
 }
 

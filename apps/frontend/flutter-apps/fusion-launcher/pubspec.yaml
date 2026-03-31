@@ -91,6 +91,17 @@ dependencies:
     path:  ../../../../libs/flutter-libs/dartzmq
   recase: ^4.1.0
 
+  # Runtime permission handling
+  permission_handler: ^11.0.1
+
+  # Explicit Windows platform plugin implementations
+  flutter_secure_storage_windows: ^3.0.0
+  image_picker_windows: ^0.2.0
+  path_provider_windows: ^2.0.0
+  permission_handler_windows: ^0.2.0
+  shared_preferences_windows: ^2.0.0
+  url_launcher_windows: ^3.0.0
+
 
 dev_dependencies:
   flutter_test:
@@ -102,7 +113,6 @@ dev_dependencies:
       path: server
   integration_test:
     sdk: flutter
-  permission_handler: ^11.0.1
   lottie: ^3.3.2
   visibility_detector: ^0.4.0+2
 

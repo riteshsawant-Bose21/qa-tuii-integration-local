@@ -158,12 +158,6 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                           final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
                           final FloorModel floor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
 
-                          /// If no floor plan image,
-                          /// show upload floor plan widget
-                          if (floor.floorPlan.imagePath.isEmpty) {
-                            return _buildEmptyFloorWidget();
-                          }
-
                           return ValueListenableBuilder<bool>(
                             valueListenable: widget.floorCanvasController.isDrawing,
                             builder: (BuildContext context, bool isDrawingValue, Widget? child) {
@@ -181,10 +175,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             for (final ListeningArea area in serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
                                               floorId: floor.id,
                                             ))
-                                              ListeningAreaPainter(
-                                                listeningArea: area,
-                                                isShowingSpl: buildingPageViewModel.isSplMode,
-                                              ),
+                                              ListeningAreaPainter(listeningArea: area, isShowingSpl: buildingPageViewModel.isSplMode),
                                           ];
 
                                           return FusionCanvas(
@@ -349,11 +340,13 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                         crossAxisAlignment: CrossAxisAlignment.start,
                                                         children: <Widget>[
                                                           widget.rightPanel,
-                                                          SizedBox(
-                                                            height: constraints.maxHeight,
-                                                            child: SplSlider(
-                                                              splPanelData: widget.splPanelData,
-                                                              splRangeController: widget.splRangeController,
+                                                          WorkSafeAreaContent(
+                                                            child: SizedBox(
+                                                              height: constraints.maxHeight - WorkAreaScope.of(context).appBarHeight,
+                                                              child: SplSlider(
+                                                                splPanelData: widget.splPanelData,
+                                                                splRangeController: widget.splRangeController,
+                                                              ),
                                                             ),
                                                           ),
                                                         ],
@@ -454,7 +447,13 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       ),
                                     ),
                                   ),
-                                  // ),
+
+                                  if (floor.floorPlan.imagePath.isEmpty) ...<Widget>[
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(245, 65, 2, 16),
+                                      child: _buildEmptyFloorWidget(),
+                                    ),
+                                  ],
                                 ],
                               );
                             },
@@ -1130,36 +1129,34 @@ class SplSlider extends StatelessWidget {
             builder: (BuildContext context, BoxConstraints constraints) {
               return Align(
                 alignment: Alignment.centerRight,
-                child: WorkSafeAreaContent(
-                  child: SPLRangeSlider(
-                    width: 24,
-                    height: constraints.maxHeight,
-                    controller: splRangeController,
-                    minValue: serviceLocator<ProjectViewModel>().minSPL,
-                    maxValue: serviceLocator<ProjectViewModel>().maxSPL,
-                    invertedColors: splPanelData.splInvertColor,
-                    onChanged: (double min, double max) {
-                      // debugPrint("SPL Range changed: ${min.round()} - ${max.round()}");
-                      serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
-                      serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);
-                      // if (!showLiveSpl) {
-                      //   setState(() {
-                      //     showLiveSpl = true;
-                      //   });
-                      // }
-                    },
-                    onChangeEnd: (double min, double max) {
-                      // debugPrint("SPL Range change ended: ${min.round()} - ${max.round()}");
-                      serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
-                      serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);
-                      // serviceLocator<ProjectViewModel>().saveProjectToLocal();
-                      // if (showLiveSpl) {
-                      //   setState(() {
-                      //     showLiveSpl = false;
-                      //   });
-                      // }
-                    },
-                  ),
+                child: SPLRangeSlider(
+                  width: 24,
+                  height: constraints.maxHeight,
+                  controller: splRangeController,
+                  minValue: serviceLocator<ProjectViewModel>().minSPL,
+                  maxValue: serviceLocator<ProjectViewModel>().maxSPL,
+                  invertedColors: splPanelData.splInvertColor,
+                  onChanged: (double min, double max) {
+                    // debugPrint("SPL Range changed: ${min.round()} - ${max.round()}");
+                    serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
+                    serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);
+                    // if (!showLiveSpl) {
+                    //   setState(() {
+                    //     showLiveSpl = true;
+                    //   });
+                    // }
+                  },
+                  onChangeEnd: (double min, double max) {
+                    // debugPrint("SPL Range change ended: ${min.round()} - ${max.round()}");
+                    serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
+                    serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);
+                    // serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                    // if (showLiveSpl) {
+                    //   setState(() {
+                    //     showLiveSpl = false;
+                    //   });
+                    // }
+                  },
                 ),
               );
             },

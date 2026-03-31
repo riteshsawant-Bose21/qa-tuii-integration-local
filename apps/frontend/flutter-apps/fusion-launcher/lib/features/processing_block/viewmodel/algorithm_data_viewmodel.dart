@@ -71,20 +71,22 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
   }
 
   void getParameterValueFromServer() async {
-    final Map<String, dynamic>? responseCallback = await serviceLocator<BlockDataViewmodel>().getBlockData(blockId: processingBlock.id);
-    if (responseCallback != null) {
-      responseCallback.forEach((String key, dynamic value) {
-        if (value is List<dynamic>) {
-          for (int i = 0; i < value.length; i++) {
-            if (value[i] != null) {
-              processingBlock.updateProperty(PropertySetting(name: key, value: value[i], dimension: i));
+    if (serviceLocator<ProjectViewModel>().virtualIP != null && serviceLocator<ProjectViewModel>().isInControlMode) {
+      final Map<String, dynamic>? responseCallback = await serviceLocator<BlockDataViewmodel>().getBlockData(blockId: processingBlock.id);
+      if (responseCallback != null) {
+        responseCallback.forEach((String key, dynamic value) {
+          if (value is List<dynamic>) {
+            for (int i = 0; i < value.length; i++) {
+              if (value[i] != null) {
+                processingBlock.updateProperty(PropertySetting(name: key, value: value[i], dimension: i));
+              }
             }
+          } else {
+            processingBlock.updateProperty(PropertySetting(name: key, value: value));
           }
-        } else {
-          processingBlock.updateProperty(PropertySetting(name: key, value: value));
-        }
-      });
-      notifyListeners();
+        });
+        notifyListeners();
+      }
     }
   }
 
@@ -123,7 +125,7 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
     if (pending == null) return;
     _pendingUpdate = null;
 
-    if (serviceLocator<ProjectViewModel>().isInControlMode) {
+    if (serviceLocator<ProjectViewModel>().isInControlMode && serviceLocator<ProjectViewModel>().virtualIP != null) {
       serviceLocator<BlockDataViewmodel>().updateBlockParameter(
         blockId: processingBlock.id,
         parameter: pending.field,

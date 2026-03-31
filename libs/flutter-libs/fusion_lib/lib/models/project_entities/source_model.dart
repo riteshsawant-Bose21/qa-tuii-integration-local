@@ -11,7 +11,8 @@ enum SourceConnectionType {
   aes67input("Aes67"),
   bluetooth("Bluetooth"),
   usb("USB"),
-  audioJack("RCA/Jack"),
+  audioJack("Audio Jack"),
+  rca("RCA"),
   xlr("XLR"),
   hdmi("HDMI");
 
@@ -32,6 +33,8 @@ extension SourceConnectionTypeExtension on SourceConnectionType {
       case SourceConnectionType.usb:
         return 'analog';
       case SourceConnectionType.audioJack:
+        return 'analog';
+      case SourceConnectionType.rca:
         return 'analog';
       case SourceConnectionType.xlr:
         return 'analog';
