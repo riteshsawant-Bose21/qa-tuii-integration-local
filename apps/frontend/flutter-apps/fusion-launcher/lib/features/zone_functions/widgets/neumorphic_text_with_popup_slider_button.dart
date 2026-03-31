@@ -160,8 +160,11 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
             ),
             if (widget.isActive) ...<Widget>[
               Positioned.fill(
-                child: Container(
-                  color: context.colorScheme.primaryColor.withAlpha(128),
+                child: IgnorePointer(
+                  ignoring: true,
+                  child: Container(
+                    color: context.colorScheme.primaryColor.withAlpha(128),
+                  ),
                 ),
               ),
             ],
