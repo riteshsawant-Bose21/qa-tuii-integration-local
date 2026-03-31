@@ -33,7 +33,11 @@ class PanelDataSourceImpl implements PanelDataSource {
         final PanelModel panelModel = PanelModel.fromDomain(panelEntity);
         late Map<String, dynamic> responseDict;
         try {
-          responseDict = response.data as Map<String, dynamic>;
+          responseDict = <String, dynamic>{
+            'settings': <String, dynamic>{
+              'audio': response.data as Map<String, dynamic>,
+            },
+          };
         } catch (e) {
           debugPrint("Error parsing response data: $e");
         }
@@ -75,26 +79,14 @@ class PanelDataSourceImpl implements PanelDataSource {
     );
 
     if (response.success) {
-      final Map<String, dynamic> responseDict = response.data as Map<String, dynamic>;
-      final Map<String, dynamic> settings = responseDict['settings'] as Map<String, dynamic>;
-
-      if (settings['audio'] is Map<String, dynamic>) {
-        final Map<String, dynamic> audio = settings['audio'] as Map<String, dynamic>;
-
-        if (audio.containsKey(blockId)) {
-          final Map<String, dynamic> blockData = audio[blockId] as Map<String, dynamic>;
-          if (blockData.containsKey(blockName)) {
-            if (blockData[blockName] is List) {
-              // If the block data is a list, return the first element
-              return blockData[blockName][0];
-            } else if (blockData[blockName] is Map) {
-              // If the block data is a map, return the map
-              return blockData[blockName];
-            } else {
-              // Otherwise, return the value directly
-              return blockData[blockName];
-            }
-          }
+      final Map<String, dynamic> blockData = response.data as Map<String, dynamic>;
+      if (blockData.containsKey(blockName)) {
+        if (blockData[blockName] is List) {
+          return blockData[blockName][0];
+        } else if (blockData[blockName] is Map) {
+          return blockData[blockName];
+        } else {
+          return blockData[blockName];
         }
       }
     }
@@ -183,34 +175,28 @@ class PanelDataSourceImpl implements PanelDataSource {
 
   @override
   Future<AudioWidgetEntity> sendWidgetData(AudioWidgetEntity audioWidgetEntity, AudioWidgetValue updatedValue) async {
-    Map<String, String> urlParams;
     final AudioWidgetModel audioWidget = AudioWidgetModel.fromDomain(audioWidgetEntity);
 
     final dynamic newValue = updatedValue.value;
 
-    if (audioWidget.isWidgetDependentOnDimensions) {
-      urlParams = <String, String>{
-        "key": "settings.audio.${audioWidget.id}.${audioWidget.name}[${audioWidget.dimensionIndex}]",
-      };
-    } else {
-      urlParams = <String, String>{};
-    }
-
-    final Map<String, dynamic> messageToSend = _getUpdateRequestJSONForWidget(audioWidget, newValue);
+    final Map<String, dynamic> messageToSend = _getUpdateRequestJSONForWidget(newValue);
 
     final ResponseCallback<dynamic> responseCallback = await fusionNetworkClient.patch(
       api: FusionApiEndpoint.fusionValue,
       data: messageToSend,
-      urlParameters: urlParams,
+      additionalPath: audioWidget.isWidgetDependentOnDimensions
+          ? '${audioWidget.id}/${audioWidget.name}/${audioWidget.dimensionIndex}'
+          : '${audioWidget.id}/${audioWidget.name}',
     );
 
     if (responseCallback.success) {
-      final String? response = responseCallback.data;
       Map<String, dynamic> responseDict = <String, dynamic>{};
 
-      if (response != null) {
+      if (responseCallback.data is Map<String, dynamic>) {
+        responseDict = responseCallback.data as Map<String, dynamic>;
+      } else if (responseCallback.data is String) {
         try {
-          responseDict = jsonDecode(response);
+          responseDict = jsonDecode(responseCallback.data as String) as Map<String, dynamic>;
         } catch (e) {
           debugPrint("Error parsing response data: $e");
         }
@@ -247,54 +233,22 @@ class PanelDataSourceImpl implements PanelDataSource {
     return audioWidgetEntity;
   }
 
-  Map<String, dynamic> _getUpdateRequestJSONForWidget(AudioWidgetModel widgetModel, dynamic newValue) {
-    if (widgetModel.isWidgetDependentOnDimensions) {
-      return <String, dynamic>{"value": newValue};
-    } else if (widgetModel.isWidgetPhantomPower) {
-      //TODO: remove this as it is debug code for proto1 (phantom_power)
-      return <String, dynamic>{
-        "settings": <String, dynamic>{
-          "fw": <String, dynamic>{
-            widgetModel.id: <String, dynamic>{widgetModel.name: newValue},
-          },
-        },
-      };
-    } else {
-      return <String, dynamic>{
-        "settings": <String, dynamic>{
-          "audio": <String, dynamic>{
-            widgetModel.id: <String, dynamic>{
-              widgetModel.name: newValue, // Use newValue directly
-            },
-          },
-        },
-      };
-    }
+  Map<String, dynamic> _getUpdateRequestJSONForWidget(dynamic newValue) {
+    return <String, dynamic>{"value": newValue};
   }
 
   @override
-  Future<bool> resetFusion() async {
-    //final String? response = await restNetworkingInterface.send("", APIType.DELETE, EndPoint.FUSION_DELETE, "");
+  Future<bool> clearAudioSettings() async {
     final ResponseCallback<dynamic> responseCallback = await fusionNetworkClient.delete(
-      api: FusionApiEndpoint.fusionDelete,
+      api: FusionApiEndpoint.fusionAudioSettings,
     );
 
     if (responseCallback.success) {
-      final Map<String, dynamic> responseDict = responseCallback.data;
-
-      if (responseDict['status'] == 'success') {
-        return true;
-      } else {
-        FusionLogger.log(
-          tag: LogTag.panel,
-          message: "Error in resetFusion: ${responseDict['error']}",
-          logLevel: LogLevel.error,
-        );
-      }
+      return true;
     } else {
       FusionLogger.log(
         tag: LogTag.panel,
-        message: "Error in resetFusion: ${responseCallback.message}",
+        message: "Error in clearAudioSettings: ${responseCallback.message}",
         logLevel: LogLevel.error,
       );
     }

@@ -1,0 +1,18 @@
+meta {
+  name: Upload audio message
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{api_url}}/pava/messages
+  body: multipartForm
+  auth: none
+}
+
+body:multipart-form {
+  display_name: froggy
+  binary: @file(/Users/gragan/Desktop/Docs/message.wav)
+  tags: Fire Drill
+  tags: Emergencies
+}

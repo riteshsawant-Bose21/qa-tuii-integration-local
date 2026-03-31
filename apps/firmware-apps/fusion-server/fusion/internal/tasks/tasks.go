@@ -4,6 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"fusion-services-core/logging"
+	"fusion/internal/api"
+	"fusion/internal/persistence"
+	"fusion/internal/pubsub"
+	"fusion/internal/utils"
 	"net/http"
 	"os"
 	"runtime/debug"
@@ -11,12 +16,6 @@ import (
 	"time"
 
 	json "github.com/goccy/go-json"
-
-	"fusion/internal/api"
-	"fusion-services-core/logging"
-	"fusion/internal/persistence"
-	"fusion/internal/pubsub"
-	"fusion/internal/utils"
 
 	"github.com/robfig/cron/v3"
 )
@@ -263,7 +262,15 @@ func (tm *TaskManager) GetTasks(w http.ResponseWriter, r *http.Request) {
 	tasks := tm.ListTasks()
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(tasks)
+	response, err := tasksToProto(tasks)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := writeProtoJSON(w, response); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 // GetTaskHandler handles HTTP GET requests to get a single task
@@ -286,7 +293,15 @@ func (tm *TaskManager) GetTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(task)
+	response, err := taskToProto(task)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := writeProtoJSON(w, response); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 // DeleteTask handles HTTP DELETE requests to remove a task by ID.

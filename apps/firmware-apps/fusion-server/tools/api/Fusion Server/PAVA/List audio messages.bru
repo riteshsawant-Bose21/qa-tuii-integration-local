@@ -1,0 +1,15 @@
+meta {
+  name: List audio messages
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{api_url}}/pava/messages
+  body: none
+  auth: none
+}
+
+params:query {
+  ~tag: Emergencies
+}

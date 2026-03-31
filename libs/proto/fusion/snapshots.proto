@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package fusion.snapshots.v1;
+
+option go_package = "fusion/internal/gen/proto/fusion;fusionpb";
+
+message SnapshotIdentifier {
+  string name = 1;
+}
+
+message SnapshotListResponse {
+  repeated string snapshots = 1;
+}
+
+message ActiveSnapshotResponse {
+  string active_snapshot = 1;
+}
+
+message SnapshotOperationStatus {
+  string name = 1;
+  string status = 2;
+}

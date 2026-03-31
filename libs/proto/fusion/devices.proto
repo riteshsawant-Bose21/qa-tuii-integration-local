@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package fusion.devices.v1;
+
+option go_package = "fusion/internal/gen/proto/fusion;fusionpb";
+
+message DeviceInfo {
+  string address = 1;
+  string id = 2;
+  string location = 3;
+  string name = 4;
+  string model_name = 5;
+  string mac_address = 6;
+  string serial_number = 7;
+  bool is_primary = 8;
+  string firmware_version = 9;
+  bool is_device_certificate_valid = 10;
+}
+
+message DevicePatch {
+  optional string id = 1;
+  optional string location = 2;
+  optional string name = 3;
+}
+
+message DeviceListResponse {
+  repeated DeviceInfo devices = 1;
+}

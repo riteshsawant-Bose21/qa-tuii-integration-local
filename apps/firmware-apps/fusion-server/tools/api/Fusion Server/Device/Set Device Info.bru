@@ -1,0 +1,21 @@
+meta {
+  name: Set Device Info
+  type: http
+  seq: 1
+}
+
+patch {
+  url: {{api_url}}/devices/:id
+  body: json
+  auth: none
+}
+
+params:path {
+  id: 
+}
+
+body:json {
+  {
+    "id":"fusion1_new_id"
+  }
+}

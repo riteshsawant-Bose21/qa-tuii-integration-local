@@ -1,0 +1,122 @@
+{
+    "$id": "static-configuration.json",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Static Configuration",
+    "description": "Specifies a static configuration of the signal processing to run on a device.",
+    "type": "object",
+    "properties": {
+        "session": {
+            "title": "Session",
+            "description": "Specify property settings for the DSP system as a whole.",
+            "type": "object",
+            "properties": {
+                "property_settings": {
+                    "title": "Property Settings",
+                    "description": "An array of property settings for the DSP system.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "interface-definition.json#/$defs/property_setting"
+                    }
+                }
+            },
+            "required": ["property_settings"]
+        },
+        "tasks": {
+            "title": "Task Specifications",
+            "description": "An array of specifications for the tasks running on this device.",
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/task"
+            }
+        },
+        "task_connections": {
+            "title": "Task Connection Specifications",
+            "description": "An array of specifications for signal connections between tasks, or between tasks and system I/O.",
+            "type": "array",
+            "items": {
+                "$ref": "interface-definition.json#/$defs/task_connection"
+            }
+        },
+        "parameter_settings": {
+            "title": "Parameter Setting Specifications",
+            "description": "An array of specifications for parameter settings for the blocks in this device.",
+            "type": "array",
+            "items": {
+                "$ref": "interface-definition.json#/$defs/parameter_setting"
+            }
+        }
+    },
+    "$defs": {
+        "task": {
+            "title": "Signal Processing Task Specification",
+            "description": "Specifications for a real-time task's property settings and the blocks running within the task.",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "title": "Task Name",
+                    "description": "The name of the task, which must be unique among all tasks in the device.",
+                    "$ref": "interface-definition.json#/$defs/name"
+                },
+                "property_settings": {
+                    "title": "Property Settings",
+                    "description": "An array of property settings for the task.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "interface-definition.json#/$defs/property_setting"
+                    }
+                },
+                "blocks": {
+                    "title": "Block Specifications",
+                    "description": "An array of specifications for the blocks running within this task.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/block"
+                    }
+                },
+                "block_connections": {
+                    "title": "Block Connection Specifications",
+                    "description": "An array of specifications for signal connections between blocks.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "interface-definition.json#/$defs/block_connection"
+                    }
+                }
+            },
+            "required": ["name", "property_settings", "blocks", "block_connections"]
+        },
+        "block": {
+            "title": "Signal Processing Block Specification",
+            "description": "The static configuration of a signal processing block including its parameter settings, terminal channel counts, and signal connections.",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "title": "Block Name",
+                    "description": "The name of the block, which must be unique among all blocks in the system.",
+                    "$ref": "interface-definition.json#/$defs/name"
+                },
+                "algorithm": {
+                    "title": "Algorithm Name",
+                    "description": "The name of the block, which must be unique among all blocks in the system.",
+                    "$ref": "interface-definition.json#/$defs/name"
+                },
+                "property_settings": {
+                    "title": "Property Settings",
+                    "description": "An array of property settings for the block.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "interface-definition.json#/$defs/property_setting"
+                    }
+                },
+                "terminal_channels": {
+                    "title": "Terminal Channels",
+                    "description": "An array of specifications for the number of channels of terminals in the block.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "interface-definition.json#/$defs/terminal_channels"
+                    }
+                }
+            },
+            "required": ["name", "algorithm", "property_settings"]
+        }
+    }
+}

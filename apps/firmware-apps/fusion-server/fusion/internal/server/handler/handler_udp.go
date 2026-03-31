@@ -45,11 +45,23 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 
 	case api.NotifyOpValueSet:
 		var update map[string]any
-		if err := json.Unmarshal(msg.Payload, &update); err != nil {
-			logger.Error("HandleUDPMessage NotifyOpValueSet error: %v", err)
-			return nil, fmt.Errorf("invalid payload: %w", err)
+
+		if len(msg.Payload) > 0 {
+			if err := json.Unmarshal(msg.Payload, &update); err != nil {
+				logger.Error("HandleUDPMessage NotifyOpValueSet error: %v", err)
+				return nil, fmt.Errorf("invalid payload: %w", err)
+			}
+		} else {
+			// Backward compatibility: accept legacy flat UDP set payloads like
+			// {"action":"set","foo":"bar"} in addition to {"action":"set","payload":{...}}.
+			if err := json.Unmarshal(data, &update); err != nil {
+				logger.Error("HandleUDPMessage legacy NotifyOpValueSet error: %v", err)
+				return nil, fmt.Errorf("invalid payload: %w", err)
+			}
+			delete(update, "action")
+			delete(update, "payload")
 		}
-		delete(update, "action")
+
 		if err := h.handleConfigUpdate(update, false); err != nil {
 			logger.Error("HandleUDPMessage handleConfigUpdate error: %v", err)
 			return nil, fmt.Errorf("failed to handle update: %w", err)

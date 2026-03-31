@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -19,6 +19,7 @@ import (
 	"fusion/internal/server/handler"
 	"fusion/internal/utils"
 
+	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 )
 
@@ -72,70 +73,52 @@ func NewFusionServer(node string, handler *handler.Handler, hub *pubsub.Hub) *Fu
 	return server
 }
 
-// GetValue handles HTTP GET requests to retrieve a configuration value based on a "key" query parameter.
-func (s *FusionServer) GetValue(w http.ResponseWriter, r *http.Request) {
-
+// GetAudioSettings handles HTTP GET requests for audio settings data.
+func (s *FusionServer) GetAudioSettings(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
 		return
 	}
 
-	// Retrieve the "key" query parameter.
-	key, err := getSingleQueryParam(r, "key")
+	vars := mux.Vars(r)
+	key := "settings.audio"
+	if blockID := vars["blockId"]; blockID != "" {
+		key += "." + blockID
+	}
+
+	value, exists := s.handler.StateManager.Get(key)
+	if !exists {
+		http.Error(w, "settings not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	json.NewEncoder(w).Encode(value)
+}
+
+// GetAudioSetting handles HTTP GET requests for a single audio setting value.
+func (s *FusionServer) GetAudioSetting(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+
+	key, err := audioSettingKeyFromRequest(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Use the handler to get the configuration value.
-	response, err := s.handler.HandleHTTPGet(key)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	value, exists := s.handler.StateManager.Get(key)
+	if !exists {
+		http.Error(w, "setting not found", http.StatusNotFound)
 		return
 	}
 
-	// Write the JSON response.
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(map[string]any{"value": value})
 }
 
-// SetValue handles HTTP PUT requests to set a configuration value.
-// It expects a JSON body containing the update data.
-func (s *FusionServer) SetValue(w http.ResponseWriter, r *http.Request) {
-
-	if !utils.RequirePost(w, r) {
-		return
-	}
-
-	// Read the request body.
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
-		return
-	}
-	defer r.Body.Close()
-
-	// Unmarshal the JSON into a map.
-	var update map[string]any
-	if err := json.Unmarshal(body, &update); err != nil {
-		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
-		return
-	}
-
-	// Use the handler to update the configuration.
-	response, err := s.handler.HandleHTTPSet(update)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Write the JSON response.
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(response)
-}
-
-// UpdateValue handles HTTP PATCH requests to update a configuration value.
-// It supports partial updates based on the provided key query parameter or the entire JSON body.
-func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
+// PatchAudioSetting handles HTTP PATCH requests for audio setting updates.
+func (s *FusionServer) PatchAudioSetting(w http.ResponseWriter, r *http.Request) {
 	type patchResponse struct {
 		Status  string         `json:"status"`
 		Updates map[string]any `json:"updates"`
@@ -145,6 +128,12 @@ func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	key, err := audioSettingKeyFromRequest(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
@@ -158,30 +147,12 @@ func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	key, err := getSingleQueryParam(r, "key")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Build minimal patch map
-	var patch map[string]any
-	if key != "" {
-		patch = map[string]any{
-			key: update["value"],
-		}
-	} else {
-		patch = update
-	}
-
-	// Apply patch (diff is computed inside handler)
-	diff, err := s.handler.HandleHTTPPatch(patch)
+	diff, err := s.handler.HandleHTTPPatch(map[string]any{key: update["value"]})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Build response
 	resp := patchResponse{}
 	if diff == nil {
 		resp.Status = "noop"
@@ -191,9 +162,28 @@ func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 		resp.Updates = diff
 	}
 
-	// Send
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(resp)
+}
+
+// ClearAudioSettings handles HTTP DELETE requests to clear audio settings.
+func (s *FusionServer) ClearAudioSettings(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	diff, err := s.handler.HandleHTTPPatch(map[string]any{"settings.audio": nil})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	if diff == nil {
+		json.NewEncoder(w).Encode(map[string]any{"status": "noop"})
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]any{"status": "success"})
 }
 
 // ExportState handles HTTP GET requests to export the entire configuration state.
@@ -347,22 +337,6 @@ func (s *FusionServer) ImportData(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ClearAllValues handles HTTP DELETE requests to clear all configuration data.
-func (s *FusionServer) ClearAllValues(w http.ResponseWriter, r *http.Request) {
-
-	if !utils.RequireDelete(w, r) {
-		return
-	}
-
-	// Clear the data using the handler.
-	if err := s.handler.HandleClearAllData(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
 // GetMembers handles HTTP GET requests to list all cluster members.
 func (s *FusionServer) GetMembers(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
@@ -376,6 +350,26 @@ func (s *FusionServer) GetMembers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
+}
+
+func audioSettingKeyFromRequest(r *http.Request) (string, error) {
+	vars := mux.Vars(r)
+
+	blockID := vars["blockId"]
+	param := vars["param"]
+	if blockID == "" || param == "" {
+		return "", fmt.Errorf("blockId and param are required")
+	}
+
+	key := "settings.audio." + blockID + "." + param
+	if index := vars["index"]; index != "" {
+		if _, err := strconv.Atoi(index); err != nil {
+			return "", fmt.Errorf("index must be an integer")
+		}
+		key += "[" + index + "]"
+	}
+
+	return key, nil
 }
 
 func (s *FusionServer) ListMessages(w http.ResponseWriter, r *http.Request) {
@@ -581,29 +575,4 @@ func (s *FusionServer) TriggerWinkById(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to encode response: %v", err), http.StatusInternalServerError)
 	}
-}
-
-// getSingleQueryParam retrieves the value of a query parameter if it exists exactly once.
-// It returns an empty string if the parameter is missing and an error if it appears multiple times
-// or contains invalid characters.
-func getSingleQueryParam(r *http.Request, param string) (string, error) {
-	if strings.Count(r.RequestURI, "?") > 1 {
-		return "", fmt.Errorf("multiple values provided for parameter %q", param)
-	}
-
-	params := r.URL.Query()[param]
-	if len(params) > 1 {
-		return "", fmt.Errorf("multiple values provided for parameter %q", param)
-	}
-
-	if len(params) == 0 {
-		return "", nil
-	}
-
-	// Validate that the parameter contains only allowed characters.
-	validKey := regexp.MustCompile(`^[a-zA-Z0-9_.\[\]*]+$`)
-	if !validKey.MatchString(params[0]) {
-		return "", fmt.Errorf("invalid characters in parameter %q", param)
-	}
-	return params[0], nil
 }

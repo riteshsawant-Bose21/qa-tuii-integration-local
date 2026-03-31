@@ -1,0 +1,15 @@
+meta {
+  name: Activate
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{api_url}}/snapshots/activate/:name
+  body: none
+  auth: none
+}
+
+params:path {
+  name: epoch_test_1764203771702099000
+}

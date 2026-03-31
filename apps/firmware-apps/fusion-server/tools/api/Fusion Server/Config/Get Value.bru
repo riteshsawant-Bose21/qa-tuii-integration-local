@@ -1,0 +1,15 @@
+meta {
+  name: Get Value
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{api_url}}/value?key=settings
+  body: none
+  auth: none
+}
+
+params:query {
+  key: settings
+}

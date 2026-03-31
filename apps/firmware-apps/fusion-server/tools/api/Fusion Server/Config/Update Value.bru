@@ -1,0 +1,25 @@
+meta {
+  name: Update Value
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{api_url}}/value
+  body: json
+  auth: none
+}
+
+params:query {
+  ~key: settings
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+      "test":121
+  }
+}

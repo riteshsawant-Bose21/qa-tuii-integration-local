@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
 	"io"
@@ -192,13 +193,31 @@ func (tm *TaskManager) CreateScheduleMessageTask(w http.ResponseWriter, r *http.
 	if !utils.RequirePost(w, r) {
 		return
 	}
+	defer r.Body.Close()
 
-	var taskMessage api.TaskMessage
-	if err := json.NewDecoder(r.Body).Decode(&taskMessage); err != nil {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	var request fusionpb.MessageTaskCreateRequest
+	if err := protoJSONUnmarshalOptions.Unmarshal(body, &request); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 		return
 	}
-	defer r.Body.Close()
+
+	taskMessage := api.TaskMessage{
+		ID:          request.Id,
+		Description: request.Description,
+		CronExpr:    request.CronExpr,
+		StartAt:     timeFromProto(request.StartAt),
+		EndAt:       timeFromProto(request.EndAt),
+		Recurrence:  recurringWindowFromProto(request.Recurrence),
+		MessageID:   request.MessageId,
+		Priority:    request.Priority,
+		Zones:       request.Zones,
+	}
 
 	if taskMessage.MessageID == "" || taskMessage.CronExpr == "" || taskMessage.Description == "" {
 		http.Error(w, "Message, cron expression and description are required", http.StatusBadRequest)
@@ -223,38 +242,23 @@ func (tm *TaskManager) CreateScheduleMessageTask(w http.ResponseWriter, r *http.
 	}
 
 	// Verify message exists
-	_, err := tm.persistence.GetAudioMetadata(taskMessage.MessageID)
+	_, err = tm.persistence.GetAudioMetadata(taskMessage.MessageID)
 	if err != nil {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
 
 	// Create the scheduled message task
-	task := api.Task{
-		ID:          taskMessage.ID,
-		Description: taskMessage.Description,
-		CronExpr:    taskMessage.CronExpr,
-		Type:        api.TaskTypeMessage,
-		StartAt:     taskMessage.StartAt,
-		EndAt:       taskMessage.EndAt,
-		Recurrence:  taskMessage.Recurrence,
-		Enabled:     true,
-		Params: map[string]any{
-			api.MessageIDKey:       taskMessage.MessageID,
-			api.MessagePriorityKey: taskMessage.Priority,
-			api.MessageZonesKey:    taskMessage.Zones,
-		},
-	}
+	task := messageCreateRequestToTask(&request)
 
-	if err := tm.AddTask(&task); err != nil {
+	if err := tm.AddTask(task); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to add task: %v", err), http.StatusBadRequest)
 		return
 	}
 
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{
-		"id": task.ID,
-	})
+	_ = writeProtoJSON(w, &fusionpb.CreateTaskResponse{Id: task.ID})
 }
 
 // UpdateScheduleMessageTask handles HTTP PATCH requests to update an existing message task.
@@ -283,17 +287,17 @@ func (tm *TaskManager) UpdateScheduleMessageTask(w http.ResponseWriter, r *http.
 	}
 	defer r.Body.Close()
 
-	var patch api.TaskMessagePatch
-	if err := json.Unmarshal(body, &patch); err != nil {
+	var patch fusionpb.MessageTaskUpdateRequest
+	if err := protoJSONUnmarshalOptions.Unmarshal(body, &patch); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 		return
 	}
 
 	// At least one must be present
-	hasMessageId := patch.MessageID != nil && strings.TrimSpace(*patch.MessageID) != ""
-	hasCron := patch.CronExpr != nil && strings.TrimSpace(*patch.CronExpr) != ""
-	hasDesc := patch.Description != nil && strings.TrimSpace(*patch.Description) != ""
-	hasZones := patch.Zones != nil && strings.TrimSpace(*patch.Zones) != ""
+	hasMessageId := patch.MessageId != nil && strings.TrimSpace(patch.GetMessageId()) != ""
+	hasCron := patch.CronExpr != nil && strings.TrimSpace(patch.GetCronExpr()) != ""
+	hasDesc := patch.Description != nil && strings.TrimSpace(patch.GetDescription()) != ""
+	hasZones := patch.Zones != nil && strings.TrimSpace(patch.GetZones()) != ""
 	hasPriority := patch.Priority != nil
 	hasStart := patch.StartAt != nil
 	hasEnd := patch.EndAt != nil
@@ -304,35 +308,35 @@ func (tm *TaskManager) UpdateScheduleMessageTask(w http.ResponseWriter, r *http.
 	}
 
 	if hasDesc {
-		task.Description = *patch.Description
+		task.Description = patch.GetDescription()
 	}
 
 	if hasCron {
-		task.CronExpr = *patch.CronExpr
+		task.CronExpr = patch.GetCronExpr()
 	}
 
 	if hasPriority {
-		task.Params[api.MessagePriorityKey] = *patch.Priority
+		task.Params[api.MessagePriorityKey] = patch.GetPriority()
 	}
 
 	if hasZones {
-		task.Params[api.MessageZonesKey] = *patch.Zones
+		task.Params[api.MessageZonesKey] = patch.GetZones()
 	}
 
 	if hasStart {
-		task.StartAt = *patch.StartAt
+		task.StartAt = patch.StartAt.AsTime()
 	}
 
 	if hasEnd {
-		task.EndAt = *patch.EndAt
+		task.EndAt = patch.EndAt.AsTime()
 	}
 
 	logger := logging.GetLogger()
 
 	// Update message id
-	if patch.MessageID != nil {
+	if hasMessageId {
 
-		messageID := *patch.MessageID
+		messageID := patch.GetMessageId()
 
 		meta, err := tm.persistence.GetAudioMetadata(messageID)
 		if err != nil {
@@ -366,6 +370,8 @@ func (tm *TaskManager) UpdateScheduleMessageTask(w http.ResponseWriter, r *http.
 			http.Error(w, "File not found", http.StatusNotFound)
 			return
 		}
+
+		task.Params[api.MessageIDKey] = messageID
 	}
 
 	err = tm.UpdateTask(task, tm.taskTriggerMessageFunc(task))

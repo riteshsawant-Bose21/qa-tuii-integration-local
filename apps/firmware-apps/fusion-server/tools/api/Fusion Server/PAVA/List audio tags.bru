@@ -1,0 +1,16 @@
+meta {
+  name: List audio tags
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{api_url}}/pava/messages/tags
+  body: none
+  auth: none
+}
+
+params:query {
+  ~tag: Emergencies
+  ~tag: Fire+Drill
+}

@@ -10,7 +10,6 @@ import (
 	"fusion/internal/utils"
 	"fusion/internal/version"
 	"net/http"
-	"reflect"
 	"sync"
 
 	"github.com/hashicorp/memberlist"
@@ -76,92 +75,31 @@ func (h *Handler) SetClusterTransport(clusterTransport transport.ClusterInterfac
 	h.clusterTransport = clusterTransport
 }
 
-func (h *Handler) HandleHTTPGet(key string) (any, error) {
-	type keyLookupResponse struct {
-		Exists bool `json:"exists"`
-		Value  any  `json:"value,omitempty"`
-		Error  any  `json:"error,omitempty"`
-	}
-
-	if key != "" {
-		value, exists := h.StateManager.Get(key)
-		if !exists {
-			return keyLookupResponse{
-				Exists: false,
-				Error:  "key not found",
-			}, nil
-		}
-		return keyLookupResponse{
-			Exists: true,
-			Value:  value,
-		}, nil
-	}
-
-	state := h.StateManager.GetStateMap()
-	return state, nil
-}
-
-// HandleHTTPSet replaces the entire configuration state with the new data.
-func (h *Handler) HandleHTTPSet(update map[string]any) (any, error) {
-	type setResponse struct {
-		Status  string         `json:"status"`
-		Updates map[string]any `json:"updates"`
-	}
-
-	existing := h.StateManager.GetStateMap()
-
-	if reflect.DeepEqual(existing, update) {
-		return setResponse{
-			Status:  "noop",
-			Updates: nil,
-		}, nil
-	}
-
-	if err := h.handleConfigUpdate(update, true); err != nil {
-		return nil, err
-	}
-
-	return setResponse{
-		Status:  "success",
-		Updates: update,
-	}, nil
-}
-
 // HandleHTTPPatch updates only the specified fields.
 func (h *Handler) HandleHTTPPatch(patch map[string]any) (map[string]any, error) {
 
 	// Get full state before PATCH
 	before := h.StateManager.GetStateMap()
+	after, ok := utils.DeepCopy(before).(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("failed to copy state for patch")
+	}
 
-	// Apply internal patch
-	afterPtr, err := h.StateManager.Patch(patch)
-	if err != nil {
+	// Apply the patch to a copy, then replicate the resulting authoritative snapshot once.
+	if err := utils.ApplyPatch(after, patch); err != nil {
 		return nil, err
 	}
 
-	// No changes
-	if afterPtr == nil {
+	diff := utils.CalculateDiff(before, after)
+	if diff == nil {
 		return nil, nil
 	}
-
-	after := *afterPtr
-
-	diff := utils.CalculateDiff(before, after)
 
 	if err := h.handleConfigUpdate(after, false); err != nil {
 		return nil, err
 	}
 
 	return diff, nil
-}
-
-func (h *Handler) HandleClearAllData() error {
-
-	if err := h.handleConfigUpdate(map[string]any{}, true); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (h *Handler) GetMembers() []*memberlist.Node {

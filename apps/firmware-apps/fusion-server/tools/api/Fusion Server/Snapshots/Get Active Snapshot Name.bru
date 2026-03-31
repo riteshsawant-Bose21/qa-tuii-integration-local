@@ -1,0 +1,11 @@
+meta {
+  name: Get Active Snapshot Name
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{api_url}}/snapshots/meta/active
+  body: none
+  auth: none
+}

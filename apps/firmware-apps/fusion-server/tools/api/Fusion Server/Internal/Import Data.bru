@@ -1,0 +1,58 @@
+meta {
+  name: Import Data
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{admin_url}}/data
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "fusion": {
+      "default": {
+        "checksum": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "state": {},
+        "timestamp": "2025-04-02T02:01:40.956957393Z",
+        "version": 0
+      },
+      "import": {
+        "checksum": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "state": {},
+        "timestamp": "2025-04-02T02:01:40.698466995Z",
+        "version": 0
+      },
+      "test_snapshot_1743559324558429000": {
+        "checksum": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "state": {},
+        "timestamp": "2025-04-02T02:01:40.613758751Z",
+        "version": 0
+      },
+      "test_snapshot_1743559324618534000": {
+        "checksum": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "state": {},
+        "timestamp": "2025-04-02T02:01:40.656419061Z",
+        "version": 0
+      }
+    },
+    "snapshot_metadata": {
+      "metadata": {
+        "active_snapshot": "",
+        "hash": "7a0ae79badcfb0d752f9775724087f42b5810cbad403800068e4fc763df2d43c",
+        "timestamp": "2025-04-02T02:01:40.956957393Z",
+        "valid": false
+      }
+    },
+    "tasks": {
+      "froggy": {
+        "EntryID": 1,
+        "cron_expr": "*/5 * * * *",
+        "description": "bleep",
+        "id": "test10"
+      }
+    }
+  }
+}

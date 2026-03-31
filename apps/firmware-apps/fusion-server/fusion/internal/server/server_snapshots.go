@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/utils"
 	"net/http"
 
@@ -42,7 +43,7 @@ func (s *FusionServer) GetActiveSnapshotName(w http.ResponseWriter, r *http.Requ
 	snapshot := s.handler.HandleGetActiveSnapshotName()
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(snapshot)
+	json.NewEncoder(w).Encode(&fusionpb.ActiveSnapshotResponse{ActiveSnapshot: snapshot})
 }
 
 // ListSnapshots handles HTTP GET requests to list available snapshots.
@@ -58,13 +59,8 @@ func (s *FusionServer) ListSnapshots(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type snapshotsResponse struct {
-		Snapshots []string `json:"snapshots"`
-	}
-
-	// Write the JSON response with the snapshots.
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(snapshotsResponse{Snapshots: snapshots})
+	json.NewEncoder(w).Encode(&fusionpb.SnapshotListResponse{Snapshots: snapshots})
 }
 
 // ActivateSnapshot handles HTTP POST requests to activate a specific snapshot.
@@ -97,7 +93,9 @@ func (s *FusionServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(&fusionpb.SnapshotOperationStatus{Name: snapshotName, Status: "activated"})
 }
 
 // CreateSnapshot handles HTTP POST requests to create a new snapshot.
@@ -133,7 +131,9 @@ func (s *FusionServer) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(&fusionpb.SnapshotOperationStatus{Name: snapshotName, Status: "created"})
 }
 
 // DeleteSnapshot handles HTTP DELETE requests to remove an existing snapshot.
@@ -159,7 +159,9 @@ func (s *FusionServer) DeleteSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(&fusionpb.SnapshotOperationStatus{Name: snapshotName, Status: "deleted"})
 }
 
 // SaveSnapshot handles POST /snapshots/{name}/save
@@ -199,5 +201,7 @@ func (s *FusionServer) SaveSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent) // success, no response body
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(&fusionpb.SnapshotOperationStatus{Name: snapshotName, Status: "saved"})
 }

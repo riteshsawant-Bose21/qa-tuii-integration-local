@@ -4,15 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/utils"
 	"io"
 	"net/http"
 	"strings"
 	"time"
-
-	json "github.com/goccy/go-json"
 )
 
 // CreateApplySnapshotTask handles HTTP POST requests to add a new snapshot task.
@@ -20,21 +19,24 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 	if !utils.RequirePost(w, r) {
 		return
 	}
+	defer r.Body.Close()
 
-	var task api.Task
-	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	var request fusionpb.SnapshotTaskCreateRequest
+	if err := protoJSONUnmarshalOptions.Unmarshal(body, &request); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 		return
 	}
-	defer r.Body.Close()
+
+	task := snapshotCreateRequestToTask(&request)
 
 	if task.ID == "" || task.CronExpr == "" || task.Description == "" {
 		http.Error(w, "Task ID, cron expression and description are required", http.StatusBadRequest)
-		return
-	}
-
-	if task.Type != api.TaskTypeSnapshot {
-		http.Error(w, "Task type must be 'snapshot'", http.StatusBadRequest)
 		return
 	}
 
@@ -49,7 +51,7 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	exists, err := tm.persistence.TaskExists(&task)
+	exists, err := tm.persistence.TaskExists(task)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error checking task existence: %v", err), http.StatusInternalServerError)
 		return
@@ -59,15 +61,14 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if err := tm.AddTask(&task); err != nil {
+	if err := tm.AddTask(task); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to add task: %v", err), http.StatusBadRequest)
 		return
 	}
 
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{
-		"id": task.ID,
-	})
+	_ = writeProtoJSON(w, &fusionpb.CreateTaskResponse{Id: task.ID})
 }
 
 // UpdateApplySnapshotTask handles HTTP PATCH requests to update an existing snapshot task.
@@ -96,16 +97,16 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 	}
 	defer r.Body.Close()
 
-	var patch api.TaskSnapshopPatch
-	if err := json.Unmarshal(body, &patch); err != nil {
+	var patch fusionpb.SnapshotTaskUpdateRequest
+	if err := protoJSONUnmarshalOptions.Unmarshal(body, &patch); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 		return
 	}
 
 	// At least one must be present
-	hasSnapshot := patch.Snapshot != nil && strings.TrimSpace(*patch.Snapshot) != ""
-	hasCron := patch.CronExpr != nil && strings.TrimSpace(*patch.CronExpr) != ""
-	hasDesc := patch.Description != nil && strings.TrimSpace(*patch.Description) != ""
+	hasSnapshot := patch.SnapshotId != nil && strings.TrimSpace(patch.GetSnapshotId()) != ""
+	hasCron := patch.CronExpr != nil && strings.TrimSpace(patch.GetCronExpr()) != ""
+	hasDesc := patch.Description != nil && strings.TrimSpace(patch.GetDescription()) != ""
 	hasStart := patch.StartAt != nil
 	hasEnd := patch.EndAt != nil
 	hasRecurrence := patch.Recurrence != nil
@@ -116,42 +117,44 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 	}
 
 	if hasDesc {
-		task.Description = *patch.Description
+		task.Description = patch.GetDescription()
 	}
 
 	if hasCron {
-		task.CronExpr = *patch.CronExpr
+		task.CronExpr = patch.GetCronExpr()
 	}
 
 	if hasSnapshot {
-		exists, err := tm.persistence.SnapshotExists(*patch.Snapshot)
+		snapshotID := patch.GetSnapshotId()
+		exists, err := tm.persistence.SnapshotExists(snapshotID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		if !exists {
-			http.Error(w, fmt.Sprintf("Snapshot %s not found", *patch.Snapshot), http.StatusNotFound)
+			http.Error(w, fmt.Sprintf("Snapshot %s not found", snapshotID), http.StatusNotFound)
 			return
 		}
 
-		task.Params[api.SnapshotIDKey] = *patch.Snapshot
+		task.Params[api.SnapshotIDKey] = snapshotID
 	}
 
 	if hasStart {
-		task.StartAt = *patch.StartAt
+		task.StartAt = patch.StartAt.AsTime()
 	}
 
 	if hasEnd {
-		task.EndAt = *patch.EndAt
+		task.EndAt = patch.EndAt.AsTime()
 	}
 
 	if hasRecurrence {
-		if err := validateRecurringWindow(patch.Recurrence); err != nil {
+		recurrence := recurringWindowFromProto(patch.Recurrence)
+		if err := validateRecurringWindow(recurrence); err != nil {
 			http.Error(w, fmt.Sprintf("Invalid recurrence: %v", err), http.StatusBadRequest)
 			return
 		}
-		task.Recurrence = patch.Recurrence
+		task.Recurrence = recurrence
 	}
 
 	err = tm.UpdateTask(task, tm.taskActivateSnapshotFunc(task))

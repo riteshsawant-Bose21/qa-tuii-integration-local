@@ -400,13 +400,13 @@ enum FusionApiEndpoint {
   process('/process', FusionApiType.droServer), //DRO endpoint
   fusionValue('/value', FusionApiType.fusionServer),
   fusionGetEndPoints('/endpoints', FusionApiType.fusionServer),
-  fusionDelete('/clear', FusionApiType.fusionServer),
 
   //Backend server endpoints
   getProfile("/user/me/authorization", FusionApiType.backendServer),
   projects("/projects", FusionApiType.backendServer),
 
   //fusion server setup apis
+  fusionDeviceConfig('/device', FusionApiType.fusionServer),
   fusionDevice('/devices', FusionApiType.fusionServer),
   setVip('/devices/vip', FusionApiType.fusionServer),
   sapSessions('/sessions', FusionApiType.fusionServer);
@@ -421,7 +421,7 @@ extension ApiEndpointTypeCheckExtension on String {
   bool isFusionServerEndpoint() {
     return contains(FusionApiEndpoint.fusionValue.path) ||
         contains(FusionApiEndpoint.fusionGetEndPoints.path) ||
-        contains(FusionApiEndpoint.fusionDelete.path) ||
+        contains(FusionApiEndpoint.fusionDeviceConfig.path) ||
         contains(FusionApiEndpoint.fusionDevice.path) ||
         contains(FusionApiEndpoint.setVip.path) ||
         contains(FusionApiEndpoint.sapSessions.path);

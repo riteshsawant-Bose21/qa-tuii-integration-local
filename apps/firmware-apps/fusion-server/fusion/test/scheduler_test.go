@@ -9,13 +9,15 @@ import (
 	"testing"
 	"time"
 
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 
 	json "github.com/goccy/go-json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 const (
@@ -63,11 +65,14 @@ func clearAllTasks(t *testing.T) {
 		t.Fatalf("Failed to list tasks for cleanup (%d): %s", resp.StatusCode, string(body))
 	}
 
-	var list []api.Task
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&list))
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
 
-	for _, task := range list {
-		req, err := http.NewRequest(http.MethodDelete, singleTaskURL(task.ID), nil)
+	var list fusionpb.TaskListResponse
+	require.NoError(t, protojson.Unmarshal(body, &list))
+
+	for _, task := range list.Tasks {
+		req, err := http.NewRequest(http.MethodDelete, singleTaskURL(task.Id), nil)
 		require.NoError(t, err)
 		respDel, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -79,16 +84,12 @@ func TestTasksSnapshotCrudThroughAPI(t *testing.T) {
 	clearAllTasks(t)
 
 	// Create a snapshot task
-	task := api.Task{
-		ID:          "snap-crud",
+	taskJSON, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&fusionpb.SnapshotTaskCreateRequest{
+		Id:          "snap-crud",
 		CronExpr:    "*/5 * * * *",
 		Description: "Snapshot CRUD test",
-		Type:        api.TaskTypeSnapshot,
-		Enabled:     true,
-		Params:      map[string]any{api.SnapshotIDKey: "default"},
-	}
-
-	taskJSON, err := json.Marshal(task)
+		SnapshotId:  "default",
+	})
 	require.NoError(t, err)
 
 	resp, err := http.Post(scheduleTasksURL(routes.TasksEndpoint), api.JsonMIMEType, bytes.NewReader(taskJSON))
@@ -102,10 +103,12 @@ func TestTasksSnapshotCrudThroughAPI(t *testing.T) {
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected 200 OK from GET /tasks")
 
-	var tasksList []api.Task
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&tasksList))
-	require.Len(t, tasksList, 1)
-	assert.Equal(t, "snap-crud", tasksList[0].ID)
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	var tasksList fusionpb.TaskListResponse
+	require.NoError(t, protojson.Unmarshal(body, &tasksList))
+	require.Len(t, tasksList.Tasks, 1)
+	assert.Equal(t, "snap-crud", tasksList.Tasks[0].Id)
 
 	// Get single task
 	resp, err = http.Get(singleTaskURL("snap-crud"))
@@ -113,21 +116,21 @@ func TestTasksSnapshotCrudThroughAPI(t *testing.T) {
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected 200 OK from GET /tasks/{id}")
 
-	var got api.Task
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&got))
-	assert.Equal(t, "snap-crud", got.ID)
+	body, err = io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	var got fusionpb.Task
+	require.NoError(t, protojson.Unmarshal(body, &got))
+	assert.Equal(t, "snap-crud", got.Id)
 	assert.Equal(t, "Snapshot CRUD test", got.Description)
 
 	// Update task via PATCH (description + cron only, leave snapshot param unchanged)
 	newDesc := "Updated description"
 	newCron := "*/10 * * * *"
 
-	patch := api.TaskSnapshopPatch{
+	patchJSON, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&fusionpb.SnapshotTaskUpdateRequest{
 		Description: &newDesc,
 		CronExpr:    &newCron,
-		// Snapshot left nil to avoid existence checks
-	}
-	patchJSON, err := json.Marshal(patch)
+	})
 	require.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodPatch, singleTaskURL("snap-crud"), bytes.NewReader(patchJSON))
@@ -144,8 +147,10 @@ func TestTasksSnapshotCrudThroughAPI(t *testing.T) {
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var updated api.Task
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&updated))
+	body, err = io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	var updated fusionpb.Task
+	require.NoError(t, protojson.Unmarshal(body, &updated))
 	assert.Equal(t, newDesc, updated.Description)
 	assert.Equal(t, newCron, updated.CronExpr)
 
@@ -163,9 +168,11 @@ func TestTasksSnapshotCrudThroughAPI(t *testing.T) {
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var finalList []api.Task
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&finalList))
-	assert.Len(t, finalList, 0, "Expected 0 tasks after deletion")
+	body, err = io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	var finalList fusionpb.TaskListResponse
+	require.NoError(t, protojson.Unmarshal(body, &finalList))
+	assert.Len(t, finalList.Tasks, 0, "Expected 0 tasks after deletion")
 }
 
 func TestTasksHistoryEndpoints(t *testing.T) {
@@ -199,16 +206,12 @@ func TestTasksHistoryEndpoints(t *testing.T) {
 func TestEnableDisableEndpoints(t *testing.T) {
 	clearAllTasks(t)
 
-	task := api.Task{
-		ID:          "toggle-api",
+	taskJSON, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&fusionpb.SnapshotTaskCreateRequest{
+		Id:          "toggle-api",
 		CronExpr:    "*/5 * * * *",
 		Description: "toggle via API",
-		Type:        api.TaskTypeSnapshot,
-		Enabled:     true,
-		Params:      map[string]any{api.SnapshotIDKey: "default"},
-	}
-
-	taskJSON, err := json.Marshal(task)
+		SnapshotId:  "default",
+	})
 	require.NoError(t, err)
 
 	resp, err := http.Post(scheduleTasksURL(routes.TasksEndpoint), api.JsonMIMEType, bytes.NewReader(taskJSON))
@@ -241,16 +244,12 @@ func TestSchedulerTasksEndpointErrorCases(t *testing.T) {
 	clearAllTasks(t)
 
 	// Create one valid task to have a known ID.
-	task := api.Task{
-		ID:          "error-id",
+	taskJSON, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&fusionpb.SnapshotTaskCreateRequest{
+		Id:          "error-id",
 		CronExpr:    "*/5 * * * *",
 		Description: "error test",
-		Type:        api.TaskTypeSnapshot,
-		Enabled:     true,
-		Params:      map[string]any{api.SnapshotIDKey: "default"},
-	}
-
-	taskJSON, err := json.Marshal(task)
+		SnapshotId:  "default",
+	})
 	require.NoError(t, err)
 
 	resp, err := http.Post(scheduleTasksURL(routes.TasksEndpoint), api.JsonMIMEType, bytes.NewReader(taskJSON))
@@ -290,7 +289,7 @@ func TestSchedulerTasksEndpointErrorCases(t *testing.T) {
 			name:       "CreateTask missing required fields",
 			method:     http.MethodPost,
 			url:        scheduleTasksURL(routes.TasksEndpoint),
-			body:       strings.NewReader(`{"id": "", "cron_expr": "", "description": ""}`),
+			body:       strings.NewReader(`{"id": "", "cron_expr": "", "description": "", "snapshot_id": ""}`),
 			wantStatus: http.StatusBadRequest,
 		},
 		{
@@ -366,16 +365,12 @@ func TestScheduledSnapshotActivationThroughAPI(t *testing.T) {
 	require.Equal(t, http.StatusNoContent, resp.StatusCode)
 
 	// Schedule snapshot activation
-	task := api.Task{
-		ID:          "schedule-snap",
+	payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&fusionpb.SnapshotTaskCreateRequest{
+		Id:          "schedule-snap",
 		CronExpr:    "@every 1s",
 		Description: "scheduled activation test",
-		Type:        api.TaskTypeSnapshot,
-		Enabled:     true,
-		Params:      map[string]any{api.SnapshotIDKey: snapName},
-	}
-
-	payload, err := json.Marshal(task)
+		SnapshotId:  snapName,
+	})
 	require.NoError(t, err)
 
 	resp, err = http.Post(scheduleTasksURL(routes.TasksEndpoint), api.JsonMIMEType, bytes.NewReader(payload))
@@ -393,10 +388,10 @@ func TestScheduledSnapshotActivationThroughAPI(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, activeResp.StatusCode)
 
-	var activeSnap string
+	var activeSnap fusionpb.ActiveSnapshotResponse
 	err = json.NewDecoder(activeResp.Body).Decode(&activeSnap)
 	require.NoError(t, err, "Failed to decode active snapshot name")
 
 	// Validate scheduled snapshot was activated
-	assert.Equal(t, snapName, activeSnap, "Scheduled snapshot was not activated")
+	assert.Equal(t, snapName, activeSnap.ActiveSnapshot, "Scheduled snapshot was not activated")
 }

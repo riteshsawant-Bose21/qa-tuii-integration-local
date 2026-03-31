@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package fusion.tasks.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "fusion/internal/gen/proto/fusion;fusionpb";
+
+enum TaskType {
+  TASK_TYPE_UNSPECIFIED = 0;
+  TASK_TYPE_SNAPSHOT = 1;
+  TASK_TYPE_MESSAGE = 2;
+}
+
+message RecurringWindow {
+  string start_time = 1;
+  string end_time = 2;
+  repeated int32 days = 3;
+}
+
+message SnapshotTaskDetails {
+  string snapshot_id = 1;
+}
+
+message MessageTaskDetails {
+  string message_id = 1;
+  int64 priority = 2;
+  string zones = 3;
+}
+
+message Task {
+  string id = 1;
+  string description = 2;
+  TaskType type = 3;
+  string cron_expr = 4;
+  google.protobuf.Timestamp start_at = 5;
+  google.protobuf.Timestamp end_at = 6;
+  RecurringWindow recurrence = 7;
+  bool enabled = 8;
+  bool scheduled = 9;
+
+  oneof details {
+    SnapshotTaskDetails snapshot = 10;
+    MessageTaskDetails message = 11;
+  }
+}
+
+message TaskListResponse {
+  repeated Task tasks = 1;
+}
+
+message TaskExecutionRecord {
+  string description = 1;
+  string status = 2;
+  string task_id = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+message TaskHistoryResponse {
+  repeated TaskExecutionRecord history = 1;
+}
+
+message CreateTaskResponse {
+  string id = 1;
+}
+
+message SnapshotTaskCreateRequest {
+  string id = 1;
+  string description = 2;
+  string cron_expr = 3;
+  google.protobuf.Timestamp start_at = 4;
+  google.protobuf.Timestamp end_at = 5;
+  RecurringWindow recurrence = 6;
+  string snapshot_id = 7;
+}
+
+message SnapshotTaskUpdateRequest {
+  optional string description = 1;
+  optional string cron_expr = 2;
+  google.protobuf.Timestamp start_at = 3;
+  google.protobuf.Timestamp end_at = 4;
+  RecurringWindow recurrence = 5;
+  optional string snapshot_id = 6;
+}
+
+message MessageTaskCreateRequest {
+  string id = 1;
+  string description = 2;
+  string cron_expr = 3;
+  google.protobuf.Timestamp start_at = 4;
+  google.protobuf.Timestamp end_at = 5;
+  RecurringWindow recurrence = 6;
+  string message_id = 7;
+  int64 priority = 8;
+  string zones = 9;
+}
+
+message MessageTaskUpdateRequest {
+  optional string description = 1;
+  optional string cron_expr = 2;
+  google.protobuf.Timestamp start_at = 3;
+  google.protobuf.Timestamp end_at = 4;
+  RecurringWindow recurrence = 5;
+  optional string message_id = 6;
+  optional int64 priority = 7;
+  optional string zones = 8;
+}

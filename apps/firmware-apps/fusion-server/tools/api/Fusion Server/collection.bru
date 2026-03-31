@@ -1,0 +1,83 @@
+meta {
+  name: Fusion Server
+}
+
+headers {
+  X-Fusion-Gateway-Auth: {{fusionAuth}}
+}
+
+auth {
+  mode: none
+}
+
+docs {
+  # Fusion Server API Documentation
+  
+  ## Overview
+  
+  - **Dev Base URL:** `http://192.168.64.100:8080`
+  - **Local Base URL:** `http://localhost:8080`
+  - **Auth:** None required
+  
+  ---
+  
+  ## 🌱 Root
+  
+  ### `GET /`
+  Returns basic server info. Used to check server status.
+  
+  ---
+  
+  ## 👥 Members
+  
+  ### `GET /members`
+  Retrieves the list of active cluster members.
+  
+  ---
+  
+  ## 📦 Binaries
+  
+  ### `POST /rollbackVersion?index=-1`
+  Rollback the server binary to a previous version.
+  
+  **Query Parameters:**
+  - `index`: integer (e.g. `-1` for latest rollback)
+  
+  ---
+  
+  ### `POST /updateVersion`
+  Uploads a new server binary.
+  
+  **Multipart Form Data:**
+  - `binary` (file): Required
+  - `checksum` (text): SHA256 checksum of the file
+  
+  ---
+  
+  ### `POST /uploadAudio`
+  Uploads an audio file.
+  
+  **Multipart Form Data:**
+  - `binary` (file): Required audio file
+  
+  ---
+  
+  ## ⏱️ Timers
+  
+  ### `GET /tasks`
+  List all scheduled tasks.
+  
+  ---
+  
+  ### `POST /tasks`
+  Add a new scheduled task.
+  
+  **JSON Body:**
+  ```json
+  {
+    "id": "task_id",
+    "cron_expr": "*/5 * * * *",
+    "description": "Task description"
+  }
+  
+}

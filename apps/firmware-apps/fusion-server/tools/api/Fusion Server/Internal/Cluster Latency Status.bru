@@ -1,0 +1,11 @@
+meta {
+  name: Cluster Latency Status
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{admin_url}}/cluster/latency/status/local
+  body: none
+  auth: none
+}

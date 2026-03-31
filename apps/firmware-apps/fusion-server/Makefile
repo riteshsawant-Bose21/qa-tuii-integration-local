@@ -9,6 +9,10 @@ BUILD_DIR=build
 BUILD_FLAGS=-tags netgo,osusergo
 RELEASE_FLAGS=-trimpath
 DEBUG_FLAGS=-gcflags "all=-N -l"
+PROTOC ?= protoc
+PROTO_SRC_DIR=../../../libs/proto
+PROTO_GO_OUT=fusion/internal/gen/proto
+PROTO_FILES=$(PROTO_SRC_DIR)/fusion/device_config.proto $(PROTO_SRC_DIR)/fusion/tasks.proto $(PROTO_SRC_DIR)/fusion/snapshots.proto $(PROTO_SRC_DIR)/fusion/devices.proto
 
 # Versioning
 VERSION ?= 1.0.0-proto.2
@@ -55,6 +59,20 @@ deps:
 
 tidy:
 	cd fusion && $(GOMOD) tidy
+
+proto:
+	mkdir -p $(PROTO_GO_OUT)
+	$(PROTOC) \
+		-I $(PROTO_SRC_DIR) \
+		--go_out=$(PROTO_GO_OUT) \
+		--go_opt=paths=source_relative \
+		$(PROTO_FILES)
+
+proto-clean:
+	rm -f $(PROTO_GO_OUT)/fusion/device_config.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/tasks.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/snapshots.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/devices.pb.go
 
 # Cross compilation
 build-linux-amd64:
@@ -116,6 +134,8 @@ help:
 	@echo " run - Build and run locally"
 	@echo " deps - Download dependencies"
 	@echo " tidy - Tidy go.mod"
+	@echo " proto - Generate Go protobuf types from shared proto definitions"
+	@echo " proto-clean - Remove generated Go protobuf types"
 	@echo " fmt - Format code"
 	@echo " vet - Run go vet"
 	@echo " lint - Run linter"

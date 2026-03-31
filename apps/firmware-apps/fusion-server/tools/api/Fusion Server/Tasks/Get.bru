@@ -1,0 +1,26 @@
+meta {
+  name: Get
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{api_url}}/tasks/:id
+  body: json
+  auth: none
+}
+
+params:path {
+  id: activate-snap-001
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "cron_expr": "*/5 * * * *",
+    "description": "updated"
+  }
+}

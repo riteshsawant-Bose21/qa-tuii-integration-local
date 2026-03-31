@@ -1,0 +1,15 @@
+meta {
+  name: Get zone status
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{api_url}}/pava/zones/:zone_id/status
+  body: none
+  auth: none
+}
+
+params:path {
+  zone_id: 
+}

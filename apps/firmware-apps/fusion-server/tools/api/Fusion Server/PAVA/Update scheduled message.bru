@@ -1,0 +1,25 @@
+meta {
+  name: Update scheduled message
+  type: http
+  seq: 15
+}
+
+patch {
+  url: {{api_url}}/pava/schedule/:id
+  body: json
+  auth: none
+}
+
+params:path {
+  id: Lunch Break
+}
+
+body:json {
+  {
+    "message_id": "01KAVZ68Q2QRBDC2135YCJZ4FH",
+    "cron_expr": "@every 1m",
+    "description":"Time For dinner",
+    "priority":50,
+    "zones":"hall"
+  }
+}

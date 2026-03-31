@@ -4,14 +4,19 @@ import (
 	"bytes"
 	"fmt"
 	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"fusion/internal/tasks"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
 	json "github.com/goccy/go-json"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,6 +29,44 @@ const (
 	snapshotID     = "test-snapshot"
 )
 
+var protoJSONMarshalOptions = protojson.MarshalOptions{UseProtoNames: true}
+
+func marshalProtoMessage(t *testing.T, msg proto.Message) []byte {
+	t.Helper()
+	data, err := protoJSONMarshalOptions.Marshal(msg)
+	require.NoError(t, err)
+	return data
+}
+
+func decodeTaskListResponse(t *testing.T, body io.Reader) *fusionpb.TaskListResponse {
+	t.Helper()
+	data, err := io.ReadAll(body)
+	require.NoError(t, err)
+
+	var resp fusionpb.TaskListResponse
+	require.NoError(t, protojson.Unmarshal(data, &resp))
+	return &resp
+}
+
+func decodeTaskResponse(t *testing.T, body io.Reader) *fusionpb.Task {
+	t.Helper()
+	data, err := io.ReadAll(body)
+	require.NoError(t, err)
+
+	var task fusionpb.Task
+	require.NoError(t, protojson.Unmarshal(data, &task))
+	return &task
+}
+
+func newSnapshotTaskRequest(id, snapshot, cronExpr, description string) *fusionpb.SnapshotTaskCreateRequest {
+	return &fusionpb.SnapshotTaskCreateRequest{
+		Id:          id,
+		CronExpr:    cronExpr,
+		Description: description,
+		SnapshotId:  snapshot,
+	}
+}
+
 // clearTasks retrieves all tasks from the live server and deletes each one.
 // This ensures tests run against a clean slate.
 func clearTasks(t *testing.T) {
@@ -31,12 +74,10 @@ func clearTasks(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
-	var tasksResp []api.Task
-	err = json.NewDecoder(resp.Body).Decode(&tasksResp)
-	require.NoError(t, err)
+	tasksResp := decodeTaskListResponse(t, resp.Body)
 
-	for _, task := range tasksResp {
-		req, err := http.NewRequest(http.MethodDelete, tasksURL+"/"+task.ID, nil)
+	for _, task := range tasksResp.Tasks {
+		req, err := http.NewRequest(http.MethodDelete, tasksURL+"/"+task.Id, nil)
 		require.NoError(t, err)
 		respDel, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -45,17 +86,7 @@ func clearTasks(t *testing.T) {
 }
 
 func createTask(t *testing.T) {
-	task := api.Task{
-		ID:          testTaskId,
-		CronExpr:    "*/5 * * * *",
-		Description: "Test task description",
-		Type:        api.TaskTypeSnapshot,
-		Enabled:     true,
-		Params:      map[string]any{api.SnapshotIDKey: "default"},
-	}
-
-	taskJSON, err := json.Marshal(task)
-	require.NoError(t, err)
+	taskJSON := marshalProtoMessage(t, newSnapshotTaskRequest(testTaskId, "default", "*/5 * * * *", "Test task description"))
 
 	resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(taskJSON))
 	require.NoError(t, err)
@@ -94,17 +125,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 	clearTasks(t)
 
 	t.Run("AddTaskHandler", func(t *testing.T) {
-		task := api.Task{
-			ID:          testTaskId,
-			CronExpr:    "*/5 * * * *",
-			Description: "Test task description",
-			Type:        api.TaskTypeSnapshot,
-			Enabled:     true,
-			Params:      map[string]any{api.SnapshotIDKey: "default"},
-		}
-
-		taskJSON, err := json.Marshal(task)
-		require.NoError(t, err)
+		taskJSON := marshalProtoMessage(t, newSnapshotTaskRequest(testTaskId, "default", "*/5 * * * *", "Test task description"))
 
 		resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(taskJSON))
 		require.NoError(t, err)
@@ -120,11 +141,9 @@ func TestTaskManagerEndpoints(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected HTTP 200")
 
-		var tasksResp []api.Task
-		err = json.NewDecoder(resp.Body).Decode(&tasksResp)
-		require.NoError(t, err, "Expected valid JSON response")
-		assert.Len(t, tasksResp, 1, "Expected 1 task in the list")
-		assert.Equal(t, testTaskId, tasksResp[0].ID, "Task ID should match")
+		tasksResp := decodeTaskListResponse(t, resp.Body)
+		assert.Len(t, tasksResp.Tasks, 1, "Expected 1 task in the list")
+		assert.Equal(t, testTaskId, tasksResp.Tasks[0].Id, "Task ID should match")
 	})
 
 	t.Run("UpdateTaskHandler", func(t *testing.T) {
@@ -134,14 +153,11 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		cron := "*/10 * * * *"
 		snap := "default"
 
-		task := api.TaskSnapshopPatch{
+		taskJSON := marshalProtoMessage(t, &fusionpb.SnapshotTaskUpdateRequest{
 			Description: &desc,
 			CronExpr:    &cron,
-			Snapshot:    &snap,
-		}
-
-		taskJSON, err := json.Marshal(task)
-		require.NoError(t, err)
+			SnapshotId:  &snap,
+		})
 
 		req, err := http.NewRequest(http.MethodPatch, tasksURL+"/test-task", bytes.NewReader(taskJSON))
 		require.NoError(t, err)
@@ -169,10 +185,8 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
-		var tasksResp []api.Task
-		err = json.NewDecoder(resp.Body).Decode(&tasksResp)
-		require.NoError(t, err, "Expected valid JSON response")
-		assert.Len(t, tasksResp, 0, "Expected 0 tasks in the list after removal")
+		tasksResp := decodeTaskListResponse(t, resp.Body)
+		assert.Len(t, tasksResp.Tasks, 0, "Expected 0 tasks in the list after removal")
 	})
 
 	t.Run("ExecutionHistoryHandler", func(t *testing.T) {
@@ -208,9 +222,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		require.NoError(t, err)
 		defer respGet.Body.Close()
 
-		var disabledTask api.Task
-		err = json.NewDecoder(respGet.Body).Decode(&disabledTask)
-		require.NoError(t, err)
+		disabledTask := decodeTaskResponse(t, respGet.Body)
 		assert.False(t, disabledTask.Enabled, "Task should be disabled")
 
 		// Enable Task
@@ -227,9 +239,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		require.NoError(t, err)
 		defer respGet2.Body.Close()
 
-		var enabledTask api.Task
-		err = json.NewDecoder(respGet2.Body).Decode(&enabledTask)
-		require.NoError(t, err)
+		enabledTask := decodeTaskResponse(t, respGet2.Body)
 		assert.True(t, enabledTask.Enabled, "Task should be enabled")
 	})
 }
@@ -399,17 +409,13 @@ func TestTaskDoesNotScheduleBeforeStartAt(t *testing.T) {
 
 	start := time.Now().Add(5 * time.Second)
 
-	task := api.Task{
-		ID:          "future-task",
+	body := marshalProtoMessage(t, &fusionpb.SnapshotTaskCreateRequest{
+		Id:          "future-task",
 		CronExpr:    "* * * * *",
 		Description: "test future start window",
-		Type:        api.TaskTypeSnapshot,
-		Enabled:     true,
-		StartAt:     start,
-		Params:      map[string]any{api.SnapshotIDKey: "default"},
-	}
-
-	body, _ := json.Marshal(task)
+		StartAt:     timestamppb.New(start),
+		SnapshotId:  "default",
+	})
 	resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(body))
 	require.NoError(t, err)
 	resp.Body.Close()
@@ -419,11 +425,10 @@ func TestTaskDoesNotScheduleBeforeStartAt(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
-	var ret api.Task
-	json.NewDecoder(resp.Body).Decode(&ret)
+	ret := decodeTaskResponse(t, resp.Body)
 
 	assert.True(t, ret.Enabled)
-	assert.Equal(t, int64(0), int64(ret.CronEntryID), "CronEntryID must be zero before StartAt")
+	assert.False(t, ret.Scheduled, "Task should not be scheduled before StartAt")
 }
 
 func TestTaskAutoDisablesAfterEndAt(t *testing.T) {
@@ -431,17 +436,13 @@ func TestTaskAutoDisablesAfterEndAt(t *testing.T) {
 
 	end := time.Now().Add(2 * time.Second)
 
-	task := api.Task{
-		ID:          "end-window-task",
+	body := marshalProtoMessage(t, &fusionpb.SnapshotTaskCreateRequest{
+		Id:          "end-window-task",
 		CronExpr:    "* * * * *",
 		Description: "test end window",
-		Type:        api.TaskTypeSnapshot,
-		Enabled:     true,
-		EndAt:       end,
-		Params:      map[string]any{api.SnapshotIDKey: "default"},
-	}
-
-	body, _ := json.Marshal(task)
+		EndAt:       timestamppb.New(end),
+		SnapshotId:  "default",
+	})
 	resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(body))
 	require.NoError(t, err)
 	resp.Body.Close()
@@ -454,11 +455,10 @@ func TestTaskAutoDisablesAfterEndAt(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
-	var ret api.Task
-	json.NewDecoder(resp.Body).Decode(&ret)
+	ret := decodeTaskResponse(t, resp.Body)
 
 	assert.False(t, ret.Enabled, "Task must auto-disable after EndAt")
-	assert.Equal(t, int64(0), int64(ret.CronEntryID), "CronEntryID must be cleared after EndAt")
+	assert.False(t, ret.Scheduled, "Task should be unscheduled after EndAt")
 }
 
 func TestUpdateTaskRespectsNewStartAt(t *testing.T) {
@@ -467,11 +467,9 @@ func TestUpdateTaskRespectsNewStartAt(t *testing.T) {
 
 	newStart := time.Now().Add(3 * time.Second)
 
-	patch := api.TaskSnapshopPatch{
-		StartAt: &newStart,
-	}
-
-	body, _ := json.Marshal(patch)
+	body := marshalProtoMessage(t, &fusionpb.SnapshotTaskUpdateRequest{
+		StartAt: timestamppb.New(newStart),
+	})
 
 	req, err := http.NewRequest(http.MethodPatch, tasksURL+"/test-task", bytes.NewReader(body))
 	require.NoError(t, err)
@@ -485,11 +483,10 @@ func TestUpdateTaskRespectsNewStartAt(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
-	var ret api.Task
-	json.NewDecoder(resp.Body).Decode(&ret)
+	ret := decodeTaskResponse(t, resp.Body)
 
 	assert.True(t, ret.Enabled)
-	assert.Equal(t, int64(0), int64(ret.CronEntryID), "CronEntryID must be cleared after updating StartAt into the future")
+	assert.False(t, ret.Scheduled, "Task should be unscheduled after updating StartAt into the future")
 }
 
 func TestTaskSchedulesAfterStartAt(t *testing.T) {
@@ -500,19 +497,13 @@ func TestTaskSchedulesAfterStartAt(t *testing.T) {
 
 	start := time.Now().Add(2 * time.Second)
 
-	task := api.Task{
-		ID:          "start-window-task",
+	body := marshalProtoMessage(t, &fusionpb.SnapshotTaskCreateRequest{
+		Id:          "start-window-task",
 		CronExpr:    "* * * * *",
 		Description: "test start window",
-		Type:        api.TaskTypeSnapshot,
-		Enabled:     true,
-		StartAt:     start,
-		Params: map[string]any{
-			api.SnapshotIDKey: snapID,
-		},
-	}
-
-	body, _ := json.Marshal(task)
+		StartAt:     timestamppb.New(start),
+		SnapshotId:  snapID,
+	})
 	resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(body))
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -525,8 +516,7 @@ func TestTaskSchedulesAfterStartAt(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
-	var ret api.Task
-	json.NewDecoder(resp.Body).Decode(&ret)
+	ret := decodeTaskResponse(t, resp.Body)
 
 	assert.True(t, ret.Enabled)
 }
@@ -555,28 +545,23 @@ func TestRecurringWindowSkipsOutsideTimeWindow(t *testing.T) {
 	start := now.Add(2 * time.Minute)
 	end := now.Add(4 * time.Minute)
 
-	recurrence := &api.RecurringWindow{
+	recurrence := &fusionpb.RecurringWindow{
 		StartTime: fmt.Sprintf("%02d:%02d", start.Hour(), start.Minute()),
 		EndTime:   fmt.Sprintf("%02d:%02d", end.Hour(), end.Minute()),
-		Days:      []int{int(now.Weekday())},
+		Days:      []int32{int32(now.Weekday())},
 	}
 
 	snapID := fmt.Sprintf("recurrence-future-%d", now.UnixNano())
 	createSnapshot(t, snapID)
 
-	task := api.Task{
-		ID:          "recurrence-future-window",
-		CronExpr:    "*/5 * * * * *", // every 5 seconds (seconds field enabled in cron parser)
+	taskID := "recurrence-future-window"
+	body := marshalProtoMessage(t, &fusionpb.SnapshotTaskCreateRequest{
+		Id:          taskID,
+		CronExpr:    "*/5 * * * * *",
 		Description: "recurrence future window",
-		Type:        api.TaskTypeSnapshot,
-		Enabled:     true,
 		Recurrence:  recurrence,
-		Params: map[string]any{
-			api.SnapshotIDKey: snapID,
-		},
-	}
-
-	body, _ := json.Marshal(task)
+		SnapshotId:  snapID,
+	})
 	resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(body))
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -587,8 +572,8 @@ func TestRecurringWindowSkipsOutsideTimeWindow(t *testing.T) {
 
 	history := fetchHistory(t)
 	for _, rec := range history {
-		if rec.TaskID == task.ID {
-			t.Fatalf("task %s should not execute before recurring window opens, but history entry was found: %+v", task.ID, rec)
+		if rec.TaskID == taskID {
+			t.Fatalf("task %s should not execute before recurring window opens, but history entry was found: %+v", taskID, rec)
 		}
 	}
 }
@@ -603,28 +588,23 @@ func TestRecurringWindowRespectsDaysOfWeek(t *testing.T) {
 	// Choose a weekday that is NOT today.
 	wrongDay := (int(now.Weekday()) + 1) % 7
 
-	recurrence := &api.RecurringWindow{
+	recurrence := &fusionpb.RecurringWindow{
 		StartTime: "00:00",
 		EndTime:   "23:59",
-		Days:      []int{wrongDay},
+		Days:      []int32{int32(wrongDay)},
 	}
 
 	snapID := fmt.Sprintf("recurrence-wrong-day-%d", now.UnixNano())
 	createSnapshot(t, snapID)
 
-	task := api.Task{
-		ID:          "recurrence-wrong-day",
-		CronExpr:    "*/5 * * * * *", // every 5 seconds
+	taskID := "recurrence-wrong-day"
+	body := marshalProtoMessage(t, &fusionpb.SnapshotTaskCreateRequest{
+		Id:          taskID,
+		CronExpr:    "*/5 * * * * *",
 		Description: "recurrence wrong weekday",
-		Type:        api.TaskTypeSnapshot,
-		Enabled:     true,
 		Recurrence:  recurrence,
-		Params: map[string]any{
-			api.SnapshotIDKey: snapID,
-		},
-	}
-
-	body, _ := json.Marshal(task)
+		SnapshotId:  snapID,
+	})
 	resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(body))
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -636,8 +616,8 @@ func TestRecurringWindowRespectsDaysOfWeek(t *testing.T) {
 
 	history := fetchHistory(t)
 	for _, rec := range history {
-		if rec.TaskID == task.ID {
-			t.Fatalf("task %s should not execute on a non-matching weekday, but history entry was found: %+v", task.ID, rec)
+		if rec.TaskID == taskID {
+			t.Fatalf("task %s should not execute on a non-matching weekday, but history entry was found: %+v", taskID, rec)
 		}
 	}
 }
@@ -653,28 +633,23 @@ func TestRecurringWindowAllowsExecutionInsideWindow(t *testing.T) {
 	end := now.Add(3 * time.Minute)
 	endStr := fmt.Sprintf("%02d:%02d", end.Hour(), end.Minute())
 
-	recurrence := &api.RecurringWindow{
+	recurrence := &fusionpb.RecurringWindow{
 		StartTime: startStr,
 		EndTime:   endStr,
-		Days:      []int{int(now.Weekday())},
+		Days:      []int32{int32(now.Weekday())},
 	}
 
 	snapID := fmt.Sprintf("recurrence-active-%d", now.UnixNano())
 	createSnapshot(t, snapID)
 
-	task := api.Task{
-		ID:          "recurrence-active-window",
-		CronExpr:    "*/5 * * * * *", // every 5 seconds
+	taskID := "recurrence-active-window"
+	body := marshalProtoMessage(t, &fusionpb.SnapshotTaskCreateRequest{
+		Id:          taskID,
+		CronExpr:    "*/5 * * * * *",
 		Description: "recurrence active window",
-		Type:        api.TaskTypeSnapshot,
-		Enabled:     true,
 		Recurrence:  recurrence,
-		Params: map[string]any{
-			api.SnapshotIDKey: snapID,
-		},
-	}
-
-	body, _ := json.Marshal(task)
+		SnapshotId:  snapID,
+	})
 	resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(body))
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -686,13 +661,13 @@ func TestRecurringWindowAllowsExecutionInsideWindow(t *testing.T) {
 	history := fetchHistory(t)
 	found := false
 	for _, rec := range history {
-		if rec.TaskID == task.ID {
+		if rec.TaskID == taskID {
 			found = true
 			break
 		}
 	}
 
 	if !found {
-		t.Fatalf("expected at least one execution for task %s inside recurring window, but none were found; history: %#v", task.ID, history)
+		t.Fatalf("expected at least one execution for task %s inside recurring window, but none were found; history: %#v", taskID, history)
 	}
 }

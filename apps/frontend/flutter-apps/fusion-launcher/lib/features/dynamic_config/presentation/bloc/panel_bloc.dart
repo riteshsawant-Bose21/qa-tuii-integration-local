@@ -24,7 +24,7 @@ class PanelBloc extends Bloc<PanelBlocEvent, PanelBlocState> {
   final DisposePanelUseCase disposePanelUseCase = serviceLocator<DisposePanelUseCase>();
   final InitializePanelUseCase initializePanelUseCase = serviceLocator<InitializePanelUseCase>();
   final GetPanelStreamUseCase getPanelDataStreamUseCase = serviceLocator<GetPanelStreamUseCase>();
-  final ResetFusionUseCase resetFusionUseCase = serviceLocator<ResetFusionUseCase>();
+  final ClearAudioSettingsUseCase clearAudioSettingsUseCase = serviceLocator<ClearAudioSettingsUseCase>();
   final SendWidgetDataUseCase sendWidgetDataUseCase = serviceLocator<SendWidgetDataUseCase>();
 
   StreamSubscription<Map<String, dynamic>>? _meterSubscription;

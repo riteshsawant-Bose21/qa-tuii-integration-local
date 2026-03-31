@@ -209,6 +209,8 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.ControllersIDWinkEndpoint, app.Server.TriggerWinkById)
 
 	// Device
+	app.registerPublicGET(routes.DeviceEndpoint, app.Server.GetDSPDeploymentPackage)
+	app.registerPublicPUT(routes.DeviceEndpoint, app.Server.PutDSPDeploymentPackage)
 	app.registerPublicGET(routes.DevicesEndpoint, app.Server.GetDevicesInfo)
 	app.registerPublicGET(routes.DevicesVIPEndpoint, app.VIPMonitor.HandleGetVIP)
 	app.registerPublicPOST(routes.DevicesSetVIPEndpoint, app.VIPMonitor.HandleSetVIP)
@@ -275,11 +277,14 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicPOST(routes.TasksIdEnableEndpoint, app.TaskManager.EnableTask)
 	app.registerPublicPOST(routes.TasksIdDisableEndpoint, app.TaskManager.DisableTask)
 
-	// Values
-	app.registerPublicGET(routes.ValueEndpoint, app.Server.GetValue)
-	app.registerPublicPOST(routes.ValueEndpoint, app.Server.SetValue)
-	app.registerPublicPATCH(routes.ValueEndpoint, app.Server.UpdateValue)
-	app.registerPublicDELETE(routes.ValueEndpoint, app.Server.ClearAllValues)
+	// Settings
+	app.registerPublicGET(routes.SettingsAudioIndexedParamEndpoint, app.Server.GetAudioSetting)
+	app.registerPublicGET(routes.SettingsAudioParamEndpoint, app.Server.GetAudioSetting)
+	app.registerPublicGET(routes.SettingsAudioBlockEndpoint, app.Server.GetAudioSettings)
+	app.registerPublicGET(routes.SettingsAudioEndpoint, app.Server.GetAudioSettings)
+	app.registerPublicPATCH(routes.SettingsAudioIndexedParamEndpoint, app.Server.PatchAudioSetting)
+	app.registerPublicPATCH(routes.SettingsAudioParamEndpoint, app.Server.PatchAudioSetting)
+	app.registerPublicDELETE(routes.SettingsAudioEndpoint, app.Server.ClearAudioSettings)
 
 	// Versioning
 	app.registerPublicGET(routes.VersionEndpoint, app.Server.GetVersion)

@@ -112,7 +112,7 @@ type ConfigValue struct {
 	Value json.RawMessage `json:"value,omitempty"`
 }
 
-// DeviceInfo represents device configuration data.
+// DeviceInfo represents persisted device metadata.
 type DeviceInfo struct {
 	Address                  string `json:"address"`
 	Id                       string `json:"id"`
@@ -126,7 +126,7 @@ type DeviceInfo struct {
 	IsDeviceCertificateValid bool   `json:"is_device_certificate_valid"`
 }
 
-// DevicePatch represents patchable device configuration data.
+// DevicePatch represents patchable device metadata.
 // When modifying this struct, please ensure to update validateNoDuplication, applyPatch
 type DevicePatch struct {
 	Id       *string `json:"id,omitempty"`

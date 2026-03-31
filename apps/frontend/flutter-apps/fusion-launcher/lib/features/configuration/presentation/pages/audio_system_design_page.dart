@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -5,6 +7,7 @@ import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/core/widgets/collapsible_side_panel.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration/presentation/widgets/dsp_setup/dsp_column.dart';
+import 'package:fusion_launcher/generated/proto/fusion/device_config.pb.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/constants.dart';
@@ -473,7 +476,7 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                     elevation: 0,
                                   ),
-                                  child: const FusionAppText(text: 'Clear value', style: TextStyle(fontSize: 11)),
+                                  child: const FusionAppText(text: 'Clear audio settings', style: TextStyle(fontSize: 11)),
                                 ),
                               ),
                             ],
@@ -595,67 +598,85 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
   }
 
   void sendToDSP() async {
-    // serviceLocator<ProjectViewModel>().saveProject();
-
-    /*    //show a loader dialog while processing
     FusionUtils.showLoader(context);
+    try {
+      final ProjectManager projectManager = serviceLocator<ProjectViewModel>().projectManager;
+      final Map<String, dynamic>? droResponse = projectManager.value.droResponse;
 
-    final Map<String, dynamic> data = projectManager.value.droResponse!;
-
-    final Map<String, dynamic> result = Map<String, dynamic>.from(data["result"] ?? <dynamic, dynamic>{});
-
-    result.remove("image_input");
-    result.remove("image_output");
-
-    data["result"] = result;
-
-    // final Map<String, Map<String, dynamic>> updatedModel = <String, Map<String, dynamic>>{
-    //   "dsp_static_config": data,
-    // };
-
-    final List<dynamic> devices = data["result"]["devices"];
-
-    final Map<String, dynamic> dataForDsp = <String, dynamic>{"devices": devices};
-
-    final Map<String, dynamic> audioStreamData = JsonFormatConverter.getAudioStreamsData(data);
-
-    dataForDsp.addAll(audioStreamData);
-
-    // Clear all dynamic values
-    dataForDsp["settings"] = <String, dynamic>{
-      "audio": <String, dynamic>{},
-    };
-
-    final ResponseCallback<dynamic> fusionServerResponse = await serviceLocator<FusionNetworkClient>().post(
-      api: FusionApiEndpoint.fusionUpdateValue,
-      data: dataForDsp,
-    );
-
-    if (fusionServerResponse.success) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: FusionAppText(
-                          text: 'Configuration is Live!'),
-            backgroundColor: Colors.green,
-          ),
+      if (droResponse == null) {
+        _showProvisioningSnackBar(
+          message: 'No DRO output available to send.',
+          isSuccess: false,
         );
+        return;
       }
-    } else {
+
+      final DeviceConfigurationPackage deviceConfigPackage = _buildDeviceConfigurationPackage(
+        droResponse: droResponse,
+      );
+
+      final ResponseCallback<dynamic> fusionServerResponse = await serviceLocator<FusionNetworkClient>().put(
+        api: FusionApiEndpoint.fusionDeviceConfig,
+        data: jsonDecode(deviceConfigPackage.writeToJson()),
+      );
+
+      _showProvisioningSnackBar(
+        message: fusionServerResponse.success ? 'Configuration is Live!' : 'Error: ${fusionServerResponse.message}',
+        isSuccess: fusionServerResponse.success,
+      );
+    } catch (e) {
+      _showProvisioningSnackBar(
+        message: 'Error: $e',
+        isSuccess: false,
+      );
+    } finally {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: FusionAppText(
-                          text: 'Error: ${fusionServerResponse.message}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        FusionUtils.hideLoader(context);
       }
     }
+  }
 
-    if (mounted) {
-      FusionUtils.hideLoader(context);
-    }*/
+  DeviceConfigurationPackage _buildDeviceConfigurationPackage({
+    required Map<String, dynamic> droResponse,
+  }) {
+    final Map<String, dynamic> conditionedOutput = Map<String, dynamic>.from(
+      droResponse["result"] as Map<String, dynamic>? ?? <String, dynamic>{},
+    );
+
+    conditionedOutput.remove("image_input");
+    conditionedOutput.remove("image_output");
+
+    final Map<String, dynamic> packageJson = <String, dynamic>{
+      "droConditionedOutput": conditionedOutput,
+      "fusionConnectAdditions": <String, dynamic>{
+        ...JsonFormatConverter.getAudioStreamsData(droResponse),
+        "settings": <String, dynamic>{
+          "audio": <String, dynamic>{},
+        },
+      },
+    };
+
+    return DeviceConfigurationPackage()
+      ..mergeFromProto3Json(
+        packageJson,
+        ignoreUnknownFields: true,
+      );
+  }
+
+  void _showProvisioningSnackBar({
+    required String message,
+    required bool isSuccess,
+  }) {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: FusionAppText(text: message),
+        backgroundColor: isSuccess ? Colors.green : Colors.red,
+      ),
+    );
   }
 
   void _deleteSource(Source source) {

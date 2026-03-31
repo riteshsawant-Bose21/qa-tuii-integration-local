@@ -1,0 +1,21 @@
+meta {
+  name: Set VIP
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{admin_url}}/devices/vip/:vip
+  body: json
+  auth: none
+}
+
+params:path {
+  vip: 192.168.64.100
+}
+
+body:json {
+  {
+    "id":"test_id"
+  }
+}

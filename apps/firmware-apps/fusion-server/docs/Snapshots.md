@@ -51,6 +51,14 @@ POST /snapshots/<name>
 - Broadcasts `NotifyOpSnapCreate(name)` to the cluster.
 - Memberlist gossip eventually delivers the create event to all nodes.
 - Each node creates the same snapshot locally.
+- Returns `SnapshotOperationStatus`:
+
+```json
+{
+  "name": "scene-a",
+  "status": "created"
+}
+```
 
 Snapshot creation is *eventually consistent*.
 
@@ -87,6 +95,15 @@ All other nodes:
 - Bump epoch
 - Converge on the same state
 
+Response:
+
+```json
+{
+  "name": "scene-a",
+  "status": "activated"
+}
+```
+
 ---
 
 ### 3. Delete snapshot
@@ -98,8 +115,38 @@ DELETE /snapshots/<name>
 - Deletes snapshot from local BoltDB
 - Broadcasts `NotifyOpSnapDelete`
 - All nodes delete the snapshot locally
+- Returns `SnapshotOperationStatus`:
+
+```json
+{
+  "name": "scene-a",
+  "status": "deleted"
+}
+```
 
 The `"default"` snapshot cannot be deleted.
+
+---
+
+## Typed Metadata Endpoints
+
+`GET /snapshots` returns `SnapshotListResponse`:
+
+```json
+{
+  "snapshots": ["default", "scene-a"]
+}
+```
+
+`GET /snapshots/meta/active` returns `ActiveSnapshotResponse`:
+
+```json
+{
+  "active_snapshot": "scene-a"
+}
+```
+
+`GET /snapshots/<name>` still returns the raw stored snapshot payload rather than a protobuf-typed snapshot body.
 
 ---
 

@@ -90,6 +90,7 @@ dependencies:
   dartzmq:
     path:  ../../../../libs/flutter-libs/dartzmq
   recase: ^4.1.0
+  protobuf: ^4.2.0
 
   # Runtime permission handling
   permission_handler: ^11.0.1
@@ -122,6 +123,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  protoc_plugin: ^22.3.0
 #  msix: ^3.16.12
 
 # For information on the generic Dart part of this file, see the

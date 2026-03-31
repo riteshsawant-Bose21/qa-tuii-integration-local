@@ -13,6 +13,7 @@ function show_help() {
     echo "  --fusion      Run only fusion tests"     
     echo "  --logger      Run only logger tests"     
     echo "  --persistence Run only persistence tests"     
+    echo "  --protobuf    Run only protobuf compatibility tests"
     echo "  --sap         Run only SAP tests"     
     echo "  --scheduler   Run only scheduler tests"     
     echo "  --snapshot    Run only snapshot tests"     
@@ -46,6 +47,7 @@ while [[ $# -gt 0 ]]; do
         --fusion)       test_type="fusion"; shift ;;
         --logger)       test_type="logger"; shift ;;
         --persistence)  test_type="persistence"; shift ;;
+        --protobuf)     test_type="protobuf"; shift ;;
         --sap)          test_type="sap"; shift ;;
         --scheduler)    test_type="scheduler"; shift ;;
         --snapshot)     test_type="snapshot"; shift ;;
@@ -111,6 +113,7 @@ function test_file_for_type() {
         fusion)       echo "fusion_test.go" ;;
         logger)       echo "logger_test.go" ;;
         persistence)  echo "persistence_test.go" ;;
+        protobuf)     echo "protobuf_test.go" ;;
         sap)          echo "sap_test.go" ;;
         scheduler)    echo "scheduler_test.go" ;;
         snapshot)     echo "snapshot_test.go" ;;
@@ -202,6 +205,7 @@ case "$test_type" in
     fusion)       run_test_file ./fusion_test.go ;;
     logger)       run_test_file ./logger_test.go ;;
     persistence)  run_test_file ./persistence_test.go ;;
+    protobuf)     run_test_file ./protobuf_test.go ;;
     sap)          run_test_file ./sap_test.go ;;
     scheduler)    run_test_file ./scheduler_test.go ;;
     snapshot)     run_test_file ./snapshot_test.go ;;

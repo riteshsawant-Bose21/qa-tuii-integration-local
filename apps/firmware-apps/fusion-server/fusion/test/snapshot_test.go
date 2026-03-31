@@ -5,14 +5,17 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
+	"fusion/internal/persistence"
 	"fusion/internal/routes"
 	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -36,7 +39,7 @@ const (
 	snapshotByNameURL   = snapServerAddr + routes.SnapshotsNameEndpoint
 	snapshotActivateURL = snapServerAddr + routes.SnapshotsActivateEndpoint
 	snapshotUpdateURL   = snapServerAddr + routes.SnapshotsUpdateEndpoint
-	valueURL            = snapServerAddr + routes.ValueEndpoint
+	stateURL            = snapAdminServerAddr + routes.StateEndpoint
 )
 
 func init() {
@@ -49,6 +52,15 @@ func init() {
 		MaxFiles:    5,
 		LogLevel:    logging.ERROR,
 	})
+}
+
+func decodeSnapshotList(t *testing.T, body io.Reader) *fusionpb.SnapshotListResponse {
+	t.Helper()
+	var resp fusionpb.SnapshotListResponse
+	if err := json.NewDecoder(body).Decode(&resp); err != nil {
+		t.Fatalf("Failed to decode snapshot list: %v", err)
+	}
+	return &resp
 }
 
 func TestSnapshotCreateAndList(t *testing.T) {
@@ -69,12 +81,7 @@ func TestSnapshotCreateAndList(t *testing.T) {
 		t.Fatalf("Failed to list snapshots: %v", err)
 	}
 	defer resp.Body.Close()
-	var listResp struct {
-		Snapshots []string `json:"snapshots"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
-		t.Fatalf("Failed to decode list: %v", err)
-	}
+	listResp := decodeSnapshotList(t, resp.Body)
 	if !slices.Contains(listResp.Snapshots, snapshotName) {
 		t.Errorf("Snapshot %s not in list", snapshotName)
 	}
@@ -97,7 +104,7 @@ func TestSnapshotActivateAndDelete(t *testing.T) {
 		t.Fatalf("Failed to activate snapshot: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusNoContent {
+	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("Activate snapshot returned %d: %s", resp.StatusCode, string(body))
 	}
@@ -109,7 +116,7 @@ func TestSnapshotActivateAndDelete(t *testing.T) {
 		t.Fatalf("Failed to delete snapshot: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusNoContent {
+	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("Delete snapshot returned %d: %s", resp.StatusCode, string(body))
 	}
@@ -264,10 +271,7 @@ func TestSnapshotExportImport(t *testing.T) {
 		t.Fatalf("Failed to list snapshots: %v", err)
 	}
 	defer resp.Body.Close()
-	var listResp struct {
-		Snapshots []string `json:"snapshots"`
-	}
-	json.NewDecoder(resp.Body).Decode(&listResp)
+	listResp := decodeSnapshotList(t, resp.Body)
 	if slices.Contains(listResp.Snapshots, snapshotToRemove) {
 		t.Errorf("Snapshot %q should have been removed by import", snapshotToRemove)
 	}
@@ -286,10 +290,7 @@ func snapshotExistsOnAllNodes(t *testing.T, name string) bool {
 			return false
 		}
 		defer resp.Body.Close()
-		var list struct {
-			Snapshots []string `json:"snapshots"`
-		}
-		json.NewDecoder(resp.Body).Decode(&list)
+		list := decodeSnapshotList(t, resp.Body)
 		if !slices.Contains(list.Snapshots, name) {
 			return false
 		}
@@ -310,10 +311,7 @@ func snapshotRemovedOnAllNodes(t *testing.T, name string) bool {
 			return false
 		}
 		defer resp.Body.Close()
-		var list struct {
-			Snapshots []string `json:"snapshots"`
-		}
-		json.NewDecoder(resp.Body).Decode(&list)
+		list := decodeSnapshotList(t, resp.Body)
 		if slices.Contains(list.Snapshots, name) {
 			return false
 		}
@@ -383,10 +381,18 @@ func TestRejectOldEpochUpdatesAfterSnapshot(t *testing.T) {
 	// Set known value
 	setStateValue(t, "foo", 111)
 
-	// Send a stale update with older epoch
-	staleUpdate := `{"foo":123}`
+	// Send a stale full-state import with an older version to ensure it is rejected.
+	state := getFullVersionedState(t)
+	if state.State == nil {
+		state.State = map[string]*api.StateEntry{}
+	}
+	state.State["foo"] = &api.StateEntry{Data: 123, Version: api.Version{}}
+	jsonData, err := json.Marshal(state)
+	if err != nil {
+		t.Fatalf("Failed to marshal stale update: %v", err)
+	}
 
-	resp, err := http.Post(valueURL, api.JsonMIMEType, bytes.NewBuffer([]byte(staleUpdate)))
+	resp, err := http.Post(stateURL, api.JsonMIMEType, bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed sending stale update: %v", err)
 	}
@@ -426,7 +432,7 @@ func TestNewEpochUpdatesApply(t *testing.T) {
 	// Immediate local GET to ensure the write succeeded locally
 	localVal := getStateValue(t, "foo_new")
 	if asInt(localVal) != 999 {
-		t.Fatalf("Local value write failed: expected 999, got %v (endpoint /value may not be applying writes)",
+		t.Fatalf("Local state write failed: expected 999, got %v",
 			localVal)
 	}
 
@@ -535,30 +541,21 @@ func getAnyClusterEpoch(t *testing.T) int64 {
 func patchStateValue(t *testing.T, key string, value any) {
 	t.Helper()
 
-	payload := map[string]any{
-		key: value,
+	state := getFullVersionedState(t)
+	if state.State == nil {
+		state.State = map[string]*api.StateEntry{}
 	}
-
-	jsonData, err := json.Marshal(payload)
+	state.State[key] = &api.StateEntry{Data: value, Version: api.Version{}}
+	jsonData, err := json.Marshal(state)
 	if err != nil {
-		t.Fatalf("Failed to marshal patch payload: %v", err)
+		t.Fatalf("Failed to marshal patchState payload: %v", err)
 	}
-
-	req, err := http.NewRequest(http.MethodPatch, valueURL, bytes.NewBuffer(jsonData))
+	resp, err := http.Post(stateURL, api.JsonMIMEType, bytes.NewBuffer(jsonData))
 	if err != nil {
-		t.Fatalf("Failed to create PATCH request for key %s: %v", key, err)
-	}
-
-	req.Header.Set("Content-Type", api.JsonMIMEType)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Fatalf("Failed to PATCH state key %s: %v", key, err)
+		t.Fatalf("Failed to set state key %s: %v", key, err)
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("patchStateValue: unexpected status %d: %s", resp.StatusCode, string(body))
 	}
@@ -566,23 +563,21 @@ func patchStateValue(t *testing.T, key string, value any) {
 
 func setStateValue(t *testing.T, key string, value any) {
 	t.Helper()
-
-	payload := map[string]any{
-		key: value,
+	state := getFullVersionedState(t)
+	if state.State == nil {
+		state.State = map[string]*api.StateEntry{}
 	}
-
-	jsonData, err := json.Marshal(payload)
+	state.State[key] = &api.StateEntry{Data: value, Version: api.Version{}}
+	jsonData, err := json.Marshal(state)
 	if err != nil {
 		t.Fatalf("Failed to marshal setState payload: %v", err)
 	}
-
-	resp, err := http.Post(valueURL, api.JsonMIMEType, bytes.NewBuffer(jsonData))
+	resp, err := http.Post(stateURL, api.JsonMIMEType, bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to set state key %s: %v", key, err)
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("setStateValue: unexpected status %d: %s", resp.StatusCode, string(body))
 	}
@@ -590,37 +585,68 @@ func setStateValue(t *testing.T, key string, value any) {
 
 func getStateValue(t *testing.T, key string) any {
 	t.Helper()
+	state := getFullVersionedState(t)
+	flat := state.Flatten()
+	return lookupNested(flat, key)
+}
 
-	url := fmt.Sprintf("%s?key=%s", valueURL, key)
-	resp, err := http.Get(url)
+func getFullVersionedState(t *testing.T) persistence.VersionedState {
+	t.Helper()
+	resp, err := http.Get(stateURL)
 	if err != nil {
-		t.Fatalf("Failed to get state key %s: %v", key, err)
+		t.Fatalf("Failed to get full state: %v", err)
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusNotFound {
-		return nil
-	}
-
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("getStateValue: unexpected status %d: %s", resp.StatusCode, string(body))
+		t.Fatalf("getFullVersionedState: unexpected status %d: %s", resp.StatusCode, string(body))
+	}
+	var state persistence.VersionedState
+	if err := json.NewDecoder(resp.Body).Decode(&state); err != nil {
+		t.Fatalf("Failed to decode full state JSON: %v", err)
+	}
+	return state
+}
+
+func lookupNested(root map[string]any, key string) any {
+	var current any = root
+	for _, part := range strings.Split(key, ".") {
+		if strings.Contains(part, "[") && strings.Contains(part, "]") {
+			name := part[:strings.Index(part, "[")]
+			indexText := part[strings.Index(part, "[")+1 : strings.Index(part, "]")]
+
+			obj, ok := current.(map[string]any)
+			if !ok {
+				return nil
+			}
+			value, ok := obj[name]
+			if !ok {
+				return nil
+			}
+			items, ok := value.([]any)
+			if !ok {
+				return nil
+			}
+			index, err := strconv.Atoi(indexText)
+			if err != nil || index < 0 || index >= len(items) {
+				return nil
+			}
+			current = items[index]
+			continue
+		}
+
+		obj, ok := current.(map[string]any)
+		if !ok {
+			return nil
+		}
+		value, ok := obj[part]
+		if !ok {
+			return nil
+		}
+		current = value
 	}
 
-	var result struct {
-		Exists bool `json:"exists"`
-		Value  any  `json:"value"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		t.Fatalf("Failed to decode getStateValue JSON: %v", err)
-	}
-
-	if !result.Exists {
-		return nil
-	}
-
-	return result.Value
+	return current
 }
 
 func TestSnapshotRestoresStateExactly(t *testing.T) {
@@ -784,10 +810,6 @@ func logPerNodeSnapshotStatus(t *testing.T, snapshotName string) {
 			continue
 		}
 
-		var list struct {
-			Snapshots []string `json:"snapshots"`
-		}
-
 		body, _ := io.ReadAll(resp.Body)
 		resp.Body.Close()
 
@@ -796,6 +818,7 @@ func logPerNodeSnapshotStatus(t *testing.T, snapshotName string) {
 			continue
 		}
 
+		var list fusionpb.SnapshotListResponse
 		if err := json.Unmarshal(body, &list); err != nil {
 			t.Logf("[%s] JSON decode error: %v (body=%s)", addr, err, string(body))
 			continue
@@ -1205,7 +1228,7 @@ func TestSnapshotUpdateOverwritesState(t *testing.T) {
 		t.Fatalf("Failed to update snapshot: %v", err)
 	}
 	resp.Body.Close()
-	if resp.StatusCode != http.StatusNoContent {
+	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("Snapshot update returned %d: %s", resp.StatusCode, string(body))
 	}

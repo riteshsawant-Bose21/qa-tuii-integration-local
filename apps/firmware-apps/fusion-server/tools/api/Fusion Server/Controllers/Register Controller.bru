@@ -1,0 +1,21 @@
+meta {
+  name: Register Controller
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{api_url}}/controllers
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "id": "ctrl-test-001",
+    "name": "Test Controller",
+    "address": "192.168.64.250",
+    "version": "1.0.0"
+  }
+  
+}

@@ -99,7 +99,11 @@ const (
 	TasksIdDisableEndpoint = TasksIdEndpoint + "/disable"
 	TasksIdEnableEndpoint  = TasksIdEndpoint + "/enable"
 
-	ValueEndpoint = "/value"
+	SettingsEndpoint                  = "/settings"
+	SettingsAudioEndpoint             = SettingsEndpoint + "/audio"
+	SettingsAudioBlockEndpoint        = SettingsAudioEndpoint + "/{blockId}"
+	SettingsAudioParamEndpoint        = SettingsAudioBlockEndpoint + "/{param}"
+	SettingsAudioIndexedParamEndpoint = SettingsAudioParamEndpoint + "/{index}"
 
 	VersionEndpoint = "/version"
 
