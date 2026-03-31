@@ -36,7 +36,7 @@ void fusion_cn_rtp_stream_release(struct kref *ref)
 }
 
 int fusion_cn_rtp_init(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_netfilter *nf,
-                       struct fusion_cn_rtp_ops *ops, void *cn_mgr)
+                       struct fusion_cn_rtp_ops *ops, struct fusion_cn_manager *cn_mgr)
 {
     int i;
 
@@ -155,7 +155,7 @@ static int fusion_cn_rtp_resolve_unicast_mac(struct fusion_cn_rtp_manager *rtp_m
 
 int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr,
                              struct fusion_cn_stream_config *info,
-                             void *alsa_stream,
+                             struct fusion_cn_substream *alsa_stream,
                              struct fusion_cn_rtp_stream **rtp_stream)
 {
     struct fusion_cn_rtp_stream *stream;
@@ -624,7 +624,7 @@ static inline void fc_tx_metrics_note(struct fusion_cn_rtp_manager *rtp_mgr,
 
 __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp_mgr,
                                                struct fusion_cn_rtp_stream  *stream,
-                                               void *alsa_stream)
+                                               struct fusion_cn_substream *alsa_stream)
 {
     struct sk_buff *skb;
     u64 scheduled_send_ns;
@@ -743,7 +743,7 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
 }
 
 
-int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, u64 handle, bool running, void *alsa_stream)
+int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, u64 handle, bool running, struct fusion_cn_substream *alsa_stream)
 {
     struct fusion_cn_rtp_stream *stream;
     unsigned long flags;

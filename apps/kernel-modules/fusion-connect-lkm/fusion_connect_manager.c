@@ -82,22 +82,19 @@ const struct fusion_cn_alsa_ops fusion_cn_alsa_ops = {
     .stop_interrupts = alsa_ops_stop_interrupts
 };
 
-static void *fusion_cn_rtp_ops_get_buffer(void *alsa_stream)
+static void *fusion_cn_rtp_ops_get_buffer(struct fusion_cn_substream *alsa_stream)
 {
-    struct fusion_cn_substream *stream = alsa_stream;
-    return stream->substream->runtime->dma_area;
+    return alsa_stream->substream->runtime->dma_area;
 }
 
-static u32 fusion_cn_rtp_ops_get_buffer_size_in_frames(void *alsa_stream)
+static u32 fusion_cn_rtp_ops_get_buffer_size_in_frames(struct fusion_cn_substream *alsa_stream)
 {
-    struct fusion_cn_substream *stream = alsa_stream;
-    return stream->substream->runtime->buffer_size;
+    return alsa_stream->substream->runtime->buffer_size;
 }
 
-static u32 fusion_cn_rtp_ops_get_buffer_offset(void *alsa_stream)
+static u32 fusion_cn_rtp_ops_get_buffer_offset(struct fusion_cn_substream *alsa_stream)
 {
-    struct fusion_cn_substream *stream = alsa_stream;
-    return stream->buffer_pos;
+    return alsa_stream->buffer_pos;
 }
 
 u64 fusion_cn_get_phc_ns(void)
@@ -105,11 +102,9 @@ u64 fusion_cn_get_phc_ns(void)
     return fusion_gpt_read_phc_ns();
 }
 
-static u64 fusion_cn_get_tick_ns(void *cn_mgr)
+static u64 fusion_cn_get_tick_ns(struct fusion_cn_manager *cn_mgr)
 {
-    struct fusion_cn_manager *mgr = cn_mgr;
-
-    return READ_ONCE(mgr->tick_ns);
+    return READ_ONCE(cn_mgr->tick_ns);
 }
 
 /* helpers: compute how many interrupts are due, and advance state */

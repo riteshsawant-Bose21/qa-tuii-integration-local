@@ -20,6 +20,10 @@
 
 #define EARLY_SLACK_NS 50000
 
+struct fusion_cn_substream;
+struct fusion_cn_manager;
+struct stream_node;
+
 struct fusion_cn_stream_config {
     u64 stream_handle;
     char stream_name[FUSION_CN_NAME_MAX];
@@ -40,10 +44,10 @@ struct fusion_cn_stream_config {
 
 struct fusion_cn_rtp_ops {
     u64  (*get_phc_ns)(void);
-    u64  (*get_tick_ns)(void *cn_mgr);
-    void *(*get_buffer)(void *alsa_stream);
-    u32  (*get_buffer_size_in_frames)(void *alsa_stream);
-    u32  (*get_buffer_offset)(void *alsa_stream);
+    u64  (*get_tick_ns)(struct fusion_cn_manager *cn_mgr);
+    void *(*get_buffer)(struct fusion_cn_substream *alsa_stream);
+    u32  (*get_buffer_size_in_frames)(struct fusion_cn_substream *alsa_stream);
+    u32  (*get_buffer_offset)(struct fusion_cn_substream *alsa_stream);
 };
 
 struct fusion_cn_rtp_header {
@@ -83,13 +87,13 @@ struct fusion_cn_rtp_stream {
     bool rtp_phc_offset_valid;
 
     struct fusion_cn_stream_metrics *metrics;
-    void *stream_node;
+    struct stream_node *stream_node;
 };
 
 // map from dest_ip and dest_port to stream_handle for incoming packets
 struct fusion_cn_packet_map {
     struct hlist_node hnode;
-    void *alsa_stream;
+    struct fusion_cn_substream *alsa_stream;
     u32 source_ip;
     u32 dest_ip;
     u16 source_port;
@@ -103,20 +107,20 @@ struct fusion_cn_rtp_manager {
     rwlock_t lock;
     struct fusion_cn_netfilter *nf;
     struct fusion_cn_rtp_ops *ops;
-    void *cn_mgr;
+    struct fusion_cn_manager *cn_mgr;
     bool debug;
     bool trace_debug;
 };
 
 /* Function prototypes */
 int fusion_cn_rtp_init(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_netfilter *nf,
-                    struct fusion_cn_rtp_ops *ops, void *cn_mgr);
+                    struct fusion_cn_rtp_ops *ops, struct fusion_cn_manager *cn_mgr);
 void fusion_cn_rtp_destroy(struct fusion_cn_rtp_manager *rtp_mgr);
 int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_stream_config *info,
-                             void *alsa_stream, struct fusion_cn_rtp_stream **rtp_stream);
+                             struct fusion_cn_substream *alsa_stream, struct fusion_cn_rtp_stream **rtp_stream);
 int fusion_cn_rtp_remove_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_stream *stream);
 int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_packet *packet);
-void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_stream *stream, void *alsa_stream);
+void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_stream *stream, struct fusion_cn_substream *alsa_stream);
 struct fusion_cn_rtp_stream *fusion_cn_rtp_get_stream(struct fusion_cn_rtp_manager *rtp_mgr, u64 handle);
 void fusion_cn_rtp_stream_release(struct kref *kref);
-int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, u64 handle, bool running, void *alsa_stream);
+int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, u64 handle, bool running, struct fusion_cn_substream *alsa_stream);
