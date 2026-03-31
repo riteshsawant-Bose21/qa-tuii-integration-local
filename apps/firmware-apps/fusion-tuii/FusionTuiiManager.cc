@@ -211,6 +211,7 @@ int main(int argc, const char *argv[])
     {
         spdlog::info("Usage: {} <serialDevice> <port> <serverIP>", argv[0]);
         spdlog::warn("No serial device specified - serial I/O will be disabled");
+        return -1;
     }
 
     unsigned int serverPort = 7947;
