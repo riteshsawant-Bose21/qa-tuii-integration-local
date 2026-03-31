@@ -978,11 +978,26 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: <Widget>[
-          FusionButton(
-            accessLabel: 'add_controller_submit',
-            label: state.isLoading ? 'Adding...' : 'Add',
-            isActive: !state.isLoading,
+          NeumorphicButton(
+            semanticId: "add_controller_add_message_btn",
             onTap: () => _onAddButtonPressed(context),
+
+            height: 32,
+            borderRadius: 8,
+            width: 90,
+            isActive: !state.isLoading,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                FusionIcon.icon(
+                  Icons.add,
+                  size: 18,
+                  color: context.colorScheme.iconWhite,
+                ),
+                const SizedBox(width: 8),
+                FusionAppText(text: state.isLoading ? 'Adding...' : 'Add', style: context.textTheme.l1Medium),
+              ],
+            ),
           ),
         ],
       ),
