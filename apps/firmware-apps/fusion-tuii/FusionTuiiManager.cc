@@ -514,9 +514,9 @@ void HandleClientSetCommand(const std::string &action, const Json::Value &msg)
             return;
         }
         const double norm = payload["norm"].asDouble();
-        if (norm < 0.0 || norm > 1.0)
+        if (norm < 0.0 || norm > 100.0)
         {
-            spdlog::warn("[Protocol] setGain payload.norm {:.4f} out of range [0.0, 1.0]", norm);
+            spdlog::warn("[Protocol] setGain payload.norm {:.4f} out of range [0.0, 100.0]", norm);
             SendNackWithRetry(action, zoneIndex);
             return;
         }
@@ -527,7 +527,7 @@ void HandleClientSetCommand(const std::string &action, const Json::Value &msg)
             return;
         }
         const double dBValue = static_cast<double>(zone.gain.minValue)
-                               + norm * (static_cast<double>(zone.gain.maxValue)
+                               + (norm/100.0) * (static_cast<double>(zone.gain.maxValue)
                                          - static_cast<double>(zone.gain.minValue));
         bridge.sendGainToFusion(zone.gain.gainID, dBValue);
     }
@@ -948,7 +948,7 @@ bool ApplyQueuedAudioCommands()
             const double denom = static_cast<double>(maxValue) - static_cast<double>(minValue);
             if (std::abs(denom) > 1e-9)
             {
-                norm = (gainValue - static_cast<double>(minValue)) / denom;
+                norm = (gainValue - static_cast<double>(minValue)) * 100.0 / denom;
             }
 
             Json::Value payload(Json::objectValue);
