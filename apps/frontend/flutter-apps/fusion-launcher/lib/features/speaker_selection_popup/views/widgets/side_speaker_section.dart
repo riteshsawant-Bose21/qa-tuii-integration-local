@@ -125,7 +125,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                         bool isSubwooferSpeaker(Speaker sp) {
                           final int? productId = sp.productId;
                           if (productId == null) return false;
-                          final SpeakerProduct? product = pq.speakers.where((SpeakerProduct s) => s.productId == productId).firstOrNull;
+                          final SpeakerProduct? product = pq.speakers.where((SpeakerProduct s) => s.id == productId).firstOrNull;
                           return product?.isSubwoofer ?? false;
                         }
 
