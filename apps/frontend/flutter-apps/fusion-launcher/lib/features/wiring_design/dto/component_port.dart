@@ -4,17 +4,18 @@ class ComponentPort {
   final String? image;
   final String? label;
   final PortType type;
-  final List<PortType> compatibleTypes;
+  // final List<PortType> compatibleTypes;
   final String id;
   final PortPosition? position;
   final int index;
   final String? description;
+
   ComponentPort({
     required this.id,
     this.image,
     this.label,
     required this.type,
-    required this.compatibleTypes,
+    // required this.compatibleTypes,
     this.position,
     this.index = 0,
     required this.description,
@@ -25,7 +26,7 @@ class ComponentPort {
       'image': image,
       'label': label,
       'type': type.name,
-      'compatibleTypes': compatibleTypes.map((PortType e) => e.name).toList(),
+      // 'compatibleTypes': compatibleTypes.map((PortType e) => e.name).toList(),
       'id': id,
     };
   }
@@ -35,18 +36,19 @@ class ComponentPort {
       description: portData.description ?? '',
       image: switch (portData.type) {
         PortType.ethernet || PortType.networkSwitchIn || PortType.networkSwitchOut => 'assets/icons/wiring_ports/ethernet.png',
-        PortType.wifiIn || PortType.wifiOut || PortType.wifi => 'assets/icons/wiring_ports/wifi.png',
-        PortType.bleIn || PortType.bleOut || PortType.ble => 'assets/icons/wiring_ports/bluetooth.png',
-        PortType.hdmiIn || PortType.hdmiOut || PortType.hdmi => 'assets/icons/wiring_ports/hdmi.png',
+        PortType.wifiIn || PortType.wifiOut => 'assets/icons/wiring_ports/wifi.png',
+        PortType.bleIn || PortType.bleOut => 'assets/icons/wiring_ports/bluetooth.png',
+        PortType.hdmiIn || PortType.hdmiOut => 'assets/icons/wiring_ports/hdmi.png',
         PortType.usbIn || PortType.usbOut || PortType.usb => 'assets/icons/wiring_ports/usb.png',
         PortType.audioJackInput || PortType.audioJackOutput => 'assets/icons/wiring_ports/audio_jack.png',
+        PortType.rcaInput || PortType.rcaOutput => 'assets/icons/wiring_ports/audio_jack.png',
         _ => null,
       },
       position: portData.position,
       index: portData.portNumber,
       label: portData.name,
       type: portData.type,
-      compatibleTypes: portData.compatibleTypes,
+      // compatibleTypes: portData.compatibleTypes,
       id: portData.id,
     );
   }
@@ -59,13 +61,13 @@ class ComponentPort {
       type: PortType.values.firstWhere(
         (PortType e) => e.name == map['type'],
       ),
-      compatibleTypes: List<PortType>.from(
-        (map['compatibleTypes'] as List<dynamic>).map<PortType>(
-          (dynamic e) => PortType.values.firstWhere(
-            (PortType pt) => pt.name == e,
-          ),
-        ),
-      ),
+      // compatibleTypes: List<PortType>.from(
+      //   (map['compatibleTypes'] as List<dynamic>).map<PortType>(
+      //     (dynamic e) => PortType.values.firstWhere(
+      //       (PortType pt) => pt.name == e,
+      //     ),
+      //   ),
+      // ),
       id: map['id'] as String,
     );
   }
@@ -78,11 +80,11 @@ class ComponentPort {
   bool operator ==(covariant ComponentPort other) {
     if (identical(this, other)) return true;
 
-    return other.image == image && other.label == label && other.type == type && listEquals(other.compatibleTypes, compatibleTypes) && other.id == id;
+    return other.image == image && other.label == label && other.type == type && other.id == id;
   }
 
   @override
   int get hashCode {
-    return image.hashCode ^ label.hashCode ^ type.hashCode ^ compatibleTypes.hashCode ^ id.hashCode;
+    return image.hashCode ^ label.hashCode ^ type.hashCode ^ id.hashCode;
   }
 }

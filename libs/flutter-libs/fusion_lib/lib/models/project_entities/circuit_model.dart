@@ -31,9 +31,7 @@ class CircuitModel {
              position: PortPosition.topLeft,
              description: PortType.circuitInput.description,
              portNumber: 1,
-             compatibleTypes: [
-               PortType.amplifierOutput,
-             ],
+
              type: PortType.circuitInput,
            );
 
@@ -57,7 +55,7 @@ class CircuitModel {
       impedance: impedance ?? this.impedance,
       wiringPos: wiringPos ?? this.wiringPos,
       speakerSKU: speakerSKU ?? this.speakerSKU,
-      addedInBuildingPage: createdInBuildingPage ?? this.addedInBuildingPage,
+      addedInBuildingPage: createdInBuildingPage ?? addedInBuildingPage,
       muted: muted ?? this.muted,
     );
   }
