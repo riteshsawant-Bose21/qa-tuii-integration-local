@@ -60,14 +60,26 @@ extension ZoneViewModel on ProjectViewModel {
       }
       projectManager.addZone(zone);
 
+      for (ProcessingBlockModel block in ProcessingBlockModel.zoneUserBlocks) {
+        final ProcessingBlockModel newBlock = block.clone().copyWith(isForUser: true);
+        addProcessingBlockToParent(
+          processingBlock: newBlock,
+          parentId: zone.id,
+          autoSave: false,
+        );
+      }
+
       for (final String algo in <String>[
         "delay",
         "peq",
       ]) {
         addProcessingBlockToParent(
-          processingBlock: ProcessingBlockModel.zoneBlocks.firstWhere(
-            (ProcessingBlockModel element) => element.algorithmId == algo,
-          ),
+          processingBlock:
+              ProcessingBlockModel.zoneBlocks
+                  .firstWhere(
+                    (ProcessingBlockModel element) => element.algorithmId == algo,
+                  )
+                  .clone(),
           parentId: zone.id,
           autoSave: false,
         );

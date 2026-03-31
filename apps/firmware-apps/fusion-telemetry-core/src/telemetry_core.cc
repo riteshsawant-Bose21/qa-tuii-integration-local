@@ -172,6 +172,10 @@ void handle_update(const std::string &update_setting)
     SPDLOG_DEBUG("server update: {}", update_setting);
 }
 
+static void handle_device_id(const std::string &new_device_id)
+{
+    set_device_id(new_device_id);
+}
 
 static void handle_parameter(const std::string &path,
                              const Json::Value &old_value,
@@ -434,6 +438,7 @@ int main(int argc, char* argv[])
 
     client = new UDPValueMonitor("127.0.0.1", fus_serv_port);
 
+    client->watchDeviceID(handle_device_id);
     client->watchPattern("settings.telemetry.*.*", handle_parameter);
 
     // Initialize manager

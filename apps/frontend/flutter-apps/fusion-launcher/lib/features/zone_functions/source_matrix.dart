@@ -92,6 +92,7 @@ class _SourceMatrixZoneControlPanelState extends State<SourceMatrixZoneControlPa
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
                         child: FusionAppText(
+                          semanticId: "zone_control_panel_heading",
                           text: "ZONE CONTROL PANEL - SOURCE MATRIX",
                           style: context.textTheme.titleSmall,
                           maxLine: 1,
@@ -107,14 +108,17 @@ class _SourceMatrixZoneControlPanelState extends State<SourceMatrixZoneControlPa
                         color: Colors.transparent,
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
-                          child: InkWell(
-                            onTap: Navigator.of(context).pop,
-                            customBorder: const CircleBorder(),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Icon(
-                                LucideIcons.x200,
-                                color: context.colorScheme.iconDefault,
+                          child: SemanticHelper.button(
+                            testId: SemanticHelper.createTestId(SemanticTypes.button, "zone_control_panel_close_button"),
+                            child: InkWell(
+                              onTap: Navigator.of(context).pop,
+                              customBorder: const CircleBorder(),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Icon(
+                                  LucideIcons.x200,
+                                  color: context.colorScheme.iconDefault,
+                                ),
                               ),
                             ),
                           ),

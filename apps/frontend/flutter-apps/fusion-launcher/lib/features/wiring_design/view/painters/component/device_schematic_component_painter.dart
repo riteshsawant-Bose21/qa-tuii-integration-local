@@ -112,6 +112,7 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
       ...component.inputPorts,
       ...component.outputPorts,
     ]) {
+      print("port ${port.data.type} at ${port.absolutePosition}");
       final Path portPath = Path();
 
       /// Port

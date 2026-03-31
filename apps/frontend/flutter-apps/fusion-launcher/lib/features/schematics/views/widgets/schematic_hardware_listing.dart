@@ -58,6 +58,7 @@ class SchematicHardwareListing<T extends HardwareComponent, VM extends DeviceLis
               zoneColor: value.zoneColor, //getZoneColor(item.id),
               equipmentLocation: value.equipmentLocationName, //getEquipmentLocationForHardware(item.id),
               assetImagePath: item.assetImagePath,
+              pagingSourceType: item is Source ? item.pagingSourceType : null,
               onTap:
                   () => projectViewModel.setSelectedDevice(
                     item.id,
