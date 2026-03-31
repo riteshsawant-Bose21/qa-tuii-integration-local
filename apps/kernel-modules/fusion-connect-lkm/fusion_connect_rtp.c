@@ -10,6 +10,7 @@
 #include <net/neighbour.h>
 #include <net/arp.h>
 #include <linux/etherdevice.h>
+#include "fusion_connect_alsa.h"
 #include "fusion_connect_rtp.h"
 #include "fusion_connect_metrics.h"
 
@@ -561,10 +562,24 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
                 if (!stream->playback_armed && slot_was_empty) {
                     stream->startup_packets_received++;
                     if (stream->startup_packets_received >= SINK_STARTUP_PACKETS) {
+                        struct fusion_cn_substream *alsa_stream = map->alsa_stream;
                         stream->playback_index =
                             (write_slot + stream->buf_size_in_packets - (SINK_STARTUP_PACKETS - 1)) %
                             stream->buf_size_in_packets;
                         stream->playback_armed = true;
+                        if (alsa_stream) {
+                            unsigned long alsa_flags;
+
+                            spin_lock_irqsave(&alsa_stream->lock, alsa_flags);
+                            alsa_stream->buffer_pos =
+                                stream->playback_index * stream->info.frames_per_packet;
+                            alsa_stream->interrupt_idx = 0;
+                            spin_unlock_irqrestore(&alsa_stream->lock, alsa_flags);
+                        }
+                        printk(KERN_DEBUG
+                               "fusion_cn_rtp: startup armed %s seq=%u write_slot=%u playback_idx=%u startup_pkts=%u\n",
+                               stream->info.stream_name, seq_num, write_slot,
+                               stream->playback_index, stream->startup_packets_received);
                     }
                 }
             }
@@ -778,6 +793,11 @@ int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, u64 
         stream->playback_armed = false;
         stream->next_action_time = 0;
         stream->current_seq_num = 0;
+        if (!stream->info.is_source)
+            printk(KERN_DEBUG
+                   "fusion_cn_rtp: set_rtp_stream_running: init sink %s buf_frames=%u buf_pkts=%u frames_per_packet=%u\n",
+                   stream->info.stream_name, stream->buf_size_in_frames,
+                   stream->buf_size_in_packets, stream->info.frames_per_packet);
     }
 
     atomic_set(&stream->is_running, running);
