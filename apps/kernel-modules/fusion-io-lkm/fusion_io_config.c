@@ -201,17 +201,17 @@ const struct base_device bd_fusion_powersmart = {
     }
 };
 
-const struct base_device bd_fusion_powersmart-rev2 = {
+const struct base_device bd_fusion_powersmart_rev2 = {
     .data = {
         .model = "powersmart-rev2",
         .sn = "tbd",
-        .type = BD_TYPE_FUSION_POWERSMART
+        .type = BD_TYPE_FUSION_POWERSMART_REV2
     },
     .num_eps = 1,
     .endpoints = (struct endpoint[]) {
         SI5351B_ENDPOINT_INIT
     },
-    .num_gpios = 4,
+    .num_gpios = 3,
     .gpios = (struct endpoint_gpio[]) {
         {
             .name = "gpio_amp_mute",
@@ -231,13 +231,6 @@ const struct base_device bd_fusion_powersmart-rev2 = {
             .type = EP_GPIO_TYPE_PHYS,
             .export = true,
             .num = 8 // GPIO1_IO8
-        },
-        {
-            .name = "gpio_amp_mute",
-            .type = EP_GPIO_TYPE_PHYS,
-            .export = true,
-            .default_val = EP_GPIO_VAL_HI,
-            .num = 14 // GPIO1_IO14
         }
     },
     .cfg_seq = {
@@ -2255,7 +2248,7 @@ const struct base_device bd_fusion_blue_pal = {
 
 const enum base_device_type default_bd_types[] = {
     BD_TYPE_FUSION_POWERSMART,
-    BD_TYPE_FUSION_POWERSMART_REV2
+    BD_TYPE_FUSION_POWERSMART_REV2,
     BD_TYPE_FUSION_C1_EVK,
     BD_TYPE_FUSION_FM6,
     BD_TYPE_FUSION_FM8Y,
@@ -2266,7 +2259,7 @@ const enum base_device_type default_bd_types[] = {
 
 const struct base_device *default_bds[] = {
     &bd_fusion_powersmart,
-    &bd_fusion_powersmart-rev2,
+    &bd_fusion_powersmart_rev2,
     &bd_fusion_c1_evk,
     &bd_fusion_fm6,
     &bd_fusion_fm8y,
