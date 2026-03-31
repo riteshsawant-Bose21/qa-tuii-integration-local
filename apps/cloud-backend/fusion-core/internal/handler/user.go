@@ -70,51 +70,6 @@ func (h *UserHandler) GetUserAuthorization(ctx *gin.Context) {
 	response.OK(ctx, authDetails)
 }
 
-// GetUserProfile retrieves the current user's profile information.
-// @Summary Get user profile
-// @Description Get the current authenticated user's profile information
-// @Tags users
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} types.User "Successfully retrieved user profile"
-// @Failure 401 {object} types.ErrorResponse "Unauthorized - User email not found in token"
-// @Failure 404 {object} types.ErrorResponse "User not found in the system"
-// @Failure 500 {object} types.ErrorResponse "Internal server error"
-// @Router /users/profile [get]
-func (h *UserHandler) GetUserProfile(ctx *gin.Context) {
-	// Get user email from JWT token (set by Auth0 middleware)
-	email, exists := ctx.Get("user_email")
-	if !exists {
-		email, exists = ctx.Get("email")
-	}
-	if !exists {
-		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
-		return
-	}
-
-	emailStr, ok := email.(string)
-	if !ok {
-		response.Unauthorized(ctx, errorutil.MsgInvalidToken)
-		return
-	}
-
-	// Get user details from service
-	user, err := h.user.GetUserByEmail(ctx, emailStr)
-	if err != nil {
-		// Check if it's a "user not found" error
-		if strings.Contains(err.Error(), "user not found") {
-			response.NotFound(ctx, "User account not found in the system. Please contact your administrator to set up your account.")
-			return
-		}
-		// All other errors are internal server errors
-		response.InternalError(ctx)
-		return
-	}
-
-	response.OK(ctx, user)
-}
-
 // CreateUser creates a new user in the system.
 // @Summary Create a new user
 // @Description Create a new user with the specified details

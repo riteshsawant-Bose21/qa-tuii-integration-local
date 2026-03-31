@@ -109,7 +109,7 @@ type InviteUserToOrganizationRequest struct {
 
 // InviteUsersToOrganizationRequest represents a request to invite multiple users to an organization
 type InviteUsersToOrganizationRequest struct {
-	Users []InviteUserToOrganizationRequest `json:"users" validate:"required,min=1,max=20" example:"[{\"email\":\"john.doe@example.com\",\"role\":\"Partner Admin\"}]"`
+	Users []InviteUserToOrganizationRequest `json:"users" validate:"required,min=1,max=20"`
 }
 
 // InviteUserResult represents the result of a single user invitation

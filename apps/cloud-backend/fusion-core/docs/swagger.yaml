@@ -65,6 +65,35 @@ definitions:
     required:
     - currency
     type: object
+  types.CreateOrganizationRequest:
+    properties:
+      description:
+        example: Leading audio distribution company
+        maxLength: 255
+        type: string
+      name:
+        example: ProAudio Distribution NA
+        maxLength: 100
+        minLength: 3
+        type: string
+      region:
+        example: North America
+        maxLength: 50
+        minLength: 3
+        type: string
+      type:
+        allOf:
+        - $ref: '#/definitions/types.OrganizationType'
+        enum:
+        - distributor
+        - reseller
+        - end_user
+        example: distributor
+    required:
+    - name
+    - region
+    - type
+    type: object
   types.CreateRoleRequest:
     properties:
       description:
@@ -163,6 +192,181 @@ definitions:
         example: 3
         type: integer
     type: object
+  types.InviteUserResult:
+    properties:
+      email:
+        example: john.doe@example.com
+        type: string
+      message:
+        example: User invited successfully
+        type: string
+      success:
+        example: true
+        type: boolean
+      user_id:
+        example: usr_123456789
+        type: string
+    type: object
+  types.InviteUserToOrganizationRequest:
+    properties:
+      email:
+        example: john.doe@example.com
+        type: string
+      role:
+        example: Partner Admin
+        maxLength: 50
+        minLength: 3
+        type: string
+    required:
+    - email
+    - role
+    type: object
+  types.InviteUsersToOrganizationRequest:
+    properties:
+      users:
+        items:
+          $ref: '#/definitions/types.InviteUserToOrganizationRequest'
+        maxItems: 20
+        minItems: 1
+        type: array
+    required:
+    - users
+    type: object
+  types.InviteUsersToOrganizationResponse:
+    properties:
+      organization_id:
+        example: org_123456789
+        type: string
+      results:
+        items:
+          $ref: '#/definitions/types.InviteUserResult'
+        type: array
+      total_failed:
+        example: 0
+        type: integer
+      total_invited:
+        example: 2
+        type: integer
+    type: object
+  types.Organization:
+    properties:
+      completed_projects:
+        example: 0
+        type: integer
+      created_at:
+        example: "2023-01-15T10:30:00Z"
+        type: string
+      description:
+        example: Leading audio distribution company
+        type: string
+      id:
+        example: org_123456789
+        type: string
+      name:
+        example: ProAudio Distribution NA
+        type: string
+      ongoing_projects:
+        example: 1
+        type: integer
+      region:
+        example: North America
+        type: string
+      type:
+        allOf:
+        - $ref: '#/definitions/types.OrganizationType'
+        example: distributor
+      updated_at:
+        example: "2023-06-20T14:45:00Z"
+        type: string
+      user_count:
+        example: 2
+        type: integer
+    type: object
+  types.OrganizationDetailsResponse:
+    properties:
+      organization:
+        $ref: '#/definitions/types.Organization'
+      projects:
+        items:
+          $ref: '#/definitions/types.OrganizationProject'
+        type: array
+      statistics:
+        $ref: '#/definitions/types.OrganizationStats'
+      users:
+        items:
+          $ref: '#/definitions/types.OrganizationUser'
+        type: array
+    type: object
+  types.OrganizationProject:
+    properties:
+      id:
+        example: proj_123456789
+        type: string
+      last_updated:
+        example: "2026-02-05T00:00:00Z"
+        type: string
+      name:
+        example: Government Building Retrofit
+        type: string
+      status:
+        example: active
+        type: string
+      type:
+        example: opportunity
+        type: string
+    type: object
+  types.OrganizationStatistics:
+    properties:
+      total_distributors:
+        example: 2
+        type: integer
+      total_end_users:
+        example: 3
+        type: integer
+      total_resellers:
+        example: 1
+        type: integer
+    type: object
+  types.OrganizationStats:
+    properties:
+      completed_projects:
+        example: 0
+        type: integer
+      ongoing_projects:
+        example: 1
+        type: integer
+      total_users:
+        example: 2
+        type: integer
+    type: object
+  types.OrganizationType:
+    enum:
+    - distributor
+    - reseller
+    - end_user
+    type: string
+    x-enum-varnames:
+    - OrganizationTypeDistributor
+    - OrganizationTypeReseller
+    - OrganizationTypeEndUser
+  types.OrganizationUser:
+    properties:
+      email:
+        example: mike.chen@proaudio.com
+        type: string
+      id:
+        example: usr_123456789
+        type: string
+      joined_at:
+        example: "2024-04-01T00:00:00Z"
+        type: string
+      name:
+        example: Mike Chen
+        type: string
+      role:
+        example: Partner Admin
+        type: string
+    type: object
   types.OrganizationUsersResponse:
     properties:
       account:
@@ -171,6 +375,24 @@ definitions:
         items:
           $ref: '#/definitions/types.UserWithRole'
         type: array
+    type: object
+  types.OrganizationsOverviewResponse:
+    properties:
+      organizations:
+        items:
+          $ref: '#/definitions/types.Organization'
+        type: array
+      page:
+        example: 1
+        type: integer
+      statistics:
+        $ref: '#/definitions/types.OrganizationStatistics'
+      total_count:
+        example: 6
+        type: integer
+      total_pages:
+        example: 1
+        type: integer
     type: object
   types.PermissionUpdateRequest:
     properties:
@@ -520,6 +742,31 @@ definitions:
       id:
         example: 53437319-7a5b-4462-bc7c-9e7f9a057a1a
         type: string
+    type: object
+  types.UpdateOrganizationRequest:
+    properties:
+      description:
+        example: Leading audio distribution company
+        maxLength: 255
+        type: string
+      name:
+        example: ProAudio Distribution NA
+        maxLength: 100
+        minLength: 3
+        type: string
+      region:
+        example: North America
+        maxLength: 50
+        minLength: 3
+        type: string
+      type:
+        allOf:
+        - $ref: '#/definitions/types.OrganizationType'
+        enum:
+        - distributor
+        - reseller
+        - end_user
+        example: distributor
     type: object
   types.UpdateUserRequest:
     properties:
@@ -1026,6 +1273,347 @@ paths:
       summary: Update user role
       tags:
       - role-management
+  /organizations:
+    get:
+      consumes:
+      - application/json
+      description: Get comprehensive overview of all organizations with statistics,
+        filtering, and pagination
+      parameters:
+      - description: Search query for organization name
+        in: query
+        name: query
+        type: string
+      - collectionFormat: csv
+        description: Filter by organization types
+        in: query
+        items:
+          enum:
+          - distributor
+          - reseller
+          - end_user
+          type: string
+        name: type
+        type: array
+      - collectionFormat: csv
+        description: Filter by regions
+        in: query
+        items:
+          type: string
+        name: region
+        type: array
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved organizations
+          schema:
+            $ref: '#/definitions/types.OrganizationsOverviewResponse'
+        "401":
+          description: Unauthorized - User email not found in token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Insufficient permissions to view organizations
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all organizations
+      tags:
+      - organizations
+    post:
+      consumes:
+      - application/json
+      description: Create a new organization with specified type, region, and details
+      parameters:
+      - description: Organization creation details
+        in: body
+        name: organization
+        required: true
+        schema:
+          $ref: '#/definitions/types.CreateOrganizationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Successfully created organization
+          schema:
+            $ref: '#/definitions/types.Organization'
+        "400":
+          description: Bad request - Invalid JSON payload or validation errors
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized - User email not found in token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Insufficient permissions to create organizations
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create new organization
+      tags:
+      - organizations
+  /organizations/{organizationId}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an existing organization (soft delete recommended)
+      parameters:
+      - description: Organization ID
+        in: path
+        name: organizationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully deleted organization
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad request - Invalid organization ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized - User email not found in token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Insufficient permissions to delete organizations
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not found - Organization not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete organization
+      tags:
+      - organizations
+    get:
+      consumes:
+      - application/json
+      description: Get comprehensive details about a specific organization including
+        users, projects, and statistics
+      parameters:
+      - description: Organization ID
+        in: path
+        name: organizationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved organization details
+          schema:
+            $ref: '#/definitions/types.OrganizationDetailsResponse'
+        "400":
+          description: Bad request - Invalid organization ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized - User email not found in token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Insufficient permissions to view organization details
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not found - Organization not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get organization details
+      tags:
+      - organizations
+    put:
+      consumes:
+      - application/json
+      description: Update an existing organization's details
+      parameters:
+      - description: Organization ID
+        in: path
+        name: organizationId
+        required: true
+        type: string
+      - description: Organization update details
+        in: body
+        name: organization
+        required: true
+        schema:
+          $ref: '#/definitions/types.UpdateOrganizationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated organization
+          schema:
+            $ref: '#/definitions/types.Organization'
+        "400":
+          description: Bad request - Invalid organization ID or JSON payload
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized - User email not found in token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Insufficient permissions to update organizations
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not found - Organization not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update organization
+      tags:
+      - organizations
+  /organizations/{organizationId}/invite-users:
+    post:
+      consumes:
+      - application/json
+      description: Invite multiple users to join an organization with specified roles
+      parameters:
+      - description: Organization ID
+        in: path
+        name: organizationId
+        required: true
+        type: string
+      - description: User invitations
+        in: body
+        name: invitations
+        required: true
+        schema:
+          $ref: '#/definitions/types.InviteUsersToOrganizationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully processed invitations
+          schema:
+            $ref: '#/definitions/types.InviteUsersToOrganizationResponse'
+        "400":
+          description: Bad request - Invalid organization ID or JSON payload
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized - User email not found in token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Insufficient permissions to invite users
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not found - Organization not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Invite users to organization
+      tags:
+      - organizations
   /products:
     get:
       consumes:
