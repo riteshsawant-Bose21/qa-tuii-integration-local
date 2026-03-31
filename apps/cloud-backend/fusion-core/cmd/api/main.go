@@ -47,6 +47,8 @@ import (
 	projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/auth"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/organization"
+	organizationdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/organization/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user"
 	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
@@ -182,6 +184,20 @@ func main() {
 	}
 	loggers.AppLogger.Info("Initialized User Service.")
 
+	// Initialize Organization DB Service
+	organizationDBSvc := organizationdb.NewService(pgs)
+	if organizationDBSvc == nil {
+		loggers.AppLogger.Fatal("Failed to initialize organization database service")
+	}
+	loggers.AppLogger.Info("Initialized Organization DB Service.")
+
+	// Initialize Organization Service
+	organizationSVC := organization.NewService(organizationDBSvc)
+	if organizationSVC == nil {
+		loggers.AppLogger.Fatal("Failed to initialize organization service")
+	}
+	loggers.AppLogger.Info("Initialized Organization Service.")
+
 	// Initialize Auth0 Service
 	authZeroSVC := authZero.NewService(cfg.AuthZero, loggers.AppLogger)
 	if authZeroSVC == nil {
@@ -218,7 +234,7 @@ func main() {
 	server, err := api.New(&api.Config{
 		Host: cfg.Server.APIHost,
 		Port: cfg.Server.APIPort,
-	}, productSVC, projectSVC, userSVC, authSVC, firmwareSVC, authMiddleware, loggers)
+	}, productSVC, projectSVC, userSVC, organizationSVC, authSVC, firmwareSVC, authMiddleware, loggers)
 	if err != nil {
 		loggers.AppLogger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}
