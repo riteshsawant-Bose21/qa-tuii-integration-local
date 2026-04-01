@@ -10,6 +10,9 @@ class AddSourceViewModelState extends Equatable {
   final String? selectedSourceName;
   final Aes67Config? selectedStream;
   final List<Aes67Config> availableStreams;
+  final int? selectedMonoChannel;
+  final int? selectedLeftChannel;
+  final int? selectedRightChannel;
 
   const AddSourceViewModelState({
     this.selectedSourceSectionType = SourceSectionType.microPhone,
@@ -21,6 +24,9 @@ class AddSourceViewModelState extends Equatable {
     this.selectedSourceName,
     this.selectedStream,
     this.availableStreams = const <Aes67Config>[],
+    this.selectedMonoChannel = 1,
+    this.selectedLeftChannel = 1,
+    this.selectedRightChannel = 2,
   });
 
   AddSourceViewModelState copyWith({
@@ -33,6 +39,9 @@ class AddSourceViewModelState extends Equatable {
     String? selectedSourceName,
     Aes67Config? selectedStream,
     List<Aes67Config>? availableStreams,
+    int? selectedMonoChannel,
+    int? selectedLeftChannel,
+    int? selectedRightChannel,
   }) {
     return AddSourceViewModelState(
       selectedSourceSectionType: selectedSourceSectionType ?? this.selectedSourceSectionType,
@@ -44,6 +53,9 @@ class AddSourceViewModelState extends Equatable {
       selectedListeningArea: selectedListeningArea ?? this.selectedListeningArea,
       selectedStream: selectedStream ?? this.selectedStream,
       availableStreams: availableStreams ?? this.availableStreams,
+      selectedMonoChannel: selectedMonoChannel ?? this.selectedMonoChannel,
+      selectedLeftChannel: selectedLeftChannel ?? this.selectedLeftChannel,
+      selectedRightChannel: selectedRightChannel ?? this.selectedRightChannel,
     );
   }
 
@@ -71,6 +83,11 @@ class AddSourceViewModelState extends Equatable {
     selectedListeningArea,
     selectedConnectionType,
     selectedSourceName,
+    selectedStream,
+    availableStreams,
+    selectedMonoChannel,
+    selectedLeftChannel,
+    selectedRightChannel,
   ];
 }
 

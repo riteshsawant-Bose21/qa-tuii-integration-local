@@ -34,6 +34,18 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
     emit(state.copyWith(selectedStream: stream));
   }
 
+  void setSelectedMonoChannel(int channel) {
+    emit(state.copyWith(selectedMonoChannel: channel));
+  }
+
+  void setSelectedLeftChannel(int channel) {
+    emit(state.copyWith(selectedLeftChannel: channel));
+  }
+
+  void setSelectedRightChannel(int channel) {
+    emit(state.copyWith(selectedRightChannel: channel));
+  }
+
   void setSourceSectionType(SourceSectionType sourceSectionType) {
     final bool isSrouceSectionTypeSame = state.selectedSourceSectionType == sourceSectionType;
     if (isSrouceSectionTypeSame) return;
