@@ -23,7 +23,7 @@ tasks:
 
   build-web:
     command: "flutter"
-    args: ["build", "web", "--release", "--web-renderer=html"]
+    args: ["build", "web", "--release"]
     deps:
       # - "install-deps"
       # - "analyze"
