@@ -12,6 +12,7 @@ import 'package:fusion_lib/fusion_widgets/form_fields/fusion_custom_textfield.da
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../configuration_aes67/viewModel/config_aes67_viewmodel.dart';
+import '../../configuration_aes67/widgets/inputStreams/input_stream_dialog.dart';
 import '../view_model/add_source_viewmodel.dart';
 
 class AddSourcePopup extends StatelessWidget {
@@ -94,9 +95,9 @@ class AddSourcePopup extends StatelessWidget {
                   const Divider(thickness: 0.5, height: 0),
                   Flexible(
                     child: BlocBuilder<ConfigAes67Viewmodel, ConfigAes67State>(
-                      builder: (context, state) {
+                      builder: (BuildContext context, ConfigAes67State configState) {
                         return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                          builder: (BuildContext context, ProjectViewModelState state) {
+                          builder: (BuildContext context, ProjectViewModelState projectState) {
                             return BlocBuilder<AddSourceViewModel, AddSourceViewModelState>(
                               builder: (
                                 BuildContext context,
@@ -192,7 +193,10 @@ class AddSourcePopup extends StatelessWidget {
                                                         onSelect: (SourceData newValue) => addSourceViewModel.updateSource(index, newValue),
                                                         labelBuilder: (SourceData option) {
                                                           return SemanticHelper.container(
-                                                            testId: SemanticHelper.createTestId(SemanticTypes.container, "add_source_section_item_label_$index"),
+                                                            testId: SemanticHelper.createTestId(
+                                                              SemanticTypes.container,
+                                                              "add_source_section_item_label_$index",
+                                                            ),
                                                             child: Padding(
                                                               padding: const EdgeInsets.symmetric(horizontal: 8),
                                                               child: Row(
@@ -219,7 +223,7 @@ class AddSourcePopup extends StatelessWidget {
                                                       ),
                                                     ),
                                                   );
-                                              }),
+                                                }),
                                               ],
                                             ),
                                           ),
@@ -344,7 +348,11 @@ class AddSourcePopup extends StatelessWidget {
                                                           decoration: BoxDecoration(
                                                             boxShadow: <BoxShadow>[
                                                               BoxShadow(color: context.colorScheme.shadowDark, offset: const Offset(1.5, 1.5), blurRadius: 7),
-                                                              BoxShadow(color: context.colorScheme.shadowLight, offset: const Offset(-1.5, -1.5), blurRadius: 5),
+                                                              BoxShadow(
+                                                                color: context.colorScheme.shadowLight,
+                                                                offset: const Offset(-1.5, -1.5),
+                                                                blurRadius: 5,
+                                                              ),
                                                             ],
                                                             color: context.colorScheme.elevation1,
                                                             borderRadius: BorderRadius.circular(8),
@@ -491,7 +499,7 @@ class AddSourcePopup extends StatelessWidget {
                                                           },
                                                         );
                                                       },
-                                                    );
+                                                    ),
                                                   );
                                                 }
 
@@ -519,7 +527,7 @@ class AddSourcePopup extends StatelessWidget {
                                         ),
                                         const SizedBox(height: 12),
 
-                                        if (state.selectedSignalType == SignalType.mono) ...[
+                                        if (state.selectedSignalType == SignalType.mono) ...<Widget>[
                                           Row(
                                             children: <Widget>[
                                               Expanded(
@@ -545,7 +553,7 @@ class AddSourcePopup extends StatelessWidget {
                                           ),
                                         ],
 
-                                        if (state.selectedSignalType == SignalType.stereo) ...[
+                                        if (state.selectedSignalType == SignalType.stereo) ...<Widget>[
                                           /// LEFT CHANNEL
                                           Row(
                                             children: <Widget>[
@@ -630,12 +638,12 @@ class AddSourcePopup extends StatelessWidget {
                                         ],
                                       ),
                                     ],
-                                  );
-                                },
-                              );
-                            },
-                          );
-                        },
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        );
                       },
                     ),
                   ),
@@ -668,7 +676,10 @@ class _ChannelDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<Aes67ChannelConfig> configs = channelConfigs.isNotEmpty ? channelConfigs : List<Aes67ChannelConfig>.generate(8, (int i) => Aes67ChannelConfig(channelNumber: i + 1, label: 'Channel ${i + 1}'));
+    final List<Aes67ChannelConfig> configs =
+        channelConfigs.isNotEmpty
+            ? channelConfigs
+            : List<Aes67ChannelConfig>.generate(8, (int i) => Aes67ChannelConfig(channelNumber: i + 1, label: 'Channel ${i + 1}'));
 
     return Container(
       decoration: BoxDecoration(
