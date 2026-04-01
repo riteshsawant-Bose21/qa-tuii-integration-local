@@ -1,0 +1,28 @@
+info:
+  name: Update scheduled message
+  type: http
+  seq: 15
+
+http:
+  method: PATCH
+  url: "{{api_url}}/pava/schedule/:id"
+  params:
+    - name: id
+      value: Lunch Break
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "message_id": "01KAVZ68Q2QRBDC2135YCJZ4FH",
+        "cron_expr": "@every 1m",
+        "description":"Time For dinner",
+        "priority":50,
+        "zones":"hall"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

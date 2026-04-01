@@ -1,0 +1,18 @@
+info:
+  name: Activate
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{api_url}}/snapshots/activate/:name"
+  params:
+    - name: name
+      value: epoch_test_1764203771702099000
+      type: path
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
