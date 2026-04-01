@@ -75,6 +75,7 @@ flutter:
     - assets/images/
     - .env
     - assets/data/devices.json
+    - assets/icons/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

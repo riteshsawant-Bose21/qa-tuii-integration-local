@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_svg_icon.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_web/core/services/service_locator.dart';
 import 'package:fusion_web/features/projects/presentation/widgets/project_actions_menu.dart';
@@ -28,9 +29,9 @@ class ProjectRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: context.colorScheme.elevation2,
+      color: context.colorScheme.onSurface.withValues(alpha: 0.05),
       child: InkWell(
-        hoverColor: context.colorScheme.elevation3,
+        hoverColor: context.colorScheme.onSurface.withValues(alpha: 0.03),
         onTap: () => onTap(project),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
@@ -46,7 +47,7 @@ class ProjectRow extends StatelessWidget {
                 flex: 3,
                 child: FusionAppText(
                   text: project.name,
-                  style: context.textTheme.bodyMedium
+                  style: context.textTheme.bodyMedium,
                 ),
               ),
 
@@ -57,7 +58,7 @@ class ProjectRow extends StatelessWidget {
                 flex: 2,
                 child: FusionAppText(
                   text: project.clientName,
-                  style: context.textTheme.bodyMedium
+                  style: context.textTheme.bodyMedium,
                 ),
               ),
 
@@ -83,7 +84,7 @@ class ProjectRow extends StatelessWidget {
                     maxLine: 2,
                     softWrap: true,
                     text: project.region,
-                    style: context.textTheme.bodyMedium
+                    style: context.textTheme.bodyMedium,
                   ),
                 ),
               ),
@@ -106,21 +107,21 @@ class ProjectRow extends StatelessWidget {
                 child: Row(
                   children: [
                     HealthStat(
-                      icon: Icons.check_circle_outline,
-                      color: context.colorScheme.volumeGreen,
+                      icon: FusionIcon.icon(Icons.check_circle_outline_rounded, color: context.colorScheme.successText,),
                       count: project.healthyDevices,
+                      semanticId: '',
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 4),
                     HealthStat(
-                      icon: Icons.warning,
-                      color: context.colorScheme.volumeYellow,
+                      icon: FusionIcon.icon(Icons.warning_amber_rounded, color: context.colorScheme.warningText,),
                       count: project.warningDevices,
+                      semanticId: '',
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 4),
                     HealthStat(
-                      icon: Icons.cancel,
-                      color: context.colorScheme.volumeRed,
+                      icon: FusionIcon.icon(Icons.cancel_outlined, color: context.colorScheme.errorText,),
                       count: project.criticalDevices,
+                      semanticId: '',
                     ),
                   ],
                 ),
@@ -133,7 +134,7 @@ class ProjectRow extends StatelessWidget {
                 width: 70,
                 child: FusionAppText(
                   text: _formatDate(project.lastUpdated),
-                  style: context.textTheme.bodyMedium
+                  style: context.textTheme.bodyMedium,
                 ),
               ),
 

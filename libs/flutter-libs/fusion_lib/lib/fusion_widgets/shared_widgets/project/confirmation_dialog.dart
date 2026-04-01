@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 class ConfirmationDialog extends StatelessWidget {
   final String title;
@@ -18,12 +19,20 @@ class ConfirmationDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final confirmColor = isDestructive ? Colors.red : Colors.black;
+    
+    final confirmColor = isDestructive ? context.colorScheme.error : context.colorScheme.primary;
 
     return AlertDialog(
+      backgroundColor: context.colorScheme.elevation2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+    color: context.colorScheme.elevation3, 
+    width: 1,
+  ),
+        
       ),
+      
       title: Text(title),
       content: Text(description),
       actions: [
@@ -34,7 +43,9 @@ class ConfirmationDialog extends StatelessWidget {
         ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: confirmColor,
-            foregroundColor: Colors.white,
+            foregroundColor: context.colorScheme.white,
+            // surfaceTintColor: Colors.transparent,
+          //  elevation: 0,
           ),
           onPressed: () {
             onConfirm();

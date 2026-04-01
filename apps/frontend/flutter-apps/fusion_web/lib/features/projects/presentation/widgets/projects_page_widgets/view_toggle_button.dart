@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 class ViewToggleButton extends StatelessWidget {
   final IconData icon;
@@ -19,12 +21,12 @@ class ViewToggleButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.black87 : Colors.grey[100],
+          color: isSelected ? context.colorScheme.elevation3.withAlpha(200) : context.colorScheme.white,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(
+        child: FusionIcon.icon(
           icon,
-          color: isSelected ? Colors.white : Colors.grey[600],
+          color: isSelected ? context.colorScheme.white : context.colorScheme.elevation3.withAlpha(200),
         ),
       ),
     );

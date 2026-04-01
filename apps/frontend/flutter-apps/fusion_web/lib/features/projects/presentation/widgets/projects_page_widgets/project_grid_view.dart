@@ -22,9 +22,9 @@ class ProjectsGridView extends StatelessWidget {
         crossAxisCount: 3,
         crossAxisSpacing: 20,
         mainAxisSpacing: 20,
-        childAspectRatio: 0.82,
+        childAspectRatio: 1.5,
       ),
-      itemBuilder: (context, index) {
+      itemBuilder: (con, index) {
         return ProjectGridCard(project: projects[index], onTap: onTap);
       },
     );

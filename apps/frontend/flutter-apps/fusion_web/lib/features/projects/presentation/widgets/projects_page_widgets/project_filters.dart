@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/form_fields/text_fleld.dart';
+import 'package:fusion_lib/fusion_widgets/form_fields/fusion_custom_textfield.dart';
+import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
 import 'package:fusion_lib/fusion_widgets/others/hover_dropdown.dart';
 import 'package:fusion_web/features/projects/presentation/viewmodels/projects_viewmodel.dart';
 import 'package:fusion_web/features/projects/presentation/widgets/filter_dropdown.dart';
@@ -21,7 +23,34 @@ class ProjectsFilters extends StatelessWidget {
             flex: 2,
             child: TextFormField(
               onChanged: vm.updateSearch,
-              decoration: _inputDecoration('Search projects...', Icons.search),
+              decoration: InputDecoration(
+                labelText: 'Search projects...',
+                prefixIcon: Icon(Icons.search),
+                filled: true,
+                fillColor: context.colorScheme.onSurface.withValues(alpha: 0.05),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+
+                // borderSide: BorderSide(color: darkColorScheme.textPrimary),
+              ),
             ),
           ),
 
@@ -30,12 +59,13 @@ class ProjectsFilters extends StatelessWidget {
           Expanded(
             child: FilterDropdown(
               value: vm.region,
+
               items: const ['All', 'indoor', 'outdoor', 'hybrid'],
               onChanged: (v) => vm.updateRegion(v!),
+              backgroundColor: context.colorScheme.elevation2,
             ),
           ),
 
-          
           const SizedBox(width: 16),
 
           Expanded(
@@ -43,6 +73,7 @@ class ProjectsFilters extends StatelessWidget {
               value: vm.status,
               items: const ['All', 'Proposal', 'Development', 'Commissioned'],
               onChanged: (v) => vm.updateStatus(v!),
+              backgroundColor: context.colorScheme.elevation2,
             ),
           ),
 
@@ -68,13 +99,4 @@ class ProjectsFilters extends StatelessWidget {
     );
   }
 
-  InputDecoration _inputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      // labelText: label,
-      // prefixIcon: Icon(icon, color: Colors.grey[400]),
-      // filled: true,
-      // fillColor: Colors.grey[50],
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-    );
-  }
 }

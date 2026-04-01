@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/others/fusion_flat_container.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
 class ProjectTableHeader extends StatelessWidget {
@@ -14,8 +13,7 @@ class ProjectTableHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
         // color: Colors.grey[50],
-        // color: context.colorScheme.elevation3,
-
+      color: context.colorScheme.onSurface.withValues(alpha: 0.05),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
         border: Border(bottom: BorderSide(color: context.colorScheme.elevation3)),
       ),
@@ -69,6 +67,7 @@ class ProjectTableHeader extends StatelessWidget {
           Expanded(
             flex: 2,
             child: FusionAppText(
+              semanticId: 'incidents_header',
               text: 'Incidents',
               style: context.textTheme.labelLarge
             ),
@@ -80,6 +79,7 @@ class ProjectTableHeader extends StatelessWidget {
           Expanded(
             flex: 2,
             child: FusionAppText(
+              semanticId: 'health_header',
               text: 'Health',
               style: context.textTheme.labelLarge
             ),

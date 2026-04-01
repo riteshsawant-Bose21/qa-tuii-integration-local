@@ -2,9 +2,10 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 class AnimatedBlurDialogRoute<T> extends PageRoute<T> {
-  AnimatedBlurDialogRoute({required this.builder});
+  AnimatedBlurDialogRoute({required this.builder, required this.theme});
 
   final WidgetBuilder builder;
+  final ThemeData theme;
 
   @override
   bool get opaque => false;
@@ -25,8 +26,11 @@ class AnimatedBlurDialogRoute<T> extends PageRoute<T> {
   Duration get reverseTransitionDuration => const Duration(milliseconds: 250);
 
   @override
-  Widget buildPage(BuildContext context, Animation<double> animation,
-      Animation<double> secondaryAnimation) {
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) {
     return AnimatedBuilder(
       animation: animation,
       builder: (context, _) {
@@ -34,7 +38,6 @@ class AnimatedBlurDialogRoute<T> extends PageRoute<T> {
 
         return Stack(
           children: [
-
             // Blur background
             GestureDetector(
               onTap: () => Navigator.of(context).pop(),
@@ -44,7 +47,8 @@ class AnimatedBlurDialogRoute<T> extends PageRoute<T> {
                   sigmaY: blurValue,
                 ),
                 child: Container(
-                  color: Colors.black.withOpacity(animation.value * 0.2),
+                  // ignore: deprecated_member_use
+                  color: Colors.black.withOpacity(animation.value * 0.3),
                 ),
               ),
             ),
@@ -58,7 +62,10 @@ class AnimatedBlurDialogRoute<T> extends PageRoute<T> {
                 ),
                 child: FadeTransition(
                   opacity: animation,
-                  child: builder(context),
+                  child: Theme(
+                    data: theme,
+                    child: builder(context),
+                  ),
                 ),
               ),
             ),

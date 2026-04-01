@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_svg_icon.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
 class ProjectActionsMenu extends StatelessWidget {
@@ -16,7 +18,8 @@ class ProjectActionsMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
-      icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
+      color: context.colorScheme.elevation3,
+      // icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
       padding: EdgeInsets.zero,
       onSelected: (value) {
         switch (value) {
@@ -31,14 +34,14 @@ class ProjectActionsMenu extends StatelessWidget {
             break;
         }
       },
-      itemBuilder: (context) => const [
+      itemBuilder: (context) => [
         PopupMenuItem(
           value: 'invite',
           child: Row(
             children: [
-              Icon(Icons.person_add_outlined, size: 16),
-              SizedBox(width: 8),
-              FusionAppText(text:'Invite User'),
+              FusionIcon.icon(Icons.person_add_outlined, size: 16),
+              const SizedBox(width: 8),
+              const FusionAppText(text: 'Invite User'),
             ],
           ),
         ),
@@ -46,9 +49,9 @@ class ProjectActionsMenu extends StatelessWidget {
           value: 'archive',
           child: Row(
             children: [
-              Icon(Icons.archive_outlined, size: 16),
-              SizedBox(width: 8),
-              FusionAppText(text:'Archive'),
+              FusionIcon.icon(Icons.archive_outlined, size: 16),
+              const SizedBox(width: 8),
+              const FusionAppText(text: 'Archive'),
             ],
           ),
         ),
@@ -56,9 +59,16 @@ class ProjectActionsMenu extends StatelessWidget {
           value: 'delete',
           child: Row(
             children: [
-              Icon(Icons.delete_outline, size: 16, color: Colors.red),
-              SizedBox(width: 8),
-              FusionAppText(text:'Delete', style: TextStyle(color: Colors.red)),
+              FusionIcon.icon(
+                Icons.delete_outline,
+                size: 16,
+                color: Colors.red,
+              ),
+              const SizedBox(width: 8),
+              const FusionAppText(
+                text: 'Delete',
+                style: TextStyle(color: Colors.red),
+              ),
             ],
           ),
         ),
@@ -66,4 +76,3 @@ class ProjectActionsMenu extends StatelessWidget {
     );
   }
 }
-

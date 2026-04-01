@@ -18,9 +18,9 @@ class ProjectsListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FusionContainer(
-      color: context.colorScheme.elevation2,
-      raised: true,
+    return Container(
+      // color: context.colorScheme.elevation2,
+      // raised: true,
       child: Column(
         children: [
           const ProjectTableHeader(),

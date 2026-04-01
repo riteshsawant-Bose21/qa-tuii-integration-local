@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_svg_icon.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_web/features/projects/data/models/project_model.dart';
 import 'package:fusion_web/features/projects/presentation/viewmodels/invite_user_viewmodel.dart';
 import 'package:fusion_web/features/users/data/models/user_model.dart';
@@ -60,7 +63,14 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
         }
       },
       child: AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: context.colorScheme.elevation3, // 👈 border color
+            width: 1.2,
+          ),
+        ),
+        backgroundColor: context.colorScheme.elevation1,
 
         content: SizedBox(
           width: 600,
@@ -95,9 +105,12 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
                       ],
                     ),
 
-                    const Text(
-                      "Search and select one or more users to invite to this project.",
-                      style: TextStyle(color: Colors.black54),
+                    const FusionAppText(
+                      text:
+                          "Search and select one or more users to invite to this project.",
+                      style: TextStyle(
+                        // color: Colors.black54
+                      ),
                     ),
 
                     const SizedBox(height: 16),
@@ -125,8 +138,8 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
                         ElevatedButton(
                           onPressed: _submit,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.black,
-                            foregroundColor: Colors.white,
+                            // backgroundColor: Colors.black,
+                            // foregroundColor: Colors.white,
                           ),
                           child: const Text("Send Invite"),
                         ),
@@ -220,19 +233,19 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.colorScheme.elevation2,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFD1D5DB)),
+              border: Border.all(color: context.colorScheme.elevation3),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  // color: Colors.black.withOpacity(0.04),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
               ],
             ),
             child: widget.selectedUsers.isEmpty
-                ? const Text("Select users...")
+                ? const FusionAppText(text: "Select users...")
                 : Wrap(
                     spacing: 6,
                     runSpacing: 6,
@@ -242,14 +255,15 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
                           horizontal: 10,
                           vertical: 6,
                         ),
+
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEDEEF2),
+                          color: context.colorScheme.elevation2,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(user.name),
+                            FusionAppText(text: user.name),
                             const SizedBox(width: 6),
                             GestureDetector(
                               onTap: () => _removeUser(user),
@@ -267,8 +281,8 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
           Container(
             margin: const EdgeInsets.only(top: 6),
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFFE5E7EB)),
+              // color: Colors.white,
+              border: Border.all(color: context.colorScheme.elevation3),
               borderRadius: BorderRadius.circular(12),
             ),
             constraints: const BoxConstraints(maxHeight: 250),
@@ -278,11 +292,32 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
                   padding: const EdgeInsets.all(8),
                   child: TextField(
                     controller: _controller,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: "Search users...",
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(),
-                      isDense: true,
+                      prefixIcon: FusionIcon.icon(Icons.search),
+
+                      filled: true,
+                      fillColor: context.colorScheme.elevation2,
+
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: context.colorScheme.elevation3,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: context.colorScheme.elevation3,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: context.colorScheme.primary, 
+                          width: 1.5,
+                        ),
+                      ),
                     ),
                     onChanged: _filter,
                   ),
@@ -307,15 +342,15 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
                             ),
                             decoration: BoxDecoration(
                               color: hoveredIndex == index
-                                  ? const Color(0xFFF3F4F6)
-                                  : Colors.white,
+                                  ? context.colorScheme.elevation3
+                                  : context.colorScheme.elevation2,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
                               children: [
                                 CircleAvatar(
                                   radius: 18,
-                                  backgroundColor: const Color(0xFFE5E7EB),
+                                  // backgroundColor: const Color(0xFFE5E7EB),
                                   child: Text(
                                     user.name.substring(0, 2).toUpperCase(),
                                   ),
@@ -342,23 +377,23 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
                                       Row(
                                         children: [
                                           Flexible(
-                                            child: Text(
-                                              user.email,
+                                            child: FusionAppText(
+                                              text: user.email,
                                               style: const TextStyle(
                                                 fontSize: 12,
-                                                color: Colors.black,
+                                                // color: Colors.black,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
-                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
 
                                           const SizedBox(width: 6),
 
                                           /// DOT
-                                          const Text(
-                                            "•",
+                                          const FusionAppText(
+                                            text: "•",
                                             style: TextStyle(
-                                              color: Colors.black,
+                                              // color: Colors.black,
                                             ),
                                           ),
 
@@ -375,7 +410,7 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
                                               borderRadius:
                                                   BorderRadius.circular(12),
                                               border: Border.all(
-                                                color: const Color(0xFFD1D5DB),
+                                                // color: const Color(0xFFD1D5DB),
                                                 width: 1,
                                               ),
                                             ),
