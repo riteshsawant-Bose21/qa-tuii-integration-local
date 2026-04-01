@@ -109,6 +109,7 @@ struct fusion_cn_metrics_snapshot
 
     uint32_t rfc3550_jitter_ns;
     uint32_t iat_min_ns, iat_p50_ns, iat_p99_ns;
+    uint32_t batch_max;
 
     uint32_t jb_depth_cur_samples, jb_depth_min_samples, jb_depth_max_samples, jb_depth_avg_samples;
     uint32_t resync_count;
@@ -1678,7 +1679,7 @@ void FusionConnectClient::process() {
                     // RX
                     SPDLOG_DEBUG(
                         "metrics RX stream={}: ts={} "
-                        "pkts={} bytes={} lost={} reo={} dup={} malf={} late_drop={} burst_max={} "
+                        "pkts={} bytes={} lost={} reo={} dup={} malf={} late_drop={} burst_max={} batch_max={} "
                         "iat_min={}us p50={}us p99={}us jitter={}us "
                         "jb: cur={} min={} max={} avg={} "
                         "lat: path={}ns e2e_playout={}ns ",

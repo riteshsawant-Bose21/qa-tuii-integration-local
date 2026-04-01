@@ -86,12 +86,23 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
     u32 wr = smp_load_acquire(&m->wr_idx);
 
     u64 last_arrival = w->last_arrival_ns;
+    u64 batch_arrival_ns = 0;
+    u32 batch_cur = 0;
     bool last_rtp_ts_valid = false;
     u32 last_rtp_ts = 0;
 
     while (rd != wr) {
         const struct fusion_cn_pkt_sample s = m->ring[rd & m->ring_mask];
         rd++;
+
+        if (!batch_cur || s.arrival_phc_ns != batch_arrival_ns) {
+            batch_arrival_ns = s.arrival_phc_ns;
+            batch_cur = 1;
+        } else {
+            batch_cur++;
+        }
+        if (batch_cur > w->batch_max)
+            w->batch_max = batch_cur;
 
         /* --- Inter-arrival time (ns) with EWMA(p50) and pseudo-p99 --- */
         if (last_arrival) {
@@ -225,6 +236,7 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
         m->snap.iat_min_ns = w->iat_min_ns;
         m->snap.iat_p50_ns = w->iat_p50_ns;
         m->snap.iat_p99_ns = w->iat_p99_ns;
+        m->snap.batch_max  = w->batch_max;
 
         /* Mirror TX totals here so the snapshot is self-contained */
         m->snap.tx_packets_total = tx_pkts;
@@ -298,6 +310,7 @@ struct fusion_cn_stream_metrics *fusion_cn_metrics_create(u32 sample_rate, u64 p
     m->win.iat_min_ns = UINT_MAX;
     m->win.iat_p50_ns = 0;
     m->win.iat_p99_ns = 0;
+    m->win.batch_max = 0;
 
     m->win.jb_depth_cur_samples = 0;
     m->win.jb_depth_min_samples = UINT_MAX;

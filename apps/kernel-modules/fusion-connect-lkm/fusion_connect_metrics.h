@@ -60,6 +60,7 @@ struct fusion_cn_metrics_window
     u32 iat_min_ns;
     u32 iat_p50_ns;
     u32 iat_p99_ns;
+    u32 batch_max;
 
     /* jitter buffer & deadlines (fed by ALSA / scheduler sites) */
     u32 jb_depth_cur_samples;
@@ -94,6 +95,7 @@ struct fusion_cn_metrics_snapshot
 
     u32 rfc3550_jitter_ns;
     u32 iat_min_ns, iat_p50_ns, iat_p99_ns;
+    u32 batch_max;
 
     u32 jb_depth_cur_samples, jb_depth_min_samples, jb_depth_max_samples, jb_depth_avg_samples;
     u32 resync_count;

@@ -464,6 +464,7 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
                 if (stream->next_action_times && stream->buf_size_in_packets)
                     memset(stream->next_action_times, 0,
                            sizeof(u64) * stream->buf_size_in_packets);
+                stream->phase_log_next_ns = 0;
                 stream->playback_slot = 0;
                 printk(KERN_DEBUG "fusion_cn_rtp: process_packet: Stashed SSRC 0x%08x for stream %s\n",
                        stream->ssrc, stream->info.stream_name);
@@ -565,6 +566,22 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
 
                 stream->next_action_times[write_slot] = sched_playout_ns;
 
+                if (stream->playback_armed && stream->buf_size_in_packets) {
+                    u32 lead_slots = (write_slot + stream->buf_size_in_packets - stream->playback_slot) %
+                                     stream->buf_size_in_packets;
+                    u32 expected_lead = max_t(u32, 1, div_u64(stream->info.playout_delay + (stream->packet_time / 2),
+                                                              stream->packet_time));
+                    if ((lead_slots <= 1 || lead_slots > expected_lead + 2) &&
+                        current_phc_ns >= stream->phase_log_next_ns) {
+                        stream->phase_log_next_ns = current_phc_ns + NSEC_PER_SEC;
+                        printk(KERN_DEBUG
+                               "fusion_cn_rtp: sink phase %s seq=%u write_slot=%u playback_slot=%u lead_slots=%u expected=%u now=%llu playout=%llu\n",
+                               stream->info.stream_name, seq_num, write_slot,
+                               stream->playback_slot, lead_slots, expected_lead,
+                               current_phc_ns, sched_playout_ns);
+                    }
+                }
+
                 if (!stream->playback_armed && slot_was_empty) {
                     stream->startup_packets_received++;
                     printk(KERN_DEBUG
@@ -581,10 +598,11 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
                             if (alsa_stream)
                                 fusion_cn_alsa_set_playback_phase(alsa_stream, buffer_pos);
                             printk(KERN_DEBUG
-                                    "fusion_cn_rtp: startup armed %s seq=%u write_slot=%u playback_idx=%u buffer_pos=%u startup_pkts=%u\n",
+                                    "fusion_cn_rtp: startup armed %s seq=%u write_slot=%u playback_idx=%u buffer_pos=%u interrupt_idx=%u startup_pkts=%u\n",
                                     stream->info.stream_name, seq_num, write_slot,
                                     stream->playback_slot,
                                     buffer_pos,
+                                    alsa_stream->interrupt_idx,
                                     stream->startup_packets_received);
                         }
                     }
@@ -798,6 +816,7 @@ int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, u64 
         stream->playback_slot = 0;
         stream->startup_packets_received = 0;
         stream->playback_armed = false;
+        stream->phase_log_next_ns = 0;
         stream->next_action_time = 0;
         stream->current_seq_num = 0;
         if (!stream->info.is_source)

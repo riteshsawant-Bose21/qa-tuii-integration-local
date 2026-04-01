@@ -83,6 +83,7 @@ struct fusion_cn_rtp_stream {
     u32 playback_slot; 
     u32 startup_packets_received;
     bool playback_armed;
+    u64 phase_log_next_ns;
     u64 packet_time;
     u64 ns_per_sample;
     bool rtp_phc_offset_valid;
