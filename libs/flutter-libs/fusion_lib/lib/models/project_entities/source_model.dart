@@ -13,6 +13,7 @@ enum SourceConnectionType {
   usb("USB"),
   audioJack("Audio Jack"),
   rca("RCA"),
+  endpoint("Endpoint"),
   xlr("XLR"),
   hdmi("HDMI");
 
@@ -36,6 +37,8 @@ extension SourceConnectionTypeExtension on SourceConnectionType {
         return 'analog';
       case SourceConnectionType.rca:
         return 'analog';
+      case SourceConnectionType.endpoint:
+        return 'endpoint';
       case SourceConnectionType.xlr:
         return 'analog';
       case SourceConnectionType.hdmi:
@@ -51,6 +54,7 @@ class Source extends HardwareComponent {
   String? ipAddress; //for AES67 sources
   final String sku;
   final PagingSourceType? pagingSourceType; // Only applicable for paging sources
+  final String? streamID; // for AES67 sources, to identify the stream to connect to.
 
   /// Constructor for SourceEntity
   Source({
@@ -76,6 +80,7 @@ class Source extends HardwareComponent {
     super.outputPortsData,
     required super.addedFromBuildingPage,
     this.pagingSourceType,
+    this.streamID,
   }) : super(
          hardwareName: hardwareName ?? name,
          id: id ?? "SOURCE${FusionUtils.shortStringUUID()}",
@@ -103,6 +108,7 @@ class Source extends HardwareComponent {
     List<PortData>? outputPortsData,
     bool? addedFromBuildingPage,
     PagingSourceType? pagingSourceType,
+    String? streamID,
   }) {
     return Source(
       id: id ?? this.id,
@@ -125,6 +131,7 @@ class Source extends HardwareComponent {
       addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
       equipmentLocationPosition: equipmentLocationPosition ?? this.equipmentLocationPosition,
       pagingSourceType: pagingSourceType ?? this.pagingSourceType,
+      streamID: streamID ?? this.streamID,
     );
   }
 
@@ -164,6 +171,7 @@ class Source extends HardwareComponent {
               orElse: () => PagingSourceType.messagePlayer,
             )
           : null,
+      streamID: json['streamID'] as String?,
     );
   }
 
@@ -190,6 +198,7 @@ class Source extends HardwareComponent {
       'addedFromBuildingPage': addedFromBuildingPage,
       'equipmentLocationPosition': equipmentLocationPosition,
       'pagingSourceType': pagingSourceType?.name,
+      'streamID': streamID,
     };
   }
 }

@@ -94,6 +94,7 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
     return FusionPopupMenu<T>(
       popupwidth: widget.matchChildWidth ? null : widget.popupWidth,
       items: widget.items,
+      tooltip: '',
       onSelected: _handleChange,
       popupOffset: widget.popupOffset,
       matchChildWidth: widget.matchChildWidth,

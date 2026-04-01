@@ -11,6 +11,7 @@ import (
 	"fusion/internal/version"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -30,6 +31,10 @@ type Handler struct {
 
 	controllerManager controllers.ControllerManagerInterface
 	httpClient        *http.Client
+
+	// Software update sync tracking
+	syncTrackers     map[string]*api.SoftwareUpdateSyncTracker
+	syncTrackersLock sync.RWMutex
 }
 
 type serverInfoResponse struct {
@@ -59,6 +64,7 @@ func NewHandler(
 		controllerManager: controllerManager,
 		sessions:          make(map[string]*SAPSession),
 		httpClient:        &http.Client{Timeout: api.HTTPTimeout},
+		syncTrackers:      make(map[string]*api.SoftwareUpdateSyncTracker),
 	}
 }
 
@@ -156,4 +162,96 @@ func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
 	}
 
 	return nil
+}
+
+// Software Update Sync Tracking Methods
+
+// StartSyncTracking creates a new sync tracker for a software update operation
+func (h *Handler) StartSyncTracking(syncID, filename, checksum string, expectedNodes []string, timeout time.Duration) *api.SoftwareUpdateSyncTracker {
+	h.syncTrackersLock.Lock()
+	defer h.syncTrackersLock.Unlock()
+
+	// Create expected nodes map
+	expectedNodesMap := make(map[string]bool)
+	for _, node := range expectedNodes {
+		expectedNodesMap[node] = false
+	}
+
+	tracker := &api.SoftwareUpdateSyncTracker{
+		SyncID:        syncID,
+		Filename:      filename,
+		Checksum:      checksum,
+		StartedAt:     time.Now(),
+		ExpectedNodes: expectedNodesMap,
+		CompletedCh:   make(chan bool, 1),
+		TimeoutCh:     make(chan bool, 1),
+	}
+
+	h.syncTrackers[syncID] = tracker
+
+	// Start timeout timer
+	go func() {
+		time.Sleep(timeout)
+		select {
+		case tracker.TimeoutCh <- true:
+		default:
+		}
+	}()
+
+	return tracker
+}
+
+// HandleSyncAck processes a sync acknowledgment from a cluster node
+func (h *Handler) HandleSyncAck(nodeName string, ack *api.SoftwareUpdateSyncAck) {
+	h.syncTrackersLock.Lock()
+	defer h.syncTrackersLock.Unlock()
+
+	tracker, exists := h.syncTrackers[ack.SyncID]
+	if !exists {
+		return // Tracker not found or already completed
+	}
+
+	// Mark this node as acknowledged
+	if _, expected := tracker.ExpectedNodes[nodeName]; expected {
+		tracker.ExpectedNodes[nodeName] = true
+	}
+
+	// Check if all nodes have acknowledged
+	allAcked := true
+	for _, acked := range tracker.ExpectedNodes {
+		if !acked {
+			allAcked = false
+			break
+		}
+	}
+
+	if allAcked {
+		select {
+		case tracker.CompletedCh <- true:
+		default:
+		}
+		delete(h.syncTrackers, ack.SyncID)
+	}
+}
+
+// WaitForSyncCompletion waits for either all nodes to acknowledge or timeout
+func (h *Handler) WaitForSyncCompletion(syncID string) (bool, error) {
+	h.syncTrackersLock.RLock()
+	tracker, exists := h.syncTrackers[syncID]
+	h.syncTrackersLock.RUnlock()
+
+	if !exists {
+		return false, fmt.Errorf("sync tracker not found for ID: %s", syncID)
+	}
+
+	select {
+	case <-tracker.CompletedCh:
+		return true, nil // All nodes acknowledged
+	case <-tracker.TimeoutCh:
+		// Clean up the tracker on timeout
+		h.syncTrackersLock.Lock()
+		delete(h.syncTrackers, syncID)
+		h.syncTrackersLock.Unlock()
+		return false, fmt.Errorf("sync operation timed out")
+	}
 }

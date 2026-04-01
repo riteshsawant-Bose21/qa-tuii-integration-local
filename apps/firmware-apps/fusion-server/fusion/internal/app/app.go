@@ -84,6 +84,9 @@ func NewApp(config *api.AppConfig) *App {
 	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
 	hub.SetClusterTransport(clusterInstance)
 	connectionHandler := handler.NewHandler(config, clusterInstance, persistence, stateManager, hub, controllerManager)
+
+	// Set the sync handler on the delegate so it can handle software update acknowledgments
+	delegate.SetSyncHandler(connectionHandler)
 	mdnsManager := initMDNSManager()
 	bleServer := initBLEServer()
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
@@ -243,6 +246,12 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.PAVAScheduleEndpoint, app.TaskManager.ListScheduledMessages)
 	app.registerPublicPOST(routes.PAVAScheduleEndpoint, app.TaskManager.CreateScheduleMessageTask)
 	app.registerPublicPATCH(routes.PAVAScheduleIDEndpoint, app.TaskManager.UpdateScheduleMessageTask)
+
+	// Software Update
+	app.registerPublicPOST(routes.SoftwareUpdateUploadEndpoint, app.ConnectionHandler.HandleSoftwareUpdateUpload)
+	app.registerPublicGET(routes.SoftwareUpdateDownloadEndpoint, app.ConnectionHandler.HandleSoftwareUpdateDownload)
+	app.registerPublicGET(routes.SoftwareUpdateListEndpoint, app.ConnectionHandler.HandleSoftwareUpdateList)
+
 	app.registerPublicPUT(routes.PAVAMessageTriggerEndpoint, app.TaskManager.TriggerMessage)
 	// app.registerPublicGET(routes.PAVAZonesEndpoint, app.Server.ListZones)
 	// app.registerPublicGET(routes.PAVAZoneStatusEndpoint, app.Server.GetZoneStatus)

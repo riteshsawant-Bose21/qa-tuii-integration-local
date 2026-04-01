@@ -3,14 +3,21 @@ package api
 import "time"
 
 const (
-	FirmwareUnknown = "Unknown"
+	SoftwareUpdateVersionUnknown = "Unknown"
+	BranchNameUnknown            = "Unknown"
+	CommitHashUnknown            = "Unknown"
+	JenkinsBuildNumberUnknown    = "Unknown"
+	SoftwareUpdateOTAPath        = "/mnt/ota"
+	MaxSoftwareUpdateUploadBytes = 300 << 20 // 300 MB
+	MinFreeSpaceBuffer           = 100 << 20 // 100 MB minimum free space buffer
 
 	FusionEpoch     = "_fusion_epoch"
 	FusionVersion   = "_fusion_version"
 	FusionMessageID = "_fusion_msg_id"
 	FusionOperation = "_fusion_op"
 
-	HTTPTimeout = 5 * time.Second
+	HTTPTimeout       = 5 * time.Second
+	HTTPUploadTimeout = 30 * time.Second
 
 	MacUnknown = "Unknown"
 
@@ -26,15 +33,25 @@ const (
 
 	SnapshotIDKey = "snapshot_id"
 
-	// Request types
+	// WS Request types (client -> server)
 	WSMsgTypeDevices            = "devices"
 	WSMsgTypeDeviceByID         = "device_by_id"
 	WSMsgTypeUpdateDeviceInfo   = "update_device_info"
-	WSMsgTypeDeviceUpdate       = "device_update"
+	WSMsgTypeConfiguration      = "config"
+	WSMsgTypePatchConfiguration = "patch_config"
+	WSMsgTypeUnsubscribeConfig  = "unsubscribe_config"
 	WSMsgTypeUnsubscribeDevices = "unsubscribe_devices"
 	WSMsgTypePing               = "ping"
 	WSMsgTypePong               = "pong"
 	WSMsgTypeError              = "error"
+
+	// WS event types (server -> client)
+	WSMsgTypeDeviceUpdate = "device_update"
+	WSMsgTypeConfigUpdate = "config_update"
+
+	// WS topic names
+	WSTopicConfigUpdates = "config_updates"
+	WSTopicDeviceUpdates = "device_updates"
 
 	// WebSocket response data field keys
 	WSDataFieldDeviceID   = "device_id"
@@ -92,6 +109,6 @@ const (
 	DefaultCSRFileName      = "device.csr"
 	DefaultCertFileName     = "device.x509.cert"
 	DefaultKeyFileName      = "device.key"
-	FirmwarePath            = "/etc/buildinfo"
+	SoftwareUpdateInfoPath  = "/etc/buildinfo"
 	SerialPath              = "/sys/firmware/devicetree/base/serial-number"
 )

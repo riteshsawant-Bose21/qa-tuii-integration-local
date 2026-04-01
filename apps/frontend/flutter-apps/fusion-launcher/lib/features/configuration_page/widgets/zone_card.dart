@@ -923,7 +923,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
   /// Multi-select source selection for zone (checkboxes)
   void _initializeTempSelection() {
-    _tempSelectedItems = {
+    _tempSelectedItems = <dynamic>{
       ..._zonesViewmodel.getSourcesInZone(zoneId: widget.zoneId),
       ..._zonesViewmodel.getSourceSetsInZone(zoneId: widget.zoneId),
     };
@@ -1027,7 +1027,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
                           const SizedBox(height: 10),
 
-                          ...availableSources.asMap().entries.map((entry) {
+                          ...availableSources.asMap().entries.map((MapEntry<int, Source> entry) {
                             final Source src = entry.value;
 
                             final bool isPrioritySource = _zonesViewmodel.getPrioritySourcesInZone(zoneId: widget.zoneId).contains(src.id);
@@ -1119,7 +1119,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
                           const SizedBox(height: 10),
 
-                          ...sourceSetList.asMap().entries.map((entry) {
+                          ...sourceSetList.asMap().entries.map((MapEntry<int, SourceSet> entry) {
                             final SourceSet setItem = entry.value;
 
                             final List<Source> sourcesInSet = _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: setItem.id);
