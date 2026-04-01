@@ -32,7 +32,9 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
       Paint()
         ..color = Colors.green
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 3.0;
+        ..strokeWidth = 3.0
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
 
   @override
   Set<FusionCanvasLayerInteraction> get possibleInteractions => <FusionCanvasLayerInteraction>{
@@ -113,128 +115,85 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
     final List<Offset> jumpPoints = intersectionManager.jumpPointsForConnection(connection.id, polylines);
     final List<Offset> cutPoints = intersectionManager.cutPointsForConnection(connection.id, polylines);
 
-    final Path drawingPath = _buildPathWithIntersections(
-      positions,
-      jumpPoints,
-      cutPoints,
-      jumpRadius: 20,
-      jumpHeight: 30,
-      cutHalfGap: 8,
-    );
+    final Path drawingPath = _buildRoundedPath(positions, cornerRadius);
+    canvas.saveLayer(null, Paint());
     canvas.drawPath(drawingPath, _connectionPaint);
+
+    final Paint cutPaint =
+        Paint()
+          ..blendMode = BlendMode.clear
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = _connectionPaint.strokeWidth + 2
+          ..strokeCap = StrokeCap.round;
+
+    for (final Offset cutPoint in cutPoints) {
+      final _SegmentDirection? direction = _directionAtPoint(positions, cutPoint);
+      if (direction == null) {
+        continue;
+      }
+      const double cutHalfGap = 8;
+      final Offset before = cutPoint - direction.direction * cutHalfGap;
+      final Offset after = cutPoint + direction.direction * cutHalfGap;
+      canvas.drawLine(before, after, cutPaint);
+    }
+
+    for (final Offset jumpPoint in jumpPoints) {
+      final _SegmentDirection? direction = _directionAtPoint(positions, jumpPoint);
+      if (direction == null) {
+        continue;
+      }
+      const double jumpRadius = 20;
+      const double jumpHeight = 30;
+      final Offset before = jumpPoint - direction.direction * jumpRadius;
+      final Offset after = jumpPoint + direction.direction * jumpRadius;
+      final Path jumpPath =
+          Path()
+            ..moveTo(before.dx, before.dy)
+            ..quadraticBezierTo(
+              jumpPoint.dx + direction.normal.dx * jumpHeight,
+              jumpPoint.dy + direction.normal.dy * jumpHeight,
+              after.dx,
+              after.dy,
+            );
+      canvas.drawLine(before, after, cutPaint);
+      canvas.drawPath(jumpPath, _connectionPaint);
+    }
+
+    canvas.restore();
     paintedPath = drawingPath;
   }
 
-  Path _buildPathWithIntersections(
-    List<Offset> positions,
-    List<Offset> jumpPoints,
-    List<Offset> cutPoints, {
-    required double jumpRadius,
-    required double jumpHeight,
-    required double cutHalfGap,
-  }) {
-    if (positions.length < 2 || (jumpPoints.isEmpty && cutPoints.isEmpty)) {
-      return _buildRoundedPath(positions, cornerRadius);
-    }
-
+  _SegmentDirection? _directionAtPoint(List<Offset> positions, Offset point) {
     const double epsilon = 0.001;
-    final Path path = Path();
-    path.moveTo(positions.first.dx, positions.first.dy);
-
     for (int i = 0; i < positions.length - 1; i++) {
-      final Offset segmentStart = positions[i];
-      final Offset segmentEnd = positions[i + 1];
-      final Offset delta = segmentEnd - segmentStart;
-      final double distance = delta.distance;
-
-      if (distance <= epsilon) {
-        continue;
-      }
-
-      final bool isHorizontal = (segmentStart.dy - segmentEnd.dy).abs() <= epsilon;
-      final bool isVertical = (segmentStart.dx - segmentEnd.dx).abs() <= epsilon;
+      final Offset start = positions[i];
+      final Offset end = positions[i + 1];
+      final bool isHorizontal = (start.dy - end.dy).abs() <= epsilon;
+      final bool isVertical = (start.dx - end.dx).abs() <= epsilon;
 
       if (!isHorizontal && !isVertical) {
-        path.lineTo(segmentEnd.dx, segmentEnd.dy);
         continue;
       }
 
-      final List<Offset> segmentJumpPoints = _pointsOnSegment(
-        segmentStart,
-        segmentEnd,
-        jumpPoints,
-      );
-      final List<Offset> segmentCutPoints = _pointsOnSegment(
-        segmentStart,
-        segmentEnd,
-        cutPoints,
-      );
-      final List<_IntersectionMarker> markers = <_IntersectionMarker>[
-        ...segmentJumpPoints.map((Offset p) => _IntersectionMarker(point: p, isJump: true)),
-        ...segmentCutPoints.map((Offset p) => _IntersectionMarker(point: p, isJump: false)),
-      ];
-
-      if (markers.isEmpty) {
-        path.lineTo(segmentEnd.dx, segmentEnd.dy);
-        continue;
+      if (isHorizontal) {
+        final double minX = start.dx < end.dx ? start.dx : end.dx;
+        final double maxX = start.dx > end.dx ? start.dx : end.dx;
+        if ((point.dy - start.dy).abs() <= epsilon && point.dx > minX + epsilon && point.dx < maxX - epsilon) {
+          final Offset direction = (end - start).distance <= epsilon ? const Offset(1, 0) : (end - start) / (end - start).distance;
+          return _SegmentDirection(direction: direction, normal: const Offset(0, -1));
+        }
       }
 
-      markers.sort((_IntersectionMarker a, _IntersectionMarker b) {
-        if (isHorizontal) {
-          return segmentStart.dx <= segmentEnd.dx ? a.point.dx.compareTo(b.point.dx) : b.point.dx.compareTo(a.point.dx);
+      if (isVertical) {
+        final double minY = start.dy < end.dy ? start.dy : end.dy;
+        final double maxY = start.dy > end.dy ? start.dy : end.dy;
+        if ((point.dx - start.dx).abs() <= epsilon && point.dy > minY + epsilon && point.dy < maxY - epsilon) {
+          final Offset direction = (end - start).distance <= epsilon ? const Offset(0, 1) : (end - start) / (end - start).distance;
+          return _SegmentDirection(direction: direction, normal: const Offset(1, 0));
         }
-        return segmentStart.dy <= segmentEnd.dy ? a.point.dy.compareTo(b.point.dy) : b.point.dy.compareTo(a.point.dy);
-      });
-
-      final Offset direction = delta / distance;
-      final Offset normal = isHorizontal ? const Offset(0, -1) : const Offset(1, 0);
-      Offset cursor = segmentStart;
-
-      for (int j = 0; j < markers.length; j++) {
-        final _IntersectionMarker marker = markers[j];
-        final Offset point = marker.point;
-        final Offset? nextPoint = j + 1 < markers.length ? markers[j + 1].point : null;
-
-        final double beforeSpace = (point - cursor).distance;
-        final double afterSpace = nextPoint == null ? (segmentEnd - point).distance : (nextPoint - point).distance;
-        final double usableSpace = (beforeSpace < afterSpace ? beforeSpace : afterSpace) / 2;
-
-        if (marker.isJump) {
-          final double radius = jumpRadius.clamp(0, usableSpace);
-          if (radius <= epsilon) {
-            continue;
-          }
-
-          final Offset before = point - direction * radius;
-          final Offset after = point + direction * radius;
-
-          path.lineTo(before.dx, before.dy);
-          path.quadraticBezierTo(
-            point.dx + normal.dx * jumpHeight,
-            point.dy + normal.dy * jumpHeight,
-            after.dx,
-            after.dy,
-          );
-          cursor = after;
-          continue;
-        }
-
-        final double halfGap = cutHalfGap.clamp(0, usableSpace);
-        if (halfGap <= epsilon) {
-          continue;
-        }
-
-        final Offset before = point - direction * halfGap;
-        final Offset after = point + direction * halfGap;
-        path.lineTo(before.dx, before.dy);
-        path.moveTo(after.dx, after.dy);
-        cursor = after;
       }
-
-      path.lineTo(segmentEnd.dx, segmentEnd.dy);
     }
-
-    return path;
+    return null;
   }
 
   /// Builds a path through [positions] with rounded corners of [radius].
@@ -348,51 +307,11 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
       FusionCanvasPoint(position: path.end, id: '${connection.id}_end'),
     ];
   }
-
-  List<Offset> _pointsOnSegment(
-    Offset start,
-    Offset end,
-    List<Offset> points,
-  ) {
-    const double epsilon = 0.001;
-    final bool isHorizontal = (start.dy - end.dy).abs() <= epsilon;
-    final bool isVertical = (start.dx - end.dx).abs() <= epsilon;
-    if (!isHorizontal && !isVertical) {
-      return <Offset>[];
-    }
-
-    final double minX = start.dx < end.dx ? start.dx : end.dx;
-    final double maxX = start.dx > end.dx ? start.dx : end.dx;
-    final double minY = start.dy < end.dy ? start.dy : end.dy;
-    final double maxY = start.dy > end.dy ? start.dy : end.dy;
-
-    final List<Offset> result = points
-        .where((Offset point) {
-          if (isHorizontal) {
-            final bool onY = (point.dy - start.dy).abs() <= epsilon;
-            final bool betweenX = point.dx > minX + epsilon && point.dx < maxX - epsilon;
-            return onY && betweenX;
-          }
-          final bool onX = (point.dx - start.dx).abs() <= epsilon;
-          final bool betweenY = point.dy > minY + epsilon && point.dy < maxY - epsilon;
-          return onX && betweenY;
-        })
-        .toList(growable: false);
-
-    result.sort((Offset a, Offset b) {
-      if (isHorizontal) {
-        return start.dx <= end.dx ? a.dx.compareTo(b.dx) : b.dx.compareTo(a.dx);
-      }
-      return start.dy <= end.dy ? a.dy.compareTo(b.dy) : b.dy.compareTo(a.dy);
-    });
-
-    return result;
-  }
 }
 
-class _IntersectionMarker {
-  const _IntersectionMarker({required this.point, required this.isJump});
+class _SegmentDirection {
+  const _SegmentDirection({required this.direction, required this.normal});
 
-  final Offset point;
-  final bool isJump;
+  final Offset direction;
+  final Offset normal;
 }

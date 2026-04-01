@@ -126,24 +126,24 @@ class _WiringPageState extends State<WiringPage> {
             },
             onMovePoints: (FusionBasePainter painter, List<String> points, Offset delta) {
               if (painter is WiringConnectionPainter) {
-                // print(" Moving points for connection ${painter.connection.id}, delta=$delta");
-                // final WiringConnectionModel connection = painter.connection;
-                // final List<FusionCanvasPoint>? updatedPoints = painter.pathPoints;
-                // if (updatedPoints == null) return;
-                // final Map<int, FusionCanvasPoint> newPoints = <int, FusionCanvasPoint>{};
-                // for (String pointId in points) {
-                //   if (updatedPoints.any((FusionCanvasPoint p) => p.id == pointId)) {
-                //     final int index = updatedPoints.indexWhere((FusionCanvasPoint p) => p.id == pointId);
-                //     // updatedPoints[index] = FusionCanvasPoint(position: updatedPoints[index].position);
-                //     newPoints[index] = updatedPoints[index].copyWith(position: updatedPoints[index].position);
-                //   }
-                // }
-                // projectViewModel.updateWiringConnection(
-                //   connection: connection.copyWith(
-                //     points: newPoints.isEmpty ? <FusionCanvasPoint>[] : newPoints.entries.map((MapEntry<int, FusionCanvasPoint> e) => e.value).toList(),
-                //   ),
-                // );
-                // pathStorage.clearPathForLayer(painter.id);
+                print(" Moving points for connection ${painter.connection.id}, delta=$delta");
+                final WiringConnectionModel connection = painter.connection;
+                final List<FusionCanvasPoint>? updatedPoints = painter.pathPoints;
+                if (updatedPoints == null) return;
+                final Map<int, FusionCanvasPoint> newPoints = <int, FusionCanvasPoint>{};
+                for (String pointId in points) {
+                  if (updatedPoints.any((FusionCanvasPoint p) => p.id == pointId)) {
+                    final int index = updatedPoints.indexWhere((FusionCanvasPoint p) => p.id == pointId);
+                    // updatedPoints[index] = FusionCanvasPoint(position: updatedPoints[index].position);
+                    newPoints[index] = updatedPoints[index].copyWith(position: updatedPoints[index].position);
+                  }
+                }
+                projectViewModel.updateWiringConnection(
+                  connection: connection.copyWith(
+                    points: newPoints.isEmpty ? <FusionCanvasPoint>[] : newPoints.entries.map((MapEntry<int, FusionCanvasPoint> e) => e.value).toList(),
+                  ),
+                );
+                pathStorage.clearPathForLayer(painter.id);
               }
             },
             onMoveLayer: (FusionBasePainter painter, Offset offset) {

@@ -10,7 +10,6 @@ import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_t
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_snap_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../../wiring_design/view/painters/dotted_grid_painter.dart';
 import '../../state/fusion_canvas_input_state.dart';
 import '../../state/fusion_canvas_state.dart';
 import '../../state/fusion_snap_state.dart';
@@ -52,12 +51,12 @@ class FusionCanvasPainter extends CustomPainter {
     canvas.translate(offset.dx, offset.dy);
     canvas.scale(state.scale);
 
-    DottedGridPainter(color: Colors.grey.shade300).paint(
-      canvas,
-      size,
-      offset,
-      state.scale,
-    );
+    // DottedGridPainter(color: Colors.grey.shade300).paint(
+    //   canvas,
+    //   size,
+    //   offset,
+    //   state.scale,
+    // );
 
     for (final FusionBasePainter painter in layers) {
       painter.paint(canvas, size, this);
