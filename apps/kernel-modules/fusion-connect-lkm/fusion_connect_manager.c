@@ -140,7 +140,7 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u6
                 break;
             }
 
-            if (g_fusion_cn_mgr->debug) pr_debug("fusion_cn: compute_sink: stream %s playback_idx=%u count=%u now=%llu\n", s->info.stream_name, s->playback_slot, count, tick_ns);
+            if (g_fusion_cn_mgr->trace_debug) printk(KERN_DEBUG "fusion_cn: compute_sink: stream %s playback_idx=%u count=%u now=%llu\n", s->info.stream_name, s->playback_slot, count, tick_ns);
 
             s->next_action_times[slot] = 0;
             if (++s->playback_slot >= s->buf_size_in_packets)
