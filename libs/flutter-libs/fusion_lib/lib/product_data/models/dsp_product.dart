@@ -30,7 +30,7 @@ class GpioLogicPorts {
 /// Field names follow the README specification.
 /// The numberOfInputsAndOutputs field accepts any schema structure.
 class DspProduct {
-  final int productId;
+  final int id;
   final ProductAsset assets;
   final String modelName;
   final String modelFamily;
@@ -44,7 +44,7 @@ class DspProduct {
   final bool isFusionCompatible;
 
   const DspProduct({
-    required this.productId,
+    required this.id,
     required this.assets,
     required this.modelName,
     required this.modelFamily,
@@ -62,7 +62,7 @@ class DspProduct {
     final specs = json; //json['specifications'] as Map<String, dynamic>? ?? {};
 
     return DspProduct(
-      productId: (json['productid'] as num?)?.toInt() ?? 0,
+      id: (json['id'] as num?)?.toInt() ?? 0,
       assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?, productType: 'dsp'),
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
@@ -80,7 +80,7 @@ class DspProduct {
   }
 
   Map<String, dynamic> toJson() => {
-    'productid': productId,
+    'id': id,
     'assets': assets.toAssetList(),
     'model_name': modelName,
     'model_family': modelFamily,
@@ -97,5 +97,5 @@ class DspProduct {
   };
 
   @override
-  String toString() => 'DspProduct(productId: $productId, modelName: $modelName)';
+  String toString() => 'DspProduct(id: $id, modelName: $modelName)';
 }
