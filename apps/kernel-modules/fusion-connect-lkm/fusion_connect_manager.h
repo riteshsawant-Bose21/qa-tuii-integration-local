@@ -64,6 +64,7 @@ struct fusion_cn_manager {
     u64 tick_ns;
     bool debug;
     bool trace_debug;
+    bool timing_ready;
 };
 
 struct fusion_cn_ctrl_msg {

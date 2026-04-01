@@ -45,6 +45,7 @@ struct fusion_cn_stream_config {
 struct fusion_cn_rtp_ops {
     u64  (*get_phc_ns)(void);
     u64  (*get_tick_ns)(struct fusion_cn_manager *cn_mgr);
+    bool (*get_timing_ready)(struct fusion_cn_manager *cn_mgr);
     void *(*get_buffer)(struct fusion_cn_substream *alsa_stream);
     u32  (*get_buffer_size_in_frames)(struct fusion_cn_substream *alsa_stream);
     u32  (*get_buffer_offset)(struct fusion_cn_substream *alsa_stream);

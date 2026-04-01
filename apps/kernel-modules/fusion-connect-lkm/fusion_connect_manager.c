@@ -107,6 +107,11 @@ static u64 fusion_cn_get_tick_ns(struct fusion_cn_manager *cn_mgr)
     return READ_ONCE(cn_mgr->tick_ns);
 }
 
+static bool fusion_cn_get_timing_ready(struct fusion_cn_manager *cn_mgr)
+{
+    return READ_ONCE(cn_mgr->timing_ready);
+}
+
 /* helpers: compute how many interrupts are due, and advance state */
 static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u64 tick_ns)
 { 
@@ -358,12 +363,14 @@ static void do_metrics(struct fusion_cn_manager *mgr)
 static int fusion_cn_state_init(struct fusion_cn_manager *mgr)
 {
     atomic_set(&mgr->state.is_started, false);
+    WRITE_ONCE(mgr->timing_ready, false);
     return 0;
 }
 
 static struct fusion_cn_rtp_ops rtp_ops = {
     .get_phc_ns = fusion_cn_get_phc_ns,
     .get_tick_ns = fusion_cn_get_tick_ns,
+    .get_timing_ready = fusion_cn_get_timing_ready,
     .get_buffer = fusion_cn_rtp_ops_get_buffer,
     .get_buffer_size_in_frames = fusion_cn_rtp_ops_get_buffer_size_in_frames,
     .get_buffer_offset = fusion_cn_rtp_ops_get_buffer_offset
@@ -395,6 +402,7 @@ static void fusion_cn_gpt_tick(void *ctx, u64 tick_ns)
     struct fusion_cn_manager *mgr = ctx;
 
     WRITE_ONCE(mgr->tick_ns, tick_ns);
+    WRITE_ONCE(mgr->timing_ready, true);
 
     fusion_cn_queue_process();
 }
@@ -518,6 +526,8 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
         pr_debug("fusion_cn: mgr already started\n");
         return -MGR_START_ERRNO_RUNNING;
     }
+
+    WRITE_ONCE(mgr->timing_ready, false);
     
     /* Initialize PREEMPT_RT-friendly TX worker once */
     if (!process_worker) {
@@ -566,6 +576,7 @@ bool fusion_cn_mgr_stop(struct fusion_cn_manager *mgr)
     
     atomic_set(&mgr->netfilter.is_enabled, false);
     atomic_set(&mgr->state.is_started, false);
+    WRITE_ONCE(mgr->timing_ready, false);
     pr_debug("fusion_cn: mgr_stop: Stopped manager\n");
     return true;
 }
@@ -966,6 +977,8 @@ static int handle_reset_timing_state(struct fusion_cn_manager *mgr,
     reply->err = fusion_gpt_reset_timing_state();
     if (reply->err)
         return 0;
+
+    WRITE_ONCE(mgr->timing_ready, false);
 
     if (process_worker)
         kthread_flush_worker(process_worker);

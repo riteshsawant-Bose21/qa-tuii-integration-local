@@ -454,6 +454,12 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
                 return NF_DROP;
             }
 
+            if (!rtp_mgr->ops->get_timing_ready(rtp_mgr->cn_mgr)) {
+                spin_unlock(&stream->lock);
+                read_unlock_irqrestore(&rtp_mgr->lock, flags);
+                return NF_DROP;
+            }
+
             sample_physical_width_bits = snd_pcm_format_physical_width(stream->info.format);
 
             packet_ssrc = be32_to_cpu(packet->rtp.ssrc);
