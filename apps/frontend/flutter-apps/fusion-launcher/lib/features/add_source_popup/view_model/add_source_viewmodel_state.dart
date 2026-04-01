@@ -83,6 +83,8 @@ enum SourceSectionType {
       case SourceSectionType.microPhone:
         return <SourceConnectionType>[
           SourceConnectionType.analogInput,
+          SourceConnectionType.bluetooth,
+          SourceConnectionType.rca,
           // SourceConnectionType.xlr,
           // SourceConnectionType.ethernet,
         ];
@@ -91,8 +93,8 @@ enum SourceSectionType {
           SourceConnectionType.usb,
           SourceConnectionType.hdmi,
           SourceConnectionType.bluetooth,
-          SourceConnectionType.audioJack,
           SourceConnectionType.rca,
+          SourceConnectionType.audioJack,
           // SourceConnectionType.ethernet,
           // SourceConnectionType.wired,
           // SourceConnectionType.rca,

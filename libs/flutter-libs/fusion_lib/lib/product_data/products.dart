@@ -61,7 +61,7 @@ class Products {
     try {
       debugPrint("Extracting local product assets...");
       await extractLocalProductsZip();
-      debugPrint("Syncing from API...");
+      // debugPrint("Syncing from API...");
       // await _syncFromApi();
       _syncedFromApi = false;
     } catch (e) {

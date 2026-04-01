@@ -29,17 +29,17 @@ extension SourceConnectionTypeExtension on SourceConnectionType {
       case SourceConnectionType.aes67input:
         return 'aes67';
       case SourceConnectionType.bluetooth:
-        return 'analog';
+        return 'bluetooth';
       case SourceConnectionType.usb:
+        return 'usb';
+      case SourceConnectionType.rca:
         return 'analog';
       case SourceConnectionType.audioJack:
-        return 'analog';
-      case SourceConnectionType.rca:
         return 'analog';
       case SourceConnectionType.xlr:
         return 'analog';
       case SourceConnectionType.hdmi:
-        return 'analog';
+        return 'hdmi';
     }
   }
 }

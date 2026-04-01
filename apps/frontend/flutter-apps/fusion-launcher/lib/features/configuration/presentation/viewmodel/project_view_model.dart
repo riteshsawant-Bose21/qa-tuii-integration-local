@@ -321,6 +321,10 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     return projectManager.getDroInputData();
   }
 
+  Map<String, dynamic> getAllProcessingBlocksData() {
+    return projectManager.getAllProcessingBlockData();
+  }
+
   /// Clears the current project selection.
   void closeProject() {
     if (state is ProjectLoaded) {
