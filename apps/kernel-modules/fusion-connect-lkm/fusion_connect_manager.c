@@ -119,7 +119,7 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u6
 
         // we may want to catch up and playback a bunch of frames, up to buf_size_in_packets worth
         while (count < s->buf_size_in_packets) {
-            u32 slot = s->playback_index;
+            u32 slot = s->playback_slot;
             u64 action_time = s->next_action_times[slot];
             s64 delta;
 
@@ -135,11 +135,11 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u6
                 break;
             }
 
-            if (g_fusion_cn_mgr->debug) pr_debug("fusion_cn: compute_sink: stream %s playback_idx=%u count=%u now=%llu\n", s->info.stream_name, s->playback_index, count, tick_ns);
+            if (g_fusion_cn_mgr->debug) pr_debug("fusion_cn: compute_sink: stream %s playback_idx=%u count=%u now=%llu\n", s->info.stream_name, s->playback_slot, count, tick_ns);
 
             s->next_action_times[slot] = 0;
-            if (++s->playback_index >= s->buf_size_in_packets)
-                s->playback_index = 0;
+            if (++s->playback_slot >= s->buf_size_in_packets)
+                s->playback_slot = 0;
             count++;
         }
     }
@@ -976,7 +976,7 @@ static int handle_reset_timing_state(struct fusion_cn_manager *mgr,
         stream->next_action_time = 0;
         stream->current_seq_num = 0;
         if (!stream->info.is_source) {
-            stream->playback_index = 0;
+            stream->playback_slot = 0;
             stream->startup_packets_received = 0;
             stream->playback_armed = false;
             if (stream->next_action_times && stream->buf_size_in_packets)

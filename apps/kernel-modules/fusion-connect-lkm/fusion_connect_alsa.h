@@ -35,7 +35,7 @@ struct fusion_cn_substream {
     u32                rate;
     u32                channels;
     u32                buffer_pos;
-    u32                rtp_frame_size;
+    u32                rtp_frames_per_packet;
     u32                interrupts_per_period;
     u32                interrupt_idx;
     struct snd_pcm_indirect pcm_indirect;

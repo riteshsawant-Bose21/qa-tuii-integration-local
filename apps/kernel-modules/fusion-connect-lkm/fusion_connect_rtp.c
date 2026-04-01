@@ -15,7 +15,7 @@
 #include "fusion_connect_metrics.h"
 
 #define TIMER_BASE_INTERVAL_NS 333333
-#define SINK_STARTUP_PACKETS 2
+#define SINK_STARTUP_PACKETS 3
 
 #define HASH_KEY(handle) hash_64(handle, FUSION_CN_RTP_HASH_BITS)
 #define PACKET_MAP_KEY_UC(ip, port) hash_64(((u64)(ip) << 16) | (port), FUSION_CN_RTP_HASH_BITS)
@@ -465,7 +465,7 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
                 if (stream->next_action_times && stream->buf_size_in_packets)
                     memset(stream->next_action_times, 0,
                            sizeof(u64) * stream->buf_size_in_packets);
-                stream->playback_index = 0;
+                stream->playback_slot = 0;
                 printk(KERN_DEBUG "fusion_cn_rtp: process_packet: Stashed SSRC 0x%08x for stream %s\n",
                        stream->ssrc, stream->info.stream_name);
             }
@@ -576,7 +576,7 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
                     }
                     if (stream->startup_packets_received >= SINK_STARTUP_PACKETS) {
                         struct fusion_cn_substream *alsa_stream = map->alsa_stream;
-                        stream->playback_index =
+                        stream->playback_slot =
                             (write_slot + stream->buf_size_in_packets - (SINK_STARTUP_PACKETS - 1)) %
                             stream->buf_size_in_packets;
                         stream->playback_armed = true;
@@ -585,7 +585,7 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
 
                             spin_lock_irqsave(&alsa_stream->lock, alsa_flags);
                             alsa_stream->buffer_pos =
-                                stream->playback_index * stream->info.frames_per_packet;
+                                stream->playback_slot * stream->info.frames_per_packet;
                             alsa_stream->interrupt_idx = 0;
                             spin_unlock_irqrestore(&alsa_stream->lock, alsa_flags);
                         }
@@ -593,8 +593,8 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
                             printk(KERN_DEBUG
                                    "fusion_cn_rtp: startup armed %s seq=%u write_slot=%u playback_idx=%u buffer_pos=%u startup_pkts=%u\n",
                                    stream->info.stream_name, seq_num, write_slot,
-                                   stream->playback_index,
-                                   stream->playback_index * stream->info.frames_per_packet,
+                                   stream->playback_slot,
+                                   stream->playback_slot * stream->info.frames_per_packet,
                                    stream->startup_packets_received);
                         }
                     }
@@ -805,7 +805,7 @@ int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, u64 
             }
             memset(stream->next_action_times, 0, sizeof(u64) * (stream->buf_size_in_packets));
         }
-        stream->playback_index = 0;
+        stream->playback_slot = 0;
         stream->startup_packets_received = 0;
         stream->playback_armed = false;
         stream->next_action_time = 0;

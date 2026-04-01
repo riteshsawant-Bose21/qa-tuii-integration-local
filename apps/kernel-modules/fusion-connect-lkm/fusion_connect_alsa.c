@@ -131,7 +131,7 @@ int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, struct fusion
     }
     rt = ss->runtime;
 
-    stream->buffer_pos += stream->rtp_frame_size;
+    stream->buffer_pos += stream->rtp_frames_per_packet;
     if (stream->buffer_pos >= rt->buffer_size)
         stream->buffer_pos -= rt->buffer_size;
 
@@ -325,9 +325,9 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     hw.rate_max = stream->rate;
     hw.channels_min = stream->channels;
     hw.channels_max = stream->channels;
-    hw.period_bytes_min = stream->rtp_frame_size * stream->channels * stream->sample_width;
-    hw.period_bytes_max = (stream->rtp_frame_size * 4 * 4) * stream->channels * stream->sample_width;
-    hw.buffer_bytes_max = stream->rtp_frame_size * 16 * stream->channels * stream->sample_width;
+    hw.period_bytes_min = stream->rtp_frames_per_packet * stream->channels * stream->sample_width;
+    hw.period_bytes_max = (stream->rtp_frames_per_packet * 4 * 4) * stream->channels * stream->sample_width;
+    hw.buffer_bytes_max = stream->rtp_frames_per_packet * 16 * stream->channels * stream->sample_width;
     hw.periods_min = 2;
     hw.periods_max = 16;
 
@@ -357,7 +357,7 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     }
 
     err = snd_pcm_hw_constraint_minmax(runtime, SNDRV_PCM_HW_PARAM_BUFFER_SIZE, 
-                                       stream->rtp_frame_size * 2, stream->rtp_frame_size * 16);
+                                       stream->rtp_frames_per_packet * 2, stream->rtp_frames_per_packet * 16);
     if (err < 0) {
         stream->substream = NULL;
         kref_put(&stream->ref, fusion_cn_alsa_substream_release);
@@ -423,7 +423,7 @@ static int fusion_cn_pcm_prepare(struct snd_pcm_substream *substream)
     if (fusion_cn_alsa_stream_disconnected(runtime->private_data)) return -ENODEV;
 
     spin_lock_irq(&stream->lock);
-    stream->interrupts_per_period = runtime->period_size / stream->rtp_frame_size;
+    stream->interrupts_per_period = runtime->period_size / stream->rtp_frames_per_packet;
     if (stream->interrupts_per_period == 0) stream->interrupts_per_period = 1;
     stream->interrupt_idx = 0;
     stream->buffer_pos = 0;
@@ -623,7 +623,7 @@ int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, u64 stream_h
     stream->channels = channels;
     stream->rate = rate;
     stream->format = format;
-    stream->rtp_frame_size = frames_per_packet;
+    stream->rtp_frames_per_packet = frames_per_packet;
     stream->stream_index = stream_index;
     stream->pcm = pcm;
 
