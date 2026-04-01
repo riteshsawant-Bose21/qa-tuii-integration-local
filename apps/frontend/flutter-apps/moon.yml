@@ -15,10 +15,10 @@ tasks:
     deps:
       - "fusion-launcher:build-windows"
   
-  # # Web build
-  # build-web:
-  #   deps:
-  #     - "fusion-launcher:build-web"
+  # Web build
+  build-web:
+    deps:
+      - "fusion_web:build-web"
   
   win-automation-build:
     deps:
