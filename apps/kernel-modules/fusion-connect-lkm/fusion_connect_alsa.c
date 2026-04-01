@@ -132,6 +132,28 @@ void fusion_cn_alsa_set_playback_phase(struct fusion_cn_substream *stream, u32 b
     spin_unlock_irqrestore(&stream->lock, flags);
 }
 
+void fusion_cn_alsa_reset_stream_timing(struct fusion_cn_substream *stream, bool clear_buffer)
+{
+    unsigned long flags;
+
+    if (!stream)
+        return;
+
+    spin_lock_irqsave(&stream->lock, flags);
+    stream->buffer_pos = 0;
+    stream->interrupt_idx = 0;
+    stream->pcm_indirect.hw_data = 0;
+    stream->pcm_indirect.sw_data = 0;
+    atomic_set(&stream->dma_offset, 0);
+    if (clear_buffer && stream->substream && stream->substream->runtime && stream->substream->runtime->dma_area)
+        memset(stream->substream->runtime->dma_area, 0,
+               snd_pcm_lib_buffer_bytes(stream->substream));
+    spin_unlock_irqrestore(&stream->lock, flags);
+
+    printk(KERN_DEBUG "fusion_cn_alsa: reset_stream_timing stream %s clear_buffer=%u\n",
+           stream->stream_name, clear_buffer ? 1 : 0);
+}
+
 int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, struct fusion_cn_substream *stream)
 {
     struct fusion_cn_chip *chip = alsa_chip;

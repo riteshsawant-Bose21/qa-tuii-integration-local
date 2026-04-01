@@ -59,6 +59,7 @@ inline bool fusion_cn_alsa_stream_disconnected(struct fusion_cn_substream *s);
 int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, struct fusion_cn_substream *alsa_stream);
 inline u32 fusion_cn_alsa_get_buffer_depth(struct fusion_cn_substream *stream);
 void fusion_cn_alsa_set_playback_phase(struct fusion_cn_substream *stream, u32 buffer_pos);
+void fusion_cn_alsa_reset_stream_timing(struct fusion_cn_substream *stream, bool clear_buffer);
 int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, u64 stream_handle, 
                                   const char *stream_name, int direction, unsigned int channels, 
                                   u32 rate, snd_pcm_format_t format, u32 frames_per_packet,

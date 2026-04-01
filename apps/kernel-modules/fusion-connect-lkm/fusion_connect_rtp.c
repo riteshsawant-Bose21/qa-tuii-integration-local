@@ -569,15 +569,11 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
                 if (stream->playback_armed && stream->buf_size_in_packets) {
                     u32 lead_slots = (write_slot + stream->buf_size_in_packets - stream->playback_slot) %
                                      stream->buf_size_in_packets;
-                    u32 expected_lead = max_t(u32, 1, div_u64(stream->info.playout_delay + (stream->packet_time / 2),
-                                                              stream->packet_time));
-                    if ((lead_slots <= 1 || lead_slots > expected_lead + 2) &&
-                        current_phc_ns >= stream->phase_log_next_ns) {
-                        stream->phase_log_next_ns = current_phc_ns + NSEC_PER_SEC;
+                    if (lead_slots == 0) {
                         printk(KERN_DEBUG
-                               "fusion_cn_rtp: sink phase %s seq=%u write_slot=%u playback_slot=%u lead_slots=%u expected=%u now=%llu playout=%llu\n",
+                               "fusion_cn_rtp: sink phase %s seq=%u write_slot=%u playback_slot=%u lead_slots=%u now=%llu playout=%llu\n",
                                stream->info.stream_name, seq_num, write_slot,
-                               stream->playback_slot, lead_slots, expected_lead,
+                               stream->playback_slot, lead_slots,
                                current_phc_ns, sched_playout_ns);
                     }
                 }

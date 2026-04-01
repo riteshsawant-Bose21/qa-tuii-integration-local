@@ -985,10 +985,15 @@ static int handle_reset_timing_state(struct fusion_cn_manager *mgr,
 
     read_lock_irqsave(&mgr->rtp.lock, flags);
     hash_for_each(mgr->rtp.streams, bkt, stream, hnode) {
+        struct fusion_cn_substream *alsa_stream = NULL;
+
         spin_lock(&stream->lock);
         stream->next_action_time = 0;
         stream->current_seq_num = 0;
-        if (!stream->info.is_source) {
+        stream->phase_log_next_ns = 0;
+        if (stream->info.is_source) {
+            alsa_stream = stream->stream_node ? stream->stream_node->alsa_stream : NULL;
+        } else {
             stream->playback_slot = 0;
             stream->startup_packets_received = 0;
             stream->playback_armed = false;
@@ -997,6 +1002,9 @@ static int handle_reset_timing_state(struct fusion_cn_manager *mgr,
                        sizeof(u64) * stream->buf_size_in_packets);
         }
         spin_unlock(&stream->lock);
+
+        if (alsa_stream)
+            fusion_cn_alsa_reset_stream_timing(alsa_stream, true);
     }
     read_unlock_irqrestore(&mgr->rtp.lock, flags);
 
