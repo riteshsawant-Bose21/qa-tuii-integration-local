@@ -3,7 +3,6 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/service_locator.dart';
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../../../../projects/widget/building/side_panel_widgets/schematic_properties.dart';
 
 class ListeningAreaDropdownWidget extends StatefulWidget {
   final List<ListeningArea> listeningAreas;
@@ -60,7 +59,7 @@ class _ListeningAreaDropdownWidgetState
       // todo: Replace with actual area creation logic (e.g., user-defined vertices)
       final ListeningArea newListeningArea = ListeningArea(
         name: _areaNameController.text.trim(),
-        vertices: <Offset>[],
+        vertices: <FusionCanvasPoint>[],
         isDrawn: false,
       );
 
@@ -571,36 +570,27 @@ class _ListeningAreaDropdownWidgetState
                                         /// Create and Select Button
                                         Align(
                                           alignment: Alignment.centerRight,
-                                          child: SemanticHelper.button(
-                                            testId: SemanticHelper.createTestId(
-                                              SemanticTypes.button,
-                                              "create_new_location_add_button",
-                                            ),
-                                            child: FusionButton(
-                                              accessLabel: 'add',
-                                              height: 32,
-                                              label: "Add",
-                                              activeBackgroundColor:
-                                                  context
-                                                      .colorScheme
-                                                      .primaryColor,
-                                              textStyle: context
-                                                  .textTheme
-                                                  .labelMedium
-                                                  ?.copyWith(
-                                                    color: Colors.white,
-                                                  ),
-                                              isActive:
-                                                  _areaNameController.text
-                                                      .trim()
-                                                      .isNotEmpty &&
-                                                  _selectedFloorId.isNotEmpty,
-                                              onTap: () {
-                                                _createNewArea(
-                                                  floorId: _selectedFloorId,
-                                                );
-                                              },
-                                            ),
+                                          child: FusionButton(
+                                            accessLabel:"create_new_location_add",
+                                            height: 32,
+                                            label: "Add",
+                                            activeBackgroundColor:
+                                                context.colorScheme.primaryColor,
+                                            textStyle: context
+                                                .textTheme
+                                                .labelMedium
+                                                ?.copyWith(
+                                                  color: Colors.white,
+                                                ),
+                                            isActive: _areaNameController.text
+                                                    .trim()
+                                                    .isNotEmpty &&
+                                                _selectedFloorId.isNotEmpty,
+                                            onTap: () {
+                                              _createNewArea(
+                                                floorId: _selectedFloorId,
+                                              );
+                                            },
                                           ),
                                         ),
                                       ],

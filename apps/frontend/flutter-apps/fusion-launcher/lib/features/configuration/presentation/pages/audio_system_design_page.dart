@@ -463,7 +463,7 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                   onPressed: () async {
                                     FusionUiUtils.showLoader(context);
                                     final ResponseCallback<dynamic> response = await serviceLocator<FusionNetworkClient>().delete(
-                                      api: FusionApiEndpoint.fusionGetValue,
+                                      api: FusionApiEndpoint.fusionValue,
                                     );
                                     if (context.mounted) FusionUiUtils.hideLoader(context);
                                   },

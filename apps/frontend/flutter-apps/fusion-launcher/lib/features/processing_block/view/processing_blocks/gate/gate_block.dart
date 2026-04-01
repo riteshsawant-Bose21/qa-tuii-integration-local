@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/add_source_popup/view_model/add_source_viewmodel.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_blocks/widgets/pb_section.dart';
 import 'package:fusion_launcher/features/processing_block/view/widgets/widgets.dart';
 import 'package:fusion_launcher/features/processing_block/viewmodel/algorithm_data_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
 
+import '../../widgets/pb_out_meter.dart';
 import '../widgets/pb_block_layout.dart';
 import '../widgets/pb_content_section.dart';
 
@@ -17,8 +17,8 @@ class GateBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AlgorithmDataViewmodel watch =
-        context.watch<AlgorithmDataViewmodel>();
+    final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
+    final String targetBlockId = watch.processingBlock.id;
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,
@@ -29,12 +29,7 @@ class GateBlock extends StatelessWidget {
         create: (BuildContext context) {
           return GateController(watch);
         },
-        update:
-            (
-              BuildContext context,
-              AlgorithmDataViewmodel valueHandler,
-              GateController? previous,
-            ) => GateController(valueHandler),
+        update: (BuildContext context, AlgorithmDataViewmodel valueHandler, GateController? previous) => GateController(valueHandler),
         child: Builder(
           builder: (BuildContext context) {
             final GateController controller = context.watch<GateController>();
@@ -203,7 +198,7 @@ class GateBlock extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const PBSection(
+                  PBSection(
                     semanticId: 'gate_output',
                     type: PBSectionType.right,
                     child: SizedBox(
@@ -211,12 +206,10 @@ class GateBlock extends StatelessWidget {
                       child: PbContentSection(
                         title: "OUTPUT",
                         child: Padding(
-                          padding: EdgeInsets.all(12.0),
-                          child: VerticalMeter(
+                          padding: const EdgeInsets.all(12.0),
+                          child: PbOutMeter(
                             semanticId: 'gate_output',
-                            value: -60,
-                            min: -60,
-                            max: 0,
+                            blockId: targetBlockId,
                           ),
                         ),
                       ),
