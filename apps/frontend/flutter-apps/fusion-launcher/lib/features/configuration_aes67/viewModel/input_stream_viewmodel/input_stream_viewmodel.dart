@@ -289,6 +289,7 @@ class InputStreamViewmodel extends Cubit<InputStreamState> {
               ),
             ),
             bitDepth: session.bitDepth.toString(),
+            packetTime: session.packetTime,
           ),
         ),
       );
@@ -343,6 +344,17 @@ class InputStreamViewmodel extends Cubit<InputStreamState> {
               port: session.port,
               device: session.sessionId,
               streamOrAdvertisement: session.sessionId,
+              channels: session.channels,
+              channelConfigs: List<Aes67ChannelConfig>.generate(
+                session.channels,
+                (int i) => Aes67ChannelConfig(
+                  channelNumber: i + 1,
+                  label: session.channelLabels.length > i ? session.channelLabels[i] : 'Ch${i + 1}',
+                  assignedTo: session.channelLabels.length > i ? session.channelLabels[i] : 'Ch${i + 1}',
+                ),
+              ),
+              bitDepth: session.bitDepth.toString(),
+              packetTime: session.packetTime,
             ),
           ),
         );

@@ -184,6 +184,13 @@ class _ConfigurationAes67View extends StatelessWidget {
     );
   }
 
+  // ── Helpers ──────────────────────────────────────────────────────────
+
+  String _formatAddress(String ipAddress, int? port) {
+    if (ipAddress.isEmpty || ipAddress == '-' || port == null) return '-';
+    return '$ipAddress:$port';
+  }
+
   // ── Column definitions ────────────────────────────────────────────────
 
   List<FusionTableColumn> _inputColumns() => const <FusionTableColumn>[
@@ -244,8 +251,8 @@ class _ConfigurationAes67View extends StatelessWidget {
                 child: CellText(text: s.streamOrAdvertisement, context: context),
               ),
               'address': FusionTableCell(
-                value: '${s.ipAddress}:${s.port}',
-                child: CellText(text: '${s.ipAddress}:${s.port}', context: context),
+                value: _formatAddress(s.ipAddress, s.port),
+                child: CellText(text: _formatAddress(s.ipAddress, s.port), context: context),
               ),
               'channels': FusionTableCell(
                 value: s.channels,
@@ -305,8 +312,8 @@ class _ConfigurationAes67View extends StatelessWidget {
                 child: CellText(text: s.streamOrAdvertisement, context: context),
               ),
               'address': FusionTableCell(
-                value: '${s.ipAddress}:${s.port}',
-                child: CellText(text: '${s.ipAddress}:${s.port}', context: context),
+                value: _formatAddress(s.ipAddress, s.port),
+                child: CellText(text: _formatAddress(s.ipAddress, s.port), context: context),
               ),
               'channels': FusionTableCell(
                 value: s.channels,

@@ -244,7 +244,7 @@ class Aes67Config {
       ),
       streamOrAdvertisement: json['streamOrAdvertisement'] as String? ?? '-',
       ipAddress: json['ipAddress'] as String? ?? '-',
-      port: json['port'] as int? ?? ,
+      port: json['port'] as int?,
       channels: channels,
       bitDepth: json['bitDepth'] as String? ?? '-',
       sampleRate: json['sampleRate'] as String? ?? '-',
