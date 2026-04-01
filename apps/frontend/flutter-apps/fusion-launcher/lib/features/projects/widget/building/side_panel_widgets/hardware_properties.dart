@@ -161,7 +161,10 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                   child: PropertyTextField(
                     controller: nameController,
                     hintText: 'Hardware Name',
-                    onSubmitted: (String v) {
+                    onTapOutside: (PointerDownEvent event) {
+                      FocusScope.of(context).unfocus();
+                      final String v = nameController.text;
+
                       // Validate that the name is not empty or just whitespace
                       final String trimmedName = v.trim();
                       if (trimmedName.isNotEmpty) {
@@ -208,10 +211,11 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                     maxLength: 24,
                                     hintText: 'X',
                                     keyboardType: TextInputType.number,
-                                    onSubmitted: (String v) {
-                                      final double? xValue = double.tryParse(
-                                        v.trim(),
-                                      );
+                                    onTapOutside: (PointerDownEvent event) {
+                                      FocusScope.of(context).unfocus();
+                                      final String v = xController.text;
+
+                                      final double? xValue = double.tryParse(v.trim());
                                       if (xValue != null) {
                                         // Multiply by 100 when submitting
                                         final HardwareComponent updated = widget.selectedHardware.copyWith(
@@ -260,10 +264,11 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                     maxLength: 24,
                                     hintText: 'Y',
                                     keyboardType: TextInputType.number,
-                                    onSubmitted: (String v) {
-                                      final double? yValue = double.tryParse(
-                                        v.trim(),
-                                      );
+                                    onTapOutside: (PointerDownEvent event) {
+                                      FocusScope.of(context).unfocus();
+                                      final String v = yController.text;
+
+                                      final double? yValue = double.tryParse(v.trim());
                                       if (yValue != null) {
                                         // Multiply by 100 when submitting
                                         final HardwareComponent updated = widget.selectedHardware.copyWith(
@@ -312,10 +317,12 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                     maxLength: 24,
                                     hintText: 'Z',
                                     keyboardType: TextInputType.number,
-                                    onSubmitted: (String v) {
-                                      final double? zValue = double.tryParse(
-                                        v.trim(),
-                                      );
+                                    onTapOutside: (PointerDownEvent event) {
+                                      FocusScope.of(context).unfocus();
+                                      final String v = zController.text;
+
+                                      final double? zValue = double.tryParse(v.trim());
+
                                       if (zValue != null) {
                                         // Multiply by 100 when submitting
                                         final HardwareComponent updated = widget.selectedHardware.copyWith(zAxis: zValue * 100);
@@ -372,7 +379,10 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                             hintText: 'Roll',
                             keyboardType: TextInputType.number,
                             suffixText: "°",
-                            onSubmitted: (String v) {
+                            onTapOutside: (PointerDownEvent event) {
+                              FocusScope.of(context).unfocus();
+                              final String v = rollController.text;
+
                               final double? roll = double.tryParse(v.trim());
                               if (roll != null) {
                                 final Speaker updated = (widget.selectedHardware as Speaker).copyWith(roll: roll);
@@ -420,7 +430,10 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                             hintText: 'Pitch',
                             suffixText: "°",
                             keyboardType: TextInputType.number,
-                            onSubmitted: (String v) {
+                            onTapOutside: (PointerDownEvent event) {
+                              FocusScope.of(context).unfocus();
+                              final String v = pitchController.text;
+
                               final double? pitch = double.tryParse(v.trim());
                               if (pitch != null) {
                                 final Speaker updated = (widget.selectedHardware as Speaker).copyWith(pitch: pitch);
@@ -432,9 +445,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                 // Show validation error
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: FusionAppText(
-                                      text: 'Pitch must be a valid decimal number',
-                                    ),
+                                    content: FusionAppText(text: 'Pitch must be a valid decimal number'),
                                     duration: Duration(seconds: 2),
                                   ),
                                 );
@@ -467,7 +478,10 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                             hintText: 'Yaw',
                             suffixText: "°",
                             keyboardType: TextInputType.number,
-                            onSubmitted: (String v) {
+                            onTapOutside: (PointerDownEvent event) {
+                              FocusScope.of(context).unfocus();
+                              final String v = yawController.text;
+
                               final double? yaw = double.tryParse(v.trim());
                               if (yaw != null) {
                                 final Speaker updated = (widget.selectedHardware as Speaker).copyWith(yaw: yaw);
@@ -517,7 +531,10 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                   hintText: 'Gain',
                                   suffixText: "dB",
                                   keyboardType: TextInputType.number,
-                                  onSubmitted: (String v) {
+                                  onTapOutside: (PointerDownEvent event) {
+                                    FocusScope.of(context).unfocus();
+                                    final String v = gainController.text;
+
                                     final double? gain = double.tryParse(v.trim());
                                     if (gain != null) {
                                       final Speaker updated = (widget.selectedHardware as Speaker).copyWith(gain: gain);
