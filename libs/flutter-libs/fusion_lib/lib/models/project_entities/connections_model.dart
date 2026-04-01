@@ -2,25 +2,7 @@ import 'dart:convert';
 
 import 'package:fusion_lib/fusion_lib.dart';
 
-enum ConnectionType { 
-  analog,
-  aes67,
-  ethernet,
-  usb,
-  wifi,
-  bluetooth,
-  hdmi,
-  audioJack,
-  rca,
-  amplifier,
-  dspAnalog,
-  endpoint,
-  xlr,
-  circuit,
-  gpio,
-  speaker,
-  dsp
- }
+enum ConnectionType { analog, aes67, ethernet, usb, wifi, bluetooth, hdmi, audioJack, rca, amplifier, dspAnalog, endpoint, xlr, circuit, gpio, speaker, dsp }
 
 /// Represents a wiring connection between two devices and their ports.
 class WiringConnectionModel {
@@ -31,6 +13,8 @@ class WiringConnectionModel {
   final String targetPortId;
   final ConnectionType type; // e.g. signal, power, data
 
+  final List<FusionCanvasPoint>? points; // For visual representation of the connection on the canvas
+
   WiringConnectionModel({
     String? id,
     required this.deviceId,
@@ -38,6 +22,7 @@ class WiringConnectionModel {
     required this.targetDeviceId,
     required this.targetPortId,
     required this.type,
+    this.points,
   }) : id = id ?? "WIRE${FusionUtils.shortStringUUID()}";
 
   WiringConnectionModel copyWith({
@@ -46,13 +31,16 @@ class WiringConnectionModel {
     String? targetDeviceId,
     String? targetPortId,
     ConnectionType? type,
+    List<FusionCanvasPoint>? points,
   }) {
     return WiringConnectionModel(
+      id: id,
       deviceId: deviceId ?? this.deviceId,
       portId: portId ?? this.portId,
       targetDeviceId: targetDeviceId ?? this.targetDeviceId,
       targetPortId: targetPortId ?? this.targetPortId,
       type: type ?? this.type,
+      points: points ?? this.points,
     );
   }
 
@@ -64,6 +52,7 @@ class WiringConnectionModel {
       targetDeviceId: json['targetDeviceId'] ?? '',
       targetPortId: json['targetPortId'] ?? '',
       type: ConnectionType.values.firstWhere((e) => e.name == json['type'], orElse: () => ConnectionType.dsp),
+      points: (json['points'] as List<dynamic>?)?.map((point) => FusionCanvasPoint.fromMap(point as Map<String, dynamic>)).toList(),
     );
   }
 
@@ -75,6 +64,7 @@ class WiringConnectionModel {
       'targetDeviceId': targetDeviceId,
       'targetPortId': targetPortId,
       'type': type.name,
+      'points': points?.map((point) => point.toMap()).toList(),
     };
   }
 

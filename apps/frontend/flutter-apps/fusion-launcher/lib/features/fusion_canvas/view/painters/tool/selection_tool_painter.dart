@@ -122,6 +122,8 @@ class SelectionToolPainter extends FusionBasePainter {
       _paintLineSelection(canvas, size, painter, element);
     } else if (element is FusionCanvasElementPainter) {
       _paintSimpleRectSelection(canvas, element.getTransformedRect(painter), painter);
+    } else {
+      // _paintSimpleRectSelection(canvas, element.getBounds(painter), painter);
     }
   }
 

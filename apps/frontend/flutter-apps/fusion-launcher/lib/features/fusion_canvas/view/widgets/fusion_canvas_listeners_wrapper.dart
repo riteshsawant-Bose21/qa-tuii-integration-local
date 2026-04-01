@@ -203,9 +203,10 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
                 if (!state.layerIds.contains(basePainter.id)) continue;
                 toolbarEvents?.onMovePoints?.call(
                   basePainter,
-                  basePainter is FusionPolygonPainter
-                      ? basePainter.polygon.points.where((FusionCanvasPoint p) => state.pointIds.contains(p.id)).toList()
-                      : <FusionCanvasPoint>[],
+                  // basePainter is FusionPolygonPainter
+                  //     ? basePainter.polygon.points.where((FusionCanvasPoint p) => state.pointIds.contains(p.id)).toList()
+                  //     :
+                  state.pointIds,
                   state.delta,
                 );
               }

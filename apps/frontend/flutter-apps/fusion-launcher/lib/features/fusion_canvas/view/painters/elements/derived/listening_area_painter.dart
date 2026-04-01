@@ -37,7 +37,7 @@ class ListeningAreaPainter extends FusionPolygonPainter {
   Set<FusionCanvasLayerInteraction>? possibleInteractionsForElement(
     FusionCanvasElement element,
   ) {
-    if (element is FusionCanvasPoint || element is FusionCanvasLine) {
+    if (element is FusionCanvasPoint || element is FusionCanvasLine || element is FusionCanvasPathSegment) {
       return const <FusionCanvasLayerInteraction>{
         FusionCanvasLayerInteraction.select,
         FusionCanvasLayerInteraction.drag,
@@ -46,7 +46,7 @@ class ListeningAreaPainter extends FusionPolygonPainter {
     return null;
   }
 
-  Color getColor(FusionCanvasPainter painter) =>   painter.context.colorScheme.elevation4;
+  Color getColor(FusionCanvasPainter painter) => painter.context.colorScheme.elevation4;
 
   @override
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter) {

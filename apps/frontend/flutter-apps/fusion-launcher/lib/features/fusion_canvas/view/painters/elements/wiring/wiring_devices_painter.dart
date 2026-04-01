@@ -14,10 +14,7 @@ class WiringDevicesPainter extends FusionCanvasElementPainter with PortPainter {
     double maxHeight = 0;
     double inputPosY = portRadius;
     for (int i = 0; i < device.inputPortsData.length; i++) {
-      final WiringPortData wiringPortData = WiringPortData(
-        position: Offset(0, inputPosY),
-        port: device.inputPortsData[i],
-      );
+      final WiringPortData wiringPortData = WiringPortData(position: Offset(0, inputPosY), port: device.inputPortsData[i], deviceId: device.id);
       _inputPorts.add(
         wiringPortData,
       );
@@ -29,6 +26,7 @@ class WiringDevicesPainter extends FusionCanvasElementPainter with PortPainter {
       final WiringPortData wiringPortData = WiringPortData(
         position: Offset(0, outputPosY),
         port: device.outputPortsData[i],
+        deviceId: device.id,
       );
       _outputPorts.add(
         wiringPortData,
@@ -67,17 +65,6 @@ class WiringDevicesPainter extends FusionCanvasElementPainter with PortPainter {
         (WiringPortData port) => port.copyWith(position: port.position + rect.topRight - Offset(portRadius, 0) + outputPortPadding + Offset(0, headerHeight)),
       ),
     ];
-  }
-
-  @override
-  Rect getTransformedRect(FusionCanvasPainter painter) {
-    final Offset offset = getOffset();
-    final Size size = getSize();
-    return Rect.fromCenter(
-      center: transformOffsetForLayer(offset, painter, id),
-      width: size.width,
-      height: size.height,
-    );
   }
 
   @override

@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/select_tool_state.dart';
-import 'package:fusion_launcher/features/fusion_canvas/state/tools/selection_tool_params.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/fusion_canvas_element_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/widgets/canvas_control_wrapper.dart';
@@ -39,7 +38,6 @@ class FusionCanvas extends StatelessWidget {
     this.toolbarEvents,
     this.selectedIds,
     this.cursorBuilder,
-    this.selectionToolParams = const SelectionToolParams(),
     this.tools = const <FusionCanvasTool<FusionToolState>>[
       FusionCanvasTool.measureTool,
       FusionCanvasTool.penTool,
@@ -56,8 +54,6 @@ class FusionCanvas extends StatelessWidget {
 
   /// Set of selected layer IDs to sync with selection state
   final Set<String>? selectedIds;
-
-  final SelectionToolParams selectionToolParams;
 
   @override
   Widget build(BuildContext context) {
@@ -155,7 +151,10 @@ class FusionCanvas extends StatelessWidget {
                                 );
 
                                 final FusionHoverState hoverState = context.read<FusionCanvasHoverViewModel>().state;
-
+                                // if(hoverState.)
+                                // print(
+                                //   "Hover state updated: hoveredPainterId=${hoverState.hoveredPainterId}, hoveredElement=${hoverState.hoveredElement}, hoveredElement interaction=${hoverState.hoveredElementInteractions}",
+                                // );
                                 if (inputState is FusionCanvasInputTapUpState &&
                                     inputState.gestureOrigin == FusionGestureOrigin.click &&
                                     hoverState.isCenterHandleHovered &&
@@ -269,11 +268,11 @@ class FusionCanvas extends StatelessWidget {
 
     final Set<String> selectedElementIds = toolVm.selectedElementIds;
     if (selectedPainter is FusionPolygonPainter && selectedElementIds.isNotEmpty) {
-      final List<FusionCanvasPoint> selectedPoints =
-          selectedPainter.polygon.points.where((FusionCanvasPoint point) => selectedElementIds.contains(point.id)).toList();
+      // final List<FusionCanvasPoint> selectedPoints =
+      //     selectedPainter.polygon.points.where((FusionCanvasPoint point) => selectedElementIds.contains(point.id)).toList();
 
-      if (selectedPoints.isNotEmpty) {
-        toolbarEvents?.onRemovePoints?.call(selectedPainter, selectedPoints);
+      if (selectedElementIds.isNotEmpty) {
+        toolbarEvents?.onRemovePoints?.call(selectedPainter, selectedElementIds.toList());
         toolVm.syncSelection(<String>{layerId});
         return;
       }
@@ -292,10 +291,10 @@ class FusionCanvasEvents {
 
   final void Function(FusionBasePainter painter, List<FusionCanvasPoint> points, FusionCanvasLine line)? onAddPoints;
 
-  final void Function(FusionBasePainter painter, List<FusionCanvasPoint> points)? onRemovePoints;
+  final void Function(FusionBasePainter painter, List<String> points)? onRemovePoints;
   final void Function(FusionBasePainter painter)? onDeleteLayer;
 
-  final void Function(FusionBasePainter painter, List<FusionCanvasPoint> points, Offset delta)? onMovePoints;
+  final void Function(FusionBasePainter painter, List<String> points, Offset delta)? onMovePoints;
 
   FusionCanvasEvents({
     this.penToolEvents,

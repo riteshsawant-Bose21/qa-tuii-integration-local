@@ -3,8 +3,6 @@ import 'dart:ui';
 
 import 'package:fusion_lib/fusion_lib.dart';
 
-import 'fusion_canvas_element.dart';
-
 class FusionCanvasPoint extends FusionCanvasElement {
   final Offset position;
 
@@ -22,10 +20,7 @@ class FusionCanvasPoint extends FusionCanvasElement {
   bool operator ==(covariant FusionCanvasElement other) {
     if (identical(this, other)) return true;
 
-    return other is FusionCanvasPoint &&
-        other.position == position &&
-        other.handleIn == handleIn &&
-        other.handleOut == handleOut;
+    return other is FusionCanvasPoint && other.position == position && other.handleIn == handleIn && other.handleOut == handleOut;
   }
 
   @override
@@ -41,6 +36,7 @@ class FusionCanvasPoint extends FusionCanvasElement {
 
   factory FusionCanvasPoint.fromMap(Map<String, dynamic> map) {
     return FusionCanvasPoint(
+      id: map['id'],
       position: DeserializationUtil.offsetDeserializer.deserialize(map['position'] ?? map)!,
       handleIn: map['handle_in'] != null ? Offset((map['handle_in']['dx'] as num).toDouble(), (map['handle_in']['dy'] as num).toDouble()) : null,
       handleOut: map['handle_out'] != null ? Offset((map['handle_out']['dx'] as num).toDouble(), (map['handle_out']['dy'] as num).toDouble()) : null,
@@ -63,7 +59,7 @@ class FusionCanvasPoint extends FusionCanvasElement {
       id: id ?? this.id,
     );
   }
-  
+
   @override
   List<String> get pointIds => [id];
 }

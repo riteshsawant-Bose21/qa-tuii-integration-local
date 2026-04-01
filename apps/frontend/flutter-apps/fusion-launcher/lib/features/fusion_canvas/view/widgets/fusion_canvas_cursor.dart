@@ -54,6 +54,7 @@ class FusionCanvasCursor extends StatelessWidget {
             hoverState.hoveredPainterId != null
                 ? switch (hoveredElement) {
                   FusionCanvasLine() => hoveredElement.isVerticalLine ? _CanvasCursorType.resizeLeftRight : _CanvasCursorType.resizeUpDown,
+                  FusionCanvasPathSegment() => hoveredElement.isVerticalLine ? _CanvasCursorType.resizeLeftRight : _CanvasCursorType.resizeUpDown,
                   FusionCanvasPoint _ => _CanvasCursorType.grab,
                   FusionCanvasPolygon _ => _CanvasCursorType.grab,
                   _ => _CanvasCursorType.basic,

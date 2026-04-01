@@ -33,11 +33,16 @@ class FusionCanvasPainter extends CustomPainter {
   final List<FusionBasePainter> layers;
   final BuildContext context;
 
+  final Map<String?, FusionBasePainter> _layerMap = <String?, FusionBasePainter>{};
   FusionCanvasPainter({
     required this.state,
     this.layers = const <FusionBasePainter>[],
     required this.context,
-  });
+  }) {
+    for (final FusionBasePainter layer in layers) {
+      _layerMap[layer.id] = layer;
+    }
+  }
   @override
   void paint(Canvas canvas, Size size) {
     context.read<FusionCanvasStateViewModel>().setCanvasSize(size);
@@ -108,11 +113,12 @@ class FusionCanvasPainter extends CustomPainter {
     )?.painter;
   }
 
+  FusionBasePainter? getLayerById(String? id) {
+    return _layerMap[id];
+  }
+
   Offset getBoundedDeltaForLayer(String layerId, Offset delta) {
-    final FusionBasePainter? painter = layers.cast<FusionBasePainter?>().firstWhere(
-      (FusionBasePainter? p) => p?.id == layerId,
-      orElse: () => null,
-    );
+    final FusionBasePainter? painter = getLayerById(layerId);
 
     if (painter is FusionCanvasBoundedMovement) {
       return painter.getBoundedDelta(delta, this);
@@ -125,10 +131,7 @@ class FusionCanvasPainter extends CustomPainter {
     String layerId,
     FusionCanvasLayerInteraction interaction,
   ) {
-    final FusionBasePainter? painter = layers.cast<FusionBasePainter?>().firstWhere(
-      (FusionBasePainter? p) => p?.id == layerId,
-      orElse: () => null,
-    );
+    final FusionBasePainter? painter = getLayerById(layerId);
 
     return painter is FusionCanvasInteractibleMixin && painter.supportsInteraction(interaction);
   }

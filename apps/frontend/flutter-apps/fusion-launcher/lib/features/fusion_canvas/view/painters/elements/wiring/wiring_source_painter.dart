@@ -22,19 +22,21 @@ class WiringSourcePainter extends FusionCanvasElementPainter with PortPainter {
 
   @override
   List<WiringPortData> getPorts(Rect rect, FusionCanvasPainter painter) {
-    return source.outputPortsData.map((PortData port) => WiringPortData(position: rect.centerRight - Offset(portRadius + 20, 0), port: port)).toList();
+    return source.outputPortsData
+        .map((PortData port) => WiringPortData(position: rect.centerRight - Offset(portRadius + 20, 0), port: port, deviceId: source.id))
+        .toList();
   }
 
-  @override
-  Rect getTransformedRect(FusionCanvasPainter painter) {
-    final Offset offset = getOffset();
-    final Size size = getSize();
-    return Rect.fromCenter(
-      center: transformOffsetForLayer(offset, painter, id),
-      width: size.width,
-      height: size.height,
-    );
-  }
+  // @override
+  // Rect getTransformedRect(FusionCanvasPainter painter) {
+  //   final Offset offset = getOffset();
+  //   final Size size = getSize();
+  //   return Rect.fromCenter(
+  //     center: transformOffsetForLayer(offset, painter, id),
+  //     width: size.width,
+  //     height: size.height,
+  //   );
+  // }
 
   @override
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter) {

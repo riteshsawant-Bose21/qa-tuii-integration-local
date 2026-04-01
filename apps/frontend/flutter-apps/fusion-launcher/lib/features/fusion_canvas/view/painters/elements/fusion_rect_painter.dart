@@ -73,43 +73,30 @@ abstract class FusionPolygonPainter extends FusionBasePainter with FusionCanvasI
     return oldDelegate.polygon != polygon;
   }
 
-  /// Check if this polygon is selected in the current tool state
-  bool _isSelectedInToolState(FusionCanvasPainter painter) {
-    return true;
-    // final FusionToolState toolState = painter.toolState;
-    // if (toolState is SelectToolState) {
-    //   return toolState.isLayerSelected(id);
-    // }
-    // return false;
-  }
-
   @override
   FusionCanvasElement? isHit(Offset position, FusionCanvasPainter painter) {
     path = getPolygonPath(polygon, painter);
 
-    // If selected, check for point/edge hits first
-    if (_isSelectedInToolState(painter)) {
-      // Check point hits
-      for (final FusionCanvasPoint point in polygon.points) {
-        final Offset effectivePos = getEffectivePosition(point, painter, id);
-        final double hitRadius = nonScaling(10, painter); // Larger hit area for points
-        if ((position - effectivePos).distance <= hitRadius) {
-          return point;
-        }
+    // Check point hits
+    for (final FusionCanvasPoint point in polygon.points) {
+      final Offset effectivePos = getEffectivePosition(point, painter, id);
+      final double hitRadius = nonScaling(10, painter); // Larger hit area for points
+      if ((position - effectivePos).distance <= hitRadius) {
+        return point;
       }
+    }
 
-      // Check edge hits
-      for (int i = 0; i < polygon.points.length; i++) {
-        final FusionCanvasPoint start = polygon.points[i];
-        final FusionCanvasPoint end = polygon.points[(i + 1) % polygon.points.length];
-        final Offset startPos = getEffectivePosition(start, painter, id);
-        final Offset endPos = getEffectivePosition(end, painter, id);
+    // Check edge hits
+    for (int i = 0; i < polygon.points.length; i++) {
+      final FusionCanvasPoint start = polygon.points[i];
+      final FusionCanvasPoint end = polygon.points[(i + 1) % polygon.points.length];
+      final Offset startPos = getEffectivePosition(start, painter, id);
+      final Offset endPos = getEffectivePosition(end, painter, id);
 
-        final double distance = _distanceFromPointToLineSegment(position, startPos, endPos);
-        final double hitThreshold = nonScaling(8, painter);
-        if (distance <= hitThreshold) {
-          return FusionCanvasLine(start: start, end: end);
-        }
+      final double distance = _distanceFromPointToLineSegment(position, startPos, endPos);
+      final double hitThreshold = nonScaling(8, painter);
+      if (distance <= hitThreshold) {
+        return FusionCanvasLine(start: start, end: end);
       }
     }
 
