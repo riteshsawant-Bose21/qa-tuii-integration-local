@@ -37,7 +37,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     final ListeningArea? la = selectedListeningArea;
     if (la == null || la.speakerSelectionMode != SpeakerSelectionMode.suggest) return;
 
-    final List<Speaker> currentSpeakers = getAllPlacedNonPlacedSpeakers();
+    final List<Speaker> currentSpeakers = getAllPlacedAndNonPlacedSpeakers();
     if (currentSpeakers.isEmpty) return;
 
     final ProductQueryViewModel pq = serviceLocator<ProductQueryViewModel>();
@@ -48,7 +48,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       final int? productId = sp.productId;
       if (productId == null) continue;
 
-      final SpeakerProduct? product = pq.speakers.where((SpeakerProduct s) => s.productId == productId).firstOrNull;
+      final SpeakerProduct? product = pq.speakers.where((SpeakerProduct s) => s.id == productId).firstOrNull;
       if (la.lowFrequency == LowFrequency.withSubwoofer) {
         if (product?.isSubwoofer == true) {
           subwooferProductId ??= productId;
@@ -123,7 +123,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     final bool willBeSubwooferMode = lf == LowFrequency.withSubwoofer;
 
     if (wasSubwooferMode != willBeSubwooferMode) {
-      final List<Speaker> existing = getAllPlacedNonPlacedSpeakers();
+      final List<Speaker> existing = getAllPlacedAndNonPlacedSpeakers();
       final ProjectViewModel pvm = serviceLocator<ProjectViewModel>();
       final ProductQueryViewModel pq = serviceLocator<ProductQueryViewModel>();
 
@@ -132,7 +132,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       //   full-range → withSubwoofer: they become mid-high speakers
       //   withSubwoofer → full-range: mid-high speakers become full-range speakers
       for (final Speaker sp in existing) {
-        final SpeakerProduct? product = sp.productId != null ? pq.speakers.where((SpeakerProduct s) => s.productId == sp.productId).firstOrNull : null;
+        final SpeakerProduct? product = sp.productId != null ? pq.speakers.where((SpeakerProduct s) => s.id == sp.productId).firstOrNull : null;
         if (product != null && product.isSubwoofer) {
           pvm.removeHardware(hardwareId: sp.id);
         }
@@ -273,9 +273,9 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
 
     final LowFrequency? lf = selectedListeningArea?.lowFrequency;
     if (lf == LowFrequency.withSubwoofer && state.selectedTab == 1) {
-      emit(state.copyWith(suggestedSubwooferProductId: product.productId));
+      emit(state.copyWith(suggestedSubwooferProductId: product.id));
     } else {
-      emit(state.copyWith(suggestedProductId: product.productId));
+      emit(state.copyWith(suggestedProductId: product.id));
     }
   }
 
@@ -400,17 +400,20 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
   /// Applies tab-based filtering for select mode when "With Subwoofer" is active.
   List<SpeakerProduct> getFilteredSpeakersForTab(List<SpeakerProduct> items) {
     final LowFrequency? lf = selectedListeningArea?.lowFrequency;
+
     if (lf == LowFrequency.withSubwoofer && items.isNotEmpty) {
       final int activeTab = state.selectedTab.clamp(0, 1);
       if (activeTab == 0) {
-        // Mid-High tab: show non-subwoofer speakers
+        // Actually full range, but taking as Mid-High tab
         return items.where((SpeakerProduct p) => !p.isSubwoofer).toList();
       } else {
         // Subwoofer tab: show only subwoofers
         return items.where((SpeakerProduct p) => p.isSubwoofer).toList();
       }
+    } else {
+      // Except subwoofer, all products are refering as full-range, so no need to filter by tab.
+      return items.where((SpeakerProduct p) => !p.isSubwoofer).toList();
     }
-    return items;
   }
 
   /// Whether the current low frequency mode is a full-range mode (vocal/fullRange/extended/mono).
@@ -423,7 +426,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
   /// Returns true if a conflict exists (full-range speakers exist when switching to
   /// withSubwoofer, or mid-high/subwoofer speakers exist when switching to full-range).
   bool hasFrequencyModeConflict(LowFrequency? newLf) {
-    final List<Speaker> allPlaced = getAllPlacedNonPlacedSpeakers();
+    final List<Speaker> allPlaced = getAllPlacedAndNonPlacedSpeakers();
     if (allPlaced.isEmpty) return false;
 
     final LowFrequency? currentLf = selectedListeningArea?.lowFrequency;
@@ -459,12 +462,12 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     final LowFrequency? lf = selectedListeningArea?.lowFrequency;
 
     if (lf == LowFrequency.withSubwoofer) {
-      final List<Speaker> allPlaced = getAllPlacedNonPlacedSpeakers();
+      final List<Speaker> allPlaced = getAllPlacedAndNonPlacedSpeakers();
       final ProductQueryViewModel pq = serviceLocator<ProductQueryViewModel>();
       final List<Speaker> midHigh = <Speaker>[];
       final List<Speaker> subwoofer = <Speaker>[];
       for (final Speaker sp in allPlaced) {
-        final SpeakerProduct? product = sp.productId != null ? pq.speakers.where((SpeakerProduct s) => s.productId == sp.productId).firstOrNull : null;
+        final SpeakerProduct? product = sp.productId != null ? pq.speakers.where((SpeakerProduct s) => s.id == sp.productId).firstOrNull : null;
         if (product != null && product.isSubwoofer) {
           subwoofer.add(sp);
         } else {
@@ -475,12 +478,12 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       return <String, List<Speaker>>{'Mid-High': midHigh, 'Subwoofer': subwoofer};
     }
 
-    final List<Speaker> allPlaced = getAllPlacedNonPlacedSpeakers();
+    final List<Speaker> allPlaced = getAllPlacedAndNonPlacedSpeakers();
     if (allPlaced.isEmpty) return <String, List<Speaker>>{};
     return <String, List<Speaker>>{frequencyCategoryLabel: allPlaced};
   }
 
-  List<Speaker> getAllPlacedNonPlacedSpeakers() {
+  List<Speaker> getAllPlacedAndNonPlacedSpeakers() {
     if (selectedListeningArea == null) return <Speaker>[];
 
     final List<Speaker> placedSpeakers = getPlacedSpeakers();
@@ -637,9 +640,6 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
   List<SpeakerProduct> _sortProducts(List<SpeakerProduct> items) {
     final List<SpeakerProduct> copy = List<SpeakerProduct>.from(items);
 
-    // Bring currently selected/placed speaker products to the top (if any)
-    final Set<int> selectedProductIds = getAllPlacedNonPlacedSpeakers().map((Speaker sp) => sp.productId).whereType<int>().toSet();
-
     int compareByOption(SpeakerProduct a, SpeakerProduct b) {
       double maxSplValue(MaxSpl? m) {
         if (m == null || m.at.isEmpty) return 0.0;
@@ -662,12 +662,12 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
         case SpeakerSortOption.nameDesc:
           return b.modelName.toLowerCase().compareTo(a.modelName.toLowerCase());
         case SpeakerSortOption.priceLowToHigh:
-          final double ap = pq.getPrice(a.productId);
-          final double bp = pq.getPrice(b.productId);
+          final double ap = pq.getPrice(a.id);
+          final double bp = pq.getPrice(b.id);
           return ap.compareTo(bp);
         case SpeakerSortOption.priceHighToLow:
-          final double ap = pq.getPrice(a.productId);
-          final double bp = pq.getPrice(b.productId);
+          final double ap = pq.getPrice(a.id);
+          final double bp = pq.getPrice(b.id);
           return bp.compareTo(ap);
         case SpeakerSortOption.maxSplHighToLow:
           final double am = maxSplValue(a.maxSpl);
@@ -688,13 +688,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       }
     }
 
-    copy.sort((SpeakerProduct a, SpeakerProduct b) {
-      final bool aSelected = selectedProductIds.contains(a.productId);
-      final bool bSelected = selectedProductIds.contains(b.productId);
-      if (aSelected && !bSelected) return -1;
-      if (!aSelected && bSelected) return 1;
-      return compareByOption(a, b);
-    });
+    copy.sort(compareByOption);
 
     return copy;
   }
@@ -731,7 +725,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     final bool isWithSubwooferMode = selectedListeningArea!.lowFrequency == LowFrequency.withSubwoofer;
 
     // Get ALL speakers (placed + non-placed) so we never miss any.
-    final List<Speaker> speakerList = getAllPlacedNonPlacedSpeakers();
+    final List<Speaker> speakerList = getAllPlacedAndNonPlacedSpeakers();
 
     if (isWithSubwooferMode) {
       // ── WITH SUBWOOFER MODE ──
@@ -741,7 +735,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       final ProductQueryViewModel pq = serviceLocator<ProductQueryViewModel>();
 
       bool isSpeakerSubwoofer(Speaker sp) {
-        final SpeakerProduct? p = sp.productId != null ? pq.speakers.where((SpeakerProduct s) => s.productId == sp.productId).firstOrNull : null;
+        final SpeakerProduct? p = sp.productId != null ? pq.speakers.where((SpeakerProduct s) => s.id == sp.productId).firstOrNull : null;
         return p != null && p.isSubwoofer;
       }
 

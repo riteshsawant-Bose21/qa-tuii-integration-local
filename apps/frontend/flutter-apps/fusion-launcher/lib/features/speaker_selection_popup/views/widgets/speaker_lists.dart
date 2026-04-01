@@ -1,10 +1,12 @@
+import 'dart:developer';
+
 import 'package:flutter/cupertino.dart' show CupertinoActivityIndicator;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/grid_view.dart';
+import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/models/models.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -53,9 +55,9 @@ class ProductQuerySpeakerList extends StatelessWidget {
                         if (midHighId == null && subwooferId == null) return const SizedBox.shrink();
 
                         final SpeakerProduct? midHighProduct =
-                            midHighId != null ? pq.speakers.where((SpeakerProduct s) => s.productId == midHighId).firstOrNull : null;
+                            midHighId != null ? pq.speakers.where((SpeakerProduct s) => s.id == midHighId).firstOrNull : null;
                         final SpeakerProduct? subwooferProduct =
-                            subwooferId != null ? pq.speakers.where((SpeakerProduct s) => s.productId == subwooferId).firstOrNull : null;
+                            subwooferId != null ? pq.speakers.where((SpeakerProduct s) => s.id == subwooferId).firstOrNull : null;
 
                         Widget buildSuggestedSection(String label, SpeakerProduct? product, int? productId) {
                           return Column(
@@ -154,7 +156,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                       final int? suggestedId = vmState.suggestedProductId;
                       if (suggestedId == null) return const SizedBox.shrink();
 
-                      final SpeakerProduct? suggestedProduct = pq.speakers.where((SpeakerProduct s) => s.productId == suggestedId).firstOrNull;
+                      final SpeakerProduct? suggestedProduct = pq.speakers.where((SpeakerProduct s) => s.id == suggestedId).firstOrNull;
                       if (suggestedProduct == null) return const SizedBox.shrink();
 
                       final double price = pq.getPrice(suggestedId);
@@ -275,7 +277,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                               else
                                 ...unique.values.map((Speaker sp) {
                                   final SpeakerProduct? product =
-                                      sp.productId != null ? pq.speakers.where((SpeakerProduct s) => s.productId == sp.productId).firstOrNull : null;
+                                      sp.productId != null ? pq.speakers.where((SpeakerProduct s) => s.id == sp.productId).firstOrNull : null;
                                   final double price = sp.productId != null ? pq.getPrice(sp.productId!) : 0.0;
 
                                   return Padding(
@@ -596,7 +598,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
 
               BlocBuilder<ProjectViewModel, ProjectViewModelState>(
                 builder: (BuildContext context, ProjectViewModelState projectViewModelState) {
-                  final List<Speaker> listeningAreaSpeakers = speakerSelectionViewModel.getAllPlacedNonPlacedSpeakers();
+                  final List<Speaker> listeningAreaSpeakers = speakerSelectionViewModel.getAllPlacedAndNonPlacedSpeakers();
 
                   return BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
                     builder: (
@@ -691,8 +693,8 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                           ),
                                         ),
                                         ...products.map((SpeakerProduct product) {
-                                          final bool isSelected = activeSuggestedId == product.productId;
-                                          final double productPrice = productQueryViewModel.getPrice(product.productId);
+                                          final bool isSelected = activeSuggestedId == product.id;
+                                          final double productPrice = productQueryViewModel.getPrice(product.id);
                                           final PowerHandling? ph = product.powerHandling;
                                           final String spiText =
                                               'SPI = ${SpeakerSelectionViewModel.formatMaxSpl(product.maxSpl)}, '
@@ -858,9 +860,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
 
                         return Flexible(
                           child: ScrollConfiguration(
-                            behavior: ScrollConfiguration.of(
-                              context,
-                            ).copyWith(scrollbars: false),
+                            behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
                             child: Builder(
                               builder: (BuildContext context) {
                                 return ListView.separated(
@@ -871,9 +871,9 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                   itemBuilder: (BuildContext context, int index) {
                                     final SpeakerProduct product = items[index];
 
-                                    final bool isSelected = listeningAreaSpeakers.any(
-                                      (Speaker sp) => sp.productId == product.productId,
-                                    );
+                                    log("==========>>>>>> ${product.id}");
+
+                                    final bool isSelected = listeningAreaSpeakers.any((Speaker sp) => sp.productId == product.id);
 
                                     return SpeakerCard(
                                       index: index,
@@ -948,7 +948,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
           if (filterColor == speakerColor) {
             varients.add(
               _SpeakerColorVarient(
-                productId: widget.product.productId,
+                productId: widget.product.id,
                 color: speakerColor,
                 cachedImagePath: assetImagePath,
               ),
@@ -990,7 +990,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
   Widget build(BuildContext context) {
     return BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
       builder: (BuildContext context, SpeakerSelectionViewModelState state) {
-        final double productPrice = context.read<ProductQueryViewModel>().getPrice(widget.product.productId);
+        final double productPrice = context.read<ProductQueryViewModel>().getPrice(widget.product.id);
 
         return SemanticHelper.container(
           testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_card_${widget.index}"),
