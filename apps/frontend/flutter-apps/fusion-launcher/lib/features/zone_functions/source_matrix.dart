@@ -488,23 +488,34 @@ class _SourceMatrixControlsState extends State<SourceMatrixControls> {
                     //
                     // OUT GAIN SLIDER
                     //
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: NeumorphicTextWithPopupSliderButton(
-                        isActive: false, // DONT ALLOW ACTIVE STATE.
-                        value: widget.zoneFunctions.matrixMixer! is MonoMatrixMixer ? (widget.zoneFunctions.matrixMixer! as MonoMatrixMixer).outGain : 0.0,
-                        onChanged: (double value) {
-                          projectViewModel.updateMatrixMixer(
-                            matrixMixer:
-                                widget.zoneFunctions.matrixMixer! is MonoMatrixMixer
-                                    ? (widget.zoneFunctions.matrixMixer! as MonoMatrixMixer).copyWith(
-                                      outGain: value,
-                                    )
-                                    : widget.zoneFunctions.matrixMixer!,
-                            functionId: widget.zoneFunctions.id,
-                          );
-                        },
-                      ),
+                    Builder(
+                      builder: (BuildContext context) {
+                        final MonoMatrixMixer? monoMatrixMixer =
+                            widget.zoneFunctions.matrixMixer is MonoMatrixMixer ? widget.zoneFunctions.matrixMixer as MonoMatrixMixer : null;
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: GestureDetector(
+                            onTap: () {
+                              if (monoMatrixMixer == null) return;
+                              projectViewModel.updateMatrixMixer(
+                                matrixMixer: monoMatrixMixer.copyWith(outActive: !monoMatrixMixer.outActive),
+                                functionId: widget.zoneFunctions.id,
+                              );
+                            },
+                            child: NeumorphicTextWithPopupSliderButton(
+                              isActive: monoMatrixMixer != null ? monoMatrixMixer.outActive : false,
+                              value: monoMatrixMixer != null ? monoMatrixMixer.outGain : 0.0,
+                              onChanged: (double value) {
+                                projectViewModel.updateMatrixMixer(
+                                  matrixMixer: monoMatrixMixer != null ? monoMatrixMixer.copyWith(outGain: value) : widget.zoneFunctions.matrixMixer!,
+                                  functionId: widget.zoneFunctions.id,
+                                );
+                              },
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -523,20 +534,26 @@ class _SourceMatrixControlsState extends State<SourceMatrixControls> {
                     final MonoMatrixSettings matrixSetting =
                         widget.zoneFunctions.matrixMixer!.settings.firstWhere((MatrixSettings ms) => ms.sourceId == source.id) as MonoMatrixSettings;
 
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      child: NeumorphicTextWithPopupSliderButton(
-                        isActive: false,
-                        value: matrixSetting.mixLevel,
-                        borderRadius: 6,
-                        onChanged: (double value) {
-                          projectViewModel.updateMatrixSettings(
-                            matrixSettings: matrixSetting.copyWith(
-                              mixLevel: value,
-                            ),
-                            functionId: widget.zoneFunctions.id,
-                          );
-                        },
+                    return GestureDetector(
+                      onTap: () {
+                        projectViewModel.updateMatrixSettings(
+                          matrixSettings: matrixSetting.copyWith(outActive: !matrixSetting.outActive),
+                          functionId: widget.zoneFunctions.id,
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        child: NeumorphicTextWithPopupSliderButton(
+                          isActive: matrixSetting.outActive,
+                          value: matrixSetting.mixLevel,
+                          borderRadius: 6,
+                          onChanged: (double value) {
+                            projectViewModel.updateMatrixSettings(
+                              matrixSettings: matrixSetting.copyWith(mixLevel: value),
+                              functionId: widget.zoneFunctions.id,
+                            );
+                          },
+                        ),
                       ),
                     );
                   },

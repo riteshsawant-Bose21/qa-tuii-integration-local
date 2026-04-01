@@ -57,7 +57,7 @@ class Power {
 /// Field names follow the README specification.
 /// The numberOfInputsAndOutputs field accepts any schema structure.
 class AmplifierProduct {
-  final int productId;
+  final int id;
   final ProductAsset assets;
   final String modelName;
   final String modelFamily;
@@ -71,7 +71,7 @@ class AmplifierProduct {
   final bool isFusionCompatible;
 
   const AmplifierProduct({
-    required this.productId,
+    required this.id,
     required this.assets,
     required this.modelName,
     required this.modelFamily,
@@ -90,7 +90,7 @@ class AmplifierProduct {
     //['specifications'] as Map<String, dynamic>? ?? {};
 
     return AmplifierProduct(
-      productId: (json['productid'] as num?)?.toInt() ?? 0,
+      id: (json['id'] as num?)?.toInt() ?? 0,
       assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?, productType: 'amplifier'),
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
@@ -108,7 +108,7 @@ class AmplifierProduct {
   }
 
   Map<String, dynamic> toJson() => {
-    'productid': productId,
+    'id': id,
     'assets': assets.toAssetList(),
     'model_name': modelName,
     'model_family': modelFamily,
@@ -125,5 +125,5 @@ class AmplifierProduct {
   };
 
   @override
-  String toString() => 'AmplifierProduct(productId: $productId, modelName: $modelName)';
+  String toString() => 'AmplifierProduct(id: $id, modelName: $modelName)';
 }

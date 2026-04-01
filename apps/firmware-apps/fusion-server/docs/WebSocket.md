@@ -121,7 +121,40 @@ The WebSocket API uses a **Pull-then-Push** pattern where requesting device data
    }
    ```
 
-5. **`unsubscribe_devices`** - Unsubscribe from device updates
+5. **`config`** - Get current configuration and auto-subscribe to `config_update`
+    ```json
+    {
+       "id": "req-config",
+       "version": 1,
+       "type": "config"
+    }
+    ```
+
+6. **`patch_config`** - Apply partial configuration patch (same semantics as HTTP PATCH)
+    ```json
+    {
+       "id": "req-patch-config",
+       "version": 1,
+       "type": "patch_config",
+       "data": {
+          "zones": {
+             "zone_a": {
+                "volume": 75
+             }
+          }
+       }
+    }
+    ```
+7. **`unsubscribe_config`** - Unsubscribe from configuration update events
+    ```json
+    {
+       "id": "req-unsub-config",
+       "version": 1,
+       "type": "unsubscribe_config"
+    }
+    ```
+
+8. **`unsubscribe_devices`** - Unsubscribe from device updates
    ```json
    {
      "id": "req-unsub",
@@ -142,7 +175,9 @@ The device APIs implement a **Pull-then-Push** pattern for real-time updates:
 
 ### Subscription Management:
 - **Auto-Subscribe**: Requesting `devices` or `device_by_id` automatically subscribes the client
+- **Auto-Subscribe (Config)**: Requesting `config` automatically subscribes the client
 - **Manual Unsubscribe**: Send `unsubscribe_devices` message to stop receiving updates
+- **Config Unsubscribe**: Send `unsubscribe_config` to stop receiving config updates
 - **Connection Cleanup**: Subscriptions are automatically removed when connection closes
 
 ## Status Codes
@@ -464,7 +499,10 @@ FUSION_TEST_LOCAL=1 go test -v ./test/websocket_test.go -timeout 60s
 |------|-------------|----------------|--------------|
 | `devices` | List all cluster devices | ✅ Yes | None |
 | `device_by_id` | Get specific device | ✅ Yes | `device_id` |
+| `config` | Get current configuration | ✅ Yes | None |
+| `patch_config` | Patch configuration state | ❌ No | Partial config object |
 | `update_device_info` | Update device info | ❌ No* | `device_id` + patch fields |
+| `unsubscribe_config` | Stop config updates | ❌ No | None |
 | `ping` | Health check | ❌ No | None |
 | `unsubscribe_devices` | Stop device updates | ❌ No | None |
 
@@ -477,8 +515,12 @@ FUSION_TEST_LOCAL=1 go test -v ./test/websocket_test.go -timeout 60s
 | `welcome` | Connection established | 3002 | Welcome message with server info |
 | `devices` | Response to devices request | 3000 | All cluster devices |
 | `device_by_id` | Response to device lookup | 3000 | Single device info |
+| `config` | Response to config request | 3000 | Current full configuration |
+| `patch_config` | Response to patch request | 3000/3001 | No-op or patch applied |
 | `update_device_info` | Response to update request | 3001 | Update confirmation |
 | `device_update` | Push notification | 3004 | Real-time device change |
+| `config_update` | Push notification | 3001 | Real-time configuration change |
+| `unsubscribe_config` | Response to unsubscribe | 3000 | Config unsubscribe confirmation |
 | `unsubscribe_devices` | Response to unsubscribe | 3000 | Unsubscribe confirmation |
 | `pong` | Response to ping | 3003 | Health check response |
 | `error` | Request processing error | 4xxx | Error details |
