@@ -6,7 +6,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
-import '../../viewModel/input_stream_viewmodel/input_stream_viewmodel.dart';
+import '../../../viewModel/input_stream_viewmodel/input_stream_viewmodel.dart';
 import 'header.dart';
 
 class InputStreamDialog extends StatelessWidget {

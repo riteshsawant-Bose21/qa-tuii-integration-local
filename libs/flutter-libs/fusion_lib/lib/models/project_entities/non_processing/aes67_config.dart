@@ -178,7 +178,7 @@ class Aes67Config {
   final Aes67StreamType streamType;
   final String streamOrAdvertisement;
   final String ipAddress;
-  final int port;
+  final int? port;
   final int channels;
   final String bitDepth;
   final String sampleRate;
@@ -192,15 +192,15 @@ class Aes67Config {
   Aes67Config({
     String? id,
     required this.name,
-    this.device = '',
+    this.device = '-',
     required this.streamType,
-    this.streamOrAdvertisement = '',
-    this.ipAddress = '',
-    this.port = 5004,
+    this.streamOrAdvertisement = '-',
+    this.ipAddress = '-',
+    this.port,
     this.channels = 2,
-    this.bitDepth = '24 bit',
-    this.sampleRate = '48 kHz',
-    this.packetTime = '1 ms',
+    this.bitDepth = '-',
+    this.sampleRate = '-',
+    this.packetTime = '-',
     this.isEnabled = true,
     List<Aes67ChannelConfig>? channelConfigs,
     List<Aes67SessionEntry>? sessions,
@@ -237,18 +237,18 @@ class Aes67Config {
     return Aes67Config(
       id: json['id'] as String,
       name: json['name'] as String,
-      device: json['device'] as String? ?? '',
+      device: json['device'] as String? ?? '-',
       streamType: Aes67StreamType.values.firstWhere(
         (e) => e.name == json['streamType'],
         orElse: () => Aes67StreamType.input,
       ),
-      streamOrAdvertisement: json['streamOrAdvertisement'] as String? ?? '',
-      ipAddress: json['ipAddress'] as String? ?? '',
-      port: json['port'] as int? ?? 5004,
+      streamOrAdvertisement: json['streamOrAdvertisement'] as String? ?? '-',
+      ipAddress: json['ipAddress'] as String? ?? '-',
+      port: json['port'] as int? ?? ,
       channels: channels,
-      bitDepth: json['bitDepth'] as String? ?? '24 bit',
-      sampleRate: json['sampleRate'] as String? ?? '48 kHz',
-      packetTime: json['packetTime'] as String? ?? '1 ms',
+      bitDepth: json['bitDepth'] as String? ?? '-',
+      sampleRate: json['sampleRate'] as String? ?? '-',
+      packetTime: json['packetTime'] as String? ?? '-',
       isEnabled: json['isEnabled'] as bool? ?? true,
       channelConfigs:
           (json['channelConfigs'] as List<dynamic>?)?.map((e) => Aes67ChannelConfig.fromJson(e as Map<String, dynamic>)).toList() ??

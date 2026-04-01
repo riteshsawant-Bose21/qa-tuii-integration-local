@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_aes67/widgets/configuration_aes67.dart';
 import 'package:fusion_launcher/features/media_files/view/configuration_media_files_pages.dart';
 import 'package:fusion_launcher/features/media_files/viewModel/media_files_view_model.dart';
 import 'package:fusion_launcher/features/projects/presentation/widgets/pages/building_page.dart';
@@ -14,6 +13,7 @@ import '../../../core/service_locator.dart';
 import '../../authentication/viewmodel/session_view_model.dart';
 import '../../commission/presentation/pages/network_config_trigger_page.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../configuration_aes67/view/configuration_aes67.dart';
 import '../../configuration_events/widgets/configuration_events.dart';
 import '../../configuration_page/pages/configuration_processing_page.dart';
 import '../../configuration_snapshot/widgets/configuration_snapshots.dart';

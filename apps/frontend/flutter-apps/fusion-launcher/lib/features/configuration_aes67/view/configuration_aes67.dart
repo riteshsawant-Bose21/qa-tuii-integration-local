@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/configuration_aes67/widgets/outputStreams/output_stream_dialog.dart';
-import 'package:fusion_launcher/features/configuration_aes67/widgets/status_dot.dart';
-import 'package:fusion_launcher/features/configuration_aes67/widgets/stream_section.dart';
-import 'package:fusion_launcher/features/configuration_aes67/widgets/stream_toggle.dart';
+import 'package:fusion_launcher/features/configuration_aes67/view/widgets/outputStreams/output_stream_dialog.dart';
+import 'package:fusion_launcher/features/configuration_aes67/view/widgets/status_dot.dart';
+import 'package:fusion_launcher/features/configuration_aes67/view/widgets/stream_section.dart';
+import 'package:fusion_launcher/features/configuration_aes67/view/widgets/stream_toggle.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import '../viewModel/config_aes67_viewmodel.dart';
-import 'cell_text.dart';
-import 'delete_button.dart';
-import 'inputStreams/input_stream_dialog.dart';
+import 'widgets/cell_text.dart';
+import 'widgets/delete_button.dart';
+import 'widgets/inputStreams/input_stream_dialog.dart';
 
 /// Top-level screen — provides the Cubit
 class ConfigurationAes67Screen extends StatelessWidget {
