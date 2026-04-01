@@ -271,7 +271,7 @@ For detailed information on specific functionality:
 - [Persistence](docs/Persistence.md) - BoltDB storage and data management
 - [WebSocket API](docs/WebSocket.md) - Real-time streaming endpoints
 - [Setup & Configuration](docs/Setup.md) - Initial setup and configuration
-- [softwareUpdate Management](docs/softwareUpdate.md) - softwareUpdate upload, distribution, and management
+- [SoftwareUpdate Management](docs/SoftwareUpdate.md) - SoftwareUpdate upload, distribution, and management
 
 # Troubleshooting macOS [ Tahoe ] and Multipass Issues
 

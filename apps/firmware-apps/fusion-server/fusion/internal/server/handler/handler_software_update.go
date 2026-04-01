@@ -345,6 +345,31 @@ func (h *Handler) HandleSoftwareUpdateDownload(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	// Sanitize filename to prevent path traversal and validate format
+	originalFilename := filename
+	filename = filepath.Base(filename)
+
+	// Reject if sanitized filename differs from original (indicates path traversal attempt)
+	if filename != originalFilename {
+		logger.Error("[SoftwareUpdateDownload] Path traversal attempt detected: %s", originalFilename)
+		writeSoftwareUpdateError(w, http.StatusBadRequest, "invalid_filename", "Invalid filename - path components not allowed")
+		return
+	}
+
+	// Reject empty filenames or current/parent directory references
+	if filename == "" || filename == "." || filename == ".." {
+		logger.Error("[SoftwareUpdateDownload] Invalid filename: %s", originalFilename)
+		writeSoftwareUpdateError(w, http.StatusBadRequest, "invalid_filename", "Invalid filename")
+		return
+	}
+
+	// Enforce .swu file extension for security
+	if !strings.HasSuffix(strings.ToLower(filename), ".swu") {
+		logger.Error("[SoftwareUpdateDownload] Invalid file type - only .swu files allowed: %s", filename)
+		writeSoftwareUpdateError(w, http.StatusBadRequest, "invalid_file_type", "Only .swu bundle files are allowed")
+		return
+	}
+
 	logger.Info("[SoftwareUpdateDownload] Requested file: %s", filename)
 
 	filePath := filepath.Join(api.SoftwareUpdateOTAPath, filename)
@@ -373,8 +398,14 @@ func (h *Handler) HandleSoftwareUpdateDownload(w http.ResponseWriter, r *http.Re
 
 	logger.Info("[SoftwareUpdateDownload] Serving file: %s (%.1f MB)", filename, float64(info.Size())/(1<<20))
 
+	// Safely encode filename for Content-Disposition header
+	safeFilename := strings.ReplaceAll(filename, "\\", "\\\\")
+	safeFilename = strings.ReplaceAll(safeFilename, "\"", "\\\"")
+	safeFilename = strings.ReplaceAll(safeFilename, "\n", "")
+	safeFilename = strings.ReplaceAll(safeFilename, "\r", "")
+
 	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Header().Set("Content-Disposition", "attachment; filename=\""+filename+"\"")
+	w.Header().Set("Content-Disposition", "attachment; filename=\""+safeFilename+"\"")
 	w.Header().Set("Content-Length", strconv.FormatInt(info.Size(), 10))
 
 	if _, err := io.Copy(w, f); err != nil {

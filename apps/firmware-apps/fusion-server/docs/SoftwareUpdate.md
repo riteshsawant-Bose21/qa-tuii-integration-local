@@ -174,7 +174,7 @@ When a softwareUpdate file is uploaded to the VIP node:
 ```
 
 ### Cleanup
-- `.part` files are automatically cleaned up as part of the upload processing (e.g. during `processFirmwareStream`)
+- `.part` files are automatically cleaned up as part of the upload processing (e.g. during `processSoftwareUpdateStream`)
 - Failed uploads are cleaned up by the upload handler and leave no persistent artifacts
 - Stale temporary files are opportunistically removed during subsequent uploads
 

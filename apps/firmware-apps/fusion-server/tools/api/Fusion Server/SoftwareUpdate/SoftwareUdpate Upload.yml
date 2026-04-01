@@ -1,5 +1,5 @@
 info:
-  name: SoftwareUdpate Upload
+  name: SoftwareUpdate Upload
   type: http
   seq: 1
 
@@ -14,7 +14,7 @@ http:
     type: multipart-form
     data:
       - name: bundle
-        type: text
+        type: file
         value: ""
       - name: checksum
         type: text

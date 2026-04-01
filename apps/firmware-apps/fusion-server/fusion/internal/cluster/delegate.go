@@ -10,6 +10,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -320,7 +321,7 @@ func (d *ClusterDelegate) handleSoftwareUpdateAvailable(message *api.NotifyMessa
 		// Calculate checksum of existing file
 		if existingChecksum, csErr := d.calculateFileChecksum(finalPath); csErr != nil {
 			logger.Warn("[SoftwareUpdateAvailable] Could not checksum existing file %s: %v — proceeding with download", finalPath, csErr)
-		} else if existingChecksum == message.SoftwareUpdate.Checksum {
+		} else if strings.EqualFold(existingChecksum, message.SoftwareUpdate.Checksum) {
 			// Checksums match - we already have the correct file
 			logger.Info("[SoftwareUpdateAvailable] File %s already up-to-date (checksum: %s), skipping download",
 				message.SoftwareUpdate.Filename, existingChecksum)

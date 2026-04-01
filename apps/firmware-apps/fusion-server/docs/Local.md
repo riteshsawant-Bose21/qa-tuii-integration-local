@@ -165,9 +165,9 @@ Upload `.swu` bundle files with SHA-256 checksum validation:
 
 ```bash
 curl --request POST \
-  --url http://localhost:8080/softwareUpdate/upload \
+  --url 'http://localhost:8080/softwareUpdate/upload?=' \
   --header 'content-type: multipart/form-data' \
-  --form bundle=@/path/to/update.swu \
+  --form bundle=@/path/to/update.swu
   --form checksum=abc123def456...
 ```
 
