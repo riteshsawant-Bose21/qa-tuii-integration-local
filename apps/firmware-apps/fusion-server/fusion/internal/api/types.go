@@ -71,6 +71,45 @@ type AudioSyncUpdate struct {
 	URL      string        `json:"url"`
 }
 
+// SoftwareUpdateSync carries the metadata for a bundle that is
+// available for followers to pull from the VIP node.
+type SoftwareUpdateSync struct {
+	Filename  string    `json:"filename"`
+	Checksum  string    `json:"checksum"`
+	SizeBytes int64     `json:"size_bytes"`
+	Uploaded  time.Time `json:"uploaded"`
+	SourceIP  string    `json:"source_ip"`
+	SyncID    string    `json:"sync_id,omitempty"` // For tracking cluster-wide sync
+}
+
+// SoftwareUpdateSyncAck carries acknowledgment information when a node
+// successfully completes syncing a software update bundle.
+type SoftwareUpdateSyncAck struct {
+	Filename string    `json:"filename"`
+	Checksum string    `json:"checksum"`
+	SyncedAt time.Time `json:"synced_at"`
+	SyncID   string    `json:"sync_id"` // Unique ID to track this sync operation
+	Success  bool      `json:"success"`
+	ErrorMsg string    `json:"error_msg,omitempty"`
+}
+
+// SoftwareUpdateSyncTracker tracks the status of a cluster-wide software update sync
+type SoftwareUpdateSyncTracker struct {
+	SyncID        string          `json:"sync_id"`
+	Filename      string          `json:"filename"`
+	Checksum      string          `json:"checksum"`
+	StartedAt     time.Time       `json:"started_at"`
+	ExpectedNodes map[string]bool `json:"expected_nodes"` // node_name -> acknowledged
+	CompletedCh   chan bool       `json:"-"`              // Channel to signal completion
+	TimeoutCh     chan bool       `json:"-"`              // Channel for timeout
+}
+
+// VersionUpdate represents version information to sync across nodes
+type VersionUpdate struct {
+	Version Version `json:"version"`
+	NodeID  string  `json:"node_id"`
+}
+
 // ConfigUpdate represents a full or partial snapshot of state for a top-level key.
 //
 //   - ConfigUpdate is a replication primitive used by memberlist to achieve
@@ -122,8 +161,11 @@ type DeviceInfo struct {
 	MacAddress               string `json:"mac_address"`
 	SerialNumber             string `json:"serial_number"`
 	IsPrimaryNode            bool   `json:"is_primary"`
-	FirmwareVersion          string `json:"firmware_version"`
+	SoftwareUpdateVersion    string `json:"software_update_version"`
 	IsDeviceCertificateValid bool   `json:"is_device_certificate_valid"`
+	FusionMonorepoBranch     string `json:"fusion_monorepo_branch,omitempty"`
+	FusionMonorepoCommitHash string `json:"fusion_monorepo_commit_hash,omitempty"`
+	JenkinsBuildNumber       string `json:"jenkins_build_number,omitempty"`
 }
 
 // DevicePatch represents patchable device configuration data.
@@ -289,8 +331,25 @@ type WebSocketStats struct {
 	MessagesByType map[string]int64 `json:"messages_by_type,omitempty"` // Messages by type
 }
 
-type FirmwareInfo struct {
+// SoftwareUpdateUploadResponse is the JSON body returned after a successful bundle upload.
+type SoftwareUpdateUploadResponse struct {
+	Filename  string    `json:"filename"`
+	Checksum  string    `json:"checksum"`
+	SizeBytes int64     `json:"size_bytes"`
+	Uploaded  time.Time `json:"uploaded"`
+}
+
+// softwareUpdateErrorResponse is the JSON body returned on bundle upload errors.
+type SoftwareUpdateErrorResponse struct {
+	Error   string `json:"error"`
+	Message string `json:"message,omitempty"`
+}
+
+type SoftwareUpdateInfo struct {
 	BuildConfiguration struct {
-		FirmwareBundleVersion string `json:"FIRMWARE_BUNDLE_VERSION"`
+		SoftwareUpdateBundleVersion string `json:"FIRMWARE_BUNDLE_VERSION"`
+		FusionMonorepoBranch        string `json:"FUSION_MONOREPO_BRANCH"`
+		FusionMonorepoCommitHash    string `json:"FUSION_MONOREPO_COMMIT_HASH"`
+		JenkinsBuildNumber          string `json:"JENKINS_BUILD_NUMBER"`
 	} `json:"build_configuration"`
 }
