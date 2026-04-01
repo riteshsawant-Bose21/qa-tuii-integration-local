@@ -611,8 +611,8 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
             stream->current_seq_num = seq_num;
 
             if (rtp_mgr->trace_debug) {
-                printk(KERN_DEBUG "fusion_cn_rtp: process_packet: %s slot=%u seq=%u now=%llu reconstructed=%llu playout=%llu\n",
-                       stream->info.stream_name, write_slot, seq_num,
+                printk(KERN_DEBUG "fusion_cn_rtp: process_packet: %s slot=%u playback_slot=%u seq=%u now=%llu reconstructed=%llu playout=%llu\n",
+                       stream->info.stream_name, write_slot, stream->playback_slot, seq_num,
                        current_phc_ns, reconstructed_phc_ns, stream->next_action_times[write_slot]);
             }
 
