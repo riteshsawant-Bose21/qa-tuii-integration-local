@@ -4,8 +4,8 @@ import 'package:fusion_launcher/core/models/products_data.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/speaker_selection_popup/views/widgets/properties_and_filter_section.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/drop_down.dart';
+import 'package:fusion_launcher/features/speaker_selection_popup/views/widgets/properties_and_filter_section.dart';
 import 'package:fusion_lib/constants/semantics/features/add_sources_popup/add_sources_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_custom_textfield.dart';
@@ -168,9 +168,7 @@ class AddSourcePopup extends StatelessWidget {
                                 Expanded(
                                   child: Column(
                                     children: <Widget>[
-                                      ...List<Widget>.generate(state.selectedSources.length, (
-                                        int index,
-                                      ) {
+                                      ...List<Widget>.generate(state.selectedSources.length, (int index) {
                                         final SourceData? selectedItem = state.selectedSources.elementAtOrNull(index);
 
                                         return SemanticHelper.container(
@@ -179,9 +177,7 @@ class AddSourcePopup extends StatelessWidget {
                                             "${FusionTestKeys.instance.addSourceSectionItem}_$index",
                                           ),
                                           child: Padding(
-                                            padding: const EdgeInsets.only(
-                                              bottom: 8.0,
-                                            ),
+                                            padding: const EdgeInsets.only(bottom: 8.0),
                                             child: BuildingPageDropDown<SourceData>(
                                               value: selectedItem,
                                               hintText: "Select source",
@@ -191,9 +187,7 @@ class AddSourcePopup extends StatelessWidget {
                                                 return SemanticHelper.container(
                                                   testId: SemanticHelper.createTestId(SemanticTypes.container, "add_source_section_item_label_$index"),
                                                   child: Padding(
-                                                    padding: const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                    ),
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8),
                                                     child: Row(
                                                       children: <Widget>[
                                                         // image
@@ -202,17 +196,12 @@ class AddSourcePopup extends StatelessWidget {
                                                           height: 14,
                                                           width: 14,
                                                         ),
-                                                        const SizedBox(
-                                                          width: 8,
-                                                        ),
+                                                        const SizedBox(width: 8),
                                                         Flexible(
                                                           child: FusionAppText(
                                                             maxLine: 1,
                                                             text: option.name,
-                                                            style:
-                                                                Theme.of(
-                                                                  context,
-                                                                ).textTheme.labelMedium,
+                                                            style: Theme.of(context).textTheme.labelMedium,
                                                           ),
                                                         ),
                                                       ],
@@ -341,9 +330,7 @@ class AddSourcePopup extends StatelessWidget {
                                               child: Container(
                                                 height: 32,
                                                 alignment: Alignment.centerLeft,
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 8,
-                                                ),
+                                                padding: const EdgeInsets.symmetric(horizontal: 8),
                                                 decoration: BoxDecoration(
                                                   boxShadow: <BoxShadow>[
                                                     BoxShadow(color: context.colorScheme.shadowDark, offset: const Offset(1.5, 1.5), blurRadius: 7),
@@ -355,10 +342,7 @@ class AddSourcePopup extends StatelessWidget {
                                                 child: FusionAppText(
                                                   text: zoneName,
                                                   maxLine: 1,
-                                                  style:
-                                                      Theme.of(
-                                                        context,
-                                                      ).textTheme.labelMedium,
+                                                  style: Theme.of(context).textTheme.labelMedium,
                                                 ),
                                               ),
                                             ),
@@ -373,23 +357,22 @@ class AddSourcePopup extends StatelessWidget {
                                             const Expanded(child: SizedBox()),
                                             const SizedBox(width: 8),
                                             Expanded(
-                                              child: Container(
-                                                height: 32,
-                                                alignment: Alignment.centerLeft,
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 8,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: context.colorScheme.surface,
-                                                  borderRadius: BorderRadius.circular(8),
-                                                ),
-                                                child: FusionAppText(
-                                                  text: subZoneName,
-                                                  maxLine: 1,
-                                                  style:
-                                                      Theme.of(
-                                                        context,
-                                                      ).textTheme.labelMedium,
+                                              child: FusionContainer(
+                                                raised: true,
+                                                borderRadius: 8,
+                                                child: Container(
+                                                  height: 32,
+                                                  alignment: Alignment.centerLeft,
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                                  decoration: BoxDecoration(
+                                                    color: context.colorScheme.surface,
+                                                    borderRadius: BorderRadius.circular(8),
+                                                  ),
+                                                  child: FusionAppText(
+                                                    text: subZoneName,
+                                                    maxLine: 1,
+                                                    style: Theme.of(context).textTheme.labelMedium,
+                                                  ),
                                                 ),
                                               ),
                                             ),
@@ -404,40 +387,49 @@ class AddSourcePopup extends StatelessWidget {
 
                             const SizedBox(height: 16),
 
-                            MouseRegion(
-                              cursor: SystemMouseCursors.forbidden,
-                              child: IgnorePointer(
-                                child: SemanticHelper.container(
-                                  testId: SemanticHelper.createTestId(
-                                    SemanticTypes.container,
-                                    FusionTestKeys.instance.addSourceSectionSignalTypeRadioGroup,
-                                  ),
-                                  child: FusionRadio<SignalType>(
-                                    selected: SignalType.mono,
-                                    options: SignalType.values,
-                                    labelBuilder: (SignalType option) {
-                                      return FusionAppText(text: option.displayName, style: context.textTheme.b3Regular);
-                                    },
-                                    onChanged: (SignalType value) {
-                                      addSourceViewModel.setSignalType(value);
-                                    },
-                                  ),
-                                ),
+                            SemanticHelper.container(
+                              testId: SemanticHelper.createTestId(
+                                SemanticTypes.container,
+                                FusionTestKeys.instance.addSourceSectionSignalTypeRadioGroup,
+                              ),
+                              child: Builder(
+                                builder: (BuildContext context) {
+                                  final bool isPaging = state.selectedSourceSectionType == SourceSectionType.paging;
+
+                                  return IgnorePointer(
+                                    ignoring: isPaging,
+                                    child: FusionRadio<SignalType>(
+                                      selected: state.selectedSignalType,
+                                      options: addSourceViewModel.signalTypes,
+                                      labelBuilder: (SignalType option) {
+                                        return FusionAppText(
+                                          text: option.displayName,
+                                          style: context.textTheme.l1Regular,
+                                        );
+                                      },
+                                      onChanged: (SignalType value) => addSourceViewModel.setSignalType(value),
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                             const SizedBox(height: 16),
 
-                            BuildRowPropertyWidget<SourceConnectionType>(
-                              label: "Connection",
-                              value: state.selectedConnectionType,
-                              options: state.selectedSourceSectionType.connectionTypes,
-                              labelBuilder: (SourceConnectionType option) => option.displayName,
-                              onOptionSelected: (
-                                int value,
-                                SourceConnectionType option,
-                              ) {
-                                addSourceViewModel.setSelectedConnectionType(
-                                  option,
+                            Builder(
+                              builder: (BuildContext context) {
+                                final bool isPaging = state.selectedSourceSectionType == SourceSectionType.paging;
+
+                                return IgnorePointer(
+                                  ignoring: isPaging,
+                                  child: BuildRowPropertyWidget<SourceConnectionType>(
+                                    label: "Connection",
+                                    value: isPaging ? null : state.selectedConnectionType,
+                                    options: state.selectedSources.firstOrNull?.supportedConnectionTypes ?? <SourceConnectionType>[],
+                                    labelBuilder: (SourceConnectionType option) => option.displayName,
+                                    onOptionSelected: (int value, SourceConnectionType option) {
+                                      addSourceViewModel.setSelectedConnectionType(option);
+                                    },
+                                  ),
                                 );
                               },
                             ),

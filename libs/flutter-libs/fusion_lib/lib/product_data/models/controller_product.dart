@@ -5,7 +5,7 @@ import 'product_asset.dart';
 /// Represents a controller product from the product catalog API.
 /// Field names follow the README specification.
 class ControllerProduct {
-  final int productId;
+  final int id;
   final ProductAsset assets;
   final String modelName;
   final String modelFamily;
@@ -20,7 +20,7 @@ class ControllerProduct {
   final bool isFusionCompatible;
 
   const ControllerProduct({
-    required this.productId,
+    required this.id,
     required this.assets,
     required this.modelName,
     required this.modelFamily,
@@ -40,7 +40,7 @@ class ControllerProduct {
     //['specifications'] as Map<String, dynamic>? ?? {};
 
     return ControllerProduct(
-      productId: (json['productid'] as num?)?.toInt() ?? 0,
+      id: (json['id'] as num?)?.toInt() ?? 0,
       assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?, productType: 'controller'),
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
@@ -57,7 +57,7 @@ class ControllerProduct {
   }
 
   Map<String, dynamic> toJson() => {
-    'productid': productId,
+    'id': id,
     'assets': assets.toAssetList(),
     'model_name': modelName,
     'model_family': modelFamily,
@@ -75,5 +75,5 @@ class ControllerProduct {
   };
 
   @override
-  String toString() => 'ControllerProduct(productId: $productId, modelName: $modelName)';
+  String toString() => 'ControllerProduct(id: $id, modelName: $modelName)';
 }
