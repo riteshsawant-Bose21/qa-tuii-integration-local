@@ -7,10 +7,11 @@
 package fusionpb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -33,7 +34,7 @@ type DeviceInfo struct {
 	MacAddress               string `protobuf:"bytes,6,opt,name=mac_address,json=macAddress,proto3" json:"mac_address,omitempty"`
 	SerialNumber             string `protobuf:"bytes,7,opt,name=serial_number,json=serialNumber,proto3" json:"serial_number,omitempty"`
 	IsPrimary                bool   `protobuf:"varint,8,opt,name=is_primary,json=isPrimary,proto3" json:"is_primary,omitempty"`
-	FirmwareVersion          string `protobuf:"bytes,9,opt,name=firmware_version,json=firmwareVersion,proto3" json:"firmware_version,omitempty"`
+	SoftwareVersion          string `protobuf:"bytes,9,opt,name=firmware_version,json=firmwareVersion,proto3" json:"firmware_version,omitempty"`
 	IsDeviceCertificateValid bool   `protobuf:"varint,10,opt,name=is_device_certificate_valid,json=isDeviceCertificateValid,proto3" json:"is_device_certificate_valid,omitempty"`
 }
 
@@ -125,9 +126,9 @@ func (x *DeviceInfo) GetIsPrimary() bool {
 	return false
 }
 
-func (x *DeviceInfo) GetFirmwareVersion() string {
+func (x *DeviceInfo) GetSoftwareVersion() string {
 	if x != nil {
-		return x.FirmwareVersion
+		return x.SoftwareVersion
 	}
 	return ""
 }

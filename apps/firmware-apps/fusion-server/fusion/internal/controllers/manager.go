@@ -155,7 +155,7 @@ func (cm *ControllerManager) handleIdentityResponse(connectionID string, message
 		return
 	}
 
-	logger.Debug("Identity details - ID: %s, Type: %s, Version: %s", payload.ID, payload.DeviceType, payload.FirmwareVersion)
+	logger.Debug("Identity details - ID: %s, Type: %s, Version: %s", payload.ID, payload.DeviceType, payload.SoftwareVersion)
 
 	if payload.ID == "" {
 		logger.Error("Missing controller ID in identity from %s", connectionID)
@@ -169,7 +169,7 @@ func (cm *ControllerManager) handleIdentityResponse(connectionID string, message
 		controller.Info = &api.ControllerInfo{
 			ID:      payload.ID,
 			Name:    payload.DeviceType,
-			Version: payload.FirmwareVersion,
+			Version: payload.SoftwareVersion,
 			Address: controller.Connection.RemoteAddr().String(),
 		}
 		controller.IsIdentified = true
@@ -187,7 +187,7 @@ func (cm *ControllerManager) handleIdentityResponse(connectionID string, message
 	// 				"action":          "controller_connected",
 	// 				"controllerID":    controllerID,
 	// 				"deviceType":      deviceType,
-	// 				"firmwareVersion": firmwareVersion,
+	// 				"softwareVersion": softwareVersion,
 	// 				"timestamp":       time.Now(),
 	// 			},
 	// 		},

@@ -113,7 +113,7 @@ func (c *Cluster) getDeviceInfoLocal() api.DeviceInfo {
 		Address:                  c.appConfig.BindAddr,
 		ModelName:                utils.GetModelName(),
 		SerialNumber:             utils.GetSerialNumber(),
-		SoftwareUpdateVersion:    utils.GetSoftwareUpdateVersion(),
+		SoftwareVersion:          utils.GetSoftwareUpdateVersion(),
 		MacAddress:               utils.GetMacAddress(),
 		IsPrimaryNode:            c.isLocalNodePrimary(),
 		IsDeviceCertificateValid: utils.IsCertificateValid(),

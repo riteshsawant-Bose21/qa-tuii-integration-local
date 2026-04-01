@@ -198,7 +198,7 @@ func deviceInfoToProto(info api.DeviceInfo) *fusionpb.DeviceInfo {
 		MacAddress:               info.MacAddress,
 		SerialNumber:             info.SerialNumber,
 		IsPrimary:                info.IsPrimaryNode,
-		FirmwareVersion:          info.FirmwareVersion,
+		SoftwareVersion:          info.SoftwareVersion,
 		IsDeviceCertificateValid: info.IsDeviceCertificateValid,
 	}
 }

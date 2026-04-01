@@ -161,7 +161,7 @@ type DeviceInfo struct {
 	MacAddress               string `json:"mac_address"`
 	SerialNumber             string `json:"serial_number"`
 	IsPrimaryNode            bool   `json:"is_primary"`
-	SoftwareUpdateVersion    string `json:"software_update_version"`
+	SoftwareVersion          string `json:"software_version"`
 	IsDeviceCertificateValid bool   `json:"is_device_certificate_valid"`
 	FusionMonorepoBranch     string `json:"fusion_monorepo_branch,omitempty"`
 	FusionMonorepoCommitHash string `json:"fusion_monorepo_commit_hash,omitempty"`
@@ -294,7 +294,7 @@ type ControllerTCPMessage struct {
 type ControllerIdentifyResponse struct {
 	ID              string `json:"id"`
 	DeviceType      string `json:"deviceType"`
-	FirmwareVersion string `json:"firmwareVersion"`
+	SoftwareVersion string `json:"softwareVersion"`
 }
 
 type ControllerWinkResponse struct {
