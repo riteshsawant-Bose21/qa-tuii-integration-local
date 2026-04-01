@@ -10,9 +10,9 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// WebSocket topic constants to avoid hardcoding
+// WebSocket error message constants to avoid hardcoding
 const (
-	TopicDeviceUpdates = "device_updates"
+	ErrInvalidPayload = "Invalid data payload"
 )
 
 // WebSocketServer interface for server operations required by the handler
@@ -67,6 +67,12 @@ func (h *Handler) routeWebSocketMessageWithConn(request *api.WebSocketRequest, c
 		return h.handleDeviceByIDWithSubscription(request, conn, server)
 	case api.WSMsgTypeUpdateDeviceInfo:
 		return h.handleUpdateDeviceInfoWithNotification(request, server)
+	case api.WSMsgTypeConfiguration:
+		return h.handleConfigurationWithSubscription(request, conn, server)
+	case api.WSMsgTypePatchConfiguration:
+		return h.handlePatchConfigurationWithNotification(request)
+	case api.WSMsgTypeUnsubscribeConfig:
+		return h.handleUnsubscribeConfig(request, conn, server)
 	case api.WSMsgTypeUnsubscribeDevices:
 		return h.handleUnsubscribeDevices(request, conn, server)
 	case api.WSMsgTypePing:
@@ -76,10 +82,24 @@ func (h *Handler) routeWebSocketMessageWithConn(request *api.WebSocketRequest, c
 	}
 }
 
+// handleConfigurationWithSubscription returns current config and subscribes client to config updates (Pull-then-Push)
+func (h *Handler) handleConfigurationWithSubscription(request *api.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*api.WebSocketResponse, error) {
+	state, err := h.GetInitialState()
+	if err != nil {
+		logging.GetLogger().Error("Failed to get configuration state: %v", err)
+		return createErrorResponse(&request.ID, api.WSCodeApplicationError, fmt.Sprintf("Failed to retrieve configuration: %v", err)), nil
+	}
+
+	server.SubscribeToTopic(conn, api.WSTopicConfigUpdates)
+	logging.GetLogger().Info("Client subscribed to configuration updates for request %s", request.ID)
+
+	return createSuccessResponse(&request.ID, api.WSMsgTypeConfiguration, api.WSCodeOK, "OK - subscribed to configuration updates", state), nil
+}
+
 // handleDevicesWithSubscription handles device listing requests and subscribes client to updates (Pull-then-Push)
 func (h *Handler) handleDevicesWithSubscription(request *api.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*api.WebSocketResponse, error) {
 	// Subscribe client to device updates for push notifications
-	server.SubscribeToTopic(conn, TopicDeviceUpdates)
+	server.SubscribeToTopic(conn, api.WSTopicDeviceUpdates)
 	logging.GetLogger().Info("Client subscribed to device updates for request %s", request.ID)
 
 	// Get actual device information from persistence
@@ -99,7 +119,7 @@ func (h *Handler) handleDeviceByIDWithSubscription(request *api.WebSocketRequest
 	}
 
 	if err := json.Unmarshal(request.Data, &payload); err != nil {
-		return createErrorResponse(&request.ID, api.WSCodeInvalidPayload, "Invalid data payload"), nil
+		return createErrorResponse(&request.ID, api.WSCodeInvalidPayload, ErrInvalidPayload), nil
 	}
 
 	if payload.DeviceID == "" {
@@ -107,7 +127,7 @@ func (h *Handler) handleDeviceByIDWithSubscription(request *api.WebSocketRequest
 	}
 
 	// Subscribe client to device updates for push notifications
-	server.SubscribeToTopic(conn, TopicDeviceUpdates)
+	server.SubscribeToTopic(conn, api.WSTopicDeviceUpdates)
 	logging.GetLogger().Info("Client subscribed to device updates for device %s", payload.DeviceID)
 
 	// Get actual device by ID from persistence
@@ -127,7 +147,7 @@ func (h *Handler) handleUpdateDeviceInfoWithNotification(request *api.WebSocketR
 	}
 
 	if err := json.Unmarshal(request.Data, &payload); err != nil {
-		return createErrorResponse(&request.ID, api.WSCodeInvalidPayload, "Invalid data payload"), nil
+		return createErrorResponse(&request.ID, api.WSCodeInvalidPayload, ErrInvalidPayload), nil
 	}
 
 	if payload.DeviceID == "" {
@@ -149,9 +169,44 @@ func (h *Handler) handleUpdateDeviceInfoWithNotification(request *api.WebSocketR
 	}), nil
 }
 
+// handlePatchConfigurationWithNotification applies a partial state patch and notifies config subscribers
+func (h *Handler) handlePatchConfigurationWithNotification(request *api.WebSocketRequest) (*api.WebSocketResponse, error) {
+	var patchData map[string]any
+	if err := json.Unmarshal(request.Data, &patchData); err != nil {
+		return createErrorResponse(&request.ID, api.WSCodeInvalidPayload, ErrInvalidPayload), nil
+	}
+
+	// Explicitly reject nil patch data (JSON null) since patch_config expects an object
+	if patchData == nil {
+		return createErrorResponse(&request.ID, api.WSCodeInvalidPayload, "Patch data cannot be null - expected object"), nil
+	}
+
+	diff, err := h.HandleHTTPPatch(patchData)
+	if err != nil {
+		return createErrorResponse(&request.ID, api.WSCodeUpdateFailed, fmt.Sprintf("Failed to patch configuration: %v", err)), nil
+	}
+
+	if diff == nil {
+		return createSuccessResponse(&request.ID, api.WSMsgTypePatchConfiguration, api.WSCodeOK, "No configuration changes applied", nil), nil
+	}
+
+	// Wrap diff in updates field to match REST API pattern
+	responseData := map[string]any{
+		"updates": diff,
+	}
+
+	return createSuccessResponse(&request.ID, api.WSMsgTypePatchConfiguration, api.WSCodeUpdated, "Configuration patched successfully", responseData), nil
+}
+
+// handleUnsubscribeConfig unsubscribes client from config update events
+func (h *Handler) handleUnsubscribeConfig(request *api.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*api.WebSocketResponse, error) {
+	server.UnsubscribeFromTopic(conn, api.WSTopicConfigUpdates)
+	return createSuccessResponse(&request.ID, api.WSMsgTypeUnsubscribeConfig, api.WSCodeOK, "Unsubscribed from configuration updates", nil), nil
+}
+
 // handleUnsubscribeDevices allows clients to unsubscribe from device updates
 func (h *Handler) handleUnsubscribeDevices(request *api.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*api.WebSocketResponse, error) {
-	server.UnsubscribeFromTopic(conn, TopicDeviceUpdates)
+	server.UnsubscribeFromTopic(conn, api.WSTopicDeviceUpdates)
 	return createSuccessResponse(&request.ID, api.WSMsgTypeUnsubscribeDevices, api.WSCodeOK, "Unsubscribed from device updates", nil), nil
 }
 
