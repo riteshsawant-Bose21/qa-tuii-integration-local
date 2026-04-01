@@ -331,13 +331,6 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr,
     }
     write_unlock_irqrestore(&rtp_mgr->lock, flags);
 
-    if (rtp_mgr->debug && !info->is_source) {
-        printk(KERN_DEBUG
-               "fusion_cn_rtp: sink setup %s slots=%u frames_per_packet=%u playout_delay=%u\n",
-               info->stream_name, stream->buf_size_in_packets,
-               info->frames_per_packet, stream->info.playout_delay);
-    }
-
     dev_put(dev);
 
     *rtp_stream = stream;
@@ -574,34 +567,25 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
 
                 if (!stream->playback_armed && slot_was_empty) {
                     stream->startup_packets_received++;
-                    if (rtp_mgr->debug) {
-                        printk(KERN_DEBUG
-                               "fusion_cn_rtp: startup fill %s seq=%u write_slot=%u startup_pkts=%u/%u\n",
-                               stream->info.stream_name, seq_num, write_slot,
-                               stream->startup_packets_received, SINK_STARTUP_PACKETS);
-                    }
+                    printk(KERN_DEBUG
+                            "fusion_cn_rtp: startup fill %s seq=%u write_slot=%u startup_pkts=%u/%u\n",
+                            stream->info.stream_name, seq_num, write_slot,
+                            stream->startup_packets_received, SINK_STARTUP_PACKETS);
                     if (stream->startup_packets_received >= SINK_STARTUP_PACKETS) {
                         struct fusion_cn_substream *alsa_stream = map->alsa_stream;
-                        stream->playback_slot =
-                            (write_slot + stream->buf_size_in_packets - (SINK_STARTUP_PACKETS - 1)) %
-                            stream->buf_size_in_packets;
+                        stream->playback_slot = (write_slot + stream->buf_size_in_packets - (SINK_STARTUP_PACKETS - 1)) % stream->buf_size_in_packets;
                         stream->playback_armed = true;
-                        if (alsa_stream) {
-                            unsigned long alsa_flags;
-
-                            spin_lock_irqsave(&alsa_stream->lock, alsa_flags);
-                            alsa_stream->buffer_pos =
-                                stream->playback_slot * stream->info.frames_per_packet;
-                            alsa_stream->interrupt_idx = 0;
-                            spin_unlock_irqrestore(&alsa_stream->lock, alsa_flags);
-                        }
-                        if (rtp_mgr->debug) {
+                        {
+                            u32 prev_slot = (stream->playback_slot + stream->buf_size_in_packets - 1) % stream->buf_size_in_packets;
+                            u32 buffer_pos = prev_slot * stream->info.frames_per_packet;
+                            if (alsa_stream)
+                                fusion_cn_alsa_set_playback_phase(alsa_stream, buffer_pos);
                             printk(KERN_DEBUG
-                                   "fusion_cn_rtp: startup armed %s seq=%u write_slot=%u playback_idx=%u buffer_pos=%u startup_pkts=%u\n",
-                                   stream->info.stream_name, seq_num, write_slot,
-                                   stream->playback_slot,
-                                   stream->playback_slot * stream->info.frames_per_packet,
-                                   stream->startup_packets_received);
+                                    "fusion_cn_rtp: startup armed %s seq=%u write_slot=%u playback_idx=%u buffer_pos=%u startup_pkts=%u\n",
+                                    stream->info.stream_name, seq_num, write_slot,
+                                    stream->playback_slot,
+                                    buffer_pos,
+                                    stream->startup_packets_received);
                         }
                     }
                 }

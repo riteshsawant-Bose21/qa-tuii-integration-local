@@ -114,6 +114,24 @@ void fusion_cn_alsa_substream_release(struct kref *kref)
     kfree(s);
 }
 
+void fusion_cn_alsa_set_playback_phase(struct fusion_cn_substream *stream, u32 buffer_pos)
+{
+    unsigned long flags;
+
+    if (!stream)
+        return;
+
+    spin_lock_irqsave(&stream->lock, flags);
+    stream->buffer_pos = buffer_pos;
+    if (stream->substream && stream->substream->runtime && stream->rtp_frames_per_packet) {
+        u32 period_size = stream->substream->runtime->period_size;
+        stream->interrupt_idx = (buffer_pos % period_size) / stream->rtp_frames_per_packet;
+    } else {
+        stream->interrupt_idx = 0;
+    }
+    spin_unlock_irqrestore(&stream->lock, flags);
+}
+
 int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, struct fusion_cn_substream *stream)
 {
     struct fusion_cn_chip *chip = alsa_chip;
