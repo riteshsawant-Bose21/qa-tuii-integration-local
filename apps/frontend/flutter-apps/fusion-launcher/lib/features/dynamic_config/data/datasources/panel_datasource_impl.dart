@@ -240,7 +240,7 @@ class PanelDataSourceImpl implements PanelDataSource {
   @override
   Future<bool> clearAudioSettings() async {
     final ResponseCallback<dynamic> responseCallback = await fusionNetworkClient.delete(
-      api: FusionApiEndpoint.fusionAudioSettings,
+      api: FusionApiEndpoint.fusionValue,
     );
 
     if (responseCallback.success) {

@@ -144,7 +144,7 @@ Future<void> setupServiceLocator() async {
   serviceLocator.registerLazySingleton<InitializePanelUseCase>(() => InitializePanelUseCase());
   serviceLocator.registerLazySingleton<DisposePanelUseCase>(() => DisposePanelUseCase());
   serviceLocator.registerLazySingleton<GetPanelStreamUseCase>(() => GetPanelStreamUseCase());
-  serviceLocator.registerLazySingleton<ResetFusionUseCase>(() => ResetFusionUseCase());
+  serviceLocator.registerLazySingleton<ClearAudioSettingsUseCase>(() => ClearAudioSettingsUseCase());
   serviceLocator.registerLazySingleton<GetPanelEntityUseCase>(() => GetPanelEntityUseCase());
   serviceLocator.registerLazySingleton<CreateProjectUseCase>(() => CreateProjectUseCase());
   serviceLocator.registerLazySingleton<UploadFileUseCase>(() => UploadFileUseCase());
