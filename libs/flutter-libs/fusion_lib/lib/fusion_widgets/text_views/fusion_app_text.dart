@@ -67,9 +67,6 @@ class FusionAppText extends StatelessWidget {
   /// Accessibility identifier for the text.
   final String? semanticId;
 
-  /// Accessibility label for the text.
-  final String? accessLabel;
-
   /// Custom text style to override default styling.
   final TextStyle? style;
 
@@ -94,7 +91,6 @@ class FusionAppText extends StatelessWidget {
     this.underLine = false,
     this.capitalize = true,
     this.semanticId,
-    this.accessLabel,
     this.textOverflow,
   });
 
@@ -107,6 +103,7 @@ class FusionAppText extends StatelessWidget {
     return SemanticHelper.staticText(
       testId: SemanticHelper.createTestId(SemanticTypes.text, semanticId ?? text),
       value: displayText,
+
       /// Exclude semantics from the child widget to avoid redundancy.
       child: ExcludeSemantics(
         excluding: true,

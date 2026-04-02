@@ -3,16 +3,9 @@ import 'dart:io';
 
 import 'package:archive/archive.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
 import 'data_sources/product_catalog.dart';
 import 'models/models.dart';
@@ -213,7 +206,10 @@ class Products {
         if (await jsonFile.exists()) {
           final jsonString = await jsonFile.readAsString();
           final json = jsonDecode(jsonString) as Map<String, dynamic>;
+          print("Loading products from local asset at: $jsonFilePath");
           _catalog = ProductCatalog.fromJson(json);
+          print(_catalog);
+          print("Loaded products from local asset at: $jsonFilePath");
         }
       }
     } catch (e) {
@@ -445,15 +441,15 @@ class Products {
 
   // ============= Lookup by ID =============
 
-  SpeakerProduct? getSpeaker(int productId) => speakers.where((s) => s.productId == productId).firstOrNull;
+  SpeakerProduct? getSpeaker(int productId) => speakers.where((s) => s.id == productId).firstOrNull;
 
-  AmplifierProduct? getAmplifier(int productId) => amplifiers.where((a) => a.productId == productId).firstOrNull;
+  AmplifierProduct? getAmplifier(int productId) => amplifiers.where((a) => a.id == productId).firstOrNull;
 
-  ControllerProduct? getController(int productId) => controllers.where((c) => c.productId == productId).firstOrNull;
+  ControllerProduct? getController(int productId) => controllers.where((c) => c.id == productId).firstOrNull;
 
-  DspProduct? getDsp(int productId) => dsps.where((d) => d.productId == productId).firstOrNull;
+  DspProduct? getDsp(int productId) => dsps.where((d) => d.id == productId).firstOrNull;
 
-  AccessoryProduct? getAccessory(int productId) => accessories.where((a) => a.productId == productId).firstOrNull;
+  AccessoryProduct? getAccessory(int productId) => accessories.where((a) => a.id == productId).firstOrNull;
 
-  IoEndpointProduct? getIoEndpoint(int productId) => ioEndpoints.where((e) => e.productId == productId).firstOrNull;
+  IoEndpointProduct? getIoEndpoint(int productId) => ioEndpoints.where((e) => e.id == productId).firstOrNull;
 }

@@ -1,0 +1,25 @@
+info:
+  name: Trigger audio message
+  type: http
+  seq: 5
+
+http:
+  method: PUT
+  url: "{{api_url}}/pava/messages/:id/trigger"
+  params:
+    - name: id
+      value: 01KAVZ68Q2QRBDC2135YCJZ4FH
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "zones": "all",
+        "priority": 100
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

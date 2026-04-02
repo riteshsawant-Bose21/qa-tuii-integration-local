@@ -30,6 +30,13 @@ type DatabaseService interface {
 	SelectUserSettingsBySettingsIDAndUserID(ctx context.Context, settingsID string, userID string) (*types.UserSettings, error)
 	InsertUserSettings(ctx context.Context, userSettings *types.UserSettings) (string, error)
 	UpdateUserSettings(ctx context.Context, settings *types.UserSettings) error
+
+	// Role Management DB Methods
+	GetOrganizationRoleManagement(ctx context.Context, accountID string) (*types.RoleManagementResponse, error)
+	CreateRole(ctx context.Context, accountID string, req *types.CreateRoleRequest) (*types.Role, error)
+	UpdateUserRole(ctx context.Context, userID, accountID string, newRoleID int) error
+	UpdateRolePermissions(ctx context.Context, roleID int, accountID string, permissions []types.PermissionUpdateRequest) error
+	CheckAdminPermission(ctx context.Context, userEmail, accountID string) (bool, error)
 }
 
 // NewService creates a new user service with the provided database service.

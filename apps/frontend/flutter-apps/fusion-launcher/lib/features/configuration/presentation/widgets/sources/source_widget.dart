@@ -73,8 +73,8 @@ class _SourceWidgetState extends State<SourceWidget> {
 
                     //find the center of area.vertices
                     center = Offset(
-                      area.vertices.map((Offset v) => v.dx).reduce((double a, double b) => a + b) / area.vertices.length,
-                      area.vertices.map((Offset v) => v.dy).reduce((double a, double b) => a + b) / area.vertices.length,
+                      area.vertices.map((FusionCanvasPoint v) => v.position.dx).reduce((double a, double b) => a + b) / area.vertices.length,
+                      area.vertices.map((FusionCanvasPoint v) => v.position.dy).reduce((double a, double b) => a + b) / area.vertices.length,
                     );
                   }
 

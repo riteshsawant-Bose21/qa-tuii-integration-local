@@ -2,14 +2,18 @@ import 'dart:ui';
 
 import 'package:fusion_lib/fusion_lib.dart';
 
-enum SourceType { mic, media, generic }
+enum SourceType { mic, media, generic, paging }
+
+enum PagingSourceType { messagePlayer, messagePlayerWithZoneSelect, pagingMic, pagingMicWithZoneSelect }
 
 enum SourceConnectionType {
   analogInput("Wired"),
   aes67input("Aes67"),
   bluetooth("Bluetooth"),
   usb("USB"),
-  audioJack("RCA/Jack"),
+  audioJack("Audio Jack"),
+  rca("RCA"),
+  endpoint("Endpoint"),
   xlr("XLR"),
   hdmi("HDMI");
 
@@ -18,12 +22,39 @@ enum SourceConnectionType {
   final String displayName;
 }
 
+extension SourceConnectionTypeExtension on SourceConnectionType {
+  String get connectionType {
+    switch (this) {
+      case SourceConnectionType.analogInput:
+        return 'analog';
+      case SourceConnectionType.aes67input:
+        return 'aes67';
+      case SourceConnectionType.bluetooth:
+        return 'analog';
+      case SourceConnectionType.usb:
+        return 'analog';
+      case SourceConnectionType.audioJack:
+        return 'analog';
+      case SourceConnectionType.rca:
+        return 'analog';
+      case SourceConnectionType.endpoint:
+        return 'endpoint';
+      case SourceConnectionType.xlr:
+        return 'analog';
+      case SourceConnectionType.hdmi:
+        return 'analog';
+    }
+  }
+}
+
 class Source extends HardwareComponent {
   /// Type of the source
   final SourceType type;
   final SourceConnectionType connectionType;
   String? ipAddress; //for AES67 sources
   final String sku;
+  final PagingSourceType? pagingSourceType; // Only applicable for paging sources
+  final String? streamID; // for AES67 sources, to identify the stream to connect to.
 
   /// Constructor for SourceEntity
   Source({
@@ -48,6 +79,8 @@ class Source extends HardwareComponent {
     super.inputPortsData,
     super.outputPortsData,
     required super.addedFromBuildingPage,
+    this.pagingSourceType,
+    this.streamID,
   }) : super(
          hardwareName: hardwareName ?? name,
          id: id ?? "SOURCE${FusionUtils.shortStringUUID()}",
@@ -74,6 +107,8 @@ class Source extends HardwareComponent {
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
     bool? addedFromBuildingPage,
+    PagingSourceType? pagingSourceType,
+    String? streamID,
   }) {
     return Source(
       id: id ?? this.id,
@@ -95,6 +130,8 @@ class Source extends HardwareComponent {
       outputPortsData: outputPortsData ?? this.outputPortsData,
       addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
       equipmentLocationPosition: equipmentLocationPosition ?? this.equipmentLocationPosition,
+      pagingSourceType: pagingSourceType ?? this.pagingSourceType,
+      streamID: streamID ?? this.streamID,
     );
   }
 
@@ -128,6 +165,13 @@ class Source extends HardwareComponent {
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
       equipmentLocationPosition: DeserializationUtil.intDeserializer.deserialize(json['equipmentLocationPosition']),
+      pagingSourceType: json['pagingSourceType'] != null
+          ? PagingSourceType.values.firstWhere(
+              (PagingSourceType e) => e.name == json['pagingSourceType'],
+              orElse: () => PagingSourceType.messagePlayer,
+            )
+          : null,
+      streamID: json['streamID'] as String?,
     );
   }
 
@@ -153,6 +197,8 @@ class Source extends HardwareComponent {
       'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
       'addedFromBuildingPage': addedFromBuildingPage,
       'equipmentLocationPosition': equipmentLocationPosition,
+      'pagingSourceType': pagingSourceType?.name,
+      'streamID': streamID,
     };
   }
 }

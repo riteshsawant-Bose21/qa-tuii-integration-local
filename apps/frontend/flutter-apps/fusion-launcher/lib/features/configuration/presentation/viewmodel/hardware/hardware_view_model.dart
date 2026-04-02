@@ -1,10 +1,11 @@
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/models/products_data.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
+import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/endpoints.dart';
@@ -76,12 +77,16 @@ extension HardwareViewModel on ProjectViewModel {
           SourceType.mic => <String>['peq', 'gate', 'compressor', 'agc'],
           SourceType.media => <String>['peq', 'compressor', 'agc'],
           SourceType.generic => <String>['peq', 'compressor'],
+          SourceType.paging => <String>['peq', 'compressor'],
         };
         for (final String algo in chain) {
           addProcessingBlockToSource(
-            processingBlock: ProcessingBlockModel.sourceBlocks.firstWhere(
-              (ProcessingBlockModel element) => element.algorithmId == algo,
-            ),
+            processingBlock:
+                ProcessingBlockModel.sourceBlocks
+                    .firstWhere(
+                      (ProcessingBlockModel element) => element.algorithmId == algo,
+                    )
+                    .clone(),
             sourceId: hardware.id,
             autoSave: false,
           );
@@ -95,6 +100,27 @@ extension HardwareViewModel on ProjectViewModel {
       FusionLogger.log(
         tag: LogTag.project,
         message: "Failed to add hardware: $e",
+      );
+    }
+  }
+
+  void removeAllSpeakersFromCurrentListeningArea({bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      final List<HardwareComponent> all = <HardwareComponent>[...getPlacedSpeakersForCurrentListeningArea(), ...getNonPlacedSpeakersForCurrentListeningArea()];
+      for (final HardwareComponent hw in all.whereType<Speaker>()) {
+        projectManager.removeHardware(hw.id);
+      }
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to remove all speakers from listening area: $e",
       );
     }
   }
@@ -255,10 +281,220 @@ extension HardwareViewModel on ProjectViewModel {
     } catch (e) {
       FusionLogger.log(
         tag: LogTag.project,
-        message: "Failed to get unplaced hardware for listening area: $e",
+        message: "Failed to get placed hardware for listening area: $e",
       );
       return <Speaker>[];
     }
+  }
+
+  ResponseCallback<bool> runAutoPlacementForCurrentListeningArea({required AutoPlacementResult autoPlacementResult}) {
+    try {
+      final String? listeningAreaId = currentSelectedListeningAreaId;
+      if (listeningAreaId == null) return ResponseCallback<bool>.failure('Select a listening area first.');
+
+      final ListeningArea listeningArea = getListeningArea(areaId: listeningAreaId);
+      if (!listeningArea.autoPlacement) return ResponseCallback<bool>.failure('Enable Auto-Placement and try again.');
+      if (listeningArea.vertices.length < 3) return ResponseCallback<bool>.failure('Listening area shape is invalid. Redraw the area and try again.');
+
+      final ProductQueryViewModel productQueryViewModel = serviceLocator<ProductQueryViewModel>();
+      final List<SpeakerProduct> catalogSpeakers = productQueryViewModel.speakers;
+
+      final List<Speaker> targetSpeakers = _getAutoPlacementTargetSpeakers(catalogSpeakers: catalogSpeakers);
+
+      if (targetSpeakers.isEmpty) return ResponseCallback<bool>.failure('Add at least one non-subwoofer speaker to auto-place.');
+
+      final ({List<Offset> positions, SurfacePlacementResult? surfacePlacementResult, PlacementResult? placementResult}) autoPlacedDetails =
+          _calculateAutoPlacedPositions(
+            listeningArea: listeningArea,
+            catalogSpeakers: catalogSpeakers,
+            targetSpeakers: targetSpeakers,
+            autoPlacementResult: autoPlacementResult,
+          );
+
+      final List<Offset> candidatePoints = autoPlacedDetails.positions;
+
+      if (candidatePoints.isEmpty) {
+        FusionLogger.log(tag: LogTag.project, message: 'Auto-placement candidate points: $candidatePoints');
+        return ResponseCallback<bool>.failure('No valid placement positions found. Adjust your listening area shape or auto-placement settings and try again.');
+      }
+
+      final List<Offset> sortedPoints = _sortPlacementPoints(listeningArea: listeningArea, points: candidatePoints);
+      final int placeCount = sortedPoints.length;
+      final ListeningAreaRoomBounds roomBounds = listeningArea.getBoundsForVertices();
+
+      recordSnapshot();
+
+      // Save auto-placement result to listening area for future reference and to display in UI if needed.
+      final ListeningArea updatedListeningArea = listeningArea.copyWith(autoPlacementResult: autoPlacementResult);
+      updateListeningArea(area: updatedListeningArea, autoSave: false);
+
+      final Speaker templateSpeaker = targetSpeakers.first;
+
+      // Hard reset speaker inventory in current LA: remove all existing placed + unplaced speakers.
+      removeAllSpeakersFromCurrentListeningArea(autoSave: false);
+
+      // Add a fresh set of algorithm-placed speakers only.
+      for (final Offset point in sortedPoints) {
+        final ({double pitch, double yaw}) orientation = _resolveOrientationForPlacement(
+          mountingType: listeningArea.mountingType,
+          position: point,
+          bounds: roomBounds,
+        );
+        final Speaker clonedSpeaker = templateSpeaker.getClone().copyWith(
+          pitch: orientation.pitch,
+          yaw: orientation.yaw,
+        );
+        clonedSpeaker.pos = point;
+        addHardware(hardware: clonedSpeaker, autoSave: false);
+      }
+
+      saveProject();
+      updateProject();
+
+      return ResponseCallback<bool>.success(true, message: 'Auto-placement successful. Placed $placeCount speakers.');
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: 'Auto-placement failed: $e');
+      return ResponseCallback<bool>.failure(e.toString().replaceFirst('Invalid argument(s): ', ''));
+    }
+  }
+
+  // Helper methods for auto-placement
+  List<Speaker> _getAutoPlacementTargetSpeakers({required List<SpeakerProduct> catalogSpeakers}) {
+    final List<Speaker> nonPlacedSpeakers = getNonPlacedSpeakersForCurrentListeningArea();
+    final List<Speaker> placedSpeakers = getPlacedSpeakersForCurrentListeningArea();
+    final List<Speaker> allSpeakers = <Speaker>[...placedSpeakers, ...nonPlacedSpeakers];
+
+    return allSpeakers.where((Speaker speaker) {
+      final int? productId = speaker.productId;
+      if (productId == null) return true;
+
+      final SpeakerProduct? product = catalogSpeakers.where((SpeakerProduct p) => p.id == productId).firstOrNull;
+      return !(product?.isSubwoofer ?? false);
+    }).toList();
+  }
+
+  // Sort candidate points based on distance from center of listening area, closest first.
+  // This is a heuristic to try to place speakers in a more balanced way in irregularly shaped rooms
+  // where the algorithm may return clusters of points in certain areas.
+  List<Offset> _sortPlacementPoints({required ListeningArea listeningArea, required List<Offset> points}) {
+    final Offset center = listeningArea.getCenterPositionOfVertices() ?? points.first;
+    return List<Offset>.from(points)..sort((Offset a, Offset b) => (a - center).distance.compareTo((b - center).distance));
+  }
+
+  ({List<Offset> positions, SurfacePlacementResult? surfacePlacementResult, PlacementResult? placementResult}) _calculateAutoPlacedPositions({
+    required ListeningArea listeningArea,
+    required List<SpeakerProduct> catalogSpeakers,
+    required List<Speaker> targetSpeakers,
+    required AutoPlacementResult autoPlacementResult,
+  }) {
+    // take mounting type from listening area if set, else from first speaker (they should all be the same since we filter by productId before)
+    final MountingType mountingType = listeningArea.mountingType;
+
+    final Speaker referenceSpeaker = targetSpeakers.first;
+
+    final SpeakerProduct? speakerProduct = catalogSpeakers.where((SpeakerProduct p) => p.id == referenceSpeaker.productId).firstOrNull;
+    final double coverageAngle = _resolveCoverageAngle(speakerProduct);
+
+    final ListeningAreaRoomBounds bounds = listeningArea.getBoundsForVertices();
+    final double roomLength = bounds.roomLengthInMeters;
+    final double roomWidth = bounds.roomWidthInMeters;
+
+    if (roomLength <= 0 || roomWidth <= 0) {
+      throw ArgumentError('Invalid room dimensions calculated from listening area vertices. Length and width must be greater than 0.');
+    }
+    final double listenerHeight = listeningArea.listeningHeight;
+
+    if (listenerHeight <= 0) throw ArgumentError('Listener height must be greater than 0.');
+
+    final double? parsedCeilingHeight = double.tryParse(listeningArea.ceilingHeight);
+    if (parsedCeilingHeight == null) throw ArgumentError('Ceiling height is required and must be a valid number.');
+    if (parsedCeilingHeight <= listenerHeight) throw ArgumentError('Ceiling height must be greater than listener height.');
+
+    final double ceilingHeight = parsedCeilingHeight;
+
+    if (mountingType == MountingType.ceiling || mountingType == MountingType.pendant) {
+      final List<Point2D> geometry = <Point2D>[
+        ...listeningArea.vertices.map(
+          (FusionCanvasPoint point) {
+            return Point2D(
+              (point.position.dx - bounds.minX) / 100,
+              (point.position.dy - bounds.minY) / 100,
+            );
+          },
+        ),
+      ];
+
+      final Room room = Room.asymmetrical(geometry: geometry, ceilingHeight: ceilingHeight, listenerHeight: listenerHeight);
+
+      final SpeakerType speakerType = mountingType == MountingType.pendant ? SpeakerType.pendant : SpeakerType.ceiling;
+
+      final PlacementResult result = AutoSpeakerPlacement.calculatePlacement(
+        room: room,
+        speakerSpec: SpeakerSpec(
+          coverageAngle: coverageAngle,
+          type: speakerType,
+          // TODO: SHARATH - need to verify if zAxis is the right dimension to use for pendant height in the algorithm, and if the algorithm expects it to be in mm or meters (we may need to convert from our internal cm representation)
+          pendantHeight: 2.1,
+        ),
+        coveragePreference: autoPlacementResult.autoPlaceCoveragePreference,
+        layoutPattern: autoPlacementResult.autoPlaceLayoutPattern,
+      );
+
+      log("Total speakers placed by algorithm: ${result.speakerPositions.length}");
+      final List<Offset> positions = result.speakerPositions.map((Point2D p) => Offset((p.x * 100) + bounds.minX, (p.y * 100) + bounds.minY)).toList();
+
+      return (positions: positions, surfacePlacementResult: null, placementResult: result);
+    } else {
+      final SurfacePlacementResult result = SurfaceSpeakerPlacer.calculatePlacement(
+        room: SurfaceRoom(
+          length: roomLength,
+          width: roomWidth,
+          ceilingHeight: ceilingHeight,
+          listenerHeight: listenerHeight,
+        ),
+        speaker: Loudspeaker(horizontalCoverageAngle: coverageAngle, type: referenceSpeaker.speakerSKU),
+        config: PlacementConfig(
+          coveragePreference: autoPlacementResult.autoPlaceCoveragePreference,
+        ),
+      );
+
+      final List<Offset> positions = <Offset>[
+        ...result.positions.map(
+          (SpeakerPosition p) {
+            return Offset(
+              (p.x * 100) + bounds.minX,
+              (p.y * 100) + bounds.minY,
+            );
+          },
+        ),
+      ];
+      return (positions: positions, surfacePlacementResult: result, placementResult: null);
+    }
+  }
+
+  double _resolveCoverageAngle(SpeakerProduct? product) {
+    if (product == null || product.coverage.isEmpty) return 90.0;
+    final int angle = product.coverage.firstOrNull?.horizontalDeg ?? 90;
+    return angle <= 0 ? 90.0 : angle.toDouble();
+  }
+
+  ({double pitch, double yaw}) _resolveOrientationForPlacement({
+    required MountingType mountingType,
+    required Offset position,
+    required ListeningAreaRoomBounds bounds,
+  }) {
+    if (mountingType == MountingType.pendant || mountingType == MountingType.ceiling) return (pitch: 90.0, yaw: 0.0);
+    if (mountingType != MountingType.surface) return (pitch: 0.0, yaw: 0.0);
+
+    final double dLeft = (position.dx - bounds.minX).abs();
+    final double dTop = (position.dy - bounds.minY).abs();
+    final double dRight = (bounds.maxX - position.dx).abs();
+    final double dBottom = (bounds.maxY - position.dy).abs();
+
+    if (dLeft <= dTop && dLeft <= dRight && dLeft <= dBottom) return (pitch: 0.0, yaw: 0.0); // Left wall
+    if (dTop <= dRight && dTop <= dBottom) return (pitch: 0.0, yaw: 90.0); // Top wall
+    if (dRight <= dBottom) return (pitch: 0.0, yaw: 180.0); // Right wall
+    return (pitch: 0.0, yaw: -90.0); // Bottom wall
   }
 
   ResponseCallback<bool> moveHardware({
@@ -413,12 +649,12 @@ extension HardwareViewModel on ProjectViewModel {
 
       if (nonPlacedSpeakers.length == 1) {
         // Last speaker placed
-        setShouldPlaceNonPlacedSpeakers(false);
+        // setShouldPlaceNonPlacedSpeakers(false);
         updateProject();
       }
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add selected product as hardware: $e");
-      setShouldPlaceNonPlacedSpeakers(false);
+      // setShouldPlaceNonPlacedSpeakers(false);
     }
   }
 
@@ -485,10 +721,15 @@ extension HardwareViewModel on ProjectViewModel {
 
   Speaker fromSpeakerProductModel(String assetImagePath, SpeakerProduct product, LocationModel locationEntity, bool isFromBuildingPage) {
     final MountingType? mountingType = MountingType.fromJson(product.mountType);
+
+    final double pitch = mountingType == MountingType.pendant || mountingType == MountingType.ceiling ? 90.0 : 0.0;
+    final double yaw = mountingType == MountingType.surface ? 90.0 : 0.0;
+    final double? horizontalCoverageAngle = product.coverage.firstOrNull?.horizontalDeg.toDouble();
+
     return Speaker(
       locationEntity: locationEntity,
       name: product.modelName,
-      productId: product.productId,
+      productId: product.id,
       pos: null,
       zAxis: 300.0,
       speakerSKU: product.modelName,
@@ -498,18 +739,20 @@ extension HardwareViewModel on ProjectViewModel {
       type: OutputType.analogOutput,
       price: 0,
       mountingType: mountingType,
-      pitch: mountingType == MountingType.pendant || mountingType == MountingType.ceiling ? 90.0 : 0.0,
+      pitch: pitch,
+      yaw: yaw,
       inputPortsData: <PortData>[
         PortData(
           name: "In",
           position: PortPosition.bottomRight,
           portNumber: 1,
-          compatibleTypes: <PortType>[PortType.amplifierOutput],
+          // compatibleTypes: <PortType>[PortType.amplifierOutput],
           type: PortType.speakerInput,
           description: PortType.speakerInput.description,
         ),
       ],
       outputPortsData: <PortData>[],
+      horizontalCoverageAngle: horizontalCoverageAngle,
     );
   }
 
@@ -534,7 +777,7 @@ extension HardwareViewModel on ProjectViewModel {
               name: "In",
               position: PortPosition.bottomRight,
               portNumber: 1,
-              compatibleTypes: <PortType>[PortType.amplifierOutput],
+              // compatibleTypes: <PortType>[PortType.amplifierOutput],
               type: PortType.analogInput,
               description: PortType.analogInput.description,
             ),
@@ -551,6 +794,8 @@ extension HardwareViewModel on ProjectViewModel {
           SourceConnectionType.audioJack => PortType.audioJackOutput,
           SourceConnectionType.xlr => PortType.xlrOutput,
           SourceConnectionType.hdmi => PortType.hdmiOut,
+          SourceConnectionType.rca => PortType.rcaOutput,
+          SourceConnectionType.endpoint => PortType.endpointOutput,
         };
         return Source(
           locationEntity: locationEntity,
@@ -569,19 +814,19 @@ extension HardwareViewModel on ProjectViewModel {
               name: "1",
               position: PortPosition.bottomRight,
               portNumber: 1,
-              compatibleTypes: switch (connectionType) {
-                SourceConnectionType.analogInput || SourceConnectionType.aes67input => <PortType>[
-                  PortType.dspAnalogInput,
-                  PortType.endpointInput,
-                ],
-                SourceConnectionType.bluetooth => <PortType>[
-                  PortType.bleIn,
-                ],
-                SourceConnectionType.usb => <PortType>[PortType.usbIn],
-                SourceConnectionType.audioJack => <PortType>[PortType.audioJackInput],
-                SourceConnectionType.xlr => <PortType>[PortType.xlrInput],
-                SourceConnectionType.hdmi => <PortType>[PortType.hdmiIn],
-              },
+              // compatibleTypes: switch (connectionType) {
+              //   SourceConnectionType.analogInput || SourceConnectionType.aes67input => <PortType>[
+              //     PortType.dspAnalogInput,
+              //     PortType.endpointInput,
+              //   ],
+              //   SourceConnectionType.bluetooth => <PortType>[
+              //     PortType.bleIn,
+              //   ],
+              //   SourceConnectionType.usb => <PortType>[PortType.usbIn],
+              //   SourceConnectionType.audioJack => <PortType>[PortType.audioJackInput],
+              //   SourceConnectionType.xlr => <PortType>[PortType.xlrInput],
+              //   SourceConnectionType.hdmi => <PortType>[PortType.hdmiIn],
+              // },
               type: portType,
               description: portType.description,
             ),
@@ -617,7 +862,7 @@ extension HardwareViewModel on ProjectViewModel {
               portNumber: 3,
               type: PortType.networkSwitchOut,
               description: PortType.ethernet.description,
-              compatibleTypes: <PortType>[PortType.networkSwitchIn],
+              // compatibleTypes: <PortType>[PortType.networkSwitchIn],
             ),
           ],
           powerPerChannel: 100.0,
@@ -677,7 +922,7 @@ extension HardwareViewModel on ProjectViewModel {
               portNumber: 3,
               type: PortType.networkSwitchOut,
               description: PortType.networkSwitchOut.description,
-              compatibleTypes: <PortType>[PortType.networkSwitchIn],
+              // compatibleTypes: <PortType>[PortType.networkSwitchIn],
             ),
           ],
         );
@@ -711,7 +956,7 @@ extension HardwareViewModel on ProjectViewModel {
               portNumber: 1,
               type: PortType.wifiIn,
               description: PortType.wifiIn.description,
-              compatibleTypes: <PortType>[PortType.wifiOut],
+              // compatibleTypes: <PortType>[PortType.wifiOut],
             ),
             PortData(
               name: 'USB',
@@ -719,7 +964,7 @@ extension HardwareViewModel on ProjectViewModel {
               portNumber: 2,
               type: PortType.usbIn,
               description: PortType.usbIn.description,
-              compatibleTypes: <PortType>[PortType.usbOut],
+              // compatibleTypes: <PortType>[PortType.usbOut],
             ),
             PortData(
               name: 'ble',
@@ -727,7 +972,7 @@ extension HardwareViewModel on ProjectViewModel {
               portNumber: 3,
               type: PortType.bleIn,
               description: PortType.bleIn.description,
-              compatibleTypes: <PortType>[PortType.bleOut],
+              // compatibleTypes: <PortType>[PortType.bleOut],
             ),
           ],
           location: '',
@@ -750,7 +995,7 @@ extension HardwareViewModel on ProjectViewModel {
               name: "In",
               position: PortPosition.bottomRight,
               portNumber: 1,
-              compatibleTypes: <PortType>[PortType.analogOutput],
+              // compatibleTypes: <PortType>[PortType.analogOutput],
               type: PortType.endpointInput,
               description: PortType.endpointInput.description,
             ),
@@ -762,7 +1007,7 @@ extension HardwareViewModel on ProjectViewModel {
               portNumber: 3,
               type: PortType.networkSwitchOut,
               description: PortType.ethernet.description,
-              compatibleTypes: <PortType>[PortType.networkSwitchIn],
+              // compatibleTypes: <PortType>[PortType.networkSwitchIn],
             ),
           ],
         );
@@ -796,7 +1041,7 @@ extension HardwareViewModel on ProjectViewModel {
         return currentImagePath;
       }
       final List<SpeakerProduct> speaker = serviceLocator<ProductQueryViewModel>().speakers;
-      final SpeakerProduct hardware = speaker.firstWhere((SpeakerProduct element) => element.productId == productId);
+      final SpeakerProduct hardware = speaker.firstWhere((SpeakerProduct element) => element.id == productId);
       return serviceLocator<ProductQueryViewModel>().getImagePath(hardware.assets.assets.values.first.first);
     } catch (e) {
       return null;

@@ -15,7 +15,13 @@ class CreateNewProjectViewmodel extends Cubit<NewProjectDetails> {
       final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
       final String currentProjectName = projectViewModel.projectName;
       final ProjectMetaData? currentProjectMetaData = projectViewModel.projectMetaData;
-      emit(NewProjectDetails(name: currentProjectName, metadata: currentProjectMetaData ?? ProjectMetaData.empty()));
+
+      emit(
+        NewProjectDetails(
+          name: currentProjectName,
+          metadata: currentProjectMetaData ?? ProjectMetaData.empty(),
+        ),
+      );
     }
   }
 
