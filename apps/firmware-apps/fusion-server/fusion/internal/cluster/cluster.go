@@ -460,26 +460,7 @@ func (c *Cluster) PostGenericToAdmin(
 	endpoint string,
 	localFn func() error,
 ) error {
-
-	for _, addr := range c.getNodeAdminAddresses() {
-		if c.hostIsLocal(addr) {
-			// If this is the local address, invoke localFn() directly:
-			if err := localFn(); err != nil {
-				return fmt.Errorf("local function failed: %w", err)
-			}
-			continue
-		}
-
-		// POST to the remote node’s admin endpoint
-		urlStr := utils.GetLocalURL(addr, endpoint)
-		resp, err := http.Post(urlStr, "", nil)
-		if err != nil {
-			return err
-		}
-		resp.Body.Close()
-	}
-
-	return nil
+	return postGenericToAdminLast(c, endpoint, localFn)
 }
 
 func postGenericToAdminLast(
