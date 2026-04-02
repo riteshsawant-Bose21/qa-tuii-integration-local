@@ -126,23 +126,23 @@ class _WiringPageState extends State<WiringPage> {
             },
             onMovePoints: (FusionBasePainter painter, List<String> points, Offset delta) {
               if (painter is WiringConnectionPainter) {
-                print(" Moving points for connection ${painter.connection.id}, delta=$delta");
-                final WiringConnectionModel connection = painter.connection;
-                final List<FusionCanvasPoint>? updatedPoints = painter.pathPoints;
-                if (updatedPoints == null) return;
-                final Map<int, FusionCanvasPoint> newPoints = <int, FusionCanvasPoint>{};
-                for (String pointId in points) {
-                  if (updatedPoints.any((FusionCanvasPoint p) => p.id == pointId)) {
-                    final int index = updatedPoints.indexWhere((FusionCanvasPoint p) => p.id == pointId);
-                    // updatedPoints[index] = FusionCanvasPoint(position: updatedPoints[index].position);
-                    newPoints[index] = updatedPoints[index].copyWith(position: updatedPoints[index].position);
-                  }
-                }
-                projectViewModel.updateWiringConnection(
-                  connection: connection.copyWith(
-                    points: newPoints.isEmpty ? <FusionCanvasPoint>[] : newPoints.entries.map((MapEntry<int, FusionCanvasPoint> e) => e.value).toList(),
-                  ),
-                );
+                // print(" Moving points for connection ${painter.connection.id}, delta=$delta");
+                // final WiringConnectionModel connection = painter.connection;
+                // final List<FusionCanvasPoint>? updatedPoints = painter.pathPoints;
+                // if (updatedPoints == null) return;
+                // final Map<int, FusionCanvasPoint> newPoints = <int, FusionCanvasPoint>{};
+                // for (String pointId in points) {
+                //   if (updatedPoints.any((FusionCanvasPoint p) => p.id == pointId)) {
+                //     final int index = updatedPoints.indexWhere((FusionCanvasPoint p) => p.id == pointId);
+                //     // updatedPoints[index] = FusionCanvasPoint(position: updatedPoints[index].position);
+                //     newPoints[index] = updatedPoints[index].copyWith(position: updatedPoints[index].position);
+                //   }
+                // }
+                // projectViewModel.updateWiringConnection(
+                //   connection: connection.copyWith(
+                //     points: newPoints.isEmpty ? <FusionCanvasPoint>[] : newPoints.entries.map((MapEntry<int, FusionCanvasPoint> e) => e.value).toList(),
+                //   ),
+                // );
                 pathStorage.clearPathForLayer(painter.id);
               }
             },
@@ -166,10 +166,11 @@ class _WiringPageState extends State<WiringPage> {
 
 class PathSystemStorage {
   final Map<String, FusionPath> _paths = <String, FusionPath>{};
+  final Map<String, FusionPath> _livePaths = <String, FusionPath>{};
   final Map<String, List<Offset>> _previousPolylines = <String, List<Offset>>{};
   final Map<String, _ConnectionPathMeta> _pathMeta = <String, _ConnectionPathMeta>{};
 
-  FusionPath? getPath(WiringConnectionModel connection, FusionCanvasPainter painter) {
+  FusionPath? getPath(WiringConnectionModel connection, FusionCanvasPainter painter, [List<Offset>? additionalStops]) {
     final String key = _keyOf(connection);
     if (_paths.containsKey(key)) {
       final FusionPath? path = _paths[key];
@@ -181,7 +182,7 @@ class PathSystemStorage {
           final Offset? start = sourceLayer.getPortPosition(connection.portId, painter);
           final Offset? end = destLayer.getPortPosition(connection.targetPortId, painter);
 
-          if (path.start == start && path.end == end) {
+          if (path.start == start && path.end == end && additionalStops == null) {
             return path;
           }
         }
@@ -192,7 +193,7 @@ class PathSystemStorage {
       connection,
       painter,
       connectionKey: key,
-      additionalStops: connection.points?.map((FusionCanvasPoint p) => p.position).toList() ?? <Offset>[],
+      additionalStops: additionalStops ?? connection.points?.map((FusionCanvasPoint p) => p.position).toList() ?? <Offset>[],
     );
     // print("Constructed path for connection ${connection.id}: $constructPath");
     if (constructPath == null) {
@@ -203,6 +204,7 @@ class PathSystemStorage {
   }
 
   FusionPath? getLivePath(WiringConnectionModel connection, FusionCanvasPainter painter, List<Offset> additionalStops) {
+    // return getPath(connection, painter, additionalStops);
     final String key = _keyOf(connection);
     final List<Offset> normalizedStops = _normalizeStops(additionalStops);
     final FusionPath? livePath = _constructPath(
@@ -214,6 +216,7 @@ class PathSystemStorage {
     if (livePath == null) {
       return null;
     }
+    _storeLivePath(key, connection, livePath);
     return livePath;
     // _storePath(key, connection, livePath);
     // return _paths[key];
@@ -284,6 +287,7 @@ class PathSystemStorage {
       _paths.remove(key);
       _previousPolylines.remove(key);
       _pathMeta.remove(key);
+      _livePaths.remove(key);
     }
   }
 
@@ -291,6 +295,15 @@ class PathSystemStorage {
 
   void _storePath(String key, WiringConnectionModel connection, FusionPath path) {
     _paths[key] = path;
+    _previousPolylines[key] = _polylineForPath(path);
+    _pathMeta[key] = _ConnectionPathMeta(
+      deviceId: connection.deviceId,
+      targetDeviceId: connection.targetDeviceId,
+    );
+  }
+
+  void _storeLivePath(String key, WiringConnectionModel connection, FusionPath path) {
+    _livePaths[key] = path;
     _previousPolylines[key] = _polylineForPath(path);
     _pathMeta[key] = _ConnectionPathMeta(
       deviceId: connection.deviceId,
@@ -357,6 +370,9 @@ class PathSystemStorage {
   Map<String, List<Offset>> allPolylines() {
     final Map<String, List<Offset>> polylines = <String, List<Offset>>{};
     for (final MapEntry<String, FusionPath> entry in _paths.entries) {
+      polylines[entry.key] = _polylineForPath(entry.value);
+    }
+    for (final MapEntry<String, FusionPath> entry in _livePaths.entries) {
       polylines[entry.key] = _polylineForPath(entry.value);
     }
     return polylines;
