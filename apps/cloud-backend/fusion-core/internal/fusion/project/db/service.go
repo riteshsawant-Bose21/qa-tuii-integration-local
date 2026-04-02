@@ -19,8 +19,8 @@ import (
 	ericDecimal "github.com/ericlagergren/decimal"
 
 	types "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
-	errorutils "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	constants "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/constants"
+	errorutils "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 )
 
 // Service is a service for managing projects in the database.
@@ -56,8 +56,6 @@ func isDuplicateKeyError(err error) bool {
 func (s *Service) GetDB(_ context.Context) customModel.DBWithTransactions {
 	return s.db
 }
-
-const roleAdmin = "Admin"
 
 // GetProjectByID retrieves a project by its ID.
 func (s *Service) GetProjectByID(ctx context.Context, projectID string, logger *zap.Logger) (*model.Project, error) {
@@ -147,7 +145,7 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 	query := ""
 	var rows *sql.Rows
 	var err error
-	
+
 	if userAuth.Role.RoleName == constants.AdminRoleName {
 		query = fmt.Sprintf(`
 			SELECT p.id, p.name, p.description, p.venue, 
