@@ -91,11 +91,11 @@ class FusionNetworkClient {
 
       final Response<dynamic> response = await httpClient.dioInstance.get(url, options: options, queryParameters: urlParameters);
 
-      if (response.data != null) {
+      if (response.statusCode! >= 200 && response.statusCode! < 300) {
         if (isBinary) {
-          return ResponseCallback<T>(success: true, message: "Binary file fetched successfully", data: response.data as T);
+          return ResponseCallback<T>(success: true, message: "Binary file fetched successfully", data: response.data as T?);
         } else {
-          T data = fromJson != null ? fromJson(response.data) : response.data;
+          T? data = fromJson != null ? fromJson(response.data) : response.data;
           return ResponseCallback<T>.success(data);
         }
       } else {
@@ -148,6 +148,7 @@ class FusionNetworkClient {
     dynamic data,
     String? additionalPath,
     String? baseUrlToOverride,
+    Map<String, dynamic>? urlParameters,
     bool isSecure = true,
     T Function(dynamic)? fromJson,
   }) async {
@@ -169,10 +170,15 @@ class FusionNetworkClient {
 
       // final dynamic body = data is FormData ? data : jsonEncode(data);
 
-      final Response<dynamic> response = await httpClient.dioInstance.post(url, data: data, options: options);
+      final Response<dynamic> response = await httpClient.dioInstance.post(
+        url,
+        data: data,
+        options: options,
+        queryParameters: urlParameters,
+      );
 
-      if (response.data != null) {
-        T data = fromJson != null ? fromJson(response.data) : response.data;
+      if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300) {
+        T? data = fromJson != null ? fromJson(response.data) : response.data;
         return ResponseCallback<T>.success(data);
       } else {
         return ResponseCallback<T>(success: false, message: httpClient.handleStatusCodeError(response.statusCode));

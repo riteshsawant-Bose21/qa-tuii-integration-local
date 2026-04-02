@@ -101,7 +101,7 @@ Future<void> setupServiceLocator() async {
   );
 
   serviceLocator.registerSingleton<MdnsService>(
-    MdnsService(serviceType: '_http._tcp'),
+    MdnsService(serviceType: '_fusion._tcp.local'),
   );
 
   final UserProfile initialUserProfile = UserProfile(
