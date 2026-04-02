@@ -4,12 +4,14 @@ info:
   seq: 7
 
 http:
-  method: delete
+  method: DELETE
   url: "{{api_url}}/devices/:id/reset"
   auth: inherit
+  params:
+    id: ""
 
 settings:
-  encodeUrl: false
+  encodeUrl: true
   timeout: 0
   followRedirects: true
   maxRedirects: 5
