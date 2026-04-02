@@ -216,11 +216,29 @@ func (h *Handler) persistFeatureDefinitions(snapshots []api.SnapshotDefinition, 
 		if err := h.persistence.UpsertSnapshotDefinitions(snapshots); err != nil {
 			return err
 		}
+
+		msg := api.NewNotifyMessage(
+			api.NotifyOpSnapshotDefsUpsert,
+			h.appConfig.NodeName,
+			api.WithSnapshotDefinitions(snapshots),
+		)
+		if err := h.hub.BroadcastToNodes(msg); err != nil {
+			return fmt.Errorf("failed to broadcast snapshot definitions upsert: %w", err)
+		}
 	}
 
 	if len(sceneSets) > 0 {
 		if err := h.persistence.UpsertSceneSets(sceneSets); err != nil {
 			return err
+		}
+
+		msg := api.NewNotifyMessage(
+			api.NotifyOpSceneSetsUpsert,
+			h.appConfig.NodeName,
+			api.WithSceneSets(sceneSets),
+		)
+		if err := h.hub.BroadcastToNodes(msg); err != nil {
+			return fmt.Errorf("failed to broadcast scene sets upsert: %w", err)
 		}
 	}
 

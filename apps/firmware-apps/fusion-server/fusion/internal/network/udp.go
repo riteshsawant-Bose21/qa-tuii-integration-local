@@ -176,7 +176,7 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 
 	logger := logging.GetLogger()
 
-	if msg.Operation == api.NotifyOpSnapActivate {
+	if msg.Operation == api.NotifyOpTimeMachineActivate {
 		if msg.ID == "" {
 			msg.ID = ulid.Make().String()
 		}

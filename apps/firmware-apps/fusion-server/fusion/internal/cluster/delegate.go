@@ -200,7 +200,7 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		d.persistence.MarkDirty()
 		d.hub.BroadcastToObservers(&message)
 
-	case api.NotifyOpSnapActivate:
+	case api.NotifyOpTimeMachineActivate:
 		if message.SnapshotOperation == nil {
 			logger.Error("SnapActivate message with nil payload from %s", message.Node)
 			return
@@ -216,19 +216,52 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 			logger.Error("Error activating snapshot: %v", err)
 		}
 
-	case api.NotifyOpSnapCreate:
+	case api.NotifyOpTimeMachineCreate:
 		if err := d.persistence.CreateSnapshot(message.SnapshotOperation.Name); err != nil {
 			logger.Error("Error creating snapshot: %v", err)
 		}
 
-	case api.NotifyOpSnapDelete:
+	case api.NotifyOpTimeMachineDelete:
 		if err := d.persistence.DeleteSnapshot(message.SnapshotOperation.Name); err != nil {
 			logger.Error("Error deleting snapshot: %v", err)
 		}
 
-	case api.NotifyOpSnapSave:
+	case api.NotifyOpTimeMachineSave:
 		if err := d.persistence.SaveSnapshot(message.SnapshotOperation.Name); err != nil {
 			logger.Error("Error saving snapshot: %v", err)
+		}
+
+	case api.NotifyOpSnapshotDefsUpsert:
+		if len(message.SnapshotDefinitions) == 0 {
+			logger.Error("SnapshotDefsUpsert message with empty payload from %s", message.Node)
+			return
+		}
+		if err := d.persistence.UpsertSnapshotDefinitions(message.SnapshotDefinitions); err != nil {
+			logger.Error("Error upserting snapshot definitions: %v", err)
+		}
+
+	case api.NotifyOpSceneSetsUpsert:
+		if len(message.SceneSets) == 0 {
+			logger.Error("SceneSetsUpsert message with empty payload from %s", message.Node)
+			return
+		}
+		if err := d.persistence.UpsertSceneSets(message.SceneSets); err != nil {
+			logger.Error("Error upserting scene sets: %v", err)
+		}
+
+	case api.NotifyOpSnapshotV2Activate:
+		if message.SnapshotActivation == nil {
+			logger.Error("SnapshotV2Activate message with nil payload from %s", message.Node)
+			return
+		}
+
+	case api.NotifyOpSceneActivate:
+		if message.SceneActivation == nil {
+			logger.Error("SceneActivate message with nil payload from %s", message.Node)
+			return
+		}
+		if err := d.persistence.SetCurrentScene(message.SceneActivation.SetID, message.SceneActivation.SceneID); err != nil {
+			logger.Error("Error setting current scene for set %s: %v", message.SceneActivation.SetID, err)
 		}
 
 	case api.NotifyOpTaskCreate:

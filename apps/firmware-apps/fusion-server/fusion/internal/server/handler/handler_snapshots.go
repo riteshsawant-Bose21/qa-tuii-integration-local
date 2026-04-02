@@ -35,10 +35,31 @@ func (h *Handler) HandleActivateSnapshotByID(id string) error {
 	}
 
 	if afterPtr == nil {
+		msg := api.NewNotifyMessage(
+			api.NotifyOpSnapshotV2Activate,
+			h.appConfig.NodeName,
+			api.WithSnapshotActivation(&api.ActivateSnapshotRequest{ID: id}),
+		)
+		if err := h.hub.BroadcastToNodes(msg); err != nil {
+			return fmt.Errorf("failed to broadcast snapshot activation: %w", err)
+		}
 		return nil
 	}
 
-	return h.handleConfigUpdate(*afterPtr, false)
+	if err := h.handleConfigUpdate(*afterPtr, false); err != nil {
+		return err
+	}
+
+	msg := api.NewNotifyMessage(
+		api.NotifyOpSnapshotV2Activate,
+		h.appConfig.NodeName,
+		api.WithSnapshotActivation(&api.ActivateSnapshotRequest{ID: id}),
+	)
+	if err := h.hub.BroadcastToNodes(msg); err != nil {
+		return fmt.Errorf("failed to broadcast snapshot activation: %w", err)
+	}
+
+	return nil
 }
 
 // HandleActivateScene activates a scene within a scene set and patches its data onto DB State.
@@ -58,10 +79,31 @@ func (h *Handler) HandleActivateScene(setID, sceneID string) error {
 	}
 
 	if afterPtr == nil {
+		msg := api.NewNotifyMessage(
+			api.NotifyOpSceneActivate,
+			h.appConfig.NodeName,
+			api.WithSceneActivation(&api.ActivateSceneSetRequest{SetID: setID, SceneID: sceneID}),
+		)
+		if err := h.hub.BroadcastToNodes(msg); err != nil {
+			return fmt.Errorf("failed to broadcast scene activation: %w", err)
+		}
 		return nil
 	}
 
-	return h.handleConfigUpdate(*afterPtr, false)
+	if err := h.handleConfigUpdate(*afterPtr, false); err != nil {
+		return err
+	}
+
+	msg := api.NewNotifyMessage(
+		api.NotifyOpSceneActivate,
+		h.appConfig.NodeName,
+		api.WithSceneActivation(&api.ActivateSceneSetRequest{SetID: setID, SceneID: sceneID}),
+	)
+	if err := h.hub.BroadcastToNodes(msg); err != nil {
+		return fmt.Errorf("failed to broadcast scene activation: %w", err)
+	}
+
+	return nil
 }
 
 // HandleListSnapshots returns a list of all available snapshot names.
@@ -71,7 +113,7 @@ func (h *Handler) HandleListSnapshots() ([]string, error) {
 
 // HandleActivateSnapshot activates the specified snapshot and broadcasts the change to the cluster.
 func (h *Handler) HandleActivateSnapshot(snapshot string) error {
-	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpSnapActivate); err != nil {
+	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpTimeMachineActivate); err != nil {
 		return fmt.Errorf("failed to handle snapshot activate: %w", err)
 	}
 
@@ -80,7 +122,7 @@ func (h *Handler) HandleActivateSnapshot(snapshot string) error {
 
 // HandleCreateSnapshot creates a new snapshot and broadcasts it to the cluster with the current system state.
 func (h *Handler) HandleCreateSnapshot(snapshot string) error {
-	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpSnapCreate); err != nil {
+	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpTimeMachineCreate); err != nil {
 		return fmt.Errorf("failed to handle snapshot create: %w", err)
 	}
 	return nil
@@ -90,7 +132,7 @@ func (h *Handler) HandleCreateSnapshot(snapshot string) error {
 func (h *Handler) HandleDeleteSnapshot(snapshot string) error {
 
 	// First, broadcast delete operation (this removes snapshot everywhere)
-	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpSnapDelete); err != nil {
+	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpTimeMachineDelete); err != nil {
 		return fmt.Errorf("failed to handle snapshot delete: %w", err)
 	}
 
@@ -99,7 +141,7 @@ func (h *Handler) HandleDeleteSnapshot(snapshot string) error {
 
 // HandleSaveSnapshot updates a snapshot and broadcasts it to the cluster with the current system state.
 func (h *Handler) HandleSaveSnapshot(snapshot string) error {
-	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpSnapSave); err != nil {
+	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpTimeMachineSave); err != nil {
 		return fmt.Errorf("failed to handle snapshot save: %w", err)
 	}
 	return nil

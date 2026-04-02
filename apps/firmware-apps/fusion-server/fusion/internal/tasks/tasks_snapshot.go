@@ -195,7 +195,7 @@ func (tm *TaskManager) taskActivateSnapshotFunc(t *api.Task) TaskFunc {
 		if err := tm.handleSnapshotOperation(
 			tm.node,
 			snapID,
-			api.NotifyOpSnapActivate); err != nil {
+			api.NotifyOpTimeMachineActivate); err != nil {
 			return err
 		}
 

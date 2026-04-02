@@ -109,7 +109,7 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 
 		h.persistence.MarkDirty()
 
-	case api.NotifyOpSnapActivate:
+	case api.NotifyOpTimeMachineActivate:
 		if message.SnapshotOperation == nil || message.SnapshotOperation.Name == "" {
 			return fmt.Errorf("SnapshotOperation with valid name required for snap activate")
 		}
@@ -124,19 +124,63 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 			return fmt.Errorf("error activating snapshot: %v", err)
 		}
 
-	case api.NotifyOpSnapCreate:
+	case api.NotifyOpTimeMachineCreate:
 		if err := h.persistence.CreateSnapshot(message.SnapshotOperation.Name); err != nil {
 			return fmt.Errorf("error creating snapshot: %v", err)
 		}
 
-	case api.NotifyOpSnapSave:
+	case api.NotifyOpTimeMachineSave:
 		if err := h.persistence.SaveSnapshot(message.SnapshotOperation.Name); err != nil {
 			logger.Error("Error saving snapshot: %v", err)
 		}
 
-	case api.NotifyOpSnapDelete:
+	case api.NotifyOpTimeMachineDelete:
 		if err := h.persistence.DeleteSnapshot(message.SnapshotOperation.Name); err != nil {
 			return fmt.Errorf("error deleting snapshot: %v", err)
+		}
+
+	case api.NotifyOpSnapshotDefsUpsert:
+		if len(message.SnapshotDefinitions) == 0 {
+			return fmt.Errorf("SnapshotDefinitions required for operation")
+		}
+		if h.transport == nil || h.transport.LocalNode() == nil {
+			return fmt.Errorf("cluster transport not configured")
+		}
+		if message.Node != h.transport.LocalNode().Name {
+			if err := h.persistence.UpsertSnapshotDefinitions(message.SnapshotDefinitions); err != nil {
+				return fmt.Errorf("error upserting snapshot definitions: %v", err)
+			}
+		}
+
+	case api.NotifyOpSceneSetsUpsert:
+		if len(message.SceneSets) == 0 {
+			return fmt.Errorf("SceneSets required for operation")
+		}
+		if h.transport == nil || h.transport.LocalNode() == nil {
+			return fmt.Errorf("cluster transport not configured")
+		}
+		if message.Node != h.transport.LocalNode().Name {
+			if err := h.persistence.UpsertSceneSets(message.SceneSets); err != nil {
+				return fmt.Errorf("error upserting scene sets: %v", err)
+			}
+		}
+
+	case api.NotifyOpSnapshotV2Activate:
+		if message.SnapshotActivation == nil {
+			return fmt.Errorf("SnapshotActivation required for operation")
+		}
+
+	case api.NotifyOpSceneActivate:
+		if message.SceneActivation == nil {
+			return fmt.Errorf("SceneActivation required for operation")
+		}
+		if h.transport == nil || h.transport.LocalNode() == nil {
+			return fmt.Errorf("cluster transport not configured")
+		}
+		if message.Node != h.transport.LocalNode().Name {
+			if err := h.persistence.SetCurrentScene(message.SceneActivation.SetID, message.SceneActivation.SceneID); err != nil {
+				return fmt.Errorf("error setting current scene: %v", err)
+			}
 		}
 
 	case api.NotifyOpDeviceUpdate:
