@@ -43,6 +43,9 @@ public:
     int get_buffer_depth();
 
 
+    int get_buffer_size();
+
+
     /// Adjust the buffer depth of this device by the given number of samples.
     /// This can be used to increase or decrease the buffer depth to match the
     /// desired target depth.
@@ -148,6 +151,7 @@ private:
     bool is_input;
     int playback_start_threshold_frames;
     State current_state = DEVICE_STATE_CLOSED;
+    snd_pcm_uframes_t negotiated_buffer_size = 0;
     bosepro::AudioSubtask deferred_open_task;
     static pthread_mutex_t open_mutex;
 
@@ -376,6 +380,12 @@ int AlsaDevice::get_buffer_depth()
     }
 
     return depth;
+}
+
+
+int AlsaDevice::get_buffer_size()
+{
+    return static_cast<int>(negotiated_buffer_size);
 }
 
 
@@ -689,6 +699,37 @@ void AlsaDevice::set_hw_params()
     {
         SPDLOG_ERROR("Failed to set ALSA hardware parameters: {}",
                      snd_strerror(error));
+    }
+    else
+    {
+        snd_pcm_uframes_t actual_buffer_size = 0;
+        snd_pcm_uframes_t actual_period_size = 0;
+        int dir = 0;
+
+        error = snd_pcm_hw_params_get_buffer_size(hw_params, &actual_buffer_size);
+        if (error < 0)
+        {
+            SPDLOG_ERROR("Failed to get negotiated ALSA buffer size: {}",
+                         snd_strerror(error));
+        }
+        else
+        {
+            negotiated_buffer_size = actual_buffer_size;
+            SPDLOG_DEBUG("Negotiated ALSA buffer size for {}: {} frames",
+                         device_name.c_str(), negotiated_buffer_size);
+        }
+
+        error = snd_pcm_hw_params_get_period_size(hw_params, &actual_period_size, &dir);
+        if (error < 0)
+        {
+            SPDLOG_ERROR("Failed to get negotiated ALSA period size: {}",
+                         snd_strerror(error));
+        }
+        else
+        {
+            SPDLOG_DEBUG("Negotiated ALSA period size for {}: {} frames",
+                         device_name.c_str(), actual_period_size);
+        }
     }
 }
 
@@ -1338,13 +1379,13 @@ AlsaOut::AlsaOut(const bosepro::BlockConfiguration &configuration)
 
 void AlsaOut::process()
 {
-    // Measure the current buffer depth
-    int depth = 64 * 48 - device->get_buffer_depth();
+    int avail = device->get_buffer_depth();
+    int buffer_size = device->get_buffer_size();
+    int depth = buffer_size - avail;
     double ratio;
 
-    if (depth > 64 * 48)
+    if (avail < 0 || buffer_size <= 0)
     {
-        // Pretend everything is operating nominally if the device isn't open
         depth = target_depth;
     }
 

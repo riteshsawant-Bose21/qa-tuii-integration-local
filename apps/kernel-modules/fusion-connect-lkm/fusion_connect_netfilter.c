@@ -11,6 +11,7 @@ static unsigned int nf_hook_func(void *priv, struct sk_buff *skb, const struct n
     struct iphdr *ip_header;
     uint8_t *rtp_header;
     struct fusion_cn_rtp_packet *packet;
+    u64 stream_handle;
 
     ip_header = ip_hdr(skb);
     if (!skb || !ip_header) {
@@ -21,7 +22,6 @@ static unsigned int nf_hook_func(void *priv, struct sk_buff *skb, const struct n
         return NF_ACCEPT;
     }
 
-    // Filter by UDP protocol
     if (ip_header->protocol != IPPROTO_UDP) {
         return NF_ACCEPT;
     }
@@ -36,13 +36,24 @@ static unsigned int nf_hook_func(void *priv, struct sk_buff *skb, const struct n
 
     packet = (void *)skb_mac_header(skb);
 
-    // Check RTP header: Version (first byte) should have 0x80 (Version 2)
     rtp_header = (uint8_t *)packet + ETH_HLEN + (ip_header->ihl * 4) + sizeof(struct udphdr);
     if (!(*rtp_header & 0x80)) {
         return NF_ACCEPT;
     }
 
-    return fusion_cn_rtp_process_packet(rtp_mgr, packet);
+    if (!fusion_cn_rtp_lookup_packet_handle(rtp_mgr, packet, &stream_handle)) {
+        return NF_ACCEPT;
+    }
+
+    if (!rtp_mgr->ops->get_timing_ready(rtp_mgr->cn_mgr)) {
+        return NF_DROP;
+    }
+
+    if (fusion_cn_rtp_enqueue_packet(rtp_mgr, stream_handle, packet, skb->len + ETH_HLEN) < 0) {
+        printk(KERN_DEBUG "fusion_cn: nf_hook: drop queued RX packet\n");
+    }
+
+    return NF_DROP;
 }
 
 
@@ -122,28 +133,28 @@ int fusion_cn_nf_tx_packet(void *rtp_mgr, struct sk_buff *skb, u32 data_size)
 
     // internally loopback
     if (ip_header->daddr == ip_header->saddr) {
-        // Ensure skb is linear
+        u64 stream_handle;
+
         if (skb_is_nonlinear(skb) && skb_linearize(skb) < 0) {
             printk(KERN_ERR "fusion_cn: tx_packet: Failed to linearize skb\n");
             return -ENOMEM;
         }
 
-        // Access UDP header directly
         udp_header = (struct udphdr *)((char *)ip_header + (ip_header->ihl * 4));
-
-        // Use the original packet pointer (starting at Ethernet header) for process_packet
         packet = (struct fusion_cn_rtp_packet *)skb->data;
 
-        // Process directly
-        ret = fusion_cn_rtp_process_packet(mgr, packet);
-        return ret == NF_DROP ? 0 : -1;
+        if (!fusion_cn_rtp_lookup_packet_handle(mgr, packet, &stream_handle))
+            return -ENOENT;
+
+        ret = fusion_cn_rtp_enqueue_packet(mgr, stream_handle, packet, skb->len);
+        return ret < 0 ? ret : 0;
     }
 
     dev = dev_get_by_name(&init_net, nf->iface_name);
     if (!dev) {
         printk(KERN_ERR "fusion_cn: tx_packet: Interface %s not found\n", nf->iface_name);
         return -ENODEV;
-    }   
+    }
 
     if (data_size == 0) {
         printk(KERN_ERR "fusion_cn: tx_packet: Empty data\n");
