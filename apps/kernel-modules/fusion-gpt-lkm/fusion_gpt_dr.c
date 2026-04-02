@@ -13,7 +13,6 @@
 #include <linux/math64.h>
 #include <linux/seqlock.h>
 #include <linux/clk.h>
-#include <linux/rcupdate.h>
 #include <linux/string.h>
 #include "fusion_gpt_client.h"
 
@@ -24,33 +23,33 @@
 #include <linux/fs.h>
 #include <linux/slab.h>
 
-#define GPT_CR      0x00
-#define GPT_PR      0x04
-#define GPT_SR      0x08
-#define GPT_IR      0x0C
-#define GPT_OCR1    0x10
-#define GPT_ICR1    0x1C
-#define GPT_ICR2    0x20
-#define GPT_CNT     0x24
+#define GPT_CR		0x00
+#define GPT_PR		0x04
+#define GPT_SR		0x08
+#define GPT_IR		0x0C
+#define GPT_OCR1	0x10
+#define GPT_ICR1	0x1C
+#define GPT_ICR2	0x20
+#define GPT_CNT		0x24
 
 /* CR bits */
-#define CR_EN           BIT(0)
-#define CR_ENMOD        BIT(1)
-#define CR_DBGEN        BIT(2)
-#define CR_WAITEN       BIT(3)
+#define CR_EN			BIT(0)
+#define CR_ENMOD		BIT(1)
+#define CR_DBGEN		BIT(2)
+#define CR_WAITEN		BIT(3)
 #define CR_CLKSRC_SHIFT 6
-#define CR_CLKSRC_EXT   (0x3 << CR_CLKSRC_SHIFT)
-#define CR_FRR          BIT(9)
-#define CR_IM1_SHIFT    16
-#define CR_IM1_RISING   (0x1 << CR_IM1_SHIFT)
-#define CR_IM1_BOTH     (0x3 << CR_IM1_SHIFT) /* 1pps on both edges */
-#define CR_IM2_SHIFT    18
-#define CR_IM2_RISING   (0x1 << CR_IM2_SHIFT) /* LRCLK on rising edge */
+#define CR_CLKSRC_EXT	(0x3 << CR_CLKSRC_SHIFT)
+#define CR_FRR			BIT(9)
+#define CR_IM1_SHIFT	16
+#define CR_IM1_RISING	(0x1 << CR_IM1_SHIFT)
+#define CR_IM1_BOTH		(0x3 << CR_IM1_SHIFT) /* 1pps on both edges */
+#define CR_IM2_SHIFT	18
+#define CR_IM2_RISING	(0x1 << CR_IM2_SHIFT) /* LRCLK on rising edge */
 
 /* SR (status, W1C) and IR (enable) bits */
-#define SR_OF1   BIT(0)
-#define SR_IF1   BIT(3)
-#define SR_IF2   BIT(4)
+#define SR_OF1	 BIT(0)
+#define SR_IF1	 BIT(3)
+#define SR_IF2	 BIT(4)
 #define IR_OF1IE BIT(0)
 #define IR_IF1IE BIT(3)
 #define IR_IF2IE BIT(4)
@@ -60,8 +59,8 @@
 /* 10 MHz -> 10,000,000 ticks per second for 1PPS capture cadence */
 #define PPS_TICKS 10000000ULL
 
-#define DEFAULT_DAC_I2C_BUS      0
-#define DEFAULT_DAC_I2C_ADDR     0x62
+#define DEFAULT_DAC_I2C_BUS		 0
+#define DEFAULT_DAC_I2C_ADDR	 0x62
 #define DEFAULT_SI5351B_I2C_ADDR 0x60
 
 enum cal_state {
@@ -129,7 +128,7 @@ struct fusion_gpt
 	int irq;
 
 	u32 next_ocr1;
-	u8  frac;
+	u8	frac;
 
 	u32 last32;
 	u64 hi;
@@ -144,65 +143,67 @@ struct fusion_gpt
 	struct clk *clk_per;
 
 	/* PPS & PHC epoch */
-	u32  pps_seq;                 /* increments on each ICR1 latch */
-	u32  pps_icr1_last32;         /* raw 32-bit capture value for latest PPS */
-	u64  pps_icr1_last64;         /* 64-bit extended capture */
+	u32  pps_seq;				  /* increments on each ICR1 latch */
+	u32  pps_icr1_last32;		  /* raw 32-bit capture value for latest PPS */
+	u64  pps_icr1_last64;		  /* 64-bit extended capture */
 	bool pps_valid;
-  u64 last_if2_cap64; /* Timestamp of the last 48k capture */
-  bool if2_valid;     /* True if we have captured at least one 48k pulse */
+	u64 last_if2_cap64; /* Timestamp of the last 48k capture */
+	bool if2_valid;		/* True if we have captured at least one 48k pulse */
 
-	u64  phc_epoch_ns;            /* PHC time at the anchored PPS */
-	u64  pps_epoch_cnt64;         /* 64-bit CNT at the anchored PPS */
+	u64  phc_epoch_ns;			  /* PHC time at the anchored PPS */
+	u64  pps_epoch_cnt64;		  /* 64-bit CNT at the anchored PPS */
 	bool phc_epoch_valid;
-	raw_spinlock_t pps_lock;      /* protects the PPS/epoch fields */
+	raw_spinlock_t pps_lock;	  /* protects the PPS/epoch fields */
+	raw_spinlock_t ctrl_lock;	  /* protects calibration/DAC/gain shared state */
+	struct device *dev;
 
-	bool phc_aligned;             /* true after PPS has phased OF1 onto the PHC grid */
-	u64  next_tick_phc_ns;        /* PHC time corresponding to the next OF1 client tick */
-	u8   tick_phase;              /* 0/1/2 modulo-3 phase for 333333/333333/333334 ns cadence */
+	bool phc_aligned;			  /* true after PPS has phased OF1 onto the PHC grid */
+	u64  next_tick_phc_ns;		  /* PHC time corresponding to the next OF1 client tick */
+	u8	 tick_phase;			  /* 0/1/2 modulo-3 phase for 333333/333333/333334 ns cadence */
 
 	/* "Arm-next-PPS" anchor from userspace (pps_seq == 0 mode) */
 	bool pending_future_anchor;
 	u64  pending_future_phc_ns;
 
-  /* DAC control */
-  struct work_struct dac_work;
-  struct i2c_client *dac_client;
-  u16 current_dac_value;
-	  long latest_freq_error;    /* The most recent frequency delta */
+	/* DAC control */
+	struct work_struct dac_work;
+	struct i2c_client *dac_client;
+	u16 current_dac_value;
+	long latest_freq_error;    /* The most recent frequency delta */
 
-  /* PI loop */
-  long error_integrator;
-  u64 sq_err_sum;
-  u32 err_count;
-  int dac_target;
+	/* PI loop */
+	long error_integrator;
+	u64 sq_err_sum;
+	u32 err_count;
+	int dac_target;
 
-  /* Si5351b gain control */
-  struct i2c_client *si5351b_client;
-  u32 si_gain_current;
-  u32 si_gain_target;
-  u32 si_gain_min;
-  u32 si_gain_max;
-  bool si_gain_pending;
+	/* Si5351b gain control */
+	struct i2c_client *si5351b_client;
+	u32 si_gain_current;
+	u32 si_gain_target;
+	u32 si_gain_min;
+	u32 si_gain_max;
+	bool si_gain_pending;
 
-  /* Startup calibration state */
-  enum cal_state cal_state;
-  int cal_probe_idx;
-  u32 cal_settle_left;
-  u32 cal_measure_left;
-  s64 cal_err_accum;
-  u32 cal_err_samples;
-  u32 cal_center_gain;
-  int cal_center_dac;
-  u32 cal_probe_gain[5];
-  int cal_probe_dac[5];
-  long cal_probe_mean[5];
-  s32 cal_k1_q16;
-  s32 cal_k2_q16;
-  s32 cal_k3_q16;
-  struct fusion_gpt_cal_config cal_cfg;
-  bool cal_config_checked;
+	/* Startup calibration state */
+	enum cal_state cal_state;
+	int cal_probe_idx;
+	u32 cal_settle_left;
+	u32 cal_measure_left;
+	s64 cal_err_accum;
+	u32 cal_err_samples;
+	u32 cal_center_gain;
+	int cal_center_dac;
+	u32 cal_probe_gain[5];
+	int cal_probe_dac[5];
+	long cal_probe_mean[5];
+	s32 cal_k1_q16;
+	s32 cal_k2_q16;
+	s32 cal_k3_q16;
+	struct fusion_gpt_cal_config cal_cfg;
+	bool cal_config_checked;
 
-  /* Sticky startup-ready flag for downstream GPT clients. */
+	/* Sticky startup-ready flag for downstream GPT clients. */
 	bool discipline_ready;
 	u32 lock_streak;
 	unsigned long pps_diag_next_jiffies;
@@ -212,6 +213,8 @@ struct fusion_gpt
 static struct fusion_gpt *gpt_singleton;
 static DEFINE_MUTEX(gpt_singleton_lock);
 static int si5351b_write_gain(struct fusion_gpt *g, u32 gain);
+static struct fusion_gpt *fusion_gpt_get_locked(void);
+static void fusion_gpt_put_locked(struct fusion_gpt *g);
 
 static void cal_config_set_defaults(struct fusion_gpt_cal_config *cfg)
 {
@@ -303,10 +306,10 @@ static int cal_parse_config_buf(char *buf, struct fusion_gpt_cal_config *cfg)
 	if (!have_k1 || !have_k2 || !have_k3)
 		return -EINVAL;
 	if (version >= 2 &&
-	    (!have_gain_start || !have_gain_delta || !have_dac_delta ||
-	     !have_settle_pps || !have_measure_pps || !have_fit_residual ||
-	     !have_inverse_gain_step || !have_jump_dac_min || !have_jump_dac_max ||
-	     !have_pre_e0_samples || !have_pre_e0_abs_max || !have_pre_e0_max_wait))
+			(!have_gain_start || !have_gain_delta || !have_dac_delta ||
+			 !have_settle_pps || !have_measure_pps || !have_fit_residual ||
+			 !have_inverse_gain_step || !have_jump_dac_min || !have_jump_dac_max ||
+			 !have_pre_e0_samples || !have_pre_e0_abs_max || !have_pre_e0_max_wait))
 		return -EINVAL;
 
 	cfg->coeffs_valid = true;
@@ -417,15 +420,15 @@ static inline u32 fusion_start_gain_value(const struct fusion_gpt_cal_config *cf
 static inline int cal_jump_dac_min_value(const struct fusion_gpt_cal_config *cfg)
 {
 	return clamp_t(int,
-		       min_t(int, cfg->cal_jump_dac_min, cfg->cal_jump_dac_max),
-		       0, 255);
+			min_t(int, cfg->cal_jump_dac_min, cfg->cal_jump_dac_max),
+			0, 255);
 }
 
 static inline int cal_jump_dac_max_value(const struct fusion_gpt_cal_config *cfg)
 {
 	return clamp_t(int,
-		       max_t(int, cfg->cal_jump_dac_min, cfg->cal_jump_dac_max),
-		       0, 255);
+			max_t(int, cfg->cal_jump_dac_min, cfg->cal_jump_dac_max),
+			0, 255);
 }
 
 static void gpt_reset_timing_state_locked(struct fusion_gpt *g)
@@ -444,6 +447,10 @@ static void gpt_reset_timing_state_locked(struct fusion_gpt *g)
 	g->tick_phase = 0;
 	g->pending_future_anchor = false;
 	g->pending_future_phc_ns = 0;
+}
+
+static void gpt_reset_control_state_locked(struct fusion_gpt *g)
+{
 	g->latest_freq_error = 0;
 	g->error_integrator = 0;
 	g->sq_err_sum = 0;
@@ -468,6 +475,25 @@ static void gpt_reset_timing_state_locked(struct fusion_gpt *g)
 	g->cal_k3_q16 = 0;
 	cal_config_set_defaults(&g->cal_cfg);
 	g->cal_config_checked = false;
+}
+
+static struct fusion_gpt *fusion_gpt_get_locked(void)
+{
+	struct fusion_gpt *g;
+
+	mutex_lock(&gpt_singleton_lock);
+	g = gpt_singleton;
+	if (!g || !get_device(g->dev))
+		g = NULL;
+	mutex_unlock(&gpt_singleton_lock);
+
+	return g;
+}
+
+static void fusion_gpt_put_locked(struct fusion_gpt *g)
+{
+	if (g)
+		put_device(g->dev);
 }
 
 /* 64-bit tick synth (read-mostly) */
@@ -533,7 +559,7 @@ static void gpt_rephase_of1_from_pps_locked(struct fusion_gpt *g, u64 cap64)
 }
 
 static void gpt_rebase_phc_epoch_locked(struct fusion_gpt *g, u64 cap64,
-					bool had_prev, u64 prev_cap64)
+		bool had_prev, u64 prev_cap64)
 {
 	if (g->pending_future_anchor) {
 		u64 prev_epoch_ns = g->phc_epoch_ns;
@@ -545,11 +571,11 @@ static void gpt_rebase_phc_epoch_locked(struct fusion_gpt *g, u64 cap64,
 		g->phc_aligned = false;
 		g->pending_future_anchor = false;
 		pr_info("fusion_gpt: phc anchor latched epoch=%llu cnt=%llu\n",
-			g->phc_epoch_ns, g->pps_epoch_cnt64);
+				g->phc_epoch_ns, g->pps_epoch_cnt64);
 		pr_info("fusion_gpt: rebase kind=anchor prev_epoch=%llu prev_cnt=%llu new_epoch=%llu new_cnt=%llu aligned=%d\n",
-			prev_epoch_ns, prev_epoch_cnt64,
-			g->phc_epoch_ns, g->pps_epoch_cnt64,
-			READ_ONCE(g->phc_aligned));
+				prev_epoch_ns, prev_epoch_cnt64,
+				g->phc_epoch_ns, g->pps_epoch_cnt64,
+				READ_ONCE(g->phc_aligned));
 		return;
 	}
 
@@ -571,14 +597,14 @@ static void gpt_rebase_phc_epoch_locked(struct fusion_gpt *g, u64 cap64,
 		g->pps_epoch_cnt64 = cap64;
 
 		pr_debug("fusion_gpt: rebase kind=pps prev_epoch=%llu prev_cnt=%llu cap=%llu delta_ticks=%llu intervals=%llu tick_err=%lld new_epoch=%llu new_cnt=%llu\n",
-			prev_epoch_ns, prev_epoch_cnt64, cap64, delta_ticks, intervals,
-			(long long)tick_error, g->phc_epoch_ns, g->pps_epoch_cnt64);
+				prev_epoch_ns, prev_epoch_cnt64, cap64, delta_ticks, intervals,
+				(long long)tick_error, g->phc_epoch_ns, g->pps_epoch_cnt64);
 	}
 }
 
 /* exported client API */
 int fusion_gpt_register_client(const struct fusion_gpt_client_ops *ops,
-			       void *ctx, struct module *owner)
+		void *ctx, struct module *owner)
 {
 	struct fusion_gpt *g;
 	int ret = -ENODEV;
@@ -586,9 +612,7 @@ int fusion_gpt_register_client(const struct fusion_gpt_client_ops *ops,
 	if (!ops || !ops->tick || !owner)
 		return -EINVAL;
 
-	mutex_lock(&gpt_singleton_lock);
-	g = gpt_singleton;
-	mutex_unlock(&gpt_singleton_lock);
+	g = fusion_gpt_get_locked();
 	if (!g)
 		return -ENODEV;
 
@@ -605,30 +629,33 @@ int fusion_gpt_register_client(const struct fusion_gpt_client_ops *ops,
 	ret = 0;
 out:
 	mutex_unlock(&g->ops_lock);
+	fusion_gpt_put_locked(g);
 	return ret;
 }
-EXPORT_SYMBOL(fusion_gpt_register_client);  /* non-GPL */
+EXPORT_SYMBOL(fusion_gpt_register_client);	/* non-GPL */
 
 void fusion_gpt_unregister_client(void)
 {
 	struct fusion_gpt *g;
+	struct module *owner = NULL;
 
-	mutex_lock(&gpt_singleton_lock);
-	g = gpt_singleton;
-	mutex_unlock(&gpt_singleton_lock);
-	if (!g) return;
+	g = fusion_gpt_get_locked();
+	if (!g)
+		return;
 
 	mutex_lock(&g->ops_lock);
 	/* Make readers see NULL first */
 	WRITE_ONCE(g->ops, NULL);
 	smp_mb(); /* publish NULL before we flush */
-
-	if (g->ops_owner)
-		module_put(g->ops_owner);
-
-	g->ops_ctx   = NULL;
+	synchronize_irq(g->irq);
+	owner = g->ops_owner;
+	g->ops_ctx = NULL;
 	g->ops_owner = NULL;
 	mutex_unlock(&g->ops_lock);
+
+	if (owner)
+		module_put(owner);
+	fusion_gpt_put_locked(g);
 }
 EXPORT_SYMBOL(fusion_gpt_unregister_client); /* non-GPL */
 
@@ -640,41 +667,38 @@ EXPORT_SYMBOL(fusion_gpt_unregister_client); /* non-GPL */
  */
 int fusion_gpt_set_phc_anchor(u64 phc_ns_at_pps)
 {
-    struct fusion_gpt *g;
-    unsigned long flags;
+	struct fusion_gpt *g;
+	unsigned long flags;
 
-    rcu_read_lock();
-    g = rcu_dereference(gpt_singleton);
-    if (!g) {
-        rcu_read_unlock();
-        return -ENODEV;
-    }
+	g = fusion_gpt_get_locked();
+	if (!g)
+		return -ENODEV;
 
-    raw_spin_lock_irqsave(&g->pps_lock, flags);
+	raw_spin_lock_irqsave(&g->pps_lock, flags);
 
-    if (phc_ns_at_pps == 0) {
-        g->pending_future_anchor = false;
-        g->pending_future_phc_ns = 0;
-        pr_debug("fusion_gpt: phc anchor cleared\n");
-        raw_spin_unlock_irqrestore(&g->pps_lock, flags);
-        rcu_read_unlock();
-        return 0;
-    }
+	if (phc_ns_at_pps == 0) {
+		g->pending_future_anchor = false;
+		g->pending_future_phc_ns = 0;
+		pr_debug("fusion_gpt: phc anchor cleared\n");
+		raw_spin_unlock_irqrestore(&g->pps_lock, flags);
+		fusion_gpt_put_locked(g);
+		return 0;
+	}
 
-    /* Touch shared PPS/epoch state from process context: IRQ-safe */
-    g->pending_future_anchor = true;
-    g->pending_future_phc_ns = phc_ns_at_pps;
+	/* Touch shared PPS/epoch state from process context: IRQ-safe */
+	g->pending_future_anchor = true;
+	g->pending_future_phc_ns = phc_ns_at_pps;
 
-    /* Ensure the OF1 handler performs the one-shot phase alignment */
-    g->phc_aligned       = false;
+	/* Ensure the OF1 handler performs the one-shot phase alignment */
+	g->phc_aligned		 = false;
 
-    /* Epoch becomes valid at the next ICR1 edge (when we bind cap64 -> PHC) */
-    g->phc_epoch_valid   = false;
+	/* Epoch becomes valid at the next ICR1 edge (when we bind cap64 -> PHC) */
+	g->phc_epoch_valid	 = false;
 
-    pr_debug("fusion_gpt: phc anchor armed %llu\n", phc_ns_at_pps);
-    raw_spin_unlock_irqrestore(&g->pps_lock, flags);
-    rcu_read_unlock();
-    return 0;
+	pr_debug("fusion_gpt: phc anchor armed %llu\n", phc_ns_at_pps);
+	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
+	fusion_gpt_put_locked(g);
+	return 0;
 }
 EXPORT_SYMBOL(fusion_gpt_set_phc_anchor);
 
@@ -686,12 +710,9 @@ int fusion_gpt_get_timing_status(struct fusion_gpt_timing_status *status)
 	if (!status)
 		return -EINVAL;
 
-	rcu_read_lock();
-	g = rcu_dereference(gpt_singleton);
-	if (!g) {
-		rcu_read_unlock();
+	g = fusion_gpt_get_locked();
+	if (!g)
 		return -ENODEV;
-	}
 
 	raw_spin_lock_irqsave(&g->pps_lock, flags);
 	status->discipline_ready = READ_ONCE(g->discipline_ready);
@@ -699,7 +720,7 @@ int fusion_gpt_get_timing_status(struct fusion_gpt_timing_status *status)
 	status->aligned = READ_ONCE(g->phc_aligned);
 	status->pps_seq = g->pps_seq;
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
-	rcu_read_unlock();
+	fusion_gpt_put_locked(g);
 	return 0;
 }
 EXPORT_SYMBOL(fusion_gpt_get_timing_status);
@@ -714,14 +735,12 @@ int fusion_gpt_reset_timing_state(void)
 	enum cal_state prev_cal_state;
 	bool changed;
 
-	rcu_read_lock();
-	g = rcu_dereference(gpt_singleton);
-	if (!g) {
-		rcu_read_unlock();
+	g = fusion_gpt_get_locked();
+	if (!g)
 		return -ENODEV;
-	}
 
 	raw_spin_lock_irqsave(&g->pps_lock, flags);
+	raw_spin_lock(&g->ctrl_lock);
 	prev_pps_seq = g->pps_seq;
 	prev_freq_error = g->latest_freq_error;
 	prev_epoch_valid = g->phc_epoch_valid;
@@ -730,20 +749,22 @@ int fusion_gpt_reset_timing_state(void)
 	prev_pending = g->pending_future_anchor;
 	prev_cal_state = g->cal_state;
 	changed = g->pps_valid || g->if2_valid || g->phc_epoch_valid ||
-		  g->pending_future_anchor || g->pps_seq ||
-		  prev_ready || g->lock_streak ||
-		  (g->cal_state != CAL_IDLE &&
-		   g->cal_state != CAL_DONE &&
-		   g->cal_state != CAL_FAIL) ||
-		  g->latest_freq_error || g->error_integrator;
+		g->pending_future_anchor || g->pps_seq ||
+		prev_ready || g->lock_streak ||
+		(g->cal_state != CAL_IDLE &&
+		 g->cal_state != CAL_DONE &&
+		 g->cal_state != CAL_FAIL) ||
+		g->latest_freq_error || g->error_integrator;
 	gpt_reset_timing_state_locked(g);
+	gpt_reset_control_state_locked(g);
+	raw_spin_unlock(&g->ctrl_lock);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
 	if (changed)
 		pr_info("fusion_gpt: timing reset reason=api prev{pps_seq=%u epoch=%u aligned=%u ready=%u pending=%u cal=%u freq_err=%ld}\n",
-			prev_pps_seq, prev_epoch_valid, prev_aligned, prev_ready,
-			prev_pending, prev_cal_state, prev_freq_error);
-	rcu_read_unlock();
+				prev_pps_seq, prev_epoch_valid, prev_aligned, prev_ready,
+				prev_pending, prev_cal_state, prev_freq_error);
+	fusion_gpt_put_locked(g);
 	return 0;
 }
 EXPORT_SYMBOL(fusion_gpt_reset_timing_state);
@@ -755,32 +776,28 @@ u64 fusion_gpt_read_phc_ns(void)
 	u64 now64, epoch_cnt64, epoch_ns, dt_ticks, ns = 0;
 	bool valid;
 
-	rcu_read_lock();
-	g = rcu_dereference(gpt_singleton);
-	if (!g) {
-		rcu_read_unlock();
+	g = fusion_gpt_get_locked();
+	if (!g)
 		return 0;
-	}
-	if (!g) return 0;
 
 	/* Snapshot epoch under pps_lock */
 	raw_spin_lock_irqsave(&g->pps_lock, flags);
-	valid       = g->phc_epoch_valid;
-	epoch_ns    = g->phc_epoch_ns;
+	valid		= g->phc_epoch_valid;
+	epoch_ns	= g->phc_epoch_ns;
 	epoch_cnt64 = g->pps_epoch_cnt64;
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 	if (!valid) {
-		rcu_read_unlock();
+		fusion_gpt_put_locked(g);
 		return 0;
 	}
 
 	/* Read current 64-bit counter safely */
 	now64 = gpt_read_ticks64(g);
 
-	/* Convert ticks→ns with 10 MHz = 100 ns/tick */
+	/* Convert ticks to ns with 10 MHz = 100 ns/tick */
 	dt_ticks = now64 - epoch_cnt64;
 	ns = epoch_ns + dt_ticks * 100ULL;
-	rcu_read_unlock();
+	fusion_gpt_put_locked(g);
 	return ns;
 }
 EXPORT_SYMBOL(fusion_gpt_read_phc_ns);
@@ -792,8 +809,8 @@ static void gpt_program_next_compare(struct fusion_gpt *g)
 	g->next_ocr1 += inc;
 
 	if ((s32)(g->next_ocr1 - g->last32) <= 0) {
-		u32 now = rdl(g, GPT_CNT);     /* fresh */
-		g->next_ocr1 = now + inc;      /* rebase compare only */
+		u32 now = rdl(g, GPT_CNT);	   /* fresh */
+		g->next_ocr1 = now + inc;	   /* rebase compare only */
 	}
 	wrl(g, g->next_ocr1, GPT_OCR1);
 }
@@ -801,11 +818,12 @@ static void gpt_program_next_compare(struct fusion_gpt *g)
 static inline bool cal_active(const struct fusion_gpt *g)
 {
 	return g->cal_state != CAL_IDLE &&
-	       g->cal_state != CAL_DONE &&
-	       g->cal_state != CAL_FAIL;
+		g->cal_state != CAL_DONE &&
+		g->cal_state != CAL_FAIL;
 }
 
-static void gpt_update_discipline_ready(struct fusion_gpt *g, long freq_error)
+static void gpt_update_discipline_ready(struct fusion_gpt *g, long freq_error,
+					bool cal_is_active)
 {
 	long abs_err = (freq_error < 0) ? -freq_error : freq_error;
 	u32 thresh = READ_ONCE(error_thresh_param);
@@ -814,7 +832,7 @@ static void gpt_update_discipline_ready(struct fusion_gpt *g, long freq_error)
 	if (READ_ONCE(g->discipline_ready))
 		return;
 
-	if (cal_active(g)) {
+	if (cal_is_active) {
 		g->lock_streak = 0;
 		return;
 	}
@@ -830,7 +848,7 @@ static void gpt_update_discipline_ready(struct fusion_gpt *g, long freq_error)
 	if (g->lock_streak >= needed) {
 		WRITE_ONCE(g->discipline_ready, true);
 		pr_info("fusion_gpt: discipline ready (|err| < %u ticks for %u PPS)\n",
-			thresh, needed);
+				thresh, needed);
 	}
 }
 
@@ -918,8 +936,8 @@ static bool cal_fit_model(struct fusion_gpt *g, u32 *mean_residual_out)
 
 	pred_q16 = (e0 << 16) + k1_q16 * dg4 + k2_q16 * dd4 + k3_q16 * dg4 * dd4;
 	pr_debug("fusion_gpt: cal fit k1_q16=%lld k2_q16=%lld k3_q16=%lld p4_meas=%lld p4_pred=%lld\n",
-		 (long long)k1_q16, (long long)k2_q16, (long long)k3_q16,
-		 (long long)e4, (long long)(pred_q16 >> 16));
+			(long long)k1_q16, (long long)k2_q16, (long long)k3_q16,
+			(long long)e4, (long long)(pred_q16 >> 16));
 
 	g->cal_k1_q16 = (s32)k1_q16;
 	g->cal_k2_q16 = (s32)k2_q16;
@@ -948,7 +966,7 @@ static bool cal_find_best_target(struct fusion_gpt *g, u32 *best_gain, int *best
 	u32 gv;
 	u32 gain_step = max_t(u32, 1, g->cal_cfg.cal_inverse_gain_step);
 	u32 gain_start = clamp(max_t(u32, g->si_gain_min, fusion_start_gain_value(&g->cal_cfg)),
-			       g->si_gain_min, g->si_gain_max);
+			g->si_gain_min, g->si_gain_max);
 
 	*best_gain = g->cal_center_gain;
 	*best_dac = g->cal_center_dac;
@@ -962,26 +980,26 @@ static bool cal_find_best_target(struct fusion_gpt *g, u32 *best_gain, int *best
 
 		if (denom == 0) {
 			pr_debug("fusion_gpt: cal inverse reject gain=%u dac=undefined denom=0\n",
-				 gv);
+					gv);
 			goto next_gain;
 		}
 
 		dd = cal_div_round_closest_s64(numer, denom);
 		dv = (s64)g->cal_center_dac + dd;
 		if (dv >= cal_jump_dac_min_value(&g->cal_cfg) &&
-		    dv <= cal_jump_dac_max_value(&g->cal_cfg)) {
+				dv <= cal_jump_dac_max_value(&g->cal_cfg)) {
 			*best_gain = gv;
 			*best_dac = (int)dv;
 			pr_debug("fusion_gpt: cal inverse target gain=%u dac=%d (center gain=%u dac=%d)\n",
-				 *best_gain, *best_dac,
-				 g->cal_center_gain, g->cal_center_dac);
+					*best_gain, *best_dac,
+					g->cal_center_gain, g->cal_center_dac);
 			return true;
 		}
 
 		pr_debug("fusion_gpt: cal inverse reject gain=%u dac=%lld (allowed %d..%d)\n",
-			 gv, (long long)dv,
-			 cal_jump_dac_min_value(&g->cal_cfg),
-			 cal_jump_dac_max_value(&g->cal_cfg));
+				gv, (long long)dv,
+				cal_jump_dac_min_value(&g->cal_cfg),
+				cal_jump_dac_max_value(&g->cal_cfg));
 
 next_gain:
 		if (gv > g->si_gain_max - gain_step)
@@ -989,7 +1007,7 @@ next_gain:
 	}
 
 	pr_warn("fusion_gpt: cal inverse solve found no in-range DAC from gain=%u..%u step=%u\n",
-		gain_start, g->si_gain_max, gain_step);
+			gain_start, g->si_gain_max, gain_step);
 	return false;
 }
 
@@ -998,308 +1016,293 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 	struct fusion_gpt *g = dev_id;
 	u32 sr = rdl(g, GPT_SR);
 	u32 clr = 0;
-	if (!sr) return IRQ_NONE;
+	if (!sr)
+		return IRQ_NONE;
 
-	/* extend 64-bit ticks on any event */
 	write_seqcount_begin(&g->ticks_sl);
 	{
 		u32 cnt = rdl(g, GPT_CNT);
-		if (cnt < g->last32) g->hi += 1ULL << 32;
+		if (cnt < g->last32)
+			g->hi += 1ULL << 32;
 		g->last32 = cnt;
 	}
 	write_seqcount_end(&g->ticks_sl);
 
-	/* If compare was programmed behind CNT, pull it forward so OF1 keeps firing */
 	if (!(sr & SR_OF1) && (s32)(g->next_ocr1 - g->last32) <= 0)
 		gpt_program_next_compare(g);
 
-  /* ------------------------------------------------------------------
-   * IF2: 48kHz Capture (Processed first to update timestamp for IF1 stats)
-   * ------------------------------------------------------------------ */
-  if (sr & SR_IF2) {
-    u32 cap = rdl(g, GPT_ICR2);   /* latches & clears capture2 */
+	if (sr & SR_IF2) {
+		u32 cap = rdl(g, GPT_ICR2);
+		u64 now64 = gpt_read_ticks64(g);
+		u64 cap64 = (now64 & ~0xffffffffULL) | cap;
 
-    /* Reconstruct 64-bit capture time */
-    u64 now64 = gpt_read_ticks64(g);
-    u64 cap64 = (now64 & ~0xffffffffULL) | cap;
+		if (cap64 > now64)
+			cap64 -= 1ULL << 32;
 
-    /* Handle wrap-around where capture happened before the upper 32-bits incremented */
-    if (cap64 > now64)
-        cap64 -= 1ULL << 32;
+		raw_spin_lock(&g->pps_lock);
+		g->last_if2_cap64 = cap64;
+		g->if2_valid = true;
+		raw_spin_unlock(&g->pps_lock);
 
-    g->last_if2_cap64 = cap64;
-    g->if2_valid = true;
+		clr |= SR_IF2;
+	}
 
-    clr |= SR_IF2;
-  }
+	if (sr & SR_IF1) {
+		u32 cap = rdl(g, GPT_ICR1);
+		u64 prev_cap64 = 0;
+		u64 diff = 0;
+		u64 now64 = gpt_read_ticks64(g);
+		u64 cap64 = (now64 & ~0xffffffffULL) | cap;
+		u32 rms_jitter = 0;
+		bool had_prev = false;
+		bool cal_is_active = false;
+		bool need_dac_work = false;
+		bool do_pps_log = false;
+		bool rebase_ready = false;
+		long freq_error = 0;
+		long if2_offset_ns = 0;
+		int dac_target = 0;
 
-  /* IF1: 1PPS capture and disciplining */
-  if (sr & SR_IF1) {
-      u32 cap = rdl(g, GPT_ICR1);   /* latches & clears capture1 */
-      u64 prev_cap64 = 0;
-      bool had_prev = false;
+		if (cap64 > now64)
+			cap64 -= 1ULL << 32;
 
-      /* Build a monotonic 64-bit capture close to "now" */
-      u64 now64 = gpt_read_ticks64(g);                /* seq-safe read */
-      u64 cap64 = (now64 & ~0xffffffffULL) | cap;
-      if (cap64 > now64)
-          cap64 -= 1ULL << 32;
-
-      raw_spin_lock(&g->pps_lock);
-      had_prev = g->pps_valid;
-      prev_cap64 = g->pps_icr1_last64;
-
-	      if (had_prev) {
-	          u64 diff = cap64 - prev_cap64;
-	          long freq_error = (long)diff - 10000000L;
-          
-          /* Accumulate squared error for RMS jitter */
-          g->sq_err_sum += (s64)freq_error * (s64)freq_error;
-          g->err_count++;
-
-          if (CAL_ENABLE && g->cal_state == CAL_IDLE &&
-              g->dac_client && g->si5351b_client) {
-              g->error_integrator = 0;
-              WRITE_ONCE(g->si_gain_pending, false);
-
-              if (!g->cal_config_checked) {
-                  g->cal_state = CAL_CONFIG_CHECK;
-                  schedule_work(&g->dac_work);
-              } else if (g->cal_cfg.coeffs_valid) {
-                  g->cal_center_gain = g->si_gain_current;
-                  g->cal_center_dac = clamp(g->dac_target, 0, 255);
-                  g->cal_err_accum = 0;
-                  g->cal_err_samples = 0;
-                  g->cal_measure_left = max_t(u32, 1, g->cal_cfg.cal_pre_e0_samples);
-                  g->cal_settle_left = max_t(u32, 1, g->cal_cfg.cal_pre_e0_max_wait);
-                  g->cal_state = CAL_PREBAKE_WAIT;
-                  pr_info("fusion_gpt: cal prebaked wait center gain=%u dac=%d k=[%d %d %d] need=%u abs<=%u wait<=%u\n",
-                          g->cal_center_gain, g->cal_center_dac,
-                          g->cal_cfg.k1_q16, g->cal_cfg.k2_q16, g->cal_cfg.k3_q16,
-                          max_t(u32, 1, g->cal_cfg.cal_pre_e0_samples),
-                          g->cal_cfg.cal_pre_e0_abs_max,
-                          max_t(u32, 1, g->cal_cfg.cal_pre_e0_max_wait));
-              } else {
-                  cal_prepare_points(g);
-                  g->cal_state = CAL_APPLY_POINT;
-                  pr_info("fusion_gpt: cal start center gain=%u dac=%d settle=%u measure=%u\n",
-                          g->cal_center_gain, g->cal_center_dac,
-                          max_t(u32, 1, g->cal_cfg.cal_settle_pps),
-                          max_t(u32, 1, g->cal_cfg.cal_measure_pps));
-                  schedule_work(&g->dac_work);
-              }
-          } else if (CAL_ENABLE && g->cal_state == CAL_IDLE &&
-                     (!g->dac_client || !g->si5351b_client)) {
-              g->cal_state = CAL_DONE;
-              pr_warn("fusion_gpt: cal skipped (missing DAC or Si5351 client)\n");
-          }
-
-          if (cal_active(g)) {
-              if (g->cal_state == CAL_PREBAKE_WAIT) {
-                  long abs_err = (freq_error < 0) ? -freq_error : freq_error;
-
-                  if (abs_err <= g->cal_cfg.cal_pre_e0_abs_max) {
-                      g->cal_err_accum += freq_error;
-                      g->cal_err_samples++;
-                  }
-
-                  if (g->cal_settle_left > 0)
-                      g->cal_settle_left--;
-
-                  if (g->cal_err_samples >= max_t(u32, 1, g->cal_cfg.cal_pre_e0_samples)) {
-                      long e0 = (long)div_s64(g->cal_err_accum,
-                                              max_t(u32, 1, g->cal_err_samples));
-                      g->cal_probe_mean[0] = e0;
-                      g->cal_k1_q16 = g->cal_cfg.k1_q16;
-                      g->cal_k2_q16 = g->cal_cfg.k2_q16;
-                      g->cal_k3_q16 = g->cal_cfg.k3_q16;
-                      if (cal_find_best_target(g, &g->si_gain_target, &g->dac_target)) {
-                          g->cal_state = CAL_APPLY_JUMP;
-                          pr_info("fusion_gpt: cal prebaked jump start center gain=%u dac=%d e0=%ld k=[%d %d %d]\n",
-                                  g->cal_center_gain, g->cal_center_dac, e0,
-                                  g->cal_k1_q16, g->cal_k2_q16, g->cal_k3_q16);
-                          schedule_work(&g->dac_work);
-                      } else {
-                          g->cal_state = CAL_FAIL;
-                          schedule_work(&g->dac_work);
-                      }
-                  } else if (g->cal_settle_left == 0) {
-                      g->cal_state = CAL_FAIL;
-                      pr_warn("fusion_gpt: cal prebaked e0 collection timed out, fallback to PI\n");
-                      schedule_work(&g->dac_work);
-                  }
-              } else if (g->cal_state == CAL_SETTLE) {
-                  if (g->cal_settle_left > 0)
-                      g->cal_settle_left--;
-                  if (g->cal_settle_left == 0) {
-                      g->cal_err_accum = 0;
-                      g->cal_err_samples = 0;
-                      g->cal_measure_left = max_t(u32, 1, g->cal_cfg.cal_measure_pps);
-                      g->cal_state = CAL_MEASURE;
-                  }
-              } else if (g->cal_state == CAL_MEASURE) {
-                  g->cal_err_accum += freq_error;
-                  g->cal_err_samples++;
-                  if (g->cal_measure_left > 0)
-                      g->cal_measure_left--;
-                  if (g->cal_measure_left == 0) {
-                      long mean = (long)div_s64(g->cal_err_accum,
-                                                max_t(u32, 1, g->cal_err_samples));
-                      int idx = g->cal_probe_idx;
-
-                      if (idx >= 0 && idx < 5)
-                          g->cal_probe_mean[idx] = mean;
-                      else
-                          idx = 0;
-
-                      pr_debug("fusion_gpt: cal probe[%d] gain=%u dac=%d mean_err=%ld\n",
-                               idx,
-                               g->cal_probe_gain[idx],
-                               g->cal_probe_dac[idx],
-                               mean);
-
-                      if (idx < 4) {
-                          g->cal_probe_idx++;
-                          g->cal_state = CAL_APPLY_POINT;
-                          schedule_work(&g->dac_work);
-                      } else {
-                          g->cal_state = CAL_FIT;
-                          schedule_work(&g->dac_work);
-                      }
-                  }
-              }
-          } else {
-              /* Accumulate error into the integrator */
-              g->error_integrator += freq_error;
-
-              /* Threshold in ticks for dithering */
-              const int INTEGRATOR_LIMIT = 5;
-              const int P_THRESHOLD = 20;
-              const int P_DIV = 10;
-              const int P_MAX_STEP = 10;
-
-              /* Proportional term: only act when error exceeds threshold */
-              {
-                  long abs_err = (freq_error < 0) ? -freq_error : freq_error;
-                  int p_step = 0;
-
-                  if (abs_err > P_THRESHOLD) {
-                      p_step = (int)(abs_err / P_DIV);
-                      p_step = clamp(p_step, 1, P_MAX_STEP);
-
-                      if (freq_error > 0)
-                          g->dac_target -= p_step; /* too fast: slow down */
-                      else
-                          g->dac_target += p_step; /* too slow: speed up */
-                  }
-              }
-
-              if (g->error_integrator > INTEGRATOR_LIMIT) {
-                  /* Positive error (too fast): slow down */
-                  g->dac_target--;
-                  g->error_integrator = 0;
-              }
-              else if (g->error_integrator < -INTEGRATOR_LIMIT) {
-                  /* Negative error (too slow): speed up */
-                  g->dac_target++;
-                  g->error_integrator = 0;
-              }
-              {
-                  const u32 SI_GAIN_STEP = 10000;
-                  bool sat_high = (g->dac_target > 255);
-                  bool sat_low = (g->dac_target < 0);
-
-                  if (sat_high || sat_low) {
-                      if (sat_high) {
-                          g->dac_target = 255;
-                          pr_debug("fusion_gpt: DAC saturated high (freq_err=%ld tick, integ=%ld)\n",
-                                               freq_error, g->error_integrator);
-                      } else {
-                          g->dac_target = 0;
-                          pr_debug("fusion_gpt: DAC saturated low (freq_err=%ld tick, integ=%ld)\n",
-                                               freq_error, g->error_integrator);
-                      }
-
-                      if (g->si5351b_client) {
-                          if (!READ_ONCE(g->si_gain_pending)) {
-                              u32 next_gain = g->si_gain_current + SI_GAIN_STEP;
-
-                              if (next_gain > g->si_gain_max)
-                                  next_gain = g->si_gain_max;
-
-                              if (next_gain > g->si_gain_current) {
-                                  WRITE_ONCE(g->si_gain_target, next_gain);
-                                  WRITE_ONCE(g->si_gain_pending, true);
-                                  pr_debug("fusion_gpt: queued Si5351b gain increase to %u\n",
-                                                       next_gain);
-                              } else {
-                                  pr_debug("fusion_gpt: DAC saturated at max Si5351b gain (%u)\n",
-                                                       g->si_gain_current);
-                              }
-                          }
-                      } else {
-                          pr_debug("fusion_gpt: Si5351b client missing, cannot adjust gain\n");
-                      }
-                  }
-              }
-          }
-
-          /* 48kHz offset: time from last 48k edge to current PPS */
-          long if2_offset_ns = 0;
-          if (g->if2_valid) {
-              if2_offset_ns = (long)(cap64 - g->last_if2_cap64) * 100L;
-              
-              /* Normalize to a positive phase within one 48k period */
-              if (if2_offset_ns < 0) {
-                   if2_offset_ns += 20833;
-              }
-          }
-
-	          g->latest_freq_error = freq_error;
-	          gpt_update_discipline_ready(g, freq_error);
-
-	          u32 rms_jitter = 0;
-	          if (g->err_count > 0) {
-	              rms_jitter = int_sqrt(g->sq_err_sum / g->err_count);
-          }
-
-	          if (pps_debug_param) {
-	              if (time_after_eq(jiffies, g->pps_diag_next_jiffies)) {
-	                      pr_info("fusion_gpt: [PPS] diff=%llu ticks err=%ld ticks rms=%u ticks 48k_off=%ldns dac=%d rebase=%d\n",
-	                              diff, freq_error, rms_jitter,
-	                              if2_offset_ns, g->dac_target,
-	                              g->phc_epoch_valid && !g->pending_future_anchor);
-	                      g->sq_err_sum = 0;
-	                      g->err_count = 0;
-	                      g->pps_diag_next_jiffies = jiffies + HZ;
-	              }
-	          } else {
-	              g->sq_err_sum = 0;
-	              g->err_count = 0;
-	              g->pps_diag_next_jiffies = jiffies + HZ;
-	          }
-      }
+		raw_spin_lock(&g->pps_lock);
+		had_prev = g->pps_valid;
+		prev_cap64 = g->pps_icr1_last64;
+		if (had_prev && g->if2_valid) {
+			if2_offset_ns = (long)(cap64 - g->last_if2_cap64) * 100L;
+			if (if2_offset_ns < 0)
+				if2_offset_ns += 20833;
+		}
 		g->pps_seq++;
 		g->pps_icr1_last32 = cap;
 		g->pps_icr1_last64 = cap64;
-		g->pps_valid       = true;
+		g->pps_valid = true;
 		gpt_rebase_phc_epoch_locked(g, cap64, had_prev, prev_cap64);
 		if (g->phc_epoch_valid)
 			gpt_rephase_of1_from_pps_locked(g, cap64);
+		rebase_ready = g->phc_epoch_valid && !g->pending_future_anchor;
 		raw_spin_unlock(&g->pps_lock);
 
-		if (READ_ONCE(g->dac_target) != READ_ONCE(g->current_dac_value) ||
-		    READ_ONCE(g->si_gain_pending) ||
-		    cal_active(g) ||
-		    READ_ONCE(g->cal_state) == CAL_FIT ||
-		    READ_ONCE(g->cal_state) == CAL_APPLY_JUMP)
+		if (had_prev) {
+			diff = cap64 - prev_cap64;
+			freq_error = (long)diff - 10000000L;
+
+			raw_spin_lock(&g->ctrl_lock);
+			g->sq_err_sum += (s64)freq_error * (s64)freq_error;
+			g->err_count++;
+
+			if (CAL_ENABLE && g->cal_state == CAL_IDLE &&
+			    g->dac_client && g->si5351b_client) {
+				g->error_integrator = 0;
+				g->si_gain_pending = false;
+
+				if (!g->cal_config_checked) {
+					g->cal_state = CAL_CONFIG_CHECK;
+					schedule_work(&g->dac_work);
+				} else if (g->cal_cfg.coeffs_valid) {
+					g->cal_center_gain = g->si_gain_current;
+					g->cal_center_dac = clamp(g->dac_target, 0, 255);
+					g->cal_err_accum = 0;
+					g->cal_err_samples = 0;
+					g->cal_measure_left = max_t(u32, 1, g->cal_cfg.cal_pre_e0_samples);
+					g->cal_settle_left = max_t(u32, 1, g->cal_cfg.cal_pre_e0_max_wait);
+					g->cal_state = CAL_PREBAKE_WAIT;
+					pr_info("fusion_gpt: cal prebaked wait center gain=%u dac=%d k=[%d %d %d] need=%u abs<=%u wait<=%u\n",
+						g->cal_center_gain, g->cal_center_dac,
+						g->cal_cfg.k1_q16, g->cal_cfg.k2_q16, g->cal_cfg.k3_q16,
+						max_t(u32, 1, g->cal_cfg.cal_pre_e0_samples),
+						g->cal_cfg.cal_pre_e0_abs_max,
+						max_t(u32, 1, g->cal_cfg.cal_pre_e0_max_wait));
+				} else {
+					cal_prepare_points(g);
+					g->cal_state = CAL_APPLY_POINT;
+					pr_info("fusion_gpt: cal start center gain=%u dac=%d settle=%u measure=%u\n",
+						g->cal_center_gain, g->cal_center_dac,
+						max_t(u32, 1, g->cal_cfg.cal_settle_pps),
+						max_t(u32, 1, g->cal_cfg.cal_measure_pps));
+					schedule_work(&g->dac_work);
+				}
+			} else if (CAL_ENABLE && g->cal_state == CAL_IDLE &&
+				   (!g->dac_client || !g->si5351b_client)) {
+				g->cal_state = CAL_DONE;
+				pr_warn("fusion_gpt: cal skipped (missing DAC or Si5351 client)\n");
+			}
+
+			if (cal_active(g)) {
+				if (g->cal_state == CAL_PREBAKE_WAIT) {
+					long abs_err = (freq_error < 0) ? -freq_error : freq_error;
+
+					if (abs_err <= g->cal_cfg.cal_pre_e0_abs_max) {
+						g->cal_err_accum += freq_error;
+						g->cal_err_samples++;
+					}
+
+					if (g->cal_settle_left > 0)
+						g->cal_settle_left--;
+
+					if (g->cal_err_samples >= max_t(u32, 1, g->cal_cfg.cal_pre_e0_samples)) {
+						long e0 = (long)div_s64(g->cal_err_accum,
+								max_t(u32, 1, g->cal_err_samples));
+						g->cal_probe_mean[0] = e0;
+						g->cal_k1_q16 = g->cal_cfg.k1_q16;
+						g->cal_k2_q16 = g->cal_cfg.k2_q16;
+						g->cal_k3_q16 = g->cal_cfg.k3_q16;
+						if (cal_find_best_target(g, &g->si_gain_target, &g->dac_target)) {
+							g->cal_state = CAL_APPLY_JUMP;
+							pr_info("fusion_gpt: cal prebaked jump start center gain=%u dac=%d e0=%ld k=[%d %d %d]\n",
+								g->cal_center_gain, g->cal_center_dac, e0,
+								g->cal_k1_q16, g->cal_k2_q16, g->cal_k3_q16);
+							schedule_work(&g->dac_work);
+						} else {
+							g->cal_state = CAL_FAIL;
+							schedule_work(&g->dac_work);
+						}
+					} else if (g->cal_settle_left == 0) {
+						g->cal_state = CAL_FAIL;
+						pr_warn("fusion_gpt: cal prebaked e0 collection timed out, fallback to PI\n");
+						schedule_work(&g->dac_work);
+					}
+				} else if (g->cal_state == CAL_SETTLE) {
+					if (g->cal_settle_left > 0)
+						g->cal_settle_left--;
+					if (g->cal_settle_left == 0) {
+						g->cal_err_accum = 0;
+						g->cal_err_samples = 0;
+						g->cal_measure_left = max_t(u32, 1, g->cal_cfg.cal_measure_pps);
+						g->cal_state = CAL_MEASURE;
+					}
+				} else if (g->cal_state == CAL_MEASURE) {
+					g->cal_err_accum += freq_error;
+					g->cal_err_samples++;
+					if (g->cal_measure_left > 0)
+						g->cal_measure_left--;
+					if (g->cal_measure_left == 0) {
+						long mean = (long)div_s64(g->cal_err_accum,
+								max_t(u32, 1, g->cal_err_samples));
+						int idx = g->cal_probe_idx;
+
+						if (idx >= 0 && idx < 5)
+							g->cal_probe_mean[idx] = mean;
+						else
+							idx = 0;
+
+						pr_debug("fusion_gpt: cal probe[%d] gain=%u dac=%d mean_err=%ld\n",
+							idx,
+							g->cal_probe_gain[idx],
+							g->cal_probe_dac[idx],
+							mean);
+
+						if (idx < 4) {
+							g->cal_probe_idx++;
+							g->cal_state = CAL_APPLY_POINT;
+							schedule_work(&g->dac_work);
+						} else {
+							g->cal_state = CAL_FIT;
+							schedule_work(&g->dac_work);
+						}
+					}
+				}
+			} else {
+				const int INTEGRATOR_LIMIT = 5;
+				const int P_THRESHOLD = 20;
+				const int P_DIV = 10;
+				const int P_MAX_STEP = 10;
+				long abs_err = (freq_error < 0) ? -freq_error : freq_error;
+
+				g->error_integrator += freq_error;
+
+				if (abs_err > P_THRESHOLD) {
+					int p_step = clamp((int)(abs_err / P_DIV), 1, P_MAX_STEP);
+
+					if (freq_error > 0)
+						g->dac_target -= p_step;
+					else
+						g->dac_target += p_step;
+				}
+
+				if (g->error_integrator > INTEGRATOR_LIMIT) {
+					g->dac_target--;
+					g->error_integrator = 0;
+				} else if (g->error_integrator < -INTEGRATOR_LIMIT) {
+					g->dac_target++;
+					g->error_integrator = 0;
+				}
+
+				if (g->dac_target > 255 || g->dac_target < 0) {
+					const u32 si_gain_step = 10000;
+
+					if (g->dac_target > 255) {
+						g->dac_target = 255;
+						pr_debug("fusion_gpt: DAC saturated high (freq_err=%ld tick, integ=%ld)\n",
+							freq_error, g->error_integrator);
+					} else {
+						g->dac_target = 0;
+						pr_debug("fusion_gpt: DAC saturated low (freq_err=%ld tick, integ=%ld)\n",
+							freq_error, g->error_integrator);
+					}
+
+					if (g->si5351b_client) {
+						if (!g->si_gain_pending) {
+							u32 next_gain = min(g->si_gain_current + si_gain_step,
+									    g->si_gain_max);
+
+							if (next_gain > g->si_gain_current) {
+								g->si_gain_target = next_gain;
+								g->si_gain_pending = true;
+								pr_debug("fusion_gpt: queued Si5351b gain increase to %u\n",
+									next_gain);
+							} else {
+								pr_debug("fusion_gpt: DAC saturated at max Si5351b gain (%u)\n",
+									g->si_gain_current);
+							}
+						}
+					} else {
+						pr_debug("fusion_gpt: Si5351b client missing, cannot adjust gain\n");
+					}
+				}
+			}
+
+			g->latest_freq_error = freq_error;
+			cal_is_active = cal_active(g);
+			if (g->err_count > 0)
+				rms_jitter = int_sqrt(g->sq_err_sum / g->err_count);
+
+			if (pps_debug_param) {
+				if (time_after_eq(jiffies, g->pps_diag_next_jiffies)) {
+					dac_target = g->dac_target;
+					do_pps_log = true;
+					g->sq_err_sum = 0;
+					g->err_count = 0;
+					g->pps_diag_next_jiffies = jiffies + HZ;
+				}
+			} else {
+				g->sq_err_sum = 0;
+				g->err_count = 0;
+				g->pps_diag_next_jiffies = jiffies + HZ;
+			}
+
+			need_dac_work = (g->dac_target != g->current_dac_value) ||
+				g->si_gain_pending ||
+				cal_is_active ||
+				g->cal_state == CAL_FIT ||
+				g->cal_state == CAL_APPLY_JUMP;
+			raw_spin_unlock(&g->ctrl_lock);
+
+			raw_spin_lock(&g->pps_lock);
+			gpt_update_discipline_ready(g, freq_error, cal_is_active);
+			raw_spin_unlock(&g->pps_lock);
+
+			if (do_pps_log)
+				pr_info("fusion_gpt: [PPS] diff=%llu ticks err=%ld ticks rms=%u ticks 48k_off=%ldns dac=%d rebase=%d\n",
+					diff, freq_error, rms_jitter, if2_offset_ns,
+					dac_target, rebase_ready);
+		}
+
+		if (need_dac_work)
 			schedule_work(&g->dac_work);
 		clr |= SR_IF1;
-
 	}
-
-	if (sr & SR_IF2)
-		clr |= SR_IF2;
 
 	if (sr & SR_OF1) {
 		gpt_program_next_compare(g);
@@ -1317,8 +1320,6 @@ static int fusion_write_dac(struct fusion_gpt *g, int target, bool ratelimited_l
 	u8 buf[3];
 
 	target = clamp(target, 0, 255);
-	if (target == g->current_dac_value)
-		return 0;
 
 	buf[0] = 0x00; /* Register/Command Byte (device specific) */
 	buf[1] = 0x00; /* Often MSB or Control */
@@ -1330,236 +1331,370 @@ static int fusion_write_dac(struct fusion_gpt *g, int target, bool ratelimited_l
 	ret = i2c_master_send(g->dac_client, buf, 3);
 	if (ret < 0)
 		return ret;
+	if (ret != ARRAY_SIZE(buf))
+		return -EIO;
 
-	g->current_dac_value = target;
 	if (ratelimited_log)
 		pr_debug("fusion_gpt: updated DAC to %u (integrator move)\n",
-				     target);
+				target);
 
 	return 0;
 }
 
 static void fusion_dac_work_handler(struct work_struct *work)
 {
-    struct fusion_gpt *g = container_of(work, struct fusion_gpt, dac_work);
-    int ret = 0;
-    int target = READ_ONCE(g->dac_target);
-    bool gain_pending = READ_ONCE(g->si_gain_pending);
-    u32 gain_target = READ_ONCE(g->si_gain_target);
+	struct fusion_gpt *g = container_of(work, struct fusion_gpt, dac_work);
+	enum cal_state state;
+	unsigned long flags;
+	int ret = 0;
+	int target;
+	int current_dac;
+	int probe_dac;
+	int jump_dac;
+	int center_dac;
+	u32 start_gain;
+	u32 gain_target;
+	u32 current_gain;
+	u32 probe_gain;
+	u32 jump_gain;
+	u32 center_gain;
+	u32 residual = 0;
+	bool gain_pending;
+	bool schedule_again = false;
+	bool fit_ok = false;
+	struct fusion_gpt_cal_config loaded_cfg;
+	struct fusion_gpt_cal_config saved_cfg;
 
-    if (g->cal_state == CAL_CONFIG_CHECK) {
-        u32 start_gain;
+	raw_spin_lock_irqsave(&g->ctrl_lock, flags);
+	state = g->cal_state;
+	target = g->dac_target;
+	current_dac = g->current_dac_value;
+	gain_pending = g->si_gain_pending;
+	gain_target = g->si_gain_target;
+	current_gain = g->si_gain_current;
+	raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
 
-        g->cal_config_checked = true;
+	if (state == CAL_CONFIG_CHECK) {
+		cal_config_set_defaults(&loaded_cfg);
+		ret = cal_load_prebaked_config(&loaded_cfg);
+		if (ret == 0) {
+			pr_info("fusion_gpt: loaded prebaked config from %s k=[%d %d %d]\n",
+				CAL_CONFIG_PATH,
+				loaded_cfg.k1_q16, loaded_cfg.k2_q16, loaded_cfg.k3_q16);
+		} else if (ret != -ENOENT) {
+			pr_warn("fusion_gpt: failed to load prebaked config from %s ret=%d, running live calibration\n",
+				CAL_CONFIG_PATH, ret);
+		}
 
-        ret = cal_load_prebaked_config(&g->cal_cfg);
-        if (ret == 0) {
-            pr_info("fusion_gpt: loaded prebaked config from %s k=[%d %d %d]\n",
-                    CAL_CONFIG_PATH,
-                    g->cal_cfg.k1_q16, g->cal_cfg.k2_q16, g->cal_cfg.k3_q16);
-        } else if (ret != -ENOENT) {
-            cal_config_set_defaults(&g->cal_cfg);
-            pr_warn("fusion_gpt: failed to load prebaked config from %s ret=%d, running live calibration\n",
-                    CAL_CONFIG_PATH, ret);
-        }
+		raw_spin_lock_irqsave(&g->ctrl_lock, flags);
+		if (g->cal_state != CAL_CONFIG_CHECK) {
+			raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
+			return;
+		}
+		g->cal_config_checked = true;
+		if (ret == 0)
+			g->cal_cfg = loaded_cfg;
+		else if (ret != -ENOENT)
+			cal_config_set_defaults(&g->cal_cfg);
 
-        start_gain = clamp(fusion_start_gain_value(&g->cal_cfg),
-                           g->si_gain_min, g->si_gain_max);
-        if (start_gain != g->si_gain_current) {
-            ret = si5351b_write_gain(g, start_gain);
-            if (ret < 0) {
-                pr_warn("fusion_gpt: failed to apply configured startup gain %u ret=%d\n",
-                        start_gain, ret);
-            } else {
-                g->si_gain_current = start_gain;
-            }
-        }
-        g->si_gain_target = g->si_gain_current;
+		start_gain = clamp(fusion_start_gain_value(&g->cal_cfg),
+				   g->si_gain_min, g->si_gain_max);
+		current_gain = g->si_gain_current;
+		raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
 
-        if (g->cal_cfg.coeffs_valid) {
-            g->cal_center_gain = g->si_gain_current;
-            g->cal_center_dac = clamp(g->dac_target, 0, 255);
-            g->cal_err_accum = 0;
-            g->cal_err_samples = 0;
-            g->cal_measure_left = max_t(u32, 1, g->cal_cfg.cal_pre_e0_samples);
-            g->cal_settle_left = max_t(u32, 1, g->cal_cfg.cal_pre_e0_max_wait);
-            g->cal_state = CAL_PREBAKE_WAIT;
-            pr_info("fusion_gpt: cal prebaked wait center gain=%u dac=%d k=[%d %d %d] need=%u abs<=%u wait<=%u\n",
-                    g->cal_center_gain, g->cal_center_dac,
-                    g->cal_cfg.k1_q16, g->cal_cfg.k2_q16, g->cal_cfg.k3_q16,
-                    max_t(u32, 1, g->cal_cfg.cal_pre_e0_samples),
-                    g->cal_cfg.cal_pre_e0_abs_max,
-                    max_t(u32, 1, g->cal_cfg.cal_pre_e0_max_wait));
-        } else {
-            cal_prepare_points(g);
-            g->cal_state = CAL_APPLY_POINT;
-            pr_info("fusion_gpt: cal start center gain=%u dac=%d settle=%u measure=%u\n",
-                    g->cal_center_gain, g->cal_center_dac,
-                    max_t(u32, 1, g->cal_cfg.cal_settle_pps),
-                    max_t(u32, 1, g->cal_cfg.cal_measure_pps));
-            schedule_work(&g->dac_work);
-        }
-        return;
-    }
+		if (start_gain != current_gain) {
+			ret = si5351b_write_gain(g, start_gain);
+			if (ret < 0)
+				pr_warn("fusion_gpt: failed to apply configured startup gain %u ret=%d\n",
+					start_gain, ret);
+		}
 
-    if (g->cal_state == CAL_APPLY_POINT) {
-        u32 probe_gain = g->cal_probe_gain[g->cal_probe_idx];
-        int probe_dac = g->cal_probe_dac[g->cal_probe_idx];
+		raw_spin_lock_irqsave(&g->ctrl_lock, flags);
+		if (start_gain != current_gain && ret >= 0)
+			g->si_gain_current = start_gain;
+		g->si_gain_target = g->si_gain_current;
 
-        if (probe_gain != g->si_gain_current) {
-            ret = si5351b_write_gain(g, probe_gain);
-            if (ret < 0) {
-                pr_err("fusion_gpt: cal failed applying probe gain idx=%d ret=%d\n",
-                       g->cal_probe_idx, ret);
-                g->cal_state = CAL_FAIL;
-                return;
-            }
-            g->si_gain_current = probe_gain;
-        }
+		if (g->cal_state != CAL_CONFIG_CHECK) {
+			raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
+			return;
+		}
 
-        ret = fusion_write_dac(g, probe_dac, false);
-        if (ret < 0) {
-            pr_err("fusion_gpt: cal failed applying probe dac idx=%d ret=%d\n",
-                   g->cal_probe_idx, ret);
-            g->cal_state = CAL_FAIL;
-            return;
-        }
+		if (g->cal_cfg.coeffs_valid) {
+			g->cal_center_gain = g->si_gain_current;
+			g->cal_center_dac = clamp(g->dac_target, 0, 255);
+			g->cal_err_accum = 0;
+			g->cal_err_samples = 0;
+			g->cal_measure_left = max_t(u32, 1, g->cal_cfg.cal_pre_e0_samples);
+			g->cal_settle_left = max_t(u32, 1, g->cal_cfg.cal_pre_e0_max_wait);
+			g->cal_state = CAL_PREBAKE_WAIT;
+			pr_info("fusion_gpt: cal prebaked wait center gain=%u dac=%d k=[%d %d %d] need=%u abs<=%u wait<=%u\n",
+				g->cal_center_gain, g->cal_center_dac,
+				g->cal_cfg.k1_q16, g->cal_cfg.k2_q16, g->cal_cfg.k3_q16,
+				max_t(u32, 1, g->cal_cfg.cal_pre_e0_samples),
+				g->cal_cfg.cal_pre_e0_abs_max,
+				max_t(u32, 1, g->cal_cfg.cal_pre_e0_max_wait));
+		} else {
+			cal_prepare_points(g);
+			g->cal_state = CAL_APPLY_POINT;
+			schedule_again = true;
+			pr_info("fusion_gpt: cal start center gain=%u dac=%d settle=%u measure=%u\n",
+				g->cal_center_gain, g->cal_center_dac,
+				max_t(u32, 1, g->cal_cfg.cal_settle_pps),
+				max_t(u32, 1, g->cal_cfg.cal_measure_pps));
+		}
+		raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
+		if (schedule_again)
+			schedule_work(&g->dac_work);
+		return;
+	}
 
-        g->dac_target = probe_dac;
-        g->error_integrator = 0;
-        g->cal_settle_left = max_t(u32, 1, g->cal_cfg.cal_settle_pps);
-        g->cal_state = CAL_SETTLE;
-        return;
-    }
+	if (state == CAL_APPLY_POINT) {
+		raw_spin_lock_irqsave(&g->ctrl_lock, flags);
+		if (g->cal_state != CAL_APPLY_POINT) {
+			raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
+			return;
+		}
+		probe_gain = g->cal_probe_gain[g->cal_probe_idx];
+		probe_dac = g->cal_probe_dac[g->cal_probe_idx];
+		current_gain = g->si_gain_current;
+		current_dac = g->current_dac_value;
+		raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
 
-    if (g->cal_state == CAL_FIT) {
-        u32 residual = 0;
+		if (probe_gain != current_gain) {
+			ret = si5351b_write_gain(g, probe_gain);
+			if (ret < 0) {
+				raw_spin_lock_irqsave(&g->ctrl_lock, flags);
+				if (g->cal_state == CAL_APPLY_POINT)
+					g->cal_state = CAL_FAIL;
+				raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
+				schedule_work(&g->dac_work);
+				pr_err("fusion_gpt: cal failed applying probe gain ret=%d\n", ret);
+				return;
+			}
+		}
 
-        if (!cal_fit_model(g, &residual)) {
-            pr_warn("fusion_gpt: cal fit failed (degenerate probe geometry)\n");
-            g->cal_state = CAL_FAIL;
-            return;
-        }
+		if (probe_dac != current_dac) {
+			ret = fusion_write_dac(g, probe_dac, false);
+			if (ret < 0) {
+				raw_spin_lock_irqsave(&g->ctrl_lock, flags);
+				if (probe_gain != current_gain)
+					g->si_gain_current = probe_gain;
+				if (g->cal_state == CAL_APPLY_POINT)
+					g->cal_state = CAL_FAIL;
+				raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
+				schedule_work(&g->dac_work);
+				pr_err("fusion_gpt: cal failed applying probe dac ret=%d\n", ret);
+				return;
+			}
+		}
 
-        if (residual > g->cal_cfg.cal_fit_residual_thresh) {
-            pr_warn("fusion_gpt: cal fit residual too high (%u > %u), skipping jump\n",
-                    residual, g->cal_cfg.cal_fit_residual_thresh);
-            g->cal_state = CAL_FAIL;
-            return;
-        }
+		raw_spin_lock_irqsave(&g->ctrl_lock, flags);
+		if (probe_gain != current_gain)
+			g->si_gain_current = probe_gain;
+		if (probe_dac != current_dac)
+			g->current_dac_value = clamp(probe_dac, 0, 255);
+		if (g->cal_state == CAL_APPLY_POINT) {
+			g->dac_target = probe_dac;
+			g->error_integrator = 0;
+			g->cal_settle_left = max_t(u32, 1, g->cal_cfg.cal_settle_pps);
+			g->cal_state = CAL_SETTLE;
+		}
+		raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
+		return;
+	}
 
-        g->cal_cfg.k1_q16 = g->cal_k1_q16;
-        g->cal_cfg.k2_q16 = g->cal_k2_q16;
-        g->cal_cfg.k3_q16 = g->cal_k3_q16;
-        g->cal_cfg.coeffs_valid = true;
+	if (state == CAL_FIT) {
+		raw_spin_lock_irqsave(&g->ctrl_lock, flags);
+		if (g->cal_state != CAL_FIT) {
+			raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
+			return;
+		}
+		fit_ok = cal_fit_model(g, &residual);
+		if (fit_ok && residual <= g->cal_cfg.cal_fit_residual_thresh) {
+			g->cal_cfg.k1_q16 = g->cal_k1_q16;
+			g->cal_cfg.k2_q16 = g->cal_k2_q16;
+			g->cal_cfg.k3_q16 = g->cal_k3_q16;
+			g->cal_cfg.coeffs_valid = true;
+			saved_cfg = g->cal_cfg;
+			if (cal_find_best_target(g, &g->si_gain_target, &g->dac_target)) {
+				g->cal_state = CAL_APPLY_JUMP;
+				schedule_again = true;
+			} else {
+				g->cal_state = CAL_FAIL;
+				schedule_again = true;
+			}
+		} else {
+			g->cal_state = CAL_FAIL;
+			schedule_again = true;
+			saved_cfg = g->cal_cfg;
+		}
+		raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
 
-        ret = cal_save_prebaked_config(&g->cal_cfg);
-        if (ret < 0) {
-            if (ret == -ENOENT)
-                pr_warn("fusion_gpt: failed to save prebaked config to %s ret=%d (missing parent directory?)\n",
-                        CAL_CONFIG_PATH, ret);
-            else
-                pr_warn("fusion_gpt: failed to save prebaked config to %s ret=%d\n",
-                        CAL_CONFIG_PATH, ret);
-        } else {
-            pr_info("fusion_gpt: saved prebaked config to %s\n",
-                    CAL_CONFIG_PATH);
-        }
+		if (!fit_ok) {
+			pr_warn("fusion_gpt: cal fit failed (degenerate probe geometry)\n");
+			if (schedule_again)
+				schedule_work(&g->dac_work);
+			return;
+		}
+		if (residual > saved_cfg.cal_fit_residual_thresh) {
+			pr_warn("fusion_gpt: cal fit residual too high (%u > %u), skipping jump\n",
+				residual, saved_cfg.cal_fit_residual_thresh);
+			if (schedule_again)
+				schedule_work(&g->dac_work);
+			return;
+		}
 
-        if (cal_find_best_target(g, &g->si_gain_target, &g->dac_target)) {
-            g->cal_state = CAL_APPLY_JUMP;
-            schedule_work(&g->dac_work);
-        } else {
-            g->cal_state = CAL_FAIL;
-            schedule_work(&g->dac_work);
-        }
-        return;
-    }
+		ret = cal_save_prebaked_config(&saved_cfg);
+		if (ret < 0) {
+			if (ret == -ENOENT)
+				pr_warn("fusion_gpt: failed to save prebaked config to %s ret=%d (missing parent directory?)\n",
+					CAL_CONFIG_PATH, ret);
+			else
+				pr_warn("fusion_gpt: failed to save prebaked config to %s ret=%d\n",
+					CAL_CONFIG_PATH, ret);
+		} else {
+			pr_info("fusion_gpt: saved prebaked config to %s\n", CAL_CONFIG_PATH);
+		}
+		if (schedule_again)
+			schedule_work(&g->dac_work);
+		return;
+	}
 
-    if (g->cal_state == CAL_APPLY_JUMP) {
-        u32 jump_gain = clamp(g->si_gain_target, g->si_gain_min, g->si_gain_max);
-        int jump_dac = clamp(g->dac_target,
-                             cal_jump_dac_min_value(&g->cal_cfg),
-                             cal_jump_dac_max_value(&g->cal_cfg));
+	if (state == CAL_APPLY_JUMP) {
+		raw_spin_lock_irqsave(&g->ctrl_lock, flags);
+		if (g->cal_state != CAL_APPLY_JUMP) {
+			raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
+			return;
+		}
+		jump_gain = clamp(g->si_gain_target, g->si_gain_min, g->si_gain_max);
+		jump_dac = clamp(g->dac_target,
+				 cal_jump_dac_min_value(&g->cal_cfg),
+				 cal_jump_dac_max_value(&g->cal_cfg));
+		current_gain = g->si_gain_current;
+		current_dac = g->current_dac_value;
+		center_gain = g->cal_center_gain;
+		center_dac = g->cal_center_dac;
+		raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
 
-        if (jump_gain != g->si_gain_current) {
-            ret = si5351b_write_gain(g, jump_gain);
-            if (ret < 0) {
-                pr_warn("fusion_gpt: cal jump gain write failed ret=%d, fallback to PI\n", ret);
-                g->cal_state = CAL_FAIL;
-                return;
-            }
-            g->si_gain_current = jump_gain;
-        }
+		if (jump_gain != current_gain) {
+			ret = si5351b_write_gain(g, jump_gain);
+			if (ret < 0) {
+				raw_spin_lock_irqsave(&g->ctrl_lock, flags);
+				if (g->cal_state == CAL_APPLY_JUMP)
+					g->cal_state = CAL_FAIL;
+				raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
+				schedule_work(&g->dac_work);
+				pr_warn("fusion_gpt: cal jump gain write failed ret=%d, fallback to PI\n",
+					ret);
+				return;
+			}
+		}
 
-        ret = fusion_write_dac(g, jump_dac, false);
-        if (ret < 0) {
-            pr_warn("fusion_gpt: cal jump dac write failed ret=%d, fallback to PI\n", ret);
-            g->cal_state = CAL_FAIL;
-            return;
-        }
+		if (jump_dac != current_dac) {
+			ret = fusion_write_dac(g, jump_dac, false);
+			if (ret < 0) {
+				raw_spin_lock_irqsave(&g->ctrl_lock, flags);
+				if (jump_gain != current_gain)
+					g->si_gain_current = jump_gain;
+				if (g->cal_state == CAL_APPLY_JUMP)
+					g->cal_state = CAL_FAIL;
+				raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
+				schedule_work(&g->dac_work);
+				pr_warn("fusion_gpt: cal jump dac write failed ret=%d, fallback to PI\n",
+					ret);
+				return;
+			}
+		}
 
-        g->error_integrator = 0;
-        g->cal_state = CAL_DONE;
-        pr_info("fusion_gpt: cal jump applied gain=%u dac=%d (center gain=%u dac=%d)\n",
-                g->si_gain_current, g->current_dac_value,
-                g->cal_center_gain, g->cal_center_dac);
-        return;
-    }
+		raw_spin_lock_irqsave(&g->ctrl_lock, flags);
+		if (jump_gain != current_gain)
+			g->si_gain_current = jump_gain;
+		if (jump_dac != current_dac)
+			g->current_dac_value = jump_dac;
+		if (g->cal_state == CAL_APPLY_JUMP) {
+			g->error_integrator = 0;
+			g->cal_state = CAL_DONE;
+		}
+		raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
 
-    if (g->cal_state == CAL_FAIL) {
-        g->cal_state = CAL_DONE;
-        g->error_integrator = 0;
-        pr_info("fusion_gpt: cal fallback to PI loop\n");
-        return;
-    }
+		pr_info("fusion_gpt: cal jump applied gain=%u dac=%d (center gain=%u dac=%d)\n",
+			jump_gain, jump_dac, center_gain, center_dac);
+		return;
+	}
 
-    target = clamp(target, 0, 255);
+	if (state == CAL_FAIL) {
+		raw_spin_lock_irqsave(&g->ctrl_lock, flags);
+		if (g->cal_state == CAL_FAIL) {
+			g->cal_state = CAL_DONE;
+			g->error_integrator = 0;
+		}
+		raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
+		pr_info("fusion_gpt: cal fallback to PI loop\n");
+		return;
+	}
 
-    ret = fusion_write_dac(g, target, true);
-    if (ret == -ENODEV) {
-        pr_debug("fusion_gpt: DAC client missing\n");
-    } else if (ret < 0) {
-        pr_debug("fusion_gpt: I2C DAC write failed: %d\n", ret);
-    }
+	target = clamp(target, 0, 255);
+	if (target != current_dac) {
+		ret = fusion_write_dac(g, target, true);
+		if (ret == -ENODEV) {
+			pr_debug("fusion_gpt: DAC client missing\n");
+		} else if (ret < 0) {
+			pr_debug("fusion_gpt: I2C DAC write failed: %d\n", ret);
+		} else {
+			raw_spin_lock_irqsave(&g->ctrl_lock, flags);
+			g->current_dac_value = target;
+			raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
+			current_dac = target;
+		}
+	}
 
-    if (gain_pending) {
-        gain_target = clamp(gain_target, g->si_gain_min, g->si_gain_max);
-        if (gain_target > g->si_gain_current) {
-            if (si5351b_write_gain(g, gain_target) >= 0) {
-                g->si_gain_current = gain_target;
-                WRITE_ONCE(g->si_gain_pending, false);
-                pr_debug("fusion_gpt: Si5351b gain increased to %u\n",
-                                     g->si_gain_current);
-            }
-        } else {
-            WRITE_ONCE(g->si_gain_pending, false);
-        }
-    }
+	if (gain_pending) {
+		gain_target = clamp(gain_target, g->si_gain_min, g->si_gain_max);
+		if (gain_target > current_gain) {
+			ret = si5351b_write_gain(g, gain_target);
+			if (ret >= 0) {
+				raw_spin_lock_irqsave(&g->ctrl_lock, flags);
+				g->si_gain_current = gain_target;
+				g->si_gain_pending = false;
+				raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
+				pr_debug("fusion_gpt: Si5351b gain increased to %u\n",
+					gain_target);
+			}
+		} else {
+			raw_spin_lock_irqsave(&g->ctrl_lock, flags);
+			g->si_gain_pending = false;
+			raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
+		}
+	}
 }
 
 static int si5351b_write_gain(struct fusion_gpt *g, u32 gain)
 {
-    int ret;
-    u8 buf[4];
+	int ret;
+	u8 buf[4];
 
-    if (!g->si5351b_client)
-        return -ENODEV;
+	if (!g->si5351b_client)
+		return -ENODEV;
 
-    buf[0] = 0xA2;
-    buf[1] = (u8)(gain & 0xFF);
-    buf[2] = (u8)((gain >> 8) & 0xFF);
-    buf[3] = (u8)((gain >> 16) & 0xFF);
+	buf[0] = 0xA2;
+	buf[1] = (u8)(gain & 0xFF);
+	buf[2] = (u8)((gain >> 8) & 0xFF);
+	buf[3] = (u8)((gain >> 16) & 0xFF);
 
-    ret = i2c_master_send(g->si5351b_client, buf, 4);
-    if (ret < 0)
-        pr_debug("fusion_gpt: Si5351b gain write failed: %d\n", ret);
+	ret = i2c_master_send(g->si5351b_client, buf, 4);
+	if (ret < 0)
+		pr_debug("fusion_gpt: Si5351b gain write failed: %d\n", ret);
+	else if (ret != ARRAY_SIZE(buf)) {
+		pr_debug("fusion_gpt: Si5351b gain short write: %d\n", ret);
+		ret = -EIO;
+	}
 
-    return ret;
+	return ret;
 }
 static int gpt_start(struct fusion_gpt *g)
 {
 	u32 cr;
+	unsigned long flags;
 
 	wrl(g, 0, GPT_CR);
 	wrl(g, 0, GPT_PR);
@@ -1567,7 +1702,7 @@ static int gpt_start(struct fusion_gpt *g)
 	wrl(g, IR_OF1IE | IR_IF1IE, GPT_IR);
 
 	cr = CR_ENMOD | CR_FRR | CR_CLKSRC_EXT | CR_DBGEN | CR_WAITEN |
-	      CR_IM1_BOTH | CR_IM2_RISING;
+		CR_IM1_BOTH | CR_IM2_RISING;
 	wrl(g, cr, GPT_CR);
 
 	g->frac = 0;
@@ -1576,7 +1711,13 @@ static int gpt_start(struct fusion_gpt *g)
 	seqcount_init(&g->ticks_sl);
 
 	raw_spin_lock_init(&g->pps_lock);
+	raw_spin_lock_init(&g->ctrl_lock);
+	raw_spin_lock_irqsave(&g->pps_lock, flags);
+	raw_spin_lock(&g->ctrl_lock);
 	gpt_reset_timing_state_locked(g);
+	gpt_reset_control_state_locked(g);
+	raw_spin_unlock(&g->ctrl_lock);
+	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
 	g->next_ocr1 = g->last32 + PERIOD_TICKS_BASE;
 	wrl(g, g->next_ocr1, GPT_OCR1);
@@ -1595,6 +1736,7 @@ static int gpt_probe(struct platform_device *pdev)
 	g = devm_kzalloc(&pdev->dev, sizeof(*g), GFP_KERNEL);
 	if (!g)
 		return -ENOMEM;
+	g->dev = &pdev->dev;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	g->base = devm_ioremap_resource(&pdev->dev, res);
@@ -1610,31 +1752,31 @@ static int gpt_probe(struct platform_device *pdev)
 	g->clk_ipg = devm_clk_get(&pdev->dev, "ipg");
 	if (IS_ERR(g->clk_ipg))
 		return dev_err_probe(&pdev->dev, PTR_ERR(g->clk_ipg),
-				     "failed to get ipg clk\n");
+				"failed to get ipg clk\n");
 
 	g->clk_per = devm_clk_get(&pdev->dev, "per");
 	if (IS_ERR(g->clk_per))
 		return dev_err_probe(&pdev->dev, PTR_ERR(g->clk_per),
-				     "failed to get per clk\n");
+				"failed to get per clk\n");
 
 	ret = clk_prepare_enable(g->clk_ipg);
 	if (ret)
 		return dev_err_probe(&pdev->dev, ret,
-				     "failed to enable ipg clk\n");
+				"failed to enable ipg clk\n");
 
 	ret = clk_prepare_enable(g->clk_per);
 	if (ret) {
 		clk_disable_unprepare(g->clk_ipg);
 		return dev_err_probe(&pdev->dev, ret,
-				     "failed to enable per clk\n");
+				"failed to enable per clk\n");
 	}
 
 	platform_set_drvdata(pdev, g);
-	
+
 	mutex_init(&g->ops_lock);
 
 	ret = devm_request_irq(&pdev->dev, g->irq, gpt_irq, IRQF_NO_THREAD,
-			       dev_name(&pdev->dev), g);
+			dev_name(&pdev->dev), g);
 	if (ret) goto err_disable_clks;
 
 	/* DAC + VCXO disciplining setup */
@@ -1644,7 +1786,7 @@ static int gpt_probe(struct platform_device *pdev)
 	g->si_gain_max = 250000;
 	cal_config_set_defaults(&g->cal_cfg);
 	g->si_gain_current = clamp(fusion_start_gain_value(&g->cal_cfg),
-				   g->si_gain_min, g->si_gain_max);
+			g->si_gain_min, g->si_gain_max);
 	g->si_gain_target = g->si_gain_current;
 	g->si_gain_pending = false;
 	INIT_WORK(&g->dac_work, fusion_dac_work_handler);
@@ -1653,7 +1795,7 @@ static int gpt_probe(struct platform_device *pdev)
 	adapter = i2c_get_adapter(DEFAULT_DAC_I2C_BUS);
 	if (!adapter) {
 		dev_dbg(&pdev->dev, "I2C bus %u not ready, deferring probe\n",
-			DEFAULT_DAC_I2C_BUS);
+				DEFAULT_DAC_I2C_BUS);
 		ret = -EPROBE_DEFER;
 		goto err_disable_clks;
 	}
@@ -1676,10 +1818,10 @@ static int gpt_probe(struct platform_device *pdev)
 	 * Si5351b driver when we only need raw I2C access for gain writes.
 	 */
 	g->si5351b_client = i2c_new_dummy_device(adapter,
-						 DEFAULT_SI5351B_I2C_ADDR);
+			DEFAULT_SI5351B_I2C_ADDR);
 	if (IS_ERR(g->si5351b_client)) {
 		dev_warn(&pdev->dev, "failed to create I2C client for Si5351b: %ld\n",
-			 PTR_ERR(g->si5351b_client));
+				PTR_ERR(g->si5351b_client));
 		g->si5351b_client = NULL;
 	} else if (si5351b_write_gain(g, g->si_gain_current) < 0) {
 		dev_warn(&pdev->dev, "failed to initialize Si5351b gain\n");
@@ -1693,11 +1835,11 @@ static int gpt_probe(struct platform_device *pdev)
 
 	/* publish after start */
 	mutex_lock(&gpt_singleton_lock);
-	rcu_assign_pointer(gpt_singleton, g);
+	gpt_singleton = g;
 	mutex_unlock(&gpt_singleton_lock);
 
 	dev_info(&pdev->dev,
-		 "GPT1 shim running (EXT 10MHz, 1/3ms compares)\n");
+			"GPT1 shim running (EXT 10MHz, 1/3ms compares)\n");
 	return 0;
 
 err_cleanup_i2c:
@@ -1718,13 +1860,12 @@ static void gpt_remove(struct platform_device *pdev)
 	u32 cr = rdl(g, GPT_CR);
 
 	mutex_lock(&gpt_singleton_lock);
-	rcu_assign_pointer(gpt_singleton, NULL);
+	gpt_singleton = NULL;
 	mutex_unlock(&gpt_singleton_lock);
-	synchronize_rcu();
 
-	wrl(g, 0, GPT_IR);                               /* mask all */
-	wrl(g, SR_OF1 | SR_IF1 | SR_IF2, GPT_SR);        /* W1C clear any latched */
-	wrl(g, cr & ~CR_EN, GPT_CR);                     /* stop */
+	wrl(g, 0, GPT_IR);								 /* mask all */
+	wrl(g, SR_OF1 | SR_IF1 | SR_IF2, GPT_SR);		 /* W1C clear any latched */
+	wrl(g, cr & ~CR_EN, GPT_CR);					 /* stop */
 
 	cancel_work_sync(&g->dac_work);
 
