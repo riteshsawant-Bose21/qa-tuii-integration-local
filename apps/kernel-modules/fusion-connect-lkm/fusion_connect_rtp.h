@@ -20,7 +20,7 @@
 
 #define EARLY_SLACK_NS 50000
 #define FUSION_CN_RX_QUEUE_DEPTH 256
-#define FUSION_CN_RX_PACKET_MAX_BYTES 2048
+#define FUSION_CN_RX_PAYLOAD_MAX_BYTES 2048
 
 struct fusion_cn_substream;
 struct fusion_cn_manager;
@@ -95,11 +95,15 @@ struct fusion_cn_rtp_stream {
     struct stream_node *stream_node;
 };
 
-// map from dest_ip and dest_port to stream_handle for incoming packets
+// queued RX work item for deferred sink processing
 struct fusion_cn_rx_packet {
     u64 stream_handle;
-    u32 packet_len;
-    u8 data[FUSION_CN_RX_PACKET_MAX_BYTES];
+    u32 timestamp;
+    u32 ssrc;
+    u16 seq_num;
+    u16 payload_len;
+    u8 payload_type;
+    u8 payload[FUSION_CN_RX_PAYLOAD_MAX_BYTES];
 };
 
 struct fusion_cn_packet_map {
@@ -124,6 +128,7 @@ struct fusion_cn_rtp_manager {
     u32 rx_queue_tail;
     u32 rx_queue_count;
     struct fusion_cn_rx_packet *rx_queue;
+    struct fusion_cn_rx_packet *rx_scratch;
     bool debug;
     bool trace_debug;
 };
