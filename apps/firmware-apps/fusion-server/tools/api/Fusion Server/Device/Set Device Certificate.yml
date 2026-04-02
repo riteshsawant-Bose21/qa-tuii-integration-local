@@ -1,0 +1,36 @@
+info:
+  name: Set Device Certificate
+  type: http
+  seq: 6
+
+http:
+  method: post
+  url: "{{api_url}}/devices/:id/certificate"
+  headers:
+    - name: Content-Type
+      value: application/text
+  body:
+    type: text
+    data: |-
+      -----BEGIN CERTIFICATE-----
+      MIIDaDCCAlCgAwIBAgIUWxpFv6BjIFmNAnQkfFhGoPuX34wwDQYJKoZIhvcNAQEL
+      BQAwTTFLMEkGA1UECwxCQW1hem9uIFdlYiBTZXJ2aWNlcyBPPUFtYXpvbi5jb20g
+      SW5jLiBMPVNlYXR0bGUgU1Q9V2FzaGluZ3RvbiBDPVVTMB4XDTI2MDMxMjE0MTEx
+      OVoXDTQ5MTIzMTIzNTk1OVowLTEQMA4GA1UEAwwHZnVzaW9uMzEZMBcGA1UECgwQ
+      Qm9zZVByb2Zlc3Npb25hbDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB
+      ALhO1G8KC72pG+pJuFh2HbzG6IozgDcCwgWe7KpxTvlpRNrIlQmccwkb6Hmvqoui
+      mSjDsojLPhPdhfY5IfHVMKvGWlLbmjRhrCkVimX40tKuchodkjvcO5hsS/UGlcmV
+      tKpeqKwdddExoU/KR4ZI+2uRcwqQua8qI9fnbcVuiWGVrKAqaiaxua/Xm3my0XVd
+      vQBgu0IaErzlGO8WN9IUvN/bjrMHfgwfaIzrRGBTNViUrv2saScYiZ/r1dPmvXMd
+      B2/8yflcUqfbIUz0IW4kN3Z/gvId/ovDCid5sc3RDS3KFTbKUMXP05CkA2rLKfsu
+      GsbjE1itNsIuoHr+ZEdy7s0CAwEAAaNgMF4wHwYDVR0jBBgwFoAUbJV0VDsW9PGg
+      wK9Q6t6OdBzF8+EwHQYDVR0OBBYEFAbTUkH/iPE4r6wCngoatsrT7AcnMAwGA1Ud
+      EwEB/wQCMAAwDg....
+      -----END CERTIFICATE----
+  auth: inherit
+
+settings:
+  encodeUrl: false
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
