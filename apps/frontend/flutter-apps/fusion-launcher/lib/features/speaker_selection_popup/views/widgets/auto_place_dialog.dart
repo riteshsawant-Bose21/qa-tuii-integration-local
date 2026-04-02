@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_lib/fusion_algorithms/surface_speakers_autolayout/surface_speakers_autolayout.dart';
@@ -18,7 +20,7 @@ class AutoPlaceDialog extends StatefulWidget {
 class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
   late AutoPlacementResult _result;
   final TextEditingController ceilingHeightController = TextEditingController();
-
+  SpeakerPlacementAlgorithmResult? algorithmResult;
   @override
   void initState() {
     super.initState();
@@ -34,7 +36,8 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
   @override
   Widget build(BuildContext context) {
     final ColorScheme cs = context.colorScheme;
-
+    final ListeningArea listeningArea = serviceLocator<ProjectViewModel>().getCurrentSelectedListeningArea()!;
+    final MountingType mountingType = listeningArea.mountingType;
     return Container(
       width: 600,
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
@@ -55,6 +58,25 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
                 ),
               ),
               const Spacer(),
+              if (algorithmResult?.surfacePlacementResult != null)
+                InkWell(
+                  onTap: () {
+                    _SurfaceAlgoResult.show(
+                      context,
+                      result: algorithmResult!.surfacePlacementResult!,
+                      coverageAngle: algorithmResult!.coverageAngle,
+                      listnersHeight: algorithmResult!.listnersHeight,
+                      coveragePreference: algorithmResult!.coveragePreference,
+                      width: algorithmResult!.width,
+                      length: algorithmResult!.length,
+                    );
+                  },
+                  child: const Icon(
+                    Icons.info_outline,
+                    color: Colors.greenAccent,
+                    size: 18,
+                  ),
+                ),
               InkWell(
                 onTap: () => Navigator.of(context).pop(),
                 borderRadius: BorderRadius.circular(99),
@@ -87,8 +109,7 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
                   ),
                 ),
                 const SizedBox(width: 10),
-
-                Expanded(child: _buildLayoutSection(context)),
+                if (mountingType == MountingType.ceiling || mountingType == MountingType.pendant) Expanded(child: _buildLayoutSection(context)),
               ],
             ),
           ),
@@ -100,11 +121,16 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
               child: ElevatedButton(
                 onPressed: () {
                   final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-                  final ResponseCallback<bool> response = projectViewModel.runAutoPlacementForCurrentListeningArea(autoPlacementResult: _result);
+                  final ResponseCallback<SpeakerPlacementAlgorithmResult> response = projectViewModel.runAutoPlacementForCurrentListeningArea(
+                    autoPlacementResult: _result,
+                  );
                   if (!response.success) {
                     FusionToast.error(context, message: response.message);
                   } else {
                     FusionToast.success(context, message: 'Auto-placement completed successfully');
+                    setState(() {
+                      algorithmResult = response.data;
+                    });
                     // Navigator.of(context).pop();
                   }
                 },
@@ -192,100 +218,6 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
                   ),
                 ],
               ),
-              // const SizedBox(height: 10),
-              // _labeledRadioNumber(
-              //   context,
-              //   label: 'Custom',
-              //   // selected: _result.autoPlaceCoveragePreference == AutoPlaceCoveragePreference.customize,
-              //   selected: false,
-              //   // value: _result.autoPlaceCustomSpacing,
-              //   value: 0.0,
-              //   // onSelect: () => setState(() => _result = _result.copyWith(autoPlaceCoveragePreference: AutoPlaceCoveragePreference.customize)),
-              //   onSelect: () {},
-              //   // onChanged: (double v) => setState(() => _result = _result.copyWith(autoPlaceCustomSpacing: v)),
-              //   onChanged: (double v) {},
-              // ),
-              // const SizedBox(height: 8),
-              // _labeledCheckboxNumber(
-              //   context,
-              //   label: 'Match Grid',
-              //   // selected: _result.autoPlaceMatchGrid,
-              //   selected: false,
-              //   value: 0.6,
-              //   // onChanged: (bool v) => setState(() => _result = _result.copyWith(autoPlaceMatchGrid: v)),
-              //   onChanged: (bool v) {},
-              // ),
-
-              // const SizedBox(height: 10),
-              // Row(
-              //   spacing: 5,
-              //   children: <Widget>[
-              //     Expanded(child: FusionAppText(text: "Coverage Angle", style: context.textTheme.bodySmall)),
-              //     Expanded(
-              //       child: PropertyTextField(
-              //         initialValue: _result.autoPlaceCoverageAngle.toStringAsFixed(0),
-              //         onSubmitted: (String raw) {
-              //           final double? parsed = double.tryParse(raw);
-              //           if (parsed != null) {
-              //             setState(() => _result = _result.copyWith(autoPlaceCoverageAngle: parsed.clamp(0.0, 180.0)));
-              //           }
-              //         },
-              //         inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^\d{0,3}$'))],
-              //       ),
-              //     ),
-              //     FusionAppText(
-              //       text: "deg",
-              //       capitalize: false,
-              //       style: context.textTheme.bodySmall,
-              //     ),
-              //   ],
-              // ),
-              // const SizedBox(height: 10),
-
-              // BuildingPageTextField(
-              //   label: "Ceiling Height (m)",
-              //   controller: ceilingHeightController,
-              //   hintText: "e.g. ${ListeningHeightOption.maxListeningHeight}",
-              //   fillColor: context.colorScheme.elevation1,
-              //   inputFormatters: <TextInputFormatter>[
-              //     FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-              //   ],
-              //   onFieldSubmitted: (String newValue) {
-              //     if (selectedListeningArea == null) return;
-              //     final double? parsed = double.tryParse(newValue);
-              //     if (parsed == null) return;
-              //     final ListeningArea updatedLA = selectedListeningArea.copyWith(ceilingHeight: parsed.toString());
-              //     projectViewModel.updateListeningArea(area: updatedLA);
-              //   },
-              // ),
-              // const SizedBox(height: 10),
-
-              // FusionAppText(
-              //   text: 'Boundary Threshold',
-              //   style: context.textTheme.bodySmall?.copyWith(color: cs.onSurface.withValues(alpha: 0.85)),
-              // ),
-              // const SizedBox(height: 8),
-              // FusionSlider(
-              //   value: _result.autoPlaceBoundaryThreshold,
-              //   min: 0.3,
-              //   max: 1,
-              //   onChanged: (double value) {
-              //     setState(() => _result = _result.copyWith(autoPlaceBoundaryThreshold: value.clamp(0.0, 1.0)));
-              //   },
-              // ),
-              // Row(
-              //   children: <Widget>[
-              //     FusionAppText(
-              //       text: '30%',
-              //       style: context.textTheme.labelSmall?.copyWith(color: cs.onSurface.withValues(alpha: 0.5), fontSize: 9),
-              //     ),
-              //     const Spacer(),
-              //     FusionAppText(
-              //       text: '100%',
-              //       style: context.textTheme.labelSmall?.copyWith(color: cs.onSurface.withValues(alpha: 0.5), fontSize: 9),
-              //     ),
-              //   ],
-              // ),
             ],
           ),
         ],
@@ -331,26 +263,6 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
                   ),
                 ],
               ),
-              // const SizedBox(height: 12),
-              // _xyField(
-              //   context,
-              //   axis: 'X',
-              //   label: 'Grid Offset',
-              //   // value: _result.autoPlaceGridX,
-              //   value: 0.0,
-              //   // onChanged: (double v) => setState(() => _result = _result.copyWith(autoPlaceGridX: v)),
-              //   onChanged: (double v) {},
-              // ),
-              // const SizedBox(height: 8),
-              // _xyField(
-              //   context,
-              //   axis: 'Y',
-              //   label: '',
-              //   // value: _result.autoPlaceOffsetY,
-              //   value: 0.0,
-              //   // onChanged: (double v) => setState(() => _result = _result.copyWith(autoPlaceOffsetY: v)),
-              //   onChanged: (double v) {},
-              // ),
             ],
           ),
         ],
@@ -422,245 +334,536 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
       ),
     );
   }
+}
 
-  Widget _labeledRadioNumber(
+class _SurfaceAlgoResult extends StatelessWidget {
+  static show(
     BuildContext context, {
-    required String label,
-    required bool selected,
-    required double value,
-    required VoidCallback onSelect,
-    required ValueChanged<double> onChanged,
+    required SurfacePlacementResult result,
+    required double coverageAngle,
+    required double listnersHeight,
+    required CoveragePreference coveragePreference,
+    required double width,
+    required double length,
   }) {
-    return Row(
-      children: <Widget>[
-        InkWell(
-          onTap: onSelect,
-          child: Icon(selected ? Icons.radio_button_checked : Icons.radio_button_unchecked, size: 14),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: FusionAppText(
-            text: label,
-            style: context.textTheme.bodySmall,
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          child: _SurfaceAlgoResult(
+            result: result,
+            coverageAngle: coverageAngle,
+            listnersHeight: listnersHeight,
+            coveragePreference: coveragePreference,
+            width: width,
+            length: length,
           ),
-        ),
-        _numberPill(context, value, onChanged),
-      ],
+        );
+      },
     );
   }
 
-  Widget _labeledCheckboxNumber(
-    BuildContext context, {
-    required String label,
-    required bool selected,
-    required double value,
-    required ValueChanged<bool> onChanged,
-    bool hideValue = false,
-  }) {
-    return Row(
-      children: <Widget>[
-        InkWell(
-          onTap: () => onChanged(!selected),
-          child: Icon(selected ? Icons.check_box : Icons.check_box_outline_blank, size: 14),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: FusionAppText(
-            text: label,
-            style: context.textTheme.labelSmall,
-          ),
-        ),
-        if (!hideValue) _numberPill(context, value, null),
-      ],
-    );
-  }
+  const _SurfaceAlgoResult({
+    super.key,
+    required this.result,
+    required this.coverageAngle,
+    required this.listnersHeight,
+    required this.coveragePreference,
+    required this.width,
+    required this.length,
+  });
+  final SurfacePlacementResult result;
+  final double coverageAngle;
+  final double listnersHeight;
+  final CoveragePreference coveragePreference;
+  final double width;
+  final double length;
 
-  Widget _xyField(
-    BuildContext context, {
-    required String axis,
-    required String label,
-    required double value,
-    required ValueChanged<double> onChanged,
-  }) {
-    return Row(
-      children: <Widget>[
-        Expanded(child: FusionAppText(text: label)),
-        FusionAppText(
-          text: axis,
-          style: context.textTheme.labelSmall,
-        ),
-        const SizedBox(width: 6),
-        _numberPill(context, value, onChanged),
-      ],
-    );
-  }
-
-  Widget _numberPill(BuildContext context, double value, ValueChanged<double>? onChanged) {
-    final TextEditingController ctrl = TextEditingController(text: value.toStringAsFixed(1));
-    return Container(
-      width: 64,
-      height: 28,
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation3,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: Row(
+  @override
+  Widget build(BuildContext context) {
+    return FusionContainer(
+      child: ListView(
         children: <Widget>[
-          Expanded(
-            child: TextField(
-              controller: ctrl,
-              textAlign: TextAlign.center,
-              style: context.textTheme.bodySmall,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(border: InputBorder.none, isDense: true),
-              onSubmitted:
-                  onChanged == null
-                      ? null
-                      : (String raw) {
-                        final double parsed = double.tryParse(raw) ?? value;
-                        onChanged(parsed);
-                      },
+          _buildDownAngleReferenceCard(context),
+          SizedBox(height: context.mediumGap),
+          _buildResultsCard(context),
+          SizedBox(height: context.mediumGap),
+          Center(child: FusionButton(label: "Close", onTap: () => Navigator.of(context).pop(), accessLabel: "Close dialog")),
+          SizedBox(height: context.mediumGap),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDownAngleReferenceCard(BuildContext context) {
+    return FusionFlatContainer(
+      color: context.colorScheme.elevation2,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(
+                Icons.table_chart,
+                color: Theme.of(context).colorScheme.secondary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Down Angle Reference Table',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Theme.of(context).colorScheme.outline),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              children: <Widget>[
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.secondaryContainer,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(8),
+                      topRight: Radius.circular(8),
+                    ),
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          'Mounting Height (m)',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 20,
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                      Expanded(
+                        child: Text(
+                          'Down-angle (deg)',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Table rows
+                _buildTableRow(
+                  'Less than 2.4',
+                  '-5',
+                  result.mountingHeight < 2.4,
+                  context,
+                ),
+                _buildTableRow(
+                  '2.4 - 4.6',
+                  '-15',
+                  result.mountingHeight >= 2.4 && result.mountingHeight <= 4.6,
+                  context,
+                ),
+                _buildTableRow(
+                  '4.6 - 5.5',
+                  '-30',
+                  result.mountingHeight >= 4.6 && result.mountingHeight <= 5.5,
+                  context,
+                ),
+                _buildTableRow(
+                  '5.5 and above',
+                  '-45',
+                  result.mountingHeight >= 5.5,
+                  context,
+                ),
+              ],
             ),
           ),
-          FusionAppText(
-            text: 'm',
-            style: context.textTheme.labelSmall?.copyWith(fontSize: 9),
+          const SizedBox(height: 12),
+          Row(
+            children: <Widget>[
+              Icon(
+                Icons.info_outline,
+                size: 16,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'The highlighted row shows the range for your current mounting height.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
-}
 
-class FusionSlider extends StatelessWidget {
-  final double value;
-  final double min;
-  final double max;
-  final ValueChanged<double> onChanged;
-
-  const FusionSlider({
-    super.key,
-    required this.value,
-    this.min = 0,
-    this.max = 1,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SliderTheme(
-      data: SliderTheme.of(context).copyWith(
-        trackHeight: 12,
-        trackShape: const _FusionSliderTrackShape(),
-        thumbShape: const _SquareSliderThumbShape(
-          thumbRadius: 6,
-          cornerRadius: 3,
+  Widget _buildTableRow(String height, String angle, bool isHighlighted, BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color:
+            isHighlighted
+                ? Theme.of(
+                  context,
+                ).colorScheme.primaryContainer.withOpacity(0.5)
+                : null,
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+            width: 0.5,
+          ),
         ),
-        overlayShape: SliderComponentShape.noOverlay,
-        thumbColor: Colors.white,
-        activeTrackColor: context.colorScheme.primaryColor,
-        inactiveTrackColor: context.colorScheme.elevation4,
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: Slider(
-          value: value,
-          min: min,
-          max: max,
-          onChanged: onChanged,
-        ),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Text(
+              height,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
+                color: isHighlighted ? Theme.of(context).colorScheme.primary : null,
+              ),
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 20,
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+          ),
+          Expanded(
+            child: Text(
+              angle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
+                color: isHighlighted ? Theme.of(context).colorScheme.primary : null,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
-}
 
-class _FusionSliderTrackShape extends SliderTrackShape {
-  const _FusionSliderTrackShape();
-
-  @override
-  Rect getPreferredRect({
-    required RenderBox parentBox,
-    Offset offset = Offset.zero,
-    required SliderThemeData sliderTheme,
-    bool isEnabled = false,
-    bool isDiscrete = false,
-  }) {
-    final double trackHeight = sliderTheme.trackHeight ?? 12;
-
-    final double trackTop = offset.dy + (parentBox.size.height - trackHeight) / 2;
-
-    return Rect.fromLTWH(offset.dx, trackTop, parentBox.size.width, trackHeight);
-  }
-
-  @override
-  void paint(
-    PaintingContext context,
-    Offset offset, {
-    required RenderBox parentBox,
-    required SliderThemeData sliderTheme,
-    required Animation<double> enableAnimation,
-    required Offset thumbCenter,
-    Offset? secondaryOffset,
-    bool isEnabled = false,
-    bool isDiscrete = false,
-    required TextDirection textDirection,
-  }) {
-    final Canvas canvas = context.canvas;
-
-    final Rect trackRect = getPreferredRect(parentBox: parentBox, offset: offset, sliderTheme: sliderTheme);
-
-    final RRect trackRRect = RRect.fromRectAndRadius(trackRect, const Radius.circular(4));
-
-    /// Inactive track
-    canvas.drawRRect(trackRRect, Paint()..color = sliderTheme.inactiveTrackColor!);
-
-    /// Active track (LEFT → THUMB)
-    final Rect activeRect = Rect.fromLTRB(trackRect.left, trackRect.top, thumbCenter.dx, trackRect.bottom);
-
-    canvas.drawRect(activeRect, Paint()..color = sliderTheme.activeTrackColor!);
-  }
-}
-
-class _SquareSliderThumbShape extends SliderComponentShape {
-  final double thumbRadius;
-  final double cornerRadius;
-
-  const _SquareSliderThumbShape({required this.thumbRadius, this.cornerRadius = 3});
-
-  @override
-  Size getPreferredSize(bool isEnabled, bool isInteractive) {
-    return Size(thumbRadius * 2, thumbRadius * 2);
-  }
-
-  @override
-  void paint(
-    PaintingContext context,
-    Offset center, {
-    required Animation<double> activationAnimation,
-    required Animation<double> enableAnimation,
-    required bool isDiscrete,
-    required TextPainter labelPainter,
-    required RenderBox parentBox,
-    required SliderThemeData sliderTheme,
-    required TextDirection textDirection,
-    required double value,
-    required double textScaleFactor,
-    required Size sizeWithOverflow,
-  }) {
-    context.canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(
-          center: center,
-          width: thumbRadius * 2,
-          height: thumbRadius * 2,
+  Widget _buildResultsCard(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        // Quick Summary Card
+        FusionFlatContainer(
+          color: Colors.blue.withValues(alpha: 0.1),
+          borderColor: Colors.blue,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Icon(
+                      Icons.summarize,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Speaker Layout Summary',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.headlineSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: <Widget>[
+                    _buildSummaryMetric(
+                      context,
+                      'Total Speakers',
+                      '${result.totalSpeakers}',
+                      Icons.speaker_group,
+                    ),
+                    _buildSummaryMetric(
+                      context,
+                      'Front/Back Walls',
+                      '${result.speakersOnLength} each',
+                      Icons.linear_scale,
+                    ),
+                    _buildSummaryMetric(
+                      context,
+                      'Left/Right Walls',
+                      '${result.speakersOnWidth} each',
+                      Icons.linear_scale_outlined,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
-        Radius.circular(cornerRadius),
+        const SizedBox(height: 16),
+
+        // Detailed Step-by-Step Calculations
+        _buildCalculationStepsCard(
+          context,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSummaryMetric(BuildContext context, String label, String value, IconData icon) {
+    return Column(
+      children: <Widget>[
+        Icon(icon, size: 32, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
+
+  Widget _buildCalculationStepsCard(BuildContext context) {
+    return FusionFlatContainer(
+      color: context.colorScheme.elevation2,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(
+                Icons.calculate,
+                color: Theme.of(context).colorScheme.secondary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Calculation Steps',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Step 1: Find distance d from loudspeaker to listener plane
+          _buildCalculationStep(
+            context: context,
+            stepNumber: 1,
+            title: 'Find Distance from Loudspeaker to Listener Plane',
+            icon: Icons.straighten,
+            formula: 'd_horiz = (mounting_height - listener_height) / tan(down_angle)',
+            calculation:
+                'd_horiz = (${result.mountingHeight.toStringAsFixed(1)} - $listnersHeight) / tan(${result.downAngle.abs().toStringAsFixed(0)}°)\n'
+                'd_horiz = ${(result.mountingHeight - listnersHeight).toStringAsFixed(1)} / ${(tan(result.downAngle.abs() * pi / 180)).toStringAsFixed(3)}\n'
+                'd_horiz = ${result.distanceToListenerPlane.toStringAsFixed(2)} m',
+            result: 'd_horiz = ${result.distanceToListenerPlane.toStringAsFixed(2)} m',
+            explanation: 'Horizontal distance from loudspeaker to the listener plane using the down-angle',
+          ),
+
+          // Step 2: Determine horizontal coverage
+          _buildCalculationStep(
+            context: context,
+            stepNumber: 2,
+            title: 'Determine Horizontal Coverage at Initial Mounting Height',
+            icon: Icons.radio_button_unchecked,
+            formula: 'Horizontal_coverage = 2 × tan(θ/2) × d',
+            calculation:
+                'Horizontal_coverage = 2 × tan($coverageAngle°/2) × ${result.distanceToListenerPlane.toStringAsFixed(2)}\n'
+                'Horizontal_coverage = 2 × tan(${(coverageAngle / 2).toStringAsFixed(1)}°) × ${result.distanceToListenerPlane.toStringAsFixed(2)}\n'
+                'Horizontal_coverage = 2 × ${(tan((coverageAngle / 2) * pi / 180)).toStringAsFixed(3)} × ${result.distanceToListenerPlane.toStringAsFixed(2)}\n'
+                'Horizontal_coverage = ${result.coverageWidth.toStringAsFixed(2)} m',
+            result: '${result.coverageWidth.toStringAsFixed(2)} m',
+            explanation: 'Horizontal coverage slice the loudspeaker provides at the initial mounting height',
+          ),
+
+          // Step 3: Place speakers around perimeter with overlap
+          _buildCalculationStep(
+            context: context,
+            stepNumber: 3,
+            title: 'Place Horizontal Loudspeakers Around Perimeter',
+            icon: Icons.grid_view,
+            formula: 'Speakers per Wall = ceil(Wall Length / Effective Coverage)',
+            calculation:
+                'Effective Coverage = ${result.coverageWidth.toStringAsFixed(2)} × ${coveragePreference.overlapMultiplier} (${coveragePreference.name}) = ${result.effectiveCoverage.toStringAsFixed(2)} m\n\n'
+                'Length Walls ($length m): ceil($length / ${result.effectiveCoverage.toStringAsFixed(2)}) = ${result.speakersOnLength} each\n'
+                'Width Walls ($width m): ceil($width / ${result.effectiveCoverage.toStringAsFixed(2)}) = ${result.speakersOnWidth} each\n\n'
+                'Total: (${result.speakersOnLength} × 2) + (${result.speakersOnWidth} × 2) = ${result.totalSpeakers} speakers',
+            result: 'Total: ${result.totalSpeakers} speakers',
+            explanation: 'Place horizontal loudspeakers around perimeter such that desired overlap is fulfilled',
+          ),
+        ],
       ),
-      Paint()
-        ..color = sliderTheme.thumbColor ?? Colors.white
-        ..style = PaintingStyle.fill,
+    );
+  }
+
+  Widget _buildCalculationStep({
+    required BuildContext context,
+    required int stepNumber,
+    required String title,
+    required IconData icon,
+    required String formula,
+    required String calculation,
+    required String result,
+    required String explanation,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+        ),
+        borderRadius: BorderRadius.circular(8),
+        color: Theme.of(context).colorScheme.surface,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          // Step Header
+          Row(
+            children: <Widget>[
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: Theme.of(context).colorScheme.secondary,
+                child: Text(
+                  '$stepNumber',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSecondary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Icon(icon, color: Theme.of(context).colorScheme.secondary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  result,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Formula
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Theme.of(
+                context,
+              ).colorScheme.secondaryContainer.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Row(
+              children: <Widget>[
+                Icon(
+                  Icons.functions,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    formula,
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      color: Theme.of(context).colorScheme.secondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Calculation
+          Text(
+            'Calculation:',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            calculation,
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Explanation
+          Row(
+            children: <Widget>[
+              Icon(
+                Icons.info_outline,
+                size: 16,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  explanation,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

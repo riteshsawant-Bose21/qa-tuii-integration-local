@@ -289,6 +289,28 @@ extension ListExtension<T> on List<T> {
   }
 }
 
+class SpeakerPlacementAlgorithmResult {
+  List<Offset> positions;
+  SurfacePlacementResult? surfacePlacementResult;
+  PlacementResult? placementResult;
+  final double coverageAngle;
+  final double listnersHeight;
+  final CoveragePreference coveragePreference;
+  final double width;
+  final double length;
+
+  SpeakerPlacementAlgorithmResult({
+    required this.positions,
+    this.surfacePlacementResult,
+    this.placementResult,
+    required this.coverageAngle,
+    required this.listnersHeight,
+    required this.coveragePreference,
+    required this.width,
+    required this.length,
+  });
+}
+
 class AutoPlacementResult {
   final CoveragePreference autoPlaceCoveragePreference;
   final LayoutPattern autoPlaceLayoutPattern;

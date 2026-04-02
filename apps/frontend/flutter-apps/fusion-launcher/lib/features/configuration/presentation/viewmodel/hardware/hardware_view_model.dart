@@ -287,21 +287,22 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  ResponseCallback<bool> runAutoPlacementForCurrentListeningArea({required AutoPlacementResult autoPlacementResult}) {
+  ResponseCallback<SpeakerPlacementAlgorithmResult> runAutoPlacementForCurrentListeningArea({required AutoPlacementResult autoPlacementResult}) {
     try {
       final String? listeningAreaId = currentSelectedListeningAreaId;
-      if (listeningAreaId == null) return ResponseCallback<bool>.failure('Select a listening area first.');
+      if (listeningAreaId == null) return ResponseCallback<SpeakerPlacementAlgorithmResult>.failure('Select a listening area first.');
 
       final ListeningArea listeningArea = getListeningArea(areaId: listeningAreaId);
-      if (!listeningArea.autoPlacement) return ResponseCallback<bool>.failure('Enable Auto-Placement and try again.');
-      if (listeningArea.vertices.length < 3) return ResponseCallback<bool>.failure('Listening area shape is invalid. Redraw the area and try again.');
+      if (!listeningArea.autoPlacement) return ResponseCallback<SpeakerPlacementAlgorithmResult>.failure('Enable Auto-Placement and try again.');
+      if (listeningArea.vertices.length < 3)
+        return ResponseCallback<SpeakerPlacementAlgorithmResult>.failure('Listening area shape is invalid. Redraw the area and try again.');
 
       final ProductQueryViewModel productQueryViewModel = serviceLocator<ProductQueryViewModel>();
       final List<SpeakerProduct> catalogSpeakers = productQueryViewModel.speakers;
 
       final List<Speaker> targetSpeakers = _getAutoPlacementTargetSpeakers(catalogSpeakers: catalogSpeakers);
 
-      if (targetSpeakers.isEmpty) return ResponseCallback<bool>.failure('Add at least one non-subwoofer speaker to auto-place.');
+      if (targetSpeakers.isEmpty) return ResponseCallback<SpeakerPlacementAlgorithmResult>.failure('Add at least one non-subwoofer speaker to auto-place.');
 
       final ({List<Offset> positions, SurfacePlacementResult? surfacePlacementResult, PlacementResult? placementResult}) autoPlacedDetails =
           _calculateAutoPlacedPositions(
@@ -315,7 +316,9 @@ extension HardwareViewModel on ProjectViewModel {
 
       if (candidatePoints.isEmpty) {
         FusionLogger.log(tag: LogTag.project, message: 'Auto-placement candidate points: $candidatePoints');
-        return ResponseCallback<bool>.failure('No valid placement positions found. Adjust your listening area shape or auto-placement settings and try again.');
+        return ResponseCallback<SpeakerPlacementAlgorithmResult>.failure(
+          'No valid placement positions found. Adjust your listening area shape or auto-placement settings and try again.',
+        );
       }
 
       final List<Offset> sortedPoints = _sortPlacementPoints(listeningArea: listeningArea, points: candidatePoints);
@@ -351,10 +354,22 @@ extension HardwareViewModel on ProjectViewModel {
       saveProject();
       updateProject();
 
-      return ResponseCallback<bool>.success(true, message: 'Auto-placement successful. Placed $placeCount speakers.');
+      return ResponseCallback<SpeakerPlacementAlgorithmResult>.success(
+        SpeakerPlacementAlgorithmResult(
+          positions: sortedPoints,
+          surfacePlacementResult: autoPlacedDetails.surfacePlacementResult,
+          placementResult: autoPlacedDetails.placementResult,
+          coverageAngle: _resolveCoverageAngle(catalogSpeakers.where((SpeakerProduct p) => p.id == targetSpeakers.first.productId).firstOrNull),
+          listnersHeight: listeningArea.listeningHeight,
+          coveragePreference: autoPlacementResult.autoPlaceCoveragePreference,
+          width: listeningArea.getBoundsForVertices().roomWidthInMeters,
+          length: listeningArea.getBoundsForVertices().roomLengthInMeters,
+        ),
+        message: 'Auto-placement successful. Placed $placeCount speakers.',
+      );
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: 'Auto-placement failed: $e');
-      return ResponseCallback<bool>.failure(e.toString().replaceFirst('Invalid argument(s): ', ''));
+      return ResponseCallback<SpeakerPlacementAlgorithmResult>.failure(e.toString().replaceFirst('Invalid argument(s): ', ''));
     }
   }
 
