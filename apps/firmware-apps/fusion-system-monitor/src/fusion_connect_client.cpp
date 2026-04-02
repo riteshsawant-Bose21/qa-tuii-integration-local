@@ -1680,7 +1680,7 @@ void FusionConnectClient::process() {
                         "pkts={} bytes={} lost={} reo={} dup={} malf={} late_drop={} burst_max={} batch_max={} "
                         "iat_min={}us p50={}us p99={}us jitter={}us "
                         "jb: cur={} min={} max={} avg={} "
-                        "lat: path={}ns e2e_playout={}ns ",
+                        "lat: path={}ns ",
                         r.stream_name, s.ts_snapshot_ns,
                         s.packets_total, s.bytes_total,
                         s.packets_lost, s.packets_reordered,
@@ -1689,7 +1689,7 @@ void FusionConnectClient::process() {
                         s.iat_min_ns / 1000, s.iat_p50_ns / 1000, s.iat_p99_ns / 1000, s.rfc3550_jitter_ns / 1000,
                         s.jb_depth_cur_samples, s.jb_depth_min_samples,
                         s.jb_depth_max_samples, s.jb_depth_avg_samples,
-                        s.path_latency_est_ns, s.e2e_playout_latency_ns
+                        s.path_latency_est_ns
                     );
                 }
             }

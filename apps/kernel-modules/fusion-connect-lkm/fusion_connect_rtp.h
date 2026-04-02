@@ -98,6 +98,7 @@ struct fusion_cn_rtp_stream {
 // queued RX work item for deferred sink processing
 struct fusion_cn_rx_packet {
     u64 stream_handle;
+    u64 rx_phc_ns;
     u32 timestamp;
     u32 ssrc;
     u16 seq_num;
