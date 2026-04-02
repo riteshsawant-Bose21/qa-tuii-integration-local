@@ -460,6 +460,7 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
                 stream->ssrc = packet_ssrc;
                 stream->current_seq_num = 0;
                 stream->startup_packets_received = 0;
+                stream->startup_wait_for_slot0 = true;
                 stream->playback_armed = false;
                 if (stream->next_action_times && stream->buf_size_in_packets)
                     memset(stream->next_action_times, 0,
@@ -560,11 +561,12 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
                 reorder = true;
             }
 
+            stream->next_action_times[write_slot] = sched_playout_ns;
+            stream->current_seq_num = seq_num;
+
             {
                 // defensive against messy startup environment... ?
                 bool slot_was_empty = (stream->next_action_times[write_slot] == 0);
-
-                stream->next_action_times[write_slot] = sched_playout_ns;
 
                 if (stream->playback_armed && stream->buf_size_in_packets) {
                     u32 lead_slots = (write_slot + stream->buf_size_in_packets - stream->playback_slot) %
@@ -579,32 +581,34 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
                 }
 
                 if (!stream->playback_armed && slot_was_empty) {
-                    stream->startup_packets_received++;
-                    printk(KERN_DEBUG
-                            "fusion_cn_rtp: startup fill %s seq=%u write_slot=%u startup_pkts=%u/%u\n",
-                            stream->info.stream_name, seq_num, write_slot,
-                            stream->startup_packets_received, SINK_STARTUP_PACKETS);
-                    if (stream->startup_packets_received >= SINK_STARTUP_PACKETS) {
-                        struct fusion_cn_substream *alsa_stream = map->alsa_stream;
-                        stream->playback_slot = (write_slot + stream->buf_size_in_packets - (SINK_STARTUP_PACKETS - 1)) % stream->buf_size_in_packets;
-                        stream->playback_armed = true;
-                        {
-                            u32 prev_slot = (stream->playback_slot + stream->buf_size_in_packets - 1) % stream->buf_size_in_packets;
-                            u32 buffer_pos = prev_slot * stream->info.frames_per_packet;
-                            if (alsa_stream)
-                                fusion_cn_alsa_set_playback_phase(alsa_stream, buffer_pos);
+                    if (stream->startup_wait_for_slot0) {
+                        if (write_slot == 0) {
+                            stream->startup_wait_for_slot0 = false;
+                            stream->startup_packets_received = 1;
                             printk(KERN_DEBUG
-                                    "fusion_cn_rtp: startup armed %s seq=%u write_slot=%u playback_idx=%u buffer_pos=%u interrupt_idx=%u startup_pkts=%u\n",
-                                    stream->info.stream_name, seq_num, write_slot,
-                                    stream->playback_slot,
-                                    buffer_pos,
-                                    alsa_stream->interrupt_idx,
-                                    stream->startup_packets_received);
+                                   "fusion_cn_rtp: startup anchor %s seq=%u write_slot=%u startup_pkts=%u/%u\n",
+                                   stream->info.stream_name, seq_num, write_slot,
+                                   stream->startup_packets_received, SINK_STARTUP_PACKETS);
                         }
+                    } else {
+                        stream->startup_packets_received++;
+                        printk(KERN_DEBUG
+                               "fusion_cn_rtp: startup fill %s seq=%u write_slot=%u startup_pkts=%u/%u\n",
+                               stream->info.stream_name, seq_num, write_slot,
+                               stream->startup_packets_received, SINK_STARTUP_PACKETS);
+                    }
+
+                    if (!stream->startup_wait_for_slot0 &&
+                        stream->startup_packets_received >= SINK_STARTUP_PACKETS) {
+                        stream->playback_armed = true;
+                        printk(KERN_DEBUG
+                               "fusion_cn_rtp: startup armed %s seq=%u write_slot=%u playback_idx=%u startup_pkts=%u\n",
+                               stream->info.stream_name, seq_num, write_slot,
+                               stream->playback_slot,
+                               stream->startup_packets_received);
                     }
                 }
             }
-            stream->current_seq_num = seq_num;
 
             if (rtp_mgr->trace_debug) {
                 printk(KERN_DEBUG "fusion_cn_rtp: process_packet: %s slot=%u playback_slot=%u seq=%u now=%llu reconstructed=%llu playout=%llu\n",
@@ -811,6 +815,7 @@ int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, u64 
         }
         stream->playback_slot = 0;
         stream->startup_packets_received = 0;
+        stream->startup_wait_for_slot0 = true;
         stream->playback_armed = false;
         stream->phase_log_next_ns = 0;
         stream->next_action_time = 0;

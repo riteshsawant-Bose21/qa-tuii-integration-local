@@ -996,6 +996,7 @@ static int handle_reset_timing_state(struct fusion_cn_manager *mgr,
         } else {
             stream->playback_slot = 0;
             stream->startup_packets_received = 0;
+            stream->startup_wait_for_slot0 = true;
             stream->playback_armed = false;
             if (stream->next_action_times && stream->buf_size_in_packets)
                 memset(stream->next_action_times, 0,
