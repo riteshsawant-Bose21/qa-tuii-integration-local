@@ -678,18 +678,6 @@ static int fusion_cn_rtp_process_resolved_packet(struct fusion_cn_rtp_manager *r
             stream->next_action_times[write_slot] = sched_playout_ns;
             stream->current_seq_num = seq_num;
 
-            if (stream->playback_armed) {
-                u32 lead_slots = (write_slot + stream->buf_size_in_packets - stream->playback_slot) %
-                                 stream->buf_size_in_packets;
-                if (lead_slots == 0) {
-                    printk(KERN_DEBUG
-                           "fusion_cn_rtp: sink phase %s seq=%u write_slot=%u playback_slot=%u lead_slots=%u now=%llu playout=%llu\n",
-                           stream->info.stream_name, seq_num, write_slot,
-                           stream->playback_slot, lead_slots,
-                           current_phc_ns, sched_playout_ns);
-                }
-            }
-
             if (!stream->playback_armed) {
                 if (stream->startup_wait_for_slot0) {
                     if (write_slot == 0) {

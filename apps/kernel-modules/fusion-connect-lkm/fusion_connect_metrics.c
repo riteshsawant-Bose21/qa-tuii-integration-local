@@ -175,17 +175,16 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
             last_rtp_ts_valid = true;
         }
 
-        /* ---- path/e2e latencies (clamped to u32) ---- */
+        /* ---- path latency (clamped to u32) ---- */
         {
             s64 path = (s64)s.recon_phc_ns - (s64)s.arrival_phc_ns;
             if (path < 0) path = 0;
             if (path > (s64)U32_MAX) path = (s64)U32_MAX;
             w->path_latency_est_ns = (u32)path;
-
-            s64 e2e = (s64)s.sched_ns - (s64)s.recon_phc_ns;
-            if (e2e < 0) e2e = 0;
-            if (e2e > (s64)U32_MAX) e2e = (s64)U32_MAX;
-            w->e2e_playout_latency_ns = (u32)e2e;
+            if (!w->path_latency_min_ns || (u32)path < w->path_latency_min_ns)
+                w->path_latency_min_ns = (u32)path;
+            if ((u32)path > w->path_latency_max_ns)
+                w->path_latency_max_ns = (u32)path;
         }
 
         w->last_arrival_ns = s.arrival_phc_ns;
@@ -243,7 +242,8 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
         m->snap.tx_bytes_total   = tx_bytes;
 
         m->snap.path_latency_est_ns    = w->path_latency_est_ns;
-        m->snap.e2e_playout_latency_ns = w->e2e_playout_latency_ns;
+        m->snap.path_latency_min_ns    = w->path_latency_min_ns;
+        m->snap.path_latency_max_ns    = w->path_latency_max_ns;
     }
 
     /* === 3) JB depth stats (samples) === */
