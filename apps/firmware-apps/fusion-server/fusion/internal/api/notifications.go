@@ -30,6 +30,7 @@ const (
 	NotifyOpValueSet                  NotifyOp = "set"
 	NotifyOpSoftwareUpdateAvailable   NotifyOp = "software_update_available"
 	NotifyOpSoftwareUpdateSyncAck     NotifyOp = "software_update_sync_ack"
+	NotifyOpSoftwareUpdate            NotifyOp = "software_update"
 )
 
 // NotifyMessage holds information about a cross-node message
@@ -134,6 +135,7 @@ func (msg *NotifyMessage) IsPublic() bool {
 		msg.Operation == NotifyOpAck ||
 		msg.Operation == NotifyOpVIPStatus ||
 		msg.Operation == NotifyOpDeviceUpdate ||
+		msg.Operation == NotifyOpSoftwareUpdate ||
 		msg.Operation == NotifyOpSoftwareUpdateAvailable ||
 		msg.Operation == NotifyOpSoftwareUpdateSyncAck
 }

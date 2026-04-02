@@ -144,6 +144,9 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 			return fmt.Errorf("DeviceInfo required for operation")
 		}
 
+	case api.NotifyOpSoftwareUpdate:
+		logger.Info("[Hub] Broadcasting software update trigger")
+
 	case api.NotifyOpSoftwareUpdateAvailable:
 		if message.SoftwareUpdate == nil {
 			return fmt.Errorf("SoftwareUpdate required for SoftwareUpdate available operation")
@@ -175,7 +178,9 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 		if err != nil {
 			return fmt.Errorf("failed to marshal update: %w", err)
 		}
-		h.broadcastToNodes(data)
+		// Include local node only for software updates
+		includeLocalNode := message.Operation == api.NotifyOpSoftwareUpdate
+		h.broadcastToNodes(data, includeLocalNode)
 	}
 
 	h.BroadcastToObservers(message)
@@ -183,7 +188,7 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 	return nil
 }
 
-func (h *Hub) broadcastToNodes(message []byte) {
+func (h *Hub) broadcastToNodes(message []byte, includeLocalNode bool) {
 	logger := logging.GetLogger()
 
 	if h.transport == nil || h.transport.LocalNode() == nil {
@@ -194,12 +199,18 @@ func (h *Hub) broadcastToNodes(message []byte) {
 	localName := h.transport.LocalNode().Name
 	members := h.transport.MemberListMembers()
 
+	logger.Info("[Hub] Broadcasting gossip to %d cluster members from %s", len(members), localName)
+
 	for _, node := range members {
-		if node.Name == localName {
+		// Skip local node unless explicitly requested to include it
+		if !includeLocalNode && node.Name == localName {
 			continue
 		}
+		logger.Info("[Hub] Sending gossip message to node %s", node.Name)
 		if err := h.transport.SendReliable(node, message); err != nil {
 			logger.Error("Failed to send message to node %s: %v", node.Name, err)
+		} else {
+			logger.Info("[Hub] Successfully sent gossip message to node %s", node.Name)
 		}
 	}
 }

@@ -42,6 +42,7 @@ const (
 	WSMsgTypePing               = "ping"
 	WSMsgTypePong               = "pong"
 	WSMsgTypeError              = "error"
+	WSMsgTypeStartUpdate        = "start_update"
 
 	// WebSocket response data field keys
 	WSDataFieldDeviceID   = "device_id"
@@ -64,6 +65,7 @@ const (
 	WSCodeConnected     = 3002 // Connection established
 	WSCodePong          = 3003 // Pong response
 	WSCodeDeviceUpdated = 3004 // Device updated (for push notifications)
+	WSCodeUpdateStarted = 3005 // Software update started successfully
 
 	// Application client error codes (4xxx) - Available for private use
 	WSCodeInvalidJSON      = 4000 // Invalid JSON in request

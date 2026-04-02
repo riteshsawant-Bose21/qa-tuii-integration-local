@@ -9,6 +9,7 @@ import (
 	"fusion/internal/utils"
 	"math"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -148,6 +149,8 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		return
 	}
 
+	logger.Debug("[Delegate] Received gossip message: %s from %s", message.Operation, message.Node)
+
 	now := time.Now().UTC()
 
 	if !message.SentAt.IsZero() {
@@ -264,6 +267,10 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 	case api.NotifyOpDeviceUpdate:
 		d.handleDeviceUpdate(&message)
 
+	case api.NotifyOpSoftwareUpdate:
+		logger.Info("[Delegate] Processing NotifyOpSoftwareUpdate from node %s", message.Node)
+		d.handleSoftwareUpdate(&message)
+
 	case api.NotifyOpSoftwareUpdateAvailable:
 		d.handleSoftwareUpdateAvailable(&message)
 
@@ -292,6 +299,27 @@ func (d *ClusterDelegate) handleDeviceUpdate(message *api.NotifyMessage) {
 		message.Node, message.DeviceInfo.Id)
 
 	d.hub.BroadcastToObservers(message)
+}
+
+// handleSoftwareUpdate processes software update trigger notifications
+func (d *ClusterDelegate) handleSoftwareUpdate(message *api.NotifyMessage) {
+	logger := logging.GetLogger()
+
+	logger.Info("[SoftwareUpdate] Received software update trigger from %s on node %s",
+		message.Node, d.appConfig.NodeName)
+
+	// Execute the systemctl command to start the swupdate service
+	cmd := exec.Command("systemctl", "start", "swupdate-ota-install.service")
+	err := cmd.Run()
+
+	if err != nil {
+		logger.Error("[SoftwareUpdate] Failed to start swupdate-ota-install.service on node %s: %v",
+			d.appConfig.NodeName, err)
+		return
+	}
+
+	logger.Info("[SoftwareUpdate] Successfully started swupdate-ota-install.service on node %s",
+		d.appConfig.NodeName)
 }
 
 // handleSoftwareUpdateAvailable processes bundle availability notifications from any node

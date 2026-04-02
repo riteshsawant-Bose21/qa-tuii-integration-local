@@ -104,6 +104,81 @@ curl http://localhost:8080/softwareUpdate/list
 ]
 ```
 
+## Software Update Execution
+
+Once software update files are uploaded and distributed across the cluster, they can be executed using coordinated cluster mechanisms.
+
+### Execution Methods
+
+#### WebSocket Trigger (Recommended)
+
+**Message Format**:
+```json
+{
+  "id": "sw-update-001",
+  "version": 1,
+  "type": "start_update"
+}
+```
+
+**Response**:
+```json
+{
+  "id": "sw-update-001",
+  "version": 1,
+  "type": "start_update",
+  "code": 3020,
+  "status": "success", 
+  "message": "Software update broadcasted to all cluster nodes",
+  "data": {
+    "action": "broadcast_cluster",
+    "nodes": [...]
+  },
+  "timestamp": "2026-04-01T10:15:30Z"
+}
+```
+
+#### REST API Trigger
+
+**Public Endpoint** (Cluster Coordination):
+```bash
+curl -X POST http://localhost:8080/cluster/software-update
+```
+
+**Admin Endpoint** (Local Node Only):
+```bash  
+curl -X POST http://localhost:9090/cluster/software-update
+```
+
+### Execution Architecture
+
+**WebSocket Trigger**: Uses cluster messaging via gossip protocol:
+1. **Message Broadcast**: Send `NotifyOpSoftwareUpdate` message to all cluster nodes
+2. **Delegate Processing**: Each node's `ClusterDelegate.handleSoftwareUpdate()` receives the message
+3. **Service Execution**: Each delegate executes `systemctl start swupdate-ota-install.service` locally
+4. **Reliable Delivery**: Gossip protocol ensures all active nodes receive the trigger
+
+**REST API Trigger**: Uses "remote-first, local-last" HTTP coordination pattern:
+
+1. **Remote Nodes First**: Trigger `systemctl start swupdate-ota-install.service` on all remote cluster nodes
+2. **Initiator Last**: Execute software update on the initiating node after confirming all remotes started
+3. **Ordered Execution**: Ensures the coordination node remains available to orchestrate the entire process
+4. **Graceful Coordination**: Prevents cluster partitioning during the update process
+
+**Service Integration**:
+- **Service Name**: `swupdate-ota-install.service`
+- **Execution**: Each node executes the systemctl command locally via delegate
+- **Cross-Platform**: Supports both Linux (systemctl) and development environments
+- **Local Mode**: Skips execution when `appConfig.Local` is enabled for development
+
+### Status Codes
+
+| Code | Category | Description |
+|------|----------|-------------|
+| `3020` | Success | Software update started successfully |
+| `4500` | Error | Failed to coordinate software update |
+| `5000` | Server Error | Internal coordination error |
+
 ## Usage Examples
 
 ### Upload New Software Update Upload

@@ -130,6 +130,37 @@ The WebSocket API uses a **Pull-then-Push** pattern where requesting device data
    }
    ```
 
+6. **`start_update`** - Trigger coordinated software update across cluster
+   ```json
+   {
+     "id": "sw-update-001", 
+     "version": 1,
+     "type": "start_update"
+   }
+   ```
+   
+   **Execution Flow**: 
+   - Broadcasts cluster message to all nodes via gossip protocol
+   - Each node's delegate receives the message and executes `systemctl start swupdate-ota-install.service`
+   - Uses reliable cluster messaging for coordination across all cluster members
+   
+   **Response**:
+   ```json
+   {
+     "id": "sw-update-001",
+     "version": 1,
+     "type": "start_update", 
+     "code": 3020,
+     "status": "success",
+     "message": "Software update broadcasted to all cluster nodes",
+     "data": {
+       "action": "broadcast_cluster",
+       "nodes": [...]
+     },
+     "timestamp": "2026-04-01T10:15:30Z"
+   }
+   ```
+
 ## Pull-then-Push Pattern
 
 The device APIs implement a **Pull-then-Push** pattern for real-time updates:
@@ -158,6 +189,7 @@ The device APIs implement a **Pull-then-Push** pattern for real-time updates:
 - `3002` - **Connected**: Connection established (welcome message)
 - `3003` - **Pong**: Response to ping request
 - `3004` - **Device Updated**: Device updated (push notifications)
+- `3020` - **Update Started**: Software update triggered successfully
 
 ### Application Client Error Codes (4xxx)
 - `4000` - **Invalid JSON**: Malformed JSON message
@@ -446,6 +478,7 @@ FUSION_TEST_LOCAL=1 go test -v ./test/websocket_test.go -timeout 60s
 | 3002 | Success | Connection established |
 | 3003 | Success | Pong response to ping |
 | 3004 | Event | Device updated (push notification) |
+| 3020 | Success | Software update triggered successfully |
 | **Application Error Codes** | | |
 | 4000 | Client Error | Invalid JSON message |
 | 4001 | Client Error | Missing required field |
@@ -467,6 +500,7 @@ FUSION_TEST_LOCAL=1 go test -v ./test/websocket_test.go -timeout 60s
 | `update_device_info` | Update device info | ❌ No* | `device_id` + patch fields |
 | `ping` | Health check | ❌ No | None |
 | `unsubscribe_devices` | Stop device updates | ❌ No | None |
+| `start_update` | Trigger software update | ❌ No | None |
 
 *Update operations trigger push notifications to all subscribed clients
 
@@ -480,5 +514,6 @@ FUSION_TEST_LOCAL=1 go test -v ./test/websocket_test.go -timeout 60s
 | `update_device_info` | Response to update request | 3001 | Update confirmation |
 | `device_update` | Push notification | 3004 | Real-time device change |
 | `unsubscribe_devices` | Response to unsubscribe | 3000 | Unsubscribe confirmation |
+| `start_update` | Response to update trigger | 3020 | Software update coordination |
 | `pong` | Response to ping | 3003 | Health check response |
 | `error` | Request processing error | 4xxx | Error details |
