@@ -177,7 +177,7 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
 
         /* ---- path latency (clamped to u32) ---- */
         {
-            s64 path = (s64)s.recon_phc_ns - (s64)s.arrival_phc_ns;
+            s64 path = (s64)s.arrival_phc_ns - (s64)s.recon_phc_ns;
             if (path < 0) path = 0;
             if (path > (s64)U32_MAX) path = (s64)U32_MAX;
             w->path_latency_est_ns = (u32)path;
