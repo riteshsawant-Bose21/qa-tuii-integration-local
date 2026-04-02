@@ -22,3 +22,4 @@ int  fusion_gpt_set_phc_anchor(u64 phc_ns_at_pps);
 int fusion_gpt_get_timing_status(struct fusion_gpt_timing_status *status);
 int fusion_gpt_reset_timing_state(void);
 u64  fusion_gpt_read_phc_ns(void);
+u64  fusion_gpt_read_phc_ns_fast(void);

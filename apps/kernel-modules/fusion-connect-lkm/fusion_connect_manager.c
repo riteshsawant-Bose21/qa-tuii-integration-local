@@ -99,7 +99,7 @@ static u32 fusion_cn_rtp_ops_get_buffer_offset(struct fusion_cn_substream *alsa_
 
 u64 fusion_cn_get_phc_ns(void)
 {
-    return fusion_gpt_read_phc_ns();
+    return fusion_gpt_read_phc_ns_fast();
 }
 
 static u64 fusion_cn_get_tick_ns(struct fusion_cn_manager *cn_mgr)

@@ -769,14 +769,14 @@ int fusion_gpt_reset_timing_state(void)
 }
 EXPORT_SYMBOL(fusion_gpt_reset_timing_state);
 
-u64 fusion_gpt_read_phc_ns(void)
+u64 fusion_gpt_read_phc_ns_fast(void)
 {
 	struct fusion_gpt *g;
 	unsigned long flags;
 	u64 now64, epoch_cnt64, epoch_ns, dt_ticks, ns = 0;
 	bool valid;
 
-	g = fusion_gpt_get_locked();
+	g = READ_ONCE(gpt_singleton);
 	if (!g)
 		return 0;
 
@@ -786,10 +786,8 @@ u64 fusion_gpt_read_phc_ns(void)
 	epoch_ns	= g->phc_epoch_ns;
 	epoch_cnt64 = g->pps_epoch_cnt64;
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
-	if (!valid) {
-		fusion_gpt_put_locked(g);
+	if (!valid)
 		return 0;
-	}
 
 	/* Read current 64-bit counter safely */
 	now64 = gpt_read_ticks64(g);
@@ -797,8 +795,13 @@ u64 fusion_gpt_read_phc_ns(void)
 	/* Convert ticks to ns with 10 MHz = 100 ns/tick */
 	dt_ticks = now64 - epoch_cnt64;
 	ns = epoch_ns + dt_ticks * 100ULL;
-	fusion_gpt_put_locked(g);
 	return ns;
+}
+EXPORT_SYMBOL(fusion_gpt_read_phc_ns_fast);
+
+u64 fusion_gpt_read_phc_ns(void)
+{
+	return fusion_gpt_read_phc_ns_fast();
 }
 EXPORT_SYMBOL(fusion_gpt_read_phc_ns);
 
