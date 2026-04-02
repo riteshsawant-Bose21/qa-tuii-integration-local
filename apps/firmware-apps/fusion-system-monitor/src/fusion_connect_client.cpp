@@ -1685,7 +1685,7 @@ void FusionConnectClient::process() {
                         s.packets_total, s.bytes_total,
                         s.packets_lost, s.packets_reordered,
                         s.packets_dup, s.malformed_count, 
-                        s.late_drop_count, s.burst_loss_max,
+                        s.late_drop_count, s.burst_loss_max, s.batch_max,
                         s.iat_min_ns / 1000, s.iat_p50_ns / 1000, s.iat_p99_ns / 1000, s.rfc3550_jitter_ns / 1000,
                         s.jb_depth_cur_samples, s.jb_depth_min_samples,
                         s.jb_depth_max_samples, s.jb_depth_avg_samples,
