@@ -238,14 +238,14 @@ CREATE TYPE bundle_approval_status_enum AS ENUM (
 CREATE TABLE bundle (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     version TEXT NOT NULL UNIQUE,
-    version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(version, '-', 1), '.' )::INT[] ) stored,
-    prerelease TEXT,      -- alpha, beta or null (for stable)
-    prerelease_num INT, 
+    version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(split_part(version, '+', 1), '-', 1), '.' )::INT[] ) stored,
+    prerelease_tag TEXT,      -- Channel tag for filtering: "alpha", "beta", "dev", NULL for stable
+    prerelease_num INT,       -- Numeric part for ordering within channel: 1, 2, 5... NULL if absent
     release_notes TEXT,
     min_prev_version TEXT NOT NULL,
-    min_prev_version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(min_prev_version, '-', 1), '.' )::INT[] ) STORED,
+    min_prev_version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(split_part(min_prev_version, '+', 1), '-', 1), '.' )::INT[] ) STORED,
     min_desktop_app_version TEXT NOT NULL,
-    min_desktop_app_version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(min_desktop_app_version, '-', 1), '.' )::INT[] ) STORED,
+    min_desktop_app_version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(split_part(min_desktop_app_version, '+', 1), '-', 1), '.' )::INT[] ) STORED,
     manifest_data JSONB,
     checksum VARCHAR(64) NOT NULL,
     s3_path TEXT NOT NULL,

@@ -10,53 +10,74 @@ import (
 var (
 	// Matches traditional MAJOR.MINOR.PATCH
 	mainVersionPattern = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$`)
-	// Matches pre-release tags like -alpha.1 also
-	firmwareVersionPattern = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:0|[1-9]\d*|[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$`)
+	// Bundle version: MAJOR.MINOR.PATCH[-tag.number][+build] where tag is alphabetic (alpha, beta, dev)
+	bundleVersionPattern = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([A-Za-z][0-9A-Za-z-]*)(?:\.(0|[1-9]\d*))?)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$`)
 )
 
 type ParsedVersion struct {
-	Major          int
-	Minor          int
-	Patch          int
-	PrereleaseFlag string
-	PrereleaseVer  int
+	Major         int
+	Minor         int
+	Patch         int
+	Prerelease    string // Full prerelease string: "beta.1", "dev.2", "" for stable
+	PrereleaseTag string // Channel tag: "beta", "rc", "alpha", "" for stable
+	PrereleaseNum int    // Numeric part for ordering: 1, 5, 0 if absent
+	Build         string // Build metadata (ignored in comparisons per SemVer)
 }
 
 func ParseSemanticVersion(version string) (*ParsedVersion, error) {
-	if err := ValidateFirmwareVersionFormat(version); err != nil {
+	if err := ValidateBundleVersionFormat(version); err != nil {
 		return nil, err
 	}
 
-	mainParts := strings.SplitN(version, "-", 2)
-	versionNums := strings.Split(mainParts[0], ".")
+	// Step 1: Strip +build metadata
+	build := ""
+	core := version
+	if plusIdx := strings.Index(version, "+"); plusIdx != -1 {
+		build = version[plusIdx+1:]
+		core = version[:plusIdx]
+	}
 
+	// Step 2: Split core into main version and prerelease
+	prerelease := ""
+	mainVersion := core
+	if dashIdx := strings.Index(core, "-"); dashIdx != -1 {
+		prerelease = core[dashIdx+1:]
+		mainVersion = core[:dashIdx]
+	}
+
+	// Step 3: Parse MAJOR.MINOR.PATCH
+	versionNums := strings.Split(mainVersion, ".")
 	major, _ := strconv.Atoi(versionNums[0])
 	minor, _ := strconv.Atoi(versionNums[1])
 	patch, _ := strconv.Atoi(versionNums[2])
 
-	prereleaseFlag := ""
-	prereleaseVer := 0
-
-	if len(mainParts) > 1 {
-		prereleaseParts := strings.SplitN(mainParts[1], ".", 2)
-		prereleaseFlag = prereleaseParts[0]
-		if len(prereleaseParts) > 1 {
-			prereleaseVer, _ = strconv.Atoi(prereleaseParts[1])
+	// Extract prerelease tag and number
+	prereleaseTag := ""
+	prereleaseNum := 0
+	if prerelease != "" {
+		parts := strings.SplitN(prerelease, ".", 2)
+		prereleaseTag = parts[0]
+		if len(parts) > 1 {
+			if n, err := strconv.Atoi(parts[1]); err == nil {
+				prereleaseNum = n
+			}
 		}
 	}
 
 	return &ParsedVersion{
-		Major:          major,
-		Minor:          minor,
-		Patch:          patch,
-		PrereleaseFlag: prereleaseFlag,
-		PrereleaseVer:  prereleaseVer,
+		Major:         major,
+		Minor:         minor,
+		Patch:         patch,
+		Prerelease:    prerelease,
+		PrereleaseTag: prereleaseTag,
+		PrereleaseNum: prereleaseNum,
+		Build:         build,
 	}, nil
 }
 
-func ValidateFirmwareVersionFormat(version string) error {
-	if !firmwareVersionPattern.MatchString(version) {
-		return errors.New("firmware version must be in format MAJOR.MINOR.PATCH or a valid Semantic Version (e.g. 1.0.0-alpha.1)")
+func ValidateBundleVersionFormat(version string) error {
+	if !bundleVersionPattern.MatchString(version) {
+		return errors.New("bundle version must be in format MAJOR.MINOR.PATCH or MAJOR.MINOR.PATCH-tag.number (e.g. 1.0.0, 1.0.0-beta.1, 1.0.0-rc.2+build.456). Prerelease tag must start with a letter")
 	}
 	return nil
 }

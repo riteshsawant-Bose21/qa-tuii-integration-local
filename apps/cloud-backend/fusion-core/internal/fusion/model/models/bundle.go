@@ -29,6 +29,7 @@ type Bundle struct {
 	Version                   string           `boil:"version" json:"version" toml:"version" yaml:"version"`
 	VersionArray              types.Int64Array `boil:"version_array" json:"version_array,omitempty" toml:"version_array" yaml:"version_array,omitempty"`
 	Prerelease                null.String      `boil:"prerelease" json:"prerelease,omitempty" toml:"prerelease" yaml:"prerelease,omitempty"`
+	PrereleaseTag             null.String      `boil:"prerelease_tag" json:"prerelease_tag,omitempty" toml:"prerelease_tag" yaml:"prerelease_tag,omitempty"`
 	PrereleaseNum             null.Int         `boil:"prerelease_num" json:"prerelease_num,omitempty" toml:"prerelease_num" yaml:"prerelease_num,omitempty"`
 	ReleaseNotes              null.String      `boil:"release_notes" json:"release_notes,omitempty" toml:"release_notes" yaml:"release_notes,omitempty"`
 	MinPrevVersion            string           `boil:"min_prev_version" json:"min_prev_version" toml:"min_prev_version" yaml:"min_prev_version"`
@@ -53,6 +54,7 @@ var BundleColumns = struct {
 	Version                   string
 	VersionArray              string
 	Prerelease                string
+	PrereleaseTag             string
 	PrereleaseNum             string
 	ReleaseNotes              string
 	MinPrevVersion            string
@@ -72,6 +74,7 @@ var BundleColumns = struct {
 	Version:                   "version",
 	VersionArray:              "version_array",
 	Prerelease:                "prerelease",
+	PrereleaseTag:             "prerelease_tag",
 	PrereleaseNum:             "prerelease_num",
 	ReleaseNotes:              "release_notes",
 	MinPrevVersion:            "min_prev_version",
@@ -93,6 +96,7 @@ var BundleTableColumns = struct {
 	Version                   string
 	VersionArray              string
 	Prerelease                string
+	PrereleaseTag             string
 	PrereleaseNum             string
 	ReleaseNotes              string
 	MinPrevVersion            string
@@ -112,6 +116,7 @@ var BundleTableColumns = struct {
 	Version:                   "bundle.version",
 	VersionArray:              "bundle.version_array",
 	Prerelease:                "bundle.prerelease",
+	PrereleaseTag:             "bundle.prerelease_tag",
 	PrereleaseNum:             "bundle.prerelease_num",
 	ReleaseNotes:              "bundle.release_notes",
 	MinPrevVersion:            "bundle.min_prev_version",
@@ -242,6 +247,7 @@ var BundleWhere = struct {
 	Version                   whereHelperstring
 	VersionArray              whereHelpertypes_Int64Array
 	Prerelease                whereHelpernull_String
+	PrereleaseTag             whereHelpernull_String
 	PrereleaseNum             whereHelpernull_Int
 	ReleaseNotes              whereHelpernull_String
 	MinPrevVersion            whereHelperstring
@@ -261,6 +267,7 @@ var BundleWhere = struct {
 	Version:                   whereHelperstring{field: "\"bundle\".\"version\""},
 	VersionArray:              whereHelpertypes_Int64Array{field: "\"bundle\".\"version_array\""},
 	Prerelease:                whereHelpernull_String{field: "\"bundle\".\"prerelease\""},
+	PrereleaseTag:             whereHelpernull_String{field: "\"bundle\".\"prerelease_tag\""},
 	PrereleaseNum:             whereHelpernull_Int{field: "\"bundle\".\"prerelease_num\""},
 	ReleaseNotes:              whereHelpernull_String{field: "\"bundle\".\"release_notes\""},
 	MinPrevVersion:            whereHelperstring{field: "\"bundle\".\"min_prev_version\""},
@@ -314,9 +321,9 @@ func (r *bundleR) GetApprovalStatusChangedByAppUser() *AppUser {
 type bundleL struct{}
 
 var (
-	bundleAllColumns            = []string{"id", "version", "version_array", "prerelease", "prerelease_num", "release_notes", "min_prev_version", "min_prev_version_array", "min_desktop_app_version", "min_desktop_app_version_array", "manifest_data", "checksum", "s3_path", "approval_status", "approval_status_changed_by", "approval_status_changed_at", "created_at", "updated_at"}
+	bundleAllColumns            = []string{"id", "version", "version_array", "prerelease", "prerelease_tag", "prerelease_num", "release_notes", "min_prev_version", "min_prev_version_array", "min_desktop_app_version", "min_desktop_app_version_array", "manifest_data", "checksum", "s3_path", "approval_status", "approval_status_changed_by", "approval_status_changed_at", "created_at", "updated_at"}
 	bundleColumnsWithoutDefault = []string{"version", "min_prev_version", "min_desktop_app_version", "checksum", "s3_path"}
-	bundleColumnsWithDefault    = []string{"id", "version_array", "prerelease", "prerelease_num", "release_notes", "min_prev_version_array", "min_desktop_app_version_array", "manifest_data", "approval_status", "approval_status_changed_by", "approval_status_changed_at", "created_at", "updated_at"}
+	bundleColumnsWithDefault    = []string{"id", "version_array", "prerelease", "prerelease_tag", "prerelease_num", "release_notes", "min_prev_version_array", "min_desktop_app_version_array", "manifest_data", "approval_status", "approval_status_changed_by", "approval_status_changed_at", "created_at", "updated_at"}
 	bundlePrimaryKeyColumns     = []string{"id"}
 	bundleGeneratedColumns      = []string{"version_array", "min_prev_version_array", "min_desktop_app_version_array"}
 )
