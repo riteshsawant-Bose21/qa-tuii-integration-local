@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:fusion_launcher/core/models/user_profile_model.dart';
-import 'package:fusion_lib/fusion_lib.dart';
 
 class UserProfileManager extends ValueNotifier<UserProfile> {
   UserProfileManager(super.initialProfile);
