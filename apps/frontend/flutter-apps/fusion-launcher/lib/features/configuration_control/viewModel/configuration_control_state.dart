@@ -78,8 +78,14 @@ class ConfigControlLoaded extends ConfigurationControlState {
   @override
   final String searchQuery;
 
-  /// Selected zones for the controller (zone IDs that are checked)
+  /// Selected zone IDs for Pro (checkbox multi-select)
   final Set<String> selectedZoneIds;
+
+  /// Selected subzone IDs for Pro (checkbox multi-select)
+  final Set<String> selectedSubZoneIds;
+
+  /// Active subzone ID for LT (radio single-select)
+  final String? activeSubZoneId;
 
   const ConfigControlLoaded({
     required this.controllers,
@@ -90,6 +96,8 @@ class ConfigControlLoaded extends ConfigurationControlState {
     this.currentTab = ConfigControlTab.zoneControl,
     this.searchQuery = '',
     this.selectedZoneIds = const <String>{},
+    this.selectedSubZoneIds = const <String>{},
+    this.activeSubZoneId,
   });
 
   /// Create a copy with updated values
@@ -102,8 +110,11 @@ class ConfigControlLoaded extends ConfigurationControlState {
     ConfigControlTab? currentTab,
     String? searchQuery,
     Set<String>? selectedZoneIds,
+    Set<String>? selectedSubZoneIds,
+    String? activeSubZoneId,
     bool clearSelectedControllerId = false,
     bool clearSelectedZoneId = false,
+    bool clearActiveSubZoneId = false,
   }) {
     return ConfigControlLoaded(
       controllers: controllers ?? this.controllers,
@@ -114,6 +125,8 @@ class ConfigControlLoaded extends ConfigurationControlState {
       currentTab: currentTab ?? this.currentTab,
       searchQuery: searchQuery ?? this.searchQuery,
       selectedZoneIds: selectedZoneIds ?? this.selectedZoneIds,
+      selectedSubZoneIds: selectedSubZoneIds ?? this.selectedSubZoneIds,
+      activeSubZoneId: clearActiveSubZoneId ? null : (activeSubZoneId ?? this.activeSubZoneId),
     );
   }
 
@@ -161,6 +174,8 @@ class ConfigControlLoaded extends ConfigurationControlState {
     currentTab,
     searchQuery,
     selectedZoneIds,
+    selectedSubZoneIds,
+    activeSubZoneId,
   ];
 }
 

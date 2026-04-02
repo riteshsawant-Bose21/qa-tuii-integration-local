@@ -33,7 +33,7 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
             color: context.colorScheme.elevation1,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: context.colorScheme.elevation2,
+              color: context.colorScheme.strokeLight,
               width: 1,
             ),
           ),
@@ -58,22 +58,21 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
+        color: context.colorScheme.elevation2,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(12),
+          topRight: Radius.circular(12),
+        ),
         border: Border(
           bottom: BorderSide(
-            color: context.colorScheme.elevation2,
+            color: context.colorScheme.strokeLight,
             width: 1,
           ),
         ),
       ),
       child: Row(
         children: <Widget>[
-          FusionAppText(
-            text: 'VIRTUAL CONTROLLER',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
-            ),
-          ),
+          FusionAppText(text: 'VIRTUAL CONTROLLER', style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textBody)),
         ],
       ),
     );

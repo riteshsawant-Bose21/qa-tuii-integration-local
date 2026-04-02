@@ -5,6 +5,9 @@ import 'package:fusion_lib/fusion_lib.dart';
 class FusionController extends HardwareComponent {
   final String sku;
 
+  /// Zone/SubZone IDs this controller is assigned to control
+  final Set<String> assignedZoneIds;
+
   FusionController({
     String? id,
     required super.name,
@@ -23,7 +26,9 @@ class FusionController extends HardwareComponent {
     super.outputPortsData,
     super.equipmentLocationPosition,
     required super.addedFromBuildingPage,
+    Set<String>? assignedZoneIds,
   }) : sku = sku ?? name,
+       assignedZoneIds = assignedZoneIds ?? <String>{},
        super(
          hardwareName: hardwareName ?? name,
          locationEntity: locationEntity ?? LocationModel(),
@@ -48,6 +53,7 @@ class FusionController extends HardwareComponent {
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
     bool? addedFromBuildingPage,
+    Set<String>? assignedZoneIds,
   }) {
     return FusionController(
       id: id ?? this.id,
@@ -66,6 +72,7 @@ class FusionController extends HardwareComponent {
       outputPortsData: outputPortsData ?? this.outputPortsData,
       addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
       equipmentLocationPosition: equipmentLocationPosition ?? this.equipmentLocationPosition,
+      assignedZoneIds: assignedZoneIds ?? this.assignedZoneIds,
     );
   }
 
@@ -88,6 +95,7 @@ class FusionController extends HardwareComponent {
       'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
       'addedFromBuildingPage': addedFromBuildingPage,
       'equipmentLocationPosition': equipmentLocationPosition,
+      'assignedZoneIds': assignedZoneIds.toList(),
     };
   }
 
@@ -110,6 +118,7 @@ class FusionController extends HardwareComponent {
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
       equipmentLocationPosition: DeserializationUtil.intDeserializer.deserialize(json['equipmentLocationPosition']),
+      assignedZoneIds: (json['assignedZoneIds'] as List<dynamic>?)?.map((dynamic e) => e as String).toSet() ?? <String>{},
     );
   }
 }

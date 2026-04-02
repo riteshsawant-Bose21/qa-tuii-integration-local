@@ -20,73 +20,54 @@ class ControllersList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (controllers.isEmpty && searchQuery.isNotEmpty) {
-      return _buildEmptySearchState(context);
-    }
-
-    return _buildControllersList(context);
-  }
-
-  Widget _buildEmptySearchState(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         color: context.colorScheme.elevation1,
         border: Border(
-          left: BorderSide(color: context.colorScheme.elevation2, width: 1),
-          right: BorderSide(color: context.colorScheme.elevation2, width: 1),
-          bottom: BorderSide(color: context.colorScheme.elevation2, width: 1),
+          right: BorderSide(color: context.colorScheme.strokeLight, width: 1),
         ),
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(12),
-          bottomRight: Radius.circular(12),
         ),
       ),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: FusionAppText(
-            text: 'No controllers match your search',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: context.colorScheme.textSecondary,
-            ),
+      child: controllers.isEmpty && searchQuery.isNotEmpty ? _buildEmptySearchState(context) : _buildControllersList(context),
+    );
+  }
+
+  /// Builds the empty state widget when no controllers match the search query
+  Widget _buildEmptySearchState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: FusionAppText(
+          text: 'No controllers match your search',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: context.colorScheme.textSecondary,
           ),
         ),
       ),
     );
   }
 
+  /// Builds the list of controllers using a ListView.builder for efficient rendering
   Widget _buildControllersList(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation1,
-        border: Border(
-          left: BorderSide(color: context.colorScheme.elevation2, width: 1),
-          right: BorderSide(color: context.colorScheme.elevation2, width: 1),
-          bottom: BorderSide(color: context.colorScheme.elevation2, width: 1),
-        ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(12),
-          bottomRight: Radius.circular(12),
-        ),
-      ),
-      child: ListView.builder(
-        padding: const EdgeInsets.all(8),
-        itemCount: controllers.length,
-        itemBuilder: (BuildContext context, int index) {
-          final FusionController controller = controllers[index];
-          final bool isSelected = controller.id == selectedControllerId;
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: controllers.length,
+      itemBuilder: (BuildContext context, int index) {
+        final FusionController controller = controllers[index];
+        final bool isSelected = controller.id == selectedControllerId;
 
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: ControllerCard(
-              controller: controller,
-              isSelected: isSelected,
-              onTap: () => context.read<ConfigurationControlViewmodel>().selectController(controller.id),
-              onDelete: () => context.read<ConfigurationControlViewmodel>().deleteController(controller.id),
-            ),
-          );
-        },
-      ),
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: ControllerCard(
+            controller: controller,
+            isSelected: isSelected,
+            onTap: () => context.read<ConfigurationControlViewmodel>().selectController(controller.id),
+            onDelete: () => context.read<ConfigurationControlViewmodel>().deleteController(controller.id),
+          ),
+        );
+      },
     );
   }
 }

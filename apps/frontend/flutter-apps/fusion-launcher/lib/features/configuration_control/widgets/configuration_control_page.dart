@@ -35,21 +35,17 @@ class _ConfigurationControlBody extends StatelessWidget {
     return BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
       builder: (BuildContext context, ConfigurationControlState state) {
         return Scaffold(
-          backgroundColor: context.colorScheme.primaryBlack,
-          body: _buildBody(context, state),
+          backgroundColor: context.colorScheme.elevation1,
+          body: switch (state) {
+            ConfigControlInitial() => _buildLoadingState(context),
+            ConfigControlLoading() => _buildLoadingState(context),
+            ConfigControlEmpty() => const EmptyControllersState(),
+            ConfigControlLoaded() => _buildLoadedState(context, state),
+            ConfigControlError() => _buildErrorState(context, state),
+          },
         );
       },
     );
-  }
-
-  Widget _buildBody(BuildContext context, ConfigurationControlState state) {
-    return switch (state) {
-      ConfigControlInitial() => _buildLoadingState(context),
-      ConfigControlLoading() => _buildLoadingState(context),
-      ConfigControlEmpty() => const EmptyControllersState(),
-      ConfigControlLoaded() => _buildLoadedState(context, state),
-      ConfigControlError() => _buildErrorState(context, state),
-    };
   }
 
   Widget _buildLoadingState(BuildContext context) {

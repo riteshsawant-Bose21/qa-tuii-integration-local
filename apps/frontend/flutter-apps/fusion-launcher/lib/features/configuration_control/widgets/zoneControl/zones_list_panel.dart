@@ -10,6 +10,8 @@ class ZonesListPanel extends StatelessWidget {
   final Map<String, List<SubZone>> subZonesInZones;
   final Set<String> selectedZoneIds;
   final String? selectedZoneId;
+  final Set<String> selectedSubZoneIds;
+  final String? activeSubZoneId;
   final bool isProController;
 
   const ZonesListPanel({
@@ -18,6 +20,8 @@ class ZonesListPanel extends StatelessWidget {
     this.subZonesInZones = const <String, List<SubZone>>{},
     this.selectedZoneIds = const <String>{},
     this.selectedZoneId,
+    this.selectedSubZoneIds = const <String>{},
+    this.activeSubZoneId,
     this.isProController = false,
   });
 
@@ -28,7 +32,7 @@ class ZonesListPanel extends StatelessWidget {
         color: context.colorScheme.elevation1,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: context.colorScheme.elevation2,
+          color: context.colorScheme.strokeLight,
           width: 1,
         ),
       ),
@@ -51,22 +55,21 @@ class ZonesListPanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
+        color: context.colorScheme.elevation2,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(12),
+          topRight: Radius.circular(12),
+        ),
         border: Border(
           bottom: BorderSide(
-            color: context.colorScheme.elevation2,
+            color: context.colorScheme.strokeLight,
             width: 1,
           ),
         ),
       ),
       child: Row(
         children: <Widget>[
-          FusionAppText(
-            text: 'ZONES',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
-            ),
-          ),
+          FusionAppText(text: 'ZONES', style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textBody)),
         ],
       ),
     );
@@ -102,11 +105,19 @@ class ZonesListPanel extends StatelessWidget {
           isSelected: isSelected,
           isActiveZone: isActiveZone,
           isProController: isProController,
+          selectedSubZoneIds: selectedSubZoneIds,
+          activeSubZoneId: activeSubZoneId,
           onToggleSelection: () {
             context.read<ConfigurationControlViewmodel>().toggleZoneSelection(zone.id);
           },
           onSelectZone: () {
             context.read<ConfigurationControlViewmodel>().selectZone(zone.id);
+          },
+          onToggleSubZoneSelection: (String subZoneId) {
+            context.read<ConfigurationControlViewmodel>().toggleSubZoneSelection(subZoneId);
+          },
+          onSelectSubZone: (String subZoneId) {
+            context.read<ConfigurationControlViewmodel>().selectSubZone(subZoneId);
           },
         );
       },

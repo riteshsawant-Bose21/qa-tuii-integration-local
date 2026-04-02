@@ -28,7 +28,7 @@ class ControllerCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? context.colorScheme.elevation3 : context.colorScheme.elevation1,
           borderRadius: BorderRadius.circular(8),
@@ -37,27 +37,22 @@ class ControllerCard extends StatelessWidget {
             width: 1,
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: <Widget>[
             /// Controller name and menu
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: FusionAppText(
-                    text: controller.name,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                _buildMenuButton(context),
-              ],
-            ),
-            const SizedBox(height: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  FusionAppText(text: controller.name, style: Theme.of(context).textTheme.l1SemiBold),
+                  const SizedBox(height: 8),
 
-            /// Location display
-            _buildLocationDisplay(context, locationName, zone),
+                  /// Location display
+                  _buildLocationDisplay(context, locationName, zone),
+                ],
+              ),
+            ),
+            _buildMenuButton(context),
           ],
         ),
       ),
@@ -97,40 +92,31 @@ class ControllerCard extends StatelessWidget {
   Widget _buildLocationDisplay(BuildContext context, String locationName, Zone? zone) {
     final bool hasLocation = locationName != '--';
 
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Row(
-        children: <Widget>[
-          if (zone != null) ...<Widget>[
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: zone.color,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ] else if (hasLocation) ...<Widget>[
-            Icon(
-              Icons.location_on_outlined,
-              size: 12,
-              color: context.colorScheme.textSecondary,
-            ),
-            const SizedBox(width: 6),
-          ],
-          Expanded(
-            child: FusionAppText(
-              text: locationName,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: hasLocation ? context.colorScheme.textSecondary : context.colorScheme.textPlaceholder,
-                fontSize: 11,
-                fontStyle: hasLocation ? FontStyle.normal : FontStyle.italic,
-              ),
+    return Row(
+      children: <Widget>[
+        if (zone != null) ...<Widget>[
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: zone.color,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: context.colorScheme.zone1Stroke, width: 1),
             ),
           ),
+          const SizedBox(width: 8),
+        ] else if (hasLocation) ...<Widget>[
+          Icon(
+            Icons.location_on_outlined,
+            size: 12,
+            color: context.colorScheme.textSecondary,
+          ),
+          const SizedBox(width: 4),
         ],
-      ),
+        Expanded(
+          child: FusionAppText(text: locationName, style: Theme.of(context).textTheme.l1Regular),
+        ),
+      ],
     );
   }
 }

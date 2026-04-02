@@ -19,19 +19,21 @@ class ZoneControlPanel extends StatelessWidget {
         }
 
         return Container(
-          color: context.colorScheme.primaryBlack,
+          color: context.colorScheme.elevation1,
           padding: const EdgeInsets.all(16),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               /// Zones list
-              SizedBox(
-                width: 280,
+              Expanded(
+                flex: 3,
                 child: ZonesListPanel(
                   zones: state.zones,
                   subZonesInZones: state.subZonesInZones,
                   selectedZoneIds: state.selectedZoneIds,
                   selectedZoneId: state.selectedZoneId,
+                  selectedSubZoneIds: state.selectedSubZoneIds,
+                  activeSubZoneId: state.activeSubZoneId,
                   isProController: state.isProController,
                 ),
               ),
@@ -39,6 +41,7 @@ class ZoneControlPanel extends StatelessWidget {
 
               /// Virtual controller emulator
               const Expanded(
+                flex: 8,
                 child: VirtualControllerPanel(),
               ),
             ],

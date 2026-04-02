@@ -217,9 +217,26 @@ class AddControllerCubit extends Cubit<AddControllerState> {
     // Set locationEntity based on location type
     LocationModel? locationEntity;
     if (state.locationType == LocationType.zone) {
-      // Use subzone ID if selected, otherwise use zone ID
-      final String? listeningAreaId = state.selectedSubZoneId ?? state.selectedZoneId;
-      locationEntity = LocationModel(listeningAreaId: listeningAreaId);
+      // Get listening area for the zone/subzone
+      String? listeningAreaId;
+
+      if (state.selectedSubZoneId != null) {
+        // Get listening areas for subzone
+        final List<ListeningArea> subZoneAreas = projectViewModel.getListeningAreasInSubZone(subZoneId: state.selectedSubZoneId!);
+        if (subZoneAreas.isNotEmpty) {
+          listeningAreaId = subZoneAreas.first.id;
+        }
+      } else if (state.selectedZoneId != null) {
+        // Get listening areas for zone
+        final List<ListeningArea> zoneAreas = projectViewModel.getListeningAreasForZone(zoneId: state.selectedZoneId!);
+        if (zoneAreas.isNotEmpty) {
+          listeningAreaId = zoneAreas.first.id;
+        }
+      }
+
+      if (listeningAreaId != null) {
+        locationEntity = LocationModel(listeningAreaId: listeningAreaId);
+      }
     }
 
     return FusionController(
@@ -229,6 +246,7 @@ class AddControllerCubit extends Cubit<AddControllerState> {
       price: price,
       sku: state.controllerType?.displayName ?? 'Controller',
       addedFromBuildingPage: false,
+      assignedZoneIds: state.selectedControlZoneIds,
     );
   }
 

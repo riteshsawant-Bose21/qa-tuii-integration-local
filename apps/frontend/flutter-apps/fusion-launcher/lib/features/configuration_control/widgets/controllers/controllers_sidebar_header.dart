@@ -16,13 +16,9 @@ class ControllersSidebarHeader extends StatelessWidget {
       height: 44,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: context.colorScheme.elevation1,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(12),
-        ),
-        border: Border.all(
-          width: 1,
-          color: context.colorScheme.elevation2,
+        border: Border(
+          right: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+          bottom: BorderSide(color: context.colorScheme.strokeLight, width: 1),
         ),
       ),
       child: Row(
