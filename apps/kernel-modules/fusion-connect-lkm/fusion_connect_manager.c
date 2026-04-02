@@ -808,10 +808,6 @@ static int handle_remove_stream(struct fusion_cn_manager *mgr,
     kref_put(&alsa_stream->ref, fusion_cn_alsa_substream_release);
     kref_put(&rtp_stream->ref, fusion_cn_rtp_stream_release);
 
-    /* Drop temp refs from handle_add_stream */
-    kref_put(&alsa_stream->ref, fusion_cn_alsa_substream_release);
-    kref_put(&rtp_stream->ref, fusion_cn_rtp_stream_release);
-
     return reply->err;
 }
 
