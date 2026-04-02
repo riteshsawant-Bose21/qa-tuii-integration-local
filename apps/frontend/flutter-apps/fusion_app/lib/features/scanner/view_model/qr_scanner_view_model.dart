@@ -92,8 +92,8 @@ class QrScannerViewModel extends Cubit<QrScannerState> {
           );
           final List<String> zoneIds = [];
 
-         // SchemaModel schemaModel = model.data!;
-          SchemaModel schemaModel = SchemaModel.fromJson(schemeData);
+          SchemaModel schemaModel = model.data!;
+         // SchemaModel schemaModel = SchemaModel.fromJson(schemeData);
           print("schemaModel");
           print(schemaModel.wallControllerConfig==null);
           print(schemaModel.wallControllerConfig!.toJson());
@@ -111,6 +111,7 @@ class QrScannerViewModel extends Cubit<QrScannerState> {
             for (var id in zoneIds) {
               if (id == item.id) {
                 zones.add(ZoneModel(id: id, name: item.name!,
+                    gainID:item.gain!.gainID ?? "",
                     sources:
                     item.sources!.map((src) =>
                         ZoneSourceModel(
@@ -186,6 +187,7 @@ class QrScannerViewModel extends Cubit<QrScannerState> {
         for (var id in zoneIds) {
           if (id == item.id) {
             zones.add(ZoneModel(id: id, name: item.name!,
+                gainID:item.gain!.gainID ?? "",
                 sources:
                 item.sources!.map((src) =>
                     ZoneSourceModel(

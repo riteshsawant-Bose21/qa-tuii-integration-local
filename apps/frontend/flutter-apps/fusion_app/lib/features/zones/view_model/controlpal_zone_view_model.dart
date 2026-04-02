@@ -8,9 +8,10 @@ part 'controlpal_zone_view_model_state.dart';
 
 class ControlPalZonesViewModel extends Cubit<ControlPalZonesState> {
 
-
+  int? bassVolume=null;
   final FusionZoneService _service;
   List<ZoneModel> _zones = [];
+
   ControlPalZonesViewModel({
     required FusionZoneService service,
   }) : _service = service,
@@ -49,14 +50,36 @@ class ControlPalZonesViewModel extends Cubit<ControlPalZonesState> {
     int indexWhere = _zones[zoneIndex].sources.indexWhere((s) => s.id == sourceModel.id);
 
     if(indexWhere == -1) return;
+
+    if(bassVolume==volume){
+      return;
+    }
+
     print(volume);
     ZoneSourceModel zoneSourceModel = sourceModel.copyWith(
       volume: volume,
       muted: volume == 0,
     );
+
+
+    bassVolume = volume;
     _zones[zoneIndex].sources[indexWhere] = zoneSourceModel;
 
-
+    var gainID =_zones[zoneIndex].gainID;
+    Map<String,dynamic> data = {
+      "settings": {
+        "audio": {
+          gainID: {
+            "gain": bassVolume,
+            "mute": bassVolume == 0
+          }
+        }
+      }
+    };
+    Map<String,dynamic> pathParams = {
+      "key": "settings.audio."+gainID
+    };
+    _service.updateGain(data, pathParams);
     emit(GainUpdated(zoneSourceModel: zoneSourceModel));
 
     emit(ZonesLoaded(zones: _zones));
@@ -64,43 +87,20 @@ class ControlPalZonesViewModel extends Cubit<ControlPalZonesState> {
 
   // 🔥 Next source
   void nextSource(int zoneIndex) {
-    //final s = _state;
 
-    // int newSourceIndex = s.currentSourceIndex + 1;
      int newZoneIndex = zoneIndex;
 
-    // if (newSourceIndex >= s.zones[newZoneIndex].sources.length) {
-    //   newSourceIndex = 0;
-       newZoneIndex++;
-    //
-    //   if (newZoneIndex >= s.zones.length) {
-    //     newZoneIndex = 0;
-    //   }
-    // }
-
-     print(newZoneIndex);
-     print(_zones.length);
+     newZoneIndex++;
 
     selectZone(_zones[newZoneIndex], newZoneIndex);
   }
 
   // 🔥 Previous source
   void previousSource(int zoneIndex) {
-  //  final s = _state;
 
-    // int newSourceIndex = s.currentSourceIndex - 1;
      int newZoneIndex = zoneIndex;
-    //
-    // if (newSourceIndex < 0) {
+
      newZoneIndex--;
-    //
-    //   if (newZoneIndex < 0) {
-    //     newZoneIndex = s.zones.length - 1;
-    //   }
-    //
-    //   newSourceIndex =
-    //       s.zones[newZoneIndex].sources.length - 1;
-    // }
 
     selectZone(_zones[newZoneIndex], newZoneIndex);
   }
