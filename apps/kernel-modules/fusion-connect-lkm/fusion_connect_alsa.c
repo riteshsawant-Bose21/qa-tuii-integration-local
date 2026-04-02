@@ -160,8 +160,7 @@ int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, struct fusion
     struct snd_pcm_substream *ss;
     struct snd_pcm_runtime *rt;
 
-    if (fusion_cn_alsa_stream_disconnected(stream))
-        return -ENODEV;
+    if (fusion_cn_alsa_stream_disconnected(stream)) return -ENODEV;
 
     spin_lock_irq(&stream->lock);
     ss = READ_ONCE(stream->substream);

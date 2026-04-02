@@ -565,10 +565,7 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
             stream->current_seq_num = seq_num;
 
             {
-                // defensive against messy startup environment... ?
-                bool slot_was_empty = (stream->next_action_times[write_slot] == 0);
-
-                if (stream->playback_armed && stream->buf_size_in_packets) {
+                if (stream->playback_armed) {
                     u32 lead_slots = (write_slot + stream->buf_size_in_packets - stream->playback_slot) %
                                      stream->buf_size_in_packets;
                     if (lead_slots == 0) {
@@ -580,7 +577,7 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
                     }
                 }
 
-                if (!stream->playback_armed && slot_was_empty) {
+                if (!stream->playback_armed) {
                     if (stream->startup_wait_for_slot0) {
                         if (write_slot == 0) {
                             stream->startup_wait_for_slot0 = false;
@@ -598,8 +595,7 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
                                stream->startup_packets_received, SINK_STARTUP_PACKETS);
                     }
 
-                    if (!stream->startup_wait_for_slot0 &&
-                        stream->startup_packets_received >= SINK_STARTUP_PACKETS) {
+                    if (!stream->startup_wait_for_slot0 && stream->startup_packets_received >= SINK_STARTUP_PACKETS) {
                         stream->playback_armed = true;
                         printk(KERN_DEBUG
                                "fusion_cn_rtp: startup armed %s seq=%u write_slot=%u playback_idx=%u startup_pkts=%u\n",
