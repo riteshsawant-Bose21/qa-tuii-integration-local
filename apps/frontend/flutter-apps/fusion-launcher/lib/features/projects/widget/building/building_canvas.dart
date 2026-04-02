@@ -25,6 +25,7 @@ import '../../../fusion_canvas/view/painters/elements/derived/hardware_component
 import '../../../fusion_canvas/view/painters/elements/derived/hardware_painter/floor_plan_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/listening_area_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/spl_painter.dart';
+import '../../../fusion_canvas/view/painters/elements/fusion_dotted_bg_painter.dart';
 import '../../presentation/project_work_area.dart';
 import '../../viewmodel/building_page_viewmodel.dart';
 
@@ -186,6 +187,9 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             },
 
                                             elements: <FusionBasePainter>[
+                                              FusionDottedBgPainter(
+                                                color: Colors.grey.shade300,
+                                              ),
                                               if (buildingPageViewModel.isSplMode)
                                                 SplPainter(
                                                   listeningAreas: listeningAreaPainters,
@@ -267,9 +271,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 if (painter is ListeningAreaPainter) {
                                                   final ListeningArea area = painter.listeningArea;
                                                   final List<FusionCanvasPoint> updatedPoints =
-                                                      area.vertices
-                                                          .where((FusionCanvasPoint v) => points.every((String p) => p != v.id))
-                                                          .toList();
+                                                      area.vertices.where((FusionCanvasPoint v) => points.every((String p) => p != v.id)).toList();
                                                   serviceLocator<ProjectViewModel>().updateListeningArea(
                                                     area: area.copyWith(vertices: updatedPoints),
                                                   );

@@ -88,6 +88,7 @@ class _WiringPageState extends State<WiringPage> {
             FusionCanvasTool.multiSelectionTool,
           ],
           elements: <FusionBasePainter>[
+            // FusionDottedBgPainter(color: Colors.grey.withValues(alpha: 0.2)),
             for (HardwareComponent source in projectViewModel.hardwareComponents)
               if (source is Source)
                 WiringSourcePainter(source: source)
@@ -193,7 +194,7 @@ class PathSystemStorage {
       connection,
       painter,
       connectionKey: key,
-      additionalStops: additionalStops ?? connection.points?.map((FusionCanvasPoint p) => p.position).toList() ?? <Offset>[],
+      additionalStops: additionalStops ?? <Offset>[],
     );
     // print("Constructed path for connection ${connection.id}: $constructPath");
     if (constructPath == null) {
