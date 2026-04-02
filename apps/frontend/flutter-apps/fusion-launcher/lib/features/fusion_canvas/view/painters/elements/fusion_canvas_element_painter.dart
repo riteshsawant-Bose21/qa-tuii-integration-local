@@ -24,8 +24,8 @@ abstract class FusionCanvasElementPainter extends FusionBasePainter with FusionC
     final Size size = getSize();
     return Rect.fromCenter(
       center: transformOffsetForLayer(offset, painter, id),
-      width: nonScaling(size.width, painter),
-      height: nonScaling(size.height, painter),
+      width: size.width,
+      height: size.height,
     );
   }
 

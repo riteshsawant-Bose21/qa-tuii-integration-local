@@ -39,6 +39,21 @@ class AddSourceViewModelState extends Equatable {
     );
   }
 
+  AddSourceViewModelState resetConnectionType() {
+    // When the source section type changes,
+    // we want to reset the connection type to null
+    // since different source types may have different connection options.
+    return AddSourceViewModelState(
+      selectedSourceSectionType: selectedSourceSectionType,
+      selectedSourceOption: selectedSourceOption,
+      selectedSignalType: selectedSignalType,
+      selectedSources: selectedSources,
+      selectedConnectionType: null,
+      selectedSourceName: selectedSourceName,
+      selectedListeningArea: selectedListeningArea,
+    );
+  }
+
   @override
   List<Object?> get props => <Object?>[
     selectedSourceSectionType,
@@ -78,32 +93,32 @@ enum SourceSectionType {
     }
   }
 
-  List<SourceConnectionType> get connectionTypes {
-    switch (this) {
-      case SourceSectionType.microPhone:
-        return <SourceConnectionType>[
-          SourceConnectionType.analogInput,
-          SourceConnectionType.bluetooth,
-          SourceConnectionType.rca,
-          // SourceConnectionType.xlr,
-          // SourceConnectionType.ethernet,
-        ];
-      case SourceSectionType.mediaSources:
-        return <SourceConnectionType>[
-          SourceConnectionType.usb,
-          SourceConnectionType.hdmi,
-          SourceConnectionType.bluetooth,
-          SourceConnectionType.rca,
-          SourceConnectionType.audioJack,
-          // SourceConnectionType.ethernet,
-          // SourceConnectionType.wired,
-          // SourceConnectionType.rca,
-        ];
+  // List<SourceConnectionType> get connectionTypes {
+  //   switch (this) {
+  //     case SourceSectionType.microPhone:
+  //       return <SourceConnectionType>[
+  //         SourceConnectionType.analogInput,
+  //         SourceConnectionType.endpoint,
+  //         SourceConnectionType.aes67input,
+  //         // SourceConnectionType.xlr,
+  //         // SourceConnectionType.ethernet,
+  //       ];
+  //     case SourceSectionType.mediaSources:
+  //       return <SourceConnectionType>[
+  //         SourceConnectionType.usb,
+  //         SourceConnectionType.hdmi,
+  //         SourceConnectionType.bluetooth,
+  //         SourceConnectionType.audioJack,
+  //         SourceConnectionType.rca,
+  //         // SourceConnectionType.ethernet,
+  //         // SourceConnectionType.wired,
+  //         // SourceConnectionType.rca,
+  //       ];
 
-      case SourceSectionType.paging:
-        return <SourceConnectionType>[];
-    }
-  }
+  //     case SourceSectionType.paging:
+  //       return <SourceConnectionType>[];
+  //   }
+  // }
 }
 
 // enum SourceConnectionType {

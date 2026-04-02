@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../zone_functions/widgets/horizontal_scroll_effect_wrapper.dart';
 import '../models/models.dart';
+import '../widgets/priority_setting_widget.dart';
 import '../widgets/zone_subzone_builder.dart';
 import 'viewmodel/mix_settings_vm.dart';
 
@@ -31,18 +32,15 @@ class SourceMixAdditionalSettingsDialog extends StatefulWidget {
   }
 
   @override
-  State<SourceMixAdditionalSettingsDialog> createState() =>
-      _SourceMixAdditionalSettingsState();
+  State<SourceMixAdditionalSettingsDialog> createState() => _SourceMixAdditionalSettingsState();
 }
 
-class _SourceMixAdditionalSettingsState
-    extends State<SourceMixAdditionalSettingsDialog> {
+class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSettingsDialog> {
   late ZoneFunctions zoneFunction;
   @override
   void initState() {
     super.initState();
-    zoneFunction =
-        projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
+    zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
   }
 
   final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
@@ -134,26 +132,14 @@ class _SourceMixAdditionalSettingsState
                           SemanticTypes.container,
                           "source_select_main_container",
                         ),
-                        child: BlocProvider<
-                          SourceMixAdditionalSettingsViewmodel
-                        >(
-                          create:
-                              (_) =>
-                                  SourceMixAdditionalSettingsViewmodel()
-                                    ..init(zoneID: widget.zoneID),
-                          child: BlocBuilder<
-                            SourceMixAdditionalSettingsViewmodel,
-                            SourceMixAdditionalSettingsVmState
-                          >(
+                        child: BlocProvider<SourceMixAdditionalSettingsViewmodel>(
+                          create: (_) => SourceMixAdditionalSettingsViewmodel()..init(zoneID: widget.zoneID),
+                          child: BlocBuilder<SourceMixAdditionalSettingsViewmodel, SourceMixAdditionalSettingsVmState>(
                             builder: (
                               BuildContext context,
                               SourceMixAdditionalSettingsVmState state,
                             ) {
-                              final SourceMixAdditionalSettingsViewmodel vm =
-                                  context
-                                      .watch<
-                                        SourceMixAdditionalSettingsViewmodel
-                                      >();
+                              final SourceMixAdditionalSettingsViewmodel vm = context.watch<SourceMixAdditionalSettingsViewmodel>();
 
                               return Container(
                                 decoration: BoxDecoration(
@@ -177,8 +163,7 @@ class _SourceMixAdditionalSettingsState
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: <Widget>[
                                         Flexible(
                                           flex: 2,
@@ -190,13 +175,11 @@ class _SourceMixAdditionalSettingsState
 
                                         VerticalDivider(
                                           width: 1,
-                                          color:
-                                              context.colorScheme.strokeLight,
+                                          color: context.colorScheme.strokeLight,
                                         ),
                                         Flexible(
                                           child: _MixSceneSetting(
-                                            allowController:
-                                                vm.isAssignToControllersEnabled,
+                                            allowController: vm.isAssignToControllersEnabled,
                                             zoneId: widget.zoneID,
                                             onAllowControllerChanged: () {
                                               vm.toggleAssignToControllers();
@@ -206,8 +189,85 @@ class _SourceMixAdditionalSettingsState
 
                                         VerticalDivider(
                                           width: 1,
-                                          color:
-                                              context.colorScheme.strokeLight,
+                                          color: context.colorScheme.strokeLight,
+                                        ),
+
+                                        PrioritySettingsWidget(
+                                          zoneId: widget.zoneID,
+                                          isStateActive: (int index) => vm.isPriorityControlTypeThreshold(index) || vm.isPriorityStateActive(index),
+                                          onStateActivePressAndHoldChanged: (int index, bool isPressed) {
+                                            vm.updatePriorityProperties(
+                                              zoneOrSubzoneId: widget.zoneID,
+                                              index: index,
+                                              isStateActive:isPressed,
+                                            );
+                                          },
+                                          onPTTControlTypeChanged: (int index) {
+                                            vm.updatePriorityProperties(
+                                              zoneOrSubzoneId: widget.zoneID,
+                                              index: index,
+                                              priorityControlType: AdditionalSettingsPriorityControlType.pttControler,
+                                            );
+                                          },
+                                          onThresholdControlTypeChanged: (int index) {
+                                            vm.updatePriorityProperties(
+                                              zoneOrSubzoneId: widget.zoneID,
+                                              index: index,
+                                              priorityControlType: AdditionalSettingsPriorityControlType.threshold,
+                                            );
+                                          },
+                                          isPriorityControlTypePTT: (int index) => vm.isPriorityControlTypePTT(index),
+                                          isPriorityControlTypeThreshold: (int index) => vm.isPriorityControlTypeThreshold(index),
+                                          enableBehaviorSettingsFields: (int index) => vm.enableBehaviorSettingsFields(index),
+                                          getThresholdValue: (int index) => vm.getThresholdValue(index),
+                                          getDepth: (int index) => vm.getDepth(index),
+                                          getAttack: (int index) => vm.getAttack(index),
+                                          getHold: (int index) => vm.getHold(index),
+                                          getRelease: (int index) => vm.getRelease(index),
+                                          getReductionValue: (int index) => vm.getReductionValue(index),
+                                          getPriorityBehavior: (int index) => vm.getPriorityBehavior(index),
+                                          onThresholdValueChanged: (int index, num value) {
+                                            vm.updatePriorityProperties(
+                                              zoneOrSubzoneId: widget.zoneID,
+                                              index: index,
+                                              thresholdValue: value.toDouble(),
+                                            );
+                                          },
+                                          onDepthValueChanged: (int index, num value) {
+                                            vm.updatePriorityProperties(
+                                              zoneOrSubzoneId: widget.zoneID,
+                                              index: index,
+                                              depthValue: value.toDouble(),
+                                            );
+                                          },
+                                          onAttackValueChanged: (int index, num value) {
+                                            vm.updatePriorityProperties(
+                                              zoneOrSubzoneId: widget.zoneID,
+                                              index: index,
+                                              attackValue: value.toDouble(),
+                                            );
+                                          },
+                                          onHoldValueChanged: (int index, num value) {
+                                            vm.updatePriorityProperties(
+                                              zoneOrSubzoneId: widget.zoneID,
+                                              index: index,
+                                              holdValue: value.toDouble(),
+                                            );
+                                          },
+                                          onReleaseValueChanged: (int index, num value) {
+                                            vm.updatePriorityProperties(
+                                              zoneOrSubzoneId: widget.zoneID,
+                                              index: index,
+                                              releaseValue: value.toDouble(),
+                                            );
+                                          },
+                                          onPriorityBehaviorChanged: (int index, AdditionalSettingPriorityBehavior value) {
+                                            vm.updatePriorityProperties(
+                                              zoneOrSubzoneId: widget.zoneID,
+                                              index: index,
+                                              priorityBehavior: value,
+                                            );
+                                          },
                                         ),
 
                                         // RIGHT COLUMN (Static)
@@ -215,48 +275,24 @@ class _SourceMixAdditionalSettingsState
                                           flex: 2,
                                           child: ZoneSubZoneBuilderWidget(
                                             zoneID: widget.zoneID,
-                                            getLowerGain:
-                                                (String zoneOrSubzoneID) =>
-                                                    vm.getLowerGain(
-                                                      zoneOrSubzoneID,
-                                                    ),
-                                            getUpperGain:
-                                                (String zoneOrSubzoneID) =>
-                                                    vm.getUpperGain(
-                                                      zoneOrSubzoneID,
-                                                    ),
-                                            isAllowMute:
-                                                (String zoneOrSubzoneID) =>
-                                                    vm.isAllowMute(
-                                                      zoneOrSubzoneID,
-                                                    ),
-                                            onLowerRangeChanged: (
-                                              String zoneOrSubzoneID,
-                                              num value,
-                                            ) {
+                                            getLowerGain: (String zoneOrSubzoneID) => vm.getLowerGain(zoneOrSubzoneID),
+                                            getUpperGain: (String zoneOrSubzoneID) => vm.getUpperGain(zoneOrSubzoneID),
+                                            isAllowMute: (String zoneOrSubzoneID) => vm.isAllowMute(zoneOrSubzoneID),
+                                            onLowerRangeChanged: (String zoneOrSubzoneID, num value) {
                                               vm.updateZoneProperties(
-                                                zoneOrSubzoneId:
-                                                    zoneOrSubzoneID,
+                                                zoneOrSubzoneId: zoneOrSubzoneID,
                                                 lowerLimit: value.toDouble(),
                                               );
                                             },
-                                            onUpperRangeChanged: (
-                                              String zoneOrSubzoneID,
-                                              num value,
-                                            ) {
+                                            onUpperRangeChanged: (String zoneOrSubzoneID, num value) {
                                               vm.updateZoneProperties(
-                                                zoneOrSubzoneId:
-                                                    zoneOrSubzoneID,
+                                                zoneOrSubzoneId: zoneOrSubzoneID,
                                                 upperLimit: value.toDouble(),
                                               );
                                             },
-                                            onAllowMuteChanged: (
-                                              String zoneOrSubzoneID,
-                                              bool newValue,
-                                            ) {
+                                            onAllowMuteChanged: (String zoneOrSubzoneID, bool newValue) {
                                               vm.updateZoneProperties(
-                                                zoneOrSubzoneId:
-                                                    zoneOrSubzoneID,
+                                                zoneOrSubzoneId: zoneOrSubzoneID,
                                                 allowMuteUnmute: newValue,
                                               );
                                             },
@@ -301,8 +337,7 @@ class __SourcesSettingState extends State<_SourcesSetting> {
   @override
   void initState() {
     super.initState();
-    final ProjectViewModel projectViewModel =
-        serviceLocator<ProjectViewModel>();
+    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
     sources = projectViewModel.getSourcesInZone(zoneId: widget.zoneID);
   }
 
@@ -318,10 +353,7 @@ class __SourcesSettingState extends State<_SourcesSetting> {
 
     return BlocProvider<SourceMixAdditionalSettingsViewmodel>.value(
       value: widget.vm,
-      child: BlocBuilder<
-        SourceMixAdditionalSettingsViewmodel,
-        SourceMixAdditionalSettingsVmState
-      >(
+      child: BlocBuilder<SourceMixAdditionalSettingsViewmodel, SourceMixAdditionalSettingsVmState>(
         builder: (
           BuildContext context,
           SourceMixAdditionalSettingsVmState state,
@@ -370,8 +402,7 @@ class __SourcesSettingState extends State<_SourcesSetting> {
                         ) {
                           final Source source = sources[index];
 
-                          final SourceVolumneRangeModel sourceRange = widget.vm
-                              .getSourceRange(source.id);
+                          final SourceVolumneRangeModel sourceRange = widget.vm.getSourceRange(source.id);
 
                           return Container(
                             width: 150,
@@ -440,8 +471,7 @@ class __SourcesSettingState extends State<_SourcesSetting> {
                                           vertical: 10,
                                         ),
                                         child: Divider(
-                                          color:
-                                              context.colorScheme.strokeLight,
+                                          color: context.colorScheme.strokeLight,
                                           height: 0,
                                         ),
                                       ),
@@ -450,32 +480,23 @@ class __SourcesSettingState extends State<_SourcesSetting> {
                                           vertical: 10,
                                         ),
                                         child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceEvenly,
+                                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                           children: <Widget>[
                                             Flexible(
                                               child: FusionAppText(
                                                 text: "Allow mute",
-                                                style: context
-                                                    .textTheme
-                                                    .labelMedium
-                                                    ?.copyWith(
-                                                      color:
-                                                          context
-                                                              .colorScheme
-                                                              .textSecondary,
-                                                    ),
+                                                style: context.textTheme.labelMedium?.copyWith(
+                                                  color: context.colorScheme.textSecondary,
+                                                ),
                                               ),
                                             ),
                                             FusionCheckbox(
-                                              semanticId:
-                                                  'mix_settings_allow_mute',
+                                              semanticId: 'mix_settings_allow_mute',
                                               value: sourceRange.allowMute,
                                               onChanged: () {
                                                 widget.vm.updateSource(
                                                   sourceId: source.id,
-                                                  alloMute:
-                                                      !sourceRange.allowMute,
+                                                  alloMute: !sourceRange.allowMute,
                                                 );
                                               },
                                             ),

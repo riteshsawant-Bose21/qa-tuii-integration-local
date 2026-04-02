@@ -6,11 +6,14 @@ class SourceMixAdditionalSettingsVmState extends Equatable {
   final List<VolumneRangeModel>? subZonesVolumeRange;
   final bool assignToControllers;
 
+  final List<PriorityAdditionalSettingsModel> priorityAdditionalSettingsModel;
+
   const SourceMixAdditionalSettingsVmState({
     this.sources = const <SourceVolumneRangeModel>[],
     this.zoneVolumeRange,
     this.subZonesVolumeRange,
     this.assignToControllers = false,
+    this.priorityAdditionalSettingsModel = const <PriorityAdditionalSettingsModel>[],
   });
 
   SourceMixAdditionalSettingsVmState copyWith({
@@ -18,12 +21,14 @@ class SourceMixAdditionalSettingsVmState extends Equatable {
     VolumneRangeModel? zoneVolumeRange,
     List<VolumneRangeModel>? subZonesVolumeRange,
     bool? assignToControllers,
+    List<PriorityAdditionalSettingsModel>? priorityAdditionalSettingsModel,
   }) {
     return SourceMixAdditionalSettingsVmState(
       sources: sources ?? this.sources,
       zoneVolumeRange: zoneVolumeRange ?? this.zoneVolumeRange,
       subZonesVolumeRange: subZonesVolumeRange ?? this.subZonesVolumeRange,
       assignToControllers: assignToControllers ?? this.assignToControllers,
+      priorityAdditionalSettingsModel: priorityAdditionalSettingsModel ?? this.priorityAdditionalSettingsModel,
     );
   }
 
@@ -33,5 +38,6 @@ class SourceMixAdditionalSettingsVmState extends Equatable {
     zoneVolumeRange,
     subZonesVolumeRange,
     assignToControllers,
+    priorityAdditionalSettingsModel,
   ];
 }
