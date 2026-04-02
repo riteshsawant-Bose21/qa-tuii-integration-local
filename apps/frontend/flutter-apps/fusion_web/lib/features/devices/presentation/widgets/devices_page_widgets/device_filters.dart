@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_web/features/devices/presentation/widgets/common_widgets/filter_dropdown.dart';
 import 'package:fusion_web/features/devices/presentation/widgets/devices_page_widgets/view_toggle_button.dart';
-
+import 'package:fusion_lib/fusion_widgets/form_fields/fusion_custom_textfield.dart';
+import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
+import 'package:fusion_lib/fusion_widgets/others/hover_dropdown.dart';
 class DeviceFilters extends StatelessWidget {
   final TextEditingController searchController;
 
@@ -72,9 +75,31 @@ class DeviceFilters extends StatelessWidget {
               child: TextFormField(
                 controller: searchController,
                 onChanged: onSearchChanged,
-                decoration: _inputDecoration(
-                  'Search devices...',
-                  Icons.search,
+                decoration: InputDecoration(
+                  labelText: 'Search devices...',
+                  prefixIcon: Icon(Icons.search),
+                  filled: true,
+                fillColor: context.colorScheme.onSurface.withValues(alpha: 0.05),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
                 ),
               ),
             ),
@@ -87,7 +112,7 @@ class DeviceFilters extends StatelessWidget {
               child: FilterDropdown(
                 value: selectedStatus,
                 items: statusItems,
-                onChanged: onStatusChanged,
+                onChanged: onStatusChanged, backgroundColor: context.colorScheme.elevation2,
               ),
             ),
 
@@ -99,7 +124,7 @@ class DeviceFilters extends StatelessWidget {
               child: FilterDropdown(
                 value: selectedProjects,
                 items: projectItems,
-                onChanged: onProjectChanged,
+                onChanged: onProjectChanged, backgroundColor: context.colorScheme.elevation2,
               ),
             ),
 
@@ -111,7 +136,7 @@ class DeviceFilters extends StatelessWidget {
               child: FilterDropdown(
                 value: selectedModels,
                 items: modelItems,
-                onChanged: onModelChanged,
+                onChanged: onModelChanged, backgroundColor: context.colorScheme.elevation2,
               ),
             ),
           ],
@@ -130,6 +155,7 @@ class DeviceFilters extends StatelessWidget {
                 value: selectedTypes,
                 items: typeItems,
                 onChanged: onTypeChanged,
+                backgroundColor: context.colorScheme.elevation2,
               ),
             ),
 
@@ -142,6 +168,7 @@ class DeviceFilters extends StatelessWidget {
                 value: selectedCategory,
                 items: categoryItems,
                 onChanged: onCategoryChanged,
+                backgroundColor: context.colorScheme.elevation2,
               ),
             ),
 
@@ -161,6 +188,7 @@ class DeviceFilters extends StatelessWidget {
       ],
     );
   }
+
 
   Widget _viewToggle() {
     return Row(

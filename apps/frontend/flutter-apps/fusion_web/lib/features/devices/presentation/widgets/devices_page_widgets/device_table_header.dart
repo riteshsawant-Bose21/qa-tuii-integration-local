@@ -10,7 +10,7 @@ class DeviceTableHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+        // borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
         border: Border(bottom: BorderSide(color: context.colorScheme.elevation3)),
       ),
       child: Row(

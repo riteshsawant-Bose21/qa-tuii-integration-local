@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_web/features/devices/presentation/handlers/devices_action_handler.dart';
 import 'package:fusion_web/features/devices/presentation/widgets/common_widgets/status_indicator.dart';
 import '../../../data/models/devices_model.dart';
@@ -32,17 +34,17 @@ class DevicesGridView extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
-            hoverColor: Colors.grey[100],
+            // hoverColor: Colors.grey[100],
             onTap: () => onDeviceTap(device),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: context.colorScheme.elevation3,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+                    // color: Colors.black.withOpacity(0.06),
+                    // blurRadius: 12,
+                    // offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -73,8 +75,8 @@ class DevicesGridView extends StatelessWidget {
                           Row(
                             children: [
                               Expanded(
-                                child: Text(
-                                  device.name,
+                                child: FusionAppText(
+                                  text: device.name,
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
@@ -98,7 +100,7 @@ class DevicesGridView extends StatelessWidget {
                                       children: [
                                         Icon(Icons.visibility_outlined),
                                         SizedBox(width: 8),
-                                        Text("View Details"),
+                                        FusionAppText(text: "View Details"),
                                       ],
                                     ),
                                   ),
@@ -110,10 +112,10 @@ class DevicesGridView extends StatelessWidget {
                           const SizedBox(height: 4),
 
                           /// MODEL
-                          Text(
-                            device.model,
+                          FusionAppText(
+                            text: device.model,
                             style: TextStyle(
-                              color: Colors.grey[600],
+                              // color: Colors.grey[600],
                               fontSize: 13,
                             ),
                           ),
@@ -126,45 +128,45 @@ class DevicesGridView extends StatelessWidget {
                           const SizedBox(height: 12),
 
                           /// DEVICE META
-                          Text(
-                            "Type: ${device.type}",
+                          FusionAppText(
+                            text: "Type: ${device.type}",
                             style: TextStyle(
-                              color: Colors.grey[700],
+                              // color: Colors.grey[700],
                               fontSize: 13,
                             ),
                           ),
 
                           const SizedBox(height: 2),
 
-                          Text(
-                            "Firmware: 2.1.0",
+                          FusionAppText(
+                            text: "Firmware: 2.1.0",
                             style: TextStyle(
-                              color: Colors.grey[700],
+                              // color: Colors.grey[700],
                               fontSize: 13,
                             ),
                           ),
 
                           const SizedBox(height: 2),
 
-                          Text(
-                            "Location: ${device.location}",
+                          FusionAppText(
+                            text: "Location: ${device.location}",
                             style: TextStyle(
-                              color: Colors.grey[700],
+                              // color: Colors.grey[700],
                               fontSize: 13,
                             ),
                           ),
 
                           const SizedBox(height: 12),
 
-                          Divider(color: Colors.grey[200]),
+                          Divider(color: context.colorScheme.elevation6),
 
                           const SizedBox(height: 8),
 
                           /// PROJECT LINK
-                          Text(
-                            device.project,
+                          FusionAppText(
+                            text: device.project,
                             style: const TextStyle(
-                              color: Color(0xFF2563EB),
+                              // color: Color(0xFF2563EB),
                               fontWeight: FontWeight.w500,
                             ),
                           ),

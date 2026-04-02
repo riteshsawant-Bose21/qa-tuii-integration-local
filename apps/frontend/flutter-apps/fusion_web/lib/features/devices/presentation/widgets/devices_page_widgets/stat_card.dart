@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 class StatCard extends StatelessWidget {
   final String title;
@@ -24,7 +25,7 @@ class StatCard extends StatelessWidget {
       width: 220,
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [BoxShadow(blurRadius: 6, color: Colors.black12)],
       ),

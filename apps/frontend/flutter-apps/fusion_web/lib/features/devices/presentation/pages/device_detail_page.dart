@@ -185,7 +185,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
-          color: selected ? Colors.white : Colors.transparent,
+          // color: selected ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),
         child: FusionAppText(

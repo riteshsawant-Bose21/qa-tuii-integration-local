@@ -22,7 +22,7 @@ class DeviceRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: context.colorScheme.elevation2,
+      color: Colors.transparent,
       child: InkWell(
         hoverColor: context.colorScheme.elevation3,
         onTap: () => onTap(device),
@@ -121,13 +121,18 @@ class DeviceRow extends StatelessWidget {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.grey[200],
                             borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: context.colorScheme.errorText,
+                            ),
                           ),
                           child: FusionAppText(
                             text:
                                 "${device.incidents} incident${device.incidents > 1 ? 's' : ''}",
-                            style: const TextStyle(fontSize: 12),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: context.colorScheme.errorText,
+                            ),
                           ),
                         ),
                       ),

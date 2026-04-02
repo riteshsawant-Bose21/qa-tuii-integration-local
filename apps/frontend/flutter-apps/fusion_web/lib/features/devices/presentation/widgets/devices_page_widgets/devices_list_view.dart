@@ -18,36 +18,39 @@ class DevicesListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FusionContainer(
-      color: context.colorScheme.elevation2,
-      raised: true,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
 
-      // decoration: BoxDecoration(
-      //   borderRadius: BorderRadius.circular(12),
-      //   border: Border.all(color: Colors.grey[200]!),
-      //   color: Colors.white,
-      // ),
-      child: Column(
-        children: [
-          const DeviceTableHeader(),
+      child: Container(
+        color: context.colorScheme.onSurface.withValues(alpha: 0.05),
 
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: devices.length,
-            separatorBuilder: (_, __) =>
-                  Divider(height: 1, color:  context.colorScheme.elevation3),
-            itemBuilder: (context, index) {
-              final device = devices[index];
+        // decoration: BoxDecoration(
+        //   borderRadius: BorderRadius.circular(12),
+        //   // border: Border.all(color: Colors.grey[200]!),
+        //   // color: Colors.white,
+        // ),
+        child: Column(
+          children: [
+            const DeviceTableHeader(),
 
-              return DeviceRow(
-                device: device,
-                isLast: index == devices.length - 1,
-                onTap: onDeviceTap,
-              );
-            },
-          ),
-        ],
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: devices.length,
+              separatorBuilder: (_, __) =>
+                  Divider(height: 1, color: context.colorScheme.elevation3),
+              itemBuilder: (context, index) {
+                final device = devices[index];
+
+                return DeviceRow(
+                  device: device,
+                  isLast: index == devices.length - 1,
+                  onTap: onDeviceTap,
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

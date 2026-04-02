@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_theme/color_pallette.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
-import 'package:google_fonts/google_fonts.dart';
 //Routes
 import 'package:go_router/go_router.dart';
 //base viewmodel
@@ -64,7 +62,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            // color: context.colorScheme.shadow,
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),

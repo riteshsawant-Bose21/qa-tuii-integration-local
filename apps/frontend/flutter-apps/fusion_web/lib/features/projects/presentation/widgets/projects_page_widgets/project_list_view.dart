@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_theme/color_pallette.dart';
@@ -18,27 +19,31 @@ class ProjectsListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      // color: context.colorScheme.elevation2,
-      // raised: true,
-      child: Column(
-        children: [
-          const ProjectTableHeader(),
-          Expanded(
-            child: ListView.separated(
-              itemCount: projects.length,
-              separatorBuilder: (_, __) =>
-                  Divider(height: 1, color:  context.colorScheme.elevation3),
-              itemBuilder: (context, index) {
-                return ProjectRow(
-                  project: projects[index],
-                  isLast: index == projects.length - 1,
-                  onTap: onTap,
-                );
-              },
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: context.colorScheme.onSurface.withValues(alpha: 0.05),
+        ),
+        child: Column(
+          children: [
+            const ProjectTableHeader(),
+            Expanded(
+              child: ListView.separated(
+                itemCount: projects.length,
+                separatorBuilder: (_, __) =>
+                    Divider(height: 1, color: context.colorScheme.elevation3),
+                itemBuilder: (context, index) {
+                  return ProjectRow(
+                    project: projects[index],
+                    isLast: index == projects.length - 1,
+                    onTap: onTap,
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

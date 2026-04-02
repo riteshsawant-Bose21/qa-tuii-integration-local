@@ -1,32 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
 class StatusIndicator extends StatelessWidget {
   final String status;
 
-  const StatusIndicator({super.key, required this.status});
+  const StatusIndicator({
+    super.key,
+    required this.status,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = _getBgColor(status);
-    final textColor = _getTextColor(status);
+    final color = _getColor(context, status);
 
     return Row(
       children: [
-
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: bgColor,
+            color: Colors.transparent, // no background
             borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: color, // same as text color
+              width: 1,
+            ),
           ),
           child: FusionAppText(
-            text:
-            _capitalize(status),
+            text: _capitalize(status),
             style: TextStyle(
-              color: textColor,
-              // fontWeight: FontWeight.w500,
               fontSize: 12,
+              color: color,
             ),
           ),
         ),
@@ -34,34 +38,26 @@ class StatusIndicator extends StatelessWidget {
     );
   }
 
-
-  Color _getBgColor(String status) {
-    switch (status) {
+  /// 🎨 Status Color Logic
+  Color _getColor(BuildContext context, String status) {
+    switch (status.toLowerCase()) {
       case "healthy":
-        return Colors.green.shade100;
+        return context.colorScheme.successText;
+
       case "critical":
-        return Colors.red.shade100;
+        return context.colorScheme.volumeRed;
+
       case "inactive":
-        return Colors.grey.shade200;
+        return context.colorScheme.elevation6;
+
       default:
-        return Colors.grey.shade200;
+        return context.colorScheme.elevation6;
     }
   }
 
-  Color _getTextColor(String status) {
-    switch (status) {
-      case "healthy":
-        return Colors.green.shade700;
-      case "critical":
-        return Colors.red.shade700;
-      case "inactive":
-        return Colors.grey.shade700;
-      default:
-        return Colors.grey.shade700;
-    }
-  }
-
+  /// 🔤 Capitalize First Letter
   String _capitalize(String text) {
+    if (text.isEmpty) return text;
     return text[0].toUpperCase() + text.substring(1);
   }
 }

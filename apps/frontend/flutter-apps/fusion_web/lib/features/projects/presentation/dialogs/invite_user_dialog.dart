@@ -278,166 +278,169 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
         ),
 
         if (isOpen)
-          Container(
-            margin: const EdgeInsets.only(top: 6),
-            decoration: BoxDecoration(
-              // color: Colors.white,
-              border: Border.all(color: context.colorScheme.elevation3),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            constraints: const BoxConstraints(maxHeight: 250),
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: TextField(
-                    controller: _controller,
-                    decoration: InputDecoration(
-                      hintText: "Search users...",
-                      prefixIcon: FusionIcon.icon(Icons.search),
-
-                      filled: true,
-                      fillColor: context.colorScheme.elevation2,
-
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: context.colorScheme.elevation3,
-                        ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: context.colorScheme.elevation3,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: context.colorScheme.primary, 
-                          width: 1.5,
-                        ),
-                      ),
-                    ),
-                    onChanged: _filter,
-                  ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: filteredUsers.length,
-                    itemBuilder: (context, index) {
-                      final user = filteredUsers[index];
-                      final isSelected = widget.selectedUsers.contains(user);
-
-                      return MouseRegion(
-                        onEnter: (_) => setState(() => hoveredIndex = index),
-                        onExit: (_) => setState(() => hoveredIndex = null),
-                        child: GestureDetector(
-                          onTap: () => _selectUser(user),
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(vertical: 4),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: hoveredIndex == index
-                                  ? context.colorScheme.elevation3
-                                  : context.colorScheme.elevation2,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 18,
-                                  // backgroundColor: const Color(0xFFE5E7EB),
-                                  child: Text(
-                                    user.name.substring(0, 2).toUpperCase(),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      /// name
-                                      Text(
-                                        user.name,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-
-                                      const SizedBox(height: 2),
-
-                                      /// email with role
-                                      Row(
-                                        children: [
-                                          Flexible(
-                                            child: FusionAppText(
-                                              text: user.email,
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                                // color: Colors.black,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ),
-
-                                          const SizedBox(width: 6),
-
-                                          /// DOT
-                                          const FusionAppText(
-                                            text: "•",
-                                            style: TextStyle(
-                                              // color: Colors.black,
-                                            ),
-                                          ),
-
-                                          const SizedBox(width: 6),
-
-                                          /// role
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              // color: const Color.fromARGB(255, 211, 213, 219),
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              border: Border.all(
-                                                // color: const Color(0xFFD1D5DB),
-                                                width: 1,
-                                              ),
-                                            ),
-                                            child: Text(
-                                              user.role,
-                                              style: const TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-
-                                if (isSelected) const Icon(Icons.check),
-                              ],
-                            ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              margin: const EdgeInsets.only(top: 6),
+              decoration: BoxDecoration(
+                // color: Colors.white,
+                // border: Border.all(color: context.colorScheme.elevation3),
+              ),
+              constraints: const BoxConstraints(maxHeight: 250),
+              child: Column(
+                children: [
+            
+                  Padding(
+                    padding: const EdgeInsets.all(0),
+                    child: TextField(
+                      controller: _controller,
+                      decoration: InputDecoration(
+                        hintText: "Search users...",
+                        prefixIcon: FusionIcon.icon(Icons.search),
+            
+                        filled: true,
+                        fillColor: context.colorScheme.elevation2,
+                        // border: InputBorder.none,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: context.colorScheme.elevation3,
                           ),
                         ),
-                      );
-                    },
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: context.colorScheme.elevation3,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: context.colorScheme.primary,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                      onChanged: _filter,
+                    ),
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: filteredUsers.length,
+                      itemBuilder: (context, index) {
+                        final user = filteredUsers[index];
+                        final isSelected = widget.selectedUsers.contains(user);
+            
+                        return MouseRegion(
+                          onEnter: (_) => setState(() => hoveredIndex = index),
+                          onExit: (_) => setState(() => hoveredIndex = null),
+                          child: GestureDetector(
+                            onTap: () => _selectUser(user),
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: hoveredIndex == index
+                                    ? context.colorScheme.elevation3
+                                    : context.colorScheme.elevation2,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 18,
+                                    // backgroundColor: const Color(0xFFE5E7EB),
+                                    child: Text(
+                                      user.name.substring(0, 2).toUpperCase(),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+            
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        /// name
+                                        Text(
+                                          user.name,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+            
+                                        const SizedBox(height: 2),
+            
+                                        /// email with role
+                                        Row(
+                                          children: [
+                                            Flexible(
+                                              child: FusionAppText(
+                                                text: user.email,
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  // color: Colors.black,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ),
+            
+                                            const SizedBox(width: 6),
+            
+                                            /// DOT
+                                            const FusionAppText(
+                                              text: "•",
+                                              style: TextStyle(
+                                                // color: Colors.black,
+                                              ),
+                                            ),
+            
+                                            const SizedBox(width: 6),
+            
+                                            /// role
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                // color: const Color.fromARGB(255, 211, 213, 219),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  // color: const Color(0xFFD1D5DB),
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                user.role,
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+            
+                                  if (isSelected) const Icon(Icons.check),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
       ],

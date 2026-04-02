@@ -29,17 +29,13 @@ class ProjectRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: context.colorScheme.onSurface.withValues(alpha: 0.05),
+      // color: context.colorScheme.onSurface.withValues(alpha: 0.05),
+      color: Colors.transparent,
       child: InkWell(
         hoverColor: context.colorScheme.onSurface.withValues(alpha: 0.03),
         onTap: () => onTap(project),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-          decoration: BoxDecoration(
-            borderRadius: isLast
-                ? const BorderRadius.vertical(bottom: Radius.circular(12))
-                : BorderRadius.zero,
-          ),
           child: Row(
             children: [
               /// PROJECT

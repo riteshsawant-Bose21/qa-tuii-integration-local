@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_theme/color_pallette.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
 import 'package:fusion_web/core/presentation/base_viewmodel.dart';
@@ -9,6 +8,7 @@ import 'package:fusion_web/core/services/service_locator.dart';
 
 import 'package:fusion_web/features/projects/data/models/project_model.dart';
 import 'package:fusion_web/features/projects/presentation/widgets/empty_state_widget.dart';
+import 'package:fusion_web/features/projects/presentation/widgets/projects_page_widgets/status_badge.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fusion_web/features/projects/presentation/handlers/project_actions_handler.dart';
 import 'package:fusion_web/features/projects/presentation/widgets/project_actions_menu.dart';
@@ -83,11 +83,11 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
           if (state is ErrorState) {
             return Scaffold(
               body: Center(
-                child: Text(
-                  (state as ErrorState).message,
+                child: FusionAppText(
+                  text: (state as ErrorState).message,
                   style: GoogleFonts.montserrat(
                     fontSize: 16,
-                    color: Colors.red,
+                    color: context.colorScheme.error,
                   ),
                 ),
               ),
@@ -144,7 +144,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                           if (states.contains(WidgetState.hovered)) {
                             return context
                                 .colorScheme
-                                .elevation3; // hover background
+                                .elevation2; // hover background
                           }
                           return Colors.transparent;
                         }),
@@ -184,17 +184,17 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  _smallPill(p.status),
-                                  const SizedBox(width: 8),
-                                  _smallPill("installation"),
+                                  StatusBadge(status: p.status),
+                                  // const SizedBox(width: 8),
+                                  // _smallPill("installation"),
                                 ],
                               ),
                               const SizedBox(height: 8),
-                              Text(
-                                p.description,
+                              FusionAppText(
+                                text: p.description,
                                 style: GoogleFonts.montserrat(
                                   fontSize: 15,
-                                  color: Colors.grey[600],
+                                  color: context.colorScheme.elevation6,
                                 ),
                               ),
                             ],
@@ -287,13 +287,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
 
                                 const SizedBox(height: 24),
 
-                                Text(
-                                  "Device Health Status",
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                                
+                                  _cardTitle("Device Health Status"),
+                                  
+                                
 
                                 const SizedBox(height: 16),
 
@@ -303,21 +300,21 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                                       "Healthy",
                                       p.healthyDevices,
                                       healthyPct,
-                                      Colors.green,
+                                      context.colorScheme.successText,
                                     ),
                                     const SizedBox(width: 12),
                                     _healthTile(
                                       "Warning",
                                       p.warningDevices,
                                       warningPct,
-                                      Colors.orange,
+                                      context.colorScheme.warningText,
                                     ),
                                     const SizedBox(width: 12),
                                     _healthTile(
                                       "Critical",
                                       p.criticalDevices,
                                       criticalPct,
-                                      Colors.red,
+                                      context.colorScheme.volumeRed,
                                     ),
                                   ],
                                 ),
@@ -511,7 +508,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                                 }
 
                                 if (state is ErrorState<DevicesModel>) {
-                                  return Center(child: Text(state.message));
+                                  return Center(child: FusionAppText(text: state.message));
                                 }
 
                                 return const SizedBox();
@@ -551,7 +548,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
 
   Widget _cardTitle(String text) => FusionAppText(
     text: text,
-    // style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w600),
+    style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w600),
   );
 
   Widget _detail(String label, String value) => Padding(
@@ -606,13 +603,13 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
+          FusionAppText(
+            text: label,
             style: GoogleFonts.montserrat(fontSize: 13, color: color),
           ),
           const SizedBox(height: 8),
-          Text(
-            "$count",
+          FusionAppText(
+            text: "$count",
             style: GoogleFonts.montserrat(
               fontSize: 24,
               fontWeight: FontWeight.w700,
@@ -620,8 +617,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            "$pct%",
+          FusionAppText(
+            text: "$pct%",
             style: GoogleFonts.montserrat(fontSize: 12, color: color),
           ),
         ],
@@ -630,31 +627,40 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
   );
 
   Widget _tabButton(String text, DetailTab tab) {
-    final selected = _selectedTab == tab;
+  final selected = _selectedTab == tab;
 
-    return InkWell(
-      onTap: () => setState(() => _selectedTab = tab),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? Colors.grey[300] : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: FusionAppText(
-          text: text
+  return InkWell(
+    borderRadius: BorderRadius.circular(20),
+    onTap: () => setState(() => _selectedTab = tab),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: selected
+            ? context.colorScheme.elevation2
+            : Colors.transparent,
+
+        borderRadius: BorderRadius.circular(20),
+
+        // ✅ ADD THIS
+        border: Border.all(
+          color: selected
+              ? context.colorScheme.elevation4 
+              : context.colorScheme.elevation3,
         ),
       ),
-    );
-  }
-
-  Widget _smallPill(String text) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-    decoration: BoxDecoration(
-      color: context.colorScheme.elevation6,
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: FusionAppText(
-      text: text,
+      child: FusionAppText(text: text),
     ),
   );
+}
+
+//   Widget _smallPill(String text) => Container(
+//     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+//     decoration: BoxDecoration(
+//       color: context.colorScheme.elevation6,
+//       borderRadius: BorderRadius.circular(20),
+//     ),
+//     child: FusionAppText(
+//       text: text,
+//     ),
+//   );
 }

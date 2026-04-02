@@ -12,9 +12,11 @@ class ProjectTableHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
+              color: Colors.transparent,
+
         // color: Colors.grey[50],
-      color: context.colorScheme.onSurface.withValues(alpha: 0.05),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+      // color: context.colorScheme.onSurface.withValues(alpha: 0.05),
+        // borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
         border: Border(bottom: BorderSide(color: context.colorScheme.elevation3)),
       ),
       child: Row(

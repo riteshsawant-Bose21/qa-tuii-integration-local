@@ -59,7 +59,6 @@ class ProjectsFilters extends StatelessWidget {
           Expanded(
             child: FilterDropdown(
               value: vm.region,
-
               items: const ['All', 'indoor', 'outdoor', 'hybrid'],
               onChanged: (v) => vm.updateRegion(v!),
               backgroundColor: context.colorScheme.elevation2,
