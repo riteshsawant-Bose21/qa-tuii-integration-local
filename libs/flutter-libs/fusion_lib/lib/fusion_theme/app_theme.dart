@@ -87,21 +87,18 @@ class FusionAppTheme {
         fontSize: 22,
         fontWeight: FontWeight.w500,
         letterSpacing: 0,
-        fontFamily: GoogleFonts.montserrat().fontFamily,
         color: colorScheme.textPrimary,
       ),
       titleMedium: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w500,
         letterSpacing: 0.15,
-        fontFamily: GoogleFonts.montserrat().fontFamily,
         color: colorScheme.textPrimary,
       ),
       titleSmall: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w500,
         letterSpacing: 0.1,
-        fontFamily: GoogleFonts.montserrat().fontFamily,
         color: colorScheme.textPrimary,
       ),
 
@@ -130,21 +127,18 @@ class FusionAppTheme {
         fontSize: 16,
         fontWeight: FontWeight.w400,
         letterSpacing: 0.5,
-        fontFamily: GoogleFonts.montserrat().fontFamily,
         color: colorScheme.textPrimary,
       ),
       bodyMedium: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w400,
         letterSpacing: 0.25,
-        fontFamily: GoogleFonts.montserrat().fontFamily,
         color: colorScheme.textPrimary,
       ),
       bodySmall: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w400,
         letterSpacing: 0.4,
-        fontFamily: GoogleFonts.montserrat().fontFamily,
         color: colorScheme.textPrimary,
       ),
     );
