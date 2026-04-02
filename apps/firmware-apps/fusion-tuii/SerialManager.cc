@@ -11,6 +11,7 @@
 #include <utility>
 
 #include <spdlog/spdlog.h>
+#include <spdlog/fmt/bin_to_hex.h>
 
 #include "SerialManager.h"
 
@@ -210,6 +211,10 @@ void SerialManager::handleHeaderRead(const boost::system::error_code &ec)
         return;
     }
 
+    //DEBUG
+    spdlog::debug("[SerialManager] SOF {:02X}{:02X}{:02X}{:02X}",
+                 m_headerBuf[0], m_headerBuf[1], m_headerBuf[2], m_headerBuf[3]);
+    //DEBUG
     processHeader();
 }
 
@@ -266,6 +271,11 @@ void SerialManager::handlePayloadRead(const boost::system::error_code &ec,
         return;
     }
 
+    //DEBUG
+    spdlog::debug("[SerialManager] CRC : expected 0x{:04X} computed 0x{:04X}",
+                      expectedCrc, crc);
+    //DEBUG
+
     handleSerialData(reinterpret_cast<const char *>(m_payloadBuf), len);
     startReadHeader();
 }
@@ -292,6 +302,10 @@ void SerialManager::handleResyncByte(const boost::system::error_code &ec)
         startResync();
         return;
     }
+
+    //DEBUG
+    spdlog::debug("[SerialManager] Resync read : {:02X}", m_resyncByte );
+    //DEBUG
 
     if (m_resyncByte == SOF_WIRE[m_resyncFill])
     {
@@ -339,6 +353,12 @@ void SerialManager::handleSerialData(const char *buf, std::size_t bytesRead)
         std::lock_guard<std::mutex> lock(m_callbackMutex);
         callback = m_receiveCallback;
     }
+
+    //DEBUG
+    spdlog::debug("[SerialManager] Received {} bytes", bytesRead);
+    spdlog::info("[SerialManager] String: {} ", buf);
+    spdlog::debug("[SerialManager] Hex: {} ", spdlog::to_hex(buf, (buf+bytesRead)));
+    //DEBUG
 
     if (callback)
     {

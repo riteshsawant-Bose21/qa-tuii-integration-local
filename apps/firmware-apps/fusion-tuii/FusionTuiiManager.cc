@@ -146,7 +146,7 @@ bool SendJsonPacket(const Json::Value &packet);
 
 namespace {
 constexpr int PROTOCOL_ACK_TIMEOUT_MS      = 100;
-constexpr int SERIAL_RETRY_INTERVAL_MS     = 1000;
+constexpr int SERIAL_RETRY_INTERVAL_MS     = 10000;
 constexpr int NACK_MAX_RETRIES             = 3;
 constexpr int NACK_RETRY_DELAY_MS          = 50;
 
@@ -652,8 +652,7 @@ void HandleSerialProtocolMessage(const char *buf, std::size_t len)
 
     if (sendUnknownNack)
     {
-        spdlog::warn("[Protocol] Unknown serial action '{}'; sending nack", action);
-        SendNackWithRetry(action, -1);
+        spdlog::warn("[Protocol] Unknown serial action '{}';", action);
         return;
     }
 
@@ -753,15 +752,14 @@ bool checkForZoneEndNack()
 ZoneEndWaitResult WaitForZoneEndResult()
 {
     std::unique_lock<std::mutex> lock(g_protocolMutex);
-    const bool signaled = g_protocolCv.wait_for(
-        lock,
-        std::chrono::milliseconds(PROTOCOL_ACK_TIMEOUT_MS),
-        []() { return g_protocolStop || g_zoneEndWaitResult != ZoneEndWaitResult::none; });
+    bool signaled = false;
 
-    if (!signaled)
-    {
-        return ZoneEndWaitResult::none;
-    }
+    do {
+        signaled = g_protocolCv.wait_for(
+                lock,
+                std::chrono::milliseconds(PROTOCOL_ACK_TIMEOUT_MS),
+                []() { return g_protocolStop || g_zoneEndWaitResult != ZoneEndWaitResult::none; });
+    } while (!signaled);
 
     return g_zoneEndWaitResult;
 }
