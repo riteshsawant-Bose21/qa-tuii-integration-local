@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_app/features/scanner/view_model/qr_scanner_view_model.dart';
+import 'package:fusion_app/features/zones/view_model/controlpal_zone_view_model.dart';
 import 'package:fusion_lib/fusion_theme/fusion_theme_notifier.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:nested/nested.dart' show SingleChildWidget;
@@ -26,7 +29,20 @@ Future<void> main() async {
       DeviceOrientation.portraitUp,
       //DeviceOrientation.landscapeLeft,
     ]);
+    final uri = Uri(
+      scheme: 'com.bosepro.fusion',
+      host: 'connect',
+      queryParameters: {
+        'vip': '192.168.1.100',
+        'controller_id': 'CTRL1762958340064766236',
+      },
+    );
 
+    final s = uri.toString();
+
+    final qrString = jsonEncode(s);
+    print("qrString");
+    print(qrString);
    await AppConfig.initialize();
 
     await setupServiceLocator();
@@ -86,15 +102,16 @@ class MyApp extends StatelessWidget {
           value: serviceLocator<AuthViewModel>()..initialize(),
           // lazy: false,
         ),
-        // BlocProvider<PanelBloc>(
-        //   create: (BuildContext context) => serviceLocator<PanelBloc>(),
-        // ),
+        BlocProvider<QrScannerViewModel>.value(
+          value: serviceLocator<QrScannerViewModel>(),
+          // lazy: false,
+        ),
         BlocProvider<ProjectViewModel>(
           create: (BuildContext context) => serviceLocator<ProjectViewModel>(),
         ),
-        // BlocProvider<ProjectSyncViewModel>(
-        //   create: (BuildContext context) => serviceLocator<ProjectSyncViewModel>(),
-        // ),
+        BlocProvider<ControlPalZonesViewModel>(
+          create: (BuildContext context) => serviceLocator<ControlPalZonesViewModel>(),
+        ),
         // BlocProvider<ProductQueryCubit>(
         //   create: (BuildContext context) => serviceLocator<ProductQueryCubit>(),
         // ),
