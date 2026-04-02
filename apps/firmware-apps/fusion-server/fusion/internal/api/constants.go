@@ -3,14 +3,21 @@ package api
 import "time"
 
 const (
-	FirmwareUnknown = "Unknown"
+	SoftwareUpdateVersionUnknown = "Unknown"
+	BranchNameUnknown            = "Unknown"
+	CommitHashUnknown            = "Unknown"
+	JenkinsBuildNumberUnknown    = "Unknown"
+	SoftwareUpdateOTAPath        = "/mnt/ota"
+	MaxSoftwareUpdateUploadBytes = 300 << 20 // 300 MB
+	MinFreeSpaceBuffer           = 100 << 20 // 100 MB minimum free space buffer
 
 	FusionEpoch     = "_fusion_epoch"
 	FusionVersion   = "_fusion_version"
 	FusionMessageID = "_fusion_msg_id"
 	FusionOperation = "_fusion_op"
 
-	HTTPTimeout = 5 * time.Second
+	HTTPTimeout       = 5 * time.Second
+	HTTPUploadTimeout = 30 * time.Second
 
 	MacUnknown = "Unknown"
 
@@ -102,6 +109,6 @@ const (
 	DefaultCSRFileName      = "device.csr"
 	DefaultCertFileName     = "device.x509.cert"
 	DefaultKeyFileName      = "device.key"
-	FirmwarePath            = "/etc/buildinfo"
+	SoftwareUpdateInfoPath  = "/etc/buildinfo"
 	SerialPath              = "/sys/firmware/devicetree/base/serial-number"
 )

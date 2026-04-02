@@ -28,6 +28,8 @@ const (
 	NotifyOpVIPStatus                 NotifyOp = "vip_status"
 	NotifyOpValueGet                  NotifyOp = "get"
 	NotifyOpValueSet                  NotifyOp = "set"
+	NotifyOpSoftwareUpdateAvailable   NotifyOp = "software_update_available"
+	NotifyOpSoftwareUpdateSyncAck     NotifyOp = "software_update_sync_ack"
 )
 
 // NotifyMessage holds information about a cross-node message
@@ -41,8 +43,11 @@ type NotifyMessage struct {
 	ConfigUpdate      *ConfigUpdate
 	ConfigValue       *ConfigValue
 	DeviceInfo        *DeviceInfo
+	SoftwareUpdate    *SoftwareUpdateSync
+	SoftwareUpdateAck *SoftwareUpdateSyncAck
 	SnapshotOperation *SnapshotOperation
 	Task              *Task
+	VersionUpdate     *VersionUpdate
 }
 
 func NewNotifyMessage(op NotifyOp, node string, builder func(*NotifyMessage)) *NotifyMessage {
@@ -99,6 +104,18 @@ var validators = map[NotifyOp]func(*NotifyMessage) error{
 		}
 		return nil
 	},
+	NotifyOpSoftwareUpdateAvailable: func(m *NotifyMessage) error {
+		if m.SoftwareUpdate == nil {
+			return errors.New("SoftwareUpdate required for operation")
+		}
+		return nil
+	},
+	NotifyOpSoftwareUpdateSyncAck: func(m *NotifyMessage) error {
+		if m.SoftwareUpdateAck == nil {
+			return errors.New("SoftwareUpdateAck required for operation")
+		}
+		return nil
+	},
 	NotifyOpTaskCreate: validateTask,
 	NotifyOpTaskUpdate: validateTask,
 	NotifyOpTaskDelete: validateTask,
@@ -116,7 +133,9 @@ func (msg *NotifyMessage) IsPublic() bool {
 		msg.Operation == NotifyOpSnapActivate ||
 		msg.Operation == NotifyOpAck ||
 		msg.Operation == NotifyOpVIPStatus ||
-		msg.Operation == NotifyOpDeviceUpdate
+		msg.Operation == NotifyOpDeviceUpdate ||
+		msg.Operation == NotifyOpSoftwareUpdateAvailable ||
+		msg.Operation == NotifyOpSoftwareUpdateSyncAck
 }
 
 func WithAudioRemove(update *AudioRemoveUpdate) func(*NotifyMessage) {
@@ -146,6 +165,24 @@ func WithSnapshotOperation(operation *SnapshotOperation) func(*NotifyMessage) {
 func WithTask(task *Task) func(*NotifyMessage) {
 	return func(m *NotifyMessage) {
 		m.Task = task
+	}
+}
+
+func WithSoftwareUpdate(update *SoftwareUpdateSync) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.SoftwareUpdate = update
+	}
+}
+
+func WithSoftwareUpdateAck(ack *SoftwareUpdateSyncAck) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.SoftwareUpdateAck = ack
+	}
+}
+
+func WithVersionUpdate(update *VersionUpdate) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.VersionUpdate = update
 	}
 }
 

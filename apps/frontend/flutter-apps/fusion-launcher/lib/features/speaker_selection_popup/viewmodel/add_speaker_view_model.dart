@@ -27,10 +27,26 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     this.zoneId = zoneId;
     this.subZoneId = subZoneId;
 
+    prefillListeningArea();
+
     // Hydrate suggest-mode state when reopening the dialog so previously configured
     // values immediately show recommended lists and top-card selections.
     _recalculateIfSuggestMode();
     _restoreSuggestedSelectionFromExistingSpeakers();
+  }
+
+  void prefillListeningArea() {
+    if (selectedListeningArea == null || selectedListeningArea?.environmentType != null) return;
+
+    final List<ListeningArea> allAreas = projectViewModel.getAllListeningAreas();
+    final ListeningArea? prefilledLA = allAreas.singleWhereOrNull((ListeningArea la) => la.environmentType != null);
+
+    final ListeningArea updatedLA = selectedListeningArea!.copyWith(
+      environmentType: prefilledLA?.environmentType,
+      listeningHeight: prefilledLA?.listeningHeight,
+      ceilingHeight: prefilledLA?.ceilingHeight,
+    );
+    projectViewModel.updateListeningArea(area: updatedLA);
   }
 
   void _restoreSuggestedSelectionFromExistingSpeakers() {
