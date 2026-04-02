@@ -144,6 +144,20 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 			return fmt.Errorf("DeviceInfo required for operation")
 		}
 
+	case api.NotifyOpSoftwareUpdateAvailable:
+		if message.SoftwareUpdate == nil {
+			return fmt.Errorf("SoftwareUpdate required for SoftwareUpdate available operation")
+		}
+		logger.Info("[Hub] Broadcasting SoftwareUpdate availability: %s (%d bytes) from %s",
+			message.SoftwareUpdate.Filename, message.SoftwareUpdate.SizeBytes, message.SoftwareUpdate.SourceIP)
+
+	case api.NotifyOpSoftwareUpdateSyncAck:
+		if message.SoftwareUpdateAck == nil {
+			return fmt.Errorf("SoftwareUpdateAck required for SoftwareUpdate sync acknowledgment operation")
+		}
+		logger.Info("[Hub] Broadcasting SoftwareUpdate sync acknowledgment: %s (success: %v, sync ID: %s)",
+			message.SoftwareUpdateAck.Filename, message.SoftwareUpdateAck.Success, message.SoftwareUpdateAck.SyncID)
+
 	default:
 		return fmt.Errorf("unknown operation type: %s", message.Operation)
 	}
@@ -178,8 +192,9 @@ func (h *Hub) broadcastToNodes(message []byte) {
 	}
 
 	localName := h.transport.LocalNode().Name
+	members := h.transport.MemberListMembers()
 
-	for _, node := range h.transport.MemberListMembers() {
+	for _, node := range members {
 		if node.Name == localName {
 			continue
 		}
