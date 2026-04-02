@@ -147,8 +147,6 @@ private:
     std::string device_name;
     bool is_input;
     int playback_start_threshold_frames;
-    int queued_before_start = 0;
-    bool playback_started = false;
     State current_state = DEVICE_STATE_CLOSED;
     bosepro::AudioSubtask deferred_open_task;
     static pthread_mutex_t open_mutex;
@@ -318,8 +316,6 @@ void AlsaDevice::open_device()
         SPDLOG_ERROR("Failed to prepare ALSA device: {}", snd_strerror(error));
     }
 
-    queued_before_start = 0;
-    playback_started = false;
     pthread_mutex_unlock(&open_mutex);
 
     ALSA_DEVICE_SET_STATE(DEVICE_STATE_STREAMING, "Opened device {}",
@@ -446,29 +442,37 @@ int AlsaDevice::read(float *buffer, int samples)
 
     if (samples > max_transfer_size)
     {
-        // If this ever happens, it's a bug, not a problem with the device.
         SPDLOG_ERROR("Requested read size {} exceeds maximum {}",
                      samples, max_transfer_size);
-        return 0;
-    }
-
-    if (snd_pcm_state(alsa) == SND_PCM_STATE_PREPARED)
-    {
-        int start = snd_pcm_start(alsa);
-
-        if (start < 0)
-        {
-            ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
-                                  "Unable to start {}: {}",
-                                  device_name.c_str(), snd_strerror(start));
-            return 0;
-        }
+        std::memset(buffer, 0, samples * channels * sizeof(float));
+        return samples;
     }
 
     int res = snd_pcm_readi(alsa, sample_buffer.get(), samples);
 
+    if (res == -EAGAIN)
+    {
+        std::memset(buffer, 0, samples * channels * sizeof(float));
+        return samples;
+    }
+
     if (res < 0)
     {
+        if (res == -EPIPE)
+        {
+            ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                                  "Capture xrun on {}: {}",
+                                  device_name.c_str(), snd_strerror(res));
+
+            if (snd_pcm_prepare(alsa) < 0)
+            {
+                close_device();
+            }
+
+            std::memset(buffer, 0, samples * channels * sizeof(float));
+            return samples;
+        }
+
         if (res == -EBADFD || res == -ENODEV)
         {
             close_device();
@@ -477,21 +481,28 @@ int AlsaDevice::read(float *buffer, int samples)
         }
 
         ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
-                              "Unable to read from {}: {}", device_name.c_str(),
-                              snd_strerror(res));
-        return 0;
+                              "Unable to read from {}: {}",
+                              device_name.c_str(), snd_strerror(res));
+        std::memset(buffer, 0, samples * channels * sizeof(float));
+        return samples;
     }
-    else if (res != samples)
+
+    if (res != samples)
     {
         ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                               "Unexpected samples read from {}: {} vs {}",
                               device_name.c_str(), res, samples);
+
+        std::memset(buffer, 0, samples * channels * sizeof(float));
+        if (res > 0)
+        {
+            convert_read(sample_buffer.get(), buffer, channels, res);
+        }
+        return res;
     }
-    else
-    {
-        ALSA_DEVICE_SET_STATE(DEVICE_STATE_STREAMING,
-                              "Device {} resumed reading", device_name.c_str());
-    }
+
+    ALSA_DEVICE_SET_STATE(DEVICE_STATE_STREAMING,
+                          "Device {} resumed reading", device_name.c_str());
 
     convert_read(sample_buffer.get(), buffer, channels, samples);
 
@@ -509,7 +520,6 @@ void AlsaDevice::write(const float *buffer, int samples)
 
     if (samples > max_transfer_size)
     {
-        // If this ever happens, it's a bug, not a problem with the device.
         SPDLOG_ERROR("Requested write size {} exceeds maximum {}",
                      samples, max_transfer_size);
         return;
@@ -519,57 +529,49 @@ void AlsaDevice::write(const float *buffer, int samples)
 
     int res = snd_pcm_writei(alsa, sample_buffer.get(), samples);
 
+    if (res == -EAGAIN)
+    {
+        return;
+    }
+
     if (res < 0)
     {
+        if (res == -EPIPE)
+        {
+            ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                                  "Playback xrun on {}: {}",
+                                  device_name.c_str(), snd_strerror(res));
+
+            if (snd_pcm_prepare(alsa) < 0)
+            {
+                close_device();
+            }
+
+            return;
+        }
+
         if (res == -EBADFD || res == -ENODEV)
         {
             close_device();
+            return;
         }
 
         ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
-                              "Unable to write {}: {}", device_name.c_str(),
-                              snd_strerror(res));
+                              "Unable to write {}: {}",
+                              device_name.c_str(), snd_strerror(res));
+        return;
     }
-    else if (res != samples)
+
+    if (res != samples)
     {
-        SPDLOG_ERROR("Unexpected number of samples written: {}", res);
         ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                               "Unexpected samples written to {}: {} vs {}",
                               device_name.c_str(), res, samples);
-    }
-    else
-    {
-        ALSA_DEVICE_SET_STATE(DEVICE_STATE_STREAMING,
-                              "Device {} resumed writing", device_name.c_str());
+        return;
     }
 
-    if (!is_input)
-    {
-        snd_pcm_state_t state = snd_pcm_state(alsa);
-
-        if (state != SND_PCM_STATE_PREPARED)
-        {
-            playback_started = true;
-        }
-        else if (!playback_started && res > 0)
-        {
-            queued_before_start += res;
-            if (queued_before_start >= playback_start_threshold_frames)
-            {
-                int start = snd_pcm_start(alsa);
-
-                if (start < 0)
-                {
-                    ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
-                                          "Unable to start {}: {}",
-                                          device_name.c_str(), snd_strerror(start));
-                    return;
-                }
-
-                playback_started = true;
-            }
-        }
-    }
+    ALSA_DEVICE_SET_STATE(DEVICE_STATE_STREAMING,
+                          "Device {} resumed writing", device_name.c_str());
 }
 
 
@@ -713,7 +715,7 @@ void AlsaDevice::set_sw_params()
 
     // Set the minimum available before considered ready to read/write,
     // usually must be a power of two periods.
-    error = snd_pcm_sw_params_set_avail_min(alsa, sw_params, 12 * period_size);
+    error = snd_pcm_sw_params_set_avail_min(alsa, sw_params, 1 * period_size);
     if (error < 0)
     {
         SPDLOG_ERROR("Failed to set ALSA avail min: {}",
@@ -726,11 +728,12 @@ void AlsaDevice::set_sw_params()
     // Automatically start when buffer fills by at least one period on
     // the capture size, or at least one period is available to write on
     // the playback side.
-    error = snd_pcm_sw_params_set_start_threshold(alsa, sw_params, period_size);
+    error = snd_pcm_sw_params_set_start_threshold(alsa, sw_params,
+                                                is_input ? 1 : playback_start_threshold_frames);
     if (error < 0)
     {
         SPDLOG_ERROR("Failed to set ALSA start threshold: {}",
-                     snd_strerror(error));
+                    snd_strerror(error));
     }
 
     // Set the threshold above which we enter xrun state.  The -1 setting
