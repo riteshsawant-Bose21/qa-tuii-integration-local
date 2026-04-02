@@ -1,22 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_app/features/commission/models/bluetooth_device_model.dart';
-import 'package:fusion_app/features/commission/widgets/hardware_item.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/button/button.dart';
 import 'package:fusion_app/features/zones/models/zone_source_model.dart';
 import 'package:fusion_app/features/zones/widgets/source_item.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 class BottomSheetSelectSource extends StatelessWidget {
-  final ValueNotifier<int> selectedIndex;
+  final ValueNotifier<ZoneSourceModel> source;
   final Function? onSelected;
   final List<ZoneSourceModel> sources;
-  const BottomSheetSelectSource({super.key,this.sources=const[], required this.selectedIndex,this.onSelected});
+  const BottomSheetSelectSource({super.key,this.sources=const[], required this.source,this.onSelected});
 
   @override
   Widget build(BuildContext context) {
-
-    print("selectedIndex.value");
-    print(selectedIndex.value);
 
     return Stack(
       alignment: Alignment.topCenter,
@@ -63,16 +58,16 @@ class BottomSheetSelectSource extends StatelessWidget {
                     itemBuilder: (ctx,i){
 
 
-                      return ValueListenableBuilder<int>(
-                          valueListenable: selectedIndex,
+                      return ValueListenableBuilder<ZoneSourceModel>(
+                          valueListenable: source,
                           builder: (context, mode, _) {
                           return GestureDetector(
                               onTap: (){
-                                selectedIndex.value = i;
+                                source.value = sources[i];
                               },
                               child: SourceCard(
                                 source: sources[i],
-                                selected: selectedIndex.value == i,
+                                selected: source.value.id == sources[i].id,
                                 showCheckbox: true,));
                         }
                       );
@@ -88,7 +83,7 @@ class BottomSheetSelectSource extends StatelessWidget {
                   isNeumorphic: true,
                   enabled: ValueNotifier(true),
                   onPressed: (){
-                    onSelected!(selectedIndex.value);
+                    onSelected!(source.value);
                     Navigator.pop(context);
                   },
                   buttonText:'Save Changes',

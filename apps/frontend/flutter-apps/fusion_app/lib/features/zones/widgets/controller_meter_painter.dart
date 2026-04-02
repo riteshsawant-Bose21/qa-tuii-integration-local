@@ -40,8 +40,7 @@ class ControllerAudioMeterPainter extends CustomPainter {
     Paint()
       ..color = trackColor
       ..style = PaintingStyle.fill;
-    print("barTop");
-    print(barTop);
+
     final RRect trackRRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(0, barTop, barWidth, barHeight),
       const Radius.circular(barHeight / 2),

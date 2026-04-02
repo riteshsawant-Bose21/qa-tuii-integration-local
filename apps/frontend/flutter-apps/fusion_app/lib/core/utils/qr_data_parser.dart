@@ -15,6 +15,7 @@ class QRConnectionParser {
     // 1. Try parsing as URI
     try {
       final uri = Uri.parse(payload);
+      print("Parsed URI: $uri");
 
       // Check for Universal Link / App Link (http/https)
       // final isUniversal =
@@ -30,13 +31,14 @@ class QRConnectionParser {
         // Handle case-insensitive keys (e.g. configid vs configId)
         String? vip = uri.queryParameters['vip'];
         String? configId =
-            uri.queryParameters['configId'] ?? uri.queryParameters['configid'];
-
+            uri.queryParameters['controller_id'] ?? uri.queryParameters['controller_id'];
+        print("Parsed URI - VIP: $vip, Config ID: $configId");
         if (vip != null && configId != null) {
           return QRConnectionDetails(vip: vip, configId: configId);
         }
       }
-    } catch (_) {
+    } catch (e) {
+      print(e);
       // Not a valid URI, continue to JSON parsing
     }
 
@@ -48,7 +50,8 @@ class QRConnectionParser {
       if (vip != null && configId != null) {
         return QRConnectionDetails(vip: vip, configId: configId);
       }
-    } catch (_) {
+    } catch (e) {
+      print(e);
       // Not a valid JSON either
     }
 

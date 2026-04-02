@@ -5,6 +5,8 @@ import 'package:fusion_app/core/models/user_profile_model.dart';
 import 'package:fusion_app/core/router/navigation_observer.dart';
 import 'package:fusion_app/core/services/user_profile_manager.dart';
 import 'package:fusion_app/features/authentication/viewmodel/session_view_model.dart';
+import 'package:fusion_app/features/scanner/view_model/fusion_qr_service.dart';
+import 'package:fusion_app/features/scanner/view_model/qr_scanner_view_model.dart';
 // import 'package:fusion_app/features/projects/view_model/project_sync_view_model.dart';
 //import 'package:fusion_app/features/shared/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/di/service_locator.dart';
@@ -15,6 +17,8 @@ import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../features/authentication/viewmodel/auth_view_model.dart';
 import '../features/landing/viewmodel/project_view_model.dart';
+import '../features/zones/view_model/controlpal_zone_view_model.dart';
+import '../features/zones/view_model/fusion_zone_service.dart';
 import 'config/app_config.dart';
 final GetIt serviceLocator = GetIt.instance;
 
@@ -54,6 +58,18 @@ Future<void> setupServiceLocator() async {
       authScheme: AppConfig.auth0Schema,
       webRedirectUrl: AppConfig.auth0RedirectUri,
       nativeRedirectUrl: AppConfig.auth0NativeRedirectUri,
+    ),
+  );
+
+  serviceLocator.registerLazySingleton<FusionQRService>(
+        () => FusionQRService(
+      networkClient: serviceLocator<FusionNetworkClient>(),
+    ),
+  );
+
+  serviceLocator.registerLazySingleton<FusionZoneService>(
+        () => FusionZoneService(
+      networkClient: serviceLocator<FusionNetworkClient>(),
     ),
   );
   //
@@ -163,6 +179,20 @@ Future<void> setupServiceLocator() async {
       authService: serviceLocator<FusionAuthService>(),
       networkClient: serviceLocator<FusionNetworkClient>(),
       sessionViewModel: serviceLocator<SessionViewModel>(),
+    ),
+  );
+
+  serviceLocator.registerLazySingleton<QrScannerViewModel>(
+        () => QrScannerViewModel(
+      qrService: serviceLocator<FusionQRService>(),
+      networkClient: serviceLocator<FusionNetworkClient>(),
+    ),
+  );
+
+
+  serviceLocator.registerLazySingleton<ControlPalZonesViewModel>(
+        () => ControlPalZonesViewModel(
+          service: serviceLocator<FusionZoneService>(),
     ),
   );
 

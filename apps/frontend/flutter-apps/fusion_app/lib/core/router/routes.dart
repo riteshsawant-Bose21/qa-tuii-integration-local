@@ -76,7 +76,6 @@ class Routes {
   static const String configureWifiCreds = '/configureWifiCredsPage';
 
   static Route<dynamic> onGenerateRoute(RouteSettings routeSettings) {
-    print("======> ${routeSettings.name}");
     switch (routeSettings.name) {
       /// Sign In Page
       // case mobileSignInPage:
@@ -151,15 +150,16 @@ class Routes {
 
       /// Zone Volume Controller Page
       case zoneVolumeControlPage:
-        Map<String,dynamic> data = routeSettings.arguments as Map<String,dynamic>;
+        //Map<String,dynamic> data = routeSettings.arguments as Map<String,dynamic>;
         return CupertinoPageRoute<void>(
           builder: (BuildContext context) =>  ZoneVolumeControl(
-            sourceId: data['sourceId'],
-            zoneIndex: data['zoneIndex'],
-            zones: data['zones'],
-            onNext: data['onNext'],
-            onPrevious: data['onPrevious'],
-            onVolumeChanged: data['onVolumeChanged'],),
+            // sourceId: data['sourceId'],
+            // zoneIndex: data['zoneIndex'],
+            // zones: data['zones'],
+            // onNext: data['onNext'],
+            // onPrevious: data['onPrevious'],
+            // onVolumeChanged: data['onVolumeChanged'],
+           ),
           settings: const RouteSettings(name: zoneVolumeControlPage),
         );
 
