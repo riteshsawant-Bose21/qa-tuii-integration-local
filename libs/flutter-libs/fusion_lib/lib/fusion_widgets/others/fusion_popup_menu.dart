@@ -14,6 +14,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
     this.tooltip,
     this.popupOffset = const Offset(10, 10),
     this.semanticsId,
+    this.itemPadding = const EdgeInsets.all(16.0),
   }) : matchChildWidth = matchChildWidth ?? (popupwidth == null);
 
   final double? popupwidth;
@@ -26,6 +27,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
   final String? tooltip;
   final Offset popupOffset;
   final String? semanticsId;
+  final EdgeInsetsGeometry itemPadding;
   @override
   Widget build(BuildContext context) {
     final childKey = GlobalKey();
@@ -67,7 +69,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
                 child: SizedBox(
                   width: width2,
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: itemPadding,
                     child: itemBuilder != null
                         ? itemBuilder!(context, item)
                         : FusionAppText(

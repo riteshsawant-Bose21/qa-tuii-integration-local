@@ -442,161 +442,295 @@ class AddSourcePopup extends StatelessWidget {
                                         ],
                                         const SizedBox(height: 16),
 
-                                        if (state.selectedConnectionType == SourceConnectionType.aes67input) ...<Widget>[
-                                          BlocBuilder<AddSourceViewModel, AddSourceViewModelState>(
-                                            builder: (BuildContext context, AddSourceViewModelState state) {
-                                              final List<Aes67Config> streams = context.read<ProjectViewModel>().getAllAes67InputStreams();
+                                        // if (state.selectedConnectionType == SourceConnectionType.aes67input) ...<Widget>[
+                                        // BlocBuilder<AddSourceViewModel, AddSourceViewModelState>(
+                                        //   builder: (BuildContext context, AddSourceViewModelState state) {
+                                        //     final List<Aes67Config> streams = context.read<ProjectViewModel>().getAllAes67InputStreams();
+                                        //
+                                        //     return BuildRowPropertyWidget<dynamic>(
+                                        //       label: "Stream",
+                                        //       value: state.selectedStream,
+                                        //
+                                        //       options: <dynamic>[
+                                        //         const AddStreamAction(),
+                                        //         ...streams,
+                                        //       ],
+                                        //
+                                        //       labelBuilder: (dynamic option) {
+                                        //         if (option is AddStreamAction) return "Add Stream";
+                                        //         return (option as Aes67Config).name;
+                                        //       },
+                                        //
+                                        //       valueBuilder: (dynamic option) {
+                                        //         if (option is AddStreamAction) {
+                                        //           return Center(
+                                        //             child: FusionAppButton(
+                                        //               borderRadius: 4,
+                                        //               text: "Add Stream",
+                                        //               textstyle: context.textTheme.l1Medium,
+                                        //               semanticId: '',
+                                        //               height: 28,
+                                        //               width: 100,
+                                        //               style: FusionAppButtonStyle.primary,
+                                        //               onPressed: () {
+                                        //                 InputStreamDialog.show(
+                                        //                   context,
+                                        //                   onSave: (Aes67Config stream) {
+                                        //                     context.read<ProjectViewModel>().addAes67InputStream(stream: stream);
+                                        //                     final List<Aes67Config> streams = context.read<ProjectViewModel>().getAllAes67InputStreams();
+                                        //
+                                        //                     final Aes67Config matchedStream = streams.firstWhere(
+                                        //                       (Aes67Config s) => s.id == stream.id, // or name if no id
+                                        //                       orElse: () => stream,
+                                        //                     );
+                                        //
+                                        //                     context.read<AddSourceViewModel>().setSelectedStream(matchedStream);
+                                        //                     context.read<InputStreamViewmodel>().init(existingStream: matchedStream);
+                                        //                   },
+                                        //                 );
+                                        //               },
+                                        //             ),
+                                        //           );
+                                        //         }
+                                        //
+                                        //         return FusionAppText(
+                                        //           text: (option as Aes67Config).name,
+                                        //           maxLine: 1,
+                                        //           style: context.textTheme.l1Regular,
+                                        //         );
+                                        //       },
+                                        //
+                                        //       onOptionSelected: (int index, dynamic option) {
+                                        //         if (option is AddStreamAction) return;
+                                        //
+                                        //         context.read<AddSourceViewModel>().setSelectedStream(option as Aes67Config);
+                                        //         context.read<InputStreamViewmodel>().init(existingStream: option);
+                                        //       },
+                                        //     );
+                                        //   },
+                                        // ),
+                                        BlocBuilder<AddSourceViewModel, AddSourceViewModelState>(
+                                          builder: (BuildContext context, AddSourceViewModelState state) {
+                                            final List<Aes67Config> streams = context.read<ProjectViewModel>().getAllAes67InputStreams();
 
-                                              return BuildRowPropertyWidget<dynamic>(
-                                                label: "Stream",
-                                                value: state.selectedStream,
+                                            final List<dynamic> options = <dynamic>[
+                                              ...streams,
+                                              const AddStreamAction(),
+                                            ];
 
-                                                options: <dynamic>[
-                                                  const AddStreamAction(),
-                                                  ...streams,
-                                                ],
-
-                                                labelBuilder: (dynamic option) {
-                                                  if (option is AddStreamAction) return "Add Stream";
-                                                  return (option as Aes67Config).name;
-                                                },
-
-                                                valueBuilder: (dynamic option) {
-                                                  if (option is AddStreamAction) {
-                                                    return Center(
-                                                      child: FusionAppButton(
-                                                        borderRadius: 4,
-                                                        text: "Add Stream",
-                                                        textstyle: context.textTheme.l1Medium,
-                                                        semanticId: '',
-                                                        height: 28,
-                                                        width: 100,
-                                                        style: FusionAppButtonStyle.primary,
-                                                        onPressed: () {
-                                                          InputStreamDialog.show(
-                                                            context,
-                                                            onSave: (Aes67Config stream) {
-                                                              context.read<ProjectViewModel>().addAes67InputStream(stream: stream);
-                                                              final List<Aes67Config> streams = context.read<ProjectViewModel>().getAllAes67InputStreams();
-
-                                                              final Aes67Config matchedStream = streams.firstWhere(
-                                                                (Aes67Config s) => s.id == stream.id, // or name if no id
-                                                                orElse: () => stream,
-                                                              );
-
-                                                              context.read<AddSourceViewModel>().setSelectedStream(matchedStream);
-                                                              context.read<InputStreamViewmodel>().init(existingStream: matchedStream);
-                                                            },
+                                            return Row(
+                                              children: [
+                                                FusionAppText(
+                                                  text: "Stream",
+                                                  style: context.textTheme.l1Regular,
+                                                ),
+                                                const Spacer(),
+                                                FusionPopupMenu<dynamic>(
+                                                  items: <dynamic>[...streams, const AddStreamAction()],
+                                                  tooltip: 'Stream',
+                                                  semanticsId: 'stream_popup_menu',
+                                                  popupOffset: const Offset(0, 2),
+                                                  itemPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                                  matchChildWidth: false,
+                                                  popupwidth: 120,
+                                                  onSelected: (dynamic option) {
+                                                    if (option is AddStreamAction) {
+                                                      InputStreamDialog.show(
+                                                        context,
+                                                        onSave: (Aes67Config stream) {
+                                                          context.read<ProjectViewModel>().addAes67InputStream(stream: stream);
+                                                          final List<Aes67Config> updatedStreams = context.read<ProjectViewModel>().getAllAes67InputStreams();
+                                                          final Aes67Config matchedStream = updatedStreams.firstWhere(
+                                                            (Aes67Config s) => s.id == stream.id,
+                                                            orElse: () => stream,
                                                           );
+                                                          context.read<AddSourceViewModel>().setSelectedStream(matchedStream);
+                                                          context.read<InputStreamViewmodel>().init(existingStream: matchedStream);
                                                         },
-                                                      ),
+                                                      );
+                                                      return;
+                                                    }
+
+                                                    context.read<AddSourceViewModel>().setSelectedStream(option as Aes67Config);
+                                                    context.read<InputStreamViewmodel>().init(existingStream: option);
+                                                  },
+                                                  itemBuilder: (BuildContext context, dynamic option) {
+                                                    if (option is AddStreamAction) {
+                                                      return Column(
+                                                        children: [
+                                                          Divider(height: 1, color: context.colorScheme.strokeLight),
+                                                          const SizedBox(height: 4),
+                                                          SizedBox(
+                                                            width: double.infinity,
+                                                            child: FusionPrimaryButton(
+                                                              label: "ADD STREAM",
+                                                              accessLabel: 'add_stream_button',
+                                                              height: 28,
+                                                              onTap: () {},
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      );
+                                                    }
+
+                                                    return Row(
+                                                      children: [
+                                                        Expanded(
+                                                          child: FusionAppText(
+                                                            text: (option as Aes67Config).name,
+                                                            maxLine: 1,
+                                                            style: context.textTheme.l1Regular.copyWith(
+                                                              color:
+                                                                  option == state.selectedStream
+                                                                      ? context.colorScheme.primary
+                                                                      : context.colorScheme.textPrimary,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        if (option == state.selectedStream)
+                                                          Icon(
+                                                            Icons.check,
+                                                            size: 14,
+                                                            color: context.colorScheme.primary,
+                                                          ),
+                                                      ],
                                                     );
-                                                  }
-
-                                                  return FusionAppText(
-                                                    text: (option as Aes67Config).name,
-                                                    maxLine: 1,
-                                                    style: context.textTheme.l1Regular,
-                                                  );
-                                                },
-
-                                                onOptionSelected: (int index, dynamic option) {
-                                                  if (option is AddStreamAction) return;
-
-                                                  context.read<AddSourceViewModel>().setSelectedStream(option as Aes67Config);
-                                                  context.read<InputStreamViewmodel>().init(existingStream: option);
-                                                },
-                                              );
-                                            },
-                                          ),
-
-                                          const SizedBox(height: 16),
-
-                                          // Session (Assigned To) dropdown
-                                          // Session dropdown
-                                          // BlocBuilder<InputStreamViewmodel, InputStreamState>(
-                                          //   builder: (BuildContext context, InputStreamState inputState) {
-                                          //     if (inputState is! InputStreamLoaded) {
-                                          //       return const SizedBox.shrink();
-                                          //     }
-                                          //
-                                          //     final List<String> sessionOptions = inputState.danteAssignableOptions;
-                                          //
-                                          //     return BuildRowPropertyWidget<String>(
-                                          //       label: "Session",
-                                          //       hint: inputState.isLoadingSessions ? 'Loading...' : 'Select session',
-                                          //       value: inputState.assignedTo,
-                                          //       options: sessionOptions,
-                                          //       labelBuilder: (String option) => option,
-                                          //       onOptionSelected: (int index, String value) {
-                                          //         context.read<InputStreamViewmodel>().updateAssignedTo(value);
-                                          //       },
-                                          //     );
-                                          //   },
-                                          // ),
-                                          const SizedBox(height: 16),
-
-                                          // Channel assignment based on signal type
-                                          BlocBuilder<InputStreamViewmodel, InputStreamState>(
-                                            builder: (BuildContext context, InputStreamState inputState) {
-                                              final Aes67Config? selectedStream = state.selectedStream;
-                                              final Aes67SessionEntry? selectedSession =
-                                                  selectedStream?.sessions
-                                                      .where((Aes67SessionEntry s) => s.sessionId == selectedStream.selectedSessionId)
-                                                      .firstOrNull;
-                                              final List<String> channelOptions =
-                                                  inputState is InputStreamLoaded ? inputState.selectedSessionChannelOptions : <String>[];
-
-                                              // Helper to convert stored int channel number back to label
-                                              String? channelLabel(int? channelNumber) {
-                                                if (channelNumber == null || channelNumber < 1 || channelNumber > channelOptions.length) return null;
-                                                return channelOptions[channelNumber - 1];
-                                              }
-
-                                              return Column(
-                                                children: <Widget>[
-                                                  if (state.selectedSignalType == SignalType.mono) ...<Widget>[
-                                                    BuildRowPropertyWidget<String>(
-                                                      label: "Channel 1",
-                                                      hint: "Assign",
-                                                      value: channelLabel(state.selectedMonoChannel),
-                                                      options: channelOptions,
-                                                      labelBuilder: (String option) => option,
-                                                      onOptionSelected: (int index, String value) {
-                                                        addSourceViewModel.setSelectedMonoChannel(index + 1);
-                                                      },
+                                                  },
+                                                  child: Container(
+                                                    width: 150,
+                                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                                                    decoration: BoxDecoration(
+                                                      color: context.colorScheme.elevation1,
+                                                      borderRadius: BorderRadius.circular(8),
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: context.colorScheme.shadowLight,
+                                                          blurRadius: 2,
+                                                          offset: const Offset(-2, -2),
+                                                        ),
+                                                        BoxShadow(
+                                                          color: context.colorScheme.shadowDark,
+                                                          blurRadius: 4,
+                                                          offset: const Offset(2, 2),
+                                                        ),
+                                                        BoxShadow(color: context.colorScheme.elevation1),
+                                                      ],
                                                     ),
-                                                  ],
-                                                  if (state.selectedSignalType == SignalType.stereo) ...<Widget>[
-                                                    BuildRowPropertyWidget<String>(
-                                                      label: "Channel 1 (Left)",
-                                                      hint: "Assign",
-                                                      value: channelLabel(state.selectedLeftChannel),
-                                                      options: channelOptions,
-                                                      labelBuilder: (String option) => option,
-                                                      onOptionSelected: (int index, String value) {
-                                                        addSourceViewModel.setSelectedLeftChannel(index + 1);
-                                                      },
+                                                    child: Row(
+                                                      children: [
+                                                        Expanded(
+                                                          child: FusionAppText(
+                                                            maxLine: 1,
+                                                            text: state.selectedStream?.name ?? "Select",
+                                                            style: context.textTheme.l1Regular.copyWith(
+                                                              color:
+                                                                  state.selectedStream?.name != null
+                                                                      ? context.colorScheme.textPrimary
+                                                                      : context.colorScheme.textPlaceholder,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        Icon(
+                                                          LucideIcons.chevronDown200,
+                                                          color: context.colorScheme.textPrimary,
+                                                          size: 16,
+                                                        ),
+                                                      ],
                                                     ),
-                                                    const SizedBox(height: 12),
-                                                    BuildRowPropertyWidget<String>(
-                                                      label: "Channel 2 (Right)",
-                                                      hint: "Assign",
-                                                      value: channelLabel(state.selectedRightChannel),
-                                                      options: channelOptions,
-                                                      labelBuilder: (String option) => option,
-                                                      onOptionSelected: (int index, String value) {
-                                                        addSourceViewModel.setSelectedRightChannel(index + 1);
-                                                      },
-                                                    ),
-                                                  ],
+                                                  ),
+                                                ),
+                                              ],
+                                            );
+                                          },
+                                        ),
+
+                                        const SizedBox(height: 16),
+
+                                        // Session (Assigned To) dropdown
+                                        // Session dropdown
+                                        // BlocBuilder<InputStreamViewmodel, InputStreamState>(
+                                        //   builder: (BuildContext context, InputStreamState inputState) {
+                                        //     if (inputState is! InputStreamLoaded) {
+                                        //       return const SizedBox.shrink();
+                                        //     }
+                                        //
+                                        //     final List<String> sessionOptions = inputState.danteAssignableOptions;
+                                        //
+                                        //     return BuildRowPropertyWidget<String>(
+                                        //       label: "Session",
+                                        //       hint: inputState.isLoadingSessions ? 'Loading...' : 'Select session',
+                                        //       value: inputState.assignedTo,
+                                        //       options: sessionOptions,
+                                        //       labelBuilder: (String option) => option,
+                                        //       onOptionSelected: (int index, String value) {
+                                        //         context.read<InputStreamViewmodel>().updateAssignedTo(value);
+                                        //       },
+                                        //     );
+                                        //   },
+                                        // ),
+                                        // const SizedBox(height: 16),
+
+                                        // Channel assignment based on signal type
+                                        BlocBuilder<InputStreamViewmodel, InputStreamState>(
+                                          builder: (BuildContext context, InputStreamState inputState) {
+                                            final Aes67Config? selectedStream = state.selectedStream;
+                                            final Aes67SessionEntry? selectedSession =
+                                                selectedStream?.sessions
+                                                    .where((Aes67SessionEntry s) => s.sessionId == selectedStream.selectedSessionId)
+                                                    .firstOrNull;
+                                            final List<String> channelOptions =
+                                                inputState is InputStreamLoaded ? inputState.selectedSessionChannelOptions : <String>[];
+
+                                            // Helper to convert stored int channel number back to label
+                                            String? channelLabel(int? channelNumber) {
+                                              if (channelNumber == null || channelNumber < 1 || channelNumber > channelOptions.length) return null;
+                                              return channelOptions[channelNumber - 1];
+                                            }
+
+                                            return Column(
+                                              children: <Widget>[
+                                                if (state.selectedSignalType == SignalType.mono) ...<Widget>[
+                                                  BuildRowPropertyWidget<String>(
+                                                    label: "Channel 1",
+                                                    hint: "Assign",
+                                                    value: channelLabel(state.selectedMonoChannel),
+                                                    options: channelOptions,
+                                                    labelBuilder: (String option) => option,
+                                                    onOptionSelected: (int index, String value) {
+                                                      addSourceViewModel.setSelectedMonoChannel(index + 1);
+                                                    },
+                                                  ),
                                                 ],
-                                              );
-                                            },
-                                          ),
-                                          const SizedBox(height: 40),
-                                        ],
+                                                if (state.selectedSignalType == SignalType.stereo) ...<Widget>[
+                                                  BuildRowPropertyWidget<String>(
+                                                    label: "Channel 1 (Left)",
+                                                    hint: "Assign",
+                                                    value: channelLabel(state.selectedLeftChannel),
+                                                    options: channelOptions,
+                                                    labelBuilder: (String option) => option,
+                                                    onOptionSelected: (int index, String value) {
+                                                      addSourceViewModel.setSelectedLeftChannel(index + 1);
+                                                    },
+                                                  ),
+                                                  const SizedBox(height: 12),
+                                                  BuildRowPropertyWidget<String>(
+                                                    label: "Channel 2 (Right)",
+                                                    hint: "Assign",
+                                                    value: channelLabel(state.selectedRightChannel),
+                                                    options: channelOptions,
+                                                    labelBuilder: (String option) => option,
+                                                    onOptionSelected: (int index, String value) {
+                                                      addSourceViewModel.setSelectedRightChannel(index + 1);
+                                                    },
+                                                  ),
+                                                ],
+                                              ],
+                                            );
+                                          },
+                                        ),
+                                        const SizedBox(height: 40),
 
+                                        // ],
                                         Row(
                                           mainAxisAlignment: MainAxisAlignment.end,
                                           children: <Widget>[
