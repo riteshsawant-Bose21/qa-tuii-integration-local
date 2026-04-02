@@ -1,4 +1,6 @@
-#include "navigator.h"
+#include <bosepro/navigator.h>
+
+#include <spdlog/spdlog.h>
 
 namespace bosepro {
 

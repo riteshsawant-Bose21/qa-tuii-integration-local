@@ -6,37 +6,70 @@
 #include <vector>
 #include <list>
 #include <algorithm>
+#include <mutex>
 #include <boost/program_options.hpp>
 #include <boost/json/src.hpp>
+#include <boost/property_tree/json_parser.hpp>
 #include "telemetry_core.h"
 #include "telemetry_utils.h"
 #include "telemetry_msg_handler.h"
 
+namespace {
+static std::mutex g_device_id_mutex;
+static std::string g_device_id;
+}
+
+void set_device_id(const std::string &device_id)
+{
+    std::lock_guard<std::mutex> lock(g_device_id_mutex);
+    g_device_id = device_id;
+}
+
 // Message Format:
 //  "parameters": {
 //     "name": <Name>,
+//     "protocol_version": <ProtocolVersion>,
+//     "schema_version": <SchemaVersion>,
 //     "block_size": [<hi>, <med>, <lo>]
 //  }
 int process_pub_register_req(bosepro::telemetryManager& telm_mgr,
                              const bosepro::Telemetry_configuration& proc_pkt,
                              uint64_t& pkt_id, std::string& req_name,
-                             void *unused)
+                             bosepro::HandlerContext& /*unused*/)
 {
-    std::vector<uint32_t> shm_size;
+    std::vector<int_fast32_t> shm_size;
+    int_fast32_t protocol_version = 0;
+    int_fast32_t schema_version = 0;
     int ret_val = 0;
 
     // Get Sub name
-    if (proc_pkt.get_value("name", req_name))
+    if (proc_pkt.get_value("name", req_name) &&
+        proc_pkt.get_value("protocol_version", protocol_version) &&
+        proc_pkt.get_value("schema_version", schema_version))
     {
+        if (!bosepro::is_supported_telemetry_protocol_version(protocol_version))
+        {
+            SPDLOG_ERROR("Publisher '{}' requested unsupported telemetry protocol version {} (supported: {} or {})",
+                         req_name, protocol_version, bosepro::kTelemetryProtocolVersion, bosepro::kTelemetryProtocolVersion - 1);
+            return -1;
+        }
+
+        if (!bosepro::is_supported_telemetry_schema_version(schema_version))
+        {
+            SPDLOG_ERROR("Publisher '{}' requested unsupported telemetry schema version {} (supported: {} or {})",
+                         req_name, schema_version, bosepro::kTelemetrySchemaVersion, bosepro::kTelemetrySchemaVersion - 1);
+            return -1;
+        }
+
         // Get address
         proc_pkt.get_config_value_vector("block_size", shm_size);
         SPDLOG_DEBUG("Size: [ {}, {}, {}]",
                       shm_size[0], shm_size[1], shm_size[2]);
 
         std::vector<bosepro::shared_mem_config> shm_config = {
-            {NULL, ("telm_"+req_name+"_hi"), shm_size[0]},
-            {NULL, ("telm_"+req_name+"_med"), shm_size[1]},
-            {NULL, ("telm_"+req_name+"_lo"), shm_size[2]}
+            {NULL, ("telm_"+req_name+"_hi"), static_cast<uint32_t>(shm_size[0])},
+            {NULL, ("telm_"+req_name+"_med"), static_cast<uint32_t>(shm_size[1])},
+            {NULL, ("telm_"+req_name+"_lo"), static_cast<uint32_t>(shm_size[2])}
         };
 
         // Register Publisher
@@ -55,6 +88,8 @@ int process_pub_register_req(bosepro::telemetryManager& telm_mgr,
 //      packet_id: pkt_id,
 //      parameters:{
 //      name:pub_name
+//      protocol_version:<ProtocolVersion>
+//      schema_version:<SchemaVersion>
 //      block_name:[HI, MED, LO]
 //      value:OK_NOK(0/1)
 //   }
@@ -62,13 +97,15 @@ int process_pub_register_rsp(bosepro::telemetryManager& telm_mgr,
                              std::string& req_name,
                              uint64_t pkt_id, bool ok_nok,
                              std::ostringstream& message,
-                             void *unused)
+                             bosepro::HandlerContext& /*unused*/)
 {
     message << "{";
     message << "\"message_name\":\"pub_register_rsp\",";
     message << "\"packet_id\":" << pkt_id << ",";
     message << "\"parameters\":{";
     message << "\"name\":\"" << req_name << "\",";
+    message << "\"protocol_version\":" << bosepro::kTelemetryProtocolVersion << ",";
+    message << "\"schema_version\":" << bosepro::kTelemetrySchemaVersion << ",";
     message << "\"block_name\":[";
 
     if (ok_nok)
@@ -101,7 +138,7 @@ int process_pub_register_rsp(bosepro::telemetryManager& telm_mgr,
 int process_pub_deregister_req(bosepro::telemetryManager& telm_mgr,
                              const bosepro::Telemetry_configuration& proc_pkt,
                              uint64_t& pkt_id, std::string& req_name,
-                             void *unused)
+                             bosepro::HandlerContext& /*unused*/)
 {
     int ret_val = 0;
 
@@ -132,7 +169,7 @@ int process_pub_deregister_rsp(bosepro::telemetryManager& telm_mgr,
                              std::string& req_name,
                              uint64_t pkt_id, bool ok_nok,
                              std::ostringstream& message,
-                             void *unused)
+                             bosepro::HandlerContext& /*unused*/)
 {
     message << "{";
     message << "\"message_name\":\"pub_deregister_rsp\",";
@@ -150,12 +187,14 @@ int process_pub_deregister_rsp(bosepro::telemetryManager& telm_mgr,
 //   message_name:update_meters_req,
 //      packet_id: pkt_id,
 //      parameters:{
+//      protocol_version:<ProtocolVersion>
+//      schema_version:<SchemaVersion>
 //      type:[HI, MED, LO]
 //   }
 int process_update_meters_req(const std::string& req_type,
                               uint64_t& pkt_id,
                               std::ostringstream& message,
-                             void *unused)
+                             bosepro::HandlerContext& /*unused*/)
 {
 
     pkt_id = get_realtime_ns();
@@ -164,7 +203,8 @@ int process_update_meters_req(const std::string& req_type,
     message << "\"message_name\":\"update_meters_req\",";
     message << "\"packet_id\":" << pkt_id << ",";
     message << "\"parameters\":{";
-
+    message << "\"protocol_version\":" << bosepro::kTelemetryProtocolVersion << ",";
+    message << "\"schema_version\":" << bosepro::kTelemetrySchemaVersion << ",";
     message << "\"period_type\":\"" << req_type << "\"";
     message << "}";
     message << "}\n";
@@ -179,30 +219,48 @@ int process_update_meters_req(const std::string& req_type,
 //      packet_id: pkt_id,
 //      parameters:{
 //      name:pub_name
+//      protocol_version:<ProtocolVersion>
+//      schema_version:<SchemaVersion>
 //      value:OK_NOK(0/1)
 //   }
 int process_update_meters_rsp(bosepro::telemetryManager& telm_mgr,
                              const bosepro::Telemetry_configuration& proc_pkt,
                              uint64_t& pkt_id, std::string& req_name,
-                             void *type)
+                             bosepro::HandlerContext& ctx)
 {
     int ret_val = 0;
     std::string ok_nok;
+    int_fast32_t protocol_version = 0;
+    int_fast32_t schema_version = 0;
     enum eMeterCategory meter_type;
-    enum eMeterCategory *meter_type_ptr =
-                             static_cast<enum eMeterCategory*>(type);
 
     // Get Sub name
     if ((proc_pkt.get_value("name", req_name)) &&
+        (proc_pkt.get_value("protocol_version", protocol_version)) &&
+        (proc_pkt.get_value("schema_version", schema_version)) &&
         (proc_pkt.get_value("value", ok_nok)))
     {
+        if (!bosepro::is_supported_telemetry_protocol_version(protocol_version))
+        {
+            SPDLOG_ERROR("Publisher '{}' responded with unsupported telemetry protocol version {} (supported: {} or {})",
+                         req_name, protocol_version, bosepro::kTelemetryProtocolVersion, bosepro::kTelemetryProtocolVersion - 1);
+            return -1;
+        }
+
+        if (!bosepro::is_supported_telemetry_schema_version(schema_version))
+        {
+            SPDLOG_ERROR("Publisher '{}' responded with unsupported telemetry schema version {} (supported: {} or {})",
+                         req_name, schema_version, bosepro::kTelemetrySchemaVersion, bosepro::kTelemetrySchemaVersion - 1);
+            return -1;
+        }
+
         // This validates if the response matches one of the
         // requests (process_update_meters_req()).
         ret_val = telm_mgr.validate_update_meter_rsp(pkt_id, req_name,
                                                      ok_nok, meter_type);
 
         // The meter type is used by process_meter_data() (response handler)
-        *meter_type_ptr = meter_type;
+        ctx.meter_type = meter_type;
     }
     else
     {
@@ -225,23 +283,21 @@ int process_meter_data(bosepro::telemetryManager& telm_mgr,
                        std::string& req_name,
                        uint64_t pkt_id, bool ok_nok,
                        std::ostringstream& message,
-                       void *type)
+                       bosepro::HandlerContext& ctx)
 {
     std::string meter_data;
     std::string meter_type;
     std::size_t size;
-    enum eMeterCategory *meter_type_ptr =
-                   static_cast<enum eMeterCategory*>(type);
     int ret_val = -1;
 
     // Check if it is time to report meter data
-    if (ok_nok && telm_mgr.time_to_report_meter(req_name, *meter_type_ptr))
+    if (ok_nok && telm_mgr.time_to_report_meter(req_name, ctx.meter_type))
     {
         int err_cnt = 0;
         while (1)
         {
-            size = telm_mgr.get_meter_data(req_name,
-                                           *meter_type_ptr,
+                size = telm_mgr.get_meter_data(req_name,
+                                           ctx.meter_type,
                                            meter_data);
 
             std::stringstream temp;
@@ -283,7 +339,7 @@ int process_meter_data(bosepro::telemetryManager& telm_mgr,
         {
             uint64_t tx_pkt_id = get_realtime_ns();
 
-            switch (*meter_type_ptr)
+            switch (ctx.meter_type)
             {
                 case TELM_METER_CTGRY_HI_PRIO:
                     meter_type.assign("HI");
@@ -304,8 +360,19 @@ int process_meter_data(bosepro::telemetryManager& telm_mgr,
 
             if (ret_val == 0)
             {
+                std::string device_id;
+
+                {
+                    std::lock_guard<std::mutex> locl(g_device_id_mutex);
+                    device_id = g_device_id;
+                }
+
                 message << "{";
                 message << "\"message_name\":\"meter_data\",";
+                if (!device_id.empty())
+                {
+                    message << "\"device_id\":\"" << device_id   << "\",";
+                }
                 message << "\"packet_id\":" << tx_pkt_id << ",";
                 message << "\"parameters\":{";
 
@@ -330,10 +397,9 @@ int process_meter_data(bosepro::telemetryManager& telm_mgr,
 int process_send_meter_req(bosepro::telemetryManager& telm_mgr,
                              const bosepro::Telemetry_configuration& proc_pkt,
                              uint64_t& pkt_id, std::string& req_name,
-                             void *type)
+                             bosepro::HandlerContext& ctx)
 {
     std::string meter_type;
-    enum eMeterCategory *meter_type_ptr = static_cast<enum eMeterCategory*>(type);
     enum etelemetryEndpointTypes end_type;
     int ret_val = 0;
 
@@ -358,15 +424,15 @@ int process_send_meter_req(bosepro::telemetryManager& telm_mgr,
 
                 if (meter_type.compare("HI") == 0)
                 {
-                    *meter_type_ptr = TELM_METER_CTGRY_HI_PRIO;
+                    ctx.meter_type = TELM_METER_CTGRY_HI_PRIO;
                 }
                 else if (meter_type.compare("MED") == 0)
                 {
-                    *meter_type_ptr = TELM_METER_CTGRY_MED_PRIO;
+                    ctx.meter_type = TELM_METER_CTGRY_MED_PRIO;
                 }
                 else // "LO"
                 {
-                    *meter_type_ptr = TELM_METER_CTGRY_LO_PRIO;
+                    ctx.meter_type = TELM_METER_CTGRY_LO_PRIO;
                 }
             }
             else
@@ -398,16 +464,15 @@ int process_send_meter_rsp(bosepro::telemetryManager& telm_mgr,
                        std::string& req_name,
                        uint64_t pkt_id, bool ok_nok,
                        std::ostringstream& message,
-                       void *type)
+                       bosepro::HandlerContext& ctx)
 {
     std::string meter_type;
-    enum eMeterCategory *meter_type_ptr = static_cast<enum eMeterCategory*>(type);
     int ret_val = 0;
     uint32_t pub_cnt = telm_mgr.get_publisher_count();
 
     if (ok_nok)
     {
-        switch (*meter_type_ptr)
+        switch (ctx.meter_type)
         {
             case TELM_METER_CTGRY_HI_PRIO:
                 meter_type.assign("HI");
@@ -436,7 +501,7 @@ int process_send_meter_rsp(bosepro::telemetryManager& telm_mgr,
                 std::string meter_data;
 
                 telm_mgr.get_meter_data(pub_name,
-                        *meter_type_ptr,
+                        ctx.meter_type,
                         meter_data);
 
                 uint64_t tx_pkt_id = get_realtime_ns();
@@ -473,7 +538,7 @@ int process_send_meter_rsp(bosepro::telemetryManager& telm_mgr,
 int process_event(bosepro::telemetryManager& telm_mgr,
                   const bosepro::Telemetry_configuration& proc_pkt,
                   uint64_t& pkt_id, std::string& req_name,
-                  void *value_str)
+                  bosepro::HandlerContext& /*value_str*/)
 {
     //char* value_ptr = static_cast<char *>(value_str);
     int ret_val = 0;
@@ -504,7 +569,7 @@ int process_event_rsp(bosepro::telemetryManager& telm_mgr,
                   std::string& req_name,
                   uint64_t pkt_id, bool ok_nok,
                   std::ostringstream& message,
-                  void *not_used)
+                  bosepro::HandlerContext& /*not_used*/)
 {
     message << "{";
     message << "\"message_name\":\"event_rsp\",";
@@ -543,9 +608,9 @@ void process_event_relay(const bosepro::Telemetry_configuration& proc_pkt,
 int process_update_report_period_req(bosepro::telemetryManager& telm_mgr,
                              const bosepro::Telemetry_configuration& proc_pkt,
                              uint64_t& pkt_id, std::string& req_name,
-                             void *unused)
+                             bosepro::HandlerContext& /*unused*/)
 {
-    std::vector<uint32_t> periods;
+    std::vector<int_fast32_t> periods;
     int ret_val = 0;
 
     // Get Req name
@@ -592,7 +657,7 @@ int process_update_report_period_rsp(bosepro::telemetryManager& telm_mgr,
                              std::string& req_name,
                              uint64_t pkt_id, bool ok_nok,
                              std::ostringstream& message,
-                             void *unused)
+                             bosepro::HandlerContext& /*unused*/)
 {
     std::vector<int> periods(3,0);
 

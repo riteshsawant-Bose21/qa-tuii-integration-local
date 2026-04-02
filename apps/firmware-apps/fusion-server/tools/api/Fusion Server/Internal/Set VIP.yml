@@ -1,0 +1,24 @@
+info:
+  name: Set VIP
+  type: http
+  seq: 8
+
+http:
+  method: POST
+  url: "{{admin_url}}/devices/vip/:vip"
+  params:
+    - name: vip
+      value: 192.168.64.100
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "id":"test_id"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

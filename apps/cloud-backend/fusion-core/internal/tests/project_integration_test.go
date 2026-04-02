@@ -40,6 +40,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"go.uber.org/zap"
 )
 
 // Constants for frequently used literals
@@ -274,10 +275,6 @@ func (suite *ProjectIntegrationTestSuite) setupAPI() error {
 	userSVC := user.NewService(userDBSvc)
 	require.NotNil(suite.T(), userSVC, "Failed to initialize user service")
 
-	// Initialize Role Management Service
-	roleManagementSvc := userdb.NewRoleManagementService(suite.db)
-	require.NotNil(suite.T(), roleManagementSvc, "Failed to initialize role management service")
-
 	// Initialize API server
 	apiConfig := &api.Config{
 		Mode: "test",
@@ -285,11 +282,13 @@ func (suite *ProjectIntegrationTestSuite) setupAPI() error {
 		Port: "0", // Use ephemeral port for testing
 	}
 
-	// Create mock auth service and middleware
+	// Create mock auth service, organization service and middleware
 	authSvc := &mockAuthService{}
+	firmwareSvc := &mockFirmwareService{}
+	orgSvc := &mockOrganizationService{}
 	authMiddleware := &mockMiddlewareStruct{}
 
-	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC, authSvc, authMiddleware, loggers)
+	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC, orgSvc, authSvc, firmwareSvc, authMiddleware, loggers)
 	if err != nil {
 		return fmt.Errorf("failed to initialize API server: %w", err)
 	}
@@ -297,13 +296,13 @@ func (suite *ProjectIntegrationTestSuite) setupAPI() error {
 	suite.api = apiServer
 
 	// Create a separate test router without auth middleware for integration testing
-	suite.ginRouter = suite.createTestRouter(projectSVC, productSVC, userSVC, userDBSvc, roleManagementSvc, loggers)
+	suite.ginRouter = suite.createTestRouter(projectSVC, productSVC, userSVC, userDBSvc, loggers)
 
 	return nil
 }
 
 // createTestRouter creates a Gin router with handlers but mocked authentication for testing
-func (suite *ProjectIntegrationTestSuite) createTestRouter(projectSVC *project.Service, _ *product.Service, userSVC *user.Service, _ *userdb.Service, _ *userdb.RoleManagementService, loggers *log.Loggers) *gin.Engine {
+func (suite *ProjectIntegrationTestSuite) createTestRouter(projectSVC *project.Service, _ *product.Service, userSVC *user.Service, _ *userdb.Service, loggers *log.Loggers) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
@@ -3335,4 +3334,61 @@ type mockMiddlewareStruct struct{}
 
 func (m *mockMiddlewareStruct) Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) { c.Next() }
+}
+
+type mockFirmwareService struct{}
+
+func (m *mockFirmwareService) NotifyBundleUpload(_ context.Context, _ *types.NotifyBundleUploadPayload, _ *zap.Logger) (*types.BundleResponse, error) {
+	return nil, nil
+}
+
+func (m *mockFirmwareService) ListBundles(_ context.Context, _ *string, _, _ int) (*types.BundleListResponse, error) {
+	return nil, nil
+}
+
+func (m *mockFirmwareService) ApproveBundle(_ context.Context, _ string, _ string, _ string, _ *zap.Logger) error {
+	return nil
+}
+
+func (m *mockFirmwareService) CheckForUpdate(_ context.Context, _ *types.FirmwareUpdateRequest, _ *zap.Logger) (*types.FirmwareUpdateResponse, error) {
+	return nil, nil
+}
+
+func (m *mockFirmwareService) GetBundleDownloadURL(_ context.Context, _ string, _ *zap.Logger) (*types.DownloadArtifactResponse, error) {
+	return nil, nil
+}
+
+func (m *mockFirmwareService) InsertBundleUpdateStatus(_ context.Context, _ *types.LogBundleUpdateStatusPayload, _ *zap.Logger) error {
+	return nil
+}
+
+// mockOrganizationService implements fusion.Organization for testing
+type mockOrganizationService struct{}
+
+func (m *mockOrganizationService) GetAllOrganizations(_ context.Context, _ *types.OrganizationSearchRequest, _ string) (*types.OrganizationsOverviewResponse, error) {
+	return nil, nil
+}
+func (m *mockOrganizationService) GetOrganizationByID(_ context.Context, _ string) (*types.OrganizationDetailsResponse, error) {
+	return nil, nil
+}
+func (m *mockOrganizationService) CreateOrganization(_ context.Context, _ *types.CreateOrganizationRequest) (*types.Organization, error) {
+	return nil, nil
+}
+func (m *mockOrganizationService) UpdateOrganization(_ context.Context, _ string, _ *types.UpdateOrganizationRequest) (*types.Organization, error) {
+	return nil, nil
+}
+func (m *mockOrganizationService) DeleteOrganization(_ context.Context, _ string) error {
+	return nil
+}
+func (m *mockOrganizationService) GetOrganizationStatistics(_ context.Context) (*types.OrganizationStatistics, error) {
+	return nil, nil
+}
+func (m *mockOrganizationService) GetOrganizationUsers(_ context.Context, _ string) ([]types.OrganizationUser, error) {
+	return nil, nil
+}
+func (m *mockOrganizationService) GetOrganizationProjects(_ context.Context, _ string) ([]types.OrganizationProject, error) {
+	return nil, nil
+}
+func (m *mockOrganizationService) InviteUsersToOrganization(_ context.Context, _ string, _ *types.InviteUsersToOrganizationRequest) (*types.InviteUsersToOrganizationResponse, error) {
+	return nil, nil
 }

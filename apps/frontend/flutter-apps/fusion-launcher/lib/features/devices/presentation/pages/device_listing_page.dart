@@ -26,14 +26,10 @@ class _DeviceListTabState extends State<DeviceListTab> {
   // Access Real Devices from Service Locator
   List<HardwareComponent> get _fusionDevices {
     // Combine DSPs, Amplifiers, and Controllers
-    final List<HardwareComponent> dsp =
-        serviceLocator<ProjectViewModel>().fusionDsps;
-    final List<HardwareComponent> amplifiers =
-        serviceLocator<ProjectViewModel>().amplifiers;
-    final List<HardwareComponent> controllers =
-        serviceLocator<ProjectViewModel>().fusionControllers;
-    final List<HardwareComponent> endpoints =
-        serviceLocator<ProjectViewModel>().fusionEndpoints;
+    final List<HardwareComponent> dsp = serviceLocator<ProjectViewModel>().fusionDsps;
+    final List<HardwareComponent> amplifiers = serviceLocator<ProjectViewModel>().amplifiers;
+    final List<HardwareComponent> controllers = serviceLocator<ProjectViewModel>().fusionControllers;
+    final List<HardwareComponent> endpoints = serviceLocator<ProjectViewModel>().fusionEndpoints;
     return <HardwareComponent>[
       ...dsp,
       ...amplifiers,
@@ -44,28 +40,24 @@ class _DeviceListTabState extends State<DeviceListTab> {
 
   String _getDeviceLocation(HardwareComponent device) {
     if (device.locationEntity.listeningAreaId != null) {
-      final Zone? zone = serviceLocator<ProjectViewModel>()
-          .getZonesForListeningArea(
-            areaId: device.locationEntity.listeningAreaId!,
-          );
+      final Zone? zone = serviceLocator<ProjectViewModel>().getZonesForListeningArea(
+        areaId: device.locationEntity.listeningAreaId!,
+      );
       if (zone != null) {
         return zone.name;
       }
-      final SubZone? subZone = serviceLocator<ProjectViewModel>()
-          .getSubZoneForListeningArea(
-            areaId: device.locationEntity.listeningAreaId!,
-          );
+      final SubZone? subZone = serviceLocator<ProjectViewModel>().getSubZoneForListeningArea(
+        areaId: device.locationEntity.listeningAreaId!,
+      );
       if (subZone != null) {
-        final Zone? parentZone = serviceLocator<ProjectViewModel>()
-            .getZoneForSubZone(subZoneId: subZone.id);
+        final Zone? parentZone = serviceLocator<ProjectViewModel>().getZoneForSubZone(subZoneId: subZone.id);
         if (parentZone != null) {
           return "${parentZone.name} > ${subZone.name}";
         }
         return subZone.name;
       }
     }
-    final EquipLocation? location = serviceLocator<ProjectViewModel>()
-        .getEquipLocationForHardware(hardwareId: device.id);
+    final EquipLocation? location = serviceLocator<ProjectViewModel>().getEquipLocationForHardware(hardwareId: device.id);
     if (location != null) {
       return location.name;
     }
@@ -183,8 +175,7 @@ class _DeviceListTabState extends State<DeviceListTab> {
         'firmware': FusionTableCell(
           value: dummyFirmware,
           child:
-              (device is! Amplifier ||
-                      !device.hardwareName.toLowerCase().startsWith("pp"))
+              (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp"))
                   ? FusionAppText(
                     text: dummyFirmware,
                     style: context.textTheme.labelMedium,
@@ -198,9 +189,7 @@ class _DeviceListTabState extends State<DeviceListTab> {
         'temp': FusionTableCell(
           value: tempCelsius,
           child:
-              (isOnline &&
-                      (device is! Amplifier ||
-                          !device.hardwareName.toLowerCase().startsWith("pp")))
+              (isOnline && (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp")))
                   ? CompactThermostatWidget(
                     temperature: tempCelsius,
                     maxTemperature: 100,
@@ -213,9 +202,7 @@ class _DeviceListTabState extends State<DeviceListTab> {
         'disk': FusionTableCell(
           value: diskUsage,
           child:
-              (isOnline &&
-                      (device is! Amplifier ||
-                          !device.hardwareName.toLowerCase().startsWith("pp")))
+              (isOnline && (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp")))
                   ? Row(
                     children: <Widget>[
                       GaugeWidget(
@@ -237,10 +224,7 @@ class _DeviceListTabState extends State<DeviceListTab> {
         'cpu': FusionTableCell(
           value: cpuUsage,
           child:
-              (isOnline &&
-                      (device is FusionDsp ||
-                          (device is Amplifier &&
-                              device.hardwareName.startsWith("PSM"))))
+              (isOnline && (device is FusionDsp || (device is Amplifier && device.hardwareName.startsWith("PSM"))))
                   ? Row(
                     children: <Widget>[
                       DiskUsageWidget(
@@ -287,8 +271,7 @@ class _DeviceListTabState extends State<DeviceListTab> {
                 const SizedBox(width: 10),
               ],
 
-              if (device is! Amplifier ||
-                  !device.hardwareName.toLowerCase().startsWith("pp"))
+              if (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp"))
                 FusionNeumorphicButton(
                   semanticId: 'reboot_button',
                   width: 26,
@@ -327,8 +310,7 @@ class _DeviceListTabState extends State<DeviceListTab> {
   Widget _buildLinkText(HardwareComponent device) {
     return InkWell(
       onTap: () {
-        if (device is! Amplifier ||
-            !device.hardwareName.toLowerCase().startsWith("pp")) {
+        if (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp")) {
           Navigator.pushNamed(
             context,
             Routes.deviceDetails,
@@ -360,8 +342,7 @@ class _DeviceListTabState extends State<DeviceListTab> {
       builder:
           (BuildContext context) => FusionActionPopup(
             title: 'STANDBY',
-            description:
-                'Do you want to set ${device.name} device to standby ?',
+            description: 'Do you want to set ${device.name} device to standby ?',
             loadingMessage: 'Device going standby',
             onConfirm: () {
               // TODO: Implement actual standby logic if needed before loading

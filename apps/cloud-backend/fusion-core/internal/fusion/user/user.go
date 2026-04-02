@@ -43,3 +43,60 @@ func (s *Service) UpdateUser(ctx context.Context, userID string, req *types.Upda
 
 	return s.dbService.UpdateUser(ctx, userID, req)
 }
+
+// Role Management Methods
+
+// GetOrganizationRoleManagement retrieves complete role management data for an organization
+func (s *Service) GetOrganizationRoleManagement(ctx context.Context, accountID string) (*types.RoleManagementResponse, error) {
+	if accountID == "" {
+		return nil, fmt.Errorf("account ID is required")
+	}
+	return s.dbService.GetOrganizationRoleManagement(ctx, accountID)
+}
+
+// CreateRole creates a new role for an organization
+func (s *Service) CreateRole(ctx context.Context, accountID string, req *types.CreateRoleRequest) (*types.Role, error) {
+	if accountID == "" {
+		return nil, fmt.Errorf("account ID is required")
+	}
+	if req.Name == "" {
+		return nil, fmt.Errorf("role name is required")
+	}
+	return s.dbService.CreateRole(ctx, accountID, req)
+}
+
+// UpdateUserRole updates the role assignment for a user
+func (s *Service) UpdateUserRole(ctx context.Context, userID, accountID string, newRoleID int) error {
+	if userID == "" {
+		return fmt.Errorf("user ID is required")
+	}
+	if accountID == "" {
+		return fmt.Errorf("account ID is required")
+	}
+	if newRoleID <= 0 {
+		return fmt.Errorf("valid role ID is required")
+	}
+	return s.dbService.UpdateUserRole(ctx, userID, accountID, newRoleID)
+}
+
+// UpdateRolePermissions updates permissions for a specific role
+func (s *Service) UpdateRolePermissions(ctx context.Context, roleID int, accountID string, permissions []types.PermissionUpdateRequest) error {
+	if roleID <= 0 {
+		return fmt.Errorf("valid role ID is required")
+	}
+	if accountID == "" {
+		return fmt.Errorf("account ID is required")
+	}
+	return s.dbService.UpdateRolePermissions(ctx, roleID, accountID, permissions)
+}
+
+// CheckAdminPermission verifies if a user has admin permissions for role management
+func (s *Service) CheckAdminPermission(ctx context.Context, userEmail, accountID string) (bool, error) {
+	if userEmail == "" {
+		return false, fmt.Errorf("user email is required")
+	}
+	if accountID == "" {
+		return false, fmt.Errorf("account ID is required")
+	}
+	return s.dbService.CheckAdminPermission(ctx, userEmail, accountID)
+}

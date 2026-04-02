@@ -3,42 +3,55 @@ package api
 import "time"
 
 const (
-	AudioFilesLocation = "/var/lib/fusion/audio"
-
-	AdminPort          = "9090"
-	ControllerPort     = "7950"
-	HTTPPort           = "8080"
-	MessageTriggerPort = 7949
-	SAPPort            = "9875" // As defined: https://datatracker.ietf.org/doc/html/rfc2974
-	UDPPort            = "7947"
-
-	ContentType  = "Content-Type"
-	JsonMIMEType = "application/json"
-	Protocol     = "http://"
+	SoftwareUpdateVersionUnknown = "Unknown"
+	BranchNameUnknown            = "Unknown"
+	CommitHashUnknown            = "Unknown"
+	JenkinsBuildNumberUnknown    = "Unknown"
+	SoftwareUpdateOTAPath        = "/mnt/ota"
+	MaxSoftwareUpdateUploadBytes = 300 << 20 // 300 MB
+	MinFreeSpaceBuffer           = 100 << 20 // 100 MB minimum free space buffer
 
 	FusionEpoch     = "_fusion_epoch"
 	FusionVersion   = "_fusion_version"
 	FusionMessageID = "_fusion_msg_id"
 	FusionOperation = "_fusion_op"
 
-	HTTPTimeout = 5 * time.Second
+	HTTPTimeout       = 5 * time.Second
+	HTTPUploadTimeout = 30 * time.Second
+
+	MacUnknown = "Unknown"
 
 	MessageIDKey        = "id"
 	MessagePriorityKey  = "priority"
 	MessageTimestampKey = "timestamp"
 	MessageZonesKey     = "zones"
+	ModelUnknown        = "Unknown"
+
+	Protocol = "http://"
+
+	SerialUnknown = "Unknown"
 
 	SnapshotIDKey = "snapshot_id"
 
-	// Request types
+	// WS Request types (client -> server)
 	WSMsgTypeDevices            = "devices"
 	WSMsgTypeDeviceByID         = "device_by_id"
 	WSMsgTypeUpdateDeviceInfo   = "update_device_info"
-	WSMsgTypeDeviceUpdate       = "device_update"
+	WSMsgTypeConfiguration      = "config"
+	WSMsgTypePatchConfiguration = "patch_config"
+	WSMsgTypeUnsubscribeConfig  = "unsubscribe_config"
 	WSMsgTypeUnsubscribeDevices = "unsubscribe_devices"
 	WSMsgTypePing               = "ping"
 	WSMsgTypePong               = "pong"
 	WSMsgTypeError              = "error"
+
+	// WS event types (server -> client)
+	WSMsgTypeDeviceUpdate = "device_update"
+	WSMsgTypeConfigUpdate = "config_update"
+
+	// WS topic names
+	WSTopicConfigUpdates = "config_updates"
+	WSTopicDeviceUpdates = "device_updates"
 
 	// WebSocket response data field keys
 	WSDataFieldDeviceID   = "device_id"
@@ -71,4 +84,31 @@ const (
 	WSCodeDeviceNotFound   = 4005 // Device not found
 	WSCodeUpdateFailed     = 4006 // Update operation failed
 	WSCodeApplicationError = 4500 // General application error
+
+)
+
+const (
+	ContentType  = "Content-Type"
+	JsonMIMEType = "application/json"
+	TextMIMEType = "text/plain"
+)
+
+const (
+	AdminPort          = "9090"
+	ControllerPort     = "7950"
+	HTTPPort           = "8080"
+	MessageTriggerPort = 7949
+	SAPPort            = "9875" // As defined: https://datatracker.ietf.org/doc/html/rfc2974
+	UDPPort            = "7947"
+)
+
+const (
+	AudioFilesLocation      = "/var/lib/fusion/audio"
+	DefaultIdentityFilePath = "/var/lib/device-identity/"
+	DefaultCAFileName       = "AmazonRootCA1.pem"
+	DefaultCSRFileName      = "device.csr"
+	DefaultCertFileName     = "device.x509.cert"
+	DefaultKeyFileName      = "device.key"
+	SoftwareUpdateInfoPath  = "/etc/buildinfo"
+	SerialPath              = "/sys/firmware/devicetree/base/serial-number"
 )

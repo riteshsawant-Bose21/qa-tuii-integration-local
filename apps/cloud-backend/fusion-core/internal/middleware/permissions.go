@@ -31,6 +31,20 @@ const (
 	UserSettingsCreate = "users.settings.create"
 	UserSettingsUpdate = "users.settings.update"
 
+	// Firmware permissions
+	FirmwareBundleRead    = "firmware.bundle.read"
+	FirmwareBundleCreate  = "firmware.bundle.create"
+	FirmwareBundleApprove = "firmware.bundle.approve"
+	FirmwareUpdateCheck   = "firmware.update.check"
+	FirmwareDownload      = "firmware.download"
+	FirmwareUpdateLog     = "firmware.update.log"
+
+	// Organization management permissions
+	OrganizationRead   = "organization.read"
+	OrganizationCreate = "organization.create"
+	OrganizationUpdate = "organization.update"
+	OrganizationDelete = "organization.delete"
+
 	// Admin permissions
 	AdminFull = "admin"
 	AdminUser = "user.manage"
@@ -43,6 +57,8 @@ const (
 func SetupProjectPermissions(acc *AccessControlConfig) {
 	// Project GET endpoints - require read permission
 	acc.RegisterPermission("GET", fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointProjects), ProjectRead, PermissionRead, "View all projects")
+
+	acc.RegisterPermission("GET", fmt.Sprintf("%s%s%s", constants.APIV1Path, constants.EndpointProjects, constants.EndpointProjectByID), ProjectRead, PermissionRead, "View project by ID")
 
 	// Project CREATE endpoint - require write permission
 	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointProjects), ProjectCreate, PermissionWrite, "Create new project")
@@ -85,11 +101,41 @@ func SetupUserSettingsPermissions(acc *AccessControlConfig) {
 	acc.RegisterPermission("PUT", fmt.Sprintf("%s%s", basePath, constants.EndpointUserSettingsByID), UserSettingsUpdate, PermissionWrite, "Update user settings")
 }
 
+// SetupFirmwarePermissions configures access control permissions for firmware update endpoints
+func SetupFirmwarePermissions(acc *AccessControlConfig) {
+	acc.RegisterPermission("GET", fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointFirmwareBundles), FirmwareBundleRead, PermissionRead, "View firmware bundles")
+	acc.RegisterPermission("PUT", fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointApproveBundle), FirmwareBundleApprove, PermissionWrite, "Approve firmware bundle")
+	acc.RegisterPermission("GET", fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointFirmwareUpdateCheck), FirmwareUpdateCheck, PermissionRead, "Check for firmware updates")
+	acc.RegisterPermission("GET", fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointBundleDownload), FirmwareDownload, PermissionRead, "Download firmware bundle")
+	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointLogBundleUpdateStatus), FirmwareUpdateLog, PermissionWrite, "Log firmware update status")
+}
+
+// SetupOrganizationPermissions configures access control permissions for organization management endpoints
+func SetupOrganizationPermissions(acc *AccessControlConfig) {
+	// Organizations endpoints
+	basePath := fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointOrganizations)
+
+	// Organization GET endpoints - require read permission
+	acc.RegisterPermission("GET", basePath, OrganizationRead, PermissionRead, "View all organizations")
+	acc.RegisterPermission("GET", fmt.Sprintf("%s%s", basePath, constants.EndpointOrganizationByID), OrganizationRead, PermissionRead, "View organization details")
+
+	// Organization CREATE endpoint - require admin permission
+	acc.RegisterPermission("POST", basePath, OrganizationCreate, PermissionAdmin, "Create new organization")
+
+	// Organization UPDATE endpoint - require admin permission
+	acc.RegisterPermission("PUT", fmt.Sprintf("%s%s", basePath, constants.EndpointOrganizationByID), OrganizationUpdate, PermissionAdmin, "Update organization")
+
+	// Organization DELETE endpoint - require admin permission
+	acc.RegisterPermission("DELETE", fmt.Sprintf("%s%s", basePath, constants.EndpointOrganizationByID), OrganizationDelete, PermissionAdmin, "Delete organization")
+}
+
 // SetupCommonPermissions configures common permission patterns
 func SetupCommonPermissions(acc *AccessControlConfig) {
 	SetupProjectPermissions(acc)
 	SetupUserProfilePermissions(acc)
 	SetupUserSettingsPermissions(acc)
+	SetupOrganizationPermissions(acc)
+	SetupFirmwarePermissions(acc)
 
 	// Add more permission setups here as needed
 	// SetupUserPermissions(acc)

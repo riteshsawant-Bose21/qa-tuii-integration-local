@@ -30,7 +30,7 @@ class GpioLogicPorts {
 /// Field names follow the README specification.
 /// The numberOfInputsAndOutputs field accepts any schema structure.
 class DspProduct {
-  final int productId;
+  final int id;
   final ProductAsset assets;
   final String modelName;
   final String modelFamily;
@@ -40,11 +40,11 @@ class DspProduct {
   final int maxNumberOfDigitalControl;
   final ProductPortData? numberOfInputsAndOutputs;
   final String? shortDescription;
-  final List<int> skus;
+  final List<String> skus;
   final bool isFusionCompatible;
 
   const DspProduct({
-    required this.productId,
+    required this.id,
     required this.assets,
     required this.modelName,
     required this.modelFamily,
@@ -59,10 +59,10 @@ class DspProduct {
   });
 
   factory DspProduct.fromJson(Map<String, dynamic> json) {
-    final specs = json['specifications'] as Map<String, dynamic>? ?? {};
+    final specs = json; //json['specifications'] as Map<String, dynamic>? ?? {};
 
     return DspProduct(
-      productId: (json['productid'] as num?)?.toInt() ?? 0,
+      id: (json['id'] as num?)?.toInt() ?? 0,
       assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?, productType: 'dsp'),
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
@@ -70,33 +70,32 @@ class DspProduct {
       maxNumberOfAnalogControl: (specs['max_number_of_analog_control'] as num?)?.toInt() ?? 0,
       maxNumberOfDigitalControl: (specs['max_number_of_digital_control'] as num?)?.toInt() ?? 0,
       numberOfInputsAndOutputs: specs['number_of_inputs_and_outputs'] != null
-          ? ProductPortData.fromMap(specs['number_of_inputs_and_outputs'] as Map<String, dynamic>): null,
+          ? ProductPortData.fromMap(specs['number_of_inputs_and_outputs'] as Map<String, dynamic>)
+          : null,
       description: json['description'] as String? ?? 'Digital Signal Processor for advanced audio processing and optimization',
       shortDescription: specs['short_description'] as String?,
-      skus: (specs['skus'] as List<dynamic>?)?.map((e) => (e as num).toInt()).toList() ?? [],
+      skus: (specs['skus'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       isFusionCompatible: json['is_fusion_compatible'] as bool? ?? false,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'productid': productId,
-        'assets': assets.toAssetList(),
-        'model_name': modelName,
-        'model_family': modelFamily,
-        'description': description,
-        'specifications': {
-          if (gpioLogicPorts != null)
-            'gpio_logic_ports': gpioLogicPorts!.toJson(),
-          'max_number_of_analog_control': maxNumberOfAnalogControl,
-          'max_number_of_digital_control': maxNumberOfDigitalControl,
-          if (numberOfInputsAndOutputs != null)
-            'number_of_inputs_and_outputs': numberOfInputsAndOutputs!.toMap(),
-          if (shortDescription != null) 'short_description': shortDescription,
-          'skus': skus,
-        },
-        'is_fusion_compatible': isFusionCompatible,
-      };
+    'id': id,
+    'assets': assets.toAssetList(),
+    'model_name': modelName,
+    'model_family': modelFamily,
+    'description': description,
+    'specifications': {
+      if (gpioLogicPorts != null) 'gpio_logic_ports': gpioLogicPorts!.toJson(),
+      'max_number_of_analog_control': maxNumberOfAnalogControl,
+      'max_number_of_digital_control': maxNumberOfDigitalControl,
+      if (numberOfInputsAndOutputs != null) 'number_of_inputs_and_outputs': numberOfInputsAndOutputs!.toMap(),
+      if (shortDescription != null) 'short_description': shortDescription,
+      'skus': skus,
+    },
+    'is_fusion_compatible': isFusionCompatible,
+  };
 
   @override
-  String toString() => 'DspProduct(productId: $productId, modelName: $modelName)';
+  String toString() => 'DspProduct(id: $id, modelName: $modelName)';
 }

@@ -29,6 +29,13 @@ Fusion Server can be run:
 - UDP broadcast of message triggers
 - Scheduling of message playback (`/pava/schedule`)
 
+## Software Update Management
+- Secure upload of `.swu` software Update bundles (`/softwareUpdate/upload`)
+- SHA-256 checksum validation and integrity verification
+- Automatic cluster-wide distribution via gossip protocol
+- Version control with duplicate detection
+- REST endpoints for download and listing (`/softwareUpdate/download`, `/softwareUpdate/list`)
+
 ## Scheduler & Tasks
 - Cron-based recurring tasks
 - One-shot and scheduled operations
@@ -214,20 +221,6 @@ BLE service identifiers for mobile provisioning:
 
 Used by the `fusion-setup` Flutter app to scan, connect, and bridge REST operations.
 
-# Binary Updates
-
-Upload:
-
-```bash
-curl -X POST   -F "binary=@build/fusion-server_linux_arm64"   -F "checksum=$(shasum -a 256 build/fusion-server_linux_arm64 | cut -d ' ' -f 1)"   http://192.168.2.100:8080/version
-```
-
-Rollback:
-
-```
-POST /version
-```
-
 # Metrics & Monitoring
 
 - `GET /metrics`
@@ -266,6 +259,19 @@ Run a subset:
 ```bash
 ./scripts/multipass/run-tests --snapshot
 ```
+
+# Documentation
+
+For detailed information on specific functionality:
+
+- [Local Development & Debugging](docs/Local.md) - Building and running locally, BLE testing
+- [Cluster Setup & Operations](docs/Cluster.md) - Distributed deployment and management  
+- [Snapshots](docs/Snapshots.md) - State consistency and snapshot management
+- [Tasks & Scheduling](docs/Tasks.md) - Cron jobs and task automation
+- [Persistence](docs/Persistence.md) - BoltDB storage and data management
+- [WebSocket API](docs/WebSocket.md) - Real-time streaming endpoints
+- [Setup & Configuration](docs/Setup.md) - Initial setup and configuration
+- [SoftwareUpdate Management](docs/SoftwareUpdate.md) - SoftwareUpdate upload, distribution, and management
 
 # Troubleshooting macOS [ Tahoe ] and Multipass Issues
 

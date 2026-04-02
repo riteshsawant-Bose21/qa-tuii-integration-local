@@ -11,22 +11,25 @@ import (
 type NotifyOp string
 
 const (
-	NotifyOpAck          NotifyOp = "ack"
-	NotifyOpAudioRemove  NotifyOp = "audio_remove"
-	NotifyOpAudioSync    NotifyOp = "audio_sync"
-	NotifyOpConfigUpdate NotifyOp = "config_update"
-	NotifyOpDeviceUpdate NotifyOp = "device_update"
-	NotifyOpNoop         NotifyOp = "no_op"
-	NotifyOpSnapActivate NotifyOp = "snapshot_activate"
-	NotifyOpSnapCreate   NotifyOp = "snapshot_create"
-	NotifyOpSnapDelete   NotifyOp = "snapshot_delete"
-	NotifyOpSnapSave     NotifyOp = "snapshot_save"
-	NotifyOpTaskCreate   NotifyOp = "task_create"
-	NotifyOpTaskDelete   NotifyOp = "task_delete"
-	NotifyOpTaskUpdate   NotifyOp = "task_update"
-	NotifyOpVIPStatus    NotifyOp = "vip_status"
-	NotifyOpValueGet     NotifyOp = "get"
-	NotifyOpValueSet     NotifyOp = "set"
+	NotifyOpAck                       NotifyOp = "ack"
+	NotifyOpAudioRemove               NotifyOp = "audio_remove"
+	NotifyOpAudioSync                 NotifyOp = "audio_sync"
+	NotifyOpConfigUpdate              NotifyOp = "config_update"
+	NotifyOpDeviceUpdate              NotifyOp = "device_update"
+	NotifyOpGetLocalDeviceInformation NotifyOp = "get_local_device_information"
+	NotifyOpNoop                      NotifyOp = "no_op"
+	NotifyOpSnapActivate              NotifyOp = "snapshot_activate"
+	NotifyOpSnapCreate                NotifyOp = "snapshot_create"
+	NotifyOpSnapDelete                NotifyOp = "snapshot_delete"
+	NotifyOpSnapSave                  NotifyOp = "snapshot_save"
+	NotifyOpTaskCreate                NotifyOp = "task_create"
+	NotifyOpTaskDelete                NotifyOp = "task_delete"
+	NotifyOpTaskUpdate                NotifyOp = "task_update"
+	NotifyOpVIPStatus                 NotifyOp = "vip_status"
+	NotifyOpValueGet                  NotifyOp = "get"
+	NotifyOpValueSet                  NotifyOp = "set"
+	NotifyOpSoftwareUpdateAvailable   NotifyOp = "software_update_available"
+	NotifyOpSoftwareUpdateSyncAck     NotifyOp = "software_update_sync_ack"
 )
 
 // NotifyMessage holds information about a cross-node message
@@ -40,6 +43,8 @@ type NotifyMessage struct {
 	ConfigUpdate      *ConfigUpdate
 	ConfigValue       *ConfigValue
 	DeviceInfo        *DeviceInfo
+	SoftwareUpdate    *SoftwareUpdateSync
+	SoftwareUpdateAck *SoftwareUpdateSyncAck
 	SnapshotOperation *SnapshotOperation
 	Task              *Task
 	VersionUpdate     *VersionUpdate
@@ -99,6 +104,18 @@ var validators = map[NotifyOp]func(*NotifyMessage) error{
 		}
 		return nil
 	},
+	NotifyOpSoftwareUpdateAvailable: func(m *NotifyMessage) error {
+		if m.SoftwareUpdate == nil {
+			return errors.New("SoftwareUpdate required for operation")
+		}
+		return nil
+	},
+	NotifyOpSoftwareUpdateSyncAck: func(m *NotifyMessage) error {
+		if m.SoftwareUpdateAck == nil {
+			return errors.New("SoftwareUpdateAck required for operation")
+		}
+		return nil
+	},
 	NotifyOpTaskCreate: validateTask,
 	NotifyOpTaskUpdate: validateTask,
 	NotifyOpTaskDelete: validateTask,
@@ -115,7 +132,10 @@ func (msg *NotifyMessage) IsPublic() bool {
 	return msg.Operation == NotifyOpConfigUpdate ||
 		msg.Operation == NotifyOpSnapActivate ||
 		msg.Operation == NotifyOpAck ||
-		msg.Operation == NotifyOpVIPStatus
+		msg.Operation == NotifyOpVIPStatus ||
+		msg.Operation == NotifyOpDeviceUpdate ||
+		msg.Operation == NotifyOpSoftwareUpdateAvailable ||
+		msg.Operation == NotifyOpSoftwareUpdateSyncAck
 }
 
 func WithAudioRemove(update *AudioRemoveUpdate) func(*NotifyMessage) {
@@ -148,8 +168,26 @@ func WithTask(task *Task) func(*NotifyMessage) {
 	}
 }
 
+func WithSoftwareUpdate(update *SoftwareUpdateSync) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.SoftwareUpdate = update
+	}
+}
+
+func WithSoftwareUpdateAck(ack *SoftwareUpdateSyncAck) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.SoftwareUpdateAck = ack
+	}
+}
+
 func WithVersionUpdate(update *VersionUpdate) func(*NotifyMessage) {
 	return func(m *NotifyMessage) {
 		m.VersionUpdate = update
+	}
+}
+
+func WithDeviceInfo(info *DeviceInfo) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.DeviceInfo = info
 	}
 }

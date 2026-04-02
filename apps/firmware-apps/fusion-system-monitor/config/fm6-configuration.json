@@ -4,29 +4,24 @@
     },
     "periodic_tasks": [
         {
-            "name": "fw_monitor",
+            "name": "system_info",
             "property_settings": [
                 { "name": "period_ms", "value": 2000 }
             ],
             "blocks": [
                 {
-                    "name": "cpu_usage",
-                    "module": "cpu_usage",
+                    "name": "system_info",
+                    "module": "system_info",
                     "telemetry": [
                         { "name": "cpu" },
-                        { "name": "high_cpu_usage" }
-                    ]
-                },
-                {
-                    "name": "space_usage",
-                    "module": "space_usage",
-                    "telemetry": [
+                        { "name": "high_cpu_usage" },
                         { "name": "ram" },
                         { "name": "high_ram_usage" },
                         { "name": "emmc" },
                         { "name": "high_emmc_usage" },
                         { "name": "usb_storage" },
-                        { "name": "usb_connected" }
+                        { "name": "usb_connected" },
+                        { "name": "temperature" }
                     ]
                 }
             ]
@@ -89,14 +84,6 @@
                                 "fm6/block_gpio/gpio_ctrl0_gpio3",
                                 "fm6/block_gpio/gpio_ctrl0_gpio4"
                             ]
-                        },
-                        { 
-                            "name": "system_mute_path",
-                            "value": "fm6/block_ana/ep_aud_out_chs-12/gpio_dac_mute"
-                        },
-                        { 
-                            "name": "system_unmute_time",
-                            "value": 45
                         }
                     ]
                 }

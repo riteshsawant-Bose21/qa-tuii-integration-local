@@ -11,7 +11,7 @@ import (
 )
 
 // registerRoutes sets up the API routes.
-// Authentication and authorization are handled by the lambda-authorizer. The extract user middleware is used to pull user 
+// Authentication and authorization are handled by the lambda-authorizer. The extract user middleware is used to pull user
 // info from headers set by the authorizer and make it available to handlers via context.
 func (a *API) registerRoutes() {
 	v1 := a.engine.Group(constants.APIV1Path)
@@ -38,6 +38,7 @@ func (a *API) registerRoutes() {
 
 		projects.POST("", projectHandler.CreateProject)
 		projects.GET("", projectHandler.GetAllProjects)
+		projects.GET(constants.EndpointProjectByID, projectHandler.GetProjectByID)
 		projects.PATCH(constants.EndpointProjectByID, projectHandler.UpdateProject)
 		projects.DELETE(constants.EndpointProjectByID, projectHandler.DeleteProject)
 		projects.PUT(constants.EndpointProjectAssignUser, projectHandler.AssignUserToProject)
@@ -88,8 +89,8 @@ func (a *API) registerRoutes() {
 		auth.GET(constants.EndpointAuthTokens, authHandler.GetAuthTokensByResourceOwnerPassword)
 	}
 
-	// Role Management routes for organization admins (auth handled by lambda-authorizer)
-	roleManagementHandler := handler.NewRoleManagementHandler(a.user, a.roleManagementService)
+	// Role Management routes for organization admins
+	roleManagementHandler := handler.NewRoleManagementHandler(a.user)
 	organization := v1.Group(constants.EndpointOrganization)
 
 	organization.Use(middleware.ExtractUserFromHeaders())
@@ -99,6 +100,37 @@ func (a *API) registerRoutes() {
 		organization.PUT(constants.EndpointUserRole, roleManagementHandler.UpdateUserRole)
 		organization.PUT(constants.EndpointRolePermissions, roleManagementHandler.UpdateRolePermissions)
 		organization.GET(constants.EndpointOrganizationUsers, roleManagementHandler.GetOrganizationUsers)
+	}
+
+	firmwareUpdate := v1.Group("")
+	firmwareHandler := handler.NewFirmwareUpdateHandler(a.firmware)
+	{
+		firmwareUpdate.POST(constants.EndpointFirmwareBundles, firmwareHandler.NotifyBundleUpload)
+	}
+
+	firmwareUpdate.Use(middleware.ExtractUserFromHeaders())
+	{
+		firmwareUpdate.GET(constants.EndpointFirmwareBundles, firmwareHandler.ListBundles)
+		firmwareUpdate.PUT(constants.EndpointApproveBundle, firmwareHandler.ApproveBundle)
+		firmwareUpdate.GET(constants.EndpointFirmwareUpdateCheck, firmwareHandler.CheckForUpdate)
+		firmwareUpdate.GET(constants.EndpointBundleDownload, firmwareHandler.GetBundleDownloadURL)
+		firmwareUpdate.POST(constants.EndpointLogBundleUpdateStatus, firmwareHandler.LogBundleUpdateStatus)
+	}
+
+	// Organizations Management routes (no auth for testing)
+	organizationHandler := handler.NewOrganizationHandler(a.organization, a.user)
+	organizations := v1.Group(constants.EndpointOrganizations)
+
+	// No middleware for testing - remove for production
+	// organizations.Use(a.authMiddleware.Middleware())
+	// organizations.Use(accessControl.GlobalAccessControlMiddleware())
+	{
+		organizations.GET("", organizationHandler.GetAllOrganizations)
+		organizations.GET(constants.EndpointOrganizationByID, organizationHandler.GetOrganizationByID)
+		organizations.POST("", organizationHandler.CreateOrganization)
+		organizations.PUT(constants.EndpointOrganizationByID, organizationHandler.UpdateOrganization)
+		organizations.DELETE(constants.EndpointOrganizationByID, organizationHandler.DeleteOrganization)
+		organizations.POST(constants.EndpointOrganizationInviteUsers, organizationHandler.InviteUsersToOrganization)
 	}
 
 }

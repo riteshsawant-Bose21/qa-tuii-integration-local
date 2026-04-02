@@ -228,3 +228,48 @@ CREATE TABLE user_settings (
     created_at timestamp NOT NULL DEFAULT NOW(),
     updated_at timestamp
 );
+
+
+-- firmware update related tables
+CREATE TYPE bundle_approval_status_enum AS ENUM (
+    'PENDING',
+    'APPROVED',
+    'REVOKED'
+);
+CREATE TABLE bundle (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    version TEXT NOT NULL UNIQUE,
+    version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(version, '-', 1), '.' )::INT[] ) stored,
+    prerelease TEXT,      -- alpha, beta or null (for stable)
+    prerelease_num INT, 
+    release_notes TEXT,
+    min_prev_version TEXT NOT NULL,
+    min_prev_version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(min_prev_version, '-', 1), '.' )::INT[] ) STORED,
+    min_desktop_app_version TEXT NOT NULL,
+    min_desktop_app_version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(min_desktop_app_version, '-', 1), '.' )::INT[] ) STORED,
+    manifest_data JSONB,
+    checksum VARCHAR(64) NOT NULL,
+    s3_path TEXT NOT NULL,
+    approval_status bundle_approval_status_enum NOT NULL DEFAULT 'PENDING',
+    approval_status_changed_by UUID references app_user(id),
+    approval_status_changed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+
+CREATE TYPE bundle_update_status_enum AS ENUM (
+    'INSTALL_SUCCESS',
+    'INSTALL_FAIL'
+);
+CREATE TABLE bundle_update_status (
+    id UUID PRIMARY KEY,         
+    update_id UUID NOT null UNIQUE,
+    project_id UUID NOT NULL references project(id),
+    bundle_version TEXT NOT NULL,      
+    previous_version TEXT,
+    status bundle_update_status_enum NOT NULL,             
+    launcher_version TEXT,    
+    installed_at TIMESTAMPTZ NOT null,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

@@ -2,7 +2,25 @@ import 'dart:convert';
 
 import 'package:fusion_lib/fusion_lib.dart';
 
-enum ConnectionType { signal, data, power, wireless }
+enum ConnectionType { 
+  analog,
+  aes67,
+  ethernet,
+  usb,
+  wifi,
+  bluetooth,
+  hdmi,
+  audioJack,
+  rca,
+  amplifier,
+  dspAnalog,
+  endpoint,
+  xlr,
+  circuit,
+  gpio,
+  speaker,
+  dsp
+ }
 
 /// Represents a wiring connection between two devices and their ports.
 class WiringConnectionModel {
@@ -45,7 +63,7 @@ class WiringConnectionModel {
       portId: json['portId'] ?? '',
       targetDeviceId: json['targetDeviceId'] ?? '',
       targetPortId: json['targetPortId'] ?? '',
-      type: ConnectionType.values.firstWhere((e) => e.name == json['type'], orElse: () => ConnectionType.signal),
+      type: ConnectionType.values.firstWhere((e) => e.name == json['type'], orElse: () => ConnectionType.dsp),
     );
   }
 

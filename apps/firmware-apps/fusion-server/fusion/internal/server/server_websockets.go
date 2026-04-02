@@ -8,7 +8,6 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	"fusion/internal/server/handler"
 
 	"github.com/gorilla/websocket"
 )
@@ -217,6 +216,10 @@ func (s *FusionServer) sendErrorToConnection(conn *websocket.Conn, requestID str
 func (s *FusionServer) BroadcastMessage(message *api.NotifyMessage) error {
 	// Convert NotifyMessage to appropriate WebSocket format based on operation
 	switch message.Operation {
+	case api.NotifyOpConfigUpdate:
+		if message.ConfigUpdate != nil {
+			return s.broadcastConfigUpdate(message)
+		}
 	case api.NotifyOpDeviceUpdate:
 		if message.DeviceInfo != nil {
 			// Convert device update to WebSocket response format
@@ -231,47 +234,66 @@ func (s *FusionServer) BroadcastMessage(message *api.NotifyMessage) error {
 				Timestamp: time.Now(),
 			}
 			// Send to topic-based subscribers
-			return s.BroadcastToTopic(handler.TopicDeviceUpdates, updateMessage)
-		}
-	default:
-		// For other message types, wrap in WebSocketResponse format for consistency
-		broadcastMessage := &api.WebSocketResponse{
-			ID:        nil, // Push notifications have null ID
-			Version:   api.WSCurrentVersion,
-			Type:      "notification",
-			Code:      api.WSCodeDeviceUpdated, // Use event code for notifications
-			Status:    api.WSStatusEvent,
-			Message:   fmt.Sprintf("System notification: %s", message.Operation),
-			Data:      message, // Include the original NotifyMessage as data
-			Timestamp: time.Now(),
-		}
-
-		s.wsLock.RLock()
-		clients := make([]*websocket.Conn, 0, len(s.wsClients))
-		for conn := range s.wsClients {
-			clients = append(clients, conn)
-		}
-		s.wsLock.RUnlock()
-
-		var failedConnections []*websocket.Conn
-		for _, conn := range clients {
-			if err := s.safeWriteJSON(conn, broadcastMessage); err != nil {
-				logging.GetLogger().Error("Error broadcasting to WebSocket client: %v", err)
-				failedConnections = append(failedConnections, conn)
-			}
-		}
-
-		// Clean up failed connections
-		if len(failedConnections) > 0 {
-			s.wsLock.Lock()
-			for _, conn := range failedConnections {
-				delete(s.wsClients, conn)
-				delete(s.wsWriteMutex, conn)
-				conn.Close()
-			}
-			s.wsLock.Unlock()
+			return s.BroadcastToTopic(api.WSTopicDeviceUpdates, updateMessage)
 		}
 	}
+
+	return s.broadcastGenericNotification(message)
+}
+
+func (s *FusionServer) broadcastConfigUpdate(message *api.NotifyMessage) error {
+	configUpdateMessage := &api.WebSocketResponse{
+		ID:        nil,
+		Version:   api.WSCurrentVersion,
+		Type:      api.WSMsgTypeConfigUpdate,
+		Code:      api.WSCodeUpdated,
+		Status:    api.WSStatusEvent,
+		Message:   "Configuration updated",
+		Data:      message.ConfigUpdate.Data,
+		Timestamp: time.Now(),
+	}
+
+	return s.BroadcastToTopic(api.WSTopicConfigUpdates, configUpdateMessage)
+}
+
+func (s *FusionServer) broadcastGenericNotification(message *api.NotifyMessage) error {
+	broadcastMessage := &api.WebSocketResponse{
+		ID:        nil, // Push notifications have null ID
+		Version:   api.WSCurrentVersion,
+		Type:      "notification",
+		Code:      api.WSCodeDeviceUpdated, // Use event code for notifications
+		Status:    api.WSStatusEvent,
+		Message:   fmt.Sprintf("System notification: %s", message.Operation),
+		Data:      message, // Include the original NotifyMessage as data
+		Timestamp: time.Now(),
+	}
+
+	s.wsLock.RLock()
+	clients := make([]*websocket.Conn, 0, len(s.wsClients))
+	for conn := range s.wsClients {
+		clients = append(clients, conn)
+	}
+	s.wsLock.RUnlock()
+
+	var failedConnections []*websocket.Conn
+	for _, conn := range clients {
+		if err := s.safeWriteJSON(conn, broadcastMessage); err != nil {
+			logging.GetLogger().Error("Error broadcasting to WebSocket client: %v", err)
+			failedConnections = append(failedConnections, conn)
+		}
+	}
+
+	// Clean up failed connections
+	if len(failedConnections) > 0 {
+		s.wsLock.Lock()
+		for _, conn := range failedConnections {
+			delete(s.wsClients, conn)
+			delete(s.wsWriteMutex, conn)
+			conn.Close()
+		}
+		s.wsLock.Unlock()
+	}
+
 	return nil
 }
 
