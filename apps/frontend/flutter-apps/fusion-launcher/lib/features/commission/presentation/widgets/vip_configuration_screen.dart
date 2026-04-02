@@ -19,17 +19,17 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
   final TextEditingController _vipController = TextEditingController();
   MdnsDevice? _selectedDevice;
   bool _isAutoSelect = true;
+  String _subnetPrefix = '';
 
   @override
   void initState() {
     super.initState();
-    _vipController.text = '192.168.0.100';
     _syncSelectionFromCubit();
   }
 
   /// Reads the current cubit state and auto-selects the first device if
   /// available. Called once on init; subsequent updates arrive via
-  /// [BlocBuilder].
+  /// [BlocListener].
   void _syncSelectionFromCubit() {
     final List<MdnsDevice> devices = _devicesFromState(
       context.read<MdnsScanViewModel>().state,
@@ -37,6 +37,7 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
     if (devices.isNotEmpty && _selectedDevice == null) {
       _selectedDevice = devices.first;
     }
+    _refreshSubnetPrefix();
   }
 
   @override
@@ -66,6 +67,37 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
     };
   }
 
+  /// Extracts the subnet prefix (first 3 octets + trailing dot) from an IP.
+  /// e.g. `192.168.1.10` → `192.168.1.`
+  String _extractSubnet(String ip) {
+    final List<String> octets = ip.split('.');
+    if (octets.length == 4) {
+      return '${octets[0]}.${octets[1]}.${octets[2]}.';
+    }
+    return '';
+  }
+
+  /// Returns the device whose IP determines the subnet prefix.
+  MdnsDevice? _resolveTargetDevice() {
+    if (_isAutoSelect) {
+      return _devicesFromState(
+        context.read<MdnsScanViewModel>().state,
+      ).firstOrNull;
+    }
+    return _selectedDevice;
+  }
+
+  /// Recomputes [_subnetPrefix] from the current target device and clears the
+  /// host octet field when the subnet changes.
+  void _refreshSubnetPrefix() {
+    final MdnsDevice? target = _resolveTargetDevice();
+    final String newPrefix = target != null ? _extractSubnet(target.ip) : '';
+    if (newPrefix != _subnetPrefix) {
+      _subnetPrefix = newPrefix;
+      _vipController.clear();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<MdnsScanViewModel, DeviceScanState>(
@@ -74,13 +106,15 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
         // Auto-select the first device when one arrives and nothing is
         // selected yet.
         if (devices.isNotEmpty && _selectedDevice == null) {
-          setState(() => _selectedDevice = devices.first);
+          _selectedDevice = devices.first;
         }
         // If the previously selected device is no longer in the list,
         // reset selection.
         if (_selectedDevice != null && !devices.any((MdnsDevice d) => d.stableId == _selectedDevice!.stableId)) {
-          setState(() => _selectedDevice = devices.isNotEmpty ? devices.first : null);
+          _selectedDevice = devices.isNotEmpty ? devices.first : null;
         }
+        _refreshSubnetPrefix();
+        setState(() {});
       },
       child: Padding(
         padding: EdgeInsets.symmetric(
@@ -206,9 +240,9 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
                 semanticId: 'vip_configuration_auto_select',
                 value: _isAutoSelect,
                 onChanged: () {
-                  final bool newValue = !_isAutoSelect;
                   setState(() {
-                    _isAutoSelect = newValue;
+                    _isAutoSelect = !_isAutoSelect;
+                    _refreshSubnetPrefix();
                   });
                 },
               ),
@@ -234,14 +268,31 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
           const SizedBox(height: 8),
           TextFormField(
             controller: _vipController,
-            validator: VipConfigViewModel.validateIp,
+            validator: VipConfigViewModel.validateHostOctet,
             autovalidateMode: AutovalidateMode.onUserInteraction,
+            keyboardType: TextInputType.number,
             style: TextStyle(
               color: context.colorScheme.textPrimary,
               fontSize: 14,
             ),
+
             decoration: InputDecoration(
-              hintText: '192.168.0.100',
+              prefixIcon:
+                  _subnetPrefix.isNotEmpty
+                      ? Padding(
+                        padding: const EdgeInsets.only(left: 16.0, top: 12.0, bottom: 12.0),
+                        child: Text(
+                          _subnetPrefix,
+                          style: TextStyle(
+                            color: context.colorScheme.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      )
+                      : null,
+              prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+              hintText: _subnetPrefix.isNotEmpty ? 'xxx' : 'Waiting for device…',
               hintStyle: TextStyle(
                 color: context.colorScheme.textPlaceholder,
                 fontSize: 14,
@@ -413,6 +464,7 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
                       : () {
                         setState(() {
                           _selectedDevice = device;
+                          _refreshSubnetPrefix();
                         });
                       },
               child: Opacity(
@@ -597,14 +649,19 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
   // ---------------------------------------------------------------------------
 
   void _verify() {
+    if (_subnetPrefix.isEmpty) {
+      FusionToast.error(context, message: 'No device available to derive subnet. Please wait or retry the scan.');
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    final String vip = _vipController.text.trim();
+    final String vip = '$_subnetPrefix${_vipController.text.trim()}';
 
     // Resolve which device IP to target.
-    final MdnsDevice? targetDevice = _isAutoSelect ? _devicesFromState(context.read<MdnsScanViewModel>().state).firstOrNull : _selectedDevice;
+    final MdnsDevice? targetDevice = _resolveTargetDevice();
 
     if (targetDevice == null) {
       FusionToast.error(context, message: 'No device available. Please wait or retry the scan.');

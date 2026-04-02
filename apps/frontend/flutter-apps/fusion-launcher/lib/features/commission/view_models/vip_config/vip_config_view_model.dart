@@ -26,6 +26,19 @@ class VipConfigViewModel extends Cubit<VipConfigViewModelState> {
     return null;
   }
 
+  /// Validates only the host octet (last part of the IP).
+  /// Must be an integer between 1 and 254 (excludes network 0 and broadcast 255).
+  static String? validateHostOctet(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Host address is required';
+    }
+    final int? octet = int.tryParse(value.trim());
+    if (octet == null || octet < 1 || octet > 254) {
+      return 'Enter a value between 1 and 254';
+    }
+    return null;
+  }
+
   /// Sets the VIP on the target device and then verifies it is reachable.
   ///
   /// 1. POST the VIP to [deviceIp] so the device adopts it.
