@@ -123,6 +123,12 @@ class _WiringPageState extends State<WiringPage> {
               if (painter is WiringConnectionPainter) {
                 final WiringConnectionModel connection = painter.connection;
                 projectViewModel.removeWiringConnection(connectionId: connection.id);
+              } else if (painter is WiringDevicesPainter) {
+                final HardwareComponent device = painter.device;
+                projectViewModel.removeHardware(hardwareId: device.id);
+              } else if (painter is WiringSourcePainter) {
+                final Source source = painter.source;
+                projectViewModel.removeHardware(hardwareId: source.id);
               }
             },
             onMovePoints: (FusionBasePainter painter, List<String> points, Offset delta) {

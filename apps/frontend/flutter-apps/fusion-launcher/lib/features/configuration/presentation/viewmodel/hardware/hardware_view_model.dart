@@ -6,6 +6,7 @@ import 'package:fusion_launcher/core/models/products_data.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
+import 'package:fusion_launcher/features/wiring_design/usecase/auto_wiring.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/endpoints.dart';
@@ -90,6 +91,19 @@ extension HardwareViewModel on ProjectViewModel {
             sourceId: hardware.id,
             autoSave: false,
           );
+        }
+      }
+
+      if (hardware is! Speaker && hardware is! HardwareRack) {
+        final List<WiringConnectionModel> newConnections = AutoWiringUseCase().autoWireForHardware(
+          component: hardware,
+          allComponents: hardwareComponents,
+          circuits: circuits,
+          existingConnections: getAllWiringConnections(),
+        );
+
+        for (final WiringConnectionModel connection in newConnections) {
+          addWiringConnection(connection: connection, autoSave: false);
         }
       }
       if (autoSave) {
