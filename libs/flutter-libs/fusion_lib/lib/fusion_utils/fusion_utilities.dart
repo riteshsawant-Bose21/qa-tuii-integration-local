@@ -16,9 +16,7 @@ import 'package:uuid/uuid.dart';
 
 class FusionUtils {
   //singleton
-  FusionUtils._internal(){
-    _init();
-  }
+  FusionUtils._internal();
 
   static final FusionUtils _instance = FusionUtils._internal();
 
@@ -28,14 +26,6 @@ class FusionUtils {
   static String generateUUID() {
     return const Uuid().v4();
   }
-
-  Directory? appDirectory;
-
-  void _init() async {
-    print("directory_set");
-    appDirectory = await getFusionAppDirectory();
-  }
-
 
   //generate a short uuid
   static int shortUUID() {
