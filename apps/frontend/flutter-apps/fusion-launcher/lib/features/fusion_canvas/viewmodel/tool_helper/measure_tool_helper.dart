@@ -16,6 +16,9 @@ class MeasureToolHelper extends FusionCanvasToolTransformer<MeasureToolState> {
     required MeasureToolState currentState,
   }) {
     if (inputState is FusionCanvasInputTapDownState) {
+      if (inputState.button != FusionMouseButton.left) {
+        return currentState;
+      }
       final Offset position = context.snapState.effectivePosition ?? inputState.tapPosition;
       if (currentState is IdleMeasureToolState) {
         return DrawingMeasureToolState(start: position);
