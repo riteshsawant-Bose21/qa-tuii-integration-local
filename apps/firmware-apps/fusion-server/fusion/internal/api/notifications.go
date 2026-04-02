@@ -11,46 +11,46 @@ import (
 type NotifyOp string
 
 const (
-	NotifyOpAck          NotifyOp = "ack"
-	NotifyOpAudioRemove  NotifyOp = "audio_remove"
-	NotifyOpAudioSync    NotifyOp = "audio_sync"
-	NotifyOpConfigUpdate NotifyOp = "config_update"
-	NotifyOpDeviceUpdate NotifyOp = "device_update"
-	NotifyOpNoop         NotifyOp = "no_op"
-	NotifyOpSceneActivate      NotifyOp = "scene_activate"
-	NotifyOpSceneSetsUpsert    NotifyOp = "scene_sets_upsert"
-	NotifyOpSnapshotDefsUpsert NotifyOp = "snapshot_defs_upsert"
-	NotifyOpSnapshotV2Activate NotifyOp = "snapshot_v2_activate"
+	NotifyOpAck                 NotifyOp = "ack"
+	NotifyOpAudioRemove         NotifyOp = "audio_remove"
+	NotifyOpAudioSync           NotifyOp = "audio_sync"
+	NotifyOpConfigUpdate        NotifyOp = "config_update"
+	NotifyOpDeviceUpdate        NotifyOp = "device_update"
+	NotifyOpNoop                NotifyOp = "no_op"
+	NotifyOpSceneActivate       NotifyOp = "scene_activate"
+	NotifyOpSceneSetsUpsert     NotifyOp = "scene_sets_upsert"
+	NotifyOpSnapshotDefsUpsert  NotifyOp = "snapshot_defs_upsert"
+	NotifyOpSnapshotV2Activate  NotifyOp = "snapshot_v2_activate"
 	NotifyOpTimeMachineActivate NotifyOp = "time_machine_activate"
 	NotifyOpTimeMachineCreate   NotifyOp = "time_machine_create"
 	NotifyOpTimeMachineDelete   NotifyOp = "time_machine_delete"
 	NotifyOpTimeMachineSave     NotifyOp = "time_machine_save"
-	NotifyOpTaskCreate   NotifyOp = "task_create"
-	NotifyOpTaskDelete   NotifyOp = "task_delete"
-	NotifyOpTaskUpdate   NotifyOp = "task_update"
-	NotifyOpVIPStatus    NotifyOp = "vip_status"
-	NotifyOpValueGet     NotifyOp = "get"
-	NotifyOpValueSet     NotifyOp = "set"
+	NotifyOpTaskCreate          NotifyOp = "task_create"
+	NotifyOpTaskDelete          NotifyOp = "task_delete"
+	NotifyOpTaskUpdate          NotifyOp = "task_update"
+	NotifyOpVIPStatus           NotifyOp = "vip_status"
+	NotifyOpValueGet            NotifyOp = "get"
+	NotifyOpValueSet            NotifyOp = "set"
 )
 
 // NotifyMessage holds information about a cross-node message
 type NotifyMessage struct {
-	ID                string   `json:"id"`
-	Operation         NotifyOp `json:"operation"`
-	Node              string
-	SentAt            time.Time
-	AudioRemove       *AudioRemoveUpdate
-	AudioSync         *AudioSyncUpdate
-	ConfigUpdate      *ConfigUpdate
-	ConfigValue       *ConfigValue
-	DeviceInfo        *DeviceInfo
-	SceneActivation   *ActivateSceneSetRequest
-	SceneSets         []SceneSet
-	SnapshotActivation *ActivateSnapshotRequest
+	ID                  string   `json:"id"`
+	Operation           NotifyOp `json:"operation"`
+	Node                string
+	SentAt              time.Time
+	AudioRemove         *AudioRemoveUpdate
+	AudioSync           *AudioSyncUpdate
+	ConfigUpdate        *ConfigUpdate
+	ConfigValue         *ConfigValue
+	DeviceInfo          *DeviceInfo
+	SceneActivation     *ActivateSceneSetRequest
+	SceneSets           []SceneSet
+	SnapshotActivation  *ActivateSnapshotRequest
 	SnapshotDefinitions []SnapshotDefinition
-	SnapshotOperation *SnapshotOperation
-	Task              *Task
-	VersionUpdate     *VersionUpdate
+	SnapshotOperation   *SnapshotOperation
+	Task                *Task
+	VersionUpdate       *VersionUpdate
 }
 
 func NewNotifyMessage(op NotifyOp, node string, builder func(*NotifyMessage)) *NotifyMessage {
@@ -142,10 +142,10 @@ var validators = map[NotifyOp]func(*NotifyMessage) error{
 	NotifyOpTimeMachineActivate: validateSnapshot,
 	NotifyOpTimeMachineCreate:   validateSnapshot,
 	NotifyOpTimeMachineDelete:   validateSnapshot,
-	NotifyOpSnapshotDefsUpsert: validateSnapshotDefinitions,
-	NotifyOpSceneSetsUpsert:    validateSceneSets,
-	NotifyOpSnapshotV2Activate: validateSnapshotActivation,
-	NotifyOpSceneActivate:      validateSceneActivation,
+	NotifyOpSnapshotDefsUpsert:  validateSnapshotDefinitions,
+	NotifyOpSceneSetsUpsert:     validateSceneSets,
+	NotifyOpSnapshotV2Activate:  validateSnapshotActivation,
+	NotifyOpSceneActivate:       validateSceneActivation,
 
 	NotifyOpValueGet: validateConfigValue,
 	NotifyOpValueSet: validateConfigValue,
