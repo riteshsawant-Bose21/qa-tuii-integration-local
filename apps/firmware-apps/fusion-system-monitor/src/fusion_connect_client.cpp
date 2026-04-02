@@ -1155,7 +1155,7 @@ bool FusionConnectClient::process_audio_streams_update() {
                 } else if (!fusion_connect_stream_map.count(sink_cfg.stream_name)) {
                     fusion_connect_stream_map[sink_cfg.stream_name] = sink_cfg;
                     pending_streams[sink_cfg.stream_name].state = STREAM_CREATE_PENDING;
-                    pending_streams[config.stream_name].retry_cnt = STREAM_RETRY_CNT;
+                    pending_streams[sink_cfg.stream_name].retry_cnt = STREAM_RETRY_CNT;
                     SPDLOG_DEBUG("Added Fusion Connect sink stream {} to pending", sink_cfg.stream_name);
                     json_stream_names.insert(sink_cfg.stream_name);
                 }

@@ -113,7 +113,7 @@ static bool fusion_cn_get_timing_ready(struct fusion_cn_manager *cn_mgr)
 }
 
 /* helpers: compute how many interrupts are due, and advance state */
-static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u64 tick_ns)
+static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, struct fusion_cn_rtp_stream *s, struct fusion_cn_substream *a, u64 tick_ns)
 { 
     int count = 0;
 
@@ -128,15 +128,22 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u6
             u64 action_time = s->next_action_times[slot];
             s64 delta;
 
-            if (action_time == 0)
-                break;
+            delta = action_time ? (s64)tick_ns - (s64)action_time : 0;
+            if (action_time == 0 || abs64(delta) > window) {
+                if (!a)
+                    break;
 
-            delta = (s64)tick_ns - (s64)action_time;
-            // If packet is little bit in the future, play it back
-            if (delta < 0 && (u64)-(delta) > EARLY_SLACK_NS) {
+                fusion_cn_alsa_fill_silence(a, slot * s->info.frames_per_packet,
+                                            s->info.frames_per_packet);
+                count++;
+                s->next_action_times[slot] = 0;
+                if (++s->playback_slot >= s->buf_size_in_packets)
+                    s->playback_slot = 0;
                 break;
-            // if packet is too far in the past, don't play it
-            } else if (abs64(delta) > window) {
+            }
+
+            // If packet is more than a little bit in the future, don't play it yet
+            if (delta < 0 && (u64)-(delta) > EARLY_SLACK_NS) {
                 break;
             }
 
@@ -190,6 +197,8 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
 
     tick_ns = READ_ONCE(mgr->tick_ns);
 
+    fusion_cn_rtp_drain_rx_queue(&mgr->rtp);
+
     /* -------- Phase 1: FusionConnect sinks (low latency priority) -------- */
     read_lock_irqsave(&mgr->rtp.lock, flags);
     list_for_each_entry_safe(node, tmp, &mgr->active_streams.fn_sink, node) {
@@ -203,7 +212,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
 
         /* compute due interrupts with stream->lock, still under mgr->rtp.lock */
         {
-            int n = rtp_compute_sink_interrupts(r, tick_ns);
+            int n = rtp_compute_sink_interrupts(mgr, r, a, tick_ns);
             if (n > 0 && fn_sink_cnt < 32) {
                 if (!kref_get_unless_zero(&r->ref))
                     continue;
@@ -254,7 +263,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         if (!r || !a) continue;
         if (!atomic_read(&r->is_running) || r->info.is_source || r->info.is_fusion_connect) continue;
 
-        int n = rtp_compute_sink_interrupts(r, tick_ns);
+        int n = rtp_compute_sink_interrupts(mgr, r, a, tick_ns);
         if (n > 0 && other_cnt < 32) {
             if (!kref_get_unless_zero(&r->ref)) continue;
             if (!kref_get_unless_zero(&a->ref)) { kref_put(&r->ref, fusion_cn_rtp_stream_release); continue; }
@@ -996,6 +1005,7 @@ static int handle_reset_timing_state(struct fusion_cn_manager *mgr,
         } else {
             stream->playback_slot = 0;
             stream->startup_packets_received = 0;
+            stream->startup_wait_for_slot0 = true;
             stream->playback_armed = false;
             if (stream->next_action_times && stream->buf_size_in_packets)
                 memset(stream->next_action_times, 0,

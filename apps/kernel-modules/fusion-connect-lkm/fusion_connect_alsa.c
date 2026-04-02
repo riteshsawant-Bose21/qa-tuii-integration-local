@@ -132,6 +132,41 @@ void fusion_cn_alsa_set_playback_phase(struct fusion_cn_substream *stream, u32 b
     spin_unlock_irqrestore(&stream->lock, flags);
 }
 
+void fusion_cn_alsa_fill_silence(struct fusion_cn_substream *stream, u32 frame_offset, u32 frames)
+{
+    unsigned long flags;
+    struct snd_pcm_substream *ss;
+    struct snd_pcm_runtime *rt;
+    u32 frame_bytes;
+    u32 buffer_frames;
+    u32 first_frames;
+    u8 *base;
+
+    if (!stream || !frames)
+        return;
+
+    spin_lock_irqsave(&stream->lock, flags);
+    ss = READ_ONCE(stream->substream);
+    if (!ss || !ss->runtime || !ss->runtime->dma_area) {
+        spin_unlock_irqrestore(&stream->lock, flags);
+        return;
+    }
+
+    rt = ss->runtime;
+    frame_bytes = stream->channels * stream->sample_width;
+    buffer_frames = rt->buffer_size;
+    frame_offset %= buffer_frames;
+    base = (u8 *)rt->dma_area;
+
+    first_frames = min(frames, buffer_frames - frame_offset);
+    memset(base + (size_t)frame_offset * frame_bytes, 0,
+           (size_t)first_frames * frame_bytes);
+    if (frames > first_frames) {
+        memset(base, 0, (size_t)(frames - first_frames) * frame_bytes);
+    }
+    spin_unlock_irqrestore(&stream->lock, flags);
+}
+
 void fusion_cn_alsa_reset_stream_timing(struct fusion_cn_substream *stream, bool clear_buffer)
 {
     unsigned long flags;
@@ -160,8 +195,7 @@ int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, struct fusion
     struct snd_pcm_substream *ss;
     struct snd_pcm_runtime *rt;
 
-    if (fusion_cn_alsa_stream_disconnected(stream))
-        return -ENODEV;
+    if (fusion_cn_alsa_stream_disconnected(stream)) return -ENODEV;
 
     spin_lock_irq(&stream->lock);
     ss = READ_ONCE(stream->substream);
