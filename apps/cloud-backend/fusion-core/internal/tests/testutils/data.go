@@ -6,10 +6,15 @@ import (
 	"github.com/google/uuid"
 )
 
-// TestUser represents a test user.
+// TestUser represents a test user with their role and account context.
 type TestUser struct {
-	ID    string `json:"id"`
-	Email string `json:"email"`
+	ID          string `json:"id"`
+	Email       string `json:"email"`
+	AccountID   string `json:"account_id"`
+	AccountName string `json:"account_name"`
+	AccountType string `json:"account_type"`
+	RoleID      int    `json:"role_id"`
+	RoleName    string `json:"role_name"`
 }
 
 // TestProduct represents expected product data for testing.
@@ -82,10 +87,16 @@ func GetDefaultTestProducts() []TestProduct {
 // GetDefaultTestUsers returns the default test users from test_data.sql.
 func GetDefaultTestUsers() []TestUser {
 	return []TestUser{
-		{ID: "60000001-0000-4000-8000-000000000001", Email: "admin@bose.com"},
-		{ID: "60000001-0000-4000-8000-000000000006", Email: "test@domain.com"},
-		{ID: "60000001-0000-4000-8000-000000000007", Email: "prof.operator@university.edu"},
-		{ID: "60000001-0000-4000-8000-000000000008", Email: "emily.service@eventproductions.com"},
+		{ID: "60000001-0000-4000-8000-000000000001", Email: "admin@bose.com", AccountID: "50000001-0000-4000-8000-000000000001", AccountName: "Bose Corporation", AccountType: "Bose Pro", RoleID: 1, RoleName: "Super Admin"},
+		{ID: "60000001-0000-4000-8000-000000000002", Email: "service@bose.com", AccountID: "50000001-0000-4000-8000-000000000001", AccountName: "Bose Corporation", AccountType: "Bose Pro", RoleID: 6, RoleName: "Service"},
+		{ID: "60000001-0000-4000-8000-000000000003", Email: "mike.designer@audiotech.com", AccountID: "50000001-0000-4000-8000-000000000002", AccountName: "AudioTech Solutions", AccountType: "Reseller", RoleID: 3, RoleName: "Designer"},
+		{ID: "60000001-0000-4000-8000-000000000004", Email: "lisa.tech@audiotech.com", AccountID: "50000001-0000-4000-8000-000000000002", AccountName: "AudioTech Solutions", AccountType: "Reseller", RoleID: 4, RoleName: "Technician"},
+		{ID: "60000001-0000-4000-8000-000000000005", Email: "alex.designer@sounddynamics.com", AccountID: "50000001-0000-4000-8000-000000000003", AccountName: "Sound Dynamics LLC", AccountType: "Reseller", RoleID: 3, RoleName: "Designer"},
+		{ID: "60000001-0000-4000-8000-000000000006", Email: "test@domain.com", AccountID: "50000001-0000-4000-8000-000000000004", AccountName: "Metro Conference Center", AccountType: "End User / System Owner", RoleID: 2, RoleName: "Admin"},
+		{ID: "60000001-0000-4000-8000-000000000007", Email: "prof.operator@university.edu", AccountID: "50000001-0000-4000-8000-000000000005", AccountName: "University Audio Labs", AccountType: "End User / System Owner", RoleID: 7, RoleName: "Operator"},
+		{ID: "60000001-0000-4000-8000-000000000008", Email: "emily.service@eventproductions.com", AccountID: "50000001-0000-4000-8000-000000000006", AccountName: "Event Productions Inc", AccountType: "End User / System Owner", RoleID: 6, RoleName: "Service"},
+		{ID: "60000001-0000-4000-8000-000000000009", Email: "guest@metroconference.com", AccountID: "50000001-0000-4000-8000-000000000004", AccountName: "Metro Conference Center", AccountType: "End User / System Owner", RoleID: 8, RoleName: "Guest"},
+		{ID: "60000001-0000-4000-8000-000000000010", Email: "fusion.reseller.sa@gmail.com", AccountID: "50000001-0000-4000-8000-000000000004", AccountName: "Metro Conference Center", AccountType: "End User / System Owner", RoleID: 2, RoleName: "Admin"},
 	}
 }
 

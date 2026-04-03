@@ -2,6 +2,7 @@ package device
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -120,9 +121,8 @@ func (s *Service) revokeOldCertificate(ctx context.Context, deviceID, certID, ce
 // Returns the certificate info, or cleans up and returns an error.
 // If deleteThingOnFailure is true, the thing will be deleted on cleanup.
 func (s *Service) setupDeviceCertificate(ctx context.Context, deviceID string, csr *string, deleteThingOnFailure bool, logger *zap.Logger) (*string, types.CertificateInfo, error) {
-	certPem, certID, certArn, err := s.iotService.CreateCertificateFromCsr(ctx, csr, logger)
+	certPem, certID, certArn, err := s.iotService.CreateCertificateFromCSR(ctx, csr, logger)
 	if err != nil {
-		logger.Error("Failed to create certificate from CSR", zap.Error(err))
 		if deleteThingOnFailure {
 			if cleanupErr := s.iotService.DeleteThing(ctx, deviceID, logger); cleanupErr != nil {
 				logger.Warn("Failed to cleanup thing after certificate creation failure",
@@ -136,7 +136,6 @@ func (s *Service) setupDeviceCertificate(ctx context.Context, deviceID string, c
 	cert := types.CertificateInfo{ID: *certID, Arn: *certArn}
 
 	if err := s.iotService.AttachCertificateToThing(ctx, deviceID, *certArn, logger); err != nil {
-		logger.Error("Failed to attach certificate to thing", zap.Error(err))
 		// Only cert exists at this point - just mark it inactive
 		if err := s.iotService.SetCertificateInactive(ctx, *certID, logger); err != nil {
 			logger.Warn("Failed to set certificate inactive after attach failure",
@@ -154,7 +153,6 @@ func (s *Service) setupDeviceCertificate(ctx context.Context, deviceID string, c
 	}
 
 	if err := s.iotService.AttachPolicyToCertificate(ctx, s.cfg.IoTDevicePolicy, *certArn, logger); err != nil {
-		logger.Error("Failed to attach policy to certificate", zap.Error(err))
 		// Cert is attached to thing - full cleanup needed
 		s.cleanupIoTResources(ctx, deviceID, *certID, *certArn, deleteThingOnFailure, logger)
 		return nil, types.CertificateInfo{}, err
@@ -171,7 +169,7 @@ func (s *Service) setupDeviceCertificate(ctx context.Context, deviceID string, c
 func (s *Service) CreateDevice(ctx context.Context, request *types.DeviceCreateRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (*types.DeviceCreateResponse, error) {
 	// Check if device already exists
 	device, err := s.dbService.GetDeviceByID(ctx, request.SerialNumber, logger)
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
 
@@ -191,7 +189,6 @@ func (s *Service) CreateDevice(ctx context.Context, request *types.DeviceCreateR
 	deleteThingOnFailure := false
 	if device == nil {
 		if err := s.iotService.RegisterThing(ctx, request.SerialNumber, logger); err != nil {
-			logger.Error("Failed to register thing", zap.Error(err))
 			return nil, err
 		}
 		deleteThingOnFailure = true
@@ -255,11 +252,11 @@ func (s *Service) BulkCreateDevices(ctx context.Context, request *types.BulkDevi
 func (s *Service) UpdateDevice(ctx context.Context, deviceID string, request *types.DeviceUpdateRequest, user types.UserAuthorizationResponse, logger *zap.Logger) error {
 	device, err := s.dbService.GetDeviceByID(ctx, deviceID, logger)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			logger.Error("Device not found", zap.String("deviceID", deviceID))
+			return errors.New(errorutil.ErrMsgDeviceNotFound)
+		}
 		return err
-	}
-	if device == nil {
-		logger.Error("Device not found", zap.String("deviceID", deviceID))
-		return errors.New(errorutil.ErrMsgDeviceNotFound)
 	}
 
 	// Verify ownership
@@ -286,11 +283,11 @@ func (s *Service) UpdateDevice(ctx context.Context, deviceID string, request *ty
 func (s *Service) ResetDevice(ctx context.Context, deviceID string, user types.UserAuthorizationResponse, logger *zap.Logger) error {
 	device, err := s.dbService.GetDeviceByID(ctx, deviceID, logger)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			logger.Error("Device not found", zap.String("deviceID", deviceID))
+			return errors.New(errorutil.ErrMsgDeviceNotFound)
+		}
 		return err
-	}
-	if device == nil {
-		logger.Error("Device not found", zap.String("deviceID", deviceID))
-		return errors.New(errorutil.ErrMsgDeviceNotFound)
 	}
 
 	if device.ClaimStatus != models.ClaimStatusEnumCLAIMED {
@@ -309,17 +306,12 @@ func (s *Service) ResetDevice(ctx context.Context, deviceID string, user types.U
 
 	// Revoke IoT credentials
 	if err := s.iotService.SetCertificateInactive(ctx, device.CertificateID.String, logger); err != nil {
-		logger.Error("Failed to set certificate inactive",
-			zap.String("certificateID", device.CertificateID.String),
-			zap.Error(err))
 		return err
 	}
 	if err := s.iotService.DetachCertificateFromThing(ctx, deviceID, device.CertificateArn.String, logger); err != nil {
-		logger.Error("Failed to detach certificate from thing", zap.Error(err))
 		return err
 	}
 	if err := s.iotService.DetachPolicyFromCertificate(ctx, s.cfg.IoTDevicePolicy, device.CertificateArn.String, logger); err != nil {
-		logger.Error("Failed to detach policy from certificate", zap.Error(err))
 		return err
 	}
 
@@ -332,11 +324,11 @@ func (s *Service) ResetDevice(ctx context.Context, deviceID string, user types.U
 func (s *Service) ClaimDevice(ctx context.Context, deviceID string, request *types.DeviceClaimRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (*types.DeviceClaimResponse, error) {
 	device, err := s.dbService.GetDeviceByID(ctx, deviceID, logger)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			logger.Error("Device not found", zap.String("deviceID", deviceID))
+			return nil, errors.New(errorutil.ErrMsgDeviceNotFound)
+		}
 		return nil, err
-	}
-	if device == nil {
-		logger.Error("Device not found", zap.String("deviceID", deviceID))
-		return nil, errors.New(errorutil.ErrMsgDeviceNotFound)
 	}
 
 	if device.ClaimStatus == models.ClaimStatusEnumCLAIMED {
@@ -372,11 +364,11 @@ func (s *Service) ClaimDevice(ctx context.Context, deviceID string, request *typ
 func (s *Service) RotateCertificate(ctx context.Context, deviceID string, request *types.DeviceRotateCertRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (*types.DeviceRotateCertResponse, error) {
 	device, err := s.dbService.GetDeviceByID(ctx, deviceID, logger)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			logger.Error("Device not found", zap.String("deviceID", deviceID))
+			return nil, errors.New(errorutil.ErrMsgDeviceNotFound)
+		}
 		return nil, err
-	}
-	if device == nil {
-		logger.Error("Device not found", zap.String("deviceID", deviceID))
-		return nil, errors.New(errorutil.ErrMsgDeviceNotFound)
 	}
 
 	if device.ClaimStatus != models.ClaimStatusEnumCLAIMED {
@@ -432,7 +424,6 @@ func (s *Service) Command(ctx context.Context, request *types.CommandRequest, us
 
 		insertErr := s.dbService.InsertCommand(ctx, request.ProjectID, commandID, request, logger)
 		if insertErr != nil {
-			logger.Error("Failed to insert command into database", zap.Error(insertErr))
 			return fmt.Errorf("failed to insert command into database: %w", insertErr)
 		}
 		return nil
@@ -460,14 +451,11 @@ func (s *Service) Command(ctx context.Context, request *types.CommandRequest, us
 
 	err = s.iotService.Publish(ctx, topic, requestBytes, logger)
 	if err != nil {
-		logger.Error("Failed to publish command", zap.Error(err))
 		return "", fmt.Errorf("failed to publish command: %w", err)
 	}
 
 	err = s.dbService.UpdateCommandStatus(ctx, commandID, models.CommandStatusEnumPUBLISHED, logger)
-
 	if err != nil {
-		logger.Error("Failed to update command status", zap.Error(err))
 		return "", fmt.Errorf("failed to update command status: %w", err)
 	}
 

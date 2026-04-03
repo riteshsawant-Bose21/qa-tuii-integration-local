@@ -99,6 +99,11 @@ func (h *DeviceHandler) CreateDevice(ctx *gin.Context) {
 		return
 	}
 
+	if req.SerialNumber == "" {
+		response.BadRequest(ctx, "serial_number is required")
+		return
+	}
+
 	res, err := h.device.CreateDevice(ctx, &req, *user, logger)
 	if err != nil {
 		h.handleDeviceError(ctx, err, logger, "create")

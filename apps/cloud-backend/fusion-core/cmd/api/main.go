@@ -172,7 +172,7 @@ func main() {
 		loggers.AppLogger.Fatal("Failed to initialize project service")
 	}
 	loggers.AppLogger.Info("Initialized Project Service.")
-	
+
 	// Initialize User DB Service
 	userDBSvc := userdb.NewService(pgs)
 	if userDBSvc == nil {

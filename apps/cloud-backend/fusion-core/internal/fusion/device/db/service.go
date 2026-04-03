@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
@@ -37,21 +38,21 @@ func (s *Service) GetDB(_ context.Context) model.DBWithTransactions {
 // ---------------------------------------------------------------------------
 
 // GetDeviceByID retrieves a device by its serial_number field.
-// Returns nil, nil if the device is not found.
+// Returns nil, sql.ErrNoRows if the device is not found.
 func (s *Service) GetDeviceByID(ctx context.Context, deviceID string, logger *zap.Logger) (*models.Device, error) {
 
 	// Guard against empty deviceID to prevent unnecessary DB query
 	if deviceID == "" {
-		return nil, nil
+		return nil, fmt.Errorf("deviceID cannot be empty")
 	}
 
 	device, err := models.Devices(models.DeviceWhere.SerialNumber.EQ(deviceID)).One(ctx, s.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, err
 		}
 		logger.Error("Failed to get device by ID", zap.String("deviceID", deviceID), zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("failed to get device by ID %s: %w", deviceID, err)
 	}
 	return device, nil
 }
@@ -71,8 +72,8 @@ func (s *Service) insertOwnershipHistory(ctx context.Context, deviceUUID, accoun
 	}
 
 	if err := history.Insert(ctx, tx, boil.Infer()); err != nil {
-		logger.Error("Failed to insert device ownership history", zap.Error(err))
-		return err
+		logger.Error("Failed to insert device ownership history", zap.String("deviceUUID", deviceUUID), zap.String("accountID", accountID), zap.Error(err))
+		return fmt.Errorf("failed to insert ownership history for device %s: %w", deviceUUID, err)
 	}
 	return nil
 }
@@ -86,8 +87,8 @@ func (s *Service) insertProjectHistory(ctx context.Context, deviceUUID, projectI
 	}
 
 	if err := history.Insert(ctx, tx, boil.Infer()); err != nil {
-		logger.Error("Failed to insert device project history", zap.Error(err))
-		return err
+		logger.Error("Failed to insert device project history", zap.String("deviceUUID", deviceUUID), zap.String("projectID", projectID), zap.Error(err))
+		return fmt.Errorf("failed to insert project history for device %s project %s: %w", deviceUUID, projectID, err)
 	}
 	return nil
 }
@@ -103,13 +104,13 @@ func (s *Service) decommissionCurrentProject(ctx context.Context, deviceUUID, pr
 			zap.String("deviceUUID", deviceUUID),
 			zap.String("projectID", projectID),
 			zap.Error(err))
-		return err
+		return fmt.Errorf("failed to get device project history for device %s project %s: %w", deviceUUID, projectID, err)
 	}
 
 	history.DecommissionedAt = null.NewTime(time.Now(), true)
 	if _, err = history.Update(ctx, tx, boil.Infer()); err != nil {
-		logger.Error("Failed to decommission device project history", zap.Error(err))
-		return err
+		logger.Error("Failed to decommission device project history", zap.String("deviceUUID", deviceUUID), zap.String("projectID", projectID), zap.Error(err))
+		return fmt.Errorf("failed to decommission project history for device %s project %s: %w", deviceUUID, projectID, err)
 	}
 	return nil
 }
@@ -120,6 +121,11 @@ func (s *Service) decommissionCurrentProject(ctx context.Context, deviceUUID, pr
 
 // Insert creates a new device record with associated ownership and project history.
 func (s *Service) Insert(ctx context.Context, req *types.DeviceCreateRequest, accountID string, cert types.CertificateInfo, tx model.DBTxExecutor, logger *zap.Logger) error {
+	
+	if req == nil {
+		return fmt.Errorf("device create request cannot be nil")
+	}
+
 	// Create device record
 	device := models.Device{
 		ClientDeviceID:  req.ClientDeviceID,
@@ -141,7 +147,7 @@ func (s *Service) Insert(ctx context.Context, req *types.DeviceCreateRequest, ac
 
 	if err := device.Insert(ctx, tx, boil.Infer()); err != nil {
 		logger.Error("Failed to insert device", zap.String("deviceID", req.SerialNumber), zap.Error(err))
-		return err
+		return fmt.Errorf("failed to insert device %s: %w", req.SerialNumber, err)
 	}
 
 	// Create ownership history
@@ -173,7 +179,7 @@ func (s *Service) ClaimDevice(ctx context.Context, device models.Device, account
 
 	if _, err := device.Update(ctx, tx, boil.Infer()); err != nil {
 		logger.Error("Failed to claim device", zap.String("serialNumber", device.SerialNumber), zap.Error(err))
-		return err
+		return fmt.Errorf("failed to claim device %s: %w", device.SerialNumber, err)
 	}
 
 	// Create ownership history
@@ -217,7 +223,7 @@ func (s *Service) Update(ctx context.Context, device models.Device, req *types.D
 
 	if _, err := device.Update(ctx, tx, boil.Infer()); err != nil {
 		logger.Error("Failed to update device", zap.String("serialNumber", device.SerialNumber), zap.Error(err))
-		return err
+		return fmt.Errorf("failed to update device %s: %w", device.SerialNumber, err)
 	}
 
 	return nil
@@ -252,14 +258,14 @@ func (s *Service) Reset(ctx context.Context, device models.Device, tx model.DBTx
 		models.DeviceOwnershipHistoryWhere.ReleasedAt.IsNull(),
 	).One(ctx, tx)
 	if err != nil {
-		logger.Error("Failed to get device ownership history", zap.Error(err))
-		return err
+		logger.Error("Failed to get device ownership history", zap.String("serialNumber", device.SerialNumber), zap.Error(err))
+		return fmt.Errorf("failed to get ownership history for device %s: %w", device.SerialNumber, err)
 	}
 
 	ownerHistory.ReleasedAt = null.NewTime(time.Now(), true)
 	if _, err = ownerHistory.Update(ctx, tx, boil.Infer()); err != nil {
-		logger.Error("Failed to update device ownership history", zap.Error(err))
-		return err
+		logger.Error("Failed to update device ownership history", zap.String("serialNumber", device.SerialNumber), zap.Error(err))
+		return fmt.Errorf("failed to update ownership history for device %s: %w", device.SerialNumber, err)
 	}
 
 	// Decommission current project
@@ -279,7 +285,7 @@ func (s *Service) Reset(ctx context.Context, device models.Device, tx model.DBTx
 
 	if _, err = device.Update(ctx, tx, boil.Infer()); err != nil {
 		logger.Error("Failed to reset device", zap.String("serialNumber", device.SerialNumber), zap.Error(err))
-		return err
+		return fmt.Errorf("failed to reset device %s: %w", device.SerialNumber, err)
 	}
 
 	return nil
@@ -296,7 +302,7 @@ func (s *Service) Claim(ctx context.Context, device models.Device, accountID str
 
 	if _, err := device.Update(ctx, tx, boil.Infer()); err != nil {
 		logger.Error("Failed to claim device", zap.String("serialNumber", device.SerialNumber), zap.Error(err))
-		return err
+		return fmt.Errorf("failed to claim device %s: %w", device.SerialNumber, err)
 	}
 
 	// Create ownership history
@@ -319,7 +325,7 @@ func (s *Service) UpdateCertificate(ctx context.Context, device models.Device, c
 
 	if _, err := device.Update(ctx, tx, boil.Infer()); err != nil {
 		logger.Error("Failed to update device certificate", zap.String("serialNumber", device.SerialNumber), zap.Error(err))
-		return err
+		return fmt.Errorf("failed to update certificate for device %s: %w", device.SerialNumber, err)
 	}
 
 	return nil
@@ -338,8 +344,8 @@ func (s *Service) InsertCommand(ctx context.Context, projectID, commandID string
 		}
 
 		if err := command.Insert(ctx, s.db, boil.Infer()); err != nil {
-			logger.Error("Failed to insert command", zap.Error(err))
-			return err
+			logger.Error("Failed to insert command", zap.String("commandID", commandID), zap.String("projectID", projectID), zap.Error(err))
+			return fmt.Errorf("failed to insert command %s for project %s: %w", commandID, projectID, err)
 		}
 	}
 
@@ -355,8 +361,8 @@ func (s *Service) InsertCommand(ctx context.Context, projectID, commandID string
 		}
 
 		if err := command.Insert(ctx, s.db, boil.Infer()); err != nil {
-			logger.Error("Failed to insert command", zap.Error(err))
-			return err
+			logger.Error("Failed to insert command", zap.String("commandID", commandID), zap.String("projectID", projectID), zap.String("deviceID", deviceID), zap.Error(err))
+			return fmt.Errorf("failed to insert command %s for device %s: %w", commandID, deviceID, err)
 		}
 	}
 	return nil
@@ -367,14 +373,14 @@ func (s *Service) UpdateCommandStatus(ctx context.Context, commandID string, sta
 	commands, err := models.DeviceCommandHistories(models.DeviceCommandHistoryWhere.CommandID.EQ(commandID)).All(ctx, s.db)
 	if err != nil {
 		logger.Error("Failed to get command history", zap.String("commandID", commandID), zap.Error(err))
-		return err
+		return fmt.Errorf("failed to get command history for %s: %w", commandID, err)
 	}
 
 	for _, command := range commands {
 		command.Status = status
 		if _, err := command.Update(ctx, s.db, boil.Infer()); err != nil {
 			logger.Error("Failed to update command status", zap.String("commandID", commandID), zap.Error(err))
-			return err
+			return fmt.Errorf("failed to update command status for %s: %w", commandID, err)
 		}
 	}
 
@@ -382,15 +388,11 @@ func (s *Service) UpdateCommandStatus(ctx context.Context, commandID string, sta
 }
 
 // GetCommandStatus retrieves the status of a command by its ID.
-// Returns nil, nil if the command is not found.
 func (s *Service) GetCommandStatus(ctx context.Context, commandID string, logger *zap.Logger) (*models.DeviceCommandHistorySlice, error) {
 	commands, err := models.DeviceCommandHistories(models.DeviceCommandHistoryWhere.CommandID.EQ(commandID)).All(ctx, s.db)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
 		logger.Error("Failed to get command status", zap.String("commandID", commandID), zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("failed to get command status for %s: %w", commandID, err)
 	}
 	return &commands, nil
 }

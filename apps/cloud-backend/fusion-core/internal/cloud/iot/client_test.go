@@ -55,7 +55,7 @@ type testableIoTClient struct {
 	mock *mockIoTClient
 }
 
-func (c *testableIoTClient) CreateCertificateFromCsr(ctx context.Context, csrPem *string, logger *zap.Logger) (certificatePem *string, certificateId *string, certificateArn *string, err error) {
+func (c *testableIoTClient) CreateCertificateFromCSR(ctx context.Context, csrPem *string, logger *zap.Logger) (certificatePem *string, certificateId *string, certificateArn *string, err error) {
 	input := &iot.CreateCertificateFromCsrInput{
 		CertificateSigningRequest: csrPem,
 		SetAsActive:               true,
@@ -169,7 +169,7 @@ const (
 	testPolicyName     = "FusionDevicePolicy"
 )
 
-func TestCreateCertificateFromCsr_Success(t *testing.T) {
+func TestCreateCertificateFromCSR_Success(t *testing.T) {
 	logger := zap.NewNop()
 	ctx := context.Background()
 	csrPem := testCSRPem
@@ -190,7 +190,7 @@ func TestCreateCertificateFromCsr_Success(t *testing.T) {
 	}
 
 	client := &testableIoTClient{mock: mockClient}
-	certPem, certId, certArn, err := client.CreateCertificateFromCsr(ctx, &csrPem, logger)
+	certPem, certId, certArn, err := client.CreateCertificateFromCSR(ctx, &csrPem, logger)
 
 	assert.NoError(t, err)
 	assert.Equal(t, &expectedCertPem, certPem)
@@ -198,7 +198,7 @@ func TestCreateCertificateFromCsr_Success(t *testing.T) {
 	assert.Equal(t, &expectedCertArn, certArn)
 }
 
-func TestCreateCertificateFromCsr_Error(t *testing.T) {
+func TestCreateCertificateFromCSR_Error(t *testing.T) {
 	logger := zap.NewNop()
 	ctx := context.Background()
 	csrPem := testCSRPem
@@ -211,7 +211,7 @@ func TestCreateCertificateFromCsr_Error(t *testing.T) {
 	}
 
 	client := &testableIoTClient{mock: mockClient}
-	certPem, certId, certArn, err := client.CreateCertificateFromCsr(ctx, &csrPem, logger)
+	certPem, certId, certArn, err := client.CreateCertificateFromCSR(ctx, &csrPem, logger)
 
 	assert.Error(t, err)
 	assert.Equal(t, expectedErr, err)

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -31,6 +32,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/testcontainers/testcontainers-go"
@@ -173,10 +175,10 @@ func (suite *BaseIntegrationSuite) runMigrations() error {
 // initTestData initializes test users and other common test data.
 func (suite *BaseIntegrationSuite) initTestData() {
 	suite.TestUsers = []TestUser{
-		{ID: "60000001-0000-4000-8000-000000000001", Email: "admin@bose.com"},
-		{ID: "60000001-0000-4000-8000-000000000006", Email: "test@domain.com"},
-		{ID: "60000001-0000-4000-8000-000000000007", Email: "prof.operator@university.edu"},
-		{ID: "60000001-0000-4000-8000-000000000008", Email: "emily.service@eventproductions.com"},
+		{ID: "60000001-0000-4000-8000-000000000001", Email: "admin@bose.com", AccountID: "50000001-0000-4000-8000-000000000001", AccountName: "Bose Corporation", AccountType: "Bose Pro", RoleID: 1, RoleName: "Super Admin"},
+		{ID: "60000001-0000-4000-8000-000000000006", Email: "test@domain.com", AccountID: "50000001-0000-4000-8000-000000000004", AccountName: "Metro Conference Center", AccountType: "End User / System Owner", RoleID: 2, RoleName: "Admin"},
+		{ID: "60000001-0000-4000-8000-000000000007", Email: "prof.operator@university.edu", AccountID: "50000001-0000-4000-8000-000000000005", AccountName: "University Audio Labs", AccountType: "End User / System Owner", RoleID: 7, RoleName: "Operator"},
+		{ID: "60000001-0000-4000-8000-000000000008", Email: "emily.service@eventproductions.com", AccountID: "50000001-0000-4000-8000-000000000006", AccountName: "Event Productions Inc", AccountType: "End User / System Owner", RoleID: 6, RoleName: "Service"},
 	}
 }
 
@@ -305,11 +307,39 @@ func (suite *BaseIntegrationSuite) MakeRequestWithUser(method, path string, body
 		req.Header.Set("Content-Type", "application/json")
 	}
 
-	// Set user context headers
+	// Find the test user and set all required auth headers
+	var testUser *TestUser
 	if userID != "" {
-		req.Header.Set("X-User-ID", userID)
-	} else if len(suite.TestUsers) > 0 {
-		req.Header.Set("X-User-ID", suite.TestUsers[0].ID)
+		for i, u := range suite.TestUsers {
+			if u.ID == userID {
+				testUser = &suite.TestUsers[i]
+				break
+			}
+		}
+		// Fall back to all known test users if not found in suite.TestUsers
+		if testUser == nil {
+			allUsers := GetDefaultTestUsers()
+			for i, u := range allUsers {
+				if u.ID == userID {
+					testUser = &allUsers[i]
+					break
+				}
+			}
+		}
+	}
+	if testUser == nil && len(suite.TestUsers) > 0 {
+		testUser = &suite.TestUsers[0]
+	}
+
+	if testUser != nil {
+		req.Header.Set("X-User-ID", testUser.ID)
+		req.Header.Set("X-Account-ID", testUser.AccountID)
+		req.Header.Set("X-User-Email", testUser.Email)
+		req.Header.Set("X-User-Role", testUser.RoleName)
+		req.Header.Set("X-Account-Name", testUser.AccountName)
+		req.Header.Set("X-Account-Type", testUser.AccountType)
+		req.Header.Set("X-Role-ID", strconv.Itoa(testUser.RoleID))
+		req.Header.Set("X-Request-ID", uuid.New().String())
 	}
 
 	w := httptest.NewRecorder()

@@ -141,7 +141,7 @@ func (suite *DeviceIntegrationTestSuite) setupRouter() {
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(middleware.ApplicationLoggerMiddleware(suite.Loggers.AppLogger))
-	router.Use(testutils.CreateMockUserAuthMiddleware(suite.TestUsers))
+	router.Use(middleware.ExtractUserFromHeaders())
 
 	deviceHandler := handler.NewDeviceHandler(suite.mockDeviceSVC)
 
@@ -179,7 +179,7 @@ func (suite *DeviceIntegrationTestSuite) createDeviceRequest() types.DeviceCreat
 
 // TestCreateDevice tests the POST /api/v1/devices endpoint.
 func (suite *DeviceIntegrationTestSuite) TestCreateDevice() {
-	suite.T().Run("should create device successfully", func(t *testing.T) {
+	suite.T().Run("should create device successfully as super admin", func(t *testing.T) {
 		req := suite.createDeviceRequest()
 		expectedResponse := &types.DeviceCreateResponse{
 			Certificate: "-----BEGIN CERTIFICATE-----\nMIIB...\n-----END CERTIFICATE-----",
@@ -189,7 +189,8 @@ func (suite *DeviceIntegrationTestSuite) TestCreateDevice() {
 			return r.ClientDeviceID == req.ClientDeviceID && r.DeviceName == req.DeviceName
 		}), mock.Anything, mock.Anything).Return(expectedResponse, nil).Once()
 
-		w, err := suite.MakeRequest("POST", "/api/v1/devices", req)
+		// Super Admin creates device
+		w, err := suite.MakeRequestWithUser("POST", "/api/v1/devices", req, "60000001-0000-4000-8000-000000000001")
 		require.NoError(t, err)
 
 		assert.Equal(t, http.StatusCreated, w.Code)
@@ -202,6 +203,48 @@ func (suite *DeviceIntegrationTestSuite) TestCreateDevice() {
 		suite.mockDeviceSVC.AssertExpectations(t)
 	})
 
+	suite.T().Run("should create device as technician", func(t *testing.T) {
+		req := suite.createDeviceRequest()
+		expectedResponse := &types.DeviceCreateResponse{
+			Certificate: "-----BEGIN CERTIFICATE-----\nMIIB...\n-----END CERTIFICATE-----",
+		}
+
+		suite.mockDeviceSVC.On("CreateDevice", mock.Anything, mock.MatchedBy(func(r *types.DeviceCreateRequest) bool {
+			return r.ClientDeviceID == req.ClientDeviceID
+		}), mock.MatchedBy(func(u types.UserAuthorizationResponse) bool {
+			return u.User.Email == "lisa.tech@audiotech.com" && u.Role.RoleName == "Technician"
+		}), mock.Anything).Return(expectedResponse, nil).Once()
+
+		// Technician (lisa.tech@audiotech.com) creates device
+		allUsers := testutils.GetDefaultTestUsers()
+		techUser := allUsers[3] // lisa.tech@audiotech.com
+		w, err := suite.MakeRequestWithUser("POST", "/api/v1/devices", req, techUser.ID)
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusCreated, w.Code)
+		suite.mockDeviceSVC.AssertExpectations(t)
+	})
+
+	suite.T().Run("should create device as designer", func(t *testing.T) {
+		req := suite.createDeviceRequest()
+		expectedResponse := &types.DeviceCreateResponse{
+			Certificate: "-----BEGIN CERTIFICATE-----\nMIIB...\n-----END CERTIFICATE-----",
+		}
+
+		suite.mockDeviceSVC.On("CreateDevice", mock.Anything, mock.Anything, mock.MatchedBy(func(u types.UserAuthorizationResponse) bool {
+			return u.User.Email == "mike.designer@audiotech.com" && u.Account.Name == "AudioTech Solutions"
+		}), mock.Anything).Return(expectedResponse, nil).Once()
+
+		// Designer (mike.designer@audiotech.com) creates device
+		allUsers := testutils.GetDefaultTestUsers()
+		designerUser := allUsers[2] // mike.designer@audiotech.com
+		w, err := suite.MakeRequestWithUser("POST", "/api/v1/devices", req, designerUser.ID)
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusCreated, w.Code)
+		suite.mockDeviceSVC.AssertExpectations(t)
+	})
+
 	suite.T().Run("should fail with invalid request payload", func(t *testing.T) {
 		invalidReq := map[string]string{
 			"device_name": "Missing required fields",
@@ -211,6 +254,15 @@ func (suite *DeviceIntegrationTestSuite) TestCreateDevice() {
 		require.NoError(t, err)
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	suite.T().Run("should fail when auth headers missing", func(t *testing.T) {
+		req := suite.createDeviceRequest()
+
+		w, err := suite.MakeRequestWithHeaders("POST", "/api/v1/devices", req, map[string]string{})
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 
 	suite.T().Run("should fail when project not found", func(t *testing.T) {
@@ -245,7 +297,7 @@ func (suite *DeviceIntegrationTestSuite) TestCreateDevice() {
 func (suite *DeviceIntegrationTestSuite) TestUpdateDevice() {
 	deviceID := uuid.New().String()
 
-	suite.T().Run("should update device successfully", func(t *testing.T) {
+	suite.T().Run("should update device successfully as super admin", func(t *testing.T) {
 		updateReq := &types.DeviceUpdateRequest{
 			ClientDeviceID:  deviceID,
 			DeviceName:      "Updated Device Name",
@@ -258,7 +310,28 @@ func (suite *DeviceIntegrationTestSuite) TestUpdateDevice() {
 			return r.DeviceName == updateReq.DeviceName
 		}), mock.Anything, mock.Anything).Return(nil).Once()
 
-		w, err := suite.MakeRequest("PATCH", "/api/v1/devices/"+deviceID, updateReq)
+		w, err := suite.MakeRequestWithUser("PATCH", "/api/v1/devices/"+deviceID, updateReq, "60000001-0000-4000-8000-000000000001")
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusNoContent, w.Code)
+		suite.mockDeviceSVC.AssertExpectations(t)
+	})
+
+	suite.T().Run("should update device as technician", func(t *testing.T) {
+		updateReq := &types.DeviceUpdateRequest{
+			ClientDeviceID:  deviceID,
+			DeviceName:      "Tech Updated Device",
+			FirmwareVersion: "2.1.0",
+		}
+
+		suite.mockDeviceSVC.On("UpdateDevice", mock.Anything, deviceID, mock.Anything, mock.MatchedBy(func(u types.UserAuthorizationResponse) bool {
+			return u.Role.RoleName == "Technician" && u.Account.ID == "50000001-0000-4000-8000-000000000002"
+		}), mock.Anything).Return(nil).Once()
+
+		// Technician (lisa.tech@audiotech.com) updates device
+		allUsers := testutils.GetDefaultTestUsers()
+		techUser := allUsers[3]
+		w, err := suite.MakeRequestWithUser("PATCH", "/api/v1/devices/"+deviceID, updateReq, techUser.ID)
 		require.NoError(t, err)
 
 		assert.Equal(t, http.StatusNoContent, w.Code)
@@ -275,6 +348,17 @@ func (suite *DeviceIntegrationTestSuite) TestUpdateDevice() {
 
 		// Should match no route
 		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+
+	suite.T().Run("should fail when auth headers missing", func(t *testing.T) {
+		updateReq := &types.DeviceUpdateRequest{
+			ClientDeviceID: deviceID,
+			DeviceName:     "Updated Name",
+		}
+
+		w, err := suite.MakeRequestWithHeaders("PATCH", "/api/v1/devices/"+deviceID, updateReq, map[string]string{})
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 
 	suite.T().Run("should fail when device not found", func(t *testing.T) {
@@ -363,7 +447,7 @@ func (suite *DeviceIntegrationTestSuite) TestResetDevice() {
 func (suite *DeviceIntegrationTestSuite) TestClaimDevice() {
 	deviceID := uuid.New().String()
 
-	suite.T().Run("should claim device successfully", func(t *testing.T) {
+	suite.T().Run("should claim device successfully as super admin", func(t *testing.T) {
 		req := types.DeviceClaimRequest{
 			CSR:       "-----BEGIN CERTIFICATE REQUEST-----\nMIIBkTCB+wIBADBSMQswCQYDVQQGEwJVUzELMAkGA1UECAwCTUExDzANBgNVBAcM\nBkJvc3RvbjENMAsGA1UECgwEQm9zZTEWMBQGA1UEAwwNdGVzdC1kZXZpY2UtMTBZ\nMBMGByqGSM49AgEGCCqGSM49AwEHA0IABDummykZ3hhNgOvCdPFxPCp8B9p0hpT8\nfZGhOnAzQi+hVGLHLBPKI9MpHcZKVBaAJz2s8z1Z5E7fzZ+3SzK1qL6gPDAyBgkq\nhkiG9w0BCQ4xJTAjMCEGA1UdEQQaMBiCFnRlc3QtZGV2aWNlLTEuYm9zZS5jb20w\nCgYIKoZIzj0EAwIDSAAwRQIhAJHDKYCZFxlEGJMJNa2ItXq9nHpw8qLhR0XCcOp0\ndmUAAiAmRoZ5iVLPBJGshZ2h8g0fKdE/P5sHvKIvC8qPz7z8Xw==\n-----END CERTIFICATE REQUEST-----",
 			ProjectID: suite.testProjectID,
@@ -376,7 +460,7 @@ func (suite *DeviceIntegrationTestSuite) TestClaimDevice() {
 			return r.ProjectID == req.ProjectID
 		}), mock.Anything, mock.Anything).Return(expectedResponse, nil).Once()
 
-		w, err := suite.MakeRequest("POST", "/api/v1/devices/"+deviceID+"/claim", req)
+		w, err := suite.MakeRequestWithUser("POST", "/api/v1/devices/"+deviceID+"/claim", req, "60000001-0000-4000-8000-000000000001")
 		require.NoError(t, err)
 
 		assert.Equal(t, http.StatusCreated, w.Code)
@@ -387,6 +471,38 @@ func (suite *DeviceIntegrationTestSuite) TestClaimDevice() {
 
 		assert.NotEmpty(t, response.Certificate)
 		suite.mockDeviceSVC.AssertExpectations(t)
+	})
+
+	suite.T().Run("should claim device as end user admin", func(t *testing.T) {
+		req := types.DeviceClaimRequest{
+			CSR:       "test-csr",
+			ProjectID: suite.testProjectID,
+		}
+		expectedResponse := &types.DeviceClaimResponse{
+			Certificate: "-----BEGIN CERTIFICATE-----\nMIIB...\n-----END CERTIFICATE-----",
+		}
+
+		suite.mockDeviceSVC.On("ClaimDevice", mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(func(u types.UserAuthorizationResponse) bool {
+			return u.User.Email == "test@domain.com" && u.Role.RoleName == "Admin"
+		}), mock.Anything).Return(expectedResponse, nil).Once()
+
+		// End User Admin (test@domain.com) claims device
+		w, err := suite.MakeRequestWithUser("POST", "/api/v1/devices/"+uuid.New().String()+"/claim", req, "60000001-0000-4000-8000-000000000006")
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusCreated, w.Code)
+		suite.mockDeviceSVC.AssertExpectations(t)
+	})
+
+	suite.T().Run("should fail when auth headers missing", func(t *testing.T) {
+		req := types.DeviceClaimRequest{
+			CSR:       "test-csr",
+			ProjectID: suite.testProjectID,
+		}
+
+		w, err := suite.MakeRequestWithHeaders("POST", "/api/v1/devices/"+deviceID+"/claim", req, map[string]string{})
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 
 	suite.T().Run("should fail when device not found", func(t *testing.T) {
