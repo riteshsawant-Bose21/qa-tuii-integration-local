@@ -28,17 +28,6 @@ extension ControllerManager on ProjectManager {
   /// Returns controllers that have [zoneId] in their assigned zone IDs.
   List<FusionController> getControllersForZone(String zoneId) => _service.getControllersForZone(zoneId);
 
-  // ─── Write ────────────────────────────────────────────────────────────────
-
-  /// Adds [controller] to the hardware repository.
-  void addFusionController(FusionController controller) => _service.addController(controller);
-
-  /// Removes the controller with [controllerId] from the hardware repository.
-  void removeFusionController(String controllerId) => _service.removeController(controllerId);
-
-  /// Replaces the stored controller record with [controller].
-  void updateFusionController(FusionController controller) => _service.updateController(controller);
-
   // ─── Zone-assignment ──────────────────────────────────────────────────────
 
   /// Assigns [zoneId] to [controllerId]'s zone list and persists.

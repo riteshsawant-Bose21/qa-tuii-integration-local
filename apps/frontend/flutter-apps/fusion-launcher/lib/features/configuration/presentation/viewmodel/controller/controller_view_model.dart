@@ -42,63 +42,6 @@ extension ControllerViewModel on ProjectViewModel {
 
   // ─── Write ────────────────────────────────────────────────────────────────
 
-  /// Adds [controller] to the project hardware repository.
-  void addFusionController({
-    required FusionController controller,
-    bool autoSave = true,
-  }) {
-    try {
-      if (autoSave) recordSnapshot();
-      projectManager.addFusionController(controller);
-      if (autoSave) saveProject();
-      updateProject();
-    } catch (e) {
-      FusionLogger.log(
-        tag: LogTag.project,
-        message: 'ControllerViewModel: failed to add controller: $e',
-      );
-      throwError('Failed to add controller: $e');
-    }
-  }
-
-  /// Removes the controller with [controllerId] from the project.
-  void removeFusionController({
-    required String controllerId,
-    bool autoSave = true,
-  }) {
-    try {
-      if (autoSave) recordSnapshot();
-      projectManager.removeFusionController(controllerId);
-      if (autoSave) saveProject();
-      updateProject();
-    } catch (e) {
-      FusionLogger.log(
-        tag: LogTag.project,
-        message: 'ControllerViewModel: failed to remove controller: $e',
-      );
-      throwError('Failed to remove controller: $e');
-    }
-  }
-
-  /// Replaces the stored controller record with [controller].
-  void updateFusionController({
-    required FusionController controller,
-    bool autoSave = true,
-  }) {
-    try {
-      if (autoSave) recordSnapshot();
-      projectManager.updateFusionController(controller);
-      if (autoSave) saveProject();
-      updateProject();
-    } catch (e) {
-      FusionLogger.log(
-        tag: LogTag.project,
-        message: 'ControllerViewModel: failed to update controller: $e',
-      );
-      throwError('Failed to update controller: $e');
-    }
-  }
-
   // ─── Zone-assignment ──────────────────────────────────────────────────────
 
   /// Assigns [zoneId] to the controller and persists.

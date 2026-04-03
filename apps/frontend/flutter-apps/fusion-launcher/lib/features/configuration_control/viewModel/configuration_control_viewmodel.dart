@@ -142,12 +142,12 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
   }
 
   void addController(FusionController controller) {
-    _projectViewModel.addFusionController(controller: controller);
+    _projectViewModel.addHardware(hardware: controller);
     _loadData(preserveControllerId: _loaded?.selectedControllerId);
   }
 
   void deleteController(String controllerId) {
-    _projectViewModel.removeFusionController(controllerId: controllerId);
+    _projectViewModel.removeHardware(hardwareId: controllerId);
 
     final ConfigControlLoaded? loaded = _loaded;
     if (loaded == null) return;
