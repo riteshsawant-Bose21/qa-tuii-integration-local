@@ -74,13 +74,6 @@ bool fusion_cn_rtp_lookup_packet_handle(struct fusion_cn_rtp_manager *rtp_mgr,
     return found;
 }
 
-bool fusion_cn_rtp_packet_is_ours(struct fusion_cn_rtp_manager *rtp_mgr, const struct fusion_cn_rtp_packet *packet)
-{
-    u64 stream_handle;
-
-    return fusion_cn_rtp_lookup_packet_handle(rtp_mgr, packet, &stream_handle);
-}
-
 int fusion_cn_rtp_enqueue_packet(struct fusion_cn_rtp_manager *rtp_mgr, u64 stream_handle,
                                const struct fusion_cn_rtp_packet *packet, u32 packet_len)
 {
@@ -723,6 +716,19 @@ static int fusion_cn_rtp_process_resolved_packet(struct fusion_cn_rtp_manager *r
                 metrics_flags |= FUSION_CN_PKTF_REORDERHINT;
             if (late)
                 metrics_flags |= FUSION_CN_PKTF_LATE;
+
+            {
+                u64 metrics_rx_ns = rx_phc_ns ? rx_phc_ns : current_phc_ns;
+                s64 path_latency_ns = (s64)metrics_rx_ns - (s64)reconstructed_phc_ns;
+
+                if (path_latency_ns > 250000) {
+                    printk(KERN_DEBUG
+                           "fusion_cn_rtp: path latency stream=%s seq=%u path=%lldns rx=%llu reconstructed=%llu playout=%llu\n",
+                           stream->info.stream_name, seq_num,
+                           (long long)path_latency_ns,
+                           metrics_rx_ns, reconstructed_phc_ns, sched_playout_ns);
+                }
+            }
 
             fusion_cn_metrics_rx_stash(stream->metrics,
                                        seq_num, rtp_timestamp, rx_phc_ns ? rx_phc_ns : current_phc_ns,

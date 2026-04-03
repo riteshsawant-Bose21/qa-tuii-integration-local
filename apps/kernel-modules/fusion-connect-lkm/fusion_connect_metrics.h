@@ -70,10 +70,12 @@ struct fusion_cn_metrics_window
     u32 jb_depth_count;
     u32 resync_count;
 
-    /* latency / clock (reserved for future) */
+    /* latency / clock */
     u32 path_latency_est_ns;
     u32 path_latency_min_ns;
     u32 path_latency_max_ns;
+    u32 path_latency_p50_ns;
+    u32 path_latency_p99_ns;
 
     /* TX timing (egress) – kept in window; mirror later if you expose */
     u64 tx_last_send_ns;
@@ -102,6 +104,7 @@ struct fusion_cn_metrics_snapshot
     u32 resync_count;
 
     u32 path_latency_est_ns, path_latency_min_ns, path_latency_max_ns;
+    u32 path_latency_p50_ns, path_latency_p99_ns;
 
     /* TX */
     u64 tx_packets_total;

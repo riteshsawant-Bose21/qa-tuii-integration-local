@@ -142,7 +142,6 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusio
                              struct fusion_cn_substream *alsa_stream, struct fusion_cn_rtp_stream **rtp_stream);
 int fusion_cn_rtp_remove_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_stream *stream);
 bool fusion_cn_rtp_lookup_packet_handle(struct fusion_cn_rtp_manager *rtp_mgr, const struct fusion_cn_rtp_packet *packet, u64 *stream_handle);
-bool fusion_cn_rtp_packet_is_ours(struct fusion_cn_rtp_manager *rtp_mgr, const struct fusion_cn_rtp_packet *packet);
 int fusion_cn_rtp_enqueue_packet(struct fusion_cn_rtp_manager *rtp_mgr, u64 stream_handle, const struct fusion_cn_rtp_packet *packet, u32 packet_len);
 void fusion_cn_rtp_drain_rx_queue(struct fusion_cn_rtp_manager *rtp_mgr);
 int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_packet *packet);

@@ -185,6 +185,15 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
                 w->path_latency_min_ns = (u32)path;
             if ((u32)path > w->path_latency_max_ns)
                 w->path_latency_max_ns = (u32)path;
+            if (!w->path_latency_p50_ns)
+                w->path_latency_p50_ns = (u32)path;
+            if (!w->path_latency_p99_ns)
+                w->path_latency_p99_ns = (u32)path;
+            w->path_latency_p50_ns += ((s32)(u32)path - (s32)w->path_latency_p50_ns) >> EWMA_P50_SHIFT;
+            if ((u32)path > w->path_latency_p99_ns)
+                w->path_latency_p99_ns += ((u32)path - w->path_latency_p99_ns) >> EWMA_P99_UP;
+            else
+                w->path_latency_p99_ns -= (w->path_latency_p99_ns - (u32)path) >> EWMA_P99_DOWN;
         }
 
         w->last_arrival_ns = s.arrival_phc_ns;
@@ -244,6 +253,8 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
         m->snap.path_latency_est_ns    = w->path_latency_est_ns;
         m->snap.path_latency_min_ns    = w->path_latency_min_ns;
         m->snap.path_latency_max_ns    = w->path_latency_max_ns;
+        m->snap.path_latency_p50_ns    = w->path_latency_p50_ns;
+        m->snap.path_latency_p99_ns    = w->path_latency_p99_ns;
     }
 
     /* === 3) JB depth stats (samples) === */
@@ -262,6 +273,13 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
     m->snap.jb_depth_max_samples = w->jb_depth_max_samples;
     m->snap.jb_depth_avg_samples =
         w->jb_depth_count ? (u32)(w->jb_depth_sum_samples / w->jb_depth_count) : 0;
+
+    /* Reset per-snapshot path-latency stats */
+    w->path_latency_est_ns = 0;
+    w->path_latency_min_ns = 0;
+    w->path_latency_max_ns = 0;
+    w->path_latency_p50_ns = 0;
+    w->path_latency_p99_ns = 0;
 
     /* === 4) Final snapshot timestamp === */
     m->snap.ts_snapshot_ns = fusion_cn_get_phc_ns();
