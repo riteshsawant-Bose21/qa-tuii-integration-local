@@ -10,8 +10,9 @@ import (
 var (
 	// Matches traditional MAJOR.MINOR.PATCH
 	mainVersionPattern = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$`)
-	// Bundle version: MAJOR.MINOR.PATCH[-tag.number][+build] where tag is alphabetic (alpha, beta, dev)
-	bundleVersionPattern = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([A-Za-z][0-9A-Za-z-]*)(?:\.(0|[1-9]\d*))?)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$`)
+	// Bundle version: MAJOR.MINOR.PATCH OR MAJOR.MINOR.PATCH-tag[.number][+build].
+	// Build metadata is allowed only when a prerelease tag is present.
+	bundleVersionPattern = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([A-Za-z][0-9A-Za-z-]*)(?:\.(0|[1-9]\d*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?)?$`)
 )
 
 type ParsedVersion struct {
@@ -20,7 +21,7 @@ type ParsedVersion struct {
 	Patch         int
 	Prerelease    string // Full prerelease string: "beta.1", "dev.2", "" for stable
 	PrereleaseTag string // Channel tag: "beta", "rc", "alpha", "" for stable
-	PrereleaseNum int    // Numeric part for ordering: 1, 5, 0 if absent
+	PrereleaseNum int    // Numeric part for ordering: 0, 1, 5... -1 if absent
 	Build         string // Build metadata (ignored in comparisons per SemVer)
 }
 
@@ -53,7 +54,7 @@ func ParseSemanticVersion(version string) (*ParsedVersion, error) {
 
 	// Extract prerelease tag and number
 	prereleaseTag := ""
-	prereleaseNum := 0
+	prereleaseNum := -1
 	if prerelease != "" {
 		parts := strings.SplitN(prerelease, ".", 2)
 		prereleaseTag = parts[0]
@@ -77,7 +78,7 @@ func ParseSemanticVersion(version string) (*ParsedVersion, error) {
 
 func ValidateBundleVersionFormat(version string) error {
 	if !bundleVersionPattern.MatchString(version) {
-		return errors.New("bundle version must be in format MAJOR.MINOR.PATCH or MAJOR.MINOR.PATCH-tag.number (e.g. 1.0.0, 1.0.0-beta.1, 1.0.0-rc.2+build.456). Prerelease tag must start with a letter")
+		return errors.New("bundle version must be MAJOR.MINOR.PATCH or MAJOR.MINOR.PATCH-tag[.number][+build]")
 	}
 	return nil
 }

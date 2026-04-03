@@ -369,7 +369,7 @@ definitions:
         example: bundles/stable/bundle-1.2.3.zip
         type: string
       version:
-        example: 1.2.3-dev.4+build123 | 1.2.3-beta.1 | 1.2.3
+        example: 1.2.3-dev.4+build123
         type: string
     required:
     - checksum

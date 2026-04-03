@@ -11,7 +11,7 @@ const (
 )
 
 type NotifyBundleUploadPayload struct {
-	Version              string      `json:"version" binding:"required" example:"1.2.3-dev.4+build123 | 1.2.3-beta.1 | 1.2.3"`
+	Version              string      `json:"version" binding:"required" example:"1.2.3-dev.4+build123"`
 	Checksum             string      `json:"checksum" binding:"required"`
 	ReleaseNotes         string      `json:"release_notes"`
 	MinPrevVersion       string      `json:"min_prev_version" binding:"required" example:"0.0.0"`

@@ -27,15 +27,10 @@ import (
 type Bundle struct {
 	ID                        string           `boil:"id" json:"id" toml:"id" yaml:"id"`
 	Version                   string           `boil:"version" json:"version" toml:"version" yaml:"version"`
-	VersionArray              types.Int64Array `boil:"version_array" json:"version_array,omitempty" toml:"version_array" yaml:"version_array,omitempty"`
-	Prerelease                null.String      `boil:"prerelease" json:"prerelease,omitempty" toml:"prerelease" yaml:"prerelease,omitempty"`
-	PrereleaseTag             null.String      `boil:"prerelease_tag" json:"prerelease_tag,omitempty" toml:"prerelease_tag" yaml:"prerelease_tag,omitempty"`
 	PrereleaseNum             null.Int         `boil:"prerelease_num" json:"prerelease_num,omitempty" toml:"prerelease_num" yaml:"prerelease_num,omitempty"`
 	ReleaseNotes              null.String      `boil:"release_notes" json:"release_notes,omitempty" toml:"release_notes" yaml:"release_notes,omitempty"`
 	MinPrevVersion            string           `boil:"min_prev_version" json:"min_prev_version" toml:"min_prev_version" yaml:"min_prev_version"`
-	MinPrevVersionArray       types.Int64Array `boil:"min_prev_version_array" json:"min_prev_version_array,omitempty" toml:"min_prev_version_array" yaml:"min_prev_version_array,omitempty"`
 	MinDesktopAppVersion      string           `boil:"min_desktop_app_version" json:"min_desktop_app_version" toml:"min_desktop_app_version" yaml:"min_desktop_app_version"`
-	MinDesktopAppVersionArray types.Int64Array `boil:"min_desktop_app_version_array" json:"min_desktop_app_version_array,omitempty" toml:"min_desktop_app_version_array" yaml:"min_desktop_app_version_array,omitempty"`
 	ManifestData              null.JSON        `boil:"manifest_data" json:"manifest_data,omitempty" toml:"manifest_data" yaml:"manifest_data,omitempty"`
 	Checksum                  string           `boil:"checksum" json:"checksum" toml:"checksum" yaml:"checksum"`
 	S3Path                    string           `boil:"s3_path" json:"s3_path" toml:"s3_path" yaml:"s3_path"`
@@ -44,6 +39,10 @@ type Bundle struct {
 	ApprovalStatusChangedAt   null.Time        `boil:"approval_status_changed_at" json:"approval_status_changed_at,omitempty" toml:"approval_status_changed_at" yaml:"approval_status_changed_at,omitempty"`
 	CreatedAt                 time.Time        `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt                 time.Time        `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	PrereleaseTag             null.String      `boil:"prerelease_tag" json:"prerelease_tag,omitempty" toml:"prerelease_tag" yaml:"prerelease_tag,omitempty"`
+	VersionArray              types.Int64Array `boil:"version_array" json:"version_array,omitempty" toml:"version_array" yaml:"version_array,omitempty"`
+	MinPrevVersionArray       types.Int64Array `boil:"min_prev_version_array" json:"min_prev_version_array,omitempty" toml:"min_prev_version_array" yaml:"min_prev_version_array,omitempty"`
+	MinDesktopAppVersionArray types.Int64Array `boil:"min_desktop_app_version_array" json:"min_desktop_app_version_array,omitempty" toml:"min_desktop_app_version_array" yaml:"min_desktop_app_version_array,omitempty"`
 
 	R *bundleR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L bundleL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -52,15 +51,10 @@ type Bundle struct {
 var BundleColumns = struct {
 	ID                        string
 	Version                   string
-	VersionArray              string
-	Prerelease                string
-	PrereleaseTag             string
 	PrereleaseNum             string
 	ReleaseNotes              string
 	MinPrevVersion            string
-	MinPrevVersionArray       string
 	MinDesktopAppVersion      string
-	MinDesktopAppVersionArray string
 	ManifestData              string
 	Checksum                  string
 	S3Path                    string
@@ -69,18 +63,17 @@ var BundleColumns = struct {
 	ApprovalStatusChangedAt   string
 	CreatedAt                 string
 	UpdatedAt                 string
+	PrereleaseTag             string
+	VersionArray              string
+	MinPrevVersionArray       string
+	MinDesktopAppVersionArray string
 }{
 	ID:                        "id",
 	Version:                   "version",
-	VersionArray:              "version_array",
-	Prerelease:                "prerelease",
-	PrereleaseTag:             "prerelease_tag",
 	PrereleaseNum:             "prerelease_num",
 	ReleaseNotes:              "release_notes",
 	MinPrevVersion:            "min_prev_version",
-	MinPrevVersionArray:       "min_prev_version_array",
 	MinDesktopAppVersion:      "min_desktop_app_version",
-	MinDesktopAppVersionArray: "min_desktop_app_version_array",
 	ManifestData:              "manifest_data",
 	Checksum:                  "checksum",
 	S3Path:                    "s3_path",
@@ -89,20 +82,19 @@ var BundleColumns = struct {
 	ApprovalStatusChangedAt:   "approval_status_changed_at",
 	CreatedAt:                 "created_at",
 	UpdatedAt:                 "updated_at",
+	PrereleaseTag:             "prerelease_tag",
+	VersionArray:              "version_array",
+	MinPrevVersionArray:       "min_prev_version_array",
+	MinDesktopAppVersionArray: "min_desktop_app_version_array",
 }
 
 var BundleTableColumns = struct {
 	ID                        string
 	Version                   string
-	VersionArray              string
-	Prerelease                string
-	PrereleaseTag             string
 	PrereleaseNum             string
 	ReleaseNotes              string
 	MinPrevVersion            string
-	MinPrevVersionArray       string
 	MinDesktopAppVersion      string
-	MinDesktopAppVersionArray string
 	ManifestData              string
 	Checksum                  string
 	S3Path                    string
@@ -111,18 +103,17 @@ var BundleTableColumns = struct {
 	ApprovalStatusChangedAt   string
 	CreatedAt                 string
 	UpdatedAt                 string
+	PrereleaseTag             string
+	VersionArray              string
+	MinPrevVersionArray       string
+	MinDesktopAppVersionArray string
 }{
 	ID:                        "bundle.id",
 	Version:                   "bundle.version",
-	VersionArray:              "bundle.version_array",
-	Prerelease:                "bundle.prerelease",
-	PrereleaseTag:             "bundle.prerelease_tag",
 	PrereleaseNum:             "bundle.prerelease_num",
 	ReleaseNotes:              "bundle.release_notes",
 	MinPrevVersion:            "bundle.min_prev_version",
-	MinPrevVersionArray:       "bundle.min_prev_version_array",
 	MinDesktopAppVersion:      "bundle.min_desktop_app_version",
-	MinDesktopAppVersionArray: "bundle.min_desktop_app_version_array",
 	ManifestData:              "bundle.manifest_data",
 	Checksum:                  "bundle.checksum",
 	S3Path:                    "bundle.s3_path",
@@ -131,33 +122,13 @@ var BundleTableColumns = struct {
 	ApprovalStatusChangedAt:   "bundle.approval_status_changed_at",
 	CreatedAt:                 "bundle.created_at",
 	UpdatedAt:                 "bundle.updated_at",
+	PrereleaseTag:             "bundle.prerelease_tag",
+	VersionArray:              "bundle.version_array",
+	MinPrevVersionArray:       "bundle.min_prev_version_array",
+	MinDesktopAppVersionArray: "bundle.min_desktop_app_version_array",
 }
 
 // Generated where
-
-type whereHelpertypes_Int64Array struct{ field string }
-
-func (w whereHelpertypes_Int64Array) EQ(x types.Int64Array) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, false, x)
-}
-func (w whereHelpertypes_Int64Array) NEQ(x types.Int64Array) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, true, x)
-}
-func (w whereHelpertypes_Int64Array) LT(x types.Int64Array) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpertypes_Int64Array) LTE(x types.Int64Array) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelpertypes_Int64Array) GT(x types.Int64Array) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpertypes_Int64Array) GTE(x types.Int64Array) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
-
-func (w whereHelpertypes_Int64Array) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
-func (w whereHelpertypes_Int64Array) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
 
 type whereHelpernull_Int struct{ field string }
 
@@ -242,18 +213,37 @@ func (w whereHelpertime_Time) GTE(x time.Time) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
+type whereHelpertypes_Int64Array struct{ field string }
+
+func (w whereHelpertypes_Int64Array) EQ(x types.Int64Array) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpertypes_Int64Array) NEQ(x types.Int64Array) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpertypes_Int64Array) LT(x types.Int64Array) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpertypes_Int64Array) LTE(x types.Int64Array) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpertypes_Int64Array) GT(x types.Int64Array) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpertypes_Int64Array) GTE(x types.Int64Array) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+
+func (w whereHelpertypes_Int64Array) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpertypes_Int64Array) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+
 var BundleWhere = struct {
 	ID                        whereHelperstring
 	Version                   whereHelperstring
-	VersionArray              whereHelpertypes_Int64Array
-	Prerelease                whereHelpernull_String
-	PrereleaseTag             whereHelpernull_String
 	PrereleaseNum             whereHelpernull_Int
 	ReleaseNotes              whereHelpernull_String
 	MinPrevVersion            whereHelperstring
-	MinPrevVersionArray       whereHelpertypes_Int64Array
 	MinDesktopAppVersion      whereHelperstring
-	MinDesktopAppVersionArray whereHelpertypes_Int64Array
 	ManifestData              whereHelpernull_JSON
 	Checksum                  whereHelperstring
 	S3Path                    whereHelperstring
@@ -262,18 +252,17 @@ var BundleWhere = struct {
 	ApprovalStatusChangedAt   whereHelpernull_Time
 	CreatedAt                 whereHelpertime_Time
 	UpdatedAt                 whereHelpertime_Time
+	PrereleaseTag             whereHelpernull_String
+	VersionArray              whereHelpertypes_Int64Array
+	MinPrevVersionArray       whereHelpertypes_Int64Array
+	MinDesktopAppVersionArray whereHelpertypes_Int64Array
 }{
 	ID:                        whereHelperstring{field: "\"bundle\".\"id\""},
 	Version:                   whereHelperstring{field: "\"bundle\".\"version\""},
-	VersionArray:              whereHelpertypes_Int64Array{field: "\"bundle\".\"version_array\""},
-	Prerelease:                whereHelpernull_String{field: "\"bundle\".\"prerelease\""},
-	PrereleaseTag:             whereHelpernull_String{field: "\"bundle\".\"prerelease_tag\""},
 	PrereleaseNum:             whereHelpernull_Int{field: "\"bundle\".\"prerelease_num\""},
 	ReleaseNotes:              whereHelpernull_String{field: "\"bundle\".\"release_notes\""},
 	MinPrevVersion:            whereHelperstring{field: "\"bundle\".\"min_prev_version\""},
-	MinPrevVersionArray:       whereHelpertypes_Int64Array{field: "\"bundle\".\"min_prev_version_array\""},
 	MinDesktopAppVersion:      whereHelperstring{field: "\"bundle\".\"min_desktop_app_version\""},
-	MinDesktopAppVersionArray: whereHelpertypes_Int64Array{field: "\"bundle\".\"min_desktop_app_version_array\""},
 	ManifestData:              whereHelpernull_JSON{field: "\"bundle\".\"manifest_data\""},
 	Checksum:                  whereHelperstring{field: "\"bundle\".\"checksum\""},
 	S3Path:                    whereHelperstring{field: "\"bundle\".\"s3_path\""},
@@ -282,6 +271,10 @@ var BundleWhere = struct {
 	ApprovalStatusChangedAt:   whereHelpernull_Time{field: "\"bundle\".\"approval_status_changed_at\""},
 	CreatedAt:                 whereHelpertime_Time{field: "\"bundle\".\"created_at\""},
 	UpdatedAt:                 whereHelpertime_Time{field: "\"bundle\".\"updated_at\""},
+	PrereleaseTag:             whereHelpernull_String{field: "\"bundle\".\"prerelease_tag\""},
+	VersionArray:              whereHelpertypes_Int64Array{field: "\"bundle\".\"version_array\""},
+	MinPrevVersionArray:       whereHelpertypes_Int64Array{field: "\"bundle\".\"min_prev_version_array\""},
+	MinDesktopAppVersionArray: whereHelpertypes_Int64Array{field: "\"bundle\".\"min_desktop_app_version_array\""},
 }
 
 // BundleRels is where relationship names are stored.
@@ -321,9 +314,9 @@ func (r *bundleR) GetApprovalStatusChangedByAppUser() *AppUser {
 type bundleL struct{}
 
 var (
-	bundleAllColumns            = []string{"id", "version", "version_array", "prerelease", "prerelease_tag", "prerelease_num", "release_notes", "min_prev_version", "min_prev_version_array", "min_desktop_app_version", "min_desktop_app_version_array", "manifest_data", "checksum", "s3_path", "approval_status", "approval_status_changed_by", "approval_status_changed_at", "created_at", "updated_at"}
+	bundleAllColumns            = []string{"id", "version", "prerelease_num", "release_notes", "min_prev_version", "min_desktop_app_version", "manifest_data", "checksum", "s3_path", "approval_status", "approval_status_changed_by", "approval_status_changed_at", "created_at", "updated_at", "prerelease_tag", "version_array", "min_prev_version_array", "min_desktop_app_version_array"}
 	bundleColumnsWithoutDefault = []string{"version", "min_prev_version", "min_desktop_app_version", "checksum", "s3_path"}
-	bundleColumnsWithDefault    = []string{"id", "version_array", "prerelease", "prerelease_tag", "prerelease_num", "release_notes", "min_prev_version_array", "min_desktop_app_version_array", "manifest_data", "approval_status", "approval_status_changed_by", "approval_status_changed_at", "created_at", "updated_at"}
+	bundleColumnsWithDefault    = []string{"id", "prerelease_num", "release_notes", "manifest_data", "approval_status", "approval_status_changed_by", "approval_status_changed_at", "created_at", "updated_at", "prerelease_tag", "version_array", "min_prev_version_array", "min_desktop_app_version_array"}
 	bundlePrimaryKeyColumns     = []string{"id"}
 	bundleGeneratedColumns      = []string{"version_array", "min_prev_version_array", "min_desktop_app_version_array"}
 )

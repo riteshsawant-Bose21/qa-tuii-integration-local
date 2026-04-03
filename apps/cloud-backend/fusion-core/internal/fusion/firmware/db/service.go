@@ -83,7 +83,7 @@ func (s *Service) InsertBundle(ctx context.Context, payload apiTypes.NotifyBundl
 		if parsedVersion.PrereleaseTag != "" {
 			bundleRecord.PrereleaseTag = null.StringFrom(parsedVersion.PrereleaseTag)
 		}
-		if parsedVersion.PrereleaseNum > 0 {
+		if parsedVersion.PrereleaseNum >= 0 {
 			bundleRecord.PrereleaseNum = null.IntFrom(parsedVersion.PrereleaseNum)
 		}
 	}
