@@ -124,13 +124,7 @@
           "description": "URL to DSP EQ file"
         },
         "skus": {
-          "type": "array",
-          "description": "Array of SKU numbers",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "minItems": 1
+          "$ref": "#/$defs/skus"
         },
         "max_spl": {
           "type": "object",
@@ -180,7 +174,7 @@
         "frequency_range": {
           "type": "object",
           "title": "Frequency Range",
-          "description": "Frequency Range (−10 dB)",
+          "description": "Frequency Range",
           "properties": {
             "unit": {
               "type": "string",
@@ -425,31 +419,6 @@
             "Surface"
           ]
         },
-        "impedance": {
-          "type": "object",
-          "title": "Impedance Range",
-          "properties": {
-            "unit": {
-              "type": "string",
-              "enum": [
-                "ohms",
-                "ohm"
-              ]
-            },
-            "low": {
-              "type": "number",
-              "minimum": 0
-            },
-            "high": {
-              "type": "number",
-              "minimum": 0
-            }
-          },
-          "required": [
-            "unit"
-          ],
-          "additionalProperties": false
-        },
         "impedance_curve": {
           "type": "array",
           "description": "Impedance curve data points",
@@ -646,7 +615,6 @@
         "environment",
         "dimensions",
         "mount_type",
-        "impedance",
         "voltage_taps",
         "images",
         "is_subwoofer",
@@ -680,13 +648,7 @@
           "description": "URL to product data sheet"
         },
         "skus": {
-          "type": "array",
-          "description": "Array of SKU numbers",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "minItems": 1
+          "$ref": "#/$defs/skus"
         },
         "power_output": {
           "type": "object",
@@ -955,13 +917,7 @@
           "description": "URL to product data sheet"
         },
         "skus": {
-          "type": "array",
-          "description": "Array of SKU numbers",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "minItems": 1
+          "$ref": "#/$defs/skus"
         },
         "number_of_inputs_and_outputs": {
           "$ref": "#/$defs/inputsOutputs"
@@ -1070,13 +1026,7 @@
           "description": "URL to product data sheet"
         },
         "skus": {
-          "type": "array",
-          "description": "Array of SKU numbers",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "minItems": 1
+          "$ref": "#/$defs/skus"
         },
         "zone_control_count": {
           "type": "string",
@@ -1171,13 +1121,7 @@
           "description": "URL to product data sheet"
         },
         "skus": {
-          "type": "array",
-          "description": "Array of SKU numbers",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "minItems": 1
+          "$ref": "#/$defs/skus"
         },
         "number_of_inputs_and_outputs": {
           "$ref": "#/$defs/inputsOutputs"
@@ -1227,8 +1171,7 @@
           "description": "Accessory model family"
         },
         "skus": {
-          "type": "array",
-          "description": "SKU identifier"
+          "$ref": "#/$defs/skus"
         },
         "images": {
           "type": "object",
@@ -1660,6 +1603,37 @@
         }
       },
       "additionalProperties": false
+    },
+    "skus": {
+      "type": "object",
+      "title": "Product SKUs by Color",
+      "description": "SKU numbers organized by color variant",
+      "properties": {
+        "black": {
+          "type": "array",
+          "description": "SKU numbers for black variant",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "white": {
+          "type": "array",
+          "description": "SKU numbers for white variant",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": {
+        "type": "array",
+        "description": "SKU numbers for other color variants",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
     }
   }
 }
