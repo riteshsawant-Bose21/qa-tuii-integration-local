@@ -1246,6 +1246,526 @@
                 }
             }
         },
+        "/organizations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get comprehensive overview of all organizations with statistics, filtering, and pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "organizations"
+                ],
+                "summary": "Get all organizations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query for organization name",
+                        "name": "query",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "enum": [
+                                "distributor",
+                                "reseller",
+                                "end_user"
+                            ],
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Filter by organization types",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Filter by regions",
+                        "name": "region",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved organizations",
+                        "schema": {
+                            "$ref": "#/definitions/types.OrganizationsOverviewResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions to view organizations",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new organization with specified type, region, and details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "organizations"
+                ],
+                "summary": "Create new organization",
+                "parameters": [
+                    {
+                        "description": "Organization creation details",
+                        "name": "organization",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.CreateOrganizationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created organization",
+                        "schema": {
+                            "$ref": "#/definitions/types.Organization"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid JSON payload or validation errors",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions to create organizations",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/organizations/{organizationId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get comprehensive details about a specific organization including users, projects, and statistics",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "organizations"
+                ],
+                "summary": "Get organization details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "organizationId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved organization details",
+                        "schema": {
+                            "$ref": "#/definitions/types.OrganizationDetailsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid organization ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions to view organization details",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found - Organization not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing organization's details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "organizations"
+                ],
+                "summary": "Update organization",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "organizationId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Organization update details",
+                        "name": "organization",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.UpdateOrganizationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated organization",
+                        "schema": {
+                            "$ref": "#/definitions/types.Organization"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid organization ID or JSON payload",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions to update organizations",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found - Organization not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete an existing organization (soft delete recommended)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "organizations"
+                ],
+                "summary": "Delete organization",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "organizationId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully deleted organization",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid organization ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions to delete organizations",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found - Organization not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/organizations/{organizationId}/invite-users": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Invite multiple users to join an organization with specified roles",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "organizations"
+                ],
+                "summary": "Invite users to organization",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "organizationId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "User invitations",
+                        "name": "invitations",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.InviteUsersToOrganizationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully processed invitations",
+                        "schema": {
+                            "$ref": "#/definitions/types.InviteUsersToOrganizationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid organization ID or JSON payload",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions to invite users",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found - Organization not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/products": {
             "get": {
                 "description": "Get all available products including speakers, amplifiers, DSPs, controllers, and endpoints",
@@ -2760,6 +3280,46 @@
                 "CommandRestart"
             ]
         },
+        "types.CreateOrganizationRequest": {
+            "type": "object",
+            "required": [
+                "name",
+                "region",
+                "type"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "Leading audio distribution company"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 3,
+                    "example": "ProAudio Distribution NA"
+                },
+                "region": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 3,
+                    "example": "North America"
+                },
+                "type": {
+                    "enum": [
+                        "distributor",
+                        "reseller",
+                        "end_user"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.OrganizationType"
+                        }
+                    ],
+                    "example": "distributor"
+                }
+            }
+        },
         "types.CreateRoleRequest": {
             "type": "object",
             "required": [
@@ -3080,6 +3640,85 @@
                 }
             }
         },
+        "types.InviteUserResult": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "john.doe@example.com"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "User invited successfully"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "user_id": {
+                    "type": "string",
+                    "example": "usr_123456789"
+                }
+            }
+        },
+        "types.InviteUserToOrganizationRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "role"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "john.doe@example.com"
+                },
+                "role": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 3,
+                    "example": "Partner Admin"
+                }
+            }
+        },
+        "types.InviteUsersToOrganizationRequest": {
+            "type": "object",
+            "required": [
+                "users"
+            ],
+            "properties": {
+                "users": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/types.InviteUserToOrganizationRequest"
+                    }
+                }
+            }
+        },
+        "types.InviteUsersToOrganizationResponse": {
+            "type": "object",
+            "properties": {
+                "organization_id": {
+                    "type": "string",
+                    "example": "org_123456789"
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.InviteUserResult"
+                    }
+                },
+                "total_failed": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "total_invited": {
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
         "types.LogBundleUpdateStatusPayload": {
             "type": "object",
             "required": [
@@ -3149,7 +3788,176 @@
                 },
                 "version": {
                     "type": "string",
-                    "example": "1.2.3"
+                    "example": "1.2.3-dev.4+build123"
+                }
+            }
+        },
+        "types.Organization": {
+            "type": "object",
+            "properties": {
+                "completed_projects": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2023-01-15T10:30:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Leading audio distribution company"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "org_123456789"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "ProAudio Distribution NA"
+                },
+                "ongoing_projects": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "region": {
+                    "type": "string",
+                    "example": "North America"
+                },
+                "type": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.OrganizationType"
+                        }
+                    ],
+                    "example": "distributor"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2023-06-20T14:45:00Z"
+                },
+                "user_count": {
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
+        "types.OrganizationDetailsResponse": {
+            "type": "object",
+            "properties": {
+                "organization": {
+                    "$ref": "#/definitions/types.Organization"
+                },
+                "projects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.OrganizationProject"
+                    }
+                },
+                "statistics": {
+                    "$ref": "#/definitions/types.OrganizationStats"
+                },
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.OrganizationUser"
+                    }
+                }
+            }
+        },
+        "types.OrganizationProject": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "proj_123456789"
+                },
+                "last_updated": {
+                    "type": "string",
+                    "example": "2026-02-05T00:00:00Z"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Government Building Retrofit"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "opportunity"
+                }
+            }
+        },
+        "types.OrganizationStatistics": {
+            "type": "object",
+            "properties": {
+                "total_distributors": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "total_end_users": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "total_resellers": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "types.OrganizationStats": {
+            "type": "object",
+            "properties": {
+                "completed_projects": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "ongoing_projects": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "total_users": {
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
+        "types.OrganizationType": {
+            "type": "string",
+            "enum": [
+                "distributor",
+                "reseller",
+                "end_user"
+            ],
+            "x-enum-varnames": [
+                "OrganizationTypeDistributor",
+                "OrganizationTypeReseller",
+                "OrganizationTypeEndUser"
+            ]
+        },
+        "types.OrganizationUser": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "mike.chen@proaudio.com"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "usr_123456789"
+                },
+                "joined_at": {
+                    "type": "string",
+                    "example": "2024-04-01T00:00:00Z"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Mike Chen"
+                },
+                "role": {
+                    "type": "string",
+                    "example": "Partner Admin"
                 }
             }
         },
@@ -3164,6 +3972,32 @@
                     "items": {
                         "$ref": "#/definitions/types.UserWithRole"
                     }
+                }
+            }
+        },
+        "types.OrganizationsOverviewResponse": {
+            "type": "object",
+            "properties": {
+                "organizations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.Organization"
+                    }
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "statistics": {
+                    "$ref": "#/definitions/types.OrganizationStatistics"
+                },
+                "total_count": {
+                    "type": "integer",
+                    "example": 6
+                },
+                "total_pages": {
+                    "type": "integer",
+                    "example": 1
                 }
             }
         },
@@ -3674,6 +4508,41 @@
                 "id": {
                     "type": "string",
                     "example": "53437319-7a5b-4462-bc7c-9e7f9a057a1a"
+                }
+            }
+        },
+        "types.UpdateOrganizationRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "Leading audio distribution company"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 3,
+                    "example": "ProAudio Distribution NA"
+                },
+                "region": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 3,
+                    "example": "North America"
+                },
+                "type": {
+                    "enum": [
+                        "distributor",
+                        "reseller",
+                        "end_user"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.OrganizationType"
+                        }
+                    ],
+                    "example": "distributor"
                 }
             }
         },

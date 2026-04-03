@@ -1,9 +1,12 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/fusion_canvas_element_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../state/tools/select_tool_state.dart';
+import '../elements/derived/hardware_component_painter.dart';
 import '../elements/fusion_canvas_line_painter.dart';
 import '../elements/fusion_canvas_point_painter.dart';
 import '../elements/fusion_image_painter.dart';
@@ -90,9 +93,29 @@ class SelectionToolPainter extends FusionBasePainter {
       _paintPolygonSelection(canvas, size, painter, element);
     } else if (element is FusionCanvasLinePainter) {
       _paintLineSelection(canvas, size, painter, element);
+    } else if (element is HardwareComponentPainter && element.hardware is Speaker && (element.hardware as Speaker).mountingType == MountingType.surface) {
+      _paintSurfaceSpeakerSelection(canvas, element.getTransformedRect(painter), painter, (element.hardware as Speaker).yaw);
     } else if (element is FusionCanvasElementPainter) {
       _paintSimpleRectSelection(canvas, element.getTransformedRect(painter), painter);
     }
+  }
+
+  void _paintSurfaceSpeakerSelection(Canvas canvas, Rect rect, FusionCanvasPainter painter, double yaw) {
+    final double yawRad = yaw * pi / 180.0;
+    canvas.save();
+    canvas.translate(rect.center.dx, rect.center.dy);
+    canvas.rotate(yawRad);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset.zero, width: rect.width, height: rect.height),
+        Radius.circular(rect.shortestSide * 0.15),
+      ),
+      Paint()
+        ..color = selectionColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = nonScaling(strokeWidth, painter),
+    );
+    canvas.restore();
   }
 
   void _paintSimpleRectSelection(Canvas canvas, Rect rect, FusionCanvasPainter painter) {

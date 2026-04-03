@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/create_zone_popup/view/create_zone_popup.dart';
 import 'package:fusion_launcher/features/projects/viewmodel/building_page_state.dart';
 import 'package:fusion_launcher/features/schematics/presentation/widgets/cost_calculator_widget.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/dock_item_config.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nested/nested.dart';
 
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -108,6 +110,25 @@ class BuildingPage extends StatelessWidget {
                                       title: toolbarMode == ToolbarMode.acoustics ? "LISTENING AREAS" : "ZONES",
                                       isExpanded: isExpanded,
                                       onTap: toggleExpand,
+                                      trailing: Builder(
+                                        builder: (BuildContext context) {
+                                          if (toolbarMode == ToolbarMode.acoustics) return const SizedBox();
+
+                                          return GuideShowcaseWrapper(
+                                            semanticId: 'zone_and_listening_area',
+                                            step: GuideShowCaseSteps.addZone,
+                                            // onHighlightedSpotTap: (TapDownDetails details) => _addNewZone(),
+                                            child: CreateZonePopup(
+                                              isFromBuildingPage: true,
+                                              child: Icon(
+                                                LucideIcons.plus200,
+                                                size: 16,
+                                                color: context.colorScheme.iconWhite,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
                                     ),
                                     Flexible(
                                       child: SizeTransition(
