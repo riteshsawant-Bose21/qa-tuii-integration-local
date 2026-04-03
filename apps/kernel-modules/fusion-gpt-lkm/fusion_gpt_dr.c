@@ -769,7 +769,7 @@ int fusion_gpt_reset_timing_state(void)
 }
 EXPORT_SYMBOL(fusion_gpt_reset_timing_state);
 
-u64 fusion_gpt_read_phc_ns_fast(void)
+u64 fusion_gpt_read_phc_ns(void)
 {
 	struct fusion_gpt *g;
 	unsigned long flags;
@@ -796,12 +796,6 @@ u64 fusion_gpt_read_phc_ns_fast(void)
 	dt_ticks = now64 - epoch_cnt64;
 	ns = epoch_ns + dt_ticks * 100ULL;
 	return ns;
-}
-EXPORT_SYMBOL(fusion_gpt_read_phc_ns_fast);
-
-u64 fusion_gpt_read_phc_ns(void)
-{
-	return fusion_gpt_read_phc_ns_fast();
 }
 EXPORT_SYMBOL(fusion_gpt_read_phc_ns);
 

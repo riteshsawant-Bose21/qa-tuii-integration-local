@@ -101,13 +101,11 @@ void fusion_cn_alsa_substream_release(struct kref *kref)
     struct fusion_cn_substream *s =
         container_of(kref, struct fusion_cn_substream, ref);
 
-    /* Free PCM only if it’s not open and not attached to a live substream */
-    if (s->pcm && atomic_read(&s->open_count) == 0 && !s->substream) {
-        struct snd_card *card = s->pcm->card;
-        struct snd_pcm  *pcm  = s->pcm;
-        s->pcm = NULL;
-        snd_device_free(card, pcm);  /* non-GPL */
-    }
+    /*
+     * PCM device lifetime is owned by ALSA disconnect/card teardown, not by
+     * the close path for an individual substream.
+     */
+    s->pcm = NULL;
 
     printk(KERN_DEBUG "fusion_cn_alsa: substream_release: release stream %s\n", s->stream_name);
 
@@ -305,6 +303,9 @@ int fusion_cn_alsa_remove_substream(struct fusion_cn_substream *stream)
 
     if (ss)
         snd_pcm_stop(ss, SNDRV_PCM_STATE_DISCONNECTED);
+
+    if (stream->pcm)
+        snd_device_disconnect(stream->pcm->card, stream->pcm);
 
     if (chip) {
         write_lock_irqsave(&chip->lock, flags);
@@ -755,6 +756,7 @@ clr_hnode:
     hlist_del(&stream->hnode);
     write_unlock_irqrestore(&chip->lock, flags);
 stream_free:
+    stream->pcm = NULL;
     kref_put(&stream->ref, fusion_cn_alsa_substream_release);
 dev_free:
     snd_device_free(chip->card, pcm);
