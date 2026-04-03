@@ -16,7 +16,7 @@ function show_help() {
     echo "  --sap         Run only SAP tests"     
     echo "  --scheduler   Run only scheduler tests"     
     echo "  --snapshot    Run only snapshot tests"     
-    echo "  --software-update  Run only software update tests"     
+    echo "  --software-update  Run only software update tests (add FUSION_SWUPDATE_TEST=1 to include progress tests, requires swupdate on device)"     
     echo "  --state       Run only state manager tests"     
     echo "  --tasks       Run only tasks tests"     
     echo "  --udp         Run only UDP tests"     
