@@ -23,6 +23,8 @@ import (
 	devicedb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/device/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/firmware"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/id"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/organization"
+	organizationdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/organization/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
@@ -59,13 +61,14 @@ type BaseIntegrationSuite struct {
 	RouterMutex       sync.Mutex
 
 	// Services available to all tests
-	ProductSVC  *product.Service
-	ProjectSVC  *project.Service
-	FirmwareSVC *firmware.Service
-	UserSVC     *user.Service
-	DeviceSVC   *device.Service
-	Loggers     *log.Loggers
-	ZapLogger   *zap.Logger
+	ProductSVC      *product.Service
+	ProjectSVC      *project.Service
+	FirmwareSVC     *firmware.Service
+	UserSVC         *user.Service
+	OrganizationSVC *organization.Service
+	DeviceSVC       *device.Service
+	Loggers         *log.Loggers
+	ZapLogger       *zap.Logger
 
 	// Test data
 	TestUsers []TestUser
@@ -250,6 +253,13 @@ func (suite *BaseIntegrationSuite) setupServices() error {
 	suite.UserSVC = user.NewService(userDBSvc)
 	require.NotNil(suite.T(), suite.UserSVC, "Failed to initialize user service")
 
+	// Initialize Organization services
+	organizationDBSvc := organizationdb.NewService(suite.DB)
+	require.NotNil(suite.T(), organizationDBSvc, "Failed to initialize organization database service")
+
+	suite.OrganizationSVC = organization.NewService(organizationDBSvc)
+	require.NotNil(suite.T(), suite.OrganizationSVC, "Failed to initialize organization service")
+
 	// Initialize IoT handler for device service
 	iotHandler, err := cloudIot.NewIoTClient(context.Background(), cloudCfg.AWSConfig, cloudCfg.IoTEndpoint, loggers.AppLogger)
 	require.NoError(suite.T(), err, "Failed to initialize IoT client")
@@ -271,7 +281,7 @@ func (suite *BaseIntegrationSuite) setupServices() error {
 	authSvc := &MockAuthService{}
 	authMiddleware := &MockMiddleware{}
 
-	apiServer, err := api.New(apiConfig, suite.ProductSVC, suite.ProjectSVC, suite.UserSVC, authSvc, suite.FirmwareSVC, authMiddleware, suite.DeviceSVC, loggers)
+	apiServer, err := api.New(apiConfig, suite.ProductSVC, suite.ProjectSVC, suite.UserSVC, suite.OrganizationSVC, authSvc, suite.FirmwareSVC, authMiddleware, suite.DeviceSVC, loggers)
 	if err != nil {
 		return fmt.Errorf("failed to initialize API server: %w", err)
 	}
