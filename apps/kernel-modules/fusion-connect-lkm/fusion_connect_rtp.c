@@ -606,18 +606,8 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
 
             reconstructed_phc_ns = (global_sac * 62500) / (stream->info.sample_rate == 48000 ? 3 : 6);
 
-            {
-                u64 metrics_rx_ns = rx_phc_ns ? rx_phc_ns : current_phc_ns;
-                s64 path_latency_ns = (s64)metrics_rx_ns - (s64)reconstructed_phc_ns;
-
-                if (path_latency_ns > (s64)stream->info.playout_delay) {
-                    printk(KERN_DEBUG
-                           "fusion_cn_rtp: late path stream=%s seq=%u path=%lldns rx=%llu reconstructed=%llu\n",
-                           stream->info.stream_name, seq_num,
-                           (long long)path_latency_ns,
-                           metrics_rx_ns, reconstructed_phc_ns);
-                }
-            }
+            u64 metrics_rx_ns = rx_phc_ns ? rx_phc_ns : current_phc_ns;
+            s64 path_latency_ns = (s64)metrics_rx_ns - (s64)reconstructed_phc_ns;
 
             if (stream->info.is_fusion_connect) {
                 ns_from_ms_boundary = reconstructed_phc_ns % NSEC_PER_MSEC;

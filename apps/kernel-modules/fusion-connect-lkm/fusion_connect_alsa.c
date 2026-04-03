@@ -192,6 +192,7 @@ int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, struct fusion
     struct fusion_cn_chip *chip = alsa_chip;
     struct snd_pcm_substream *ss;
     struct snd_pcm_runtime *rt;
+    bool do_period_elapsed = false;
 
     if (fusion_cn_alsa_stream_disconnected(stream)) return -ENODEV;
 
@@ -211,10 +212,13 @@ int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, struct fusion
 
     if (++stream->interrupt_idx >= stream->interrupts_per_period) {
         stream->interrupt_idx = 0;
-        snd_pcm_period_elapsed(stream->substream);
+        do_period_elapsed = true;
     }
 
     spin_unlock_irq(&stream->lock);
+
+    if (do_period_elapsed)
+        snd_pcm_period_elapsed(ss);
 
     return 0;
 }
