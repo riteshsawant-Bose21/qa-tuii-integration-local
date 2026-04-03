@@ -23,7 +23,39 @@ enum ConnectionType {
   dsp("io_in_analog");
 
   const ConnectionType(this.type);
+
   final String type;
+}
+
+extension ConnectionTypeExtension on ConnectionType {
+  bool get inDspInputSection {
+    switch (this) {
+      case ConnectionType.analog:
+      case ConnectionType.usb:
+      case ConnectionType.wifi:
+      case ConnectionType.bluetooth:
+      case ConnectionType.hdmi:
+      case ConnectionType.audioJack:
+      case ConnectionType.rca:
+      case ConnectionType.dspAnalog:
+      case ConnectionType.endpoint:
+      case ConnectionType.xlr:
+      case ConnectionType.dsp:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  bool get inDspOutputSection {
+    switch (this) {
+      case ConnectionType.amplifier:
+        return true;
+
+      default:
+        return false;
+    }
+  }
 }
 
 /// Represents a wiring connection between two devices and their ports.
