@@ -139,15 +139,6 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
                 break;
             }
 
-            // Too old; skip this slot and keep chasing playout cadence.
-            if (delta > s->packet_time) {
-                s->next_action_times[slot] = 0;
-                if (++s->playback_slot >= s->buf_size_in_packets)
-                    s->playback_slot = 0;
-                s->next_action_time += s->packet_time;
-                continue;
-            }
-
             if (action_time == 0) {
                 if (!a)
                     break;
