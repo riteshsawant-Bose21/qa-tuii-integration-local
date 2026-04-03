@@ -104,6 +104,151 @@ curl http://localhost:8080/softwareUpdate/list
 ]
 ```
 
+## Software Update Execution
+
+Once software update files are uploaded and distributed across the cluster, they can be executed using coordinated cluster mechanisms.
+
+### Execution Methods
+
+#### WebSocket Trigger (Recommended)
+
+**Message Format**:
+```json
+{
+  "id": "sw-update-001",
+  "version": 1,
+  "type": "start_update"
+}
+```
+
+**Response**:
+```json
+{
+  "id": "sw-update-001",
+  "version": 1,
+  "type": "start_update",
+  "code": 3005,
+  "status": "success", 
+  "message": "Software update broadcasted to all cluster nodes",
+  "data": {
+    "action": "broadcast_cluster",
+    "nodes": [...]
+  },
+  "timestamp": "2026-04-01T10:15:30Z"
+}
+```
+
+#### REST API Trigger
+
+**Public Endpoint** (Cluster Coordination):
+```bash
+curl -X POST http://localhost:8080/cluster/software-update
+```
+
+**Admin Endpoint** (Local Node Only):
+```bash  
+curl -X POST http://localhost:9090/cluster/software-update
+```
+
+### Execution Architecture
+
+**WebSocket Trigger**: Uses cluster messaging via gossip protocol:
+1. **Message Broadcast**: Send `NotifyOpSoftwareUpdate` message to all cluster nodes
+2. **Delegate Processing**: Each node's `ClusterDelegate.handleSoftwareUpdate()` receives the message
+3. **Service Execution**: Each delegate executes `systemctl start swupdate-ota-install.service` locally
+4. **Reliable Delivery**: Gossip protocol ensures all active nodes receive the trigger
+
+**REST API Trigger**: Uses "remote-first, local-last" HTTP coordination pattern:
+
+1. **Remote Nodes First**: Trigger `systemctl start swupdate-ota-install.service` on all remote cluster nodes
+2. **Initiator Last**: Execute software update on the initiating node after confirming all remotes started
+3. **Ordered Execution**: Ensures the coordination node remains available to orchestrate the entire process
+4. **Graceful Coordination**: Prevents cluster partitioning during the update process
+
+**Service Integration**:
+- **Service Name**: `swupdate-ota-install.service`
+- **Execution**: Each node executes the systemctl command locally via delegate
+- **Cross-Platform**: Supports both Linux (systemctl) and development environments
+- **Local Mode**: Skips execution when `appConfig.Local` is enabled for development
+
+### Status Codes
+
+| Code | Category | Description |
+|------|----------|-------------|
+| `3005` | Success | Software update started successfully |
+| `4500` | Error | Failed to coordinate software update |
+| `5000` | Server Error | Internal coordination error |
+
+### Real-Time Progress Push
+
+Once a software update starts, the server broadcasts real-time progress events to **all connected WebSocket clients** automatically. No subscription is required. Each push message contains a snapshot of the current progress for **every cluster node** in a single message.
+
+**Message type**: `update_progress`  
+**Code**: `3004` (shared event push code)
+
+```json
+{
+  "id": null,
+  "version": 1,
+  "type": "update_progress",
+  "code": 3004,
+  "status": "event",
+  "message": "System notification: software_update_progress",
+  "data": {
+    "node-1": {
+      "update_state": "IN_PROGRESS",
+      "step": "2/4",
+      "current_task": "rootfs.ext4",
+      "progress": "65",
+      "node": "node-1",
+      "handler": "raw",
+      "timestamp": "2026-04-01T10:16:05Z",
+      "serial_number": "0123456789abcdef"
+    },
+    "node-2": {
+      "update_state": "SUCCESS",
+      "step": "4/4",
+      "current_task": "rootfs.ext4",
+      "progress": "100",
+      "node": "node-2",
+      "handler": "raw",
+      "timestamp": "2026-04-01T10:16:42Z",
+      "serial_number": "fedcba9876543210"
+    }
+  },
+  "timestamp": "2026-04-01T10:16:45Z"
+}
+```
+
+The `data` field is a `map[string]object` keyed by **node name**. Each value contains:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `update_state` | string | Current status: `IDLE`, `STARTING`, `IN_PROGRESS`, `SUCCESS`, `FAILED`, `DOWNLOADING`, `COMPLETED`, `SUBPROCESS`, `PROGRESS`, `UNKNOWN` |
+| `step` | string | Current step as `"current/total"` (e.g. `"2/4"`) |
+| `current_task` | string | Active swupdate image name |
+| `progress` | string | Percent complete for the current step |
+| `node` | string | Node name |
+| `handler` | string | swupdate handler (e.g. `"raw"`, `"shellscript"`) |
+| `timestamp` | string | RFC3339 timestamp of the event |
+| `serial_number` | string | Node serial number |
+
+**Progress flow** (gossip integration):
+
+1. swupdate daemon writes progress to unix socket `/tmp/swupdateprog` on each node
+2. Hub reads the socket, stores progress keyed by node name, and gossips a **single-node** `NotifyOpSoftwareUpdateProgress` message to peer nodes (lean payload — no aggregated map)
+3. Each receiving node stores the incoming progress in its own per-node map
+4. Before pushing to local WebSocket clients, each node aggregates its full per-node map into the `update_progress` message
+5. VIP (and any node with connected WebSocket clients) broadcasts the aggregated `update_progress` push
+
+**Progress monitoring lifecycle**:
+
+- Monitoring starts automatically when a `NotifyOpSoftwareUpdate` trigger is processed on the local node
+- Monitoring stops on `COMPLETED` (swupdate `DONE`) in the normal success path, or on `FAILED` in the error path
+- The full observable sequence in normal operation is: `STARTING → DOWNLOADING → IN_PROGRESS → ... → SUCCESS → COMPLETED`
+- Clients should treat `COMPLETED` as the definitive end-of-update signal
+- This prevents the monitoring goroutine from running indefinitely or producing error log spam after the update socket closes
+
 ## Usage Examples
 
 ### Upload New Software Update Upload
@@ -335,6 +480,41 @@ FUSION_TEST_NODES=192.168.2.100:8080 \
 go test -v ./test -run TestSoftwareUpdateDownload
 ```
 
+### WebSocket Software Update Tests
+
+WebSocket-based software update tests (trigger and progress) are also available:
+
+**Trigger via WebSocket (expects code `3005`)**:
+```bash
+FUSION_TEST_VIP=192.168.2.100:8080 \
+go test -v ./test -run TestSoftwareUpdateTriggerViaWebSocket
+```
+
+**Invalid type error handling (expects code `4002`)**:
+```bash
+FUSION_TEST_VIP=192.168.2.100:8080 \
+go test -v ./test -run TestSoftwareUpdateTriggerUnknownType
+```
+
+**Progress push after trigger** (requires `/tmp/swupdateprog` socket — real device only):
+```bash
+FUSION_TEST_VIP=192.168.2.100:8080 \
+FUSION_SWUPDATE_TEST=1 \
+go test -v ./test -run TestSoftwareUpdateProgressReceivedAfterTrigger
+```
+
+**Progress message format validation** (requires `/tmp/swupdateprog` socket — real device only):
+```bash
+FUSION_TEST_VIP=192.168.2.100:8080 \
+FUSION_SWUPDATE_TEST=1 \
+go test -v ./test -run TestSoftwareUpdateProgressMessageFormat
+```
+
+> **Note**: Tests that read the swupdate progress socket (`/tmp/swupdateprog`) check for the
+> `FUSION_SWUPDATE_TEST=1` environment variable and **skip automatically** if it is not set.
+> This keeps the test suite safe to run in Multipass or CI environments where the swupdate daemon
+> is not present. Set `FUSION_SWUPDATE_TEST=1` only when running against a real device.
+
 ### Test Coverage
 
 The integration test suite validates:
@@ -348,6 +528,8 @@ The integration test suite validates:
 - **Storage Integration**: Persistent storage in `/mnt/ota` with atomic operations
 - **Cluster Synchronization**: Sync tracking and completion waiting across cluster members
 - **Error Handling**: Comprehensive HTTP status code mapping and error responses
+- **WebSocket Trigger**: `start_update` via WebSocket with correct code `3005` response
+- **WebSocket Progress Push**: Validates aggregated `update_progress` message format (all nodes, per-field types)
 
 ### Testing Against Local Server
 

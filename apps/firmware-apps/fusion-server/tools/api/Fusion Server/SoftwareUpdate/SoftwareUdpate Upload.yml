@@ -15,10 +15,11 @@ http:
     data:
       - name: bundle
         type: file
-        value: ""
+        value:
+          - ./fusion-update-bundle-fusion-nano.rootfs-20260403064046.swu
       - name: checksum
         type: text
-        value: ""
+        value: 899e0993c0379b1459353d690d08462e3809a5325e9a9fd0697302ddece1feeb
   auth: inherit
 
 settings:
