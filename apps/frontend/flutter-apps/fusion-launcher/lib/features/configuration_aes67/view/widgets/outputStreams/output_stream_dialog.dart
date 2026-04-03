@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/aes67/configation_aes67.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
@@ -57,53 +58,56 @@ class _DialogContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: Stack(
-        children: <Widget>[
-          GestureDetector(
-            onTap: () => _close(context),
-            child: Container(color: Colors.transparent),
-          ),
-          Center(
-            child: Container(
-              clipBehavior: Clip.hardEdge,
-              margin: const EdgeInsets.all(24),
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.30,
-                maxHeight: MediaQuery.of(context).size.height * 0.90,
-              ),
-              decoration: BoxDecoration(
-                color: context.colorScheme.elevation1,
-                border: Border.all(color: context.colorScheme.strokeLight),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  _Header(onClose: () => _close(context)),
-                  Flexible(
-                    child: BlocBuilder<OutputStreamViewmodel, OutputStreamState>(
-                      builder:
-                          (BuildContext context, OutputStreamState state) => switch (state) {
-                            OutputStreamInitial() => const SizedBox.shrink(),
-                            OutputStreamLoading() => const Padding(
-                              padding: EdgeInsets.all(48),
-                              child: CircularProgressIndicator(),
-                            ),
-                            OutputStreamError(:final String message) => Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: FusionAppText(text: message),
-                            ),
-                            OutputStreamLoaded() => _LoadedBody(state: state, onSave: onSave, isEditing: isEditing),
-                          },
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.aes67_output_dialog),
+      child: Material(
+        color: Colors.transparent,
+        child: Stack(
+          children: <Widget>[
+            GestureDetector(
+              onTap: () => _close(context),
+              child: Container(color: Colors.transparent),
+            ),
+            Center(
+              child: Container(
+                clipBehavior: Clip.hardEdge,
+                margin: const EdgeInsets.all(24),
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.30,
+                  maxHeight: MediaQuery.of(context).size.height * 0.90,
+                ),
+                decoration: BoxDecoration(
+                  color: context.colorScheme.elevation1,
+                  border: Border.all(color: context.colorScheme.strokeLight),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    _Header(onClose: () => _close(context)),
+                    Flexible(
+                      child: BlocBuilder<OutputStreamViewmodel, OutputStreamState>(
+                        builder:
+                            (BuildContext context, OutputStreamState state) => switch (state) {
+                              OutputStreamInitial() => const SizedBox.shrink(),
+                              OutputStreamLoading() => const Padding(
+                                padding: EdgeInsets.all(48),
+                                child: CircularProgressIndicator(),
+                              ),
+                              OutputStreamError(:final String message) => Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: FusionAppText(text: message),
+                              ),
+                              OutputStreamLoaded() => _LoadedBody(state: state, onSave: onSave, isEditing: isEditing),
+                            },
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -117,37 +121,42 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: context.colorScheme.strokeLight),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: <Widget>[
-          FusionAppText(
-            text: 'AES 67 OUTPUT STREAM',
-            style: context.textTheme.bodySmall?.copyWith(
-              letterSpacing: 1.0,
-              fontWeight: FontWeight.w600,
-              color: context.colorScheme.textPrimary,
-            ),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.aes67_output_dialog_header),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: context.colorScheme.strokeLight),
           ),
-          InkWell(
-            onTap: onClose,
-            customBorder: const CircleBorder(),
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: Icon(
-                LucideIcons.x,
-                size: 18,
-                color: context.colorScheme.iconDefault,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            FusionAppText(
+              semanticId: FusionTestKeys.instance.aes67_output_dialog_header_text,
+              text: 'AES 67 OUTPUT STREAM',
+              style: context.textTheme.bodySmall?.copyWith(
+                letterSpacing: 1.0,
+                fontWeight: FontWeight.w600,
+                color: context.colorScheme.textPrimary,
               ),
             ),
-          ),
-        ],
+            InkWell(
+              onTap: onClose,
+              customBorder: const CircleBorder(),
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: FusionIcon.icon(
+                  semanticId: FusionTestKeys.instance.aes67_output_dialog_header_icon,
+                  LucideIcons.x,
+                  size: 18,
+                  color: context.colorScheme.iconDefault,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -184,13 +193,14 @@ class _LoadedBody extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: <Widget>[
-                    const SizedBox(
+                    SizedBox(
                       width: _labelW,
-                      child: _FieldLabel(text: 'Name'),
+                      child: _FieldLabel(semanticId: FusionTestKeys.instance.aes67_output_dialog_name_field_label, text: 'Name'),
                     ),
                     const SizedBox(width: _gapLabel),
                     Expanded(
                       child: _DarkTextField(
+                        semanticId: FusionTestKeys.instance.aes67_output_dialog_name_field,
                         value: state.name,
                         onChanged: cubit.updateName,
                       ),
@@ -280,10 +290,13 @@ class _ChannelSection extends StatelessWidget {
         // "Name" label
         SizedBox(
           width: labelW,
-          child: const Padding(
+          child: Padding(
             // Vertically centre against the first channel row (≈38px high)
-            padding: EdgeInsets.only(top: 10),
-            child: _FieldLabel(text: 'Name'),
+            padding: const EdgeInsets.only(top: 10),
+            child: _FieldLabel(
+              text: 'Name',
+              semanticId: FusionTestKeys.instance.aes67_output_dialog_channel_label,
+            ),
           ),
         ),
         SizedBox(width: gapLabel),
@@ -294,6 +307,7 @@ class _ChannelSection extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.only(top: 4),
             child: _CountDropdown(
+              semanticId: FusionTestKeys.instance.aes67_output_dialog_channel_count_dropdown,
               value: state.channelCount,
               onChanged: cubit.updateChannelCount,
             ),
@@ -310,6 +324,7 @@ class _ChannelSection extends StatelessWidget {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: _DarkTextField(
+                      semanticId: FusionTestKeys.instance.aes67_output_dialog_channel_name,
                       value: ch.label ?? 'Channel ${ch.channelNumber}',
                       onChanged: (String v) => cubit.updateChannelName(ch.channelNumber, v),
                     ),
@@ -358,18 +373,22 @@ class _AdvancedSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         // ── "Advanced" toggle — right-aligned ────────────────────────
-        Align(
-          alignment: Alignment.centerRight,
-          child: InkWell(
-            onTap: cubit.toggleAdvanced,
-            borderRadius: BorderRadius.circular(6),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              child: FusionAppText(
-                text: 'Advanced',
-                style: context.textTheme.bodySmall?.copyWith(
-                  color: context.colorScheme.textSecondary,
-                  fontWeight: FontWeight.w500,
+        SemanticHelper.button(
+          testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.instance.aes67_output_dialog_advanced_toggle),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: InkWell(
+              onTap: cubit.toggleAdvanced,
+              borderRadius: BorderRadius.circular(6),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                child: FusionAppText(
+                  semanticId: FusionTestKeys.instance.aes67_output_dialog_advanced_toggle_text,
+                  text: 'Advanced',
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: context.colorScheme.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ),
@@ -386,10 +405,12 @@ class _AdvancedSection extends StatelessWidget {
               children: <Widget>[
                 // Session ID
                 _FormRow(
+                  sematicId: FusionTestKeys.instance.aes67_output_dialog_session_id_label,
                   labelW: labelW,
                   gapLabel: gapLabel,
                   label: 'Session ID',
                   child: _DarkTextField(
+                    semanticId: FusionTestKeys.instance.aes67_output_dialog_session_id_field,
                     value: state.sessionId,
                     onChanged: cubit.updateSessionId,
                   ),
@@ -398,10 +419,12 @@ class _AdvancedSection extends StatelessWidget {
 
                 // IP Address
                 _FormRow(
+                  sematicId: FusionTestKeys.instance.aes67_output_dialog_ip_address_label,
                   labelW: labelW,
                   gapLabel: gapLabel,
                   label: 'IP Address',
                   child: _DarkTextField(
+                    semanticId: FusionTestKeys.instance.aes67_output_dialog_ip_address_field,
                     value: state.ipAddress,
                     onChanged: cubit.updateIpAddress,
                   ),
@@ -410,10 +433,12 @@ class _AdvancedSection extends StatelessWidget {
 
                 // Bit Depth
                 _FormRow(
+                  sematicId: FusionTestKeys.instance.aes67_output_dialog_bit_depth_dropdown_label,
                   labelW: labelW,
                   gapLabel: gapLabel,
                   label: 'Bit Depth',
                   child: _DarkDropdown<String>(
+                    semanticId: FusionTestKeys.instance.aes67_output_dialog_bit_depth_dropdown,
                     value: state.bitDepth,
                     hint: '—',
                     items: _bitDepths,
@@ -426,9 +451,11 @@ class _AdvancedSection extends StatelessWidget {
                 // Sample Rate
                 _FormRow(
                   labelW: labelW,
+                  sematicId: FusionTestKeys.instance.aes67_output_dialog_sample_rate_dropdown_label,
                   gapLabel: gapLabel,
                   label: 'Sample Rate',
                   child: _DarkDropdown<String>(
+                    semanticId: FusionTestKeys.instance.aes67_output_dialog_sample_rate_dropdown,
                     value: state.sampleRate,
                     hint: '—',
                     items: _sampleRates,
@@ -440,10 +467,12 @@ class _AdvancedSection extends StatelessWidget {
 
                 // Packet Time
                 _FormRow(
+                  sematicId: FusionTestKeys.instance.aes67_output_dialog_packet_time_dropdown_label,
                   labelW: labelW,
                   gapLabel: gapLabel,
                   label: 'Packet Time',
                   child: _DarkDropdown<String>(
+                    semanticId: FusionTestKeys.instance.aes67_output_dialog_packet_time_dropdown,
                     value: state.packetTime,
                     hint: '—',
                     items: _packetTimes,
@@ -478,52 +507,57 @@ class _Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: context.colorScheme.strokeLight),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.aes67_output_dialog_footer),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(color: context.colorScheme.strokeLight),
+          ),
         ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: <Widget>[
-          // Export SDP Config — outlined
-          OutlinedButton(
-            onPressed: onExport,
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: context.colorScheme.strokeLight),
-              foregroundColor: context.colorScheme.textPrimary,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: FusionAppText(
-              text: 'Export SDP Config',
-              style: context.textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w500,
-                color: context.colorScheme.textPrimary,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            // Export SDP Config — outlined
+            OutlinedButton(
+              onPressed: onExport,
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: context.colorScheme.strokeLight),
+                foregroundColor: context.colorScheme.textPrimary,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: FusionAppText(
+                semanticId: FusionTestKeys.instance.aes67_output_dialog_export_sdp_button,
+                text: 'Export SDP Config',
+                style: context.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: context.colorScheme.textPrimary,
+                ),
               ),
             ),
-          ),
 
-          // Save/Edit — filled
-          ElevatedButton(
-            onPressed: onSave,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: context.colorScheme.textPrimary,
-              foregroundColor: context.colorScheme.primaryBlack,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: FusionAppText(
-              text: _buttonText,
-              style: context.textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: context.colorScheme.primaryBlack,
+            // Save/Edit — filled
+            ElevatedButton(
+              onPressed: onSave,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.colorScheme.textPrimary,
+                foregroundColor: context.colorScheme.primaryBlack,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: FusionAppText(
+                semanticId: FusionTestKeys.instance.aes67_output_dialog_save_button,
+                text: _buttonText,
+                style: context.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: context.colorScheme.primaryBlack,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -537,6 +571,7 @@ class _FormRow extends StatelessWidget {
   final double labelW;
   final double gapLabel;
   final String label;
+  final String sematicId;
   final Widget child;
 
   const _FormRow({
@@ -544,6 +579,7 @@ class _FormRow extends StatelessWidget {
     required this.gapLabel,
     required this.label,
     required this.child,
+    required this.sematicId,
   });
 
   @override
@@ -553,7 +589,7 @@ class _FormRow extends StatelessWidget {
       children: <Widget>[
         SizedBox(
           width: labelW,
-          child: _FieldLabel(text: label),
+          child: _FieldLabel(semanticId: sematicId, text: label),
         ),
         SizedBox(width: gapLabel),
         Expanded(child: child),
@@ -566,47 +602,51 @@ class _FormRow extends StatelessWidget {
 
 class _CountDropdown extends StatelessWidget {
   final int value;
+  final String semanticId;
   final ValueChanged<int> onChanged;
 
-  const _CountDropdown({required this.value, required this.onChanged});
+  const _CountDropdown({required this.value, required this.onChanged, required this.semanticId});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation2,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: context.colorScheme.strokeLight),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<int>(
-          value: value,
-          isDense: true,
-          isExpanded: true,
-          dropdownColor: context.colorScheme.elevation2,
-          icon: const SizedBox.shrink(), // no chevron — space is tight
-          style: context.textTheme.bodySmall?.copyWith(
-            color: context.colorScheme.textPrimary,
-            fontWeight: FontWeight.w500,
-          ),
-          items:
-              List<int>.generate(8, (int i) => i + 1)
-                  .map(
-                    (int n) => DropdownMenuItem<int>(
-                      value: n,
-                      child: FusionAppText(
-                        text: n.toString(),
-                        style: context.textTheme.bodySmall?.copyWith(
-                          color: context.colorScheme.textPrimary,
+    return SemanticHelper.dropdown(
+      testId: SemanticHelper.createTestId(SemanticTypes.dropdown, semanticId),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: context.colorScheme.elevation2,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: context.colorScheme.strokeLight),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<int>(
+            value: value,
+            isDense: true,
+            isExpanded: true,
+            dropdownColor: context.colorScheme.elevation2,
+            icon: const SizedBox.shrink(), // no chevron — space is tight
+            style: context.textTheme.bodySmall?.copyWith(
+              color: context.colorScheme.textPrimary,
+              fontWeight: FontWeight.w500,
+            ),
+            items:
+                List<int>.generate(8, (int i) => i + 1)
+                    .map(
+                      (int n) => DropdownMenuItem<int>(
+                        value: n,
+                        child: FusionAppText(
+                          text: n.toString(),
+                          style: context.textTheme.bodySmall?.copyWith(
+                            color: context.colorScheme.textPrimary,
+                          ),
                         ),
                       ),
-                    ),
-                  )
-                  .toList(),
-          onChanged: (int? v) {
-            if (v != null) onChanged(v);
-          },
+                    )
+                    .toList(),
+            onChanged: (int? v) {
+              if (v != null) onChanged(v);
+            },
+          ),
         ),
       ),
     );
@@ -617,11 +657,13 @@ class _CountDropdown extends StatelessWidget {
 
 class _FieldLabel extends StatelessWidget {
   final String text;
-  const _FieldLabel({required this.text});
+  final String semanticId;
+  const _FieldLabel({required this.text, required this.semanticId});
 
   @override
   Widget build(BuildContext context) {
     return FusionAppText(
+      semanticId: semanticId,
       text: text,
       style: context.textTheme.bodySmall?.copyWith(
         fontWeight: FontWeight.w400,
@@ -633,9 +675,10 @@ class _FieldLabel extends StatelessWidget {
 
 class _DarkTextField extends StatefulWidget {
   final String value;
+  final String semanticId;
   final ValueChanged<String> onChanged;
 
-  const _DarkTextField({required this.value, required this.onChanged});
+  const _DarkTextField({required this.value, required this.onChanged, required this.semanticId});
 
   @override
   State<_DarkTextField> createState() => _DarkTextFieldState();
@@ -666,29 +709,32 @@ class _DarkTextFieldState extends State<_DarkTextField> {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      controller: _ctrl,
-      onChanged: widget.onChanged,
-      style: context.textTheme.bodySmall?.copyWith(
-        color: context.colorScheme.textPrimary,
-        fontWeight: FontWeight.w400,
-      ),
-      decoration: InputDecoration(
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        filled: true,
-        fillColor: context.colorScheme.elevation2,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: context.colorScheme.strokeLight),
+    return SemanticHelper.textInput(
+      testId: SemanticHelper.createTestId(SemanticTypes.textInput, widget.semanticId),
+      child: TextField(
+        controller: _ctrl,
+        onChanged: widget.onChanged,
+        style: context.textTheme.bodySmall?.copyWith(
+          color: context.colorScheme.textPrimary,
+          fontWeight: FontWeight.w400,
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: context.colorScheme.strokeLight),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: context.colorScheme.primaryColor),
+        decoration: InputDecoration(
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          filled: true,
+          fillColor: context.colorScheme.elevation2,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: context.colorScheme.strokeLight),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: context.colorScheme.strokeLight),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: context.colorScheme.primaryColor),
+          ),
         ),
       ),
     );
@@ -698,6 +744,7 @@ class _DarkTextFieldState extends State<_DarkTextField> {
 class _DarkDropdown<T> extends StatelessWidget {
   final T? value;
   final String hint;
+  final String semanticId;
   final List<T> items;
   final String Function(T) labelBuilder;
   final ValueChanged<T?> onChanged;
@@ -708,52 +755,56 @@ class _DarkDropdown<T> extends StatelessWidget {
     required this.items,
     required this.labelBuilder,
     required this.onChanged,
+    required this.semanticId,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation2,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: context.colorScheme.strokeLight),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<T>(
-          value: value,
-          hint: FusionAppText(
-            text: hint,
-            style: context.textTheme.bodySmall?.copyWith(
+    return SemanticHelper.dropdown(
+      testId: SemanticHelper.createTestId(SemanticTypes.dropdown, semanticId),
+      child: Container(
+        decoration: BoxDecoration(
+          color: context.colorScheme.elevation2,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: context.colorScheme.strokeLight),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<T>(
+            value: value,
+            hint: FusionAppText(
+              text: hint,
+              style: context.textTheme.bodySmall?.copyWith(
+                color: context.colorScheme.textSecondary,
+              ),
+            ),
+            isDense: true,
+            isExpanded: true,
+            dropdownColor: context.colorScheme.elevation2,
+            icon: Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 16,
               color: context.colorScheme.textSecondary,
             ),
-          ),
-          isDense: true,
-          isExpanded: true,
-          dropdownColor: context.colorScheme.elevation2,
-          icon: Icon(
-            Icons.keyboard_arrow_down_rounded,
-            size: 16,
-            color: context.colorScheme.textSecondary,
-          ),
-          style: context.textTheme.bodySmall?.copyWith(
-            color: context.colorScheme.textPrimary,
-          ),
-          items:
-              items
-                  .map(
-                    (T item) => DropdownMenuItem<T>(
-                      value: item,
-                      child: FusionAppText(
-                        text: labelBuilder(item),
-                        style: context.textTheme.bodySmall?.copyWith(
-                          color: context.colorScheme.textPrimary,
+            style: context.textTheme.bodySmall?.copyWith(
+              color: context.colorScheme.textPrimary,
+            ),
+            items:
+                items
+                    .map(
+                      (T item) => DropdownMenuItem<T>(
+                        value: item,
+                        child: FusionAppText(
+                          text: labelBuilder(item),
+                          style: context.textTheme.bodySmall?.copyWith(
+                            color: context.colorScheme.textPrimary,
+                          ),
                         ),
                       ),
-                    ),
-                  )
-                  .toList(),
-          onChanged: onChanged,
+                    )
+                    .toList(),
+            onChanged: onChanged,
+          ),
         ),
       ),
     );

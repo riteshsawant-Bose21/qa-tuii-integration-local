@@ -7,6 +7,7 @@ class FusionTableColumn {
   final int flex; // Ensure this is int flex, not double width
   final bool sortable;
   final Alignment alignment;
+  final String? semanticId;
 
   const FusionTableColumn({
     required this.key,
@@ -14,6 +15,7 @@ class FusionTableColumn {
     this.flex = 1,
     this.sortable = true,
     this.alignment = Alignment.centerLeft,
+    this.semanticId,
   });
 }
 
@@ -31,6 +33,7 @@ class FusionTableRow {
   final Function(String)? onDrop;
   final Function(String)? onWillAccept;
   final bool isDragTarget;
+  final String? semanticId;
 
   const FusionTableRow({
     required this.key,
@@ -40,6 +43,7 @@ class FusionTableRow {
     this.onWillAccept,
     this.onDrop,
     this.isDragTarget = false,
+    this.semanticId,
   });
 }
 
@@ -113,69 +117,83 @@ class _FusionTableState extends State<FusionTable> {
     return SemanticHelper.table(
       testId: SemanticHelper.createTestId(
         SemanticTypes.section,
-        "fusion_table${widget.semanticId ?? ''}",
+        "fusion_table_${widget.semanticId ?? ''}",
       ),
       value: widget.columns.map((col) => col.key).join(', '),
       child: Column(
         children: <Widget>[
           // HEADER
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: context.colorScheme.strokeLight),
-              ),
+          SemanticHelper.table(
+            testId: SemanticHelper.createTestId(
+              SemanticTypes.section,
+              "fusion_table_header_${widget.semanticId ?? ''}",
             ),
-            child: Row(
-              children: widget.columns.map((FusionTableColumn column) {
-                // FLEX HEADER
-                return Expanded(
-                  flex: column.flex,
-                  child: Align(
-                    alignment: column.alignment,
-                    child: InkWell(
-                      onTap: column.sortable ? () => _onSort(column.key) : null,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Flexible(
-                            child: FusionAppText(
-                              text: column.header.toUpperCase(),
-                              maxLine: 1,
-                              textOverflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: context.colorScheme.textSecondary,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: context.colorScheme.strokeLight),
+                ),
+              ),
+              child: Row(
+                children: widget.columns.map((FusionTableColumn column) {
+                  // FLEX HEADER
+                  return Expanded(
+                    flex: column.flex,
+                    child: Align(
+                      alignment: column.alignment,
+                      child: InkWell(
+                        onTap: column.sortable ? () => _onSort(column.key) : null,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Flexible(
+                              child: FusionAppText(
+                                text: column.header.toUpperCase(),
+                                semanticId: column.key,
+                                maxLine: 1,
+                                textOverflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: context.colorScheme.textSecondary,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
-                          ),
-                          if (column.sortable && _sortColumnKey == column.key)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 4),
-                              child: Icon(
-                                _sortAscending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
-                                size: 14,
-                                color: context.colorScheme.primaryColor,
+                            if (column.sortable && _sortColumnKey == column.key)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 4),
+                                child: FusionIcon.icon(
+                                  semanticId: "fusion_table_header_sort_icon_${widget.semanticId ?? ''}",
+                                  _sortAscending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                                  size: 14,
+                                  color: context.colorScheme.primaryColor,
+                                ),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                );
-              }).toList(),
+                  );
+                }).toList(),
+              ),
             ),
           ),
 
           // BODY
           Expanded(
-            child: ListView.builder(
-              controller: _verticalController,
-              itemCount: _sortedRows.length,
-              itemBuilder: (BuildContext context, int index) {
-                return _buildDataRow(_sortedRows[index], index);
-              },
+            child: SemanticHelper.table(
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.section,
+                "fusion_table_body_${widget.semanticId ?? ''}",
+              ),
+              child: ListView.builder(
+                controller: _verticalController,
+                itemCount: _sortedRows.length,
+                itemBuilder: (BuildContext context, int index) {
+                  return _buildDataRow(_sortedRows[index], index);
+                },
+              ),
             ),
           ),
         ],

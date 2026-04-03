@@ -6,6 +6,7 @@ import 'package:fusion_launcher/features/configuration_aes67/view/widgets/output
 import 'package:fusion_launcher/features/configuration_aes67/view/widgets/status_dot.dart';
 import 'package:fusion_launcher/features/configuration_aes67/view/widgets/stream_section.dart';
 import 'package:fusion_launcher/features/configuration_aes67/view/widgets/stream_toggle.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/aes67/configation_aes67.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import '../viewModel/config_aes67_viewmodel.dart';
 import 'widgets/cell_text.dart';
@@ -35,40 +36,50 @@ class _ConfigurationAes67View extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      clipBehavior: Clip.hardEdge,
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation1,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(width: 1, color: context.colorScheme.elevation2),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          /// ── Title bar ──────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: FusionAppText(text: 'AES 67', style: Theme.of(context).textTheme.labelMedium),
-          ),
-
-          Divider(height: 1, color: context.colorScheme.strokeLight),
-
-          /// ── Body ───────────────────────────────────────────────────────
-          Expanded(
-            child: BlocBuilder<ConfigAes67Viewmodel, ConfigAes67State>(
-              builder: (BuildContext context, ConfigAes67State state) {
-                return switch (state) {
-                  ConfigAes67Initial() => const SizedBox.shrink(),
-                  ConfigAes67Loading() => const Center(child: CircularProgressIndicator()),
-                  ConfigAes67Error(:final String message) => Center(
-                    child: FusionAppText(text: 'Error: $message'),
-                  ),
-                  ConfigAes67Loaded() => _buildLoaded(context, state),
-                };
-              },
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.aes67_panel),
+      child: Container(
+        clipBehavior: Clip.hardEdge,
+        decoration: BoxDecoration(
+          color: context.colorScheme.elevation1,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(width: 1, color: context.colorScheme.elevation2),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            /// ── Title bar ──────────────────────────────────────────────────
+            SemanticHelper.container(
+              testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.aes67_panel_header),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: FusionAppText(
+                  semanticId: FusionTestKeys.instance.aes67_panel_header_text,
+                  text: 'AES 67',
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+              ),
             ),
-          ),
-        ],
+
+            Divider(height: 1, color: context.colorScheme.strokeLight),
+
+            /// ── Body ───────────────────────────────────────────────────────
+            Expanded(
+              child: BlocBuilder<ConfigAes67Viewmodel, ConfigAes67State>(
+                builder: (BuildContext context, ConfigAes67State state) {
+                  return switch (state) {
+                    ConfigAes67Initial() => const SizedBox.shrink(),
+                    ConfigAes67Loading() => const Center(child: CircularProgressIndicator()),
+                    ConfigAes67Error(:final String message) => Center(
+                      child: FusionAppText(text: 'Error: $message'),
+                    ),
+                    ConfigAes67Loaded() => _buildLoaded(context, state),
+                  };
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -85,6 +96,7 @@ class _ConfigurationAes67View extends StatelessWidget {
           Row(
             children: <Widget>[
               FusionAppText(
+                semanticId: FusionTestKeys.instance.aes67_clock_leader_label,
                 text: 'Clock Leader',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontSize: 12,
@@ -100,6 +112,7 @@ class _ConfigurationAes67View extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: FusionAppText(
+                  semanticId: FusionTestKeys.instance.aes67_clock_leader_value,
                   text: state.clockLeader,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontSize: 12,
@@ -110,6 +123,7 @@ class _ConfigurationAes67View extends StatelessWidget {
               ),
               const SizedBox(width: 24),
               FusionAppText(
+                semanticId: FusionTestKeys.instance.aes67_status_label,
                 text: 'Status',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontSize: 12,
@@ -127,6 +141,7 @@ class _ConfigurationAes67View extends StatelessWidget {
           // ── Input Streams Section ────────────────────────────────────
           Expanded(
             child: StreamSection(
+              semanticId: FusionTestKeys.instance.aes67_input_section,
               title: 'AES 67 Input Streams',
               addLabel: 'Add Input Stream',
               emptyMessage: 'No input streams configured',
@@ -156,6 +171,7 @@ class _ConfigurationAes67View extends StatelessWidget {
           // ── Output Streams Section ───────────────────────────────────
           Expanded(
             child: StreamSection(
+              semanticId: FusionTestKeys.instance.aes67_output_section,
               title: 'AES 67 Output Streams',
               addLabel: 'Add Output Stream',
               emptyMessage: 'No output streams configured',

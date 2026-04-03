@@ -18,6 +18,7 @@ class CellText extends StatelessWidget {
   Widget build(BuildContext _) {
     final String displayText = text.isEmpty ? '-' : text;
     return FusionAppText(
+      semanticId: 'aes67_cell_text',
       text: displayText,
       maxLine: 1,
       textOverflow: TextOverflow.ellipsis,
