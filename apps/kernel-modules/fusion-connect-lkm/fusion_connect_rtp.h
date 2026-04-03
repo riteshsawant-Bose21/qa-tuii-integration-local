@@ -18,9 +18,9 @@
 #define FUSION_CN_RTP_HASH_BITS 6
 #define FUSION_CN_NAME_MAX 32
 
-#define EARLY_SLACK_NS 50000
+#define EARLY_SLACK_NS 20000
 #define FUSION_CN_RX_QUEUE_DEPTH 256
-#define FUSION_CN_RX_PAYLOAD_MAX_BYTES 2048
+#define FUSION_CN_RX_PAYLOAD_MAX_BYTES (ETH_DATA_LEN - sizeof(struct iphdr) - sizeof(struct udphdr) - sizeof(struct fusion_cn_rtp_header))
 
 struct fusion_cn_substream;
 struct fusion_cn_manager;
@@ -83,10 +83,7 @@ struct fusion_cn_rtp_stream {
     u64 next_action_time;
     u64 *next_action_times;
     u32 playback_slot; 
-    u32 startup_packets_received;
-    bool startup_wait_for_slot0;
     bool playback_armed;
-    u64 phase_log_next_ns;
     u64 packet_time;
     u64 ns_per_sample;
     bool rtp_phc_offset_valid;
@@ -144,7 +141,6 @@ int fusion_cn_rtp_remove_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fu
 bool fusion_cn_rtp_lookup_packet_handle(struct fusion_cn_rtp_manager *rtp_mgr, const struct fusion_cn_rtp_packet *packet, u64 *stream_handle);
 int fusion_cn_rtp_enqueue_packet(struct fusion_cn_rtp_manager *rtp_mgr, u64 stream_handle, const struct fusion_cn_rtp_packet *packet, u32 packet_len);
 void fusion_cn_rtp_drain_rx_queue(struct fusion_cn_rtp_manager *rtp_mgr);
-int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_packet *packet);
 void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_stream *stream, struct fusion_cn_substream *alsa_stream);
 struct fusion_cn_rtp_stream *fusion_cn_rtp_get_stream(struct fusion_cn_rtp_manager *rtp_mgr, u64 handle);
 void fusion_cn_rtp_stream_release(struct kref *kref);

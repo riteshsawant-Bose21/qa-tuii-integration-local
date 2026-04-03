@@ -114,56 +114,47 @@ static bool fusion_cn_get_timing_ready(struct fusion_cn_manager *cn_mgr)
 
 /* helpers: compute how many interrupts are due, and advance state */
 static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, struct fusion_cn_rtp_stream *s, struct fusion_cn_substream *a, u64 tick_ns)
-{ 
+{
     int count = 0;
 
     spin_lock(&s->lock);
     if (s->playback_armed) {
-        // window after the action_time to still include the frame
-        u64 window = 2 * s->packet_time;
-
         // we may want to catch up and playback a bunch of frames, up to buf_size_in_packets worth
         while (count < s->buf_size_in_packets) {
-            
             u32 slot = s->playback_slot;
             u64 action_time = s->next_action_times[slot];
+            s64 delta;
 
-            // Play silence if we're starting with an invalid action time. But don't loop on them
-            s64 delta = action_time ? (s64)tick_ns - (s64)action_time : 0;
-            if (action_time == 0) {
-                if (count == 0) {
-                    if (!a)
-                        break;
-
-                    fusion_cn_alsa_fill_silence(a, slot * s->info.frames_per_packet,
-                                                s->info.frames_per_packet);
-                    count++;
-                    s->next_action_times[slot] = 0;
-                    if (++s->playback_slot >= s->buf_size_in_packets)
-                        s->playback_slot = 0;
-                }
-                break;
+            if (s->next_action_time == 0) {
+                if (action_time == 0)
+                    break;
+                s->next_action_time = action_time;
             }
 
-            // Same thing for late packets
-            if (abs64(delta) > window) {
-                if (count == 0) {
-                    if (!a)
-                        break;
+            delta = action_time ? (s64)tick_ns - (s64)action_time :
+                                  (s64)tick_ns - (s64)s->next_action_time;
 
-                    fusion_cn_alsa_fill_silence(a, slot * s->info.frames_per_packet,
-                                                s->info.frames_per_packet);
-                    count++;
-                    s->next_action_times[slot] = 0;
-                    if (++s->playback_slot >= s->buf_size_in_packets)
-                        s->playback_slot = 0;
-                }
-                break;
-            }
-
-            // If packet is more than a little bit in the future, don't play it yet
+            // Play packets that are up to EARLY_SLACK_NS after tick
             if (delta < 0 && (u64)-(delta) > EARLY_SLACK_NS) {
                 break;
+            }
+
+            // Too old; skip this slot and keep chasing playout cadence.
+            if (delta > s->packet_time) {
+                s->next_action_times[slot] = 0;
+                if (++s->playback_slot >= s->buf_size_in_packets)
+                    s->playback_slot = 0;
+                s->next_action_time += s->packet_time;
+                continue;
+            }
+
+            if (action_time == 0) {
+                if (!a)
+                    break;
+
+                fusion_cn_alsa_fill_silence(a, slot * s->info.frames_per_packet,
+                                            s->info.frames_per_packet);
+                s->next_action_time += s->packet_time;
             }
 
             if (g_fusion_cn_mgr->trace_debug) printk(KERN_DEBUG "fusion_cn: compute_sink: stream %s playback_idx=%u count=%u now=%llu\n", s->info.stream_name, s->playback_slot, count, tick_ns);
@@ -171,7 +162,12 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
             s->next_action_times[slot] = 0;
             if (++s->playback_slot >= s->buf_size_in_packets)
                 s->playback_slot = 0;
+            if (action_time != 0)
+                s->next_action_time += s->packet_time;
             count++;
+
+            if (s->packet_time >= TIMER_BASE_INTERVAL_NS)
+                break;
         }
     }
     spin_unlock(&s->lock);
@@ -1014,13 +1010,10 @@ static int handle_reset_timing_state(struct fusion_cn_manager *mgr,
         spin_lock(&stream->lock);
         stream->next_action_time = 0;
         stream->current_seq_num = 0;
-        stream->phase_log_next_ns = 0;
         if (stream->info.is_source) {
             alsa_stream = stream->stream_node ? stream->stream_node->alsa_stream : NULL;
         } else {
             stream->playback_slot = 0;
-            stream->startup_packets_received = 0;
-            stream->startup_wait_for_slot0 = true;
             stream->playback_armed = false;
             if (stream->next_action_times && stream->buf_size_in_packets)
                 memset(stream->next_action_times, 0,
