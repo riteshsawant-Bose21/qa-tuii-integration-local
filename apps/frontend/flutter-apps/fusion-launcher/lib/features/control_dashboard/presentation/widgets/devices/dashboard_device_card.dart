@@ -1,10 +1,11 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/assets/asset_icons.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/devices/presentation/widgets/live_device_widgets.dart';
+import 'package:fusion_launcher/features/projects/models/device_system_info.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/router/routes.dart';
@@ -64,43 +65,17 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
     return "--";
   }
 
-  bool get isOnline {
-    //Mock logic - In real implementation, this would be based on actual device status
-    // return widget.index != 4;
-    return false;
-  }
+  bool get _showTempAndDisk => widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp");
 
-  String? get alertMsg {
-    //Mock logic - In real implementation, this would be based on actual device alerts
-    // if (widget.index % 5 == 0) {
-    //   return "Open Circuit Fault Channel: 3 , Zone: Reception, Circuit: DM5SE";
-    // } else if (widget.index % 3 == 0) {
-    //   return "High Temperature Warning";
-    // }
-    return null;
-  }
-
-  bool get isCritical {
-    //Mock logic - In real implementation, this would be based on actual alert severity
-    // return widget.index % 5 == 0;
-    return false;
-  }
+  bool get _showCpu => widget.device is FusionDsp || (widget.device is Amplifier && widget.device.hardwareName.startsWith("PSM"));
 
   @override
   Widget build(BuildContext context) {
-    final int temp = Random().nextInt(100);
-    final double cpu = Random().nextDouble();
-    final double disk = Random().nextDouble();
-
     return InkWell(
       onTap: () {
         if (!_isPlayingAnimation) {
           if (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp")) {
-            Navigator.pushNamed(
-              context,
-              Routes.deviceDetails,
-              arguments: widget.device.id,
-            );
+            Navigator.pushNamed(context, Routes.deviceDetails, arguments: widget.device.id);
           }
         }
       },
@@ -109,312 +84,209 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
         decoration: BoxDecoration(
           color: context.colorScheme.elevation2,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color:
-                (alertMsg != null && !_isPlayingAnimation)
-                    ? isCritical
-                        ? context.colorScheme.errorStroke
-                        : context.colorScheme.warningStroke
-                    : context.colorScheme.elevation3,
-          ),
+          border: Border.all(color: context.colorScheme.elevation3),
         ),
-        child: Column(
-          children: <Widget>[
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Padding(
-                    // PADDING: 12.0 horizontal (Matches Header's effective padding)
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12.0,
-                      vertical: 12.0,
-                    ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
+            child: Row(
+              children: <Widget>[
+                // 1. Device Info
+                Expanded(
+                  flex: 6,
+                  child: Row(
+                    children: <Widget>[
+                      Container(
+                        width: 50,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: context.colorScheme.primaryWhite,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        child: Stack(
+                          children: <Widget>[
+                            Center(child: FusionImage.asset(widget.device.assetImagePath)),
+                            Positioned(
+                              left: 4,
+                              top: 4,
+                              child: LiveStatusDot(deviceId: widget.device.id),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            FusionAppText(
+                              text: widget.device.name,
+                              style: context.textTheme.labelMedium,
+                              textOverflow: TextOverflow.ellipsis,
+                              maxLine: 1,
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: <Widget>[
+                                Flexible(
+                                  child: FusionAppText(
+                                    text: widget.device.hardwareName,
+                                    style: context.textTheme.labelSmall!.copyWith(color: context.colorScheme.textPrimary, fontSize: 11),
+                                    textOverflow: TextOverflow.ellipsis,
+                                    maxLine: 1,
+                                  ),
+                                ),
+                                //small separator dot
+                                Container(
+                                  width: 4,
+                                  height: 4,
+                                  margin: const EdgeInsets.symmetric(horizontal: 6),
+                                  decoration: BoxDecoration(color: context.colorScheme.textSecondary, shape: BoxShape.circle),
+                                ),
+                                Expanded(
+                                  child: FusionAppText(
+                                    text: location,
+                                    style: context.textTheme.labelSmall!.copyWith(color: context.colorScheme.textPrimary, fontSize: 11),
+                                    textOverflow: TextOverflow.ellipsis,
+                                    maxLine: 1,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                if (_isPlayingAnimation) ...<Widget>[
+                  Expanded(
+                    flex: 6,
                     child: Row(
                       children: <Widget>[
-                        // 1. Device Info (FLEX 5 - MATCHES HEADER)
                         Expanded(
-                          flex: 6,
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              Container(
-                                width: 50,
-                                height: 30,
-                                decoration: BoxDecoration(
-                                  color: context.colorScheme.primaryWhite,
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                                child: Stack(
-                                  children: <Widget>[
-                                    // Placeholder for device icon - In real implementation, this would be an actual image/icon based on device type
-                                    Center(
-                                      child: FusionImage.asset(
-                                        widget.device.assetImagePath,
-                                      ),
-                                    ),
-
-                                    Positioned(
-                                      left: 4,
-                                      top: 4,
-                                      child: Container(
-                                        width: 6,
-                                        height: 6,
-                                        decoration: BoxDecoration(
-                                          color: isOnline ? context.colorScheme.green : context.colorScheme.error,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    FusionAppText(
-                                      text: widget.device.name,
-                                      style: context.textTheme.labelMedium,
-                                      textOverflow: TextOverflow.ellipsis,
-                                      maxLine: 1,
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Row(
-                                      children: <Widget>[
-                                        Flexible(
-                                          child: FusionAppText(
-                                            text: widget.device.hardwareName,
-                                            style: context.textTheme.labelSmall!.copyWith(
-                                              color: context.colorScheme.textPrimary,
-                                              fontSize: 11,
-                                            ),
-                                            textOverflow: TextOverflow.ellipsis,
-                                            maxLine: 1,
-                                          ),
-                                        ),
-                                        //small separator dot
-                                        Container(
-                                          width: 4,
-                                          height: 4,
-                                          margin: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: context.colorScheme.textSecondary,
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: FusionAppText(
-                                            text: location,
-                                            style: context.textTheme.labelSmall!.copyWith(
-                                              color: context.colorScheme.textPrimary,
-                                              fontSize: 11,
-                                            ),
-                                            textOverflow: TextOverflow.ellipsis,
-                                            maxLine: 1,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              FusionAppText(text: _loadingTitle, style: context.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 4),
+                              FusionAppText(text: _loadingMessage, style: context.textTheme.labelSmall?.copyWith(color: context.colorScheme.textSecondary)),
                             ],
                           ),
                         ),
+                        const SizedBox(width: 16),
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                        ),
+                        const SizedBox(width: 24),
+                      ],
+                    ),
+                  ),
+                ] else ...<Widget>[
+                  // 2. Temperature — only this tiny widget rebuilds
+                  Expanded(
+                    flex: 2,
+                    child:
+                        _showTempAndDisk
+                            ? LiveDeviceMetric(
+                              deviceId: widget.device.id,
+                              builder: (DeviceSystemInfo? info, bool online) {
+                                if (!online) return buildDash();
+                                return Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: CompactThermostatWidget(temperature: info?.temperature.round() ?? 0, maxTemperature: 100),
+                                );
+                              },
+                            )
+                            : buildDash(),
+                  ),
 
-                        if (_isPlayingAnimation) ...<Widget>[
-                          Expanded(
-                            flex: 6,
-                            child: Row(
-                              children: <Widget>[
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      FusionAppText(
-                                        text: _loadingTitle,
-                                        style: context.textTheme.labelMedium?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      FusionAppText(
-                                        text: _loadingMessage,
-                                        style: context.textTheme.labelSmall?.copyWith(
-                                          color: context.colorScheme.textSecondary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 24),
-                              ],
-                            ),
-                          ),
-                        ] else ...<Widget>[
-                          // 2. Metrics (FLEX 2 EACH - MATCHES HEADER)
-                          Expanded(
-                            flex: 2,
-                            child:
-                                (isOnline && (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp")))
-                                    ? Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: CompactThermostatWidget(
-                                        temperature: temp,
-                                        maxTemperature: 100,
-                                      ),
-                                    )
-                                    : _buildDash(),
-                          ),
+                  // 3. Disk usage
+                  Expanded(
+                    flex: 2,
+                    child:
+                        _showTempAndDisk
+                            ? LiveDeviceMetric(
+                              deviceId: widget.device.id,
+                              builder: (DeviceSystemInfo? info, bool online) {
+                                if (!online) return buildDash();
+                                final double disk = info?.emmc ?? 0;
+                                return Row(
+                                  children: <Widget>[
+                                    GaugeWidget(value: disk, size: const Size(24, 24)),
+                                    const SizedBox(width: 6),
+                                    FusionAppText(text: "${disk.toInt()}%", style: context.textTheme.labelMedium),
+                                  ],
+                                );
+                              },
+                            )
+                            : buildDash(),
+                  ),
 
-                          Expanded(
-                            flex: 2,
-                            child:
-                                (isOnline && (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp")))
-                                    ? Row(
-                                      children: <Widget>[
-                                        GaugeWidget(
-                                          value: 100 * disk,
-                                          size: const Size(24, 24),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        FusionAppText(
-                                          text: "${(disk * 100).toInt()}%",
-                                          style: context.textTheme.labelMedium,
-                                        ),
-                                      ],
-                                    )
-                                    : _buildDash(),
-                          ),
+                  // 4. CPU usage
+                  Expanded(
+                    flex: 2,
+                    child:
+                        _showCpu
+                            ? LiveDeviceMetric(
+                              deviceId: widget.device.id,
+                              builder: (DeviceSystemInfo? info, bool online) {
+                                if (!online) return buildDash();
+                                final double cpu = info?.ram ?? 0;
+                                return Row(
+                                  children: <Widget>[
+                                    DiskUsageWidget(value: cpu, size: const Size(24, 24)),
+                                    const SizedBox(width: 6),
+                                    FusionAppText(text: "${cpu.toInt()}%", style: context.textTheme.labelMedium),
+                                  ],
+                                );
+                              },
+                            )
+                            : buildDash(),
+                  ),
 
-                          Expanded(
-                            flex: 2,
-                            child:
-                                (isOnline && (widget.device is FusionDsp || (widget.device is Amplifier && widget.device.hardwareName.startsWith("PSM"))))
-                                    ? Row(
-                                      children: <Widget>[
-                                        DiskUsageWidget(
-                                          value: 100 * cpu,
-                                          size: const Size(24, 24),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        FusionAppText(
-                                          text: "${(cpu * 100).toInt()}%",
-                                          style: context.textTheme.labelMedium,
-                                        ),
-                                      ],
-                                    )
-                                    : _buildDash(),
+                  // 5. Controls
+                  Expanded(
+                    flex: 2,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: <Widget>[
+                        if (widget.device is! FusionDsp &&
+                            (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp"))) ...<Widget>[
+                          FusionNeumorphicButton(
+                            semanticId: 'standby_button',
+                            width: 26,
+                            height: 26,
+                            borderRadius: 6,
+                            color: context.colorScheme.elevation2,
+                            enabled: false,
+                            onTap: () => _showStandbyConfirmation(context),
+                            child: FusionImage.asset(AssetIcons.standbyIcon, height: 12, width: 12, assetColor: context.colorScheme.iconWhite),
                           ),
-
-                          // 3. Controls (FLEX 2 - MATCHES HEADER)
-                          Expanded(
-                            flex: 2,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: <Widget>[
-                                if (widget.device is! FusionDsp &&
-                                    (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp"))) ...<Widget>[
-                                  FusionNeumorphicButton(
-                                    semanticId: 'standby_button',
-                                    width: 26,
-                                    height: 26,
-                                    borderRadius: 6,
-                                    color: context.colorScheme.elevation2,
-                                    enabled: false,
-                                    onTap: () {
-                                      _showStandbyConfirmation(context);
-                                    },
-                                    child: FusionImage.asset(
-                                      AssetIcons.standbyIcon,
-                                      height: 12,
-                                      width: 12,
-                                      assetColor: context.colorScheme.iconWhite,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                ],
-
-                                if (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp"))
-                                  FusionNeumorphicButton(
-                                    semanticId: 'restart_button',
-                                    width: 26,
-                                    height: 26,
-                                    borderRadius: 6,
-                                    enabled: false,
-                                    color: context.colorScheme.elevation2,
-                                    onTap: () {
-                                      _showRestartConfirmation(context);
-                                    },
-                                    child: FusionImage.asset(
-                                      AssetIcons.rebootIcon,
-                                      height: 12,
-                                      width: 12,
-                                      assetColor: context.colorScheme.iconWhite,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
+                          const SizedBox(width: 10),
                         ],
+                        if (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp"))
+                          FusionNeumorphicButton(
+                            semanticId: 'restart_button',
+                            width: 26,
+                            height: 26,
+                            borderRadius: 6,
+                            enabled: false,
+                            color: context.colorScheme.elevation2,
+                            onTap: () => _showRestartConfirmation(context),
+                            child: FusionImage.asset(AssetIcons.rebootIcon, height: 12, width: 12, assetColor: context.colorScheme.iconWhite),
+                          ),
                       ],
                     ),
                   ),
                 ],
-              ),
+              ],
             ),
-            // Alert Banner code remains same...
-            if (alertMsg != null && !_isPlayingAnimation)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: isCritical ? context.colorScheme.errorFill : context.colorScheme.warningFill,
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(6),
-                    bottomRight: Radius.circular(6),
-                  ),
-                ),
-                child: Row(
-                  children: <Widget>[
-                    Icon(
-                      isCritical ? Icons.error_outline : Icons.warning_amber_rounded,
-                      color: isCritical ? context.colorScheme.errorText : context.colorScheme.warningText,
-                      size: 14,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: FusionAppText(
-                        text: alertMsg!,
-                        style: context.textTheme.labelSmall!.copyWith(
-                          color: isCritical ? context.colorScheme.errorText : context.colorScheme.warningText,
-                        ),
-                        textOverflow: TextOverflow.ellipsis,
-                        maxLine: 1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
+          ),
         ),
       ),
     );
@@ -427,10 +299,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
           (BuildContext context) => FusionConfirmationPopup(
             title: 'STANDBY',
             description: 'Do you want to set ${widget.device.name} device to standby ?',
-            onConfirm: () {
-              // TODO: Implement actual standby logic
-              _startLoadingState('Please wait...', 'Device going standby');
-            },
+            onConfirm: () => _startLoadingState('Please wait...', 'Device going standby'),
           ),
     );
   }
@@ -442,10 +311,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
           (BuildContext context) => FusionConfirmationPopup(
             title: 'RESTART',
             description: 'Do you want to restart ${widget.device.name} device?',
-            onConfirm: () {
-              // TODO: Implement actual restart logic
-              _startLoadingState('Please wait...', 'Device restarting');
-            },
+            onConfirm: () => _startLoadingState('Please wait...', 'Device restarting'),
           ),
     );
   }
@@ -456,24 +322,9 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
       _loadingTitle = title;
       _loadingMessage = message;
     });
-
     _timer?.cancel();
     _timer = Timer(const Duration(seconds: 3), () {
-      if (mounted) {
-        setState(() {
-          _isPlayingAnimation = false;
-        });
-      }
+      if (mounted) setState(() => _isPlayingAnimation = false);
     });
   }
 }
-
-Widget _buildDash() => const Align(
-  alignment: Alignment.centerLeft,
-  child: Text(
-    "-",
-    style: TextStyle(
-      color: Colors.grey,
-    ),
-  ),
-);

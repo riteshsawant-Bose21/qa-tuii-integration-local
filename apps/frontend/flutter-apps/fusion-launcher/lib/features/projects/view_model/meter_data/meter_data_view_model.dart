@@ -7,6 +7,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../models/device_system_info.dart';
 import '../../models/meter_data.dart';
 
 part 'meter_data_vm_state.dart';
@@ -245,17 +246,26 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
       final MeterPacket packet = MeterPacket.fromMap(
         message.data as Map<String, dynamic>,
       );
+
       final Map<String, MeterPacket> updatedPackets = Map<String, MeterPacket>.from(state.packets)..[packet.name] = packet;
 
-      final Map<String, MeterBlock> updatedMeterValues = <String, MeterBlock>{};
+      final Map<String, MeterBlock> updatedMeterValues = Map<String, MeterBlock>.from(state.meterValues ?? <String, MeterBlock>{});
       for (final MeterBlock block in packet.blocks) {
         updatedMeterValues[block.blockName] = block;
+      }
+
+      // Extract per-device system info from fusion_system_monitor packets.
+      Map<String, DeviceSystemInfo>? updatedSystemInfo;
+      if (packet.name == 'fusion_system_monitor' && packet.deviceId.isNotEmpty) {
+        updatedSystemInfo = Map<String, DeviceSystemInfo>.from(state.deviceSystemInfo);
+        updatedSystemInfo[packet.deviceId] = _parseSystemInfo(packet);
       }
 
       emit(
         state.copyWith(
           packets: updatedPackets,
           meterValues: updatedMeterValues,
+          deviceSystemInfo: updatedSystemInfo,
           isConnected: true,
           clearInactiveReason: true,
         ),
@@ -263,6 +273,37 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
     } catch (e) {
       debugPrint('[MeterData] Parse error: $e');
     }
+  }
+
+  /// Extracts [DeviceSystemInfo] from a `fusion_system_monitor` [MeterPacket].
+  DeviceSystemInfo _parseSystemInfo(MeterPacket packet) {
+    double emmc = 0;
+    double ram = 0;
+    double temperature = 0;
+    double usbStorage = 0;
+
+    for (final MeterBlock block in packet.blocks) {
+      if (block.blockName != 'system_info') continue;
+      final double val = block.value.isNotEmpty ? block.value.first : 0;
+      switch (block.meterName) {
+        case 'emmc':
+          emmc = val;
+        case 'ram':
+          ram = val;
+        case 'temperature':
+          temperature = val;
+        case 'usb_storage':
+          usbStorage = val;
+      }
+    }
+
+    return DeviceSystemInfo(
+      emmc: emmc,
+      ram: ram,
+      temperature: temperature,
+      usbStorage: usbStorage,
+      updatedAt: DateTime.now(),
+    );
   }
 
   // ── heartbeat (stale-connection detection) ─────────────────────────────────
