@@ -233,6 +233,72 @@ func (s *FusionServer) BroadcastMessage(message *api.NotifyMessage) error {
 			// Send to topic-based subscribers
 			return s.BroadcastToTopic(handler.TopicDeviceUpdates, updateMessage)
 		}
+	case api.NotifyOpSoftwareUpdateProgress:
+		if message.SoftwareUpdateProgressAll == nil && message.SoftwareUpdateProgress == nil {
+			return nil
+		}
+		// Build a per-node map of formatted progress responses
+		nodesProgress := make(map[string]api.SoftwareUpdateProgressResponse)
+		if message.SoftwareUpdateProgressAll != nil {
+			for nodeName, p := range message.SoftwareUpdateProgressAll {
+				nodesProgress[nodeName] = api.SoftwareUpdateProgressResponse{
+					UpdateState:  p.Status.String(),
+					Step:         fmt.Sprintf("%d/%d", p.CurStep, p.NSteps),
+					CurrentTask:  p.CurImage,
+					Progress:     fmt.Sprintf("%d", p.CurPercent),
+					Node:         p.NodeName,
+					Handler:      p.HndName,
+					Timestamp:    p.Timestamp.Format(time.RFC3339),
+					SerialNumber: p.SerialNumber,
+				}
+			}
+		} else {
+			// Fallback: single node (e.g. local-only, no cluster)
+			p := message.SoftwareUpdateProgress
+			nodesProgress[p.NodeName] = api.SoftwareUpdateProgressResponse{
+				UpdateState:  p.Status.String(),
+				Step:         fmt.Sprintf("%d/%d", p.CurStep, p.NSteps),
+				CurrentTask:  p.CurImage,
+				Progress:     fmt.Sprintf("%d", p.CurPercent),
+				Node:         p.NodeName,
+				Handler:      p.HndName,
+				Timestamp:    p.Timestamp.Format(time.RFC3339),
+				SerialNumber: p.SerialNumber,
+			}
+		}
+		var progressData interface{} = nodesProgress
+		broadcastMessage := &api.WebSocketResponse{
+			ID:        nil,
+			Version:   api.WSCurrentVersion,
+			Type:      api.WSMsgTypeUpdateProgress,
+			Code:      api.WSCodeDeviceUpdated,
+			Status:    api.WSStatusEvent,
+			Message:   fmt.Sprintf("System notification: %s", message.Operation),
+			Data:      progressData,
+			Timestamp: time.Now(),
+		}
+		s.wsLock.RLock()
+		clients := make([]*websocket.Conn, 0, len(s.wsClients))
+		for conn := range s.wsClients {
+			clients = append(clients, conn)
+		}
+		s.wsLock.RUnlock()
+		var failedConnections []*websocket.Conn
+		for _, conn := range clients {
+			if err := s.safeWriteJSON(conn, broadcastMessage); err != nil {
+				logging.GetLogger().Error("Error broadcasting progress to WebSocket client: %v", err)
+				failedConnections = append(failedConnections, conn)
+			}
+		}
+		if len(failedConnections) > 0 {
+			s.wsLock.Lock()
+			for _, conn := range failedConnections {
+				delete(s.wsClients, conn)
+				delete(s.wsWriteMutex, conn)
+				conn.Close()
+			}
+			s.wsLock.Unlock()
+		}
 	default:
 		// For other message types, wrap in WebSocketResponse format for consistency
 		broadcastMessage := &api.WebSocketResponse{

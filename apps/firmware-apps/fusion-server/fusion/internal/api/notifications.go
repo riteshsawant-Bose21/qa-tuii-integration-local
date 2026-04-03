@@ -31,24 +31,27 @@ const (
 	NotifyOpSoftwareUpdateAvailable   NotifyOp = "software_update_available"
 	NotifyOpSoftwareUpdateSyncAck     NotifyOp = "software_update_sync_ack"
 	NotifyOpSoftwareUpdate            NotifyOp = "software_update"
+	NotifyOpSoftwareUpdateProgress    NotifyOp = "software_update_progress"
 )
 
 // NotifyMessage holds information about a cross-node message
 type NotifyMessage struct {
-	ID                string   `json:"id"`
-	Operation         NotifyOp `json:"operation"`
-	Node              string
-	SentAt            time.Time
-	AudioRemove       *AudioRemoveUpdate
-	AudioSync         *AudioSyncUpdate
-	ConfigUpdate      *ConfigUpdate
-	ConfigValue       *ConfigValue
-	DeviceInfo        *DeviceInfo
-	SoftwareUpdate    *SoftwareUpdateSync
-	SoftwareUpdateAck *SoftwareUpdateSyncAck
-	SnapshotOperation *SnapshotOperation
-	Task              *Task
-	VersionUpdate     *VersionUpdate
+	ID                        string   `json:"id"`
+	Operation                 NotifyOp `json:"operation"`
+	Node                      string
+	SentAt                    time.Time
+	AudioRemove               *AudioRemoveUpdate
+	AudioSync                 *AudioSyncUpdate
+	ConfigUpdate              *ConfigUpdate
+	ConfigValue               *ConfigValue
+	DeviceInfo                *DeviceInfo
+	SoftwareUpdate            *SoftwareUpdateSync
+	SoftwareUpdateAck         *SoftwareUpdateSyncAck
+	SoftwareUpdateProgress    *SoftwareUpdateProgress
+	SoftwareUpdateProgressAll map[string]*SoftwareUpdateProgress // aggregated progress from all nodes
+	SnapshotOperation         *SnapshotOperation
+	Task                      *Task
+	VersionUpdate             *VersionUpdate
 }
 
 func NewNotifyMessage(op NotifyOp, node string, builder func(*NotifyMessage)) *NotifyMessage {

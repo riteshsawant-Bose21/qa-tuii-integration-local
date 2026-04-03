@@ -277,6 +277,10 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 	case api.NotifyOpSoftwareUpdateSyncAck:
 		d.handleSoftwareUpdateSyncAck(&message)
 
+	case api.NotifyOpSoftwareUpdateProgress:
+		logger.Debug("[Delegate] Processing NotifyOpSoftwareUpdateProgress from node %s", message.Node)
+		d.handleSoftwareUpdateProgress(&message)
+
 	default:
 		logger.Error("Unknown message type: %q", message.Operation)
 	}
@@ -510,6 +514,32 @@ func (d *ClusterDelegate) handleSoftwareUpdateSyncAck(message *api.NotifyMessage
 		d.handler.HandleSyncAck(message.Node, message.SoftwareUpdateAck)
 	} else {
 		logger.Warn("[SoftwareUpdateSyncAck] No sync handler configured - ignoring acknowledgment")
+	}
+}
+
+// handleSoftwareUpdateProgress processes software update progress messages
+func (d *ClusterDelegate) handleSoftwareUpdateProgress(message *api.NotifyMessage) {
+	logger := logging.GetLogger()
+
+	if message.SoftwareUpdateProgress == nil {
+		logger.Error("SoftwareUpdateProgress message with nil payload from %s", message.Node)
+		return
+	}
+
+	logger.Debug("[SoftwareUpdateProgress] Received progress from %s: %s %d%% (step %d/%d)",
+		message.Node,
+		message.SoftwareUpdateProgress.Status,
+		message.SoftwareUpdateProgress.CurPercent,
+		message.SoftwareUpdateProgress.CurStep,
+		message.SoftwareUpdateProgress.NSteps)
+
+	// Forward to Hub for aggregation and WebSocket broadcasting
+	if d.hub != nil {
+		if err := d.hub.BroadcastToNodes(message); err != nil {
+			logger.Error("Failed to forward progress message to Hub: %v", err)
+		}
+	} else {
+		logger.Warn("[SoftwareUpdateProgress] No Hub configured - ignoring progress message")
 	}
 }
 

@@ -127,7 +127,7 @@ Once software update files are uploaded and distributed across the cluster, they
   "id": "sw-update-001",
   "version": 1,
   "type": "start_update",
-  "code": 3020,
+  "code": 3005,
   "status": "success", 
   "message": "Software update broadcasted to all cluster nodes",
   "data": {
@@ -175,9 +175,71 @@ curl -X POST http://localhost:9090/cluster/software-update
 
 | Code | Category | Description |
 |------|----------|-------------|
-| `3020` | Success | Software update started successfully |
+| `3005` | Success | Software update started successfully |
 | `4500` | Error | Failed to coordinate software update |
 | `5000` | Server Error | Internal coordination error |
+
+### Real-Time Progress Push
+
+Once a software update starts, the server broadcasts real-time progress events to **all connected WebSocket clients** automatically. No subscription is required. Each push message contains a snapshot of the current progress for **every cluster node** in a single message.
+
+**Message type**: `update_progress`  
+**Code**: `3004` (shared event push code)
+
+```json
+{
+  "id": null,
+  "version": 1,
+  "type": "update_progress",
+  "code": 3004,
+  "status": "event",
+  "message": "System notification: software_update_progress",
+  "data": {
+    "node-1": {
+      "update_state": "IN_PROGRESS",
+      "step": "2/4",
+      "current_task": "rootfs.ext4",
+      "progress": "65",
+      "node": "node-1",
+      "handler": "raw",
+      "timestamp": "2026-04-01T10:16:05Z",
+      "serial_number": "0123456789abcdef"
+    },
+    "node-2": {
+      "update_state": "SUCCESS",
+      "step": "4/4",
+      "current_task": "rootfs.ext4",
+      "progress": "100",
+      "node": "node-2",
+      "handler": "raw",
+      "timestamp": "2026-04-01T10:16:42Z",
+      "serial_number": "fedcba9876543210"
+    }
+  },
+  "timestamp": "2026-04-01T10:16:45Z"
+}
+```
+
+The `data` field is a `map[string]object` keyed by **node name**. Each value contains:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `update_state` | string | Current status: `IDLE`, `STARTING`, `IN_PROGRESS`, `SUCCESS`, `FAILED`, `DOWNLOADING`, `COMPLETED`, `SUBPROCESS`, `PROGRESS`, `UNKNOWN` |
+| `step` | string | Current step as `"current/total"` (e.g. `"2/4"`) |
+| `current_task` | string | Active swupdate image name |
+| `progress` | string | Percent complete for the current step |
+| `node` | string | Node name |
+| `handler` | string | swupdate handler (e.g. `"raw"`, `"shellscript"`) |
+| `timestamp` | string | RFC3339 timestamp of the event |
+| `serial_number` | string | Node serial number |
+
+**Progress flow** (gossip integration):
+
+1. swupdate daemon writes progress to unix socket `/tmp/swupdateprog` on each node
+2. Hub reads the socket and stores progress keyed by node name
+3. Gossip relays progress from follower nodes to the VIP hub
+4. Hub aggregates all nodes' progress into a single `NotifyMessage`
+5. VIP broadcasts the aggregated `update_progress` push to all WebSocket clients
 
 ## Usage Examples
 
@@ -410,6 +472,41 @@ FUSION_TEST_NODES=192.168.2.100:8080 \
 go test -v ./test -run TestSoftwareUpdateDownload
 ```
 
+### WebSocket Software Update Tests
+
+WebSocket-based software update tests (trigger and progress) are also available:
+
+**Trigger via WebSocket (expects code `3005`)**:
+```bash
+FUSION_TEST_VIP=192.168.2.100:8080 \
+go test -v ./test -run TestSoftwareUpdateTriggerViaWebSocket
+```
+
+**Invalid type error handling (expects code `4002`)**:
+```bash
+FUSION_TEST_VIP=192.168.2.100:8080 \
+go test -v ./test -run TestSoftwareUpdateTriggerUnknownType
+```
+
+**Progress push after trigger** (requires `/tmp/swupdateprog` socket — real device only):
+```bash
+FUSION_TEST_VIP=192.168.2.100:8080 \
+FUSION_SWUPDATE_TEST=1 \
+go test -v ./test -run TestSoftwareUpdateProgressReceivedAfterTrigger
+```
+
+**Progress message format validation** (requires `/tmp/swupdateprog` socket — real device only):
+```bash
+FUSION_TEST_VIP=192.168.2.100:8080 \
+FUSION_SWUPDATE_TEST=1 \
+go test -v ./test -run TestSoftwareUpdateProgressMessageFormat
+```
+
+> **Note**: Tests that read the swupdate progress socket (`/tmp/swupdateprog`) check for the
+> `FUSION_SWUPDATE_TEST=1` environment variable and **skip automatically** if it is not set.
+> This keeps the test suite safe to run in Multipass or CI environments where the swupdate daemon
+> is not present. Set `FUSION_SWUPDATE_TEST=1` only when running against a real device.
+
 ### Test Coverage
 
 The integration test suite validates:
@@ -423,6 +520,8 @@ The integration test suite validates:
 - **Storage Integration**: Persistent storage in `/mnt/ota` with atomic operations
 - **Cluster Synchronization**: Sync tracking and completion waiting across cluster members
 - **Error Handling**: Comprehensive HTTP status code mapping and error responses
+- **WebSocket Trigger**: `start_update` via WebSocket with correct code `3005` response
+- **WebSocket Progress Push**: Validates aggregated `update_progress` message format (all nodes, per-field types)
 
 ### Testing Against Local Server
 

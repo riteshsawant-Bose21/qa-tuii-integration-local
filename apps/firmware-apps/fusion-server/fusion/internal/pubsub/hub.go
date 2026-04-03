@@ -1,12 +1,14 @@
 package pubsub
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/cluster/transport"
 	"fusion/internal/persistence"
+	"sync"
 )
 
 type Broadcaster interface {
@@ -20,12 +22,19 @@ type Hub struct {
 	stateManager *persistence.StateManager
 	persistence  *persistence.Persistence
 	transport    transport.ClusterInterface
+
+	// SWUpdate progress monitoring
+	swUpdateMutex    sync.RWMutex
+	swUpdateActive   bool
+	swUpdateCancel   context.CancelFunc
+	swUpdateProgress map[string]*api.SoftwareUpdateProgress // node_name -> latest progress
 }
 
 func NewHub(stateManager *persistence.StateManager, persistence *persistence.Persistence) *Hub {
 	return &Hub{
-		stateManager: stateManager,
-		persistence:  persistence,
+		stateManager:     stateManager,
+		persistence:      persistence,
+		swUpdateProgress: make(map[string]*api.SoftwareUpdateProgress),
 	}
 }
 
@@ -146,6 +155,25 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 
 	case api.NotifyOpSoftwareUpdate:
 		logger.Info("[Hub] Broadcasting software update trigger")
+		// Start progress monitoring when software update begins
+		if h.transport != nil && h.transport.LocalNode() != nil && message.Node == h.transport.LocalNode().Name {
+			h.startSWUpdateProgressMonitoring()
+		}
+
+	case api.NotifyOpSoftwareUpdateProgress:
+		if message.SoftwareUpdateProgress == nil {
+			return fmt.Errorf("SoftwareUpdateProgress required for progress operation")
+		}
+		logger.Debug("[Hub] Processing software update progress from %s: %s %d%% (step %d/%d)",
+			message.SoftwareUpdateProgress.NodeName,
+			message.SoftwareUpdateProgress.Status,
+			message.SoftwareUpdateProgress.CurPercent,
+			message.SoftwareUpdateProgress.CurStep,
+			message.SoftwareUpdateProgress.NSteps)
+
+		// Store and attach full aggregated map so observers get all nodes in one push
+		h.updateSWProgress(message.SoftwareUpdateProgress)
+		message.SoftwareUpdateProgressAll = h.getAggregatedProgress()
 
 	case api.NotifyOpSoftwareUpdateAvailable:
 		if message.SoftwareUpdate == nil {
