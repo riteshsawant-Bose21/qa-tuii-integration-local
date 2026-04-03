@@ -124,21 +124,40 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
 
         // we may want to catch up and playback a bunch of frames, up to buf_size_in_packets worth
         while (count < s->buf_size_in_packets) {
+            
             u32 slot = s->playback_slot;
             u64 action_time = s->next_action_times[slot];
-            s64 delta;
 
-            delta = action_time ? (s64)tick_ns - (s64)action_time : 0;
-            if (action_time == 0 || abs64(delta) > window) {
-                if (!a)
-                    break;
+            // Play silence if we're starting with an invalid action time. But don't loop on them
+            s64 delta = action_time ? (s64)tick_ns - (s64)action_time : 0;
+            if (action_time == 0) {
+                if (count == 0) {
+                    if (!a)
+                        break;
 
-                fusion_cn_alsa_fill_silence(a, slot * s->info.frames_per_packet,
-                                            s->info.frames_per_packet);
-                count++;
-                s->next_action_times[slot] = 0;
-                if (++s->playback_slot >= s->buf_size_in_packets)
-                    s->playback_slot = 0;
+                    fusion_cn_alsa_fill_silence(a, slot * s->info.frames_per_packet,
+                                                s->info.frames_per_packet);
+                    count++;
+                    s->next_action_times[slot] = 0;
+                    if (++s->playback_slot >= s->buf_size_in_packets)
+                        s->playback_slot = 0;
+                }
+                break;
+            }
+
+            // Same thing for late packets
+            if (abs64(delta) > window) {
+                if (count == 0) {
+                    if (!a)
+                        break;
+
+                    fusion_cn_alsa_fill_silence(a, slot * s->info.frames_per_packet,
+                                                s->info.frames_per_packet);
+                    count++;
+                    s->next_action_times[slot] = 0;
+                    if (++s->playback_slot >= s->buf_size_in_packets)
+                        s->playback_slot = 0;
+                }
                 break;
             }
 
@@ -805,10 +824,6 @@ static int handle_remove_stream(struct fusion_cn_manager *mgr,
     reply->err = remove_stream(mgr, handle, stream_name, rtp_stream, alsa_stream);
 
     /* Drop temp refs from find/get stream() */
-    kref_put(&alsa_stream->ref, fusion_cn_alsa_substream_release);
-    kref_put(&rtp_stream->ref, fusion_cn_rtp_stream_release);
-
-    /* Drop temp refs from handle_add_stream */
     kref_put(&alsa_stream->ref, fusion_cn_alsa_substream_release);
     kref_put(&rtp_stream->ref, fusion_cn_rtp_stream_release);
 

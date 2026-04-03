@@ -25,7 +25,8 @@
 static bool fusion_cn_rtp_is_ip_mcast(u32 ip);
 static int fusion_cn_rtp_process_resolved_packet(struct fusion_cn_rtp_manager *rtp_mgr, u64 handle,
                                                  u16 seq_num, u32 rtp_timestamp, u32 packet_ssrc,
-                                                 u8 payload_type, const u8 *payload, u32 payload_len);
+                                                 u8 payload_type, const u8 *payload, u32 payload_len,
+                                                 u64 rx_phc_ns);
 static int fusion_cn_rtp_process_rx_packet(struct fusion_cn_rtp_manager *rtp_mgr,
                                            const struct fusion_cn_rx_packet *rx);
 
@@ -73,13 +74,6 @@ bool fusion_cn_rtp_lookup_packet_handle(struct fusion_cn_rtp_manager *rtp_mgr,
     return found;
 }
 
-bool fusion_cn_rtp_packet_is_ours(struct fusion_cn_rtp_manager *rtp_mgr, const struct fusion_cn_rtp_packet *packet)
-{
-    u64 stream_handle;
-
-    return fusion_cn_rtp_lookup_packet_handle(rtp_mgr, packet, &stream_handle);
-}
-
 int fusion_cn_rtp_enqueue_packet(struct fusion_cn_rtp_manager *rtp_mgr, u64 stream_handle,
                                const struct fusion_cn_rtp_packet *packet, u32 packet_len)
 {
@@ -109,6 +103,7 @@ int fusion_cn_rtp_enqueue_packet(struct fusion_cn_rtp_manager *rtp_mgr, u64 stre
 
     entry = &rtp_mgr->rx_queue[rtp_mgr->rx_queue_head];
     entry->stream_handle = stream_handle;
+    entry->rx_phc_ns = rtp_mgr->ops->get_phc_ns();
     entry->timestamp = be32_to_cpu(packet->rtp.timestamp);
     entry->ssrc = be32_to_cpu(packet->rtp.ssrc);
     entry->seq_num = be16_to_cpu(packet->rtp.seq_num);
@@ -543,7 +538,8 @@ struct fusion_cn_rtp_stream *fusion_cn_rtp_get_stream(struct fusion_cn_rtp_manag
 
 static int fusion_cn_rtp_process_resolved_packet(struct fusion_cn_rtp_manager *rtp_mgr, u64 handle,
                                                  u16 seq_num, u32 rtp_timestamp, u32 packet_ssrc,
-                                                 u8 payload_type, const u8 *payload, u32 payload_len)
+                                                 u8 payload_type, const u8 *payload, u32 payload_len,
+                                                 u64 rx_phc_ns)
 {
     struct fusion_cn_rtp_stream *stream;
     struct fusion_cn_substream *alsa_stream;
@@ -675,18 +671,6 @@ static int fusion_cn_rtp_process_resolved_packet(struct fusion_cn_rtp_manager *r
             stream->next_action_times[write_slot] = sched_playout_ns;
             stream->current_seq_num = seq_num;
 
-            if (stream->playback_armed) {
-                u32 lead_slots = (write_slot + stream->buf_size_in_packets - stream->playback_slot) %
-                                 stream->buf_size_in_packets;
-                if (lead_slots == 0) {
-                    printk(KERN_DEBUG
-                           "fusion_cn_rtp: sink phase %s seq=%u write_slot=%u playback_slot=%u lead_slots=%u now=%llu playout=%llu\n",
-                           stream->info.stream_name, seq_num, write_slot,
-                           stream->playback_slot, lead_slots,
-                           current_phc_ns, sched_playout_ns);
-                }
-            }
-
             if (!stream->playback_armed) {
                 if (stream->startup_wait_for_slot0) {
                     if (write_slot == 0) {
@@ -733,8 +717,21 @@ static int fusion_cn_rtp_process_resolved_packet(struct fusion_cn_rtp_manager *r
             if (late)
                 metrics_flags |= FUSION_CN_PKTF_LATE;
 
+            {
+                u64 metrics_rx_ns = rx_phc_ns ? rx_phc_ns : current_phc_ns;
+                s64 path_latency_ns = (s64)metrics_rx_ns - (s64)reconstructed_phc_ns;
+
+                if (path_latency_ns > 250000) {
+                    printk(KERN_DEBUG
+                           "fusion_cn_rtp: path latency stream=%s seq=%u path=%lldns rx=%llu reconstructed=%llu playout=%llu\n",
+                           stream->info.stream_name, seq_num,
+                           (long long)path_latency_ns,
+                           metrics_rx_ns, reconstructed_phc_ns, sched_playout_ns);
+                }
+            }
+
             fusion_cn_metrics_rx_stash(stream->metrics,
-                                       seq_num, rtp_timestamp, current_phc_ns,
+                                       seq_num, rtp_timestamp, rx_phc_ns ? rx_phc_ns : current_phc_ns,
                                        payload_len, metrics_flags,
                                        reconstructed_phc_ns, sched_playout_ns);
 
@@ -756,7 +753,8 @@ static int fusion_cn_rtp_process_rx_packet(struct fusion_cn_rtp_manager *rtp_mgr
 
     return fusion_cn_rtp_process_resolved_packet(rtp_mgr, rx->stream_handle,
                                                  rx->seq_num, rx->timestamp, rx->ssrc,
-                                                 rx->payload_type, rx->payload, rx->payload_len);
+                                                 rx->payload_type, rx->payload, rx->payload_len,
+                                                 rx->rx_phc_ns);
 }
 
 int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
@@ -783,7 +781,8 @@ int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
                                                  be32_to_cpu(packet->rtp.timestamp),
                                                  be32_to_cpu(packet->rtp.ssrc),
                                                  packet->rtp.payload_type,
-                                                 (const u8 *)packet + sizeof(*packet), payload_len);
+                                                 (const u8 *)packet + sizeof(*packet), payload_len,
+                                                 rtp_mgr->ops->get_phc_ns());
 }
 
 static inline void fc_tx_metrics_note(struct fusion_cn_rtp_manager *rtp_mgr,

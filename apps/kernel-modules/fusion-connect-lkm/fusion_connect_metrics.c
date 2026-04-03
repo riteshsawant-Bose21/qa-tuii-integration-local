@@ -175,17 +175,25 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
             last_rtp_ts_valid = true;
         }
 
-        /* ---- path/e2e latencies (clamped to u32) ---- */
+        /* ---- path latency (clamped to u32) ---- */
         {
             s64 path = (s64)s.arrival_phc_ns - (s64)s.recon_phc_ns;
             if (path < 0) path = 0;
             if (path > (s64)U32_MAX) path = (s64)U32_MAX;
             w->path_latency_est_ns = (u32)path;
-
-            s64 e2e = (s64)s.sched_ns - (s64)s.recon_phc_ns;
-            if (e2e < 0) e2e = 0;
-            if (e2e > (s64)U32_MAX) e2e = (s64)U32_MAX;
-            w->e2e_playout_latency_ns = (u32)e2e;
+            if (!w->path_latency_min_ns || (u32)path < w->path_latency_min_ns)
+                w->path_latency_min_ns = (u32)path;
+            if ((u32)path > w->path_latency_max_ns)
+                w->path_latency_max_ns = (u32)path;
+            if (!w->path_latency_p50_ns)
+                w->path_latency_p50_ns = (u32)path;
+            if (!w->path_latency_p99_ns)
+                w->path_latency_p99_ns = (u32)path;
+            w->path_latency_p50_ns += ((s32)(u32)path - (s32)w->path_latency_p50_ns) >> EWMA_P50_SHIFT;
+            if ((u32)path > w->path_latency_p99_ns)
+                w->path_latency_p99_ns += ((u32)path - w->path_latency_p99_ns) >> EWMA_P99_UP;
+            else
+                w->path_latency_p99_ns -= (w->path_latency_p99_ns - (u32)path) >> EWMA_P99_DOWN;
         }
 
         w->last_arrival_ns = s.arrival_phc_ns;
@@ -243,7 +251,10 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
         m->snap.tx_bytes_total   = tx_bytes;
 
         m->snap.path_latency_est_ns    = w->path_latency_est_ns;
-        m->snap.e2e_playout_latency_ns = w->e2e_playout_latency_ns;
+        m->snap.path_latency_min_ns    = w->path_latency_min_ns;
+        m->snap.path_latency_max_ns    = w->path_latency_max_ns;
+        m->snap.path_latency_p50_ns    = w->path_latency_p50_ns;
+        m->snap.path_latency_p99_ns    = w->path_latency_p99_ns;
     }
 
     /* === 3) JB depth stats (samples) === */
@@ -262,6 +273,13 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
     m->snap.jb_depth_max_samples = w->jb_depth_max_samples;
     m->snap.jb_depth_avg_samples =
         w->jb_depth_count ? (u32)(w->jb_depth_sum_samples / w->jb_depth_count) : 0;
+
+    /* Reset per-snapshot path-latency stats */
+    w->path_latency_est_ns = 0;
+    w->path_latency_min_ns = 0;
+    w->path_latency_max_ns = 0;
+    w->path_latency_p50_ns = 0;
+    w->path_latency_p99_ns = 0;
 
     /* === 4) Final snapshot timestamp === */
     m->snap.ts_snapshot_ns = fusion_cn_get_phc_ns();

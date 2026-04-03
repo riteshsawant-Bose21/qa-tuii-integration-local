@@ -114,7 +114,8 @@ struct fusion_cn_metrics_snapshot
     uint32_t jb_depth_cur_samples, jb_depth_min_samples, jb_depth_max_samples, jb_depth_avg_samples;
     uint32_t resync_count;
 
-    uint32_t path_latency_est_ns, e2e_playout_latency_ns;
+    uint32_t path_latency_est_ns, path_latency_min_ns, path_latency_max_ns;
+    uint32_t path_latency_p50_ns, path_latency_p99_ns;
 
     /* TX */
     uint64_t tx_packets_total;
@@ -1008,6 +1009,7 @@ bool FusionConnectClient::process_audio_streams_update() {
     }
 
     std::set<std::string> json_stream_names;
+    bool needs_retry = false;
 
     // --- Process each stream ---------------------------------------------------
     for (const auto& stream : root) {
@@ -1115,16 +1117,12 @@ bool FusionConnectClient::process_audio_streams_update() {
                 // Role invariants: TX must set source_ip=local, dest_ip=peer
                 config.source_ip = local_ip_be;
 
-                // Resolve peer (dest device) IP (no default to local)
-                uint32_t dest_ip = 0;
-                for (int retry = 0; retry < 100 && (dest_ip == 0 || dest_ip == INADDR_NONE); ++retry) {
-                    dest_ip = ip_to_be32(query_device_ip(dest_device_uid, system_ip));
-                    if (dest_ip == 0 || dest_ip == INADDR_NONE) usleep(500000);
-                }
-                config.dest_ip = dest_ip;
+                // Resolve peer (dest device) IP once; outer audio update retry owns retries.
+                config.dest_ip = ip_to_be32(query_device_ip(dest_device_uid, system_ip));
 
                 if (config.dest_ip == 0 || config.dest_ip == INADDR_NONE) {
                     SPDLOG_ERROR("Failed to resolve destination IP for {}", config.stream_name);
+                    needs_retry = true;
                 } else if (!fusion_connect_stream_map.count(config.stream_name)) {
                     fusion_connect_stream_map[config.stream_name] = config;
                     pending_streams[config.stream_name].state = STREAM_CREATE_PENDING;
@@ -1142,16 +1140,12 @@ bool FusionConnectClient::process_audio_streams_update() {
                 // Role invariants: RX must set dest_ip=local, source_ip=peer
                 sink_cfg.dest_ip = local_ip_be;
 
-                // Resolve peer (source device) IP (no default to local)
-                uint32_t src_ip = 0;
-                for (int retry = 0; retry < 100 && (src_ip == 0 || src_ip == INADDR_NONE); ++retry) {
-                    src_ip = ip_to_be32(query_device_ip(source_device_uid, system_ip));
-                    if (src_ip == 0 || src_ip == INADDR_NONE) usleep(500000);
-                }
-                sink_cfg.source_ip = src_ip;
+                // Resolve peer (source device) IP once; outer audio update retry owns retries.
+                sink_cfg.source_ip = ip_to_be32(query_device_ip(source_device_uid, system_ip));
 
                 if (sink_cfg.source_ip == 0 || sink_cfg.source_ip == INADDR_NONE) {
                     SPDLOG_ERROR("Failed to resolve source IP for {}", sink_cfg.stream_name);
+                    needs_retry = true;
                 } else if (!fusion_connect_stream_map.count(sink_cfg.stream_name)) {
                     fusion_connect_stream_map[sink_cfg.stream_name] = sink_cfg;
                     pending_streams[sink_cfg.stream_name].state = STREAM_CREATE_PENDING;
@@ -1255,6 +1249,11 @@ bool FusionConnectClient::process_audio_streams_update() {
         } else {
             ++it;
         }
+    }
+
+    if (needs_retry) {
+        SPDLOG_DEBUG("Deferring audio_streams_update until peer device discovery is available");
+        return false;
     }
 
     return true;
@@ -1682,16 +1681,17 @@ void FusionConnectClient::process() {
                         "pkts={} bytes={} lost={} reo={} dup={} malf={} late_drop={} burst_max={} batch_max={} "
                         "iat_min={}us p50={}us p99={}us jitter={}us "
                         "jb: cur={} min={} max={} avg={} "
-                        "lat: path={}ns e2e_playout={}ns ",
+                        "lat: path={}ns min={}ns max={}ns p50={}ns p99={}ns ",
                         r.stream_name, s.ts_snapshot_ns,
                         s.packets_total, s.bytes_total,
                         s.packets_lost, s.packets_reordered,
                         s.packets_dup, s.malformed_count, 
-                        s.late_drop_count, s.burst_loss_max,
+                        s.late_drop_count, s.burst_loss_max, s.batch_max,
                         s.iat_min_ns / 1000, s.iat_p50_ns / 1000, s.iat_p99_ns / 1000, s.rfc3550_jitter_ns / 1000,
                         s.jb_depth_cur_samples, s.jb_depth_min_samples,
                         s.jb_depth_max_samples, s.jb_depth_avg_samples,
-                        s.path_latency_est_ns, s.e2e_playout_latency_ns
+                        s.path_latency_est_ns, s.path_latency_min_ns, s.path_latency_max_ns,
+                        s.path_latency_p50_ns, s.path_latency_p99_ns
                     );
                 }
             }

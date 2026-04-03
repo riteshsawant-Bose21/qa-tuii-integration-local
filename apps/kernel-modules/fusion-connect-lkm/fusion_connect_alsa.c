@@ -101,13 +101,11 @@ void fusion_cn_alsa_substream_release(struct kref *kref)
     struct fusion_cn_substream *s =
         container_of(kref, struct fusion_cn_substream, ref);
 
-    /* Free PCM only if it’s not open and not attached to a live substream */
-    if (s->pcm && atomic_read(&s->open_count) == 0 && !s->substream) {
-        struct snd_card *card = s->pcm->card;
-        struct snd_pcm  *pcm  = s->pcm;
-        s->pcm = NULL;
-        snd_device_free(card, pcm);  /* non-GPL */
-    }
+    /*
+     * PCM device lifetime is owned by ALSA disconnect/card teardown, not by
+     * the close path for an individual substream.
+     */
+    s->pcm = NULL;
 
     printk(KERN_DEBUG "fusion_cn_alsa: substream_release: release stream %s\n", s->stream_name);
 
@@ -289,6 +287,7 @@ static int fusion_cn_pcm_fill_silence(struct snd_pcm_substream *substream,
 int fusion_cn_alsa_remove_substream(struct fusion_cn_substream *stream)
 {
     struct fusion_cn_chip *chip;
+    struct snd_pcm_substream *ss = NULL;
     unsigned long flags;
 
     if (!stream)
@@ -296,17 +295,18 @@ int fusion_cn_alsa_remove_substream(struct fusion_cn_substream *stream)
 
     chip = platform_get_drvdata(g_pdev);
 
-    // Mark disconnected and force ALSA state change if still open
     spin_lock_irqsave(&stream->lock, flags);
-    if (stream->substream) {
-        atomic_set(&stream->disconnected, 1);
-        // Force wake of any blocking I/O on this substream
-        snd_pcm_stop(stream->substream, SNDRV_PCM_STATE_DISCONNECTED);
-        /* DO NOT clear stream->substream here; ALSA still owns it until close */
-    }
+    atomic_set(&stream->disconnected, 1);
+    ss = stream->substream;
+    stream->pending_free = true;
     spin_unlock_irqrestore(&stream->lock, flags);
 
-    // unlink from hash and free device index
+    if (ss)
+        snd_pcm_stop(ss, SNDRV_PCM_STATE_DISCONNECTED);
+
+    if (stream->pcm)
+        snd_device_disconnect(stream->pcm->card, stream->pcm);
+
     if (chip) {
         write_lock_irqsave(&chip->lock, flags);
         if (!hlist_unhashed(&stream->hnode))
@@ -315,19 +315,6 @@ int fusion_cn_alsa_remove_substream(struct fusion_cn_substream *stream)
         write_unlock_irqrestore(&chip->lock, flags);
     }
 
-    // If not open anymore, unregister now; otherwise defer
-    if (atomic_read(&stream->open_count) == 0 && !stream->substream) {
-        if (stream->pcm) {
-            struct snd_card *card = stream->pcm->card;
-            struct snd_pcm  *pcm  = stream->pcm;
-            stream->pcm = NULL;
-            snd_device_free(card, pcm);
-        }
-    } else {
-        stream->pending_free = true;
-    }
-
-    // remove ref taken in add_substream
     kref_put(&stream->ref, fusion_cn_alsa_substream_release);
 
     printk(KERN_DEBUG "fusion_cn_alsa: remove_substream: Stream %s removed, device=%d%s\n",
@@ -472,16 +459,7 @@ static int fusion_cn_pcm_close(struct snd_pcm_substream *substream)
     }
     spin_unlock_irqrestore(&stream->lock, flags);
 
-    if (atomic_dec_and_test(&stream->open_count)) {
-        if (stream->pending_free && stream->pcm) {
-            struct snd_card *card = stream->pcm->card;
-            struct snd_pcm  *pcm  = stream->pcm;
-            stream->pcm = NULL;
-            snd_device_free(card, pcm);
-        }
-    }
-
-    atomic_set(&stream->disconnected, 0);
+    atomic_dec(&stream->open_count);
     kref_put(&stream->ref, fusion_cn_alsa_substream_release);
 
     printk(KERN_DEBUG "fusion_cn_alsa: pcm_close: Closed stream %s\n", stream->stream_name);
@@ -778,6 +756,7 @@ clr_hnode:
     hlist_del(&stream->hnode);
     write_unlock_irqrestore(&chip->lock, flags);
 stream_free:
+    stream->pcm = NULL;
     kref_put(&stream->ref, fusion_cn_alsa_substream_release);
 dev_free:
     snd_device_free(chip->card, pcm);
@@ -851,41 +830,32 @@ static void fusion_cn_chip_remove(struct platform_device *pdev)
     /* Block new user opens early */
     snd_card_disconnect(card);
 
-    /* Collect & unlink under lock (no sleeping ops inside) */
+    /* Collect & unlink under lock only */
     write_lock_irqsave(&chip->lock, flags);
     for (i = 0; i < (1 << FUSION_CN_ALSA_HASH_BITS); i++) {
         struct hlist_node *tmp;
         struct fusion_cn_substream *stream;
         hlist_for_each_entry_safe(stream, tmp, &chip->streams[i], hnode) {
-            if (chip->alsa_ops && chip->alsa_ops->stop_interrupts)
-                chip->alsa_ops->stop_interrupts(chip->fusion_cn_mgr, stream->stream_handle);
-
-            if (stream->substream)
-                snd_pcm_stop(stream->substream, SNDRV_PCM_STATE_DISCONNECTED);
-
             hlist_del_init(&stream->hnode);
             clear_bit(stream->stream_index, chip->stream_indices);
-
+            atomic_set(&stream->disconnected, 1);
+            stream->pending_free = true;
             to_free[n++] = stream;
         }
     }
     write_unlock_irqrestore(&chip->lock, flags);
 
-    /* Now sleepable frees without holding chip->lock */
+    /* Now sleepable teardown without holding chip->lock */
     for (i = 0; i < n; i++) {
         struct fusion_cn_substream *s = to_free[i];
+        struct snd_pcm_substream *ss;
 
-        if (s->pcm) {
-            /* If it isn’t open, free now; otherwise let .close do it (pending_free) */
-            if (atomic_read(&s->open_count) == 0 && !s->substream) {
-                struct snd_card *c = s->pcm->card;
-                struct snd_pcm  *p = s->pcm;
-                s->pcm = NULL;
-                snd_device_free(c, p);    /* non-GPL */
-            } else {
-                s->pending_free = true;
-            }
-        }
+        if (chip->alsa_ops && chip->alsa_ops->stop_interrupts)
+            chip->alsa_ops->stop_interrupts(chip->fusion_cn_mgr, s->stream_handle);
+
+        ss = READ_ONCE(s->substream);
+        if (ss)
+            snd_pcm_stop(ss, SNDRV_PCM_STATE_DISCONNECTED);
 
         kref_put(&s->ref, fusion_cn_alsa_substream_release);
     }
