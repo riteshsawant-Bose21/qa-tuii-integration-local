@@ -76,7 +76,7 @@ enum cal_state {
 	CAL_FAIL,
 };
 
-#define CAL_CONFIG_VERSION 2U
+#define CAL_CONFIG_VERSION 3U
 #define CAL_CONFIG_PATH "/var/lib/fusion/fusion-gpt-calibration.conf"
 
 #define CAL_ENABLE true
@@ -92,6 +92,9 @@ enum cal_state {
 #define CAL_DEFAULT_PRE_E0_SAMPLES 3U
 #define CAL_DEFAULT_PRE_E0_ABS_MAX 1000U
 #define CAL_DEFAULT_PRE_E0_MAX_WAIT 12U
+#define CAL_DEFAULT_VERIFY_GAIN_DELTA_MAX 10000U
+#define CAL_DEFAULT_VERIFY_DAC_DELTA_MAX 4U
+#define CAL_DEFAULT_VERIFY_E0_DELTA_MAX 20U
 
 #define CAL_LOCK_CONSECUTIVE 5U
 
@@ -107,6 +110,7 @@ struct fusion_gpt_cal_config {
 	s32 k1_q16;
 	s32 k2_q16;
 	s32 k3_q16;
+	s32 cal_saved_e0;
 	u32 si_gain_start;
 	u32 cal_gain_delta;
 	u32 cal_dac_delta;
@@ -119,7 +123,13 @@ struct fusion_gpt_cal_config {
 	u32 cal_pre_e0_samples;
 	u32 cal_pre_e0_abs_max;
 	u32 cal_pre_e0_max_wait;
+	u32 cal_saved_center_gain;
+	u32 cal_verify_gain_delta_max;
+	u32 cal_verify_dac_delta_max;
+	u32 cal_verify_e0_delta_max;
+	int cal_saved_center_dac;
 	bool coeffs_valid;
+	bool fingerprint_valid;
 };
 
 struct fusion_gpt
@@ -215,6 +225,7 @@ static DEFINE_MUTEX(gpt_singleton_lock);
 static int si5351b_write_gain(struct fusion_gpt *g, u32 gain);
 static struct fusion_gpt *fusion_gpt_get_locked(void);
 static void fusion_gpt_put_locked(struct fusion_gpt *g);
+static void cal_prepare_points(struct fusion_gpt *g);
 
 static void cal_config_set_defaults(struct fusion_gpt_cal_config *cfg)
 {
@@ -231,6 +242,9 @@ static void cal_config_set_defaults(struct fusion_gpt_cal_config *cfg)
 	cfg->cal_pre_e0_samples = CAL_DEFAULT_PRE_E0_SAMPLES;
 	cfg->cal_pre_e0_abs_max = CAL_DEFAULT_PRE_E0_ABS_MAX;
 	cfg->cal_pre_e0_max_wait = CAL_DEFAULT_PRE_E0_MAX_WAIT;
+	cfg->cal_verify_gain_delta_max = CAL_DEFAULT_VERIFY_GAIN_DELTA_MAX;
+	cfg->cal_verify_dac_delta_max = CAL_DEFAULT_VERIFY_DAC_DELTA_MAX;
+	cfg->cal_verify_e0_delta_max = CAL_DEFAULT_VERIFY_E0_DELTA_MAX;
 }
 
 static int cal_parse_config_buf(char *buf, struct fusion_gpt_cal_config *cfg)
@@ -243,6 +257,9 @@ static int cal_parse_config_buf(char *buf, struct fusion_gpt_cal_config *cfg)
 	bool have_settle_pps = false, have_measure_pps = false, have_fit_residual = false;
 	bool have_inverse_gain_step = false, have_jump_dac_min = false, have_jump_dac_max = false;
 	bool have_pre_e0_samples = false, have_pre_e0_abs_max = false, have_pre_e0_max_wait = false;
+	bool have_saved_center_gain = false, have_saved_center_dac = false, have_saved_e0 = false;
+	bool have_verify_gain_delta_max = false, have_verify_dac_delta_max = false;
+	bool have_verify_e0_delta_max = false;
 	int tmp_int;
 	unsigned int tmp_u32;
 
@@ -298,21 +315,42 @@ static int cal_parse_config_buf(char *buf, struct fusion_gpt_cal_config *cfg)
 		} else if (sscanf(line, "cal_pre_e0_max_wait=%u", &tmp_u32) == 1) {
 			cfg->cal_pre_e0_max_wait = tmp_u32;
 			have_pre_e0_max_wait = true;
+		} else if (sscanf(line, "cal_saved_center_gain=%u", &tmp_u32) == 1) {
+			cfg->cal_saved_center_gain = tmp_u32;
+			have_saved_center_gain = true;
+		} else if (sscanf(line, "cal_saved_center_dac=%d", &tmp_int) == 1) {
+			cfg->cal_saved_center_dac = tmp_int;
+			have_saved_center_dac = true;
+		} else if (sscanf(line, "cal_saved_e0=%d", &tmp_int) == 1) {
+			cfg->cal_saved_e0 = (s32)tmp_int;
+			have_saved_e0 = true;
+		} else if (sscanf(line, "cal_verify_gain_delta_max=%u", &tmp_u32) == 1) {
+			cfg->cal_verify_gain_delta_max = tmp_u32;
+			have_verify_gain_delta_max = true;
+		} else if (sscanf(line, "cal_verify_dac_delta_max=%u", &tmp_u32) == 1) {
+			cfg->cal_verify_dac_delta_max = tmp_u32;
+			have_verify_dac_delta_max = true;
+		} else if (sscanf(line, "cal_verify_e0_delta_max=%u", &tmp_u32) == 1) {
+			cfg->cal_verify_e0_delta_max = tmp_u32;
+			have_verify_e0_delta_max = true;
 		}
 	}
 
-	if (!have_version || version < 1 || version > CAL_CONFIG_VERSION)
+	if (!have_version || version != CAL_CONFIG_VERSION)
 		return -EINVAL;
 	if (!have_k1 || !have_k2 || !have_k3)
 		return -EINVAL;
-	if (version >= 2 &&
-			(!have_gain_start || !have_gain_delta || !have_dac_delta ||
-			 !have_settle_pps || !have_measure_pps || !have_fit_residual ||
-			 !have_inverse_gain_step || !have_jump_dac_min || !have_jump_dac_max ||
-			 !have_pre_e0_samples || !have_pre_e0_abs_max || !have_pre_e0_max_wait))
+	if (!have_gain_start || !have_gain_delta || !have_dac_delta ||
+	    !have_settle_pps || !have_measure_pps || !have_fit_residual ||
+	    !have_inverse_gain_step || !have_jump_dac_min || !have_jump_dac_max ||
+	    !have_pre_e0_samples || !have_pre_e0_abs_max || !have_pre_e0_max_wait ||
+	    !have_saved_center_gain || !have_saved_center_dac || !have_saved_e0 ||
+	    !have_verify_gain_delta_max || !have_verify_dac_delta_max ||
+	    !have_verify_e0_delta_max)
 		return -EINVAL;
 
 	cfg->coeffs_valid = true;
+	cfg->fingerprint_valid = true;
 	return 0;
 }
 
@@ -374,7 +412,13 @@ static int cal_save_prebaked_config(const struct fusion_gpt_cal_config *cfg)
 			"cal_jump_dac_max=%d\n"
 			"cal_pre_e0_samples=%u\n"
 			"cal_pre_e0_abs_max=%u\n"
-			"cal_pre_e0_max_wait=%u\n",
+			"cal_pre_e0_max_wait=%u\n"
+			"cal_saved_center_gain=%u\n"
+			"cal_saved_center_dac=%d\n"
+			"cal_saved_e0=%d\n"
+			"cal_verify_gain_delta_max=%u\n"
+			"cal_verify_dac_delta_max=%u\n"
+			"cal_verify_e0_delta_max=%u\n",
 			CAL_CONFIG_VERSION,
 			(int)cfg->k1_q16, (int)cfg->k2_q16, (int)cfg->k3_q16,
 			cfg->si_gain_start,
@@ -388,7 +432,13 @@ static int cal_save_prebaked_config(const struct fusion_gpt_cal_config *cfg)
 			cfg->cal_jump_dac_max,
 			cfg->cal_pre_e0_samples,
 			cfg->cal_pre_e0_abs_max,
-			cfg->cal_pre_e0_max_wait);
+			cfg->cal_pre_e0_max_wait,
+			cfg->cal_saved_center_gain,
+			cfg->cal_saved_center_dac,
+			(int)cfg->cal_saved_e0,
+			cfg->cal_verify_gain_delta_max,
+			cfg->cal_verify_dac_delta_max,
+			cfg->cal_verify_e0_delta_max);
 
 	filp = filp_open(CAL_CONFIG_PATH, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	if (IS_ERR(filp))
@@ -429,6 +479,37 @@ static inline int cal_jump_dac_max_value(const struct fusion_gpt_cal_config *cfg
 	return clamp_t(int,
 			max_t(int, cfg->cal_jump_dac_min, cfg->cal_jump_dac_max),
 			0, 255);
+}
+
+static bool cal_prebaked_fingerprint_matches(struct fusion_gpt *g, long e0)
+{
+	long gain_delta = abs((long)g->cal_center_gain -
+			      (long)g->cal_cfg.cal_saved_center_gain);
+	long dac_delta = abs((long)g->cal_center_dac -
+			     (long)g->cal_cfg.cal_saved_center_dac);
+	long e0_delta = abs(e0 - (long)g->cal_cfg.cal_saved_e0);
+
+	if (!g->cal_cfg.fingerprint_valid)
+		return false;
+
+	if (gain_delta > g->cal_cfg.cal_verify_gain_delta_max)
+		return false;
+	if (dac_delta > g->cal_cfg.cal_verify_dac_delta_max)
+		return false;
+	if (e0_delta > g->cal_cfg.cal_verify_e0_delta_max)
+		return false;
+
+	return true;
+}
+
+static void cal_start_live_calibration_locked(struct fusion_gpt *g)
+{
+	cal_prepare_points(g);
+	g->cal_state = CAL_APPLY_POINT;
+	pr_info("fusion_gpt: cal start center gain=%u dac=%d settle=%u measure=%u\n",
+		g->cal_center_gain, g->cal_center_dac,
+		max_t(u32, 1, g->cal_cfg.cal_settle_pps),
+		max_t(u32, 1, g->cal_cfg.cal_measure_pps));
 }
 
 static void gpt_reset_timing_state_locked(struct fusion_gpt *g)
@@ -1115,12 +1196,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 						g->cal_cfg.cal_pre_e0_abs_max,
 						max_t(u32, 1, g->cal_cfg.cal_pre_e0_max_wait));
 				} else {
-					cal_prepare_points(g);
-					g->cal_state = CAL_APPLY_POINT;
-					pr_info("fusion_gpt: cal start center gain=%u dac=%d settle=%u measure=%u\n",
-						g->cal_center_gain, g->cal_center_dac,
-						max_t(u32, 1, g->cal_cfg.cal_settle_pps),
-						max_t(u32, 1, g->cal_cfg.cal_measure_pps));
+					cal_start_live_calibration_locked(g);
 					schedule_work(&g->dac_work);
 				}
 			} else if (CAL_ENABLE && g->cal_state == CAL_IDLE &&
@@ -1145,17 +1221,33 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 						long e0 = (long)div_s64(g->cal_err_accum,
 								max_t(u32, 1, g->cal_err_samples));
 						g->cal_probe_mean[0] = e0;
-						g->cal_k1_q16 = g->cal_cfg.k1_q16;
-						g->cal_k2_q16 = g->cal_cfg.k2_q16;
-						g->cal_k3_q16 = g->cal_cfg.k3_q16;
-						if (cal_find_best_target(g, &g->si_gain_target, &g->dac_target)) {
-							g->cal_state = CAL_APPLY_JUMP;
-							pr_info("fusion_gpt: cal prebaked jump start center gain=%u dac=%d e0=%ld k=[%d %d %d]\n",
-								g->cal_center_gain, g->cal_center_dac, e0,
-								g->cal_k1_q16, g->cal_k2_q16, g->cal_k3_q16);
-							schedule_work(&g->dac_work);
+						if (cal_prebaked_fingerprint_matches(g, e0)) {
+							g->cal_k1_q16 = g->cal_cfg.k1_q16;
+							g->cal_k2_q16 = g->cal_cfg.k2_q16;
+							g->cal_k3_q16 = g->cal_cfg.k3_q16;
+							pr_info("fusion_gpt: cal prebaked verification passed gain=%u dac=%d e0=%ld\n",
+								g->cal_center_gain, g->cal_center_dac, e0);
+							if (cal_find_best_target(g, &g->si_gain_target, &g->dac_target)) {
+								g->cal_state = CAL_APPLY_JUMP;
+								pr_info("fusion_gpt: cal prebaked jump start center gain=%u dac=%d e0=%ld k=[%d %d %d]\n",
+									g->cal_center_gain, g->cal_center_dac, e0,
+									g->cal_k1_q16, g->cal_k2_q16, g->cal_k3_q16);
+								schedule_work(&g->dac_work);
+							} else {
+								g->cal_state = CAL_FAIL;
+								schedule_work(&g->dac_work);
+							}
 						} else {
-							g->cal_state = CAL_FAIL;
+							pr_warn("fusion_gpt: cal prebaked verification mismatch center gain delta=%ld/%u dac delta=%ld/%u e0 delta=%ld/%u, rerunning live calibration\n",
+								abs((long)g->cal_center_gain -
+								    (long)g->cal_cfg.cal_saved_center_gain),
+								g->cal_cfg.cal_verify_gain_delta_max,
+								abs((long)g->cal_center_dac -
+								    (long)g->cal_cfg.cal_saved_center_dac),
+								g->cal_cfg.cal_verify_dac_delta_max,
+								abs(e0 - (long)g->cal_cfg.cal_saved_e0),
+								g->cal_cfg.cal_verify_e0_delta_max);
+							cal_start_live_calibration_locked(g);
 							schedule_work(&g->dac_work);
 						}
 					} else if (g->cal_settle_left == 0) {
@@ -1381,6 +1473,9 @@ static void fusion_dac_work_handler(struct work_struct *work)
 			pr_info("fusion_gpt: loaded prebaked config from %s k=[%d %d %d]\n",
 				CAL_CONFIG_PATH,
 				loaded_cfg.k1_q16, loaded_cfg.k2_q16, loaded_cfg.k3_q16);
+		} else if (ret == -EINVAL) {
+			pr_info("fusion_gpt: stale or invalid prebaked config at %s, running live calibration\n",
+				CAL_CONFIG_PATH);
 		} else if (ret != -ENOENT) {
 			pr_warn("fusion_gpt: failed to load prebaked config from %s ret=%d, running live calibration\n",
 				CAL_CONFIG_PATH, ret);
@@ -1434,13 +1529,8 @@ static void fusion_dac_work_handler(struct work_struct *work)
 				g->cal_cfg.cal_pre_e0_abs_max,
 				max_t(u32, 1, g->cal_cfg.cal_pre_e0_max_wait));
 		} else {
-			cal_prepare_points(g);
-			g->cal_state = CAL_APPLY_POINT;
+			cal_start_live_calibration_locked(g);
 			schedule_again = true;
-			pr_info("fusion_gpt: cal start center gain=%u dac=%d settle=%u measure=%u\n",
-				g->cal_center_gain, g->cal_center_dac,
-				max_t(u32, 1, g->cal_cfg.cal_settle_pps),
-				max_t(u32, 1, g->cal_cfg.cal_measure_pps));
 		}
 		raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
 		if (schedule_again)
@@ -1514,7 +1604,11 @@ static void fusion_dac_work_handler(struct work_struct *work)
 			g->cal_cfg.k1_q16 = g->cal_k1_q16;
 			g->cal_cfg.k2_q16 = g->cal_k2_q16;
 			g->cal_cfg.k3_q16 = g->cal_k3_q16;
+			g->cal_cfg.cal_saved_center_gain = g->cal_center_gain;
+			g->cal_cfg.cal_saved_center_dac = g->cal_center_dac;
+			g->cal_cfg.cal_saved_e0 = (s32)g->cal_probe_mean[0];
 			g->cal_cfg.coeffs_valid = true;
+			g->cal_cfg.fingerprint_valid = true;
 			saved_cfg = g->cal_cfg;
 			if (cal_find_best_target(g, &g->si_gain_target, &g->dac_target)) {
 				g->cal_state = CAL_APPLY_JUMP;
