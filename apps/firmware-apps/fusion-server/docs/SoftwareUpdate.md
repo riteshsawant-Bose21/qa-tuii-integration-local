@@ -236,10 +236,18 @@ The `data` field is a `map[string]object` keyed by **node name**. Each value con
 **Progress flow** (gossip integration):
 
 1. swupdate daemon writes progress to unix socket `/tmp/swupdateprog` on each node
-2. Hub reads the socket and stores progress keyed by node name
-3. Gossip relays progress from follower nodes to the VIP hub
-4. Hub aggregates all nodes' progress into a single `NotifyMessage`
-5. VIP broadcasts the aggregated `update_progress` push to all WebSocket clients
+2. Hub reads the socket, stores progress keyed by node name, and gossips a **single-node** `NotifyOpSoftwareUpdateProgress` message to peer nodes (lean payload — no aggregated map)
+3. Each receiving node stores the incoming progress in its own per-node map
+4. Before pushing to local WebSocket clients, each node aggregates its full per-node map into the `update_progress` message
+5. VIP (and any node with connected WebSocket clients) broadcasts the aggregated `update_progress` push
+
+**Progress monitoring lifecycle**:
+
+- Monitoring starts automatically when a `NotifyOpSoftwareUpdate` trigger is processed on the local node
+- Monitoring stops on `COMPLETED` (swupdate `DONE`) in the normal success path, or on `FAILED` in the error path
+- The full observable sequence in normal operation is: `STARTING → DOWNLOADING → IN_PROGRESS → ... → SUCCESS → COMPLETED`
+- Clients should treat `COMPLETED` as the definitive end-of-update signal
+- This prevents the monitoring goroutine from running indefinitely or producing error log spam after the update socket closes
 
 ## Usage Examples
 

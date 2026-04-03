@@ -416,18 +416,20 @@ When a software update is running, the server pushes real-time progress from **a
 
 **`update_state` enum values**:
 
-| Value | Meaning |
-|-------|---------|
-| `IDLE` | No update in progress |
-| `STARTING` | Update service starting |
-| `IN_PROGRESS` | Update actively running |
-| `SUCCESS` | Update completed successfully |
-| `FAILED` | Update encountered an error |
-| `DOWNLOADING` | Downloading update bundle |
-| `COMPLETED` | Update fully done (post-reboot state) |
-| `SUBPROCESS` | Running a subprocess step |
-| `PROGRESS` | General progress tick |
-| `UNKNOWN` | Unrecognised status code |
+| Value | Meaning | Terminal |
+|-------|---------|----------|
+| `IDLE` | No update in progress | — |
+| `STARTING` | Update service starting | — |
+| `IN_PROGRESS` | Update actively running | — |
+| `SUCCESS` | Update completed successfully | — |
+| `FAILED` | Update encountered an error | ✅ stops monitoring |
+| `DOWNLOADING` | Downloading update bundle | — |
+| `COMPLETED` | Update fully done — **last observed state in normal flow** | ✅ stops monitoring |
+| `SUBPROCESS` | Running a subprocess step | — |
+| `PROGRESS` | General progress tick | — |
+| `UNKNOWN` | Unrecognised status code | — |
+
+> **Monitoring lifecycle**: progress monitoring starts automatically on `start_update`. In normal operation the full sequence ends with `SUCCESS` followed by `COMPLETED` — monitoring stops on `COMPLETED`. On error, monitoring stops on `FAILED`. Clients should wait for `COMPLETED` (or `FAILED`) as the definitive final state.
 
 ## Configuration
 

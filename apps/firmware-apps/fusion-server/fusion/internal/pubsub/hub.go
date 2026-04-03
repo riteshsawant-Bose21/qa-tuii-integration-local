@@ -171,9 +171,8 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 			message.SoftwareUpdateProgress.CurStep,
 			message.SoftwareUpdateProgress.NSteps)
 
-		// Store and attach full aggregated map so observers get all nodes in one push
+		// Store progress; aggregation is attached after gossip fanout (see below)
 		h.updateSWProgress(message.SoftwareUpdateProgress)
-		message.SoftwareUpdateProgressAll = h.getAggregatedProgress()
 
 	case api.NotifyOpSoftwareUpdateAvailable:
 		if message.SoftwareUpdate == nil {
@@ -211,6 +210,12 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 		h.broadcastToNodes(data, includeLocalNode)
 	}
 
+	// Attach the aggregated progress map only for local WebSocket delivery.
+	// This is done after gossiping so the cluster payload stays lean (single-node only).
+	if message.Operation == api.NotifyOpSoftwareUpdateProgress {
+		message.SoftwareUpdateProgressAll = h.getAggregatedProgress()
+	}
+
 	h.BroadcastToObservers(message)
 
 	return nil
@@ -227,18 +232,18 @@ func (h *Hub) broadcastToNodes(message []byte, includeLocalNode bool) {
 	localName := h.transport.LocalNode().Name
 	members := h.transport.MemberListMembers()
 
-	logger.Info("[Hub] Broadcasting gossip to %d cluster members from %s", len(members), localName)
+	logger.Debug("[Hub] Broadcasting gossip to %d cluster members from %s", len(members), localName)
 
 	for _, node := range members {
 		// Skip local node unless explicitly requested to include it
 		if !includeLocalNode && node.Name == localName {
 			continue
 		}
-		logger.Info("[Hub] Sending gossip message to node %s", node.Name)
+		logger.Debug("[Hub] Sending gossip message to node %s", node.Name)
 		if err := h.transport.SendReliable(node, message); err != nil {
 			logger.Error("Failed to send message to node %s: %v", node.Name, err)
 		} else {
-			logger.Info("[Hub] Successfully sent gossip message to node %s", node.Name)
+			logger.Debug("[Hub] Successfully sent gossip message to node %s", node.Name)
 		}
 	}
 }

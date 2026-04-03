@@ -159,7 +159,30 @@ func (h *Hub) processSWUpdateMessage(buf []byte) error {
 	})
 
 	// Broadcast to cluster nodes
-	return h.BroadcastToNodes(message)
+	if err := h.BroadcastToNodes(message); err != nil {
+		return err
+	}
+
+	// Stop monitoring once a terminal state is reached so the goroutine
+	// does not keep retrying/logging after the update completes.
+	if isSWUpdateTerminalStatus(progress.Status) {
+		logging.GetLogger().Info("[Hub] SWUpdate reached terminal status %s; stopping progress monitoring", progress.Status)
+		h.StopSWUpdateProgressMonitoring()
+	}
+
+	return nil
+}
+
+// isSWUpdateTerminalStatus reports whether the given status marks the end of an update.
+// SUCCESS is intentionally not terminal here so that monitoring continues until
+// swupdate emits DONE (COMPLETED), giving clients visibility of the full sequence.
+// Monitoring stops on DONE (normal completion) or FAILURE (error path).
+func isSWUpdateTerminalStatus(s api.SWUpdateStatus) bool {
+	switch s {
+	case api.SWUpdateStatusDone, api.SWUpdateStatusFailure:
+		return true
+	}
+	return false
 }
 
 // parseProgressMessage parses raw SWUpdate progress data
