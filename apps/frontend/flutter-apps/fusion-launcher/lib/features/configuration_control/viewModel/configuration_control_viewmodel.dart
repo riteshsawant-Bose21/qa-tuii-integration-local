@@ -1,354 +1,281 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 
 import 'configuration_control_state.dart';
 
-/// ViewModel/Cubit for the Configuration Control feature
+/// ViewModel/Cubit for the Configuration Control feature.
+///
+/// Follows the same [serviceLocator] pattern as [MessagePlayerConfigCubit]:
+/// [ProjectViewModel] is accessed via a lazy getter — no constructor injection needed.
 class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
-  final ProjectViewModel projectViewModel;
-  late final StreamSubscription<ProjectViewModelState> _projectViewModelSubscription;
+  late final StreamSubscription<ProjectViewModelState> _projectSubscription;
 
-  ConfigurationControlViewmodel({
-    required this.projectViewModel,
-  }) : super(const ConfigControlInitial()) {
+  ConfigurationControlViewmodel() : super(const ConfigControlInitial()) {
     _loadData();
-    // Listen to all ProjectViewModel changes and sync automatically
-    _projectViewModelSubscription = projectViewModel.stream.listen((_) {
-      syncWithProjectViewModel();
-    });
+    // Re-sync whenever the project changes externally (controllers added / removed / updated)
+    _projectSubscription = _projectViewModel.stream.listen((_) => _sync());
+  }
+
+  // ─── Service-locator accessor (same pattern as MessagePlayerConfigCubit) ───
+
+  /// Lazy reference — never hold a field copy, always read from the locator.
+  ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
+
+  // ─── Convenience helper ────────────────────────────────────────────────────
+
+  /// Returns the current loaded state, or null if the cubit is not yet loaded.
+  ConfigControlLoaded? get _loaded {
+    final ConfigurationControlState s = state;
+    return s is ConfigControlLoaded ? s : null;
   }
 
   @override
   Future<void> close() {
-    _projectViewModelSubscription.cancel();
+    _projectSubscription.cancel();
     return super.close();
   }
 
-  /// Get location name for a controller (same pattern as device location)
-  String getControllerLocation(FusionController controller) {
-    if (controller.locationEntity.listeningAreaId != null) {
-      final String listeningAreaId = controller.locationEntity.listeningAreaId!;
+  // ─── Data loading ──────────────────────────────────────────────────────────
 
-      // Try to get zone for this listening area
-      final Zone? zone = projectViewModel.getZonesForListeningArea(areaId: listeningAreaId);
-      if (zone != null) return zone.name;
-
-      // Try to get subzone for this listening area
-      final SubZone? subZone = projectViewModel.getSubZoneForListeningArea(areaId: listeningAreaId);
-      if (subZone != null) {
-        final Zone? parentZone = projectViewModel.getZoneForSubZone(subZoneId: subZone.id);
-        return parentZone != null ? "${parentZone.name} > ${subZone.name}" : subZone.name;
-      }
-    }
-
-    // Check equipment location
-    final EquipLocation? equipLocation = projectViewModel.getEquipLocationForHardware(hardwareId: controller.id);
-    return equipLocation?.name ?? '--';
-  }
-
-  /// Get zone for a controller (for color display)
-  Zone? getZoneForController(FusionController controller) {
-    if (controller.locationEntity.listeningAreaId != null) {
-      final String listeningAreaId = controller.locationEntity.listeningAreaId!;
-
-      // Try to get zone for this listening area
-      final Zone? zone = projectViewModel.getZonesForListeningArea(areaId: listeningAreaId);
-      if (zone != null) return zone;
-
-      // Try to get subzone and return parent zone
-      final SubZone? subZone = projectViewModel.getSubZoneForListeningArea(areaId: listeningAreaId);
-      if (subZone != null) {
-        return projectViewModel.getZoneForSubZone(subZoneId: subZone.id);
-      }
-    }
-    return null;
-  }
-
-  /// Load controllers and zones data
-  void _loadData() {
-    emit(const ConfigControlLoading());
+  /// Loads (or reloads) data from the project view model.
+  ///
+  /// Pass [preserveControllerId] to keep the current selection; otherwise the
+  /// first controller is selected.
+  void _loadData({String? preserveControllerId}) {
+    if (_loaded == null) emit(const ConfigControlLoading());
 
     try {
-      final List<FusionController> controllers = projectViewModel.fusionControllers;
-      final List<Zone> zones = projectViewModel.zones;
-      final List<SubZone> subZones = projectViewModel.subZones;
+      final List<FusionController> controllers = _projectViewModel.fusionControllers;
 
-      // If no controllers, emit empty state
       if (controllers.isEmpty) {
         emit(const ConfigControlEmpty());
         return;
       }
 
-      // Build subzones map for each zone
-      final Map<String, List<SubZone>> subZonesInZones = _buildSubZonesMap(zones, subZones);
+      final List<Zone> zones = _projectViewModel.zones;
+      final Map<String, List<SubZone>> subZonesInZones = _buildSubZonesMap(zones);
 
-      // Select first controller by default
-      final FusionController firstController = controllers.first;
-      final ({Set<String> selectedZoneIds, String? selectedZoneId, Set<String> selectedSubZoneIds, String? activeSubZoneId}) selection =
-          _buildZoneSelectionForController(firstController);
+      // Keep the previously selected controller when syncing; fall back to first.
+      final FusionController selected = _resolveController(controllers, preserveControllerId);
+      final _ZoneSelection sel = _buildZoneSelection(selected);
 
       emit(
         ConfigControlLoaded(
           controllers: controllers,
           zones: zones,
           subZonesInZones: subZonesInZones,
-          selectedControllerId: firstController.id,
-          selectedZoneIds: selection.selectedZoneIds,
-          selectedZoneId: selection.selectedZoneId,
-          selectedSubZoneIds: selection.selectedSubZoneIds,
-          activeSubZoneId: selection.activeSubZoneId,
+          selectedControllerId: selected.id,
+          selectedZoneIds: sel.zoneIds,
+          selectedZoneId: sel.zoneId,
+          selectedSubZoneIds: sel.subZoneIds,
+          activeSubZoneId: sel.activeSubZoneId,
+          // Preserve tab and search query across syncs
+          currentTab: _loaded?.currentTab ?? ConfigControlTab.zoneControl,
+          searchQuery: _loaded?.searchQuery ?? '',
         ),
       );
     } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: 'Failed to load configuration control data: $e');
+      FusionLogger.log(tag: LogTag.project, message: 'ConfigControl: failed to load data: $e');
       emit(ConfigControlError(message: 'Failed to load data: $e'));
     }
   }
 
-  /// Build zone selection state from a controller's assignedZoneIds.
-  /// Splits IDs into zone IDs vs subzone IDs by checking all known subzones.
-  ({Set<String> selectedZoneIds, String? selectedZoneId, Set<String> selectedSubZoneIds, String? activeSubZoneId}) _buildZoneSelectionForController(
-    FusionController controller,
-  ) {
-    final Set<String> assigned = controller.assignedZoneIds;
+  /// Called by the project subscription — re-loads while keeping current selection.
+  void _sync() => _loadData(preserveControllerId: _loaded?.selectedControllerId);
 
-    // Collect all known subzone IDs for look-up
-    final List<SubZone> allSubZones = projectViewModel.subZones;
-    final Set<String> allSubZoneIds = allSubZones.map((SubZone s) => s.id).toSet();
+  /// Public refresh — useful when the caller knows data has changed.
+  void refresh() => _sync();
+
+  // ─── Controller helpers (used by UI widgets) ───────────────────────────────
+
+  String getControllerLocation(FusionController controller) {
+    if (controller.locationEntity.listeningAreaId != null) {
+      final String areaId = controller.locationEntity.listeningAreaId!;
+      final Zone? zone = _projectViewModel.getZonesForListeningArea(areaId: areaId);
+      if (zone != null) return zone.name;
+
+      final SubZone? sub = _projectViewModel.getSubZoneForListeningArea(areaId: areaId);
+      if (sub != null) {
+        final Zone? parent = _projectViewModel.getZoneForSubZone(subZoneId: sub.id);
+        return parent != null ? '${parent.name} > ${sub.name}' : sub.name;
+      }
+    }
+    return _projectViewModel.getEquipLocationForHardware(hardwareId: controller.id)?.name ?? '--';
+  }
+
+  Zone? getZoneForController(FusionController controller) {
+    if (controller.locationEntity.listeningAreaId != null) {
+      final String areaId = controller.locationEntity.listeningAreaId!;
+      final Zone? zone = _projectViewModel.getZonesForListeningArea(areaId: areaId);
+      if (zone != null) return zone;
+
+      final SubZone? sub = _projectViewModel.getSubZoneForListeningArea(areaId: areaId);
+      if (sub != null) return _projectViewModel.getZoneForSubZone(subZoneId: sub.id);
+    }
+    return null;
+  }
+
+  // ─── Controller actions ────────────────────────────────────────────────────
+
+  void selectController(String controllerId) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+
+    final FusionController? controller = loaded.controllers.where((FusionController c) => c.id == controllerId).firstOrNull;
+    if (controller == null) return;
+
+    final _ZoneSelection sel = _buildZoneSelection(controller);
+    emit(
+      loaded.copyWith(
+        selectedControllerId: controllerId,
+        selectedZoneIds: sel.zoneIds,
+        selectedZoneId: sel.zoneId,
+        selectedSubZoneIds: sel.subZoneIds,
+        activeSubZoneId: sel.activeSubZoneId,
+      ),
+    );
+  }
+
+  void addController(FusionController controller) {
+    _projectViewModel.addFusionController(controller: controller);
+    _loadData(preserveControllerId: _loaded?.selectedControllerId);
+  }
+
+  void deleteController(String controllerId) {
+    _projectViewModel.removeFusionController(controllerId: controllerId);
+
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+
+    final List<FusionController> remaining = loaded.controllers.where((FusionController c) => c.id != controllerId).toList();
+
+    if (remaining.isEmpty) {
+      emit(const ConfigControlEmpty());
+      return;
+    }
+
+    // Keep selection unless the deleted controller was selected
+    final String? keepId = loaded.selectedControllerId == controllerId ? null : loaded.selectedControllerId;
+    _loadData(preserveControllerId: keepId);
+  }
+
+  // ─── Zone / subzone actions ────────────────────────────────────────────────
+
+  void selectZone(String zoneId) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    emit(loaded.copyWith(selectedZoneId: zoneId, clearActiveSubZoneId: true));
+  }
+
+  void toggleZoneSelection(String zoneId) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    final Set<String> updated = Set<String>.from(loaded.selectedZoneIds);
+    updated.contains(zoneId) ? updated.remove(zoneId) : updated.add(zoneId);
+    emit(loaded.copyWith(selectedZoneIds: updated));
+  }
+
+  bool isZoneSelected(String zoneId) => _loaded?.selectedZoneIds.contains(zoneId) ?? false;
+
+  void selectSubZone(String subZoneId) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    emit(loaded.copyWith(activeSubZoneId: subZoneId, clearSelectedZoneId: true));
+  }
+
+  void toggleSubZoneSelection(String subZoneId) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    final Set<String> updated = Set<String>.from(loaded.selectedSubZoneIds);
+    updated.contains(subZoneId) ? updated.remove(subZoneId) : updated.add(subZoneId);
+    emit(loaded.copyWith(selectedSubZoneIds: updated));
+  }
+
+  bool isSubZoneSelected(String subZoneId) => _loaded?.selectedSubZoneIds.contains(subZoneId) ?? false;
+
+  // ─── Tab / search ──────────────────────────────────────────────────────────
+
+  void changeTab(ConfigControlTab tab) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    emit(loaded.copyWith(currentTab: tab));
+  }
+
+  void updateSearchQuery(String query) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    emit(loaded.copyWith(searchQuery: query));
+  }
+
+  void clearSearch() => updateSearchQuery('');
+
+  // ─── Query helpers (called by child widgets) ───────────────────────────────
+
+  List<Zone> getZonesForController(String controllerId) => _loaded?.zones ?? <Zone>[];
+
+  List<SubZone> getSubZonesForZone(String zoneId) => _loaded?.subZonesInZones[zoneId] ?? <SubZone>[];
+
+  // ─── Private helpers ───────────────────────────────────────────────────────
+
+  FusionController _resolveController(
+    List<FusionController> controllers,
+    String? preferredId,
+  ) {
+    if (preferredId != null) {
+      final FusionController? match = controllers.where((FusionController c) => c.id == preferredId).firstOrNull;
+      if (match != null) return match;
+    }
+    return controllers.first;
+  }
+
+  _ZoneSelection _buildZoneSelection(FusionController controller) {
+    // Read from ControllerViewModel → ControllerManager → ControllerService
+    // (RelationshipType.controllerZones) — the authoritative source.
+    // Falls back to model's assignedZoneIds for backward compatibility.
+    final Set<String> relZoneIds = _projectViewModel.getAssignedZoneIds(controller.id);
+    final Set<String> assigned = relZoneIds.isNotEmpty ? relZoneIds : controller.assignedZoneIds;
+
+    final Set<String> allSubZoneIds = _projectViewModel.subZones.map((SubZone s) => s.id).toSet();
 
     final Set<String> zoneIds = <String>{};
     final Set<String> subZoneIds = <String>{};
 
     for (final String id in assigned) {
-      if (allSubZoneIds.contains(id)) {
-        subZoneIds.add(id);
-      } else {
-        zoneIds.add(id);
-      }
+      (allSubZoneIds.contains(id) ? subZoneIds : zoneIds).add(id);
     }
 
-    return (
-      selectedZoneIds: zoneIds,
-      selectedZoneId: zoneIds.isNotEmpty ? zoneIds.first : null,
-      selectedSubZoneIds: subZoneIds,
+    return _ZoneSelection(
+      zoneIds: zoneIds,
+      zoneId: zoneIds.isNotEmpty ? zoneIds.first : null,
+      subZoneIds: subZoneIds,
       activeSubZoneId: subZoneIds.isNotEmpty ? subZoneIds.first : null,
     );
   }
 
-  /// Build a map of zone IDs to their subzones
-  Map<String, List<SubZone>> _buildSubZonesMap(List<Zone> zones, List<SubZone> allSubZones) {
-    final Map<String, List<SubZone>> result = <String, List<SubZone>>{};
-
-    for (final Zone zone in zones) {
-      final List<SubZone> subZonesForZone = projectViewModel.getSubZonesForZone(parentZoneId: zone.id);
-      result[zone.id] = subZonesForZone;
-    }
-
-    return result;
+  Map<String, List<SubZone>> _buildSubZonesMap(List<Zone> zones) {
+    return <String, List<SubZone>>{
+      for (final Zone zone in zones) zone.id: _projectViewModel.getSubZonesForZone(parentZoneId: zone.id),
+    };
   }
+}
 
-  /// Refresh data from project view model
-  void refresh() {
-    _loadData();
-  }
+// ─── Private value object ──────────────────────────────────────────────────────
 
-  /// Sync with project view model (called when project is updated externally)
-  void syncWithProjectViewModel() {
-    if (state is! ConfigControlLoaded) {
-      _loadData();
-      return;
-    }
+class _ZoneSelection {
+  final Set<String> zoneIds;
+  final String? zoneId;
+  final Set<String> subZoneIds;
+  final String? activeSubZoneId;
 
-    final ConfigControlLoaded currentState = state as ConfigControlLoaded;
-    final List<FusionController> controllers = projectViewModel.fusionControllers;
-    final List<Zone> zones = projectViewModel.zones;
-    final List<SubZone> subZones = projectViewModel.subZones;
-
-    if (controllers.isEmpty) {
-      emit(const ConfigControlEmpty());
-      return;
-    }
-
-    final Map<String, List<SubZone>> subZonesInZones = _buildSubZonesMap(zones, subZones);
-
-    // Maintain current selection if still valid
-    String? selectedControllerId = currentState.selectedControllerId;
-    if (selectedControllerId != null && !controllers.any((FusionController c) => c.id == selectedControllerId)) {
-      selectedControllerId = controllers.first.id;
-    }
-
-    // Rebuild zone selection from the (possibly updated) controller's assignedZoneIds
-    final FusionController? selectedController = controllers.where((FusionController c) => c.id == selectedControllerId).firstOrNull;
-    final ({Set<String> selectedZoneIds, String? selectedZoneId, Set<String> selectedSubZoneIds, String? activeSubZoneId}) selection =
-        selectedController != null
-            ? _buildZoneSelectionForController(selectedController)
-            : (selectedZoneIds: const <String>{}, selectedZoneId: null, selectedSubZoneIds: const <String>{}, activeSubZoneId: null);
-
-    emit(
-      currentState.copyWith(
-        controllers: controllers,
-        zones: zones,
-        subZonesInZones: subZonesInZones,
-        selectedControllerId: selectedControllerId,
-        selectedZoneIds: selection.selectedZoneIds,
-        selectedZoneId: selection.selectedZoneId,
-        selectedSubZoneIds: selection.selectedSubZoneIds,
-        activeSubZoneId: selection.activeSubZoneId,
-      ),
-    );
-  }
-
-  /// Select a controller — pre-populates zone selections from controller's assignedZoneIds
-  void selectController(String controllerId) {
-    if (state is! ConfigControlLoaded) return;
-
-    final ConfigControlLoaded currentState = state as ConfigControlLoaded;
-    final FusionController? controller = currentState.controllers.where((FusionController c) => c.id == controllerId).firstOrNull;
-
-    if (controller == null) return;
-
-    final ({Set<String> selectedZoneIds, String? selectedZoneId, Set<String> selectedSubZoneIds, String? activeSubZoneId}) selection =
-        _buildZoneSelectionForController(controller);
-
-    emit(
-      currentState.copyWith(
-        selectedControllerId: controllerId,
-        selectedZoneIds: selection.selectedZoneIds,
-        selectedZoneId: selection.selectedZoneId,
-        selectedSubZoneIds: selection.selectedSubZoneIds,
-        activeSubZoneId: selection.activeSubZoneId,
-      ),
-    );
-  }
-
-  /// Select a zone (LT radio — clears any active subzone so only one radio is selected)
-  void selectZone(String zoneId) {
-    if (state is! ConfigControlLoaded) return;
-
-    final ConfigControlLoaded currentState = state as ConfigControlLoaded;
-    emit(currentState.copyWith(selectedZoneId: zoneId, clearActiveSubZoneId: true));
-  }
-
-  /// Toggle zone selection (checkbox)
-  void toggleZoneSelection(String zoneId) {
-    if (state is! ConfigControlLoaded) return;
-
-    final ConfigControlLoaded currentState = state as ConfigControlLoaded;
-    final Set<String> updatedSelection = Set<String>.from(currentState.selectedZoneIds);
-
-    if (updatedSelection.contains(zoneId)) {
-      updatedSelection.remove(zoneId);
-    } else {
-      updatedSelection.add(zoneId);
-    }
-
-    emit(currentState.copyWith(selectedZoneIds: updatedSelection));
-  }
-
-  /// Check if a zone is selected
-  bool isZoneSelected(String zoneId) {
-    if (state is! ConfigControlLoaded) return false;
-    return (state as ConfigControlLoaded).selectedZoneIds.contains(zoneId);
-  }
-
-  /// Change the current tab
-  void changeTab(ConfigControlTab tab) {
-    if (state is! ConfigControlLoaded) return;
-
-    final ConfigControlLoaded currentState = state as ConfigControlLoaded;
-    emit(currentState.copyWith(currentTab: tab));
-  }
-
-  /// Update search query
-  void updateSearchQuery(String query) {
-    if (state is! ConfigControlLoaded) return;
-
-    final ConfigControlLoaded currentState = state as ConfigControlLoaded;
-    emit(currentState.copyWith(searchQuery: query));
-  }
-
-  /// Clear search query
-  void clearSearch() {
-    if (state is! ConfigControlLoaded) return;
-
-    final ConfigControlLoaded currentState = state as ConfigControlLoaded;
-    emit(currentState.copyWith(searchQuery: ''));
-  }
-
-  /// Add a new controller to the project
-  void addController(FusionController controller) {
-    projectViewModel.addHardware(hardware: controller);
-    refresh();
-  }
-
-  /// Delete a controller from the project
-  void deleteController(String controllerId) {
-    projectViewModel.removeHardware(hardwareId: controllerId);
-
-    if (state is ConfigControlLoaded) {
-      final ConfigControlLoaded currentState = state as ConfigControlLoaded;
-      if (currentState.selectedControllerId == controllerId) {
-        final List<FusionController> remainingControllers = currentState.controllers.where((FusionController c) => c.id != controllerId).toList();
-
-        if (remainingControllers.isEmpty) {
-          emit(const ConfigControlEmpty());
-        } else {
-          emit(
-            currentState.copyWith(
-              controllers: remainingControllers,
-              selectedControllerId: remainingControllers.first.id,
-            ),
-          );
-        }
-      }
-    }
-
-    refresh();
-  }
-
-  /// Get zones for a specific controller
-  List<Zone> getZonesForController(String controllerId) {
-    if (state is! ConfigControlLoaded) return <Zone>[];
-    return (state as ConfigControlLoaded).zones;
-  }
-
-  /// Get subzones for a specific zone
-  List<SubZone> getSubZonesForZone(String zoneId) {
-    if (state is! ConfigControlLoaded) return <SubZone>[];
-    return (state as ConfigControlLoaded).subZonesInZones[zoneId] ?? <SubZone>[];
-  }
-
-  /// Select a subzone (LT radio — clears any active zone so only one radio is selected)
-  void selectSubZone(String subZoneId) {
-    if (state is! ConfigControlLoaded) return;
-
-    final ConfigControlLoaded currentState = state as ConfigControlLoaded;
-    emit(currentState.copyWith(activeSubZoneId: subZoneId, clearSelectedZoneId: true));
-  }
-
-  /// Toggle subzone selection (checkbox)
-  void toggleSubZoneSelection(String subZoneId) {
-    if (state is! ConfigControlLoaded) return;
-
-    final ConfigControlLoaded currentState = state as ConfigControlLoaded;
-    final Set<String> updatedSelection = Set<String>.from(currentState.selectedSubZoneIds);
-
-    if (updatedSelection.contains(subZoneId)) {
-      updatedSelection.remove(subZoneId);
-    } else {
-      updatedSelection.add(subZoneId);
-    }
-
-    emit(currentState.copyWith(selectedSubZoneIds: updatedSelection));
-  }
-
-  /// Check if a subzone is selected
-  bool isSubZoneSelected(String subZoneId) {
-    if (state is! ConfigControlLoaded) return false;
-    return (state as ConfigControlLoaded).selectedSubZoneIds.contains(subZoneId);
-  }
+  const _ZoneSelection({
+    required this.zoneIds,
+    required this.zoneId,
+    required this.subZoneIds,
+    required this.activeSubZoneId,
+  });
 }

@@ -7,6 +7,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/project_manger/dro/dro_input_mapper.dart';
 
 export 'circuit/circuit_viewmodel.dart';
+export 'controller/controller_view_model.dart';
 export 'equip_location/equip_location_view_model.dart';
 export 'events/events_view_model.dart';
 

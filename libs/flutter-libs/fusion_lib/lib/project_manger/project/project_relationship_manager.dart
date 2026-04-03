@@ -29,6 +29,10 @@ enum RelationshipType {
   playerMessages,
   sourceMessages,
   messageMediaMapping,
+
+  /// Maps a [FusionController] → its assigned zone/sub-zone IDs.
+  /// Mirrors the [messageZones] pattern used by the message player.
+  controllerZones,
 }
 
 class RelationshipManager {

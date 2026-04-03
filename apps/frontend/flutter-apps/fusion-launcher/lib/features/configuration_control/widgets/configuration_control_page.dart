@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/controllers/controllers_sidebar.dart';
@@ -15,13 +13,8 @@ class ConfigurationControlPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-
     return BlocProvider<ConfigurationControlViewmodel>(
-      create:
-          (BuildContext context) => ConfigurationControlViewmodel(
-            projectViewModel: projectViewModel,
-          ),
+      create: (_) => ConfigurationControlViewmodel(),
       child: const _ConfigurationControlBody(),
     );
   }
