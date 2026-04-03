@@ -37,8 +37,10 @@ const (
 	ClusterNTPSkewEndpoint                     = ClusterEndpoint + "/ntp-skew"
 	ClusterStatusEndpoint                      = ClusterEndpoint + "/status"
 
-	ClusterRebootEndpoint      = ClusterEndpoint + "/reboot"
-	ClusterRebootLocalEndpoint = ClusterRebootEndpoint
+	ClusterRebootEndpoint              = ClusterEndpoint + "/reboot"
+	ClusterRebootLocalEndpoint         = ClusterRebootEndpoint
+	ClusterSoftwareUpdateEndpoint      = ClusterEndpoint + "/software-update"
+	ClusterSoftwareUpdateLocalEndpoint = ClusterSoftwareUpdateEndpoint
 
 	ControllersEndpoint       = "/controllers"
 	ControllersIDEndpoint     = ControllersEndpoint + "/{id}"
