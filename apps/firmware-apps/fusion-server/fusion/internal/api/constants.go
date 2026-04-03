@@ -33,17 +33,27 @@ const (
 
 	SnapshotIDKey = "snapshot_id"
 
-	// Request types
+	// WS Request types (client -> server)
 	WSMsgTypeDevices            = "devices"
 	WSMsgTypeDeviceByID         = "device_by_id"
 	WSMsgTypeUpdateDeviceInfo   = "update_device_info"
-	WSMsgTypeDeviceUpdate       = "device_update"
+	WSMsgTypeConfiguration      = "config"
+	WSMsgTypePatchConfiguration = "patch_config"
+	WSMsgTypeUnsubscribeConfig  = "unsubscribe_config"
 	WSMsgTypeUnsubscribeDevices = "unsubscribe_devices"
 	WSMsgTypePing               = "ping"
 	WSMsgTypePong               = "pong"
 	WSMsgTypeError              = "error"
 	WSMsgTypeStartUpdate        = "start_update"
 	WSMsgTypeUpdateProgress     = "update_progress"
+
+	// WS event types (server -> client)
+	WSMsgTypeDeviceUpdate = "device_update"
+	WSMsgTypeConfigUpdate = "config_update"
+
+	// WS topic names
+	WSTopicConfigUpdates = "config_updates"
+	WSTopicDeviceUpdates = "device_updates"
 
 	// WebSocket response data field keys
 	WSDataFieldDeviceID   = "device_id"

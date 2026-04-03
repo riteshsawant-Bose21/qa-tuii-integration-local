@@ -105,7 +105,7 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
                     FusionToast.error(context, message: response.message);
                   } else {
                     FusionToast.success(context, message: 'Auto-placement completed successfully');
-                    Navigator.of(context).pop();
+                    // Navigator.of(context).pop();
                   }
                 },
                 style: ElevatedButton.styleFrom(

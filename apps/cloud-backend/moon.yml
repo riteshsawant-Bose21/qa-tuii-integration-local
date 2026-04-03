@@ -1,6 +1,6 @@
 project:
   name: cloud-backend
-  description: Cloud backend services for Fusion
+  description: Fusion Cloud backend services
 
 tasks:
   build-all:

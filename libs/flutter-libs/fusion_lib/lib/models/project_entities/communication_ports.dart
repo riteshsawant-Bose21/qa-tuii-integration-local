@@ -44,6 +44,7 @@ enum PortType {
   amplifierOutput('Output'),
   dspAnalogInput('Input'),
   endpointInput('Input'),
+  endpointOutput('Output'),
   dspAnalogOutput('Output'),
   controllerInput('Input'),
   controllerOutput('Output'),
