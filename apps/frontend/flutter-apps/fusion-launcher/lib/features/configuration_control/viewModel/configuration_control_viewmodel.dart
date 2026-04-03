@@ -60,6 +60,13 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
       final List<Zone> zones = _projectViewModel.zones;
       final Map<String, List<SubZone>> subZonesInZones = _buildSubZonesMap(zones);
 
+      // Load scene sets and snapshots
+      final List<SceneSetModel> sceneSets = _projectViewModel.getAllSceneSets();
+      final Map<String, List<SnapshotsModel>> snapshotsInSceneSets = _buildSnapshotsInSceneSetsMap(sceneSets);
+      final List<SnapshotsModel> allSnapshots = _projectViewModel.getAllSnapshots();
+      final Map<String, List<SnapshotsModel>> snapshotsPerPage = _computeSnapshotsPerPage(snapshotsInSceneSets);
+      final Set<String> usedSnapshotIds = _computeUsedSnapshotIds(snapshotsPerPage);
+
       // Keep the previously selected controller when syncing; fall back to first.
       final FusionController selected = _resolveController(controllers, preserveControllerId);
       final _ZoneSelection sel = _buildZoneSelection(selected);
@@ -69,14 +76,25 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
           controllers: controllers,
           zones: zones,
           subZonesInZones: subZonesInZones,
+          sceneSets: sceneSets,
+          snapshotsInSceneSets: snapshotsInSceneSets,
+          allSnapshots: allSnapshots,
+          snapshotsPerPage: snapshotsPerPage,
+          usedSnapshotIds: usedSnapshotIds,
           selectedControllerId: selected.id,
           selectedZoneIds: sel.zoneIds,
           selectedZoneId: sel.zoneId,
           selectedSubZoneIds: sel.subZoneIds,
           activeSubZoneId: sel.activeSubZoneId,
-          // Preserve tab and search query across syncs
           currentTab: _loaded?.currentTab ?? ConfigControlTab.zoneControl,
           searchQuery: _loaded?.searchQuery ?? '',
+          // Checkboxes: preserve or start empty (no auto-check on first load)
+          selectedSceneSetIds: _loaded?.selectedSceneSetIds ?? const <String>{},
+          // Active scene (drives SNAPSHOT PAGE + VC): preserve or default to first
+          selectedSceneSetId: _loaded?.selectedSceneSetId ?? (sceneSets.isNotEmpty ? sceneSets.first.id : null),
+          activeSnapshotId: _loaded?.activeSnapshotId,
+          snapshotPages: _loaded?.snapshotPages ?? const <SnapshotPageModel>[],
+          selectedSnapshotPageId: _loaded?.selectedSnapshotPageId,
         ),
       );
     } catch (e) {
@@ -213,6 +231,160 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
   }
 
   void clearSearch() => updateSearchQuery('');
+
+  // ─── Scene set / snapshot actions ──────────────────────────────────────────
+
+  /// Toggle checkbox in the SCENES panel.
+  /// ONLY updates selectedSceneSetIds — does NOT change the active scene set.
+  /// (SCENES checkboxes and SNAPSHOT PAGE are independent.)
+  void toggleSceneSetSelection(String sceneSetId) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    final Set<String> updated = Set<String>.from(loaded.selectedSceneSetIds);
+    if (updated.contains(sceneSetId)) {
+      updated.remove(sceneSetId);
+    } else {
+      updated.add(sceneSetId);
+    }
+    // Only the checkbox state changes — active scene set stays the same
+    emit(loaded.copyWith(selectedSceneSetIds: updated));
+  }
+
+  /// Select the active scene set (shown in PAGES panel & SNAPSHOT PAGE section).
+  /// Clears selectedSnapshotPageId so only one row is active at a time in PAGES.
+  void selectSceneSet(String sceneSetId) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    emit(
+      loaded.copyWith(
+        selectedSceneSetId: sceneSetId,
+        clearActiveSnapshotId: true,
+        clearSelectedSnapshotPageId: true,
+      ),
+    );
+  }
+
+  /// Set the active/recalled snapshot (radio button in VIRTUAL CONTROLLER).
+  void setActiveSnapshot(String snapshotId) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    emit(loaded.copyWith(activeSnapshotId: snapshotId));
+  }
+
+  /// Create a new snapshot page — a user-defined grouping of selected snapshots.
+  /// This does NOT create any entity in the project; it only lives in
+  /// ConfigControl state and is shown on the wall controller.
+  void createSnapshotPage({
+    required String name,
+    required List<String> selectedSnapshotIds,
+  }) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+
+    final String pageName = name.trim().isEmpty ? 'Untitled_Snapshot' : name.trim();
+    final SnapshotPageModel newPage = SnapshotPageModel(
+      name: pageName,
+      snapshotIds: selectedSnapshotIds,
+    );
+
+    final List<SnapshotPageModel> updatedPages = <SnapshotPageModel>[...loaded.snapshotPages, newPage];
+
+    emit(
+      loaded.copyWith(
+        snapshotPages: updatedPages,
+        selectedSnapshotPageId: newPage.id,
+      ),
+    );
+  }
+
+  /// Delete a snapshot page by ID.
+  void deleteSnapshotPage(String pageId) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+
+    final List<SnapshotPageModel> updatedPages = loaded.snapshotPages.where((SnapshotPageModel p) => p.id != pageId).toList();
+
+    emit(
+      loaded.copyWith(
+        snapshotPages: updatedPages,
+        clearSelectedSnapshotPageId: loaded.selectedSnapshotPageId == pageId,
+      ),
+    );
+  }
+
+  /// Select a snapshot page in the SNAPSHOT PAGE list.
+  void selectSnapshotPage(String pageId) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    emit(loaded.copyWith(selectedSnapshotPageId: pageId));
+  }
+
+  /// Get snapshots for a specific scene set.
+  List<SnapshotsModel> getSnapshotsForSceneSet(String sceneSetId) {
+    return _projectViewModel.getSnapshotInSceneSet(sceneSetId: sceneSetId);
+  }
+
+  /// Reload only scene set / snapshot data and re-emit.
+  void _reloadSceneData() {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    try {
+      final List<SceneSetModel> sceneSets = _projectViewModel.getAllSceneSets();
+      final Map<String, List<SnapshotsModel>> snapshotsInSceneSets = _buildSnapshotsInSceneSetsMap(sceneSets);
+      final List<SnapshotsModel> allSnapshots = _projectViewModel.getAllSnapshots();
+      final Map<String, List<SnapshotsModel>> snapshotsPerPage = _computeSnapshotsPerPage(snapshotsInSceneSets);
+      final Set<String> usedSnapshotIds = _computeUsedSnapshotIds(snapshotsPerPage);
+      emit(
+        loaded.copyWith(
+          sceneSets: sceneSets,
+          snapshotsInSceneSets: snapshotsInSceneSets,
+          allSnapshots: allSnapshots,
+          snapshotsPerPage: snapshotsPerPage,
+          usedSnapshotIds: usedSnapshotIds,
+        ),
+      );
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: 'ConfigControl: failed to reload scene data: $e');
+    }
+  }
+
+  /// For each snapshot page, collect the SnapshotsModel linked as recall actions.
+  Map<String, List<SnapshotsModel>> _computeSnapshotsPerPage(
+    Map<String, List<SnapshotsModel>> snapshotsInSceneSets,
+  ) {
+    final Map<String, List<SnapshotsModel>> result = <String, List<SnapshotsModel>>{};
+    for (final List<SnapshotsModel> pages in snapshotsInSceneSets.values) {
+      for (final SnapshotsModel page in pages) {
+        final List<SceneActionModel> actions = _projectViewModel.getSceneActionsForSnapshot(page.id);
+        final List<SnapshotsModel> linked = <SnapshotsModel>[];
+        for (final SceneActionModel action in actions) {
+          if (action.actionType == SceneActionType.snapshot && action.item != null) {
+            final SnapshotsModel? snap = _projectViewModel.getSnapshotById(sceneId: action.item!.itemId);
+            if (snap != null) linked.add(snap);
+          }
+        }
+        result[page.id] = linked;
+      }
+    }
+    return result;
+  }
+
+  /// Collect all snapshot IDs that have been linked to any snapshot page.
+  Set<String> _computeUsedSnapshotIds(Map<String, List<SnapshotsModel>> snapshotsPerPage) {
+    final Set<String> usedIds = <String>{};
+    for (final List<SnapshotsModel> linked in snapshotsPerPage.values) {
+      for (final SnapshotsModel snap in linked) {
+        usedIds.add(snap.id);
+      }
+    }
+    return usedIds;
+  }
+
+  Map<String, List<SnapshotsModel>> _buildSnapshotsInSceneSetsMap(List<SceneSetModel> sceneSets) {
+    return <String, List<SnapshotsModel>>{
+      for (final SceneSetModel s in sceneSets) s.id: _projectViewModel.getSnapshotInSceneSet(sceneSetId: s.id),
+    };
+  }
 
   // ─── Query helpers (called by child widgets) ───────────────────────────────
 

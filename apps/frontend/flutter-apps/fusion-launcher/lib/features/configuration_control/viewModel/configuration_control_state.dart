@@ -2,6 +2,23 @@ import 'package:equatable/equatable.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 
+/// A user-created snapshot page — groups selected snapshots under a name.
+/// Displayed in the SNAPSHOT PAGE list and on the wall controller.
+class SnapshotPageModel extends Equatable {
+  final String id;
+  final String name;
+  final List<String> snapshotIds;
+
+  SnapshotPageModel({
+    String? id,
+    required this.name,
+    required this.snapshotIds,
+  }) : id = id ?? "SNAPPAGE${DateTime.now().millisecondsSinceEpoch}";
+
+  @override
+  List<Object?> get props => <Object?>[id, name, snapshotIds];
+}
+
 /// Enum representing the available tabs in Configuration Control
 enum ConfigControlTab {
   zoneControl,
@@ -23,6 +40,24 @@ sealed class ConfigurationControlState extends Equatable {
 
   /// Get sub-zones map for each zone (empty for non-loaded states)
   Map<String, List<SubZone>> get subZonesInZones => <String, List<SubZone>>{};
+
+  /// Get scene sets list (empty for non-loaded states)
+  List<SceneSetModel> get sceneSets => <SceneSetModel>[];
+
+  /// Get snapshots map per scene set (empty for non-loaded states)
+  Map<String, List<SnapshotsModel>> get snapshotsInSceneSets => <String, List<SnapshotsModel>>{};
+
+  /// Get all standalone snapshots (empty for non-loaded states)
+  List<SnapshotsModel> get allSnapshots => <SnapshotsModel>[];
+
+  /// Snapshots linked to each snapshot page (pageId → linked snapshots list)
+  Map<String, List<SnapshotsModel>> get snapshotsPerPage => <String, List<SnapshotsModel>>{};
+
+  /// Snapshot IDs that are already assigned to some snapshot page (used/unavailable)
+  Set<String> get usedSnapshotIds => <String>{};
+
+  /// User-created snapshot pages (each page has a name + linked snapshot IDs)
+  List<SnapshotPageModel> get snapshotPages => <SnapshotPageModel>[];
 
   /// Get selected controller ID
   String? get selectedControllerId => null;
@@ -67,6 +102,28 @@ class ConfigControlLoaded extends ConfigurationControlState {
   final Map<String, List<SubZone>> subZonesInZones;
 
   @override
+  final List<SceneSetModel> sceneSets;
+
+  @override
+  final Map<String, List<SnapshotsModel>> snapshotsInSceneSets;
+
+  /// All standalone snapshots
+  @override
+  final List<SnapshotsModel> allSnapshots;
+
+  /// Snapshots linked to each snapshot page (pageId → linked snapshots)
+  @override
+  final Map<String, List<SnapshotsModel>> snapshotsPerPage;
+
+  /// Snapshot IDs already assigned to some snapshot page
+  @override
+  final Set<String> usedSnapshotIds;
+
+  /// User-created snapshot pages
+  @override
+  final List<SnapshotPageModel> snapshotPages;
+
+  @override
   final String? selectedControllerId;
 
   @override
@@ -87,10 +144,28 @@ class ConfigControlLoaded extends ConfigurationControlState {
   /// Active subzone ID for LT (radio single-select)
   final String? activeSubZoneId;
 
+  /// Selected scene set IDs (checkbox multi-select in SCENES panel)
+  final Set<String> selectedSceneSetIds;
+
+  /// Currently focused/active scene set ID (shows in PAGES panel + VIRTUAL CONTROLLER)
+  final String? selectedSceneSetId;
+
+  /// Currently active/recalled snapshot ID (radio button in VIRTUAL CONTROLLER)
+  final String? activeSnapshotId;
+
+  /// Currently selected snapshot page ID (highlighted in SNAPSHOT PAGE list)
+  final String? selectedSnapshotPageId;
+
   const ConfigControlLoaded({
     required this.controllers,
     required this.zones,
     this.subZonesInZones = const <String, List<SubZone>>{},
+    this.sceneSets = const <SceneSetModel>[],
+    this.snapshotsInSceneSets = const <String, List<SnapshotsModel>>{},
+    this.allSnapshots = const <SnapshotsModel>[],
+    this.snapshotsPerPage = const <String, List<SnapshotsModel>>{},
+    this.usedSnapshotIds = const <String>{},
+    this.snapshotPages = const <SnapshotPageModel>[],
     this.selectedControllerId,
     this.selectedZoneId,
     this.currentTab = ConfigControlTab.zoneControl,
@@ -98,6 +173,10 @@ class ConfigControlLoaded extends ConfigurationControlState {
     this.selectedZoneIds = const <String>{},
     this.selectedSubZoneIds = const <String>{},
     this.activeSubZoneId,
+    this.selectedSceneSetIds = const <String>{},
+    this.selectedSceneSetId,
+    this.activeSnapshotId,
+    this.selectedSnapshotPageId,
   });
 
   /// Create a copy with updated values
@@ -105,6 +184,12 @@ class ConfigControlLoaded extends ConfigurationControlState {
     List<FusionController>? controllers,
     List<Zone>? zones,
     Map<String, List<SubZone>>? subZonesInZones,
+    List<SceneSetModel>? sceneSets,
+    Map<String, List<SnapshotsModel>>? snapshotsInSceneSets,
+    List<SnapshotsModel>? allSnapshots,
+    Map<String, List<SnapshotsModel>>? snapshotsPerPage,
+    Set<String>? usedSnapshotIds,
+    List<SnapshotPageModel>? snapshotPages,
     String? selectedControllerId,
     String? selectedZoneId,
     ConfigControlTab? currentTab,
@@ -112,14 +197,27 @@ class ConfigControlLoaded extends ConfigurationControlState {
     Set<String>? selectedZoneIds,
     Set<String>? selectedSubZoneIds,
     String? activeSubZoneId,
+    Set<String>? selectedSceneSetIds,
+    String? selectedSceneSetId,
+    String? activeSnapshotId,
+    String? selectedSnapshotPageId,
     bool clearSelectedControllerId = false,
     bool clearSelectedZoneId = false,
     bool clearActiveSubZoneId = false,
+    bool clearSelectedSceneSetId = false,
+    bool clearActiveSnapshotId = false,
+    bool clearSelectedSnapshotPageId = false,
   }) {
     return ConfigControlLoaded(
       controllers: controllers ?? this.controllers,
       zones: zones ?? this.zones,
       subZonesInZones: subZonesInZones ?? this.subZonesInZones,
+      sceneSets: sceneSets ?? this.sceneSets,
+      snapshotsInSceneSets: snapshotsInSceneSets ?? this.snapshotsInSceneSets,
+      allSnapshots: allSnapshots ?? this.allSnapshots,
+      snapshotsPerPage: snapshotsPerPage ?? this.snapshotsPerPage,
+      usedSnapshotIds: usedSnapshotIds ?? this.usedSnapshotIds,
+      snapshotPages: snapshotPages ?? this.snapshotPages,
       selectedControllerId: clearSelectedControllerId ? null : (selectedControllerId ?? this.selectedControllerId),
       selectedZoneId: clearSelectedZoneId ? null : (selectedZoneId ?? this.selectedZoneId),
       currentTab: currentTab ?? this.currentTab,
@@ -127,6 +225,10 @@ class ConfigControlLoaded extends ConfigurationControlState {
       selectedZoneIds: selectedZoneIds ?? this.selectedZoneIds,
       selectedSubZoneIds: selectedSubZoneIds ?? this.selectedSubZoneIds,
       activeSubZoneId: clearActiveSubZoneId ? null : (activeSubZoneId ?? this.activeSubZoneId),
+      selectedSceneSetIds: selectedSceneSetIds ?? this.selectedSceneSetIds,
+      selectedSceneSetId: clearSelectedSceneSetId ? null : (selectedSceneSetId ?? this.selectedSceneSetId),
+      activeSnapshotId: clearActiveSnapshotId ? null : (activeSnapshotId ?? this.activeSnapshotId),
+      selectedSnapshotPageId: clearSelectedSnapshotPageId ? null : (selectedSnapshotPageId ?? this.selectedSnapshotPageId),
     );
   }
 
@@ -169,6 +271,12 @@ class ConfigControlLoaded extends ConfigurationControlState {
     controllers,
     zones,
     subZonesInZones,
+    sceneSets,
+    snapshotsInSceneSets,
+    allSnapshots,
+    snapshotsPerPage,
+    usedSnapshotIds,
+    snapshotPages,
     selectedControllerId,
     selectedZoneId,
     currentTab,
@@ -176,6 +284,10 @@ class ConfigControlLoaded extends ConfigurationControlState {
     selectedZoneIds,
     selectedSubZoneIds,
     activeSubZoneId,
+    selectedSceneSetIds,
+    selectedSceneSetId,
+    activeSnapshotId,
+    selectedSnapshotPageId,
   ];
 }
 

@@ -4,6 +4,7 @@ import 'package:fusion_launcher/features/configuration_control/viewModel/configu
 import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/control_tab_bar.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/settings/settings_panel.dart';
+import 'package:fusion_launcher/features/configuration_control/widgets/snapshotsAndScenes/snapshots_scenes_panel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/zoneControl/zone_control_panel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -39,7 +40,7 @@ class ControlContentPanel extends StatelessWidget {
       case ConfigControlTab.zoneControl:
         return const ZoneControlPanel();
       case ConfigControlTab.snapshotsScenes:
-        return _buildPlaceholderContent(context, 'Snapshots/Scenes');
+        return const SnapshotsScenesPanel();
       case ConfigControlTab.schedule:
         return _buildPlaceholderContent(context, 'Schedule');
       case ConfigControlTab.message:
