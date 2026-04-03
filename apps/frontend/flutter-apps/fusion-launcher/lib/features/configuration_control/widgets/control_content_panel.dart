@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/control_tab_bar.dart';
+import 'package:fusion_launcher/features/configuration_control/widgets/settings/settings_panel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/zoneControl/zone_control_panel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -44,7 +45,7 @@ class ControlContentPanel extends StatelessWidget {
       case ConfigControlTab.message:
         return _buildPlaceholderContent(context, 'Message');
       case ConfigControlTab.settings:
-        return _buildPlaceholderContent(context, 'Settings');
+        return const SettingsPanel();
     }
   }
 

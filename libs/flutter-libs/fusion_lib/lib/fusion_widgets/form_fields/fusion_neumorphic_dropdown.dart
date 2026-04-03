@@ -21,6 +21,7 @@ class FusionNeumorphicDropdown<T> extends StatefulWidget {
     this.popupOffset = const Offset(-1, 6),
     this.isItemEnabled,
     this.itemPadding,
+    this.constraints,
   });
 
   final String? displayValue;
@@ -41,6 +42,9 @@ class FusionNeumorphicDropdown<T> extends StatefulWidget {
   final Widget? child;
   final bool Function(T)? isItemEnabled;
   final EdgeInsets? itemPadding;
+
+  /// Optional constraints forwarded to the popup menu (e.g. max height for scrolling).
+  final BoxConstraints? constraints;
 
   @override
   State<FusionNeumorphicDropdown<T>> createState() => _FusionNeumorphicDropdownState<T>();
@@ -103,6 +107,7 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
       matchChildWidth: widget.matchChildWidth,
       isItemEnabled: widget.isItemEnabled,
       itemPadding: widget.itemPadding,
+      constraints: widget.constraints,
       itemBuilder: (context, item) {
         final bool isSelected = item == _selectedValue;
         if (widget.itemBuilderWithSelection != null) {

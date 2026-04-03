@@ -24,13 +24,13 @@ class ControlTabBar extends StatelessWidget {
         final List<ConfigControlTab> tabs = _getTabsForController(selectedController);
 
         return Container(
-          height: 44,
+          height: 45,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
             color: context.colorScheme.elevation1,
             border: Border(
               bottom: BorderSide(
-                color: context.colorScheme.elevation2,
+                color: context.colorScheme.strokeLight,
                 width: 1,
               ),
             ),

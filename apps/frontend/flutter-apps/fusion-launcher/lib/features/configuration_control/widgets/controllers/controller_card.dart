@@ -44,11 +44,35 @@ class ControllerCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  FusionAppText(text: controller.name, style: Theme.of(context).textTheme.l1SemiBold),
+                  FusionAppText(
+                    text: controller.name,
+                    style: Theme.of(context).textTheme.l1SemiBold,
+                    maxLine: 1,
+                  ),
                   const SizedBox(height: 8),
 
                   /// Location display
-                  _buildLocationDisplay(context, locationName, zone),
+                  Row(
+                    children: <Widget>[
+                      Flexible(
+                        child: FusionAppText(
+                          text: controller.sku,
+                          style: Theme.of(context).textTheme.l1Regular,
+                          maxLine: 1,
+                        ),
+                      ),
+                      Container(
+                        width: 4,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: context.colorScheme.textBody,
+                          shape: BoxShape.circle,
+                        ),
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                      ),
+                      _buildLocationDisplay(context, locationName, zone),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -113,8 +137,10 @@ class ControllerCard extends StatelessWidget {
           ),
           const SizedBox(width: 4),
         ],
-        Expanded(
-          child: FusionAppText(text: locationName, style: Theme.of(context).textTheme.l1Regular),
+        FusionAppText(
+          text: locationName,
+          style: Theme.of(context).textTheme.l1Regular,
+          maxLine: 1,
         ),
       ],
     );

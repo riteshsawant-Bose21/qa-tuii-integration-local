@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/zoneControl/zone_item_widget.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -40,36 +41,12 @@ class ZonesListPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           /// Header
-          _buildHeader(context),
+          const PanelSectionHeader(title: 'ZONES'),
 
           /// Zones list
           Expanded(
             child: _buildZonesList(context),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation2,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(12),
-          topRight: Radius.circular(12),
-        ),
-        border: Border(
-          bottom: BorderSide(
-            color: context.colorScheme.strokeLight,
-            width: 1,
-          ),
-        ),
-      ),
-      child: Row(
-        children: <Widget>[
-          FusionAppText(text: 'ZONES', style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textBody)),
         ],
       ),
     );

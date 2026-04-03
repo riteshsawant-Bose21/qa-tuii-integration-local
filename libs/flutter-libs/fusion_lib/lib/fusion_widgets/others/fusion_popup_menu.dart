@@ -16,6 +16,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
     this.semanticsId,
     this.isItemEnabled,
     this.itemPadding,
+    this.constraints,
   }) : matchChildWidth = matchChildWidth ?? (popupwidth == null);
 
   final double? popupwidth;
@@ -30,6 +31,11 @@ class FusionPopupMenu<T> extends StatelessWidget {
   final String? semanticsId;
   final bool Function(T)? isItemEnabled;
   final EdgeInsets? itemPadding;
+
+  /// Optional size constraints forwarded to [CustomPopupMenuButton].
+  /// Use [BoxConstraints.tightFor] or [BoxConstraints(maxHeight: …)] to cap
+  /// popup height and enable scrolling.
+  final BoxConstraints? constraints;
   @override
   Widget build(BuildContext context) {
     final childKey = GlobalKey();
@@ -47,6 +53,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
         position: PopupMenuPosition.under,
         menuPadding: EdgeInsets.zero,
         offset: popupOffset,
+        constraints: constraints,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.0),
           side: BorderSide(color: context.colorScheme.strokeLight, width: 1),
