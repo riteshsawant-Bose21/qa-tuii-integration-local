@@ -35,11 +35,18 @@ Fusion Server can be run:
 - Task history and enable/disable controls
 - Fully programmable via REST
 
-## Snapshots (Consistency Backbone)
-- Create, list, delete, and activate snapshots
+## Time Machine (Consistency Backbone)
+- Create, list, delete, and activate time machine entries (`/time-machine/*`)
 - Epoch-based clustering model ensures strict ordering
-- Snapshot activation resets state cluster-wide
+- Activation performs a full-state restore with an epoch bump cluster-wide
 - Full-state restore with deterministic version bumping
+
+## Scene Catalog (Parameter Recall)
+- Store named **Snapshot Definitions** and **Scene Sets** via `POST /value`
+- Activate a Snapshot Definition to **patch** its data onto DB State (no epoch bump)
+- Activate a Scene within a Scene Set to patch its data and track `current_scene_id`
+- Query current scene, list all definitions, and retrieve the full catalog
+- All definitions and activations replicated across the cluster via gossip
 
 ## Networking Interfaces
 - REST API (primary control interface)
@@ -178,11 +185,22 @@ ExecStart=/usr/local/bin/fusion-server -verbose
 - `DELETE /value`
 - `GET /ws`
 
-## Snapshots
-- `GET /snapshots`
-- `POST /snapshots/{name}`
-- `POST /snapshots/{name}/activate`
-- `DELETE /snapshots/{name}`
+## Time Machine
+- `GET /time-machine`
+- `POST /time-machine/{name}`
+- `POST /time-machine/activate/{name}`
+- `POST /time-machine/update/{name}`
+- `DELETE /time-machine/{name}`
+
+## Scene Catalog
+- `POST /value` (with `snapshots` and/or `scene_sets` root keys to upsert definitions)
+- `POST /snapshots/activate`
+- `GET  /snapshots/list`
+- `GET  /scenes/list`
+- `POST /scene-sets/activate`
+- `POST /scene-sets/current-scene`
+- `GET  /scene-sets/list`
+- `GET  /scene-catalog-list`
 
 ## Tasks & Scheduler
 - `GET /tasks`

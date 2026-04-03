@@ -243,6 +243,171 @@ POST /admin/data   (import)
 
 ---
 
+## Scene Catalog API (Snapshot Definitions, Scenes, Scene Sets)
+
+The **Scene Catalog** is a second, independent storage system layered on top of the existing Time Machine system. Where Time Machine entries are full-state restores with epoch semantics, Scene Catalog entries are **patch-style overlays**: activating a Snapshot Definition or Scene merges its stored `data` keys onto the current DB State rather than replacing it entirely.
+
+This makes the Scene Catalog suitable for parameter-set recall (e.g. EQ presets, gain levels) without resetting unrelated state or bumping the epoch. This should avoid invalidating ongoing same-epoch updates during the patch.
+
+---
+
+### Key Concepts
+
+**Snapshot Definition**  
+A named blob of settings stored by ID. Activation patches `data` over DB State. Fire-and-forget — the ID is not tracked after activation.
+
+**Scene**  
+Like a Snapshot Definition but the current active Scene ID is tracked per Scene Set. Scenes are always nested inside a Scene Set.
+
+**Scene Set**  
+A named collection of Scenes. One scene in the set can be active at a time. The server maintains `current_scene_id` for each set independently.
+
+---
+
+### Creating / Updating Definitions
+
+Snapshot Definitions and Scene Sets are written via the existing `/value` endpoint using the `snapshots` and `scene_sets` root keys. The write is a **clobber upsert** — if a definition with the same ID already exists, it is overwritten.
+
+```sh
+# Store snapshot definitions alongside other config (or alone via PATCH)
+PATCH /value
+{
+  "snapshots": [
+    {
+      "id": "snap-morning-01",
+      "name": "Morning Baseline",
+      "data": { "channels.1.gain_db": -6.0 }
+    }
+  ],
+  "scene_sets": [
+    {
+      "set_id": "set-dayparts-01",
+      "name": "Channel 1 Dayparts",
+      "default_scene": "scene-morning-01",
+      "scenes": [
+        {
+          "id": "scene-morning-01",
+          "name": "Morning",
+          "data": { "channels.1.gain_db": -6.0 }
+        },
+        {
+          "id": "scene-evening-01",
+          "name": "Evening",
+          "data": { "channels.1.gain_db": -12.0 }
+        }
+      ]
+    }
+  ]
+}
+```
+
+`snapshots` and `scene_sets` keys are **extracted before** normal config processing. Any other root keys in the same payload continue through the standard state update path.
+
+---
+
+### REST API: Scene Catalog Endpoints (port 8080)
+
+#### Activate a Snapshot Definition
+
+```
+POST /snapshots/activate
+{ "id": "<snapshot-id>" }
+```
+
+- Loads the stored snapshot definition
+- Merges `data` onto DB State via `Patch` semantics (no epoch bump)
+- Broadcasts `snapshot_v2_activate` to the cluster
+- Returns **204** on success, **400** if `id` is missing, **404** if not found
+
+#### Activate a Scene (within a Scene Set)
+
+```
+POST /scene-sets/activate
+{ "set_id": "<set-id>", "scene_id": "<scene-id>" }
+```
+
+- Validates that `scene_id` belongs to `set_id` (returns **409** if not)
+- Merges scene `data` onto DB State
+- Updates `current_scene_id` for that set in persistent storage
+- Broadcasts `scene_activate` to the cluster
+- Returns **204** on success, **400** if fields missing, **404** if set not found, **409** if scene not a member
+
+#### Query Current Scene
+
+```
+POST /scene-sets/current-scene
+{ "set_id": "<set-id>" }
+```
+
+Response:
+```json
+{
+  "set_id": "set-dayparts-01",
+  "current_scene": {
+    "scene_id": "scene-morning-01",
+    "name": "Morning"
+  }
+}
+```
+
+Returns **200** with empty `scene_id` / `name` if no scene has been activated yet for that set.  
+Returns **404** if the set does not exist.
+
+#### List Snapshot Definitions
+
+```
+GET /snapshots/list
+```
+
+Returns all stored snapshot definitions (full objects including `id`, `name`, `data`).
+
+#### List All Scenes (flat)
+
+```
+GET /scenes/list
+```
+
+Returns all scenes across all scene sets as a flat list.
+
+#### List Scene Sets
+
+```
+GET /scene-sets/list
+```
+
+Returns all stored scene sets (full objects including nested scenes and `current_scene_id`).
+
+#### List Full Scene Catalog
+
+```
+GET /scene-catalog-list
+```
+
+Returns both snapshot definitions and scene sets in one response:
+```json
+{
+  "snapshots": [ ... ],
+  "scene_sets": [ ... ]
+}
+```
+
+---
+
+### Cluster Replication
+
+Scene Catalog definitions and activations are propagated across cluster nodes using the gossip pipeline.
+
+| Operation | Notify Op | What is replicated |
+|---|---|---|
+| Write snapshot defs | `snapshot_defs_upsert` | `[]SnapshotDefinition` persisted on all nodes |
+| Write scene sets | `scene_sets_upsert` | `[]SceneSet` persisted on all nodes |
+| Activate snapshot def | `snapshot_v2_activate` | Config state travels via existing `config_update` broadcast |
+| Activate scene | `scene_activate` | Config state via `config_update`; `current_scene_id` updated on all nodes |
+
+Definition writes check `message.Node == localNode` in the hub to avoid double-write on the originating node.
+
+---
+
 ## Cluster Convergence Guarantees
 
 Fusion guarantees:
