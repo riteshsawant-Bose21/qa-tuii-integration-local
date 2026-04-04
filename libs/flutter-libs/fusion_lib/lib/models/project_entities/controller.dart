@@ -8,6 +8,10 @@ class FusionController extends HardwareComponent {
   /// Zone/SubZone IDs this controller is assigned to control
   final Set<String> assignedZoneIds;
 
+  /// Persisted snapshot-page definitions (each is a map with id, name, snapshotIds).
+  /// Stored on the model so they survive serialization via hardware toJson/fromJson.
+  final List<Map<String, dynamic>> snapshotPagesData;
+
   FusionController({
     String? id,
     required super.name,
@@ -27,8 +31,10 @@ class FusionController extends HardwareComponent {
     super.equipmentLocationPosition,
     required super.addedFromBuildingPage,
     Set<String>? assignedZoneIds,
+    List<Map<String, dynamic>>? snapshotPagesData,
   }) : sku = sku ?? name,
        assignedZoneIds = assignedZoneIds ?? <String>{},
+       snapshotPagesData = snapshotPagesData ?? <Map<String, dynamic>>[],
        super(
          hardwareName: hardwareName ?? name,
          locationEntity: locationEntity ?? LocationModel(),
@@ -54,6 +60,7 @@ class FusionController extends HardwareComponent {
     List<PortData>? outputPortsData,
     bool? addedFromBuildingPage,
     Set<String>? assignedZoneIds,
+    List<Map<String, dynamic>>? snapshotPagesData,
   }) {
     return FusionController(
       id: id ?? this.id,
@@ -73,6 +80,7 @@ class FusionController extends HardwareComponent {
       addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
       equipmentLocationPosition: equipmentLocationPosition ?? this.equipmentLocationPosition,
       assignedZoneIds: assignedZoneIds ?? this.assignedZoneIds,
+      snapshotPagesData: snapshotPagesData ?? this.snapshotPagesData,
     );
   }
 
@@ -96,6 +104,7 @@ class FusionController extends HardwareComponent {
       'addedFromBuildingPage': addedFromBuildingPage,
       'equipmentLocationPosition': equipmentLocationPosition,
       'assignedZoneIds': assignedZoneIds.toList(),
+      'snapshotPagesData': snapshotPagesData,
     };
   }
 
@@ -119,6 +128,8 @@ class FusionController extends HardwareComponent {
       addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
       equipmentLocationPosition: DeserializationUtil.intDeserializer.deserialize(json['equipmentLocationPosition']),
       assignedZoneIds: (json['assignedZoneIds'] as List<dynamic>?)?.map((dynamic e) => e as String).toSet() ?? <String>{},
+      snapshotPagesData:
+          (json['snapshotPagesData'] as List<dynamic>?)?.map((dynamic e) => Map<String, dynamic>.from(e as Map)).toList() ?? <Map<String, dynamic>>[],
     );
   }
 }

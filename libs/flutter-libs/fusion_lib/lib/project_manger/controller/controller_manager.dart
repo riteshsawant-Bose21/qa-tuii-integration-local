@@ -47,4 +47,41 @@ extension ControllerManager on ProjectManager {
     controllerId: controllerId,
     zoneId: zoneId,
   );
+
+  // ─── Page-assignment (controllerPages) ─────────────────────────────────────
+
+  /// Page IDs linked to [controllerId] (scene-set IDs + snapshot-page IDs).
+  Set<String> getControllerPageIds(String controllerId) => _service.getControllerPageIds(controllerId);
+
+  /// Links a single [pageId] to [controllerId].
+  void linkPageToController({
+    required String controllerId,
+    required String pageId,
+  }) => _service.linkPageToController(controllerId: controllerId, pageId: pageId);
+
+  /// Unlinks a single [pageId] from [controllerId].
+  void unlinkPageFromController({
+    required String controllerId,
+    required String pageId,
+  }) => _service.unlinkPageFromController(controllerId: controllerId, pageId: pageId);
+
+  /// Replaces ALL page links for [controllerId] with [pageIds].
+  void setControllerPageIds({
+    required String controllerId,
+    required Set<String> pageIds,
+  }) => _service.setControllerPageIds(controllerId: controllerId, pageIds: pageIds);
+
+  // ─── Snapshot page data ────────────────────────────────────────────────────
+
+  /// Returns snapshot-page definitions stored on the controller model.
+  List<Map<String, dynamic>> getSnapshotPagesData(String controllerId) => _service.getSnapshotPagesData(controllerId);
+
+  /// Persists snapshot-page definitions on the controller model.
+  void setSnapshotPagesData({
+    required String controllerId,
+    required List<Map<String, dynamic>> snapshotPagesData,
+  }) => _service.setSnapshotPagesData(
+    controllerId: controllerId,
+    snapshotPagesData: snapshotPagesData,
+  );
 }

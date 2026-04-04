@@ -15,6 +15,20 @@ class SnapshotPageModel extends Equatable {
     required this.snapshotIds,
   }) : id = id ?? "SNAPPAGE${DateTime.now().millisecondsSinceEpoch}";
 
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'id': id,
+    'name': name,
+    'snapshotIds': snapshotIds,
+  };
+
+  factory SnapshotPageModel.fromJson(Map<String, dynamic> json) {
+    return SnapshotPageModel(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      snapshotIds: (json['snapshotIds'] as List<dynamic>).cast<String>(),
+    );
+  }
+
   @override
   List<Object?> get props => <Object?>[id, name, snapshotIds];
 }

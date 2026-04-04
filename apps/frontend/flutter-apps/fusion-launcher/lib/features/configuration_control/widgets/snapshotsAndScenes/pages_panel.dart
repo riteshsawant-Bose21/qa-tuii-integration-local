@@ -25,11 +25,10 @@ class PagesPanel extends StatelessWidget {
         // Checked scene sets (only these appear as scene-set rows)
         final List<SceneSetModel> selectedSets = state.sceneSets.where((SceneSetModel s) => state.selectedSceneSetIds.contains(s.id)).toList();
 
-        // Snapshot pages from the ACTIVE scene set — always shown
-        final List<SnapshotsModel> activePages =
-            state.selectedSceneSetId != null ? (state.snapshotsInSceneSets[state.selectedSceneSetId] ?? <SnapshotsModel>[]) : <SnapshotsModel>[];
+        // User-created snapshot pages — always shown in PAGES
+        final List<SnapshotPageModel> snapshotPages = state.snapshotPages;
 
-        final bool nothingToShow = selectedSets.isEmpty && activePages.isEmpty;
+        final bool nothingToShow = selectedSets.isEmpty && snapshotPages.isEmpty;
 
         return Container(
           decoration: BoxDecoration(
@@ -66,8 +65,8 @@ class PagesPanel extends StatelessWidget {
                               );
                             }),
 
-                            // ── Snapshot pages — ALWAYS visible ──────────────────
-                            ...activePages.map((SnapshotsModel page) {
+                            // ── User-created snapshot pages ──────────────────────
+                            ...snapshotPages.map((SnapshotPageModel page) {
                               final bool isActive = state.selectedSnapshotPageId == page.id;
                               return _PageRow(
                                 label: page.name,

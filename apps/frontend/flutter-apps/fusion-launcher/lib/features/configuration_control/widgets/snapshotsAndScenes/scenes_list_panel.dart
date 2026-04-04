@@ -193,11 +193,8 @@ class _SnapshotPageSection extends StatelessWidget {
                       itemCount: pages.length,
                       itemBuilder: (BuildContext context, int index) {
                         final SnapshotPageModel page = pages[index];
-                        final bool isSelected = state.selectedSnapshotPageId == page.id;
                         return _SnapshotPageItem(
                           page: page,
-                          isSelected: isSelected,
-                          onTap: () => context.read<ConfigurationControlViewmodel>().selectSnapshotPage(page.id),
                           onDelete: () => context.read<ConfigurationControlViewmodel>().deleteSnapshotPage(page.id),
                         );
                       },
@@ -211,46 +208,39 @@ class _SnapshotPageSection extends StatelessWidget {
 
 class _SnapshotPageItem extends StatelessWidget {
   final SnapshotPageModel page;
-  final bool isSelected;
-  final VoidCallback onTap;
   final VoidCallback onDelete;
 
   const _SnapshotPageItem({
     required this.page,
-    required this.isSelected,
-    required this.onTap,
     required this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? context.colorScheme.elevation3 : context.colorScheme.elevation2,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: isSelected ? context.colorScheme.strokeDark : context.colorScheme.strokeLight,
-            width: 1,
-          ),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation2,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: context.colorScheme.strokeLight,
+          width: 1,
         ),
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              child: FusionAppText(
-                text: page.name,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: context.colorScheme.textPrimary,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                ),
+      ),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: FusionAppText(
+              text: page.name,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: context.colorScheme.textPrimary,
+                fontWeight: FontWeight.w400,
               ),
             ),
-            _PageContextMenu(page: page, onDelete: onDelete),
-          ],
-        ),
+          ),
+          _PageContextMenu(page: page, onDelete: onDelete),
+        ],
       ),
     );
   }

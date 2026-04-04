@@ -73,4 +73,60 @@ extension ControllerService on ProjectService {
   }) {
     relationships.unlink(RelationshipType.controllerZones, controllerId, zoneId);
   }
+
+  // ─── Page-assignment (via RelationshipManager — controllerPages) ──────────
+
+  /// Page IDs linked to [controllerId] (scene-set IDs + snapshot-page IDs).
+  Set<String> getControllerPageIds(String controllerId) => relationships.getChildren(RelationshipType.controllerPages, controllerId);
+
+  /// Links [pageId] to [controllerId] in the relationship manager.
+  void linkPageToController({
+    required String controllerId,
+    required String pageId,
+  }) {
+    relationships.link(RelationshipType.controllerPages, controllerId, pageId);
+  }
+
+  /// Unlinks [pageId] from [controllerId] in the relationship manager.
+  void unlinkPageFromController({
+    required String controllerId,
+    required String pageId,
+  }) {
+    relationships.unlink(RelationshipType.controllerPages, controllerId, pageId);
+  }
+
+  /// Replaces ALL page links for [controllerId] with [pageIds].
+  void setControllerPageIds({
+    required String controllerId,
+    required Set<String> pageIds,
+  }) {
+    // Remove existing links
+    final Set<String> existing = Set<String>.from(getControllerPageIds(controllerId));
+    for (final String id in existing) {
+      relationships.unlink(RelationshipType.controllerPages, controllerId, id);
+    }
+    // Add new links
+    for (final String id in pageIds) {
+      relationships.link(RelationshipType.controllerPages, controllerId, id);
+    }
+  }
+
+  // ─── Snapshot page data (persisted on the FusionController model) ─────────
+
+  /// Returns the snapshot-page definitions stored on the controller model.
+  List<Map<String, dynamic>> getSnapshotPagesData(String controllerId) {
+    final FusionController? controller = getControllerById(controllerId);
+    return controller?.snapshotPagesData ?? <Map<String, dynamic>>[];
+  }
+
+  /// Replaces the snapshot-page definitions stored on the controller model.
+  void setSnapshotPagesData({
+    required String controllerId,
+    required List<Map<String, dynamic>> snapshotPagesData,
+  }) {
+    final FusionController? controller = getControllerById(controllerId);
+    if (controller == null) return;
+    final FusionController updated = controller.copyWith(snapshotPagesData: snapshotPagesData);
+    hardware.add(controllerId, updated);
+  }
 }

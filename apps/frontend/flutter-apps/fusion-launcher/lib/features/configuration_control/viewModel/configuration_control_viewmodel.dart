@@ -71,6 +71,9 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
       final FusionController selected = _resolveController(controllers, preserveControllerId);
       final _ZoneSelection sel = _buildZoneSelection(selected);
 
+      // ── Restore persisted pages data for the selected controller ──────────
+      final _PersistedPages persisted = _loadPersistedPages(selected, sceneSets);
+
       emit(
         ConfigControlLoaded(
           controllers: controllers,
@@ -88,12 +91,13 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
           activeSubZoneId: sel.activeSubZoneId,
           currentTab: _loaded?.currentTab ?? ConfigControlTab.zoneControl,
           searchQuery: _loaded?.searchQuery ?? '',
-          // Checkboxes: preserve or start empty (no auto-check on first load)
-          selectedSceneSetIds: _loaded?.selectedSceneSetIds ?? const <String>{},
+          // Restore persisted scene-set checkbox selections
+          selectedSceneSetIds: persisted.selectedSceneSetIds,
           // Active scene (drives SNAPSHOT PAGE + VC): preserve or default to first
           selectedSceneSetId: _loaded?.selectedSceneSetId ?? (sceneSets.isNotEmpty ? sceneSets.first.id : null),
           activeSnapshotId: _loaded?.activeSnapshotId,
-          snapshotPages: _loaded?.snapshotPages ?? const <SnapshotPageModel>[],
+          // Restore persisted snapshot pages
+          snapshotPages: persisted.snapshotPages,
           selectedSnapshotPageId: _loaded?.selectedSnapshotPageId,
         ),
       );
@@ -237,17 +241,48 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
   /// Toggle checkbox in the SCENES panel.
   /// ONLY updates selectedSceneSetIds — does NOT change the active scene set.
   /// (SCENES checkboxes and SNAPSHOT PAGE are independent.)
+  /// Persists via [RelationshipType.controllerPages].
   void toggleSceneSetSelection(String sceneSetId) {
     final ConfigControlLoaded? loaded = _loaded;
     if (loaded == null) return;
+
+    final bool wasChecked = loaded.selectedSceneSetIds.contains(sceneSetId);
     final Set<String> updated = Set<String>.from(loaded.selectedSceneSetIds);
-    if (updated.contains(sceneSetId)) {
+
+    if (wasChecked) {
       updated.remove(sceneSetId);
     } else {
       updated.add(sceneSetId);
     }
-    // Only the checkbox state changes — active scene set stays the same
-    emit(loaded.copyWith(selectedSceneSetIds: updated));
+
+    // Persist: update controllerPages = selectedSceneSetIds ∪ snapshotPageIds
+    if (loaded.selectedControllerId != null) {
+      _persistPageIds(
+        controllerId: loaded.selectedControllerId!,
+        selectedSceneSetIds: updated,
+        snapshotPages: loaded.snapshotPages,
+      );
+    }
+
+    if (!wasChecked) {
+      // Checked ON → activate this scene set row in PAGES, clear any snapshot page selection
+      emit(
+        loaded.copyWith(
+          selectedSceneSetIds: updated,
+          selectedSceneSetId: sceneSetId,
+          clearSelectedSnapshotPageId: true,
+        ),
+      );
+    } else {
+      // Checked OFF → if it was the active row, clear it
+      final bool wasActive = loaded.selectedSceneSetId == sceneSetId;
+      emit(
+        loaded.copyWith(
+          selectedSceneSetIds: updated,
+          clearSelectedSceneSetId: wasActive,
+        ),
+      );
+    }
   }
 
   /// Select the active scene set (shown in PAGES panel & SNAPSHOT PAGE section).
@@ -272,8 +307,8 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
   }
 
   /// Create a new snapshot page — a user-defined grouping of selected snapshots.
-  /// This does NOT create any entity in the project; it only lives in
-  /// ConfigControl state and is shown on the wall controller.
+  /// Persisted on the [FusionController] model (snapshotPagesData) and linked
+  /// via [RelationshipType.controllerPages].
   void createSnapshotPage({
     required String name,
     required List<String> selectedSnapshotIds,
@@ -289,20 +324,49 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
 
     final List<SnapshotPageModel> updatedPages = <SnapshotPageModel>[...loaded.snapshotPages, newPage];
 
+    // Persist to the project
+    if (loaded.selectedControllerId != null) {
+      _persistPageIds(
+        controllerId: loaded.selectedControllerId!,
+        selectedSceneSetIds: loaded.selectedSceneSetIds,
+        snapshotPages: updatedPages,
+      );
+      _persistSnapshotPagesData(
+        controllerId: loaded.selectedControllerId!,
+        snapshotPages: updatedPages,
+      );
+    }
+
     emit(
       loaded.copyWith(
         snapshotPages: updatedPages,
         selectedSnapshotPageId: newPage.id,
+        clearSelectedSceneSetId: true,
       ),
     );
   }
 
   /// Delete a snapshot page by ID.
+  /// Persists the removal to [RelationshipType.controllerPages] and the
+  /// controller model's [snapshotPagesData].
   void deleteSnapshotPage(String pageId) {
     final ConfigControlLoaded? loaded = _loaded;
     if (loaded == null) return;
 
     final List<SnapshotPageModel> updatedPages = loaded.snapshotPages.where((SnapshotPageModel p) => p.id != pageId).toList();
+
+    // Persist the removal
+    if (loaded.selectedControllerId != null) {
+      _persistPageIds(
+        controllerId: loaded.selectedControllerId!,
+        selectedSceneSetIds: loaded.selectedSceneSetIds,
+        snapshotPages: updatedPages,
+      );
+      _persistSnapshotPagesData(
+        controllerId: loaded.selectedControllerId!,
+        snapshotPages: updatedPages,
+      );
+    }
 
     emit(
       loaded.copyWith(
@@ -312,11 +376,12 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
     );
   }
 
-  /// Select a snapshot page in the SNAPSHOT PAGE list.
+  /// Select a snapshot page in the PAGES panel.
+  /// Clears selectedSceneSetId so only one row is active at a time.
   void selectSnapshotPage(String pageId) {
     final ConfigControlLoaded? loaded = _loaded;
     if (loaded == null) return;
-    emit(loaded.copyWith(selectedSnapshotPageId: pageId));
+    emit(loaded.copyWith(selectedSnapshotPageId: pageId, clearSelectedSceneSetId: true));
   }
 
   /// Get snapshots for a specific scene set.
@@ -434,9 +499,92 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
       for (final Zone zone in zones) zone.id: _projectViewModel.getSubZonesForZone(parentZoneId: zone.id),
     };
   }
+
+  // ─── Persistence helpers (controllerPages relationship) ────────────────────
+
+  /// Restores the pages state for [controller] from the persisted relationship
+  /// graph ([RelationshipType.controllerPages]) and the controller model's
+  /// [FusionController.snapshotPagesData].
+  _PersistedPages _loadPersistedPages(
+    FusionController controller,
+    List<SceneSetModel> sceneSets,
+  ) {
+    // All page IDs linked to this controller (scene-set IDs + snapshot-page IDs)
+    final Set<String> pageIds = _projectViewModel.getControllerPageIds(controller.id);
+
+    // Scene-set IDs that are currently valid
+    final Set<String> validSceneSetIds = sceneSets.map((SceneSetModel s) => s.id).toSet();
+
+    // Partition: scene-set IDs vs snapshot-page IDs
+    final Set<String> selectedSceneSetIds = <String>{};
+    for (final String id in pageIds) {
+      if (validSceneSetIds.contains(id)) {
+        selectedSceneSetIds.add(id);
+      }
+    }
+
+    // Restore snapshot pages from controller model data
+    final List<Map<String, dynamic>> rawPages = _projectViewModel.getSnapshotPagesData(controller.id);
+    final List<SnapshotPageModel> snapshotPages =
+        rawPages
+            .map((Map<String, dynamic> json) {
+              try {
+                return SnapshotPageModel.fromJson(json);
+              } catch (_) {
+                return null;
+              }
+            })
+            .whereType<SnapshotPageModel>()
+            .toList();
+
+    return _PersistedPages(
+      selectedSceneSetIds: selectedSceneSetIds,
+      snapshotPages: snapshotPages,
+    );
+  }
+
+  /// Persists the combined set of page IDs (selectedSceneSetIds ∪ snapshotPageIds)
+  /// into the [RelationshipType.controllerPages] relationship.
+  void _persistPageIds({
+    required String controllerId,
+    required Set<String> selectedSceneSetIds,
+    required List<SnapshotPageModel> snapshotPages,
+  }) {
+    final Set<String> allPageIds = <String>{
+      ...selectedSceneSetIds,
+      ...snapshotPages.map((SnapshotPageModel p) => p.id),
+    };
+    _projectViewModel.setControllerPageIds(
+      controllerId: controllerId,
+      pageIds: allPageIds,
+    );
+  }
+
+  /// Persists snapshot-page definitions (name + snapshotIds) on the
+  /// [FusionController] model so they survive project serialization.
+  void _persistSnapshotPagesData({
+    required String controllerId,
+    required List<SnapshotPageModel> snapshotPages,
+  }) {
+    final List<Map<String, dynamic>> data = snapshotPages.map((SnapshotPageModel p) => p.toJson()).toList();
+    _projectViewModel.setSnapshotPagesData(
+      controllerId: controllerId,
+      snapshotPagesData: data,
+    );
+  }
 }
 
-// ─── Private value object ──────────────────────────────────────────────────────
+// ─── Private value objects ─────────────────────────────────────────────────────
+
+class _PersistedPages {
+  final Set<String> selectedSceneSetIds;
+  final List<SnapshotPageModel> snapshotPages;
+
+  const _PersistedPages({
+    required this.selectedSceneSetIds,
+    required this.snapshotPages,
+  });
+}
 
 class _ZoneSelection {
   final Set<String> zoneIds;

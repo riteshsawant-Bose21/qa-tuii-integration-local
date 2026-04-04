@@ -33,6 +33,7 @@ enum RelationshipType {
   /// Maps a [FusionController] → its assigned zone/sub-zone IDs.
   /// Mirrors the [messageZones] pattern used by the message player.
   controllerZones,
+  controllerPages,
 }
 
 class RelationshipManager {

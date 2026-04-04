@@ -89,4 +89,97 @@ extension ControllerViewModel on ProjectViewModel {
       throwError('Failed to unassign zone from controller: $e');
     }
   }
+
+  // ─── Page-assignment (controllerPages) ──────────────────────────────────
+
+  /// Page IDs linked to [controllerId] via [RelationshipType.controllerPages].
+  Set<String> getControllerPageIds(String controllerId) {
+    try {
+      return projectManager.getControllerPageIds(controllerId);
+    } catch (_) {
+      return <String>{};
+    }
+  }
+
+  /// Links [pageId] to the controller and persists.
+  void linkPageToController({
+    required String controllerId,
+    required String pageId,
+    bool autoSave = true,
+  }) {
+    try {
+      if (autoSave) recordSnapshot();
+      projectManager.linkPageToController(controllerId: controllerId, pageId: pageId);
+      if (autoSave) saveProject();
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to link page: $e');
+      throwError('Failed to link page to controller: $e');
+    }
+  }
+
+  /// Unlinks [pageId] from the controller and persists.
+  void unlinkPageFromController({
+    required String controllerId,
+    required String pageId,
+    bool autoSave = true,
+  }) {
+    try {
+      if (autoSave) recordSnapshot();
+      projectManager.unlinkPageFromController(controllerId: controllerId, pageId: pageId);
+      if (autoSave) saveProject();
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to unlink page: $e');
+      throwError('Failed to unlink page from controller: $e');
+    }
+  }
+
+  /// Replaces ALL page links for [controllerId] and persists.
+  void setControllerPageIds({
+    required String controllerId,
+    required Set<String> pageIds,
+    bool autoSave = true,
+  }) {
+    try {
+      if (autoSave) recordSnapshot();
+      projectManager.setControllerPageIds(controllerId: controllerId, pageIds: pageIds);
+      if (autoSave) saveProject();
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to set page IDs: $e');
+      throwError('Failed to set controller page IDs: $e');
+    }
+  }
+
+  // ─── Snapshot page data ────────────────────────────────────────────────
+
+  /// Returns snapshot-page definitions stored on the controller model.
+  List<Map<String, dynamic>> getSnapshotPagesData(String controllerId) {
+    try {
+      return projectManager.getSnapshotPagesData(controllerId);
+    } catch (_) {
+      return <Map<String, dynamic>>[];
+    }
+  }
+
+  /// Persists snapshot-page definitions on the controller model and saves.
+  void setSnapshotPagesData({
+    required String controllerId,
+    required List<Map<String, dynamic>> snapshotPagesData,
+    bool autoSave = true,
+  }) {
+    try {
+      if (autoSave) recordSnapshot();
+      projectManager.setSnapshotPagesData(
+        controllerId: controllerId,
+        snapshotPagesData: snapshotPagesData,
+      );
+      if (autoSave) saveProject();
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to set snapshot pages data: $e');
+      throwError('Failed to set snapshot pages data: $e');
+    }
+  }
 }
