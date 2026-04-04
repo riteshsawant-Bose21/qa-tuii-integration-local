@@ -120,6 +120,11 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
     spin_lock(&s->lock);
     if (s->playback_armed) {
         // we may want to catch up and playback a bunch of frames, up to buf_size_in_packets worth
+        // Policy: if next_action_times[playback_slot] is 0, we want to playback silence. 
+        //         to playback silence in packet_time, we keep time with next_action_time instead
+        //         next_action_time is managed completely from here
+        //         EARLY_SLACK_NS is a window after the tick to still play back the packet
+        //         we have no measure for "stale" packets--just play out packets timestamped in the past
         while (count < s->buf_size_in_packets) {
             u32 slot = s->playback_slot;
             u64 action_time = s->next_action_times[slot];
@@ -156,9 +161,6 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
             if (action_time != 0)
                 s->next_action_time += s->packet_time;
             count++;
-
-            if (s->packet_time >= TIMER_BASE_INTERVAL_NS)
-                break;
         }
     }
     spin_unlock(&s->lock);

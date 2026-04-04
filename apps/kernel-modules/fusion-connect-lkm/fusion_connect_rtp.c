@@ -527,7 +527,9 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
     bool marker, malformed, duplicate, reorder = false, late;
     u16 metrics_flags = 0;
 
-    current_phc_ns = rtp_mgr->ops->get_tick_ns(rtp_mgr->cn_mgr);
+    // Use the timestamp taken on packet ingress 
+    // alternative is to use the tick timestamp from this processing window, but that will cause packets to play out later  
+    current_phc_ns = rx_phc_ns;
 
     if (unlikely(!payload && payload_len))
         return;
@@ -552,6 +554,7 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
 
             sample_physical_width_bits = snd_pcm_format_physical_width(stream->info.format);
 
+            // If we haven't seen an SSRC for this stream yet, or if the packet's SSRC differs from the stashed one, stash it and reset timing state
             if (stream->ssrc == 0 || packet_ssrc != stream->ssrc) {
                 stream->ssrc = packet_ssrc;
                 stream->current_seq_num = 0;
@@ -565,11 +568,14 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
                        stream->ssrc, stream->info.stream_name);
             }
 
+            // We use the incoming packet's sequence number to determine where it should go in the buffer
             write_slot = seq_num % stream->buf_size_in_packets;
 
+            // To keep playback aligned with write_slot, we wait for a packet to land in slot 0 before arming playback
             if (!stream->playback_armed) {
                 if (write_slot == 0) {
                     stream->playback_armed = true;
+                    // for playback streams, "next_action_time" is used to keep time when we miss a packet or they stop showing up.
                     stream->next_action_time = sched_playout_ns;
                     printk(KERN_DEBUG "fusion_cn_rtp: playback armed %s\n", stream->info.stream_name);
                 } else {
@@ -586,6 +592,7 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
             marker = !!(payload_type & 0x80);
             duplicate = (stream->current_seq_num && seq_num == stream->current_seq_num);
 
+            // buffer offset for the next write
             buf_offset = write_slot * stream->info.frames_per_packet;
 
             buf = rtp_mgr->ops->get_buffer(alsa_stream);
@@ -596,9 +603,12 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
                 return;
             }
 
+            // get the current SAC for bottom 32 of the RTP timestamp reconstruction
             current_sac = (((current_phc_ns >> (stream->info.sample_rate == 48000 ? 2 : 1)) * 3) / 15625);
 
+            // reconstruct the global SAC by combining the current SAC with the incoming RTP timestamp
             global_sac = ((current_sac & 0xFFFFFFFF00000000ULL) | rtp_timestamp) - stream->info.timestamp_offset;
+            // handle 32-bit RTP timestamp wrap
             if (rtp_timestamp < 0x3FFFFFFFU && (u32)current_sac >= 0xC0000000U)
                 global_sac += (1ULL << 32);
             else if ((u32)current_sac < 0x3FFFFFFFU && rtp_timestamp >= 0xC0000000U)
