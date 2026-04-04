@@ -3,7 +3,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/config/app_config.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
-import 'package:fusion_lib/fusion_widgets/fusion_widgets.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/product_data.dart';
 import 'package:fusion_lib/product_data/products.dart';
 
@@ -52,10 +52,18 @@ class ProductQueryViewModelState extends Equatable {
 }
 
 class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
-  ProductQueryViewModel() : super(ProductQueryViewModelState.initial());
+  final FusionNetworkClient networkClient;
+  ProductQueryViewModel({required this.networkClient}) : super(ProductQueryViewModelState.initial()) {
+    loadProducts();
+  }
 
   static const int _maxRetries = 1;
-  final Products _productsApi = Products(baseUrl: AppConfig.awsApiBaseUrl, fusionOnly: true);
+
+  Products get _productsApi => Products(
+    baseUrl: AppConfig.awsApiBaseUrl,
+    networkClient: networkClient,
+    fusionOnly: true,
+  );
 
   late String localProductDirPath;
 

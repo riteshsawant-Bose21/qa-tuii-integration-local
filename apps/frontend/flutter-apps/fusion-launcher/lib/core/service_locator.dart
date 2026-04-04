@@ -220,7 +220,11 @@ Future<void> setupServiceLocator() async {
     ),
   );
 
-  serviceLocator.registerLazySingleton<ProductQueryViewModel>(() => ProductQueryViewModel());
+  serviceLocator.registerLazySingleton<ProductQueryViewModel>(
+    () => ProductQueryViewModel(
+      networkClient: serviceLocator<FusionNetworkClient>(),
+    ),
+  );
 
   serviceLocator.registerLazySingleton<ProjectSyncService>(
     () => ProjectSyncService(

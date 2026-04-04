@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:archive/archive.dart';
@@ -24,6 +25,7 @@ import 'models/models.dart';
 /// ```
 class Products {
   final String baseUrl;
+  final FusionNetworkClient networkClient;
   final String cacheDir;
   final bool fusionOnly;
   final String productCacheZipAssetPath = 'assets/zip/product_cache.zip';
@@ -36,6 +38,7 @@ class Products {
 
   Products({
     required this.baseUrl,
+    required this.networkClient,
     String? cacheDir,
     this.fusionOnly = false,
   }) : cacheDir = cacheDir ?? _getDefaultCacheDir();
@@ -51,19 +54,16 @@ class Products {
   Directory get _imagesDir => Directory('$cacheDir/images');
 
   /// Initialize products - offline first
-  ///
   /// 1. Try to sync from API (if online)
   /// 2. If API fails or offline, load from local cache
   /// 3. If no cache exists and API fails, throws error
   Future<void> initialize() async {
-    // Try to sync from API first
-    debugPrint("cacheDir: $cacheDir");
     try {
-      debugPrint("Extracting local product assets...");
-      await extractLocalProductsZip();
-      debugPrint("Syncing from API...");
-      // await _syncFromApi();
-      _syncedFromApi = false;
+      // debugPrint("Extracting local product assets...");
+      // await extractLocalProductsZip();
+      // debugPrint("Syncing from API...");
+      await _syncFromApi();
+      _syncedFromApi = true;
     } catch (e) {
       // API failed - that's okay, we'll use cache
       _syncedFromApi = false;
@@ -85,9 +85,10 @@ class Products {
   /// Force refresh from API (with fallback to cache)
   Future<void> refresh() async {
     try {
-      // await _syncFromApi();
-      await _loadFromCache();
-      _syncedFromApi = false;
+      log("Refreshing products from API...");
+      await _syncFromApi();
+      // await _loadFromCache();
+      _syncedFromApi = true;
     } catch (e) {
       // API failed - load from cache if available
       if (await _cacheFile.exists()) {
@@ -162,36 +163,31 @@ class Products {
 
   /// Internal: Sync from API and save to local cache
   Future<void> _syncFromApi() async {
-    final client = HttpClient();
-    client.connectionTimeout = const Duration(seconds: 10);
-
     try {
-      final request = await client.getUrl(
-        Uri.parse('$baseUrl/products'),
+      final response = await networkClient.get<ProductCatalog>(
+        api: FusionApiEndpoint.products,
+        fromJson: (p0) => ProductCatalog.fromJson(p0),
       );
-      request.headers.set('Accept', 'application/json');
 
-      final response = await request.close();
-      if (response.statusCode != 200) {
-        FusionLogger.log(tag: LogTag.project, message: "Failed to sync products from API. Status code: ${response.statusCode}");
-        throw Exception('HTTP Error: ${response.statusCode}');
+      if (!response.success) {
+        FusionLogger.log(tag: LogTag.project, message: "Products sync failed: ${response.message}");
+        throw Exception(response.message);
       }
 
-      final body = await response.transform(utf8.decoder).join();
-      final json = jsonDecode(body) as Map<String, dynamic>;
-      final catalog = ProductCatalog.fromJson(json);
+      final catalog = response.data!;
 
       // Ensure cache directory exists
       await _ensureCacheDir();
 
       // Save JSON to cache
-      await _cacheFile.writeAsString(body);
+      await _cacheFile.writeAsString(jsonEncode(catalog.toJson()));
       await _versionFile.writeAsString(catalog.version);
 
-      // Start image caching in background (n on-blocking)
+      // Start image caching in background (non-blocking)
       _cacheImagesInBackground(catalog);
-    } finally {
-      client.close();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Products sync error: $e");
+      // Don't throw - we'll fallback to cache
     }
   }
 

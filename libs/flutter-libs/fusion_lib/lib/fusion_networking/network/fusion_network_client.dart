@@ -4,15 +4,8 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_logger/logger.dart';
 import 'package:fusion_lib/fusion_networking/network/rest_client/dio_client.dart';
-import 'package:fusion_lib/fusion_storage/fusion_secure_storage.dart';
-import 'package:fusion_lib/fusion_storage/fusion_secure_storage_impl.dart';
-import 'package:fusion_lib/models/response_callback.dart';
 
-import '../../fusion_utils/app_settings.dart';
-import '../../fusion_utils/shared_preference_handler.dart';
-import '../../fusion_utils/telemetry_data.dart';
 import '../../service/auth/fusion_auth_service.dart';
 import 'dartzmq_stub.dart' if (dart.library.io) 'package:dartzmq/dartzmq.dart';
 
@@ -91,11 +84,11 @@ class FusionNetworkClient {
 
       final Response<dynamic> response = await httpClient.dioInstance.get(url, options: options, queryParameters: urlParameters);
 
-      if (response.data != null) {
+      if (response.statusCode! >= 200 && response.statusCode! < 300) {
         if (isBinary) {
-          return ResponseCallback<T>(success: true, message: "Binary file fetched successfully", data: response.data as T);
+          return ResponseCallback<T>(success: true, message: "Binary file fetched successfully", data: response.data as T?);
         } else {
-          T data = fromJson != null ? fromJson(response.data) : response.data;
+          T? data = fromJson != null ? fromJson(response.data) : response.data;
           return ResponseCallback<T>.success(data);
         }
       } else {
@@ -131,7 +124,7 @@ class FusionNetworkClient {
 
       final Response<dynamic> response = await httpClient.dioInstance.put(url, options: options, data: data);
 
-      if (response.data != null) {
+      if (response.statusCode! >= 200 && response.statusCode! < 300) {
         T data = fromJson != null ? fromJson(response.data) : response.data;
         return ResponseCallback<T>.success(data);
       } else {
@@ -171,7 +164,7 @@ class FusionNetworkClient {
 
       final Response<dynamic> response = await httpClient.dioInstance.post(url, data: data, options: options);
 
-      if (response.data != null) {
+      if (response.statusCode! >= 200 && response.statusCode! < 300) {
         T data = fromJson != null ? fromJson(response.data) : response.data;
         return ResponseCallback<T>.success(data);
       } else {
@@ -220,7 +213,7 @@ class FusionNetworkClient {
         data: data,
         queryParameters: urlParameters,
       );
-      if (response.data != null) {
+      if (response.statusCode! >= 200 && response.statusCode! < 300) {
         T data = fromJson != null ? fromJson(response.data) : response.data;
         return ResponseCallback<T>.success(data);
       } else {
@@ -265,7 +258,7 @@ class FusionNetworkClient {
 
       final Response<dynamic> response = await httpClient.dioInstance.delete(url, options: options, queryParameters: urlParameters);
 
-      if (response.data != null) {
+      if (response.statusCode! >= 200 && response.statusCode! < 300) {
         T? data = fromJson != null ? fromJson(response.data) : response.data;
         return ResponseCallback<T>.success(data);
       } else if (response.statusCode == 204 || response.statusCode == 200 || response.statusCode == 202) {
@@ -403,8 +396,11 @@ enum FusionApiEndpoint {
   fusionDelete('/clear', FusionApiType.fusionServer),
 
   //Backend server endpoints
-  getProfile("/user/me/authorization", FusionApiType.backendServer),
+  getProfile("/users/authorization", FusionApiType.backendServer),
   projects("/projects", FusionApiType.backendServer),
+  products('/products', FusionApiType.backendServer),
+  devicesBulkCloud('/devices/bulk', FusionApiType.backendServer),
+  devicesCloud('/devices', FusionApiType.backendServer),
 
   //fusion server setup apis
   fusionDevice('/devices', FusionApiType.fusionServer),
@@ -432,7 +428,7 @@ extension ApiEndpointTypeCheckExtension on String {
   }
 
   bool isBackendServerEndpoint() {
-    return contains(FusionApiEndpoint.getProfile.path) || contains(FusionApiEndpoint.projects.path);
+    return contains(FusionApiEndpoint.getProfile.path) || contains(FusionApiEndpoint.projects.path) || contains(FusionApiEndpoint.devicesCloud.path);
   }
 
   bool isTokenRequired() {
