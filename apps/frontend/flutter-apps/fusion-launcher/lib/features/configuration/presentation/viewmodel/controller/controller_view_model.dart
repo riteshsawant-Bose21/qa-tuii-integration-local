@@ -208,4 +208,32 @@ extension ControllerViewModel on ProjectViewModel {
       throwError('Failed to set controller message pages: $e');
     }
   }
+
+  // ─── Schedule page config ─────────────────────────────────────────────────
+
+  /// Returns the persisted [ControllerSchedulePageConfig] for [controllerId].
+  ControllerSchedulePageConfig getControllerScheduleConfig(String controllerId) {
+    try {
+      return projectManager.getControllerScheduleConfig(controllerId);
+    } catch (_) {
+      return const ControllerSchedulePageConfig();
+    }
+  }
+
+  /// Persists updated [ControllerSchedulePageConfig] for [controllerId].
+  void setControllerScheduleConfig({
+    required String controllerId,
+    required ControllerSchedulePageConfig config,
+    bool autoSave = true,
+  }) {
+    try {
+      if (autoSave) recordSnapshot();
+      projectManager.setControllerScheduleConfig(controllerId: controllerId, config: config);
+      if (autoSave) saveProject();
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to set schedule config: $e');
+      throwError('Failed to set controller schedule config: $e');
+    }
+  }
 }

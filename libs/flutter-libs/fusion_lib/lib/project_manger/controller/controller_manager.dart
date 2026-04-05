@@ -65,4 +65,15 @@ extension ControllerManager on ProjectManager {
   /// and keeps [RelationshipType.controllerMessagePages] in sync.
   void setControllerMessagePages({required String controllerId, required List<ControllerMessagePageModel> messagePages}) =>
       _service.setControllerMessagePages(controllerId: controllerId, messagePages: messagePages);
+
+  // ─── Schedule page config ─────────────────────────────────────────────────
+
+  /// Returns the persisted [ControllerSchedulePageConfig] for [controllerId].
+  ControllerSchedulePageConfig getControllerScheduleConfig(String controllerId) => _service.getControllerScheduleConfig(controllerId);
+
+  /// Replaces the [ControllerSchedulePageConfig] for [controllerId].
+  void setControllerScheduleConfig({
+    required String controllerId,
+    required ControllerSchedulePageConfig config,
+  }) => _service.setControllerScheduleConfig(controllerId: controllerId, config: config);
 }

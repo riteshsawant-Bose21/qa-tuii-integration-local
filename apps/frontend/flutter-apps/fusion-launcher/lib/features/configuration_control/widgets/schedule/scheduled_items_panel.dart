@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
-import 'package:fusion_launcher/features/configuration_control/widgets/schedule/schedule_tab_cubit.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Left panel — SCHEDULED ITEMS.
 ///
-/// Contains:
-///  • "Show upcoming items" checkbox
-///  • Show none / Show all / Show selected radio buttons
-///  • Scheduler checklist (only when "Show selected" is active)
+/// Reads from and writes to [ConfigurationControlViewmodel] so state
+/// survives tab switches and is persisted on the controller model.
 class ScheduledItemsPanel extends StatelessWidget {
   const ScheduledItemsPanel({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ScheduleTabCubit, ScheduleTabState>(
-      builder: (BuildContext context, ScheduleTabState state) {
+    return BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
+      builder: (BuildContext context, ConfigurationControlState state) {
+        if (state is! ConfigControlLoaded) return const SizedBox.shrink();
+        final ConfigurationControlViewmodel vm = context.read<ConfigurationControlViewmodel>();
+
         return Container(
           decoration: BoxDecoration(
             color: context.colorScheme.elevation1,
@@ -35,37 +37,36 @@ class ScheduledItemsPanel extends StatelessWidget {
                     _CheckboxRow(
                       label: 'Show upcoming items',
                       isChecked: state.showUpcoming,
-                      onTap: () => context.read<ScheduleTabCubit>().toggleShowUpcoming(),
+                      onTap: vm.toggleShowUpcoming,
                     ),
-
                     const SizedBox(height: 8),
 
                     // ── Filter mode radio buttons ────────────────────────
                     _RadioRow(
                       label: 'Show none',
-                      isSelected: state.filterMode == ScheduleFilterMode.none,
-                      onTap: () => context.read<ScheduleTabCubit>().setFilterMode(ScheduleFilterMode.none),
+                      isSelected: state.scheduleDisplayMode == ScheduleDisplayMode.none,
+                      onTap: () => vm.setScheduleDisplayMode(ScheduleDisplayMode.none),
                     ),
                     _RadioRow(
                       label: 'Show all',
-                      isSelected: state.filterMode == ScheduleFilterMode.all,
-                      onTap: () => context.read<ScheduleTabCubit>().setFilterMode(ScheduleFilterMode.all),
+                      isSelected: state.scheduleDisplayMode == ScheduleDisplayMode.all,
+                      onTap: () => vm.setScheduleDisplayMode(ScheduleDisplayMode.all),
                     ),
                     _RadioRow(
                       label: 'Show selected',
-                      isSelected: state.filterMode == ScheduleFilterMode.selected,
-                      onTap: () => context.read<ScheduleTabCubit>().setFilterMode(ScheduleFilterMode.selected),
+                      isSelected: state.scheduleDisplayMode == ScheduleDisplayMode.selected,
+                      onTap: () => vm.setScheduleDisplayMode(ScheduleDisplayMode.selected),
                     ),
 
                     // ── Schedule checklist (only for "Show selected") ────
-                    if (state.filterMode == ScheduleFilterMode.selected) ...<Widget>[
+                    if (state.scheduleDisplayMode == ScheduleDisplayMode.selected) ...<Widget>[
                       const SizedBox(height: 4),
                       ...state.allSchedules.map((ScheduleConfig schedule) {
                         final bool isChecked = state.selectedScheduleIds.contains(schedule.id);
                         return _ScheduleCheckboxRow(
                           schedule: schedule,
                           isChecked: isChecked,
-                          onToggle: () => context.read<ScheduleTabCubit>().toggleScheduleSelection(schedule.id),
+                          onToggle: () => vm.toggleScheduleItemSelection(schedule.id),
                         );
                       }),
                     ],
@@ -80,18 +81,14 @@ class ScheduledItemsPanel extends StatelessWidget {
   }
 }
 
-// ─── Show upcoming items checkbox row ────────────────────────────────────────
+// ─── Checkbox row ─────────────────────────────────────────────────────────────
 
 class _CheckboxRow extends StatelessWidget {
   final String label;
   final bool isChecked;
   final VoidCallback onTap;
 
-  const _CheckboxRow({
-    required this.label,
-    required this.isChecked,
-    required this.onTap,
-  });
+  const _CheckboxRow({required this.label, required this.isChecked, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -125,11 +122,7 @@ class _RadioRow extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
 
-  const _RadioRow({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
+  const _RadioRow({required this.label, required this.isSelected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -156,18 +149,14 @@ class _RadioRow extends StatelessWidget {
   }
 }
 
-// ─── Schedule checkbox row (indented, for "Show selected" mode) ───────────────
+// ─── Schedule checkbox row ────────────────────────────────────────────────────
 
 class _ScheduleCheckboxRow extends StatelessWidget {
   final ScheduleConfig schedule;
   final bool isChecked;
   final VoidCallback onToggle;
 
-  const _ScheduleCheckboxRow({
-    required this.schedule,
-    required this.isChecked,
-    required this.onToggle,
-  });
+  const _ScheduleCheckboxRow({required this.schedule, required this.isChecked, required this.onToggle});
 
   @override
   Widget build(BuildContext context) {
@@ -239,10 +228,7 @@ class _RadioIndicator extends StatelessWidget {
                 child: Container(
                   width: 8,
                   height: 8,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: context.colorScheme.primaryColor,
-                  ),
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: context.colorScheme.primaryColor),
                 ),
               )
               : null,

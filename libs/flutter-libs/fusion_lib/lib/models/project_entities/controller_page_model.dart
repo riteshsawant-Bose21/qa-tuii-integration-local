@@ -91,3 +91,52 @@ class ControllerMessagePageModel {
     );
   }
 }
+
+// ─── Schedule page config ─────────────────────────────────────────────────────
+
+/// Persisted schedule-tab settings for a [FusionController].
+///
+/// Stores which filter mode is active, whether upcoming events are shown, and
+/// which specific scheduler IDs are selected (when in "selected" mode).
+class ControllerSchedulePageConfig {
+  /// 'none' | 'all' | 'selected'
+  final String displayMode;
+
+  /// Whether the "Show upcoming items" checkbox is checked.
+  final bool showUpcoming;
+
+  /// Schedule IDs that are checked when [displayMode] == 'selected'.
+  final List<String> selectedScheduleIds;
+
+  const ControllerSchedulePageConfig({
+    this.displayMode = 'all',
+    this.showUpcoming = false,
+    this.selectedScheduleIds = const <String>[],
+  });
+
+  ControllerSchedulePageConfig copyWith({
+    String? displayMode,
+    bool? showUpcoming,
+    List<String>? selectedScheduleIds,
+  }) {
+    return ControllerSchedulePageConfig(
+      displayMode: displayMode ?? this.displayMode,
+      showUpcoming: showUpcoming ?? this.showUpcoming,
+      selectedScheduleIds: selectedScheduleIds ?? this.selectedScheduleIds,
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'displayMode': displayMode,
+    'showUpcoming': showUpcoming,
+    'selectedScheduleIds': selectedScheduleIds,
+  };
+
+  factory ControllerSchedulePageConfig.fromJson(Map<String, dynamic> json) {
+    return ControllerSchedulePageConfig(
+      displayMode: json['displayMode'] as String? ?? 'all',
+      showUpcoming: json['showUpcoming'] as bool? ?? false,
+      selectedScheduleIds: (json['selectedScheduleIds'] as List<dynamic>?)?.cast<String>() ?? <String>[],
+    );
+  }
+}

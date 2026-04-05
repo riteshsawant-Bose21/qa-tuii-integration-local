@@ -15,6 +15,9 @@ class FusionController extends HardwareComponent {
   /// Persisted message pages — checked message-player sources and their selected messages.
   final List<ControllerMessagePageModel> messagePages;
 
+  /// Persisted schedule-tab settings.
+  final ControllerSchedulePageConfig schedulePageConfig;
+
   FusionController({
     String? id,
     required super.name,
@@ -36,10 +39,12 @@ class FusionController extends HardwareComponent {
     Set<String>? assignedZoneIds,
     List<ControllerPageModel>? pages,
     List<ControllerMessagePageModel>? messagePages,
+    ControllerSchedulePageConfig? schedulePageConfig,
   }) : sku = sku ?? name,
        assignedZoneIds = assignedZoneIds ?? <String>{},
        pages = pages ?? <ControllerPageModel>[],
        messagePages = messagePages ?? <ControllerMessagePageModel>[],
+       schedulePageConfig = schedulePageConfig ?? const ControllerSchedulePageConfig(),
        super(
          hardwareName: hardwareName ?? name,
          locationEntity: locationEntity ?? LocationModel(),
@@ -67,6 +72,7 @@ class FusionController extends HardwareComponent {
     Set<String>? assignedZoneIds,
     List<ControllerPageModel>? pages,
     List<ControllerMessagePageModel>? messagePages,
+    ControllerSchedulePageConfig? schedulePageConfig,
   }) {
     return FusionController(
       id: id ?? this.id,
@@ -88,6 +94,7 @@ class FusionController extends HardwareComponent {
       assignedZoneIds: assignedZoneIds ?? this.assignedZoneIds,
       pages: pages ?? this.pages,
       messagePages: messagePages ?? this.messagePages,
+      schedulePageConfig: schedulePageConfig ?? this.schedulePageConfig,
     );
   }
 
@@ -113,6 +120,7 @@ class FusionController extends HardwareComponent {
       'assignedZoneIds': assignedZoneIds.toList(),
       'pages': pages.map((ControllerPageModel p) => p.toJson()).toList(),
       'messagePages': messagePages.map((ControllerMessagePageModel p) => p.toJson()).toList(),
+      'schedulePageConfig': schedulePageConfig.toJson(),
     };
   }
 
@@ -140,6 +148,9 @@ class FusionController extends HardwareComponent {
       messagePages:
           (json['messagePages'] as List<dynamic>?)?.map((dynamic e) => ControllerMessagePageModel.fromJson(Map<String, dynamic>.from(e as Map))).toList() ??
           <ControllerMessagePageModel>[],
+      schedulePageConfig: json['schedulePageConfig'] != null
+          ? ControllerSchedulePageConfig.fromJson(Map<String, dynamic>.from(json['schedulePageConfig'] as Map))
+          : const ControllerSchedulePageConfig(),
     );
   }
 

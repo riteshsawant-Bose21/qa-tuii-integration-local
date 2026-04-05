@@ -42,6 +42,24 @@ enum ConfigControlTab {
   settings,
 }
 
+/// Schedule filter mode for the Schedule tab.
+enum ScheduleDisplayMode {
+  none,
+  all,
+  selected,
+}
+
+extension ScheduleDisplayModeX on ScheduleDisplayMode {
+  String get key => name; // 'none' | 'all' | 'selected'
+
+  static ScheduleDisplayMode fromKey(String key) {
+    return ScheduleDisplayMode.values.firstWhere(
+      (ScheduleDisplayMode m) => m.name == key,
+      orElse: () => ScheduleDisplayMode.all,
+    );
+  }
+}
+
 /// Base state class for the Configuration Control feature
 sealed class ConfigurationControlState extends Equatable {
   const ConfigurationControlState();
@@ -89,6 +107,20 @@ sealed class ConfigurationControlState extends Equatable {
 
   /// Selected message IDs per player (checkbox state).
   Map<String, Set<String>> get selectedMessageIdsPerPlayer => <String, Set<String>>{};
+
+  // ── Schedule tab ────────────────────────────────────────────────────────────
+
+  /// All schedules loaded from the project.
+  List<ScheduleConfig> get allSchedules => <ScheduleConfig>[];
+
+  /// Whether "Show upcoming items" is checked.
+  bool get showUpcoming => false;
+
+  /// Active filter mode in the Schedule tab.
+  ScheduleDisplayMode get scheduleDisplayMode => ScheduleDisplayMode.all;
+
+  /// Schedule IDs checked in "Show selected" mode.
+  Set<String> get selectedScheduleIds => <String>{};
 
   /// Get selected controller ID
   String? get selectedControllerId => null;
@@ -171,6 +203,20 @@ class ConfigControlLoaded extends ConfigurationControlState {
   @override
   final Map<String, Set<String>> selectedMessageIdsPerPlayer;
 
+  // ── Schedule tab ──────────────────────────────────────────────────────────
+
+  @override
+  final List<ScheduleConfig> allSchedules;
+
+  @override
+  final bool showUpcoming;
+
+  @override
+  final ScheduleDisplayMode scheduleDisplayMode;
+
+  @override
+  final Set<String> selectedScheduleIds;
+
   @override
   final String? selectedControllerId;
 
@@ -219,6 +265,10 @@ class ConfigControlLoaded extends ConfigurationControlState {
     this.selectedMessagePageId,
     this.messagesPerPlayer = const <String, List<MessageModel>>{},
     this.selectedMessageIdsPerPlayer = const <String, Set<String>>{},
+    this.allSchedules = const <ScheduleConfig>[],
+    this.showUpcoming = false,
+    this.scheduleDisplayMode = ScheduleDisplayMode.all,
+    this.selectedScheduleIds = const <String>{},
     this.selectedControllerId,
     this.selectedZoneId,
     this.currentTab = ConfigControlTab.zoneControl,
@@ -248,6 +298,10 @@ class ConfigControlLoaded extends ConfigurationControlState {
     String? selectedMessagePageId,
     Map<String, List<MessageModel>>? messagesPerPlayer,
     Map<String, Set<String>>? selectedMessageIdsPerPlayer,
+    List<ScheduleConfig>? allSchedules,
+    bool? showUpcoming,
+    ScheduleDisplayMode? scheduleDisplayMode,
+    Set<String>? selectedScheduleIds,
     String? selectedControllerId,
     String? selectedZoneId,
     ConfigControlTab? currentTab,
@@ -282,6 +336,10 @@ class ConfigControlLoaded extends ConfigurationControlState {
       selectedMessagePageId: clearSelectedMessagePageId ? null : (selectedMessagePageId ?? this.selectedMessagePageId),
       messagesPerPlayer: messagesPerPlayer ?? this.messagesPerPlayer,
       selectedMessageIdsPerPlayer: selectedMessageIdsPerPlayer ?? this.selectedMessageIdsPerPlayer,
+      allSchedules: allSchedules ?? this.allSchedules,
+      showUpcoming: showUpcoming ?? this.showUpcoming,
+      scheduleDisplayMode: scheduleDisplayMode ?? this.scheduleDisplayMode,
+      selectedScheduleIds: selectedScheduleIds ?? this.selectedScheduleIds,
       selectedControllerId: clearSelectedControllerId ? null : (selectedControllerId ?? this.selectedControllerId),
       selectedZoneId: clearSelectedZoneId ? null : (selectedZoneId ?? this.selectedZoneId),
       currentTab: currentTab ?? this.currentTab,
@@ -346,6 +404,10 @@ class ConfigControlLoaded extends ConfigurationControlState {
     selectedMessagePageId,
     messagesPerPlayer,
     selectedMessageIdsPerPlayer,
+    allSchedules,
+    showUpcoming,
+    scheduleDisplayMode,
+    selectedScheduleIds,
     selectedControllerId,
     selectedZoneId,
     currentTab,

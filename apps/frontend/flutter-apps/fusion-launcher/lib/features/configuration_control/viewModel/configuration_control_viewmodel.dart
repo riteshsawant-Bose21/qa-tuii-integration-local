@@ -69,6 +69,7 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
       final Set<String> usedSnapshotIds = _computeUsedSnapshotIds(snapshotsPerPage);
 
       // Load message players
+      // Load message players
       final List<Source> messagePlayers =
           _projectViewModel.sources
               .where(
@@ -81,9 +82,15 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
         for (final Source s in messagePlayers) s.id: _projectViewModel.getMessagesForSource(s.id),
       };
 
+      // Load schedules
+      final List<ScheduleConfig> allSchedules = _projectViewModel.getAllSchedules();
+
       // Keep the previously selected controller when syncing; fall back to first.
       final FusionController selected = _resolveController(controllers, preserveControllerId);
       final _ZoneSelection sel = _buildZoneSelection(selected);
+
+      // Restore persisted schedule config for selected controller
+      final ControllerSchedulePageConfig schedCfg = _loadPersistedScheduleConfig(selected);
 
       // ── Restore persisted pages data for the selected controller ──────────
       final _PersistedPages persisted = _loadPersistedPages(selected, sceneSets);
@@ -121,6 +128,11 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
           selectedMessagePageId:
               persistedMsg.selectedMessagePlayerIds.isNotEmpty ? (_loaded?.selectedMessagePageId ?? persistedMsg.selectedMessagePlayerIds.last) : null,
           selectedMessageIdsPerPlayer: persistedMsg.selectedMessageIdsPerPlayer,
+          // Schedule state (restore persisted config)
+          allSchedules: allSchedules,
+          showUpcoming: schedCfg.showUpcoming,
+          scheduleDisplayMode: ScheduleDisplayModeX.fromKey(schedCfg.displayMode),
+          selectedScheduleIds: Set<String>.from(schedCfg.selectedScheduleIds),
         ),
       );
     } catch (e) {
@@ -398,7 +410,59 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
     emit(loaded.copyWith(selectedSnapshotPageId: pageId, clearSelectedSceneSetId: true));
   }
 
-  // ─── Message Player actions ────────────────────────────────────────────────
+  // ─── Schedule tab actions ─────────────────────────────────────────────────
+
+  /// Toggle the "Show upcoming items" checkbox and persist.
+  void toggleShowUpcoming() {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    final bool next = !loaded.showUpcoming;
+    _persistScheduleConfig(loaded.copyWith(showUpcoming: next));
+    emit(loaded.copyWith(showUpcoming: next));
+  }
+
+  /// Set filter mode (Show none / Show all / Show selected) and persist.
+  void setScheduleDisplayMode(ScheduleDisplayMode mode) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    _persistScheduleConfig(loaded.copyWith(scheduleDisplayMode: mode));
+    emit(loaded.copyWith(scheduleDisplayMode: mode));
+  }
+
+  /// Toggle a schedule checkbox in "Show selected" mode and persist.
+  void toggleScheduleItemSelection(String scheduleId) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    final Set<String> updated = Set<String>.from(loaded.selectedScheduleIds);
+    updated.contains(scheduleId) ? updated.remove(scheduleId) : updated.add(scheduleId);
+    final ConfigControlLoaded next = loaded.copyWith(selectedScheduleIds: updated);
+    _persistScheduleConfig(next);
+    emit(next);
+  }
+
+  /// Toggle the enabled/disabled status of a schedule and reload.
+  void toggleScheduleStatus(ScheduleConfig schedule) {
+    _projectViewModel.updateSchedule(schedule: schedule.copyWith(status: !schedule.status));
+    _sync();
+  }
+
+  // ─── Persistence helpers (schedule config) ────────────────────────────────
+
+  ControllerSchedulePageConfig _loadPersistedScheduleConfig(FusionController controller) {
+    return _projectViewModel.getControllerScheduleConfig(controller.id);
+  }
+
+  void _persistScheduleConfig(ConfigControlLoaded state) {
+    if (state.selectedControllerId == null) return;
+    _projectViewModel.setControllerScheduleConfig(
+      controllerId: state.selectedControllerId!,
+      config: ControllerSchedulePageConfig(
+        displayMode: state.scheduleDisplayMode.key,
+        showUpcoming: state.showUpcoming,
+        selectedScheduleIds: state.selectedScheduleIds.toList(),
+      ),
+    );
+  }
 
   /// Toggle message-player checkbox.
   /// Checking ON  → adds a page to the PAGES panel and makes it active.

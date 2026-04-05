@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
-import 'package:fusion_launcher/features/configuration_control/widgets/schedule/schedule_tab_cubit.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:intl/intl.dart';
 
@@ -11,6 +10,9 @@ import 'package:intl/intl.dart';
 /// Shows an "Events" card with:
 ///  • Scheduled tab (always visible)
 ///  • Upcoming tab (only when "Show upcoming items" is checked)
+///
+/// Reads state from [ConfigurationControlViewmodel] so changes are persisted
+/// per-controller via [ControllerSchedulePageConfig].
 class ScheduleVcPanel extends StatefulWidget {
   const ScheduleVcPanel({super.key});
 
@@ -33,101 +35,124 @@ class _ScheduleVcPanelState extends State<ScheduleVcPanel> with SingleTickerProv
     super.dispose();
   }
 
+  /// Derive the scheduled items based on the current filter mode.
+  List<ScheduleConfig> _getScheduledItems(ConfigControlLoaded state) {
+    switch (state.scheduleDisplayMode) {
+      case ScheduleDisplayMode.none:
+        return <ScheduleConfig>[];
+      case ScheduleDisplayMode.all:
+        return state.allSchedules;
+      case ScheduleDisplayMode.selected:
+        return state.allSchedules.where((ScheduleConfig s) => state.selectedScheduleIds.contains(s.id)).toList();
+    }
+  }
+
+  /// Derive the upcoming items (schedules whose time is later than now).
+  List<ScheduleConfig> _getUpcomingItems(List<ScheduleConfig> scheduledItems) {
+    final DateTime now = DateTime.now();
+    return scheduledItems.where((ScheduleConfig s) {
+      final DateTime scheduleTime = DateTime(now.year, now.month, now.day, s.time.hour, s.time.minute);
+      return scheduleTime.isAfter(now);
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ScheduleTabCubit, ScheduleTabState>(
-      builder: (BuildContext context, ScheduleTabState tabState) {
-        return BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
-          builder: (BuildContext context, ConfigurationControlState ctrlState) {
-            final String controllerName = ctrlState is ConfigControlLoaded ? (ctrlState.selectedController?.name ?? '') : '';
+    return BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
+      builder: (BuildContext context, ConfigurationControlState ctrlState) {
+        if (ctrlState is! ConfigControlLoaded) return const SizedBox.shrink();
 
-            // Ensure tab index is valid when upcoming tab is hidden
-            final bool showUpcoming = tabState.showUpcoming;
-            if (!showUpcoming && _tabController.index == 1) {
-              _tabController.animateTo(0);
-            }
+        final ConfigurationControlViewmodel vm = context.read<ConfigurationControlViewmodel>();
+        final String controllerName = ctrlState.selectedController?.name ?? '';
 
-            final List<ScheduleConfig> scheduledItems = tabState.scheduledItems;
-            final List<ScheduleConfig> upcomingItems = tabState.upcomingItems;
+        // Ensure tab index is valid when upcoming tab is hidden
+        final bool showUpcoming = ctrlState.showUpcoming;
+        if (!showUpcoming && _tabController.index == 1) {
+          _tabController.animateTo(0);
+        }
 
-            return Container(
-              decoration: BoxDecoration(
-                color: context.colorScheme.elevation1,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: context.colorScheme.strokeLight, width: 1),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Center(
-                  child: Container(
-                    constraints: const BoxConstraints(maxWidth: 460),
-                    decoration: BoxDecoration(
-                      color: context.colorScheme.elevation2,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: context.colorScheme.strokeLight, width: 1),
+        final List<ScheduleConfig> scheduledItems = _getScheduledItems(ctrlState);
+        final List<ScheduleConfig> upcomingItems = _getUpcomingItems(scheduledItems);
+
+        // Determine empty message based on filter mode
+        final String emptyMessage = ctrlState.scheduleDisplayMode == ScheduleDisplayMode.none ? 'No items to display' : 'No scheduled items';
+
+        return Container(
+          decoration: BoxDecoration(
+            color: context.colorScheme.elevation1,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: context.colorScheme.strokeLight, width: 1),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Center(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 460),
+                decoration: BoxDecoration(
+                  color: context.colorScheme.elevation2,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: context.colorScheme.strokeLight, width: 1),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    // ── "Events" header ────────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                      child: FusionAppText(
+                        text: 'Events',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: context.colorScheme.textPrimary,
+                        ),
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: <Widget>[
-                        // ── "Events" header ────────────────────────────
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-                          child: FusionAppText(
-                            text: 'Events',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: context.colorScheme.textPrimary,
-                            ),
-                          ),
-                        ),
 
-                        // ── Tab bar ────────────────────────────────────
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: _EventsTabBar(
-                            controller: _tabController,
-                            showUpcoming: showUpcoming,
-                          ),
-                        ),
+                    // ── Tab bar ────────────────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _EventsTabBar(
+                        controller: _tabController,
+                        showUpcoming: showUpcoming,
+                      ),
+                    ),
 
-                        const SizedBox(height: 8),
+                    const SizedBox(height: 8),
 
-                        // ── Tab content ────────────────────────────────
-                        Expanded(
-                          child:
-                              showUpcoming
-                                  ? TabBarView(
-                                    controller: _tabController,
-                                    children: <Widget>[
-                                      _EventList(
-                                        schedules: scheduledItems,
-                                        controllerName: controllerName,
-                                        emptyMessage: tabState.filterMode == ScheduleFilterMode.none ? 'No items to display' : 'No scheduled items',
-                                        onToggle: (ScheduleConfig s) => context.read<ScheduleTabCubit>().toggleScheduleStatus(s),
-                                      ),
-                                      _EventList(
-                                        schedules: upcomingItems,
-                                        controllerName: controllerName,
-                                        emptyMessage: 'No upcoming items',
-                                        onToggle: (ScheduleConfig s) => context.read<ScheduleTabCubit>().toggleScheduleStatus(s),
-                                      ),
-                                    ],
-                                  )
-                                  // Single-tab mode: show only scheduled
-                                  : _EventList(
+                    // ── Tab content ────────────────────────────────
+                    Expanded(
+                      child:
+                          showUpcoming
+                              ? TabBarView(
+                                controller: _tabController,
+                                children: <Widget>[
+                                  _EventList(
                                     schedules: scheduledItems,
                                     controllerName: controllerName,
-                                    emptyMessage: tabState.filterMode == ScheduleFilterMode.none ? 'No items to display' : 'No scheduled items',
-                                    onToggle: (ScheduleConfig s) => context.read<ScheduleTabCubit>().toggleScheduleStatus(s),
+                                    emptyMessage: emptyMessage,
+                                    onToggle: (ScheduleConfig s) => vm.toggleScheduleStatus(s),
                                   ),
-                        ),
-                      ],
+                                  _EventList(
+                                    schedules: upcomingItems,
+                                    controllerName: controllerName,
+                                    emptyMessage: 'No upcoming items',
+                                    onToggle: (ScheduleConfig s) => vm.toggleScheduleStatus(s),
+                                  ),
+                                ],
+                              )
+                              // Single-tab mode: show only scheduled
+                              : _EventList(
+                                schedules: scheduledItems,
+                                controllerName: controllerName,
+                                emptyMessage: emptyMessage,
+                                onToggle: (ScheduleConfig s) => vm.toggleScheduleStatus(s),
+                              ),
                     ),
-                  ),
+                  ],
                 ),
               ),
-            );
-          },
+            ),
+          ),
         );
       },
     );

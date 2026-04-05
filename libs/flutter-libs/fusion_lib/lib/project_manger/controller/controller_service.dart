@@ -180,4 +180,22 @@ extension ControllerService on ProjectService {
       sourceIds: messagePages.map((ControllerMessagePageModel p) => p.sourceId).toSet(),
     );
   }
+
+  // ─── Schedule page config (persisted on the FusionController model) ─────────
+
+  /// Returns the [ControllerSchedulePageConfig] stored on the controller model.
+  ControllerSchedulePageConfig getControllerScheduleConfig(String controllerId) {
+    final FusionController? controller = getControllerById(controllerId);
+    return controller?.schedulePageConfig ?? const ControllerSchedulePageConfig();
+  }
+
+  /// Replaces the [ControllerSchedulePageConfig] on the controller model.
+  void setControllerScheduleConfig({
+    required String controllerId,
+    required ControllerSchedulePageConfig config,
+  }) {
+    final FusionController? controller = getControllerById(controllerId);
+    if (controller == null) return;
+    hardware.add(controllerId, controller.copyWith(schedulePageConfig: config));
+  }
 }
