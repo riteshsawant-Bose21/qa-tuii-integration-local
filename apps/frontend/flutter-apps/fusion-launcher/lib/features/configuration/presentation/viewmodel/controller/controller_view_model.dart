@@ -1,6 +1,7 @@
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
+import 'package:fusion_lib/models/project_entities/controller_page_model.dart';
 
 /// Extension on [ProjectViewModel] providing FusionController-specific
 /// **write** operations with undo/redo, auto-save, and project-update signals.
@@ -152,34 +153,31 @@ extension ControllerViewModel on ProjectViewModel {
     }
   }
 
-  // ─── Snapshot page data ────────────────────────────────────────────────
+  // ─── Typed pages data ───────────────────────────────────────────────────
 
-  /// Returns snapshot-page definitions stored on the controller model.
-  List<Map<String, dynamic>> getSnapshotPagesData(String controllerId) {
+  /// Returns all [ControllerPageModel] entries stored on the controller model.
+  List<ControllerPageModel> getControllerPages(String controllerId) {
     try {
-      return projectManager.getSnapshotPagesData(controllerId);
+      return projectManager.getControllerPages(controllerId);
     } catch (_) {
-      return <Map<String, dynamic>>[];
+      return <ControllerPageModel>[];
     }
   }
 
-  /// Persists snapshot-page definitions on the controller model and saves.
-  void setSnapshotPagesData({
+  /// Replaces the full [ControllerPageModel] list on the controller model and persists.
+  void setControllerPages({
     required String controllerId,
-    required List<Map<String, dynamic>> snapshotPagesData,
+    required List<ControllerPageModel> pages,
     bool autoSave = true,
   }) {
     try {
       if (autoSave) recordSnapshot();
-      projectManager.setSnapshotPagesData(
-        controllerId: controllerId,
-        snapshotPagesData: snapshotPagesData,
-      );
+      projectManager.setControllerPages(controllerId: controllerId, pages: pages);
       if (autoSave) saveProject();
       updateProject();
     } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to set snapshot pages data: $e');
-      throwError('Failed to set snapshot pages data: $e');
+      FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to set controller pages: $e');
+      throwError('Failed to set controller pages: $e');
     }
   }
 }

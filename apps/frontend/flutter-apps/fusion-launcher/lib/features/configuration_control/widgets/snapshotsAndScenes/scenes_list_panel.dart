@@ -99,11 +99,6 @@ class _SceneSetItem extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
-      decoration: BoxDecoration(
-        color: isChecked ? context.colorScheme.elevation2 : Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
-        border: isChecked ? Border.all(color: context.colorScheme.strokeDark, width: 1) : null,
-      ),
       child: Row(
         children: <Widget>[
           GestureDetector(
@@ -138,9 +133,15 @@ class _SnapshotPageSection extends StatelessWidget {
   const _SnapshotPageSection({required this.state});
 
   Future<void> _openCreateForm(BuildContext context, ConfigControlLoaded state) async {
+    // Collect all snapshot IDs already assigned to existing snapshot pages
+    final Set<String> usedIds = state.snapshotPages.expand((SnapshotPageModel p) => p.snapshotIds).toSet();
+
+    // Only offer snapshots not yet assigned to any snapshot page
+    final List<SnapshotsModel> availableSnapshots = state.allSnapshots.where((SnapshotsModel s) => !usedIds.contains(s.id)).toList();
+
     final CreateSnapshotPageResult? result = await showCreateSnapshotPageDialog(
       context: context,
-      availableSnapshots: state.allSnapshots,
+      availableSnapshots: availableSnapshots,
     );
     if (result == null || !context.mounted) return;
     context.read<ConfigurationControlViewmodel>().createSnapshotPage(

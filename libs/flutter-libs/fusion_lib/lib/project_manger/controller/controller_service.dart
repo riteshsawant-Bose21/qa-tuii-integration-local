@@ -1,5 +1,6 @@
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
+import 'package:fusion_lib/models/project_entities/controller_page_model.dart';
 
 /// Extension on [ProjectService] providing FusionController-specific data access.
 ///
@@ -111,22 +112,28 @@ extension ControllerService on ProjectService {
     }
   }
 
-  // ─── Snapshot page data (persisted on the FusionController model) ─────────
+  // ─── Typed pages data (persisted on the FusionController model) ──────────
 
-  /// Returns the snapshot-page definitions stored on the controller model.
-  List<Map<String, dynamic>> getSnapshotPagesData(String controllerId) {
+  /// Returns all [ControllerPageModel] entries stored on the controller model.
+  List<ControllerPageModel> getControllerPages(String controllerId) {
     final FusionController? controller = getControllerById(controllerId);
-    return controller?.snapshotPagesData ?? <Map<String, dynamic>>[];
+    return controller?.pages ?? <ControllerPageModel>[];
   }
 
-  /// Replaces the snapshot-page definitions stored on the controller model.
-  void setSnapshotPagesData({
+  /// Replaces the full [ControllerPageModel] list on the controller model.
+  void setControllerPages({
     required String controllerId,
-    required List<Map<String, dynamic>> snapshotPagesData,
+    required List<ControllerPageModel> pages,
   }) {
     final FusionController? controller = getControllerById(controllerId);
     if (controller == null) return;
-    final FusionController updated = controller.copyWith(snapshotPagesData: snapshotPagesData);
+    final FusionController updated = controller.copyWith(pages: pages);
     hardware.add(controllerId, updated);
+
+    // Keep the controllerPages relationship in sync with the page IDs
+    setControllerPageIds(
+      controllerId: controllerId,
+      pageIds: pages.map((ControllerPageModel p) => p.id).toSet(),
+    );
   }
 }

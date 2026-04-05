@@ -5,6 +5,7 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
+import 'package:fusion_lib/models/project_entities/controller_page_model.dart';
 
 import 'configuration_control_state.dart';
 
@@ -255,9 +256,9 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
       updated.add(sceneSetId);
     }
 
-    // Persist: update controllerPages = selectedSceneSetIds ∪ snapshotPageIds
+    // Persist: both scene sets and snapshot pages in one call
     if (loaded.selectedControllerId != null) {
-      _persistPageIds(
+      _persistControllerPages(
         controllerId: loaded.selectedControllerId!,
         selectedSceneSetIds: updated,
         snapshotPages: loaded.snapshotPages,
@@ -324,15 +325,11 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
 
     final List<SnapshotPageModel> updatedPages = <SnapshotPageModel>[...loaded.snapshotPages, newPage];
 
-    // Persist to the project
+    // Persist to the project (scene sets + snapshot pages in one call)
     if (loaded.selectedControllerId != null) {
-      _persistPageIds(
+      _persistControllerPages(
         controllerId: loaded.selectedControllerId!,
         selectedSceneSetIds: loaded.selectedSceneSetIds,
-        snapshotPages: updatedPages,
-      );
-      _persistSnapshotPagesData(
-        controllerId: loaded.selectedControllerId!,
         snapshotPages: updatedPages,
       );
     }
@@ -355,15 +352,11 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
 
     final List<SnapshotPageModel> updatedPages = loaded.snapshotPages.where((SnapshotPageModel p) => p.id != pageId).toList();
 
-    // Persist the removal
+    // Persist the removal (scene sets + updated snapshot pages in one call)
     if (loaded.selectedControllerId != null) {
-      _persistPageIds(
+      _persistControllerPages(
         controllerId: loaded.selectedControllerId!,
         selectedSceneSetIds: loaded.selectedSceneSetIds,
-        snapshotPages: updatedPages,
-      );
-      _persistSnapshotPagesData(
-        controllerId: loaded.selectedControllerId!,
         snapshotPages: updatedPages,
       );
     }
@@ -502,40 +495,36 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
 
   // ─── Persistence helpers (controllerPages relationship) ────────────────────
 
-  /// Restores the pages state for [controller] from the persisted relationship
-  /// graph ([RelationshipType.controllerPages]) and the controller model's
-  /// [FusionController.snapshotPagesData].
+  /// Restores the pages state for [controller] from [FusionController.pages] —
+  /// partitions [ControllerPageType.sceneSet] entries into [selectedSceneSetIds]
+  /// and [ControllerPageType.snapshotPage] entries into [snapshotPages].
   _PersistedPages _loadPersistedPages(
     FusionController controller,
     List<SceneSetModel> sceneSets,
   ) {
-    // All page IDs linked to this controller (scene-set IDs + snapshot-page IDs)
-    final Set<String> pageIds = _projectViewModel.getControllerPageIds(controller.id);
+    final List<ControllerPageModel> allPages = _projectViewModel.getControllerPages(controller.id);
 
-    // Scene-set IDs that are currently valid
+    // Valid scene-set IDs (guard against stale IDs if sets were deleted)
     final Set<String> validSceneSetIds = sceneSets.map((SceneSetModel s) => s.id).toSet();
 
-    // Partition: scene-set IDs vs snapshot-page IDs
     final Set<String> selectedSceneSetIds = <String>{};
-    for (final String id in pageIds) {
-      if (validSceneSetIds.contains(id)) {
-        selectedSceneSetIds.add(id);
+    final List<SnapshotPageModel> snapshotPages = <SnapshotPageModel>[];
+
+    for (final ControllerPageModel page in allPages) {
+      if (page.type == ControllerPageType.sceneSet) {
+        if (validSceneSetIds.contains(page.id)) {
+          selectedSceneSetIds.add(page.id);
+        }
+      } else {
+        snapshotPages.add(
+          SnapshotPageModel(
+            id: page.id,
+            name: page.name,
+            snapshotIds: page.snapshotIds,
+          ),
+        );
       }
     }
-
-    // Restore snapshot pages from controller model data
-    final List<Map<String, dynamic>> rawPages = _projectViewModel.getSnapshotPagesData(controller.id);
-    final List<SnapshotPageModel> snapshotPages =
-        rawPages
-            .map((Map<String, dynamic> json) {
-              try {
-                return SnapshotPageModel.fromJson(json);
-              } catch (_) {
-                return null;
-              }
-            })
-            .whereType<SnapshotPageModel>()
-            .toList();
 
     return _PersistedPages(
       selectedSceneSetIds: selectedSceneSetIds,
@@ -543,33 +532,47 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
     );
   }
 
-  /// Persists the combined set of page IDs (selectedSceneSetIds ∪ snapshotPageIds)
-  /// into the [RelationshipType.controllerPages] relationship.
-  void _persistPageIds({
+  /// Persists both scene-set selections and snapshot pages as a unified
+  /// [ControllerPageModel] list on the controller model.
+  ///
+  /// Scene sets need [sceneSets] to resolve their display names.
+  void _persistControllerPages({
     required String controllerId,
     required Set<String> selectedSceneSetIds,
     required List<SnapshotPageModel> snapshotPages,
   }) {
-    final Set<String> allPageIds = <String>{
-      ...selectedSceneSetIds,
-      ...snapshotPages.map((SnapshotPageModel p) => p.id),
-    };
-    _projectViewModel.setControllerPageIds(
-      controllerId: controllerId,
-      pageIds: allPageIds,
-    );
-  }
+    // Resolve scene-set names from the current loaded state
+    final List<SceneSetModel> allSceneSets = _loaded?.sceneSets ?? <SceneSetModel>[];
 
-  /// Persists snapshot-page definitions (name + snapshotIds) on the
-  /// [FusionController] model so they survive project serialization.
-  void _persistSnapshotPagesData({
-    required String controllerId,
-    required List<SnapshotPageModel> snapshotPages,
-  }) {
-    final List<Map<String, dynamic>> data = snapshotPages.map((SnapshotPageModel p) => p.toJson()).toList();
-    _projectViewModel.setSnapshotPagesData(
+    final List<ControllerPageModel> pages = <ControllerPageModel>[
+      // Scene-set entries (type = sceneSet) — snapshotIds = snapshots inside the scene set
+      for (final String id in selectedSceneSetIds)
+        ControllerPageModel(
+          id: id,
+          type: ControllerPageType.sceneSet,
+          name:
+              allSceneSets
+                  .firstWhere(
+                    (SceneSetModel s) => s.id == id,
+                    orElse: () => SceneSetModel(id: id, name: id),
+                  )
+                  .name,
+          snapshotIds: (_loaded?.snapshotsInSceneSets[id] ?? <SnapshotsModel>[]).map((SnapshotsModel s) => s.id).toList(),
+        ),
+
+      // Snapshot-page entries (type = snapshotPage)
+      for (final SnapshotPageModel p in snapshotPages)
+        ControllerPageModel(
+          id: p.id,
+          type: ControllerPageType.snapshotPage,
+          name: p.name,
+          snapshotIds: p.snapshotIds,
+        ),
+    ];
+
+    _projectViewModel.setControllerPages(
       controllerId: controllerId,
-      snapshotPagesData: data,
+      pages: pages,
     );
   }
 }

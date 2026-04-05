@@ -1,5 +1,6 @@
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
+import 'package:fusion_lib/models/project_entities/controller_page_model.dart';
 import 'package:fusion_lib/project_manger/controller/controller_service.dart';
 
 /// Extension on [ProjectManager] providing FusionController-specific operations.
@@ -71,17 +72,15 @@ extension ControllerManager on ProjectManager {
     required Set<String> pageIds,
   }) => _service.setControllerPageIds(controllerId: controllerId, pageIds: pageIds);
 
-  // ─── Snapshot page data ────────────────────────────────────────────────────
+  // ─── Typed pages data ──────────────────────────────────────────────────────
 
-  /// Returns snapshot-page definitions stored on the controller model.
-  List<Map<String, dynamic>> getSnapshotPagesData(String controllerId) => _service.getSnapshotPagesData(controllerId);
+  /// Returns all [ControllerPageModel] entries stored on the controller model.
+  List<ControllerPageModel> getControllerPages(String controllerId) => _service.getControllerPages(controllerId);
 
-  /// Persists snapshot-page definitions on the controller model.
-  void setSnapshotPagesData({
+  /// Replaces the full [ControllerPageModel] list on the controller model
+  /// and keeps [RelationshipType.controllerPages] in sync.
+  void setControllerPages({
     required String controllerId,
-    required List<Map<String, dynamic>> snapshotPagesData,
-  }) => _service.setSnapshotPagesData(
-    controllerId: controllerId,
-    snapshotPagesData: snapshotPagesData,
-  );
+    required List<ControllerPageModel> pages,
+  }) => _service.setControllerPages(controllerId: controllerId, pages: pages);
 }

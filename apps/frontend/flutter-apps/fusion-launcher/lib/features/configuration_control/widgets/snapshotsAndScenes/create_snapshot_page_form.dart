@@ -40,12 +40,6 @@ class _CreateSnapshotPageDialogState extends State<_CreateSnapshotPageDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: 'Untitled_Snapshot');
-    // Pre-select all available snapshots by default
-    for (final SnapshotsModel s in widget.availableSnapshots) {
-      if (widget.availableSnapshots.indexOf(s) < widget.availableSnapshots.length - 1) {
-        _selectedIds.add(s.id);
-      }
-    }
   }
 
   @override

@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/controller_page_model.dart';
 
 class FusionController extends HardwareComponent {
   final String sku;
@@ -8,9 +9,9 @@ class FusionController extends HardwareComponent {
   /// Zone/SubZone IDs this controller is assigned to control
   final Set<String> assignedZoneIds;
 
-  /// Persisted snapshot-page definitions (each is a map with id, name, snapshotIds).
+  /// Persisted pages — both scene-set selections and user-created snapshot pages.
   /// Stored on the model so they survive serialization via hardware toJson/fromJson.
-  final List<Map<String, dynamic>> snapshotPagesData;
+  final List<ControllerPageModel> pages;
 
   FusionController({
     String? id,
@@ -31,10 +32,10 @@ class FusionController extends HardwareComponent {
     super.equipmentLocationPosition,
     required super.addedFromBuildingPage,
     Set<String>? assignedZoneIds,
-    List<Map<String, dynamic>>? snapshotPagesData,
+    List<ControllerPageModel>? pages,
   }) : sku = sku ?? name,
        assignedZoneIds = assignedZoneIds ?? <String>{},
-       snapshotPagesData = snapshotPagesData ?? <Map<String, dynamic>>[],
+       pages = pages ?? <ControllerPageModel>[],
        super(
          hardwareName: hardwareName ?? name,
          locationEntity: locationEntity ?? LocationModel(),
@@ -60,7 +61,7 @@ class FusionController extends HardwareComponent {
     List<PortData>? outputPortsData,
     bool? addedFromBuildingPage,
     Set<String>? assignedZoneIds,
-    List<Map<String, dynamic>>? snapshotPagesData,
+    List<ControllerPageModel>? pages,
   }) {
     return FusionController(
       id: id ?? this.id,
@@ -80,7 +81,7 @@ class FusionController extends HardwareComponent {
       addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
       equipmentLocationPosition: equipmentLocationPosition ?? this.equipmentLocationPosition,
       assignedZoneIds: assignedZoneIds ?? this.assignedZoneIds,
-      snapshotPagesData: snapshotPagesData ?? this.snapshotPagesData,
+      pages: pages ?? this.pages,
     );
   }
 
@@ -104,7 +105,7 @@ class FusionController extends HardwareComponent {
       'addedFromBuildingPage': addedFromBuildingPage,
       'equipmentLocationPosition': equipmentLocationPosition,
       'assignedZoneIds': assignedZoneIds.toList(),
-      'snapshotPagesData': snapshotPagesData,
+      'pages': pages.map((ControllerPageModel p) => p.toJson()).toList(),
     };
   }
 
@@ -128,8 +129,28 @@ class FusionController extends HardwareComponent {
       addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
       equipmentLocationPosition: DeserializationUtil.intDeserializer.deserialize(json['equipmentLocationPosition']),
       assignedZoneIds: (json['assignedZoneIds'] as List<dynamic>?)?.map((dynamic e) => e as String).toSet() ?? <String>{},
-      snapshotPagesData:
-          (json['snapshotPagesData'] as List<dynamic>?)?.map((dynamic e) => Map<String, dynamic>.from(e as Map)).toList() ?? <Map<String, dynamic>>[],
+      // Support old key 'snapshotPagesData' for backward compatibility
+      pages: _pagesFromJson(json),
     );
+  }
+
+  static List<ControllerPageModel> _pagesFromJson(Map<String, dynamic> json) {
+    // New key: 'pages'
+    if (json['pages'] != null) {
+      return (json['pages'] as List<dynamic>).map((dynamic e) => ControllerPageModel.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+    }
+    // Backward compat: old 'snapshotPagesData' key — migrate as snapshotPage type
+    if (json['snapshotPagesData'] != null) {
+      return (json['snapshotPagesData'] as List<dynamic>).map((dynamic e) {
+        final Map<String, dynamic> m = Map<String, dynamic>.from(e as Map);
+        return ControllerPageModel(
+          id: m['id'] as String,
+          type: ControllerPageType.snapshotPage,
+          name: m['name'] as String,
+          snapshotIds: (m['snapshotIds'] as List<dynamic>?)?.cast<String>() ?? <String>[],
+        );
+      }).toList();
+    }
+    return <ControllerPageModel>[];
   }
 }
