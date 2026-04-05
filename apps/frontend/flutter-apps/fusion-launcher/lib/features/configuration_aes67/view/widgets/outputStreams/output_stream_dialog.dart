@@ -771,7 +771,7 @@ class _DarkDropdown<T> extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10),
         child: DropdownButtonHideUnderline(
           child: DropdownButton<T>(
-            value: value,
+            value: (value != null && items.contains(value)) ? value : null,
             hint: FusionAppText(
               text: hint,
               style: context.textTheme.bodySmall?.copyWith(

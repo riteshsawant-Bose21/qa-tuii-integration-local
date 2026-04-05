@@ -13,12 +13,38 @@ class InputStreamViewmodel extends Cubit<InputStreamState> {
   final ProjectViewModel _projectViewModel;
   final String? _streamId;
 
+  /// Sessions fetched from the API – kept in the viewmodel, not in state.
+  List<Aes67SessionEntry> _apiSessions = <Aes67SessionEntry>[];
+  bool _isLoadingSessions = false;
+
   InputStreamViewmodel({
     required ProjectViewModel projectViewModel,
     String? streamId,
   }) : _projectViewModel = projectViewModel,
        _streamId = streamId,
        super(const InputStreamInitial());
+
+  // ── Session data exposed to the UI ───────────────────────────────────────
+
+  List<Aes67SessionEntry> get apiSessions => List<Aes67SessionEntry>.unmodifiable(_apiSessions);
+  bool get isLoadingSessions => _isLoadingSessions;
+
+  /// Derive the display name of the currently assigned session.
+  String? get assignedTo {
+    final String? selectedId = _loaded?.stream.selectedSessionId;
+    if (selectedId == null) return null;
+    return _apiSessions.where((Aes67SessionEntry s) => s.id == selectedId).firstOrNull?.sessionId;
+  }
+
+  /// All session IDs available for the "Assigned to" dropdown.
+  List<String> get danteAssignableOptions => _apiSessions.map((Aes67SessionEntry s) => s.sessionId).toList();
+
+  /// Channel labels of the currently selected session.
+  List<String> get selectedSessionChannelOptions {
+    final String? selectedId = _loaded?.stream.selectedSessionId;
+    if (selectedId == null) return <String>[];
+    return _apiSessions.where((Aes67SessionEntry s) => s.id == selectedId).firstOrNull?.channelLabels ?? <String>[];
+  }
 
   void init({Aes67Config? existingStream}) {
     emit(const InputStreamLoading());
@@ -31,7 +57,7 @@ class InputStreamViewmodel extends Cubit<InputStreamState> {
         stream = existingStream;
       } else if (_streamId != null) {
         // Load from ProjectViewModel
-        final Aes67Config? loadedStream = _projectViewModel.getAes67InputStreamById(_streamId!);
+        final Aes67Config? loadedStream = _projectViewModel.getAes67InputStreamById(_streamId);
         if (loadedStream == null) {
           emit(const InputStreamError(message: 'Stream not found'));
           return;
@@ -45,17 +71,12 @@ class InputStreamViewmodel extends Cubit<InputStreamState> {
         );
       }
 
-      emit(
-        InputStreamLoaded(
-          stream: stream,
-          isSessionSectionExpanded: false,
-          apiSessions: const <Aes67SessionEntry>[],
-          isLoadingSessions: false,
-        ),
-      );
+      emit(InputStreamLoaded(stream: stream));
 
-      // Fetch sessions from API
-      fetchSessions();
+      /// Fetch sessions from API only when connected (control mode)
+      if (_projectViewModel.isInControlMode) {
+        fetchSessions();
+      }
     } catch (e) {
       emit(InputStreamError(message: e.toString()));
     }
@@ -140,7 +161,8 @@ class InputStreamViewmodel extends Cubit<InputStreamState> {
     final InputStreamLoaded? s = _loaded;
     if (s == null) return;
 
-    emit(s.copyWith(isLoadingSessions: true));
+    _isLoadingSessions = true;
+    emit(s.copyWith()); // notify UI that loading started
 
     try {
       final ResponseCallback<dynamic> responseCallback = await serviceLocator<FusionNetworkClient>().get(api: FusionApiEndpoint.sapSessions);
@@ -177,25 +199,17 @@ class InputStreamViewmodel extends Cubit<InputStreamState> {
               );
             }).toList();
 
-        final InputStreamLoaded? current = _loaded;
-        if (current != null) {
-          // Use API sessions if available, otherwise use sample data for testing
-          final List<Aes67SessionEntry> finalSessions = sessions.isNotEmpty ? sessions : _sampleSessions;
-          emit(current.copyWith(apiSessions: finalSessions, isLoadingSessions: false));
-        }
+        // Use API sessions if available, otherwise fall back to sample data
+        _apiSessions = sessions.isNotEmpty ? sessions : _sampleSessions;
       } else {
-        // API failed, use sample data for testing
-        final InputStreamLoaded? current = _loaded;
-        if (current != null) {
-          emit(current.copyWith(apiSessions: _sampleSessions, isLoadingSessions: false));
-        }
+        _apiSessions = _sampleSessions;
       }
     } catch (e) {
-      // API error, use sample data for testing
+      _apiSessions = _sampleSessions;
+    } finally {
+      _isLoadingSessions = false;
       final InputStreamLoaded? current = _loaded;
-      if (current != null) {
-        emit(current.copyWith(apiSessions: _sampleSessions, isLoadingSessions: false));
-      }
+      if (current != null) emit(current.copyWith()); // notify UI with updated sessions
     }
   }
 
@@ -228,7 +242,7 @@ class InputStreamViewmodel extends Cubit<InputStreamState> {
     final InputStreamLoaded? s = _loaded;
     if (s == null) return;
     final List<Aes67ChannelConfig> updated =
-        s.channelConfigs.map((Aes67ChannelConfig c) {
+        s.stream.channelConfigs.map((Aes67ChannelConfig c) {
           return c.channelNumber == channelNumber ? c.copyWith(label: label) : c;
         }).toList();
     emit(s.copyWith(stream: s.stream.copyWith(channelConfigs: updated)));
@@ -238,7 +252,7 @@ class InputStreamViewmodel extends Cubit<InputStreamState> {
     final InputStreamLoaded? s = _loaded;
     if (s == null) return;
     final List<Aes67ChannelConfig> updated =
-        s.channelConfigs.map((Aes67ChannelConfig c) {
+        s.stream.channelConfigs.map((Aes67ChannelConfig c) {
           return c.channelNumber == channelNumber ? c.copyWith(assignedTo: assignedTo) : c;
         }).toList();
     emit(s.copyWith(stream: s.stream.copyWith(channelConfigs: updated)));
@@ -268,7 +282,7 @@ class InputStreamViewmodel extends Cubit<InputStreamState> {
     }
 
     // Find the session by its sessionId (the display name shown in dropdown)
-    final Aes67SessionEntry? session = s.apiSessions.where((Aes67SessionEntry sess) => sess.sessionId == sessionIdValue).firstOrNull;
+    final Aes67SessionEntry? session = _apiSessions.where((Aes67SessionEntry sess) => sess.sessionId == sessionIdValue).firstOrNull;
 
     if (session != null) {
       emit(
@@ -317,7 +331,7 @@ class InputStreamViewmodel extends Cubit<InputStreamState> {
     if (s == null) return;
 
     // Toggle off if already selected
-    final String? newId = s.selectedSessionId == id ? null : id;
+    final String? newId = s.stream.selectedSessionId == id ? null : id;
 
     if (newId == null) {
       // Deselecting - clear session-related fields
@@ -334,7 +348,7 @@ class InputStreamViewmodel extends Cubit<InputStreamState> {
       );
     } else {
       // Selecting - copy session data to stream
-      final Aes67SessionEntry? session = s.apiSessions.where((Aes67SessionEntry sess) => sess.id == id).firstOrNull;
+      final Aes67SessionEntry? session = _apiSessions.where((Aes67SessionEntry sess) => sess.id == id).firstOrNull;
       if (session != null) {
         emit(
           s.copyWith(
@@ -367,7 +381,7 @@ class InputStreamViewmodel extends Cubit<InputStreamState> {
     if (s == null) return;
 
     final List<Aes67SessionEntry> updatedSessions =
-        s.apiSessions.map((Aes67SessionEntry session) {
+        _apiSessions.map((Aes67SessionEntry session) {
           if (session.id == id) {
             return session.copyWith(isDanteDevice: !session.isDanteDevice);
           }
@@ -377,7 +391,7 @@ class InputStreamViewmodel extends Cubit<InputStreamState> {
     // If the toggled session's isDanteDevice just became false and it was the
     // current selected session, clear selectedSessionId
     final Aes67SessionEntry toggled = updatedSessions.firstWhere((Aes67SessionEntry se) => se.id == id);
-    String? newSelectedSessionId = s.selectedSessionId;
+    String? newSelectedSessionId = s.stream.selectedSessionId;
     if (!toggled.isDanteDevice && newSelectedSessionId == toggled.id) {
       newSelectedSessionId = null;
     }
@@ -386,9 +400,9 @@ class InputStreamViewmodel extends Cubit<InputStreamState> {
       newSelectedSessionId = toggled.id;
     }
 
+    _apiSessions = updatedSessions;
     emit(
       s.copyWith(
-        apiSessions: updatedSessions,
         stream: s.stream.copyWith(
           selectedSessionId: newSelectedSessionId,
           clearSelectedSessionId: newSelectedSessionId == null,
@@ -401,33 +415,32 @@ class InputStreamViewmodel extends Cubit<InputStreamState> {
     final InputStreamLoaded? s = _loaded;
     if (s == null) return;
 
-    final List<Aes67SessionEntry> updated =
-        s.apiSessions.map((Aes67SessionEntry session) {
+    _apiSessions =
+        _apiSessions.map((Aes67SessionEntry session) {
           return session.id == updatedSession.id ? updatedSession : session;
         }).toList();
 
-    emit(s.copyWith(apiSessions: updated));
+    emit(s.copyWith()); // trigger rebuild with updated sessions
   }
 
   void addSession(Aes67SessionEntry session) {
     final InputStreamLoaded? s = _loaded;
     if (s == null) return;
 
-    final List<Aes67SessionEntry> updated = <Aes67SessionEntry>[...s.apiSessions, session];
-    emit(s.copyWith(apiSessions: updated));
+    _apiSessions = <Aes67SessionEntry>[..._apiSessions, session];
+    emit(s.copyWith()); // trigger rebuild with updated sessions
   }
 
   void removeSession(String sessionId) {
     final InputStreamLoaded? s = _loaded;
     if (s == null) return;
 
-    final List<Aes67SessionEntry> updated = s.apiSessions.where((Aes67SessionEntry session) => session.id != sessionId).toList();
+    _apiSessions = _apiSessions.where((Aes67SessionEntry session) => session.id != sessionId).toList();
 
     // Clear selection if removed session was selected
-    final bool clearSelection = s.selectedSessionId == sessionId;
+    final bool clearSelection = s.stream.selectedSessionId == sessionId;
     emit(
       s.copyWith(
-        apiSessions: updated,
         stream: clearSelection ? s.stream.copyWith(clearSelectedSessionId: true) : null,
       ),
     );

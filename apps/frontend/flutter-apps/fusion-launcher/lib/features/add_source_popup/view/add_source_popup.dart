@@ -112,7 +112,7 @@ class AddSourcePopup extends StatelessWidget {
                                   final List<ListeningArea> listeningAreas = projectViewModel.getAllListeningAreas();
 
                                   return SingleChildScrollView(
-                                    padding: const EdgeInsetsGeometry.all(16),
+                                    padding: const EdgeInsets.all(16),
                                     physics: const ClampingScrollPhysics(),
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -612,8 +612,7 @@ class AddSourcePopup extends StatelessWidget {
                                                   selectedStream?.sessions
                                                       .where((Aes67SessionEntry s) => s.sessionId == selectedStream.selectedSessionId)
                                                       .firstOrNull;
-                                              final List<String> channelOptions =
-                                                  inputState is InputStreamLoaded ? inputState.selectedSessionChannelOptions : <String>[];
+                                              final List<String> channelOptions = context.read<InputStreamViewmodel>().selectedSessionChannelOptions;
 
                                               // Helper to convert stored int channel number back to label
                                               String? channelLabel(int? channelNumber) {

@@ -157,7 +157,7 @@ class _DialogContent extends StatelessWidget {
                       width: _nameFieldW,
                       child: _DarkTextField(
                         semanticId: FusionTestKeys.instance.aes67_input_dialog_name_field,
-                        value: state.name,
+                        value: state.stream.name,
                         onChanged: cubit.updateName,
                       ),
                     ),
@@ -181,10 +181,9 @@ class _DialogContent extends StatelessWidget {
                           width: _dropW,
                           child: _DarkDropdown<String>(
                             semanticId: FusionTestKeys.instance.aes67_input_dialog_assigned_to_dropdown,
-                            // Only use the value if it exists in the current options, otherwise null
-                            value: (state.assignedTo != null && state.danteAssignableOptions.contains(state.assignedTo)) ? state.assignedTo : null,
+                            value: cubit.assignedTo,
                             hint: '—',
-                            items: state.danteAssignableOptions,
+                            items: cubit.danteAssignableOptions,
                             labelBuilder: (String v) => v,
                             onChanged: cubit.updateAssignedTo,
                           ),
@@ -206,7 +205,7 @@ class _DialogContent extends StatelessWidget {
                       width: _nameFieldW,
                       child: _DarkDropdown<int>(
                         semanticId: FusionTestKeys.instance.aes67_input_dialog_channel_assign_dropdown,
-                        value: state.channelCount,
+                        value: state.stream.channels,
                         hint: '—',
                         items: List<int>.generate(8, (int i) => i + 1),
                         labelBuilder: (int v) => v.toString(),
@@ -222,7 +221,7 @@ class _DialogContent extends StatelessWidget {
 
                 /// ── Channel config rows (one per channel, in a two-column grid) ─────────
                 _ChannelGrid(
-                  channelConfigs: state.channelConfigs,
+                  channelConfigs: state.stream.channelConfigs,
                   cubit: cubit,
                   isControl: isControl,
                   numW: _numW,
@@ -230,7 +229,7 @@ class _DialogContent extends StatelessWidget {
                   labelW: _labelW,
                   gapNum: _gapNum,
                   gapCols: _gapCols,
-                  assignOptions: state.selectedSessionChannelOptions,
+                  assignOptions: cubit.selectedSessionChannelOptions,
                 ),
 
                 const SizedBox(height: 24),
@@ -247,7 +246,7 @@ class _DialogContent extends StatelessWidget {
                       const SizedBox(width: 8),
                       FusionAppText(
                         text:
-                            state.selectedSessionId != null
+                            state.stream.selectedSessionId != null
                                 ? 'Discovered sessions will be shown here when connected to the network.'
                                 : 'Connect to network to map channels.',
                         style: context.textTheme.bodySmall?.copyWith(
@@ -374,7 +373,7 @@ class _ChannelGrid extends StatelessWidget {
                         child: _DarkDropdown<String>(
                           semanticId: FusionTestKeys.instance.aes67_input_dialog_channel_dropdown,
                           // Only use the value if it exists in the current options, otherwise null
-                          value: (channel.assignedTo != null && assignOptions.contains(channel.assignedTo)) ? channel.assignedTo : null,
+                          value: channel.assignedTo,
                           hint: 'Assign',
                           items: assignOptions,
                           labelBuilder: (String v) => v,
@@ -471,10 +470,10 @@ class _SessionTable extends StatelessWidget {
           const _SessionTableHeader(),
           Divider(height: 1, color: context.colorScheme.strokeLight),
           // Data rows
-          ...state.sessions.map(
+          ...cubit.apiSessions.map(
             (Aes67SessionEntry session) => _SessionTableRow(
               session: session,
-              isSelected: state.selectedSessionId == session.id,
+              isSelected: state.stream.selectedSessionId == session.id,
               onSelect: () => cubit.selectSession(session.id),
             ),
           ),
@@ -848,7 +847,7 @@ class _DarkDropdown<T> extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10),
         child: DropdownButtonHideUnderline(
           child: DropdownButton<T>(
-            value: value,
+            value: (value != null && items.contains(value)) ? value : null,
             hint: FusionAppText(
               text: hint,
               style: context.textTheme.bodySmall?.copyWith(
