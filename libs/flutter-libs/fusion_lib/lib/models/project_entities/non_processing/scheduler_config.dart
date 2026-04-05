@@ -82,6 +82,7 @@ class ScheduleConfig {
     DateTime? endDate,
     RecurrenceType? recurrence,
     List<int>? weeklyDays,
+    bool? status,
   }) {
     return ScheduleConfig(
       id: id ?? this.id,
@@ -92,6 +93,7 @@ class ScheduleConfig {
       endDate: endDate ?? this.endDate,
       recurrence: recurrence ?? this.recurrence,
       weeklyDays: weeklyDays ?? this.weeklyDays,
+      status: status ?? this.status,
     );
   }
 }
