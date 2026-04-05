@@ -75,6 +75,7 @@ struct fusion_cn_rtp_stream {
     struct fusion_cn_stream_config info;
     struct fusion_cn_rtp_packet rtp_packet_base __aligned(64);
     atomic_t is_running;
+    atomic_t playback_armed;
     u32 buf_size_in_frames;
     u32 buf_size_in_packets;
     u32 ssrc;
@@ -83,7 +84,6 @@ struct fusion_cn_rtp_stream {
     u64 next_action_time;
     u64 *next_action_times;
     u32 playback_slot; 
-    bool playback_armed;
     u64 packet_time;
     u64 ns_per_sample;
     bool rtp_phc_offset_valid;

@@ -558,7 +558,7 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
             if (stream->ssrc == 0 || packet_ssrc != stream->ssrc) {
                 stream->ssrc = packet_ssrc;
                 stream->current_seq_num = 0;
-                stream->playback_armed = false;
+                atomic_set(&stream->playback_armed, false);
                 stream->next_action_time = 0;
                 if (stream->next_action_times && stream->buf_size_in_packets)
                     memset(stream->next_action_times, 0,
@@ -571,12 +571,10 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
             // We use the incoming packet's sequence number to determine where it should go in the buffer
             write_slot = seq_num % stream->buf_size_in_packets;
 
-            // To keep playback aligned with write_slot, we wait for a packet to land in slot 0 before arming playback
-            if (!stream->playback_armed) {
+             // To keep playback aligned with write_slot, we wait for a packet to land in slot 0 before arming playback
+            if (!atomic_read(&stream->playback_armed)) {
                 if (write_slot == 0) {
-                    stream->playback_armed = true;
-                    // for playback streams, "next_action_time" is used to keep time when we miss a packet or they stop showing up.
-                    stream->next_action_time = sched_playout_ns;
+                    atomic_set(&stream->playback_armed, true);
                     printk(KERN_DEBUG "fusion_cn_rtp: playback armed %s\n", stream->info.stream_name);
                 } else {
                     spin_unlock(&stream->lock);
@@ -637,7 +635,7 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
 
             bytes_per_frame = stream->info.channels * (sample_physical_width_bits / 8);
 
-            if (late || malformed) {
+            if (malformed) {
                 memset(buf + (size_t)buf_offset * bytes_per_frame, 0,
                        (size_t)stream->info.frames_per_packet * bytes_per_frame);
             } else {
@@ -892,7 +890,6 @@ int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, u64 
             memset(stream->next_action_times, 0, sizeof(u64) * (stream->buf_size_in_packets));
         }
         stream->playback_slot = 0;
-        stream->playback_armed = false;
         stream->next_action_time = 0;
         stream->current_seq_num = 0;
         if (!stream->info.is_source)
@@ -902,6 +899,7 @@ int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, u64 
                    stream->buf_size_in_packets, stream->info.frames_per_packet);
     }
 
+    atomic_set(&stream->playback_armed, false);
     atomic_set(&stream->is_running, running);
 
     kref_put(&stream->ref, fusion_cn_rtp_stream_release);

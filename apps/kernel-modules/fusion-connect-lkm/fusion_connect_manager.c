@@ -118,8 +118,9 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
     int count = 0;
 
     spin_lock(&s->lock);
-    if (s->playback_armed) {
+    if (atomic_read(&s->playback_armed)) {
         // we may want to catch up and playback a bunch of frames, up to buf_size_in_packets worth
+        // Two looping cases: 1) packet_time < 1/3ms; 2) packet batching edge cases 
         // Policy: if next_action_times[playback_slot] is 0, we want to playback silence. 
         //         to playback silence in packet_time, we keep time with next_action_time instead
         //         next_action_time is managed completely from here
@@ -130,12 +131,15 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
             u64 action_time = s->next_action_times[slot];
             s64 delta;
 
+            // initilize next_action_time as backup time keeper, if not already
             if (s->next_action_time == 0) {
+                // shouldn't happens
                 if (action_time == 0)
                     break;
                 s->next_action_time = action_time;
             }
 
+            // use the appropriate action time for delta
             delta = action_time ? (s64)tick_ns - (s64)action_time :
                                   (s64)tick_ns - (s64)s->next_action_time;
 
@@ -144,6 +148,7 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
                 break;
             }
 
+            // if we have no packet, play silence based on next_action_time
             if (action_time == 0) {
                 if (!a)
                     break;
@@ -197,7 +202,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         struct fusion_cn_rtp_stream *rtp;
         struct fusion_cn_substream  *alsa;
         int n;
-    } fn_sink[32], other[32];
+    } fn_sink[32], other[40];
     int fn_sink_cnt = 0, other_cnt = 0;
 
     if (!atomic_read(&mgr->state.is_started))
@@ -257,7 +262,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         if (!atomic_read(&r->is_running) || !r->info.is_source || !r->info.is_fusion_connect) continue;
 
         int n = rtp_compute_source_interrupts(r, tick_ns);
-        if (n > 0 && other_cnt < 32) {
+        if (n > 0 && other_cnt < 40) {
             if (!kref_get_unless_zero(&r->ref)) continue;
             if (!kref_get_unless_zero(&a->ref)) { kref_put(&r->ref, fusion_cn_rtp_stream_release); continue; }
             other[other_cnt++] = (typeof(other[0])){ .rtp = r, .alsa = a, .n = n };
@@ -272,7 +277,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         if (!atomic_read(&r->is_running) || r->info.is_source || r->info.is_fusion_connect) continue;
 
         int n = rtp_compute_sink_interrupts(mgr, r, a, tick_ns);
-        if (n > 0 && other_cnt < 32) {
+        if (n > 0 && other_cnt < 40) {
             if (!kref_get_unless_zero(&r->ref)) continue;
             if (!kref_get_unless_zero(&a->ref)) { kref_put(&r->ref, fusion_cn_rtp_stream_release); continue; }
             other[other_cnt++] = (typeof(other[0])){ .rtp = r, .alsa = a, .n = n };
@@ -287,7 +292,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         if (!atomic_read(&r->is_running) || !r->info.is_source || r->info.is_fusion_connect) continue;
 
         int n = rtp_compute_source_interrupts(r, tick_ns);
-        if (n > 0 && other_cnt < 32) {
+        if (n > 0 && other_cnt < 40) {
             if (!kref_get_unless_zero(&r->ref)) continue;
             if (!kref_get_unless_zero(&a->ref)) { kref_put(&r->ref, fusion_cn_rtp_stream_release); continue; }
             other[other_cnt++] = (typeof(other[0])){ .rtp = r, .alsa = a, .n = n };
@@ -399,7 +404,7 @@ static int fusion_cn_alsa_init(struct fusion_cn_manager *mgr)
     return fusion_cn_alsa_driver_init(mgr, &fusion_cn_alsa_ops);
 }
 
-/* --- Coalesced queue helper (re-uses your existing worker) --- */
+/* --- Tick queue helper --- */
 static inline void fusion_cn_queue_process(void)
 {
     struct kthread_worker *worker = READ_ONCE(process_worker);
@@ -1007,7 +1012,7 @@ static int handle_reset_timing_state(struct fusion_cn_manager *mgr,
             alsa_stream = stream->stream_node ? stream->stream_node->alsa_stream : NULL;
         } else {
             stream->playback_slot = 0;
-            stream->playback_armed = false;
+            atomic_set(&stream->playback_armed, false);
             if (stream->next_action_times && stream->buf_size_in_packets)
                 memset(stream->next_action_times, 0,
                        sizeof(u64) * stream->buf_size_in_packets);
