@@ -75,17 +75,17 @@ extension ControllerService on ProjectService {
     relationships.unlink(RelationshipType.controllerZones, controllerId, zoneId);
   }
 
-  // ─── Page-assignment (via RelationshipManager — controllerPages) ──────────
+  // ─── Page-assignment (via RelationshipManager — controllerSnapshotPages) ──
 
   /// Page IDs linked to [controllerId] (scene-set IDs + snapshot-page IDs).
-  Set<String> getControllerPageIds(String controllerId) => relationships.getChildren(RelationshipType.controllerPages, controllerId);
+  Set<String> getControllerPageIds(String controllerId) => relationships.getChildren(RelationshipType.controllerSnapshotPages, controllerId);
 
   /// Links [pageId] to [controllerId] in the relationship manager.
   void linkPageToController({
     required String controllerId,
     required String pageId,
   }) {
-    relationships.link(RelationshipType.controllerPages, controllerId, pageId);
+    relationships.link(RelationshipType.controllerSnapshotPages, controllerId, pageId);
   }
 
   /// Unlinks [pageId] from [controllerId] in the relationship manager.
@@ -93,7 +93,7 @@ extension ControllerService on ProjectService {
     required String controllerId,
     required String pageId,
   }) {
-    relationships.unlink(RelationshipType.controllerPages, controllerId, pageId);
+    relationships.unlink(RelationshipType.controllerSnapshotPages, controllerId, pageId);
   }
 
   /// Replaces ALL page links for [controllerId] with [pageIds].
@@ -104,15 +104,15 @@ extension ControllerService on ProjectService {
     // Remove existing links
     final Set<String> existing = Set<String>.from(getControllerPageIds(controllerId));
     for (final String id in existing) {
-      relationships.unlink(RelationshipType.controllerPages, controllerId, id);
+      relationships.unlink(RelationshipType.controllerSnapshotPages, controllerId, id);
     }
     // Add new links
     for (final String id in pageIds) {
-      relationships.link(RelationshipType.controllerPages, controllerId, id);
+      relationships.link(RelationshipType.controllerSnapshotPages, controllerId, id);
     }
   }
 
-  // ─── Typed pages data (persisted on the FusionController model) ──────────
+  // ─── Typed snapshot pages data (persisted on the FusionController model) ──
 
   /// Returns all [ControllerPageModel] entries stored on the controller model.
   List<ControllerPageModel> getControllerPages(String controllerId) {
@@ -130,10 +130,54 @@ extension ControllerService on ProjectService {
     final FusionController updated = controller.copyWith(pages: pages);
     hardware.add(controllerId, updated);
 
-    // Keep the controllerPages relationship in sync with the page IDs
+    // Keep the controllerSnapshotPages relationship in sync with the page IDs
     setControllerPageIds(
       controllerId: controllerId,
       pageIds: pages.map((ControllerPageModel p) => p.id).toSet(),
+    );
+  }
+
+  // ─── Message pages (via RelationshipManager — controllerMessagePages) ──────
+
+  /// Source IDs of checked message players for [controllerId].
+  Set<String> getControllerMessagePageIds(String controllerId) => relationships.getChildren(RelationshipType.controllerMessagePages, controllerId);
+
+  /// Replaces ALL message-page source-ID links for [controllerId] with [sourceIds].
+  void setControllerMessagePageIds({
+    required String controllerId,
+    required Set<String> sourceIds,
+  }) {
+    final Set<String> existing = Set<String>.from(getControllerMessagePageIds(controllerId));
+    for (final String id in existing) {
+      relationships.unlink(RelationshipType.controllerMessagePages, controllerId, id);
+    }
+    for (final String id in sourceIds) {
+      relationships.link(RelationshipType.controllerMessagePages, controllerId, id);
+    }
+  }
+
+  // ─── Typed message pages data (persisted on the FusionController model) ────
+
+  /// Returns all [ControllerMessagePageModel] entries stored on the controller model.
+  List<ControllerMessagePageModel> getControllerMessagePages(String controllerId) {
+    final FusionController? controller = getControllerById(controllerId);
+    return controller?.messagePages ?? <ControllerMessagePageModel>[];
+  }
+
+  /// Replaces the full [ControllerMessagePageModel] list on the controller model.
+  void setControllerMessagePages({
+    required String controllerId,
+    required List<ControllerMessagePageModel> messagePages,
+  }) {
+    final FusionController? controller = getControllerById(controllerId);
+    if (controller == null) return;
+    final FusionController updated = controller.copyWith(messagePages: messagePages);
+    hardware.add(controllerId, updated);
+
+    // Keep the controllerMessagePages relationship in sync
+    setControllerMessagePageIds(
+      controllerId: controllerId,
+      sourceIds: messagePages.map((ControllerMessagePageModel p) => p.sourceId).toSet(),
     );
   }
 }

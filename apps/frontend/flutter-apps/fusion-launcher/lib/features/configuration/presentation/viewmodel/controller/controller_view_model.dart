@@ -91,9 +91,9 @@ extension ControllerViewModel on ProjectViewModel {
     }
   }
 
-  // ─── Page-assignment (controllerPages) ──────────────────────────────────
+  // ─── Page-assignment (controllerSnapshotPages) ──────────────────────────
 
-  /// Page IDs linked to [controllerId] via [RelationshipType.controllerPages].
+  /// Page IDs linked to [controllerId] via [RelationshipType.controllerSnapshotPages].
   Set<String> getControllerPageIds(String controllerId) {
     try {
       return projectManager.getControllerPageIds(controllerId);
@@ -153,7 +153,7 @@ extension ControllerViewModel on ProjectViewModel {
     }
   }
 
-  // ─── Typed pages data ───────────────────────────────────────────────────
+  // ─── Typed snapshot pages data ───────────────────────────────────────────
 
   /// Returns all [ControllerPageModel] entries stored on the controller model.
   List<ControllerPageModel> getControllerPages(String controllerId) {
@@ -178,6 +178,34 @@ extension ControllerViewModel on ProjectViewModel {
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to set controller pages: $e');
       throwError('Failed to set controller pages: $e');
+    }
+  }
+
+  // ─── Typed message pages data ─────────────────────────────────────────────
+
+  /// Returns all [ControllerMessagePageModel] entries stored on the controller model.
+  List<ControllerMessagePageModel> getControllerMessagePages(String controllerId) {
+    try {
+      return projectManager.getControllerMessagePages(controllerId);
+    } catch (_) {
+      return <ControllerMessagePageModel>[];
+    }
+  }
+
+  /// Replaces the full [ControllerMessagePageModel] list on the controller model and persists.
+  void setControllerMessagePages({
+    required String controllerId,
+    required List<ControllerMessagePageModel> messagePages,
+    bool autoSave = true,
+  }) {
+    try {
+      if (autoSave) recordSnapshot();
+      projectManager.setControllerMessagePages(controllerId: controllerId, messagePages: messagePages);
+      if (autoSave) saveProject();
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to set controller message pages: $e');
+      throwError('Failed to set controller message pages: $e');
     }
   }
 }

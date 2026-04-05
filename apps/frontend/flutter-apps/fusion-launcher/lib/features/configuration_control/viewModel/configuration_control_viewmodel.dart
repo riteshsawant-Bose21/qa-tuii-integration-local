@@ -87,6 +87,7 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
 
       // ── Restore persisted pages data for the selected controller ──────────
       final _PersistedPages persisted = _loadPersistedPages(selected, sceneSets);
+      final _PersistedMessagePages persistedMsg = _loadPersistedMessagePages(selected);
 
       emit(
         ConfigControlLoaded(
@@ -113,12 +114,13 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
           // Restore persisted snapshot pages
           snapshotPages: persisted.snapshotPages,
           selectedSnapshotPageId: _loaded?.selectedSnapshotPageId,
-          // Message player state (preserve selections across sync)
+          // Message player state (restore persisted selections)
           messagePlayers: messagePlayers,
           messagesPerPlayer: messagesPerPlayer,
-          selectedMessagePlayerIds: _loaded?.selectedMessagePlayerIds ?? const <String>{},
-          selectedMessagePageId: _loaded?.selectedMessagePageId,
-          selectedMessageIdsPerPlayer: _loaded?.selectedMessageIdsPerPlayer ?? const <String, Set<String>>{},
+          selectedMessagePlayerIds: persistedMsg.selectedMessagePlayerIds,
+          selectedMessagePageId:
+              persistedMsg.selectedMessagePlayerIds.isNotEmpty ? (_loaded?.selectedMessagePageId ?? persistedMsg.selectedMessagePlayerIds.last) : null,
+          selectedMessageIdsPerPlayer: persistedMsg.selectedMessageIdsPerPlayer,
         ),
       );
     } catch (e) {
@@ -417,13 +419,20 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
 
     String? newPageId;
     if (!wasChecked) {
-      // Just checked ON → activate this player's page
       newPageId = playerId;
     } else if (loaded.selectedMessagePageId == playerId) {
-      // Removed the active page → fall back to last remaining player
       newPageId = updated.isNotEmpty ? updated.last : null;
     } else {
       newPageId = loaded.selectedMessagePageId;
+    }
+
+    // Persist: rebuild message pages list from updated selections
+    if (loaded.selectedControllerId != null) {
+      _persistControllerMessagePages(
+        controllerId: loaded.selectedControllerId!,
+        selectedPlayerIds: updated,
+        selectedMessageIdsPerPlayer: loaded.selectedMessageIdsPerPlayer,
+      );
     }
 
     emit(
@@ -458,6 +467,15 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
       playerSet.add(messageId);
     }
     updatedMap[playerId] = playerSet;
+
+    // Persist
+    if (loaded.selectedControllerId != null) {
+      _persistControllerMessagePages(
+        controllerId: loaded.selectedControllerId!,
+        selectedPlayerIds: loaded.selectedMessagePlayerIds,
+        selectedMessageIdsPerPlayer: updatedMap,
+      );
+    }
 
     emit(loaded.copyWith(selectedMessageIdsPerPlayer: updatedMap));
   }
@@ -660,6 +678,46 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
       pages: pages,
     );
   }
+  // ─── Persistence helpers (controllerMessagePages relationship) ────────────
+
+  /// Restores the message-pages state for [controller] from [FusionController.messagePages].
+  _PersistedMessagePages _loadPersistedMessagePages(FusionController controller) {
+    final List<ControllerMessagePageModel> allPages = _projectViewModel.getControllerMessagePages(controller.id);
+
+    final Set<String> selectedPlayerIds = <String>{};
+    final Map<String, Set<String>> selectedMessageIdsPerPlayer = <String, Set<String>>{};
+
+    for (final ControllerMessagePageModel page in allPages) {
+      selectedPlayerIds.add(page.sourceId);
+      selectedMessageIdsPerPlayer[page.sourceId] = Set<String>.from(page.selectedMessageIds);
+    }
+
+    return _PersistedMessagePages(
+      selectedMessagePlayerIds: selectedPlayerIds,
+      selectedMessageIdsPerPlayer: selectedMessageIdsPerPlayer,
+    );
+  }
+
+  /// Persists message-player selections and per-player message checkboxes as a
+  /// [ControllerMessagePageModel] list on the controller model.
+  void _persistControllerMessagePages({
+    required String controllerId,
+    required Set<String> selectedPlayerIds,
+    required Map<String, Set<String>> selectedMessageIdsPerPlayer,
+  }) {
+    final List<ControllerMessagePageModel> pages = <ControllerMessagePageModel>[
+      for (final String sourceId in selectedPlayerIds)
+        ControllerMessagePageModel(
+          sourceId: sourceId,
+          selectedMessageIds: (selectedMessageIdsPerPlayer[sourceId] ?? <String>{}).toList(),
+        ),
+    ];
+
+    _projectViewModel.setControllerMessagePages(
+      controllerId: controllerId,
+      messagePages: pages,
+    );
+  }
 }
 
 // ─── Private value objects ─────────────────────────────────────────────────────
@@ -671,6 +729,16 @@ class _PersistedPages {
   const _PersistedPages({
     required this.selectedSceneSetIds,
     required this.snapshotPages,
+  });
+}
+
+class _PersistedMessagePages {
+  final Set<String> selectedMessagePlayerIds;
+  final Map<String, Set<String>> selectedMessageIdsPerPlayer;
+
+  const _PersistedMessagePages({
+    required this.selectedMessagePlayerIds,
+    required this.selectedMessageIdsPerPlayer,
   });
 }
 

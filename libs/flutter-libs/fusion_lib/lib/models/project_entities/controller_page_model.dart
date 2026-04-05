@@ -52,3 +52,42 @@ class ControllerPageModel {
     );
   }
 }
+
+/// A persisted message-player page entry on a [FusionController].
+///
+/// Stores which message-player source is checked, and which of its
+/// messages the user has selected (checked) in the MESSAGE LIST panel.
+class ControllerMessagePageModel {
+  /// The message-player [Source] ID.
+  final String sourceId;
+
+  /// IDs of messages whose checkbox is checked for this player.
+  final List<String> selectedMessageIds;
+
+  const ControllerMessagePageModel({
+    required this.sourceId,
+    this.selectedMessageIds = const <String>[],
+  });
+
+  ControllerMessagePageModel copyWith({
+    String? sourceId,
+    List<String>? selectedMessageIds,
+  }) {
+    return ControllerMessagePageModel(
+      sourceId: sourceId ?? this.sourceId,
+      selectedMessageIds: selectedMessageIds ?? this.selectedMessageIds,
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'sourceId': sourceId,
+    'selectedMessageIds': selectedMessageIds,
+  };
+
+  factory ControllerMessagePageModel.fromJson(Map<String, dynamic> json) {
+    return ControllerMessagePageModel(
+      sourceId: json['sourceId'] as String,
+      selectedMessageIds: (json['selectedMessageIds'] as List<dynamic>?)?.cast<String>() ?? <String>[],
+    );
+  }
+}

@@ -9,9 +9,11 @@ class FusionController extends HardwareComponent {
   /// Zone/SubZone IDs this controller is assigned to control
   final Set<String> assignedZoneIds;
 
-  /// Persisted pages — both scene-set selections and user-created snapshot pages.
-  /// Stored on the model so they survive serialization via hardware toJson/fromJson.
+  /// Persisted snapshot pages — scene-set selections and user-created snapshot pages.
   final List<ControllerPageModel> pages;
+
+  /// Persisted message pages — checked message-player sources and their selected messages.
+  final List<ControllerMessagePageModel> messagePages;
 
   FusionController({
     String? id,
@@ -33,9 +35,11 @@ class FusionController extends HardwareComponent {
     required super.addedFromBuildingPage,
     Set<String>? assignedZoneIds,
     List<ControllerPageModel>? pages,
+    List<ControllerMessagePageModel>? messagePages,
   }) : sku = sku ?? name,
        assignedZoneIds = assignedZoneIds ?? <String>{},
        pages = pages ?? <ControllerPageModel>[],
+       messagePages = messagePages ?? <ControllerMessagePageModel>[],
        super(
          hardwareName: hardwareName ?? name,
          locationEntity: locationEntity ?? LocationModel(),
@@ -62,6 +66,7 @@ class FusionController extends HardwareComponent {
     bool? addedFromBuildingPage,
     Set<String>? assignedZoneIds,
     List<ControllerPageModel>? pages,
+    List<ControllerMessagePageModel>? messagePages,
   }) {
     return FusionController(
       id: id ?? this.id,
@@ -82,6 +87,7 @@ class FusionController extends HardwareComponent {
       equipmentLocationPosition: equipmentLocationPosition ?? this.equipmentLocationPosition,
       assignedZoneIds: assignedZoneIds ?? this.assignedZoneIds,
       pages: pages ?? this.pages,
+      messagePages: messagePages ?? this.messagePages,
     );
   }
 
@@ -106,6 +112,7 @@ class FusionController extends HardwareComponent {
       'equipmentLocationPosition': equipmentLocationPosition,
       'assignedZoneIds': assignedZoneIds.toList(),
       'pages': pages.map((ControllerPageModel p) => p.toJson()).toList(),
+      'messagePages': messagePages.map((ControllerMessagePageModel p) => p.toJson()).toList(),
     };
   }
 
@@ -129,8 +136,10 @@ class FusionController extends HardwareComponent {
       addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
       equipmentLocationPosition: DeserializationUtil.intDeserializer.deserialize(json['equipmentLocationPosition']),
       assignedZoneIds: (json['assignedZoneIds'] as List<dynamic>?)?.map((dynamic e) => e as String).toSet() ?? <String>{},
-      // Support old key 'snapshotPagesData' for backward compatibility
       pages: _pagesFromJson(json),
+      messagePages:
+          (json['messagePages'] as List<dynamic>?)?.map((dynamic e) => ControllerMessagePageModel.fromJson(Map<String, dynamic>.from(e as Map))).toList() ??
+          <ControllerMessagePageModel>[],
     );
   }
 
