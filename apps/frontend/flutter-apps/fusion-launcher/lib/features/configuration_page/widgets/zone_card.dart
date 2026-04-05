@@ -80,7 +80,7 @@ class _ZoneCardState extends State<ZoneCard> {
     return FadeTransition(
       opacity: animation.drive(Tween<double>(begin: 0.95, end: 1.0)),
       child: Material(
-        color: context.colorScheme.elevation2.withAlpha(100),
+        color: Colors.transparent,
         child: MultiBlocProvider(
           providers: <BlocProvider<dynamic>>[
             BlocProvider<ConfigZonesViewmodel>.value(value: _zonesViewmodel),
@@ -211,51 +211,53 @@ class _ZoneCardState extends State<ZoneCard> {
                 SemanticTypes.container,
                 FusionTestKeys.instance.zonelistcontent,
               ),
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 12),
-                color: context.colorScheme.elevation2.withAlpha(100),
+              child: SingleChildScrollView(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 12),
 
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    /// Functions Panel
-                    SemanticHelper.container(
-                      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.zonelistfunctionspanel),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          //left border
-                          border: Border(
-                            right: BorderSide(
-                              color: context.colorScheme.elevation2,
+                  color: context.colorScheme.elevation1,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      /// Functions Panel
+                      SemanticHelper.container(
+                        testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.zonelistfunctionspanel),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            //left border
+                            border: Border(
+                              right: BorderSide(
+                                color: context.colorScheme.elevation2,
+                              ),
                             ),
                           ),
+                          width: MediaQuery.of(context).size.width * 0.12,
+                          padding: const EdgeInsets.all(16),
+                          child: _buildZoneFunctionsPanel(),
                         ),
-                        width: constraints.maxWidth * 0.34,
-                        padding: const EdgeInsets.all(12),
-                        child: _buildZoneFunctionsPanel(),
                       ),
-                    ),
 
-                    /// Subzone Panel
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          //left border
-                          border: Border(
-                            left: BorderSide(
-                              color: context.colorScheme.elevation2,
+                      /// Subzone Panel
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            //left border
+                            border: Border(
+                              left: BorderSide(
+                                color: context.colorScheme.elevation2,
+                              ),
                             ),
                           ),
+                          child:
+                              isInControlMode
+                                  ? ConfigZoneControlModePanel(
+                                    zone: widget.zoneData,
+                                  )
+                                  : _buildSubZonePanel(subZonesForZone),
                         ),
-                        child:
-                            isInControlMode
-                                ? ConfigZoneControlModePanel(
-                                  zone: widget.zoneData,
-                                )
-                                : _buildSubZonePanel(subZonesForZone),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );
@@ -291,13 +293,12 @@ class _ZoneCardState extends State<ZoneCard> {
                 child: FusionAppText(
                   text: 'FUNCTIONS',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: context.colorScheme.textBody,
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-
-              if (_hasSelectedFunction) buildAddFunctionButton(isEdit: true),
             ],
           ),
         ),
@@ -307,7 +308,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
         // const Spacer(),
         _buildReorderablePriorityWidgets(),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         buildSourceSelectionForZone(),
       ],
     );
@@ -321,57 +322,54 @@ class _ZoneCardState extends State<ZoneCard> {
       return const SizedBox.shrink();
     }
 
-    return SizedBox(
-      height: 60,
-      child: Material(
-        color: Colors.transparent,
-        child: ReorderableListView.builder(
-          proxyDecorator: _defaultProxyDecorator,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          buildDefaultDragHandles: false,
-          itemCount: 2,
-          onReorder: (int oldIndex, int newIndex) {
-            if (oldIndex < newIndex) newIndex -= 1;
+    return Material(
+      color: Colors.transparent,
+      child: ReorderableListView.builder(
+        proxyDecorator: _defaultProxyDecorator,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        buildDefaultDragHandles: false,
+        itemCount: 2,
+        onReorder: (int oldIndex, int newIndex) {
+          if (oldIndex < newIndex) newIndex -= 1;
 
-            /// Handle the reordering logic - swap sources using reOrderPrioritySourcesInZone
-            if (oldIndex != newIndex) {
-              /// Get current source IDs directly from view model
-              final List<String> prioritySources = _zonesViewmodel.getPrioritySourcesInZone(zoneId: widget.zoneId);
-              final String? source1 = prioritySources.isNotEmpty ? prioritySources[0] : null;
-              final String? source2 = prioritySources.length > 1 ? prioritySources[1] : null;
+          /// Handle the reordering logic - swap sources using reOrderPrioritySourcesInZone
+          if (oldIndex != newIndex) {
+            /// Get current source IDs directly from view model
+            final List<String> prioritySources = _zonesViewmodel.getPrioritySourcesInZone(zoneId: widget.zoneId);
+            final String? source1 = prioritySources.isNotEmpty ? prioritySources[0] : null;
+            final String? source2 = prioritySources.length > 1 ? prioritySources[1] : null;
 
-              /// Create new order list with swapped sources
-              final List<String> newOrder = <String>[];
-              if (oldIndex == 0 && newIndex == 1) {
-                /// P1 moved to P2 position
-                newOrder.add(source2 ?? '');
-                newOrder.add(source1 ?? '');
-              } else if (oldIndex == 1 && newIndex == 0) {
-                /// P2 moved to P1 position
-                newOrder.add(source2 ?? '');
-                newOrder.add(source1 ?? '');
-              }
-
-              /// Use the new reOrderPrioritySourcesInZone method
-              _zonesViewmodel.reOrderPrioritySourcesInZone(
-                zoneId: widget.zoneId,
-                newOrder: newOrder,
-              );
+            /// Create new order list with swapped sources
+            final List<String> newOrder = <String>[];
+            if (oldIndex == 0 && newIndex == 1) {
+              /// P1 moved to P2 position
+              newOrder.add(source2 ?? '');
+              newOrder.add(source1 ?? '');
+            } else if (oldIndex == 1 && newIndex == 0) {
+              /// P2 moved to P1 position
+              newOrder.add(source2 ?? '');
+              newOrder.add(source1 ?? '');
             }
-          },
-          itemBuilder: (BuildContext context, int index) {
-            final int priorityIndex = index + 1;
-            return ReorderableDragStartListener(
-              key: ValueKey<String>('priority_widget_$index'),
-              index: index,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: buildPriorityFunctionWidget(priorityIndex: priorityIndex),
-              ),
+
+            /// Use the new reOrderPrioritySourcesInZone method
+            _zonesViewmodel.reOrderPrioritySourcesInZone(
+              zoneId: widget.zoneId,
+              newOrder: newOrder,
             );
-          },
-        ),
+          }
+        },
+        itemBuilder: (BuildContext context, int index) {
+          final int priorityIndex = index + 1;
+          return ReorderableDragStartListener(
+            key: ValueKey<String>('priority_widget_$index'),
+            index: index,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: buildPriorityFunctionWidget(priorityIndex: priorityIndex),
+            ),
+          );
+        },
       ),
     );
   }
@@ -385,6 +383,7 @@ class _ZoneCardState extends State<ZoneCard> {
   }
 
   /// Priority Override function button (Popup Menu) - supports independent P1 / P2
+
   Widget buildPriorityFunctionWidget({required int priorityIndex}) {
     String? selectedSourceId;
     String? selectedSource;
@@ -416,50 +415,34 @@ class _ZoneCardState extends State<ZoneCard> {
       visible: existingFunction?.hasPriority ?? false,
       child: Row(
         children: <Widget>[
-          /// Priority Source Selection
-          DragTarget<Source>(
-            onWillAcceptWithDetails: (DragTargetDetails<Source> details) {
-              final String incomingId = details.data.id;
+          Expanded(
+            child: DragTarget<Source>(
+              onWillAcceptWithDetails: (DragTargetDetails<Source> details) {
+                final String incomingId = details.data.id;
+                if (incomingId == selectedSourceId) return false;
+                if (prioritySources.contains(incomingId)) return false;
 
-              /// Reject if already selected for this slot
-              if (priorityIndex == 1 && incomingId == selectedSourceId) return false;
-              if (priorityIndex == 2 && incomingId == selectedSourceId) return false;
+                return true;
+              },
+              onAcceptWithDetails: (DragTargetDetails<Source> details) {
+                final String sourceId = details.data.id;
 
-              /// incomingId should not be in both the priority slots
-              if (prioritySources.contains(incomingId)) return false;
+                setState(() {
+                  _zonesViewmodel.removeSourceFromZone(zoneId: widget.zoneId, sourceId: sourceId);
 
-              return true;
-            },
-            onLeave: (Source? data) {},
-            onAcceptWithDetails: (DragTargetDetails<Source> details) {
-              final Source source = details.data;
-              final String sourceId = source.id;
-              setState(() {
-                /// Remove from regular source selection if it's currently selected
-                _zonesViewmodel.removeSourceFromZone(zoneId: widget.zoneId, sourceId: sourceId);
+                  _zonesViewmodel.addPrioritySourceToZone(
+                    zoneId: widget.zoneId,
+                    sourceId: sourceId,
+                    priority: priorityIndex,
+                  );
+                });
+              },
+              builder: (BuildContext context, List<Source?> candidateData, List<dynamic> rejectedData) {
+                final bool canAccept = candidateData.isNotEmpty;
+                final bool cannotAccept = rejectedData.isNotEmpty;
+                final bool isSelected = selectedSource != null;
 
-                /// Add to priority
-                _zonesViewmodel.addPrioritySourceToZone(
-                  zoneId: widget.zoneId,
-                  sourceId: sourceId,
-                  priority: priorityIndex,
-                );
-              });
-            },
-            builder: (BuildContext context, List<Source?> candidateData, List<dynamic> rejectedData) {
-              final bool canAccept = candidateData.isNotEmpty;
-              final bool cannotAccept = rejectedData.isNotEmpty;
-              return Theme(
-                data: Theme.of(context).copyWith(
-                  tooltipTheme: TooltipThemeData(
-                    decoration: BoxDecoration(
-                      color: context.colorScheme.primaryBlack,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    textStyle: context.textTheme.bodySmall,
-                  ),
-                ),
-                child: PopupMenuButton<String>(
+                return PopupMenuButton<String>(
                   onSelected: (String value) {
                     setState(() {
                       /// Remove from regular source selection if it's currently selected
@@ -474,10 +457,9 @@ class _ZoneCardState extends State<ZoneCard> {
                     });
                   },
                   offset: const Offset(0, 25),
-                  tooltip: "Select Priority Source P$priorityIndex",
                   color: context.colorScheme.elevation1,
-
                   padding: EdgeInsets.zero,
+
                   itemBuilder: (BuildContext context) {
                     final List<PopupMenuEntry<String>> entries = <PopupMenuEntry<String>>[];
 
@@ -577,171 +559,84 @@ class _ZoneCardState extends State<ZoneCard> {
                         );
                       }
                     }
-
-                    // todo : source sets priority selection disabled for now according to robs feedback
-                    /*/// Divider
-                    entries.add(const PopupMenuDivider(height: 4));
-
-                    /// Header: Source Sets
-                    entries.add(
-                      PopupMenuItem<String>(
-                        enabled: false,
-                        height: 20,
-                        child: FusionAppText(
-                          text: 'SOURCE SETS',
-                          maxLine: 1,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    );
-
-                    /// Source sets with their sources
-                    final List<SourceSet> allSourceSets = _sourceSetsViewmodel.getAllSourceSets();
-                    if (allSourceSets.isEmpty) {
-                      entries.add(
-                        PopupMenuItem<String>(
-                          enabled: false,
-                          height: 20,
-                          child: Center(
-                            child: FusionAppText(
-                              text: 'No available source sets',
-                              maxLine: 1,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
-                            ),
-                          ),
-                        ),
-                      );
-                    } else
-                    {
-                      for (final SourceSet sourceSet in allSourceSets) {
-                        final List<Source> sources = _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: sourceSet.id);
-                        for (final Source src in sources) {
-                          final String name = '${src.name} (${sourceSet.name})';
-                          final String value = src.id;
-                          final String assetPath = src.assetImagePath;
-                          final bool isAlreadyInPriority = prioritySources.contains(value);
-                          final bool isCurrentSelection = selectedSourceId == value;
-
-                          entries.add(
-                            PopupMenuItem<String>(
-                              value: isAlreadyInPriority && !isCurrentSelection ? null : value,
-                              enabled: !isAlreadyInPriority || isCurrentSelection,
-                              height: 20,
-                              child: Opacity(
-                                opacity: isAlreadyInPriority && !isCurrentSelection ? 0.9 : 1.0,
-                                child: Row(
-                                  children: <Widget>[
-                                    Transform.scale(
-                                      scale: 0.7,
-                                      child: Radio<String>(
-                                        value: value,
-                                        groupValue: isAlreadyInPriority && !isCurrentSelection ? value : selectedSourceId,
-                                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                        visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                                        activeColor: context.colorScheme.primaryBlack,
-                                        onChanged:
-                                            isAlreadyInPriority && !isCurrentSelection
-                                                ? null
-                                                : (String? v) {
-                                                  if (v != null) Navigator.pop(context, v);
-                                                },
-                                      ),
-                                    ),
-
-                                    FusionImage.asset(
-                                      assetPath,
-                                      width: 14,
-                                      height: 14,
-                                      fit: BoxFit.contain,
-                                    ),
-                                    const SizedBox(width: 4),
-
-                                    Expanded(
-                                      child: FusionAppText(
-                                        text: isAlreadyInPriority && !isCurrentSelection ? '$name (already selected)' : name,
-                                        capitalize: true,
-                                        maxLine: 1,
-                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                          fontSize: 10,
-                                          color: isAlreadyInPriority && !isCurrentSelection ? context.colorScheme.primaryBlack.withAlpha(150) : null,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        }
-                      }
-                    }*/
-
                     return entries;
                   },
+
                   child: Container(
-                    height: 22,
-                    width: 160,
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    height: 30,
+                    padding: const EdgeInsets.only(right: 8, left: 8, top: 4, bottom: 4),
+
                     decoration: BoxDecoration(
                       color:
                           cannotAccept
                               ? context.colorScheme.errorFill
                               : canAccept
-                              ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                              : null,
+                              ? Theme.of(context).colorScheme.primary.withAlpha(10)
+                              : isSelected
+                              ? context.colorScheme.elevation1
+                              : Colors.transparent,
+
                       border: Border.all(
                         color:
                             cannotAccept
                                 ? context.colorScheme.errorStroke
                                 : canAccept
-                                ? Theme.of(context).colorScheme.primary.withOpacity(0.3)
-                                : selectedSource == null
-                                ? context.colorScheme.elevation5.withAlpha(150)
-                                : context.colorScheme.elevation5,
+                                ? Theme.of(context).colorScheme.primary
+                                : isSelected
+                                ? Colors.transparent
+                                : context.colorScheme.strokeLight,
+                        width: 1,
                       ),
-                      borderRadius: BorderRadius.circular(3),
+
+                      borderRadius: BorderRadius.circular(6),
+
+                      boxShadow:
+                          isSelected
+                              ? <BoxShadow>[
+                                BoxShadow(
+                                  color: context.colorScheme.shadowLight,
+                                  blurRadius: 2,
+                                  offset: const Offset(-2, -2),
+                                ),
+                                BoxShadow(
+                                  color: context.colorScheme.shadowDark,
+                                  blurRadius: 4,
+                                  offset: const Offset(2, 2),
+                                ),
+                                BoxShadow(color: context.colorScheme.elevation1),
+                              ]
+                              : <BoxShadow>[],
                     ),
+
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.start,
                       children: <Widget>[
                         Expanded(
                           child: FusionAppText(
-                            text: selectedSource ?? 'Select priority',
-                            semanticId: _prioritySemanticId(
-                              priorityIndex: priorityIndex,
-                              element: 'source_name',
-                            ),
+                            text: selectedSource ?? 'Select',
                             maxLine: 1,
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 11,
-                              color: selectedSource == null ? context.colorScheme.primaryWhite.withAlpha(150) : context.colorScheme.primaryWhite,
+                              fontSize: 10,
+                              color: isSelected ? context.colorScheme.primaryWhite : context.colorScheme.primaryWhite.withAlpha(120),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 4),
-                        Container(
-                          width: 14,
-                          height: 14,
 
+                        const SizedBox(width: 6),
+
+                        Container(
+                          width: 24,
+                          height: 24,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: selectedSource == null ? context.colorScheme.primaryWhite.withAlpha(150) : context.colorScheme.primaryWhite,
-                            borderRadius: BorderRadius.circular(3),
+                            color: isSelected ? context.colorScheme.infoStroke : context.colorScheme.elevation2,
+                            borderRadius: BorderRadius.circular(4),
                           ),
                           child: FusionAppText(
-                            semanticId: _prioritySemanticId(
-                              priorityIndex: priorityIndex,
-                              element: 'status_patch',
-                            ),
                             text: 'P$priorityIndex',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontSize: 8,
-                              color: context.colorScheme.primaryBlack,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 10,
                               fontWeight: FontWeight.w600,
+                              color: isSelected ? context.colorScheme.textPrimary : context.colorScheme.textDisabled,
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -749,35 +644,37 @@ class _ZoneCardState extends State<ZoneCard> {
                       ],
                     ),
                   ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(width: 8),
-
-          /// Delete priority source button (now active)
-          if (selectedSourceId != null)
-            GestureDetector(
-              onTap: () {
-                /// Remove priority source from zone using the actual ID from view model
-                _zonesViewmodel.removePrioritySourceFromZone(
-                  zoneId: widget.zoneId,
-                  sourceId: selectedSourceId!,
                 );
-                setState(() {});
               },
-              child: FusionImage.asset(
-                semanticId: _prioritySemanticId(
-                  priorityIndex: priorityIndex,
-                  element: 'delete_button',
-                ),
-                Assets.deleteIcon,
-                width: 17,
-                height: 17,
-                assetColor: context.colorScheme.primaryWhite,
-                fit: BoxFit.contain,
-              ),
             ),
+          ),
+          SizedBox(
+            width: MediaQuery.of(context).size.width * 0.008,
+          ),
+
+          /// delete button
+          SizedBox(
+            width: 20,
+            height: 20,
+            child:
+                selectedSourceId != null
+                    ? GestureDetector(
+                      onTap: () {
+                        _zonesViewmodel.removePrioritySourceFromZone(
+                          zoneId: widget.zoneId,
+                          sourceId: selectedSourceId!,
+                        );
+                        setState(() {});
+                      },
+                      child: FusionImage.asset(
+                        Assets.deleteIcon,
+                        width: 17,
+                        height: 17,
+                        assetColor: context.colorScheme.primaryWhite,
+                      ),
+                    )
+                    : null,
+          ),
         ],
       ),
     );
@@ -862,68 +759,91 @@ class _ZoneCardState extends State<ZoneCard> {
 
   /// Selected Function button
   Widget buildSelectedFunctionButton() {
-    return GestureDetector(
-      onTap: () {
-        if (selectedFunction == ZoneFunctionsType.sourceSelect || selectedFunction == ZoneFunctionsType.sourceSelectWithPriority) {
-          SourceSelectZoneControlPanel.showDialog(
-            context,
-            zoneID: widget.zoneId,
-          );
-        } else if (selectedFunction == ZoneFunctionsType.sourceMix || selectedFunction == ZoneFunctionsType.sourceMixWithPriority) {
-          SourceMixZoneControlPanel.showDialog(
-            context,
-            zoneID: widget.zoneId,
-          );
-        } else if (selectedFunction == ZoneFunctionsType.sourceMatrix || selectedFunction == ZoneFunctionsType.sourceMatrixWithPriority) {
-          SourceMatrixZoneControlPanel.showDialog(
-            context,
-            zoneID: widget.zoneId,
-          );
-        }
-      },
-      child: Container(
-        height: 22,
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+    return SizedBox(
+      width: MediaQuery.of(context).size.width * 0.2,
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                if (selectedFunction == ZoneFunctionsType.sourceSelect || selectedFunction == ZoneFunctionsType.sourceSelectWithPriority) {
+                  SourceSelectZoneControlPanel.showDialog(
+                    context,
+                    zoneID: widget.zoneId,
+                  );
+                } else if (selectedFunction == ZoneFunctionsType.sourceMix || selectedFunction == ZoneFunctionsType.sourceMixWithPriority) {
+                  SourceMixZoneControlPanel.showDialog(
+                    context,
+                    zoneID: widget.zoneId,
+                  );
+                } else if (selectedFunction == ZoneFunctionsType.sourceMatrix || selectedFunction == ZoneFunctionsType.sourceMatrixWithPriority) {
+                  SourceMatrixZoneControlPanel.showDialog(
+                    context,
+                    zoneID: widget.zoneId,
+                  );
+                }
+              },
+              child: Container(
+                height: 30,
+                width: MediaQuery.of(context).size.width * 0.1,
+                padding: const EdgeInsets.all(8),
 
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: context.colorScheme.elevation5,
-          ),
-          borderRadius: BorderRadius.circular(3),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            Expanded(
-              child: FusionAppText(
-                semanticId: FusionTestKeys.instance.functionselecttext,
-                text: selectedFunction?.displayName ?? '',
-                maxLine: 1,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w400,
+                decoration: BoxDecoration(
+                  color: context.colorScheme.elevation1,
+                  boxShadow: <BoxShadow>[
+                    BoxShadow(
+                      color: context.colorScheme.shadowLight,
+                      blurRadius: 2,
+                      offset: const Offset(-2, -2),
+                    ),
+                    BoxShadow(
+                      color: context.colorScheme.shadowDark,
+                      blurRadius: 4,
+                      offset: const Offset(2, 2),
+                    ),
+                    BoxShadow(color: context.colorScheme.elevation1),
+                  ],
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    Flexible(
+                      fit: FlexFit.loose,
+                      child: FusionAppText(
+                        semanticId: FusionTestKeys.instance.functionselecttext,
+                        text: selectedFunction?.displayName ?? '',
+                        maxLine: 1,
+                        style: context.textTheme.bodyMedium?.copyWith(color: context.colorScheme.textPrimary, fontSize: 10),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FusionImage.asset(
+                      semanticId: FusionTestKeys.instance.functionselecticon,
+                      Assets.configurationIcon,
+                      width: 24,
+                      height: 24,
+                      fit: BoxFit.contain,
+                      assetColor: context.colorScheme.primaryWhite,
+                    ),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-            FusionImage.asset(
-              semanticId: FusionTestKeys.instance.functionselecticon,
-              Assets.configurationFilledIcon,
-              width: 14,
-              height: 14,
-              fit: BoxFit.contain,
-              assetColor: context.colorScheme.primaryWhite,
-            ),
-          ],
-        ),
+          ),
+          SizedBox(
+            width: MediaQuery.of(context).size.width * 0.01,
+          ),
+          if (_hasSelectedFunction) buildAddFunctionButton(isEdit: true),
+        ],
       ),
     );
   }
 
   /// Multi-select source selection for zone (checkboxes)
   void _initializeTempSelection() {
-    _tempSelectedItems = {
+    _tempSelectedItems = <dynamic>{
       ..._zonesViewmodel.getSourcesInZone(zoneId: widget.zoneId),
       ..._zonesViewmodel.getSourceSetsInZone(zoneId: widget.zoneId),
     };
@@ -1027,7 +947,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
                           const SizedBox(height: 10),
 
-                          ...availableSources.asMap().entries.map((entry) {
+                          ...availableSources.asMap().entries.map((MapEntry<int, Source> entry) {
                             final Source src = entry.value;
 
                             final bool isPrioritySource = _zonesViewmodel.getPrioritySourcesInZone(zoneId: widget.zoneId).contains(src.id);
@@ -1119,7 +1039,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
                           const SizedBox(height: 10),
 
-                          ...sourceSetList.asMap().entries.map((entry) {
+                          ...sourceSetList.asMap().entries.map((MapEntry<int, SourceSet> entry) {
                             final SourceSet setItem = entry.value;
 
                             final List<Source> sourcesInSet = _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: setItem.id);
@@ -1169,60 +1089,75 @@ class _ZoneCardState extends State<ZoneCard> {
 
               return const SizedBox();
             },
-
             child: SemanticHelper.button(
               testId: SemanticHelper.createTestId(
                 SemanticTypes.container,
                 FusionTestKeys.instance.selectSourceButton,
               ),
               child: Container(
-                height: 22,
-                width: 160,
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                width: MediaQuery.of(context).size.width * 0.3,
+                height: 30,
+                padding: const EdgeInsets.only(right: 9, left: 8, top: 4, bottom: 4),
+
                 decoration: BoxDecoration(
-                  border: Border.all(
-                    color: hasSelection ? context.colorScheme.elevation5 : context.colorScheme.elevation5.withAlpha(150),
-                  ),
-                  borderRadius: BorderRadius.circular(3),
+                  color: context.colorScheme.elevation1,
+                  borderRadius: BorderRadius.circular(6),
+
+                  boxShadow: <BoxShadow>[
+                    BoxShadow(
+                      color: context.colorScheme.shadowLight,
+                      blurRadius: 2,
+                      offset: const Offset(-2, -2),
+                    ),
+                    BoxShadow(
+                      color: context.colorScheme.shadowDark,
+                      blurRadius: 4,
+                      offset: const Offset(2, 2),
+                    ),
+                    BoxShadow(color: context.colorScheme.elevation1),
+                  ],
                 ),
+
                 child: Row(
                   children: <Widget>[
                     Expanded(
                       child: FusionAppText(
-                        text: hasSelection ? 'Sources selected' : 'Select sources',
+                        text: hasSelection ? 'Selected' : 'Select sources',
                         maxLine: 1,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 11,
-                          color: hasSelection ? context.colorScheme.primaryWhite : context.colorScheme.primaryWhite.withAlpha(150),
+                          fontSize: 10,
+                          color: hasSelection ? context.colorScheme.primaryWhite : context.colorScheme.primaryWhite.withAlpha(140),
                         ),
                       ),
                     ),
-                    hasSelection
-                        ? IntrinsicWidth(
-                          child: Container(
-                            height: 14,
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: context.colorScheme.primaryWhite,
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                            child: FusionAppText(
-                              semanticId: FusionTestKeys.instance.selectSourceText,
-                              text: _zonesViewmodel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                fontSize: 8,
-                                color: context.colorScheme.primaryBlack,
-                                fontWeight: FontWeight.w600,
+                    Container(
+                      height: 24,
+                      width: 24,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: hasSelection ? context.colorScheme.elevation3 : context.colorScheme.elevation2,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child:
+                          hasSelection
+                              ? Center(
+                                child: FusionAppText(
+                                  semanticId: FusionTestKeys.instance.selectSourceText,
+                                  text: _zonesViewmodel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 10,
+                                    color: context.colorScheme.primaryWhite,
+                                  ),
+                                ),
+                              )
+                              : const Center(
+                                child: Icon(
+                                  Icons.add,
+                                  size: 16,
+                                ),
                               ),
-                            ),
-                          ),
-                        )
-                        : Icon(
-                          Icons.add,
-                          color: context.colorScheme.primaryWhite.withAlpha(150),
-                          size: 16,
-                        ),
+                    ),
                   ],
                 ),
               ),

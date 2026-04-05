@@ -102,6 +102,7 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
     return FusionPopupMenu<T>(
       popupwidth: widget.matchChildWidth ? null : widget.popupWidth,
       items: widget.items,
+      tooltip: '',
       onSelected: _handleChange,
       popupOffset: widget.popupOffset,
       matchChildWidth: widget.matchChildWidth,
@@ -111,10 +112,7 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
       itemBuilder: (context, item) {
         final bool isSelected = item == _selectedValue;
         if (widget.itemBuilderWithSelection != null) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: widget.itemBuilderWithSelection!(context, item, isSelected),
-          );
+          return widget.itemBuilderWithSelection!(context, item, isSelected);
         }
 
         if (widget.itemBuilder != null) {

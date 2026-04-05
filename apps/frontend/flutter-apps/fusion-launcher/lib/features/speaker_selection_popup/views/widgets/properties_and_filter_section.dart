@@ -598,6 +598,7 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
   final String Function(T option) labelBuilder;
   final Widget Function(T option)? valueBuilder;
   final String hint;
+  final int rightFlex;
 
   const BuildRowPropertyWidget({
     super.key,
@@ -608,6 +609,7 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
     required this.labelBuilder,
     this.valueBuilder,
     this.hint = "Select",
+    this.rightFlex = 1,
   });
 
   @override
@@ -625,6 +627,7 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Expanded(
+          flex: rightFlex,
           child: FusionNeumorphicDropdown<T>(
             popupOffset: const Offset(2, 4),
             popupWidth: 150,
@@ -640,7 +643,7 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
               } else {
                 return FusionAppText(
                   text: labelBuilder(option),
-                  style: context.textTheme.bodySmall,
+                  style: context.textTheme.l1Regular,
                 );
               }
             },
@@ -661,7 +664,7 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
                             return FusionAppText(
                               text: value != null ? labelBuilder(value as T) : hint,
                               maxLine: 1,
-                              style: context.textTheme.bodySmall?.copyWith(
+                              style: context.textTheme.l1Regular.copyWith(
                                 color: value != null ? context.colorScheme.textPrimary : context.colorScheme.textPlaceholder,
                               ),
                             );

@@ -91,3 +91,11 @@ export 'media_files/media_file_service.dart';
 //message player
 export 'message_player/message_player_manager.dart';
 export 'message_player/message_player_service.dart';
+
+//aes67
+export 'aes67/aes67_manager.dart';
+export 'aes67/aes67_service.dart';
+
+// AES67
+export 'aes67/aes67_manager.dart';
+export 'aes67/aes67_service.dart';

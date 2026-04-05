@@ -38,6 +38,7 @@ export 'project_entities/non_processing/snapshot_model.dart';
 export 'project_entities/non_processing/scene_set_model.dart';
 export 'project_entities/non_processing/scheduler_config.dart';
 export 'project_entities/non_processing/fusion_event.dart';
+export 'project_entities/non_processing/aes67_config.dart';
 export 'fusion_auth/user_model.dart';
 export 'project_cloud/project_list_response.dart';
 export 'project_entities/media_files/media_file_model.dart';

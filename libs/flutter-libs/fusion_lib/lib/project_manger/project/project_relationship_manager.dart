@@ -29,6 +29,8 @@ enum RelationshipType {
   playerMessages,
   sourceMessages,
   messageMediaMapping,
+  aes67InputStreams,
+  aes67OutputStreams,
 
   /// Maps a [FusionController] → its assigned zone/sub-zone IDs.
   /// Mirrors the [messageZones] pattern used by the message player.

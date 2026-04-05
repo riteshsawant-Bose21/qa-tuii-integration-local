@@ -15,7 +15,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
     this.popupOffset = const Offset(10, 10),
     this.semanticsId,
     this.isItemEnabled,
-    this.itemPadding,
+    this.itemPadding = const EdgeInsets.all(16.0),
     this.constraints,
   }) : matchChildWidth = matchChildWidth ?? (popupwidth == null);
 
@@ -30,8 +30,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
   final Offset popupOffset;
   final String? semanticsId;
   final bool Function(T)? isItemEnabled;
-  final EdgeInsets? itemPadding;
-
+  final EdgeInsetsGeometry itemPadding;
   /// Optional size constraints forwarded to [CustomPopupMenuButton].
   /// Use [BoxConstraints.tightFor] or [BoxConstraints(maxHeight: …)] to cap
   /// popup height and enable scrolling.
@@ -79,7 +78,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
                 child: SizedBox(
                   width: width2,
                   child: Padding(
-                    padding: itemPadding ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: itemPadding,
                     child: itemBuilder != null
                         ? itemBuilder!(context, item)
                         : FusionAppText(
