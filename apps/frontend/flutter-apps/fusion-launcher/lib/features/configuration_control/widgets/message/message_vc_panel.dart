@@ -41,7 +41,13 @@ class MessageVcPanel extends StatelessWidget {
     final String? activePlayerId = state.selectedMessagePageId;
     final Source? activePlayer = activePlayerId != null ? state.messagePlayers.where((Source s) => s.id == activePlayerId).cast<Source?>().firstOrNull : null;
 
-    final List<MessageModel> messages = activePlayer != null ? (state.messagesPerPlayer[activePlayer.id] ?? <MessageModel>[]) : <MessageModel>[];
+    // Only show messages that are CHECKED in the MESSAGE LIST panel
+    final Set<String> checkedIds = activePlayer != null ? (state.selectedMessageIdsPerPlayer[activePlayer.id] ?? <String>{}) : <String>{};
+
+    final List<MessageModel> checkedMessages =
+        activePlayer != null
+            ? (state.messagesPerPlayer[activePlayer.id] ?? <MessageModel>[]).where((MessageModel m) => checkedIds.contains(m.id)).toList()
+            : <MessageModel>[];
 
     return Padding(
       padding: const EdgeInsets.all(20),
@@ -69,7 +75,7 @@ class MessageVcPanel extends StatelessWidget {
                 ),
               ),
 
-              // ── Message list ──────────────────────────────────────────
+              // ── Message list (checked only) ────────────────────────────
               if (activePlayer == null)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -80,11 +86,11 @@ class MessageVcPanel extends StatelessWidget {
                     ),
                   ),
                 )
-              else if (messages.isEmpty)
+              else if (checkedMessages.isEmpty)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                   child: FusionAppText(
-                    text: 'No messages configured for this player',
+                    text: 'No messages selected — check messages in the list to show them here',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: context.colorScheme.textSecondary,
                     ),
@@ -95,15 +101,10 @@ class MessageVcPanel extends StatelessWidget {
                   child: ListView.builder(
                     shrinkWrap: true,
                     padding: const EdgeInsets.only(bottom: 8),
-                    itemCount: messages.length,
+                    itemCount: checkedMessages.length,
                     itemBuilder: (BuildContext context, int index) {
-                      final MessageModel message = messages[index];
-                      final bool isSelected = (state.selectedMessageIdsPerPlayer[activePlayer.id] ?? <String>{}).contains(message.id);
-                      return _MessageVcItem(
-                        message: message,
-                        isSelected: isSelected,
-                        onTap: () => context.read<ConfigurationControlViewmodel>().toggleMessageSelection(activePlayer.id, message.id),
-                      );
+                      final MessageModel message = checkedMessages[index];
+                      return _MessageVcItem(message: message);
                     },
                   ),
                 ),
@@ -117,50 +118,41 @@ class MessageVcPanel extends StatelessWidget {
 
 // ─── Message VC row ───────────────────────────────────────────────────────────
 
+/// Display-only row in the Virtual Controller.
+/// Only checked messages are passed here, so every row is shown without
+/// any additional selection indicator.
 class _MessageVcItem extends StatelessWidget {
   final MessageModel message;
-  final bool isSelected;
-  final VoidCallback onTap;
 
-  const _MessageVcItem({
-    required this.message,
-    required this.isSelected,
-    required this.onTap,
-  });
+  const _MessageVcItem({required this.message});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        decoration: BoxDecoration(
-          color: isSelected ? context.colorScheme.elevation3 : context.colorScheme.elevation2,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isSelected ? context.colorScheme.strokeDark : context.colorScheme.strokeLight,
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              child: FusionAppText(
-                text: message.name,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: context.colorScheme.textPrimary,
-                ),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation2,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: context.colorScheme.strokeLight, width: 1),
+      ),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: FusionAppText(
+              text: message.name,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+                color: context.colorScheme.textPrimary,
               ),
             ),
-            Icon(
-              Icons.chevron_right,
-              size: 18,
-              color: context.colorScheme.iconDefault,
-            ),
-          ],
-        ),
+          ),
+          Icon(
+            Icons.chevron_right,
+            size: 18,
+            color: context.colorScheme.iconDefault,
+          ),
+        ],
       ),
     );
   }
