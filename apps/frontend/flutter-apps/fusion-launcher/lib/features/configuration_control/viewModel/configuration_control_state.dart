@@ -73,6 +73,23 @@ sealed class ConfigurationControlState extends Equatable {
   /// User-created snapshot pages (each page has a name + linked snapshot IDs)
   List<SnapshotPageModel> get snapshotPages => <SnapshotPageModel>[];
 
+  // ── Message Player tab ──────────────────────────────────────────────────────
+
+  /// All message-player sources available in the project.
+  List<Source> get messagePlayers => <Source>[];
+
+  /// IDs of message players whose checkbox is checked.
+  Set<String> get selectedMessagePlayerIds => <String>{};
+
+  /// The currently active/highlighted page in the PAGES panel (message tab).
+  String? get selectedMessagePageId => null;
+
+  /// Messages grouped by message-player source ID.
+  Map<String, List<MessageModel>> get messagesPerPlayer => <String, List<MessageModel>>{};
+
+  /// Selected message IDs per player (checkbox state).
+  Map<String, Set<String>> get selectedMessageIdsPerPlayer => <String, Set<String>>{};
+
   /// Get selected controller ID
   String? get selectedControllerId => null;
 
@@ -137,6 +154,23 @@ class ConfigControlLoaded extends ConfigurationControlState {
   @override
   final List<SnapshotPageModel> snapshotPages;
 
+  // ── Message Player tab ─────────────────────────────────────────────────────
+
+  @override
+  final List<Source> messagePlayers;
+
+  @override
+  final Set<String> selectedMessagePlayerIds;
+
+  @override
+  final String? selectedMessagePageId;
+
+  @override
+  final Map<String, List<MessageModel>> messagesPerPlayer;
+
+  @override
+  final Map<String, Set<String>> selectedMessageIdsPerPlayer;
+
   @override
   final String? selectedControllerId;
 
@@ -180,6 +214,11 @@ class ConfigControlLoaded extends ConfigurationControlState {
     this.snapshotsPerPage = const <String, List<SnapshotsModel>>{},
     this.usedSnapshotIds = const <String>{},
     this.snapshotPages = const <SnapshotPageModel>[],
+    this.messagePlayers = const <Source>[],
+    this.selectedMessagePlayerIds = const <String>{},
+    this.selectedMessagePageId,
+    this.messagesPerPlayer = const <String, List<MessageModel>>{},
+    this.selectedMessageIdsPerPlayer = const <String, Set<String>>{},
     this.selectedControllerId,
     this.selectedZoneId,
     this.currentTab = ConfigControlTab.zoneControl,
@@ -204,6 +243,11 @@ class ConfigControlLoaded extends ConfigurationControlState {
     Map<String, List<SnapshotsModel>>? snapshotsPerPage,
     Set<String>? usedSnapshotIds,
     List<SnapshotPageModel>? snapshotPages,
+    List<Source>? messagePlayers,
+    Set<String>? selectedMessagePlayerIds,
+    String? selectedMessagePageId,
+    Map<String, List<MessageModel>>? messagesPerPlayer,
+    Map<String, Set<String>>? selectedMessageIdsPerPlayer,
     String? selectedControllerId,
     String? selectedZoneId,
     ConfigControlTab? currentTab,
@@ -221,6 +265,7 @@ class ConfigControlLoaded extends ConfigurationControlState {
     bool clearSelectedSceneSetId = false,
     bool clearActiveSnapshotId = false,
     bool clearSelectedSnapshotPageId = false,
+    bool clearSelectedMessagePageId = false,
   }) {
     return ConfigControlLoaded(
       controllers: controllers ?? this.controllers,
@@ -232,6 +277,11 @@ class ConfigControlLoaded extends ConfigurationControlState {
       snapshotsPerPage: snapshotsPerPage ?? this.snapshotsPerPage,
       usedSnapshotIds: usedSnapshotIds ?? this.usedSnapshotIds,
       snapshotPages: snapshotPages ?? this.snapshotPages,
+      messagePlayers: messagePlayers ?? this.messagePlayers,
+      selectedMessagePlayerIds: selectedMessagePlayerIds ?? this.selectedMessagePlayerIds,
+      selectedMessagePageId: clearSelectedMessagePageId ? null : (selectedMessagePageId ?? this.selectedMessagePageId),
+      messagesPerPlayer: messagesPerPlayer ?? this.messagesPerPlayer,
+      selectedMessageIdsPerPlayer: selectedMessageIdsPerPlayer ?? this.selectedMessageIdsPerPlayer,
       selectedControllerId: clearSelectedControllerId ? null : (selectedControllerId ?? this.selectedControllerId),
       selectedZoneId: clearSelectedZoneId ? null : (selectedZoneId ?? this.selectedZoneId),
       currentTab: currentTab ?? this.currentTab,
@@ -291,6 +341,11 @@ class ConfigControlLoaded extends ConfigurationControlState {
     snapshotsPerPage,
     usedSnapshotIds,
     snapshotPages,
+    messagePlayers,
+    selectedMessagePlayerIds,
+    selectedMessagePageId,
+    messagesPerPlayer,
+    selectedMessageIdsPerPlayer,
     selectedControllerId,
     selectedZoneId,
     currentTab,

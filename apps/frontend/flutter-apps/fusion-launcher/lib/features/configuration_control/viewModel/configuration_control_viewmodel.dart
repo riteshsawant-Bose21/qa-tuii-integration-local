@@ -68,6 +68,19 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
       final Map<String, List<SnapshotsModel>> snapshotsPerPage = _computeSnapshotsPerPage(snapshotsInSceneSets);
       final Set<String> usedSnapshotIds = _computeUsedSnapshotIds(snapshotsPerPage);
 
+      // Load message players
+      final List<Source> messagePlayers =
+          _projectViewModel.sources
+              .where(
+                (Source s) =>
+                    s.type == SourceType.paging &&
+                    (s.pagingSourceType == PagingSourceType.messagePlayer || s.pagingSourceType == PagingSourceType.messagePlayerWithZoneSelect),
+              )
+              .toList();
+      final Map<String, List<MessageModel>> messagesPerPlayer = <String, List<MessageModel>>{
+        for (final Source s in messagePlayers) s.id: _projectViewModel.getMessagesForSource(s.id),
+      };
+
       // Keep the previously selected controller when syncing; fall back to first.
       final FusionController selected = _resolveController(controllers, preserveControllerId);
       final _ZoneSelection sel = _buildZoneSelection(selected);
@@ -100,6 +113,12 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
           // Restore persisted snapshot pages
           snapshotPages: persisted.snapshotPages,
           selectedSnapshotPageId: _loaded?.selectedSnapshotPageId,
+          // Message player state (preserve selections across sync)
+          messagePlayers: messagePlayers,
+          messagesPerPlayer: messagesPerPlayer,
+          selectedMessagePlayerIds: _loaded?.selectedMessagePlayerIds ?? const <String>{},
+          selectedMessagePageId: _loaded?.selectedMessagePageId,
+          selectedMessageIdsPerPlayer: _loaded?.selectedMessageIdsPerPlayer ?? const <String, Set<String>>{},
         ),
       );
     } catch (e) {
@@ -375,6 +394,72 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
     final ConfigControlLoaded? loaded = _loaded;
     if (loaded == null) return;
     emit(loaded.copyWith(selectedSnapshotPageId: pageId, clearSelectedSceneSetId: true));
+  }
+
+  // ─── Message Player actions ────────────────────────────────────────────────
+
+  /// Toggle message-player checkbox.
+  /// Checking ON  → adds a page to the PAGES panel and makes it active.
+  /// Checking OFF → removes the corresponding page; if it was active, the last
+  ///                remaining checked player becomes active (or none).
+  void toggleMessagePlayerSelection(String playerId) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+
+    final bool wasChecked = loaded.selectedMessagePlayerIds.contains(playerId);
+    final Set<String> updated = Set<String>.from(loaded.selectedMessagePlayerIds);
+
+    if (wasChecked) {
+      updated.remove(playerId);
+    } else {
+      updated.add(playerId);
+    }
+
+    String? newPageId;
+    if (!wasChecked) {
+      // Just checked ON → activate this player's page
+      newPageId = playerId;
+    } else if (loaded.selectedMessagePageId == playerId) {
+      // Removed the active page → fall back to last remaining player
+      newPageId = updated.isNotEmpty ? updated.last : null;
+    } else {
+      newPageId = loaded.selectedMessagePageId;
+    }
+
+    emit(
+      loaded.copyWith(
+        selectedMessagePlayerIds: updated,
+        selectedMessagePageId: newPageId,
+        clearSelectedMessagePageId: newPageId == null,
+      ),
+    );
+  }
+
+  /// Select a message-player page (highlights it in the PAGES panel).
+  void selectMessagePage(String playerId) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    emit(loaded.copyWith(selectedMessagePageId: playerId));
+  }
+
+  /// Toggle individual message checkbox for a given player.
+  void toggleMessageSelection(String playerId, String messageId) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+
+    final Map<String, Set<String>> updatedMap = <String, Set<String>>{
+      for (final MapEntry<String, Set<String>> e in loaded.selectedMessageIdsPerPlayer.entries) e.key: Set<String>.from(e.value),
+    };
+
+    final Set<String> playerSet = Set<String>.from(updatedMap[playerId] ?? <String>{});
+    if (playerSet.contains(messageId)) {
+      playerSet.remove(messageId);
+    } else {
+      playerSet.add(messageId);
+    }
+    updatedMap[playerId] = playerSet;
+
+    emit(loaded.copyWith(selectedMessageIdsPerPlayer: updatedMap));
   }
 
   /// Get snapshots for a specific scene set.
