@@ -49,7 +49,7 @@ static unsigned int nf_hook_func(void *priv, struct sk_buff *skb, const struct n
         return NF_DROP;
     }
 
-    if (fusion_cn_rtp_enqueue_packet(rtp_mgr, stream_handle, packet, skb->len + ETH_HLEN) < 0) {
+    if (fusion_cn_rtp_enqueue_packet(rtp_mgr, stream_handle, skb, skb->len + ETH_HLEN) < 0) {
         printk(KERN_DEBUG "fusion_cn: nf_hook: drop queued RX packet\n");
     }
 
@@ -146,7 +146,8 @@ int fusion_cn_nf_tx_packet(void *rtp_mgr, struct sk_buff *skb, u32 data_size)
         if (!fusion_cn_rtp_lookup_packet_handle(mgr, packet, &stream_handle))
             return -ENOENT;
 
-        ret = fusion_cn_rtp_enqueue_packet(mgr, stream_handle, packet, skb->len);
+        ret = fusion_cn_rtp_enqueue_packet(mgr, stream_handle, skb, skb->len);
+        kfree_skb(skb);
         return ret < 0 ? ret : 0;
     }
 

@@ -210,7 +210,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
 
     tick_ns = READ_ONCE(mgr->tick_ns);
 
-    fusion_cn_rtp_drain_rx_queue(&mgr->rtp);
+    fusion_cn_rtp_drain_rx_queue(&mgr->rtp, FUSION_CN_RX_DRAIN_BUDGET);
 
     /* -------- Phase 1: FusionConnect sinks (low latency priority) -------- */
     read_lock_irqsave(&mgr->rtp.lock, flags);
@@ -244,8 +244,6 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         struct stream_node *sn = fn_sink[i].rtp->stream_node;
         for (int k = 0; k < fn_sink[i].n; k++)
             fusion_cn_alsa_pcm_interrupt(mgr->alsa.alsa_chip, fn_sink[i].alsa);
-
-        atomic_set(&sn->metrics_pending, 1);
 
         kref_put(&fn_sink[i].rtp->ref,  fusion_cn_rtp_stream_release);
         kref_put(&fn_sink[i].alsa->ref, fusion_cn_alsa_substream_release);
@@ -310,7 +308,8 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
             fusion_cn_alsa_pcm_interrupt(mgr->alsa.alsa_chip, other[i].alsa);
         }
 
-        atomic_set(&sn->metrics_pending, 1);
+        if (other[i].rtp->info.is_source)
+            atomic_set(&sn->metrics_pending, 1);
 
         kref_put(&other[i].rtp->ref,  fusion_cn_rtp_stream_release);
         kref_put(&other[i].alsa->ref, fusion_cn_alsa_substream_release);

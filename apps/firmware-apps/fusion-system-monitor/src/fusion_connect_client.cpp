@@ -105,6 +105,7 @@ struct fusion_cn_metrics_snapshot
     uint64_t packets_lost, packets_reordered, packets_dup;
     uint64_t packets_marked, malformed_count;
     uint64_t late_drop_count;
+    uint64_t rx_queue_drop_count;
     uint64_t burst_loss_max;
 
     uint32_t rfc3550_jitter_ns;
@@ -1678,7 +1679,7 @@ void FusionConnectClient::process() {
                     // RX
                     SPDLOG_DEBUG(
                         "metrics RX stream={}: ts={} "
-                        "pkts={} bytes={} lost={} reo={} dup={} malf={} late_drop={} burst_max={} batch_max={} "
+                        "pkts={} bytes={} lost={} reo={} dup={} malf={} late_drop={} rxq_drop={} burst_max={} batch_max={} "
                         "iat_min={}us p50={}us p99={}us jitter={}us "
                         "jb: cur={} min={} max={} avg={} "
                         "lat: path={}ns min={}ns max={}ns p50={}ns p99={}ns ",
@@ -1686,7 +1687,7 @@ void FusionConnectClient::process() {
                         s.packets_total, s.bytes_total,
                         s.packets_lost, s.packets_reordered,
                         s.packets_dup, s.malformed_count, 
-                        s.late_drop_count, s.burst_loss_max, s.batch_max,
+                        s.late_drop_count, s.rx_queue_drop_count, s.burst_loss_max, s.batch_max,
                         s.iat_min_ns / 1000, s.iat_p50_ns / 1000, s.iat_p99_ns / 1000, s.rfc3550_jitter_ns / 1000,
                         s.jb_depth_cur_samples, s.jb_depth_min_samples,
                         s.jb_depth_max_samples, s.jb_depth_avg_samples,

@@ -657,10 +657,6 @@ static void gpt_rebase_phc_epoch_locked(struct fusion_gpt *g, u64 cap64,
 		g->pending_future_anchor = false;
 		pr_info("fusion_gpt: phc anchor latched epoch=%llu cnt=%llu\n",
 				g->phc_epoch_ns, g->pps_epoch_cnt64);
-		pr_info("fusion_gpt: rebase kind=anchor prev_epoch=%llu prev_cnt=%llu new_epoch=%llu new_cnt=%llu aligned=%d\n",
-				prev_epoch_ns, prev_epoch_cnt64,
-				g->phc_epoch_ns, g->pps_epoch_cnt64,
-				READ_ONCE(g->phc_aligned));
 		return;
 	}
 
