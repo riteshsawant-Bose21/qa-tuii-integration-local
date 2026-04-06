@@ -3042,7 +3042,7 @@ const docTemplate = `{
                 },
                 "version": {
                     "type": "string",
-                    "example": "1.2.3"
+                    "example": "1.2.3-dev.4+build123"
                 }
             }
         },

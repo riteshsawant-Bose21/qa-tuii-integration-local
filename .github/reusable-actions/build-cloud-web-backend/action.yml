@@ -102,18 +102,18 @@ runs:
     #     docker push ${{ inputs.DOCKER_REGISTRY_DEV }}/product-sync-image:$(git rev-parse --short HEAD)
     #     docker push ${{ inputs.DOCKER_REGISTRY_DEV }}/product-sync-image:latest
         
-    # # - name: Trigger new ECS deployment
-    # #   if: >-
-    # #     ${{
-    # #       (
-    # #         github.event_name == 'push' &&
-    # #         (
-    # #           github.ref_name == 'develop' ||
-    # #           startsWith(github.ref_name, 'release/')
-    # #         )
-    # #       )
-    # #     }}
-    # #   shell: bash
+    # - name: Trigger new ECS deployment
+    #   if: >-
+    #     ${{
+    #       (
+    #         github.event_name == 'push' &&
+    #         (
+    #           github.ref_name == 'develop' ||
+    #           startsWith(github.ref_name, 'release/')
+    #         )
+    #       )
+    #     }}
+    #   shell: bash
     #   working-directory: apps/cloud-backend/fusion-core
     #   env:
     #     AWS_ACCESS_KEY_ID: ${{ inputs.AWS_ACCESS_KEY_ID_DEV }}

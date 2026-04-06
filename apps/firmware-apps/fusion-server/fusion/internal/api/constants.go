@@ -44,6 +44,8 @@ const (
 	WSMsgTypePing               = "ping"
 	WSMsgTypePong               = "pong"
 	WSMsgTypeError              = "error"
+	WSMsgTypeStartUpdate        = "start_update"
+	WSMsgTypeUpdateProgress     = "update_progress"
 
 	// WS event types (server -> client)
 	WSMsgTypeDeviceUpdate = "device_update"
@@ -74,6 +76,7 @@ const (
 	WSCodeConnected     = 3002 // Connection established
 	WSCodePong          = 3003 // Pong response
 	WSCodeDeviceUpdated = 3004 // Device updated (for push notifications)
+	WSCodeUpdateStarted = 3005 // Software update started successfully
 
 	// Application client error codes (4xxx) - Available for private use
 	WSCodeInvalidJSON      = 4000 // Invalid JSON in request
@@ -111,4 +114,45 @@ const (
 	DefaultKeyFileName      = "device.key"
 	SoftwareUpdateInfoPath  = "/etc/buildinfo"
 	SerialPath              = "/sys/firmware/devicetree/base/serial-number"
+)
+
+// RECOVERY_STATUS enum values from SWUpdate
+const (
+	SWUpdateStatusIdle       SWUpdateStatus = 0
+	SWUpdateStatusStart      SWUpdateStatus = 1
+	SWUpdateStatusRun        SWUpdateStatus = 2
+	SWUpdateStatusSuccess    SWUpdateStatus = 3
+	SWUpdateStatusFailure    SWUpdateStatus = 4
+	SWUpdateStatusDownload   SWUpdateStatus = 5
+	SWUpdateStatusDone       SWUpdateStatus = 6
+	SWUpdateStatusSubprocess SWUpdateStatus = 7
+	SWUpdateStatusProgress   SWUpdateStatus = 8
+)
+
+// SWUpdate progress socket constants
+const (
+	SWUpdateSocketPath       = "/tmp/swupdateprog"
+	SWUpdateConnectAckSize   = 8
+	SWUpdateMsgSizeV200      = 2408
+	SWUpdateMsgSizeV210      = 2416
+	SWUpdateExpectedAckMagic = "ACK"
+	SWUpdateProgressAPIV200  = uint32(0x00020000)
+	SWUpdateProgressAPIV210  = uint32(0x00020100)
+)
+
+// SWUpdate progress message byte offsets
+const (
+	SWUpdateOffAPIVersion   = 0
+	SWUpdateOffStatus       = 4
+	SWUpdateOffDwlPercent   = 8
+	SWUpdateOffDwlBytes     = 12
+	SWUpdateOffNSteps       = 20
+	SWUpdateOffCurStep      = 24
+	SWUpdateOffCurPercent   = 28
+	SWUpdateOffCurImage     = 32
+	SWUpdateOffHndName      = 288
+	SWUpdateOffSource       = 352
+	SWUpdateOffInfoLen      = 356
+	SWUpdateOffInfo         = 360
+	SWUpdateOffSerialNumber = 2408
 )
