@@ -651,6 +651,8 @@ func (sm *StateManager) validateData() {
 		return
 	}
 
+	logger.Warn("[DATA] Detected divergent state across %d alive members; entering anti-entropy repair", len(memberMetadata))
+
 	// Pick the member whose metadata.Version is greatest.
 	// (Version is your Lamport counter + node‐ID tie breaker.)
 	mostCurrent := memberMetadata[0]
@@ -661,7 +663,7 @@ func (sm *StateManager) validateData() {
 	}
 
 	logger.Info(
-		"Most current data found on member %s with version %v",
+		"[DATA] Most current data found on member %s with version %v",
 		mostCurrent.Member.Name,
 		mostCurrent.Metadata.Version,
 	)
@@ -692,7 +694,7 @@ func (sm *StateManager) validateData() {
 	}
 
 	sm.syncData(memberMetadata, mostCurrent.Metadata.Hash, data)
-	logger.Info("Successfully synced data")
+	logger.Info("[DATA] Successfully completed anti-entropy sync from %s", mostCurrent.Member.Name)
 }
 
 // syncData propagate the data to all nodes with outdated data
