@@ -160,7 +160,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
   final TextEditingController _distanceController = TextEditingController(
     text: '5.00',
   );
-  MeasurementUnit _selectedUnit = MeasurementUnit.feet;
+  MeasurementUnit _selectedUnit = MeasurementUnit.meters;
   _ToolMode _mode = _ToolMode.measure;
 
   // current image rect on screen (used for conversions)

@@ -6,6 +6,7 @@ import 'package:fusion_launcher/features/devices/presentation/widgets/settings/d
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'device_mapping_screen.dart';
+import 'device_updates_tab.dart';
 
 enum DeviceMappingDialogTab {
   mapping("Mapping"),
@@ -64,22 +65,15 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
             Expanded(
               child: Builder(
                 builder: (BuildContext context) {
-                  if (_selectedTab == DeviceMappingDialogTab.mapping) {
-                    return DeviceMappingScreen(
-                      devices: _fusionDevices,
-                    );
-                  } else if (_selectedTab == DeviceMappingDialogTab.settings) {
-                    return const DeviceGlobalSettingsTab();
-                  } else if (_selectedTab == DeviceMappingDialogTab.droConfig) {
-                    return const DroConfigScreen();
-                  } else if (_selectedTab == DeviceMappingDialogTab.updates) {
-                    return const Center(
-                      child: Text('Updates tab content goes here'),
-                    );
-                  } else {
-                    return const Center(
-                      child: Text('Unknown tab and no content to display'),
-                    );
+                  switch (_selectedTab) {
+                    case DeviceMappingDialogTab.mapping:
+                      return DeviceMappingScreen(devices: _fusionDevices);
+                    case DeviceMappingDialogTab.settings:
+                      return const DeviceGlobalSettingsTab();
+                    case DeviceMappingDialogTab.droConfig:
+                      return const DroConfigScreen();
+                    case DeviceMappingDialogTab.updates:
+                      return const DeviceUpdatesTab();
                   }
                 },
               ),
