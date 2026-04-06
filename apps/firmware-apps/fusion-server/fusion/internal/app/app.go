@@ -205,6 +205,7 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.ClusterNTPSkewEndpoint, app.Cluster.GetNTPSkew)
 	app.registerPublicGET(routes.ClusterStatusEndpoint, app.Cluster.Metrics.GetClusterStatus)
 	app.registerPublicPOST(routes.ClusterRebootEndpoint, app.Cluster.RebootSystem)
+	app.registerPublicPOST(routes.ClusterSoftwareUpdateEndpoint, app.Cluster.SoftwareUpdateSystem)
 
 	// Controllers
 	app.registerPublicGET(routes.ControllersEndpoint, app.Server.GetControllers)
@@ -304,6 +305,7 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivateGET(routes.ClusterLatencyNetworkFailuresLocalEndpoint, app.Cluster.GetNetworkFailuresLocal)
 	app.registerPrivateGET(routes.ClusterLatencyStatusLocalEndpoint, app.Cluster.GetLatencyStatusLocal)
 	app.registerPrivatePOST(routes.ClusterRebootLocalEndpoint, app.Cluster.RebootSystemLocal)
+	app.registerPrivatePOST(routes.ClusterSoftwareUpdateLocalEndpoint, app.Cluster.SoftwareUpdateSystemLocal)
 
 	app.registerPrivateGET(routes.DeviceEndpoint, app.Server.GetDeviceInfoLocal)
 	app.registerPrivatePATCH(routes.DeviceEndpoint, app.Server.UpdateDeviceInfoLocal)

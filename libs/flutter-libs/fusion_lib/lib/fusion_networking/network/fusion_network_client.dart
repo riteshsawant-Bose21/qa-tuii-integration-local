@@ -124,7 +124,7 @@ class FusionNetworkClient {
 
       final Response<dynamic> response = await httpClient.dioInstance.put(url, options: options, data: data);
 
-      if (response.data != null) {
+      if (response.statusCode! >= 200 && response.statusCode! < 300) {
         T data = fromJson != null ? fromJson(response.data) : response.data;
         return ResponseCallback<T>.success(data);
       } else {
@@ -170,8 +170,8 @@ class FusionNetworkClient {
         queryParameters: urlParameters,
       );
 
-      if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300) {
-        T? data = fromJson != null ? fromJson(response.data) : response.data;
+      if (response.statusCode! >= 200 && response.statusCode! < 300) {
+        T data = fromJson != null ? fromJson(response.data) : response.data;
         return ResponseCallback<T>.success(data);
       } else {
         return ResponseCallback<T>(success: false, message: httpClient.handleStatusCodeError(response.statusCode));
@@ -219,7 +219,7 @@ class FusionNetworkClient {
         data: data,
         queryParameters: urlParameters,
       );
-      if (response.data != null) {
+      if (response.statusCode! >= 200 && response.statusCode! < 300) {
         T data = fromJson != null ? fromJson(response.data) : response.data;
         return ResponseCallback<T>.success(data);
       } else {
@@ -264,7 +264,7 @@ class FusionNetworkClient {
 
       final Response<dynamic> response = await httpClient.dioInstance.delete(url, options: options, queryParameters: urlParameters);
 
-      if (response.data != null) {
+      if (response.statusCode! >= 200 && response.statusCode! < 300) {
         T? data = fromJson != null ? fromJson(response.data) : response.data;
         return ResponseCallback<T>.success(data);
       } else if (response.statusCode == 204 || response.statusCode == 200 || response.statusCode == 202) {
@@ -419,8 +419,11 @@ enum FusionApiEndpoint {
   fusionDelete('/clear', FusionApiType.fusionServer),
 
   //Backend server endpoints
-  getProfile("/user/me/authorization", FusionApiType.backendServer),
+  getProfile("/users/authorization", FusionApiType.backendServer),
   projects("/projects", FusionApiType.backendServer),
+  products('/products', FusionApiType.backendServer),
+  devicesBulkCloud('/devices/bulk', FusionApiType.backendServer),
+  devicesCloud('/devices', FusionApiType.backendServer),
 
   //fusion server setup apis
   fusionDevice('/devices', FusionApiType.fusionServer),
@@ -448,7 +451,7 @@ extension ApiEndpointTypeCheckExtension on String {
   }
 
   bool isBackendServerEndpoint() {
-    return contains(FusionApiEndpoint.getProfile.path) || contains(FusionApiEndpoint.projects.path);
+    return contains(FusionApiEndpoint.getProfile.path) || contains(FusionApiEndpoint.projects.path) || contains(FusionApiEndpoint.devicesCloud.path);
   }
 
   bool isTokenRequired() {

@@ -6,6 +6,7 @@ import 'package:fusion_launcher/core/config/app_config.dart';
 import 'package:fusion_launcher/core/image_loader_service.dart';
 import 'package:fusion_launcher/core/models/algorithm/algorithm_metadata.dart';
 import 'package:fusion_launcher/core/network_clients/rest_client/interceptor.dart';
+import 'package:fusion_launcher/core/services/app_cache_service.dart';
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/dynamic_config/domain/usecases/get_panel_entity_usecase.dart';
@@ -22,12 +23,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/authentication/viewmodel/session_view_model.dart';
 import '../features/configuration/presentation/viewmodel/project_view_model.dart';
-import '../features/home/domain/usecases/create_project_usecase.dart';
-import '../features/home/domain/usecases/delete_project_usecase.dart';
-import '../features/home/domain/usecases/fetch_file_usecase.dart';
-import '../features/home/domain/usecases/get_projects_data_usecase.dart';
-import '../features/home/domain/usecases/update_project_usecase.dart';
-import '../features/home/domain/usecases/upload_file_usecase.dart';
 import '../features/dynamic_config/data/datasources/panel_datasource.dart';
 import '../features/dynamic_config/data/datasources/panel_datasource_impl.dart';
 import '../features/dynamic_config/data/repositories/panel_repository_impl.dart';
@@ -39,6 +34,12 @@ import '../features/dynamic_config/domain/usecases/initialize_panel_usecase.dart
 import '../features/dynamic_config/domain/usecases/reset_fusion_data_usecase.dart';
 import '../features/dynamic_config/domain/usecases/send_widget_data_usecase.dart';
 import '../features/dynamic_config/presentation/bloc/panel_bloc.dart';
+import '../features/home/domain/usecases/create_project_usecase.dart';
+import '../features/home/domain/usecases/delete_project_usecase.dart';
+import '../features/home/domain/usecases/fetch_file_usecase.dart';
+import '../features/home/domain/usecases/get_projects_data_usecase.dart';
+import '../features/home/domain/usecases/update_project_usecase.dart';
+import '../features/home/domain/usecases/upload_file_usecase.dart';
 import '../features/product_query/presentation/viewModel/product_query_view_model_cubit.dart';
 import '../features/projects/view_model/block_data/block_data_viewmodel.dart';
 import '../features/projects/view_model/meter_data/meter_data_view_model.dart';
@@ -55,6 +56,9 @@ Future<void> setupServiceLocator() async {
 
   final SharedPreferences prefs = await SharedPreferences.getInstance();
   serviceLocator.registerSingleton<SharedPreferences>(prefs);
+
+  final AppCacheService appCacheService = await AppCacheService.create();
+  serviceLocator.registerSingleton<AppCacheService>(appCacheService);
 
   serviceLocator.registerSingleton<SharedPreferencesHandler>(SharedPreferencesHandler.getInstance(serviceLocator<SharedPreferences>()));
 
@@ -220,7 +224,11 @@ Future<void> setupServiceLocator() async {
     ),
   );
 
-  serviceLocator.registerLazySingleton<ProductQueryViewModel>(() => ProductQueryViewModel());
+  serviceLocator.registerLazySingleton<ProductQueryViewModel>(
+    () => ProductQueryViewModel(
+      networkClient: serviceLocator<FusionNetworkClient>(),
+    ),
+  );
 
   serviceLocator.registerLazySingleton<ProjectSyncService>(
     () => ProjectSyncService(

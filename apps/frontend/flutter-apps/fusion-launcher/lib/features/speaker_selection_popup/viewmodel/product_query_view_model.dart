@@ -2,8 +2,9 @@ import 'package:dio/dio.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/config/app_config.dart';
+import 'package:fusion_launcher/core/services/app_cache_service.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
-import 'package:fusion_lib/fusion_widgets/fusion_widgets.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/product_data.dart';
 import 'package:fusion_lib/product_data/products.dart';
 
@@ -52,10 +53,24 @@ class ProductQueryViewModelState extends Equatable {
 }
 
 class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
-  ProductQueryViewModel() : super(ProductQueryViewModelState.initial());
+  final FusionNetworkClient networkClient;
+  ProductQueryViewModel({required this.networkClient}) : super(ProductQueryViewModelState.initial()) {
+    _productsApi = Products(
+      baseUrl: AppConfig.awsApiBaseUrl,
+      networkClient: networkClient,
+      fusionOnly: true,
+      loadFromZip: true,
+    );
+    loadProducts();
+  }
 
   static const int _maxRetries = 1;
-  final Products _productsApi = Products(baseUrl: AppConfig.awsApiBaseUrl, fusionOnly: true);
+  static const Duration _pricesCacheTtl = Duration(hours: 24);
+
+  bool _hasLoadedProducts = false;
+  final AppCacheService _cacheService = serviceLocator<AppCacheService>();
+
+  late final Products _productsApi;
 
   late String localProductDirPath;
 
@@ -64,29 +79,31 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
   Future<void> loadProducts({int attempt = 1, bool refresh = false}) async {
     try {
       if (state.isRefreshing) return;
+      if (!refresh && _hasLoadedProducts && state.products != null) return;
 
       if (refresh) emit(state.copyWith(isRefreshing: true));
       await (refresh ? _productsApi.refresh() : _productsApi.initialize());
+      _hasLoadedProducts = true;
       emit(state.copyWith(products: _productsApi, isLoading: false, isRefreshing: false));
 
       if (hasCloudAccess) {
         for (SpeakerProduct element in speakers) {
-          _fetchProductPrices(element.id);
+          _fetchProductPrices(element.id, forceRefresh: refresh);
         }
         for (AmplifierProduct element in amplifiers) {
-          _fetchProductPrices(element.id);
+          _fetchProductPrices(element.id, forceRefresh: refresh);
         }
         for (IoEndpointProduct element in ioEndpoints) {
-          _fetchProductPrices(element.id);
+          _fetchProductPrices(element.id, forceRefresh: refresh);
         }
         for (DspProduct element in dsps) {
-          _fetchProductPrices(element.id);
+          _fetchProductPrices(element.id, forceRefresh: refresh);
         }
         for (ControllerProduct element in controllers) {
-          _fetchProductPrices(element.id);
+          _fetchProductPrices(element.id, forceRefresh: refresh);
         }
         for (AccessoryProduct element in accessories) {
-          _fetchProductPrices(element.id);
+          _fetchProductPrices(element.id, forceRefresh: refresh);
         }
       }
     } catch (e) {
@@ -126,7 +143,26 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
   }
 
   // get prices call api
-  Future<void> _fetchProductPrices(int productId) async {
+  Future<void> _fetchProductPrices(int productId, {bool forceRefresh = false}) async {
+    final String cacheKey = _priceCacheKey(productId);
+
+    if (!forceRefresh) {
+      final List<ProductPriceModel>? cachedPrices = await _cacheService.getJson<List<ProductPriceModel>>(
+        cacheKey,
+        (Object? json) {
+          final List<dynamic> raw = (json as List<dynamic>? ?? <dynamic>[]);
+          return raw.map((dynamic item) => ProductPriceModel.fromJson(item as Map<String, dynamic>)).toList();
+        },
+      );
+
+      if (cachedPrices != null && cachedPrices.isNotEmpty) {
+        final Map<int, List<ProductPriceModel>> updatedPrices = Map<int, List<ProductPriceModel>>.from(state.prices);
+        updatedPrices[productId] = cachedPrices;
+        emit(state.copyWith(prices: updatedPrices));
+        return;
+      }
+    }
+
     try {
       final Dio dio = Dio();
       final Response<dynamic> response = await dio.get(
@@ -136,7 +172,7 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
       if (response.statusCode == 200) {
         final List<ProductPriceModel> pricesVarientMap = <ProductPriceModel>[];
 
-        for (final dynamic priceJson in response.data["prices"] ?? <dynamic>[]) {
+        for (final dynamic priceJson in (response.data as Map<String, dynamic>)['prices'] ?? <dynamic>[]) {
           final ProductPriceModel price = ProductPriceModel.fromJson(priceJson as Map<String, dynamic>);
           pricesVarientMap.add(price);
         }
@@ -144,11 +180,19 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
         final Map<int, List<ProductPriceModel>> updatedPrices = Map<int, List<ProductPriceModel>>.from(state.prices);
         updatedPrices[productId] = pricesVarientMap;
         emit(state.copyWith(prices: updatedPrices));
+
+        await _cacheService.setJson(
+          cacheKey,
+          pricesVarientMap.map((ProductPriceModel item) => item.toJson()).toList(),
+          ttl: _pricesCacheTtl,
+        );
       }
     } catch (e) {
       //
     }
   }
+
+  String _priceCacheKey(int productId) => 'product_prices_usd_$productId';
 }
 
 class ProductPriceModel extends Equatable {
@@ -164,6 +208,14 @@ class ProductPriceModel extends Equatable {
       currency: json['currency'] as String,
       price: (json['price'] as num).toDouble(),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'variant': variant,
+      'currency': currency,
+      'price': price,
+    };
   }
 
   @override
