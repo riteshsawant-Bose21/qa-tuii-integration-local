@@ -1058,29 +1058,38 @@ static bool cal_find_best_target(struct fusion_gpt *g, u32 *best_gain, int *best
 		s64 denom = (s64)g->cal_k2_q16 + (s64)g->cal_k3_q16 * dg;
 		s64 dd;
 		s64 dv;
+		s64 pred_err_q16;
 
 		if (denom == 0) {
-			pr_debug("fusion_gpt: cal inverse reject gain=%u dac=undefined denom=0\n",
-					gv);
+			pr_debug("fusion_gpt: cal inverse reject gain=%u dac=undefined dd=undefined pred_err=undefined numer=%lld denom=0\n",
+					gv, (long long)numer);
 			goto next_gain;
 		}
 
 		dd = cal_div_round_closest_s64(numer, denom);
 		dv = (s64)g->cal_center_dac + dd;
+		pred_err_q16 = e0_q16 + (s64)g->cal_k1_q16 * dg + denom * dd;
 		if (dv >= cal_jump_dac_min_value(&g->cal_cfg) &&
 				dv <= cal_jump_dac_max_value(&g->cal_cfg)) {
 			*best_gain = gv;
 			*best_dac = (int)dv;
-			pr_debug("fusion_gpt: cal inverse target gain=%u dac=%d (center gain=%u dac=%d)\n",
+			pr_debug("fusion_gpt: cal inverse target gain=%u dac=%d dd=%lld pred_err=%lld (q16=%lld center gain=%u dac=%d)\n",
 					*best_gain, *best_dac,
+					(long long)dd,
+					(long long)(pred_err_q16 >> 16),
+					(long long)pred_err_q16,
 					g->cal_center_gain, g->cal_center_dac);
 			return true;
 		}
 
-		pr_debug("fusion_gpt: cal inverse reject gain=%u dac=%lld (allowed %d..%d)\n",
+		pr_debug("fusion_gpt: cal inverse reject gain=%u dac=%lld dd=%lld pred_err=%lld (q16=%lld allowed %d..%d numer=%lld denom=%lld)\n",
 				gv, (long long)dv,
+				(long long)dd,
+				(long long)(pred_err_q16 >> 16),
+				(long long)pred_err_q16,
 				cal_jump_dac_min_value(&g->cal_cfg),
-				cal_jump_dac_max_value(&g->cal_cfg));
+				cal_jump_dac_max_value(&g->cal_cfg),
+				(long long)numer, (long long)denom);
 
 next_gain:
 		if (gv > g->si_gain_max - gain_step)
@@ -1207,15 +1216,18 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 
 			if (cal_active(g)) {
 				if (g->cal_state == CAL_PREBAKE_WAIT) {
+					u32 pre_wait = max_t(u32, 1, g->cal_cfg.cal_pre_e0_max_wait);
+					u32 settle_skip = min_t(u32,
+								max_t(u32, 1, g->cal_cfg.cal_settle_pps),
+								pre_wait > 1 ? pre_wait - 1 : 0);
+					u32 elapsed = pre_wait - min_t(u32, g->cal_settle_left, pre_wait);
 					long abs_err = (freq_error < 0) ? -freq_error : freq_error;
 
-					if (abs_err <= g->cal_cfg.cal_pre_e0_abs_max) {
+					if (elapsed >= settle_skip &&
+					    abs_err <= g->cal_cfg.cal_pre_e0_abs_max) {
 						g->cal_err_accum += freq_error;
 						g->cal_err_samples++;
 					}
-
-					if (g->cal_settle_left > 0)
-						g->cal_settle_left--;
 
 					if (g->cal_err_samples >= max_t(u32, 1, g->cal_cfg.cal_pre_e0_samples)) {
 						long e0 = (long)div_s64(g->cal_err_accum,
@@ -1250,7 +1262,14 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 							cal_start_live_calibration_locked(g);
 							schedule_work(&g->dac_work);
 						}
-					} else if (g->cal_settle_left == 0) {
+					} else {
+						if (g->cal_settle_left > 0)
+							g->cal_settle_left--;
+					}
+
+					if (g->cal_state == CAL_PREBAKE_WAIT &&
+					    g->cal_settle_left == 0 &&
+					    g->cal_err_samples < max_t(u32, 1, g->cal_cfg.cal_pre_e0_samples)) {
 						g->cal_state = CAL_FAIL;
 						pr_warn("fusion_gpt: cal prebaked e0 collection timed out, fallback to PI\n");
 						schedule_work(&g->dac_work);
@@ -1610,6 +1629,10 @@ static void fusion_dac_work_handler(struct work_struct *work)
 			g->cal_cfg.coeffs_valid = true;
 			g->cal_cfg.fingerprint_valid = true;
 			saved_cfg = g->cal_cfg;
+			pr_info("fusion_gpt: cal fit updated k=[%d %d %d] center gain=%u dac=%d e0=%ld residual=%u\n",
+				g->cal_k1_q16, g->cal_k2_q16, g->cal_k3_q16,
+				g->cal_center_gain, g->cal_center_dac,
+				g->cal_probe_mean[0], residual);
 			if (cal_find_best_target(g, &g->si_gain_target, &g->dac_target)) {
 				g->cal_state = CAL_APPLY_JUMP;
 				schedule_again = true;
