@@ -49,6 +49,11 @@ class SnapshotVcPanel extends StatelessWidget {
       final SnapshotPageModel? page = _findSnapshotPage(state, state.selectedSnapshotPageId!);
       title = page?.name ?? 'Snapshot Page';
       snapshots = _resolveSnapshots(state, page);
+    } else if (state.selectedSceneSetId != null) {
+      // A scene-set row was tapped in PAGES → show snapshots for that scene set
+      final SceneSetModel? sceneSet = _findSceneSet(state, state.selectedSceneSetId!);
+      title = sceneSet?.name ?? 'Scene';
+      snapshots = state.snapshotsInSceneSets[state.selectedSceneSetId] ?? <SnapshotsModel>[];
     } else {
       title = 'Snapshots';
       snapshots = <SnapshotsModel>[];
@@ -85,7 +90,12 @@ class SnapshotVcPanel extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                   child: FusionAppText(
-                    text: state.selectedSnapshotPageId != null ? 'No snapshots linked to this page' : 'Select a snapshot page to view',
+                    text:
+                        state.selectedSnapshotPageId != null
+                            ? 'No snapshots linked to this page'
+                            : state.selectedSceneSetId != null
+                            ? 'No snapshots in this scene'
+                            : 'Select a page or scene to view',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: context.colorScheme.textSecondary,
                     ),
@@ -119,6 +129,15 @@ class SnapshotVcPanel extends StatelessWidget {
   SnapshotPageModel? _findSnapshotPage(ConfigControlLoaded state, String pageId) {
     try {
       return state.snapshotPages.firstWhere((SnapshotPageModel p) => p.id == pageId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Finds a SceneSetModel by ID from the sceneSets list.
+  SceneSetModel? _findSceneSet(ConfigControlLoaded state, String sceneSetId) {
+    try {
+      return state.sceneSets.firstWhere((SceneSetModel s) => s.id == sceneSetId);
     } catch (_) {
       return null;
     }
