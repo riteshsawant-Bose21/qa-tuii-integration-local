@@ -37,7 +37,8 @@ static inline s32 ns_delta_to_rtp_units(s64 ns, u32 rate)
 static inline s32 rtp32_delta(u32 a, u32 b) { return (s32)(a - b); }
 
 /* Fold-only TX path: per-CPU counters -> snapshot, and stamp ts */
-void fusion_cn_metrics_aggregate_tx(struct fusion_cn_stream_metrics *m)
+void fusion_cn_metrics_aggregate_tx(struct fusion_cn_stream_metrics *m,
+                                    u64 snapshot_ns)
 {
     u64 tx_pkts = 0, tx_bytes = 0;
     int cpu;
@@ -66,8 +67,8 @@ void fusion_cn_metrics_aggregate_tx(struct fusion_cn_stream_metrics *m)
     m->snap.tx_iat_p99_ns            = m->win.tx_iat_p99_ns;
     m->snap.tx_sched_err_abs_p50_ns  = m->win.tx_sched_err_abs_p50_ns;
 
-    /* Always give TX streams a fresh timestamp so userspace sees progress */
-    m->snap.ts_snapshot_ns = fusion_cn_get_phc_ns();
+    /* Stamp snapshot from the current worker tick to avoid a fresh PHC read here. */
+    m->snap.ts_snapshot_ns = snapshot_ns;
 }
 
 /* Helpers for 16-bit sequence arithmetic */
@@ -75,7 +76,8 @@ static inline bool seq16_after(u16 a, u16 b)  { return (s16)(a - b) > 0; }
 static inline bool seq16_before(u16 a, u16 b) { return seq16_after(b, a); }
 
 void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
-                                    u32 jb_depth_samples)
+                                    u32 jb_depth_samples,
+                                    u64 snapshot_ns)
 {
     struct fusion_cn_metrics_window *w = &m->win;
 
@@ -285,7 +287,7 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
     w->path_latency_p99_ns = 0;
 
     /* === 4) Final snapshot timestamp === */
-    m->snap.ts_snapshot_ns = fusion_cn_get_phc_ns();
+    m->snap.ts_snapshot_ns = snapshot_ns;
 }
 
 static inline u32 fc_ns_to_samples(u64 ns, u32 rate)

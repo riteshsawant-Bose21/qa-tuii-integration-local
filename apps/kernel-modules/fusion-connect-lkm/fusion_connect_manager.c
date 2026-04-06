@@ -368,15 +368,19 @@ static void do_metrics(struct fusion_cn_manager *mgr)
 
     read_unlock_irqrestore(&mgr->rtp.lock, flags);
 
-    for (int i = 0; i < todo_cnt; i++) {
-        if (!todo[i].is_source) {
-            u32 jb = fusion_cn_alsa_get_buffer_depth(todo[i].alsa);
-            fusion_cn_metrics_aggregate_rx(todo[i].rtp->metrics, jb);
-            kref_put(&todo[i].alsa->ref, fusion_cn_alsa_substream_release);
-        } else {
-            fusion_cn_metrics_aggregate_tx(todo[i].rtp->metrics);
+    {
+        u64 snapshot_ns = READ_ONCE(mgr->tick_ns);
+
+        for (int i = 0; i < todo_cnt; i++) {
+            if (!todo[i].is_source) {
+                u32 jb = fusion_cn_alsa_get_buffer_depth(todo[i].alsa);
+                fusion_cn_metrics_aggregate_rx(todo[i].rtp->metrics, jb, snapshot_ns);
+                kref_put(&todo[i].alsa->ref, fusion_cn_alsa_substream_release);
+            } else {
+                fusion_cn_metrics_aggregate_tx(todo[i].rtp->metrics, snapshot_ns);
+            }
+            kref_put(&todo[i].rtp->ref, fusion_cn_rtp_stream_release);
         }
-        kref_put(&todo[i].rtp->ref, fusion_cn_rtp_stream_release);
     }
 }
 
