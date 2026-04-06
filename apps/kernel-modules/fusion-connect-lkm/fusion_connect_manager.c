@@ -210,7 +210,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
 
     tick_ns = READ_ONCE(mgr->tick_ns);
 
-    fusion_cn_rtp_drain_rx_queue(&mgr->rtp);
+    fusion_cn_rtp_drain_rx_queue(&mgr->rtp, FUSION_CN_RX_DRAIN_BUDGET);
 
     /* -------- Phase 1: FusionConnect sinks (low latency priority) -------- */
     read_lock_irqsave(&mgr->rtp.lock, flags);
