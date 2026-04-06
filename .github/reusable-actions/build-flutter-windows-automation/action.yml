@@ -97,7 +97,7 @@ runs:
         Write-Output "VERSION: $version"
 
         $buildPath = "./windows/Installer/NSIS/FusionLauncherAutomationBuildInstaller.exe"
-        $nexusUrl = "${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-Automation-Build-$version.exe"
+        $nexusUrl = "${{ inputs.nexus_url }}/Fusion-Frontend/Nightly/$branchName/$version/flutter-windows/Fusion-Launcher-Automation-Build-$version.exe"
         $username = "github-actions-uploader"
         $password = "${{ inputs.nexus_password }}"
         
