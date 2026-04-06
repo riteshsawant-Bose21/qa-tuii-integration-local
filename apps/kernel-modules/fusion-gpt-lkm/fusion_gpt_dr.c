@@ -194,6 +194,8 @@ struct fusion_gpt
 	u32 si_gain_min;
 	u32 si_gain_max;
 	bool si_gain_pending;
+	bool si_gain_sync_needed;
+	bool baseline_restore_pending;
 
 	/* Startup calibration state */
 	enum cal_state cal_state;
@@ -227,6 +229,7 @@ static struct fusion_gpt *fusion_gpt_get_locked(void);
 static void fusion_gpt_put_locked(struct fusion_gpt *g);
 static void cal_prepare_points(struct fusion_gpt *g);
 static s64 cal_div_round_closest_s64(s64 num, s64 den);
+static void gpt_restore_control_baseline_locked(struct fusion_gpt *g);
 
 static void cal_config_set_defaults(struct fusion_gpt_cal_config *cfg)
 {
@@ -531,6 +534,15 @@ static void gpt_reset_timing_state_locked(struct fusion_gpt *g)
 	g->pending_future_phc_ns = 0;
 }
 
+static void gpt_restore_control_baseline_locked(struct fusion_gpt *g)
+{
+	g->dac_target = 128;
+	g->current_dac_value = 0xFFFF; /* force next DAC write */
+	g->si_gain_current = clamp(fusion_start_gain_value(&g->cal_cfg),
+				   g->si_gain_min, g->si_gain_max);
+	g->si_gain_target = g->si_gain_current;
+}
+
 static void gpt_reset_control_state_locked(struct fusion_gpt *g,
 					   bool preserve_calibration)
 {
@@ -539,6 +551,7 @@ static void gpt_reset_control_state_locked(struct fusion_gpt *g,
 	g->sq_err_sum = 0;
 	g->err_count = 0;
 	WRITE_ONCE(g->si_gain_pending, false);
+	WRITE_ONCE(g->si_gain_sync_needed, false);
 	WRITE_ONCE(g->discipline_ready, false);
 	g->lock_streak = 0;
 	g->pps_diag_next_jiffies = jiffies + HZ;
@@ -556,10 +569,14 @@ static void gpt_reset_control_state_locked(struct fusion_gpt *g,
 	g->cal_k1_q16 = 0;
 	g->cal_k2_q16 = 0;
 	g->cal_k3_q16 = 0;
+	g->baseline_restore_pending = false;
 	if (!preserve_calibration) {
 		cal_config_set_defaults(&g->cal_cfg);
 		g->cal_config_checked = false;
 	}
+	gpt_restore_control_baseline_locked(g);
+	g->cal_center_gain = g->si_gain_current;
+	g->cal_center_dac = clamp(g->dac_target, 0, 255);
 }
 
 static struct fusion_gpt *fusion_gpt_get_locked(void)
@@ -812,6 +829,8 @@ int fusion_gpt_reset_timing_state(void)
 	unsigned long flags;
 	u32 prev_pps_seq;
 	long prev_freq_error;
+	u32 baseline_gain;
+	int baseline_dac;
 	bool prev_epoch_valid, prev_aligned, prev_ready, prev_pending;
 	enum cal_state prev_cal_state;
 	bool changed;
@@ -838,6 +857,10 @@ int fusion_gpt_reset_timing_state(void)
 		g->latest_freq_error || g->error_integrator;
 	gpt_reset_timing_state_locked(g);
 	gpt_reset_control_state_locked(g, true);
+	g->si_gain_sync_needed = true;
+	g->baseline_restore_pending = true;
+	baseline_gain = g->si_gain_target;
+	baseline_dac = clamp(g->dac_target, 0, 255);
 	raw_spin_unlock(&g->ctrl_lock);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
@@ -845,6 +868,9 @@ int fusion_gpt_reset_timing_state(void)
 		pr_info("fusion_gpt: timing reset reason=api prev{pps_seq=%u epoch=%u aligned=%u ready=%u pending=%u cal=%u freq_err=%ld}\n",
 				prev_pps_seq, prev_epoch_valid, prev_aligned, prev_ready,
 				prev_pending, prev_cal_state, prev_freq_error);
+	pr_info("fusion_gpt: baseline queued reason=timing_reset gain=%u dac=%d\n",
+		baseline_gain, baseline_dac);
+	schedule_work(&g->dac_work);
 	fusion_gpt_put_locked(g);
 	return 0;
 }
@@ -1404,6 +1430,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 
 			need_dac_work = (g->dac_target != g->current_dac_value) ||
 				g->si_gain_pending ||
+				g->si_gain_sync_needed ||
 				cal_is_active ||
 				g->cal_state == CAL_FIT ||
 				g->cal_state == CAL_APPLY_JUMP;
@@ -1480,6 +1507,8 @@ static void fusion_dac_work_handler(struct work_struct *work)
 	u32 center_gain;
 	u32 residual = 0;
 	bool gain_pending;
+	bool gain_sync_needed;
+	bool baseline_restore_pending;
 	bool schedule_again = false;
 	bool fit_ok = false;
 	struct fusion_gpt_cal_config loaded_cfg;
@@ -1490,6 +1519,8 @@ static void fusion_dac_work_handler(struct work_struct *work)
 	target = g->dac_target;
 	current_dac = g->current_dac_value;
 	gain_pending = g->si_gain_pending;
+	gain_sync_needed = g->si_gain_sync_needed;
+	baseline_restore_pending = g->baseline_restore_pending;
 	gain_target = g->si_gain_target;
 	current_gain = g->si_gain_current;
 	raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
@@ -1774,23 +1805,34 @@ static void fusion_dac_work_handler(struct work_struct *work)
 		}
 	}
 
-	if (gain_pending) {
+	if (gain_pending || gain_sync_needed) {
 		gain_target = clamp(gain_target, g->si_gain_min, g->si_gain_max);
-		if (gain_target > current_gain) {
-			ret = si5351b_write_gain(g, gain_target);
-			if (ret >= 0) {
-				raw_spin_lock_irqsave(&g->ctrl_lock, flags);
-				g->si_gain_current = gain_target;
-				g->si_gain_pending = false;
-				raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
-				pr_debug("fusion_gpt: Si5351b gain increased to %u\n",
-					gain_target);
-			}
-		} else {
+		ret = si5351b_write_gain(g, gain_target);
+		if (ret >= 0) {
 			raw_spin_lock_irqsave(&g->ctrl_lock, flags);
+			g->si_gain_current = gain_target;
 			g->si_gain_pending = false;
+			g->si_gain_sync_needed = false;
 			raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
+			pr_debug("fusion_gpt: Si5351b gain applied %u\n", gain_target);
 		}
+	}
+
+	if (baseline_restore_pending) {
+		bool gain_applied;
+		bool dac_applied = (current_dac == target);
+
+		raw_spin_lock_irqsave(&g->ctrl_lock, flags);
+		gain_applied = !g->si_gain_sync_needed &&
+			(g->si_gain_current == clamp(g->si_gain_target,
+						     g->si_gain_min,
+						     g->si_gain_max));
+		g->baseline_restore_pending = false;
+		raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
+
+		pr_info("fusion_gpt: baseline applied reason=timing_reset gain=%u dac=%d applied_gain=%u applied_dac=%u\n",
+			clamp(gain_target, g->si_gain_min, g->si_gain_max), target,
+			gain_applied ? 1 : 0, dac_applied ? 1 : 0);
 	}
 }
 
@@ -1906,15 +1948,13 @@ static int gpt_probe(struct platform_device *pdev)
 	if (ret) goto err_disable_clks;
 
 	/* DAC + VCXO disciplining setup */
-	g->dac_target = 128;
-	g->current_dac_value = 0xFFFF; /* force first write */
 	g->si_gain_min = 40000;
 	g->si_gain_max = 250000;
 	cal_config_set_defaults(&g->cal_cfg);
-	g->si_gain_current = clamp(fusion_start_gain_value(&g->cal_cfg),
-			g->si_gain_min, g->si_gain_max);
-	g->si_gain_target = g->si_gain_current;
 	g->si_gain_pending = false;
+	g->si_gain_sync_needed = false;
+	g->baseline_restore_pending = false;
+	gpt_restore_control_baseline_locked(g);
 	INIT_WORK(&g->dac_work, fusion_dac_work_handler);
 
 	/* Get the discipline I2C adapter (defer if not ready). */
