@@ -139,12 +139,12 @@ func (r *DiscoveryReconciler) reconcile(reason string) error {
 
 	switch {
 	case currentVIP == "":
-		if err := r.app.MDNSManager.Close(); err != nil {
-			return fmt.Errorf("stop mDNS with no VIP configured: %w", err)
-		}
 
 		ip := net.ParseIP(bindAddr)
 		if ip == nil {
+			if err := r.app.MDNSManager.Close(); err != nil {
+				return fmt.Errorf("stop mDNS with no VIP configured: %w", err)
+			}
 			return fmt.Errorf("invalid bind addr for fusion-only mDNS: %s", bindAddr)
 		}
 		if err := r.app.MDNSManager.StartFusionAdvertismentOnly(ip); err != nil {
