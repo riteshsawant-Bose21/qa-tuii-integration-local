@@ -676,6 +676,8 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
                                        seq_num, rtp_timestamp, rx_phc_ns ? rx_phc_ns : current_phc_ns,
                                        payload_len, metrics_flags,
                                        reconstructed_phc_ns, sched_playout_ns);
+            if (stream->stream_node)
+                atomic_set(&stream->stream_node->metrics_pending, 1);
 
             spin_unlock(&stream->lock);
             read_unlock_irqrestore(&rtp_mgr->lock, flags);
