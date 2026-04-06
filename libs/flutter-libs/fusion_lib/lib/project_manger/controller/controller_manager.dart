@@ -76,4 +76,15 @@ extension ControllerManager on ProjectManager {
     required String controllerId,
     required ControllerSchedulePageConfig config,
   }) => _service.setControllerScheduleConfig(controllerId: controllerId, config: config);
+
+  // ─── Display config ───────────────────────────────────────────────────────
+
+  /// Returns the persisted [ControllerDisplayConfig] for [controllerId].
+  ControllerDisplayConfig getControllerDisplayConfig(String controllerId) => _service.getControllerDisplayConfig(controllerId);
+
+  /// Replaces the [ControllerDisplayConfig] for [controllerId].
+  void setControllerDisplayConfig({
+    required String controllerId,
+    required ControllerDisplayConfig config,
+  }) => _service.setControllerDisplayConfig(controllerId: controllerId, config: config);
 }

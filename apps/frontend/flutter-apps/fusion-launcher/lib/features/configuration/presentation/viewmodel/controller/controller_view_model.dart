@@ -236,4 +236,32 @@ extension ControllerViewModel on ProjectViewModel {
       throwError('Failed to set controller schedule config: $e');
     }
   }
+
+  // ─── Display config ───────────────────────────────────────────────────────
+
+  /// Returns the persisted [ControllerDisplayConfig] for [controllerId].
+  ControllerDisplayConfig getControllerDisplayConfig(String controllerId) {
+    try {
+      return projectManager.getControllerDisplayConfig(controllerId);
+    } catch (_) {
+      return const ControllerDisplayConfig();
+    }
+  }
+
+  /// Persists updated [ControllerDisplayConfig] for [controllerId].
+  void setControllerDisplayConfig({
+    required String controllerId,
+    required ControllerDisplayConfig config,
+    bool autoSave = true,
+  }) {
+    try {
+      if (autoSave) recordSnapshot();
+      projectManager.setControllerDisplayConfig(controllerId: controllerId, config: config);
+      if (autoSave) saveProject();
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to set display config: $e');
+      throwError('Failed to set controller display config: $e');
+    }
+  }
 }

@@ -198,4 +198,20 @@ extension ControllerService on ProjectService {
     if (controller == null) return;
     hardware.add(controllerId, controller.copyWith(schedulePageConfig: config));
   }
+
+  /// Returns the [ControllerDisplayConfig] stored on the controller model.
+  ControllerDisplayConfig getControllerDisplayConfig(String controllerId) {
+    final FusionController? controller = getControllerById(controllerId);
+    return controller?.displayConfig ?? const ControllerDisplayConfig();
+  }
+
+  /// Replaces the [ControllerDisplayConfig] on the controller model.
+  void setControllerDisplayConfig({
+    required String controllerId,
+    required ControllerDisplayConfig config,
+  }) {
+    final FusionController? controller = getControllerById(controllerId);
+    if (controller == null) return;
+    hardware.add(controllerId, controller.copyWith(displayConfig: config));
+  }
 }

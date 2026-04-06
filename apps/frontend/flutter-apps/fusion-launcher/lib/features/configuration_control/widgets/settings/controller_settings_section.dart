@@ -1,68 +1,49 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-/// Available screen mode options
-enum ScreenMode { light, dark }
-
-/// Available screen saver options
-enum ScreenSaverOption { dateAndTime, qrCode, homeScreen, blackScreen }
-
-extension ScreenSaverOptionLabel on ScreenSaverOption {
-  String get label {
-    switch (this) {
-      case ScreenSaverOption.dateAndTime:
-        return 'Date and time';
-      case ScreenSaverOption.qrCode:
-        return 'QR Code';
-      case ScreenSaverOption.homeScreen:
-        return 'Home screen';
-      case ScreenSaverOption.blackScreen:
-        return 'Black screen';
-    }
-  }
-}
-
-/// Controller Settings section — Screen Mode, Screen Saver, and Sleep Time
-class ControllerSettingsSection extends StatefulWidget {
+/// Controller Settings section — Screen Mode, Screen Saver, and Sleep Time.
+///
+/// All state is driven by [ConfigControlLoaded] in the BLoC so each controller
+/// has independent, persisted settings.
+class ControllerSettingsSection extends StatelessWidget {
   const ControllerSettingsSection({super.key});
 
   @override
-  State<ControllerSettingsSection> createState() => _ControllerSettingsSectionState();
-}
-
-class _ControllerSettingsSectionState extends State<ControllerSettingsSection> {
-  ScreenMode _screenMode = ScreenMode.dark;
-  ScreenSaverOption _screenSaver = ScreenSaverOption.qrCode;
-  int _sleepTime = 30;
-
-  static const int _minSleep = 5;
-  static const int _maxSleep = 300;
-
-  @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        const PanelSectionHeader(title: 'CONTROLLER SETTINGS'),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              _buildScreenModeRow(context),
-              const SizedBox(height: 16),
-              _buildDivider(context),
-              const SizedBox(height: 16),
-              _buildScreenSaverRow(context),
-              const SizedBox(height: 16),
-              _buildDivider(context),
-              const SizedBox(height: 16),
-              _buildSleepTimeRow(context),
-            ],
-          ),
-        ),
-      ],
+    return BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
+      builder: (BuildContext context, ConfigurationControlState state) {
+        if (state is! ConfigControlLoaded) return const SizedBox.shrink();
+
+        final ConfigurationControlViewmodel vm = context.read<ConfigurationControlViewmodel>();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const PanelSectionHeader(title: 'CONTROLLER SETTINGS'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  _buildScreenModeRow(context, state, vm),
+                  const SizedBox(height: 16),
+                  _buildDivider(context),
+                  const SizedBox(height: 16),
+                  _buildScreenSaverRow(context, state, vm),
+                  const SizedBox(height: 16),
+                  _buildDivider(context),
+                  const SizedBox(height: 16),
+                  _buildSleepTimeRow(context, state, vm),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -72,7 +53,11 @@ class _ControllerSettingsSectionState extends State<ControllerSettingsSection> {
 
   // ─── Screen Mode ─────────────────────────────────────────────────────────────
 
-  Widget _buildScreenModeRow(BuildContext context) {
+  Widget _buildScreenModeRow(
+    BuildContext context,
+    ConfigControlLoaded state,
+    ConfigurationControlViewmodel vm,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -89,9 +74,9 @@ class _ControllerSettingsSectionState extends State<ControllerSettingsSection> {
               context: context,
               label: 'Light',
               value: ScreenMode.light,
-              groupValue: _screenMode,
+              groupValue: state.screenMode,
               onChanged: (ScreenMode? v) {
-                if (v != null) setState(() => _screenMode = v);
+                if (v != null) vm.setScreenMode(v);
               },
             ),
             const SizedBox(width: 32),
@@ -99,9 +84,9 @@ class _ControllerSettingsSectionState extends State<ControllerSettingsSection> {
               context: context,
               label: 'Dark',
               value: ScreenMode.dark,
-              groupValue: _screenMode,
+              groupValue: state.screenMode,
               onChanged: (ScreenMode? v) {
-                if (v != null) setState(() => _screenMode = v);
+                if (v != null) vm.setScreenMode(v);
               },
             ),
           ],
@@ -112,7 +97,11 @@ class _ControllerSettingsSectionState extends State<ControllerSettingsSection> {
 
   // ─── Screen Saver ─────────────────────────────────────────────────────────────
 
-  Widget _buildScreenSaverRow(BuildContext context) {
+  Widget _buildScreenSaverRow(
+    BuildContext context,
+    ConfigControlLoaded state,
+    ConfigurationControlViewmodel vm,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -133,9 +122,9 @@ class _ControllerSettingsSectionState extends State<ControllerSettingsSection> {
                       context: context,
                       label: option.label,
                       value: option,
-                      groupValue: _screenSaver,
+                      groupValue: state.screenSaver,
                       onChanged: (ScreenSaverOption? v) {
-                        if (v != null) setState(() => _screenSaver = v);
+                        if (v != null) vm.setScreenSaver(v);
                       },
                     ),
                   )
@@ -147,7 +136,14 @@ class _ControllerSettingsSectionState extends State<ControllerSettingsSection> {
 
   // ─── Screen Sleep Time ────────────────────────────────────────────────────────
 
-  Widget _buildSleepTimeRow(BuildContext context) {
+  static const int _minSleep = 5;
+  static const int _maxSleep = 300;
+
+  Widget _buildSleepTimeRow(
+    BuildContext context,
+    ConfigControlLoaded state,
+    ConfigurationControlViewmodel vm,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -165,19 +161,23 @@ class _ControllerSettingsSectionState extends State<ControllerSettingsSection> {
           ),
         ),
         const SizedBox(height: 16),
-        _buildSleepDropdown(context),
+        _buildSleepDropdown(context, state, vm),
       ],
     );
   }
 
-  Widget _buildSleepDropdown(BuildContext context) {
+  Widget _buildSleepDropdown(
+    BuildContext context,
+    ConfigControlLoaded state,
+    ConfigurationControlViewmodel vm,
+  ) {
     final List<int> values = List<int>.generate(
       _maxSleep - _minSleep + 1,
       (int i) => _minSleep + i,
     );
 
     return FusionNeumorphicDropdown<int>(
-      value: _sleepTime,
+      value: state.sleepTime,
       height: 38,
       width: 120,
       borderRadius: BorderRadius.circular(8),
@@ -185,13 +185,9 @@ class _ControllerSettingsSectionState extends State<ControllerSettingsSection> {
       items: values,
       matchChildWidth: true,
       itemLabelBuilder: (int v) => '$v sec',
-
-      /// Fixed item height via vertical padding — 8+text+8 ≈ 32 px per row
       itemPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-
-      /// Cap popup at 200 px so it scrolls instead of growing full-screen
       constraints: const BoxConstraints(maxHeight: 400),
-      onChanged: (int v) => setState(() => _sleepTime = v),
+      onChanged: (int v) => vm.setSleepTime(v),
     );
   }
 

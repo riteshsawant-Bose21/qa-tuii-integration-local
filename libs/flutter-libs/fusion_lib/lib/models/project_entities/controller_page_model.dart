@@ -92,6 +92,55 @@ class ControllerMessagePageModel {
   }
 }
 
+// ─── Display config (persisted on the FusionController model) ─────────────────
+
+/// Persisted display/settings-tab configuration for a [FusionController].
+///
+/// Stores the screen mode ('light'|'dark'), screen-saver option, and sleep time
+/// so each controller retains its own settings independently.
+class ControllerDisplayConfig {
+  /// 'light' | 'dark'
+  final String screenMode;
+
+  /// 'dateAndTime' | 'qrCode' | 'homeScreen' | 'blackScreen'
+  final String screenSaver;
+
+  /// Screen sleep time in seconds (5–300).
+  final int sleepTime;
+
+  const ControllerDisplayConfig({
+    this.screenMode = 'dark',
+    this.screenSaver = 'qrCode',
+    this.sleepTime = 30,
+  });
+
+  ControllerDisplayConfig copyWith({
+    String? screenMode,
+    String? screenSaver,
+    int? sleepTime,
+  }) {
+    return ControllerDisplayConfig(
+      screenMode: screenMode ?? this.screenMode,
+      screenSaver: screenSaver ?? this.screenSaver,
+      sleepTime: sleepTime ?? this.sleepTime,
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'screenMode': screenMode,
+    'screenSaver': screenSaver,
+    'sleepTime': sleepTime,
+  };
+
+  factory ControllerDisplayConfig.fromJson(Map<String, dynamic> json) {
+    return ControllerDisplayConfig(
+      screenMode: json['screenMode'] as String? ?? 'dark',
+      screenSaver: json['screenSaver'] as String? ?? 'qrCode',
+      sleepTime: (json['sleepTime'] as num?)?.toInt() ?? 30,
+    );
+  }
+}
+
 // ─── Schedule page config ─────────────────────────────────────────────────────
 
 /// Persisted schedule-tab settings for a [FusionController].

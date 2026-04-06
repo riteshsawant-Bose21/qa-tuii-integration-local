@@ -42,6 +42,47 @@ enum ConfigControlTab {
   settings,
 }
 
+/// Screen mode for the controller settings tab.
+enum ScreenMode { light, dark }
+
+/// Screen saver option for the controller settings tab.
+enum ScreenSaverOption { dateAndTime, qrCode, homeScreen, blackScreen }
+
+extension ScreenSaverOptionLabel on ScreenSaverOption {
+  String get label {
+    switch (this) {
+      case ScreenSaverOption.dateAndTime:
+        return 'Date and time';
+      case ScreenSaverOption.qrCode:
+        return 'QR Code';
+      case ScreenSaverOption.homeScreen:
+        return 'Home screen';
+      case ScreenSaverOption.blackScreen:
+        return 'Black screen';
+    }
+  }
+
+  String get key => name; // 'dateAndTime' | 'qrCode' | 'homeScreen' | 'blackScreen'
+
+  static ScreenSaverOption fromKey(String key) {
+    return ScreenSaverOption.values.firstWhere(
+      (ScreenSaverOption o) => o.name == key,
+      orElse: () => ScreenSaverOption.qrCode,
+    );
+  }
+}
+
+extension ScreenModeX on ScreenMode {
+  String get key => name; // 'light' | 'dark'
+
+  static ScreenMode fromKey(String key) {
+    return ScreenMode.values.firstWhere(
+      (ScreenMode m) => m.name == key,
+      orElse: () => ScreenMode.dark,
+    );
+  }
+}
+
 /// Schedule filter mode for the Schedule tab.
 enum ScheduleDisplayMode {
   none,
@@ -250,6 +291,17 @@ class ConfigControlLoaded extends ConfigurationControlState {
   /// Currently selected snapshot page ID (highlighted in SNAPSHOT PAGE list)
   final String? selectedSnapshotPageId;
 
+  // ── Display / Settings tab ────────────────────────────────────────────────
+
+  /// Screen mode for the controller settings tab (per-controller).
+  final ScreenMode screenMode;
+
+  /// Screen saver option for the controller settings tab (per-controller).
+  final ScreenSaverOption screenSaver;
+
+  /// Screen sleep time in seconds for the controller settings tab (per-controller).
+  final int sleepTime;
+
   const ConfigControlLoaded({
     required this.controllers,
     required this.zones,
@@ -280,6 +332,9 @@ class ConfigControlLoaded extends ConfigurationControlState {
     this.selectedSceneSetId,
     this.activeSnapshotId,
     this.selectedSnapshotPageId,
+    this.screenMode = ScreenMode.dark,
+    this.screenSaver = ScreenSaverOption.qrCode,
+    this.sleepTime = 30,
   });
 
   /// Create a copy with updated values
@@ -320,6 +375,9 @@ class ConfigControlLoaded extends ConfigurationControlState {
     bool clearActiveSnapshotId = false,
     bool clearSelectedSnapshotPageId = false,
     bool clearSelectedMessagePageId = false,
+    ScreenMode? screenMode,
+    ScreenSaverOption? screenSaver,
+    int? sleepTime,
   }) {
     return ConfigControlLoaded(
       controllers: controllers ?? this.controllers,
@@ -351,6 +409,9 @@ class ConfigControlLoaded extends ConfigurationControlState {
       selectedSceneSetId: clearSelectedSceneSetId ? null : (selectedSceneSetId ?? this.selectedSceneSetId),
       activeSnapshotId: clearActiveSnapshotId ? null : (activeSnapshotId ?? this.activeSnapshotId),
       selectedSnapshotPageId: clearSelectedSnapshotPageId ? null : (selectedSnapshotPageId ?? this.selectedSnapshotPageId),
+      screenMode: screenMode ?? this.screenMode,
+      screenSaver: screenSaver ?? this.screenSaver,
+      sleepTime: sleepTime ?? this.sleepTime,
     );
   }
 
@@ -419,6 +480,9 @@ class ConfigControlLoaded extends ConfigurationControlState {
     selectedSceneSetId,
     activeSnapshotId,
     selectedSnapshotPageId,
+    screenMode,
+    screenSaver,
+    sleepTime,
   ];
 }
 

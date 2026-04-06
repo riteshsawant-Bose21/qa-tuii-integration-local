@@ -47,8 +47,17 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
   ///
   /// Pass [preserveControllerId] to keep the current selection; otherwise the
   /// first controller is selected.
+  /// When [preserveControllerId] differs from the currently selected controller
+  /// (i.e. the user deliberately switched controllers) transient UI selections
+  /// (active scene set, active snapshot, selected pages) are reset so the new
+  /// controller starts with a clean slate while still restoring its own
+  /// persisted data.
   void _loadData({String? preserveControllerId}) {
     if (_loaded == null) emit(const ConfigControlLoading());
+
+    // Detect whether we are switching to a different controller.
+    final bool isControllerSwitch =
+        preserveControllerId != null && _loaded?.selectedControllerId != null && preserveControllerId != _loaded!.selectedControllerId;
 
     try {
       final List<FusionController> controllers = _projectViewModel.fusionControllers;
@@ -92,6 +101,9 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
       // Restore persisted schedule config for selected controller
       final ControllerSchedulePageConfig schedCfg = _loadPersistedScheduleConfig(selected);
 
+      // Restore persisted display config (screen mode/saver/sleep) for selected controller
+      final ControllerDisplayConfig displayCfg = _loadPersistedDisplayConfig(selected);
+
       // ── Restore persisted pages data for the selected controller ──────────
       final _PersistedPages persisted = _loadPersistedPages(selected, sceneSets);
       final _PersistedMessagePages persistedMsg = _loadPersistedMessagePages(selected);
@@ -111,28 +123,39 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
           selectedZoneId: sel.zoneId,
           selectedSubZoneIds: sel.subZoneIds,
           activeSubZoneId: sel.activeSubZoneId,
-          currentTab: _loaded?.currentTab ?? ConfigControlTab.zoneControl,
+          currentTab: _resolveTab(_loaded?.currentTab ?? ConfigControlTab.zoneControl, selected),
           searchQuery: _loaded?.searchQuery ?? '',
           // Restore persisted scene-set checkbox selections
           selectedSceneSetIds: persisted.selectedSceneSetIds,
-          // Active scene (drives SNAPSHOT PAGE + VC): preserve or default to first
-          selectedSceneSetId: _loaded?.selectedSceneSetId ?? (sceneSets.isNotEmpty ? sceneSets.first.id : null),
-          activeSnapshotId: _loaded?.activeSnapshotId,
+          // When switching controllers reset transient selections; otherwise preserve.
+          selectedSceneSetId:
+              isControllerSwitch
+                  ? (sceneSets.isNotEmpty ? sceneSets.first.id : null)
+                  : (_loaded?.selectedSceneSetId ?? (sceneSets.isNotEmpty ? sceneSets.first.id : null)),
+          activeSnapshotId: isControllerSwitch ? null : _loaded?.activeSnapshotId,
           // Restore persisted snapshot pages
           snapshotPages: persisted.snapshotPages,
-          selectedSnapshotPageId: _loaded?.selectedSnapshotPageId,
+          selectedSnapshotPageId: isControllerSwitch ? null : _loaded?.selectedSnapshotPageId,
           // Message player state (restore persisted selections)
           messagePlayers: messagePlayers,
           messagesPerPlayer: messagesPerPlayer,
           selectedMessagePlayerIds: persistedMsg.selectedMessagePlayerIds,
           selectedMessagePageId:
-              persistedMsg.selectedMessagePlayerIds.isNotEmpty ? (_loaded?.selectedMessagePageId ?? persistedMsg.selectedMessagePlayerIds.last) : null,
+              persistedMsg.selectedMessagePlayerIds.isNotEmpty
+                  ? (isControllerSwitch
+                      ? persistedMsg.selectedMessagePlayerIds.last
+                      : (_loaded?.selectedMessagePageId ?? persistedMsg.selectedMessagePlayerIds.last))
+                  : null,
           selectedMessageIdsPerPlayer: persistedMsg.selectedMessageIdsPerPlayer,
           // Schedule state (restore persisted config)
           allSchedules: allSchedules,
           showUpcoming: schedCfg.showUpcoming,
           scheduleDisplayMode: ScheduleDisplayModeX.fromKey(schedCfg.displayMode),
           selectedScheduleIds: Set<String>.from(schedCfg.selectedScheduleIds),
+          // Display config (restore per-controller settings)
+          screenMode: ScreenModeX.fromKey(displayCfg.screenMode),
+          screenSaver: ScreenSaverOptionLabel.fromKey(displayCfg.screenSaver),
+          sleepTime: displayCfg.sleepTime,
         ),
       );
     } catch (e) {
@@ -181,20 +204,12 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
   void selectController(String controllerId) {
     final ConfigControlLoaded? loaded = _loaded;
     if (loaded == null) return;
+    if (loaded.selectedControllerId == controllerId) return; // already selected
 
-    final FusionController? controller = loaded.controllers.where((FusionController c) => c.id == controllerId).firstOrNull;
-    if (controller == null) return;
-
-    final _ZoneSelection sel = _buildZoneSelection(controller);
-    emit(
-      loaded.copyWith(
-        selectedControllerId: controllerId,
-        selectedZoneIds: sel.zoneIds,
-        selectedZoneId: sel.zoneId,
-        selectedSubZoneIds: sel.subZoneIds,
-        activeSubZoneId: sel.activeSubZoneId,
-      ),
-    );
+    // Reload ALL per-controller persisted data (pages, messages, schedule,
+    // display config) for the newly selected controller.
+    // _loadData detects the ID change and resets transient selections.
+    _loadData(preserveControllerId: controllerId);
   }
 
   void addController(FusionController controller) {
@@ -464,6 +479,51 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
     );
   }
 
+  // ─── Persistence helpers (display config) ─────────────────────────────────
+
+  ControllerDisplayConfig _loadPersistedDisplayConfig(FusionController controller) {
+    return _projectViewModel.getControllerDisplayConfig(controller.id);
+  }
+
+  void _persistDisplayConfig(ConfigControlLoaded state) {
+    if (state.selectedControllerId == null) return;
+    _projectViewModel.setControllerDisplayConfig(
+      controllerId: state.selectedControllerId!,
+      config: ControllerDisplayConfig(
+        screenMode: state.screenMode.key,
+        screenSaver: state.screenSaver.key,
+        sleepTime: state.sleepTime,
+      ),
+    );
+  }
+
+  /// Update screen mode for the selected controller and persist.
+  void setScreenMode(ScreenMode mode) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    final ConfigControlLoaded next = loaded.copyWith(screenMode: mode);
+    _persistDisplayConfig(next);
+    emit(next);
+  }
+
+  /// Update screen saver option for the selected controller and persist.
+  void setScreenSaver(ScreenSaverOption option) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    final ConfigControlLoaded next = loaded.copyWith(screenSaver: option);
+    _persistDisplayConfig(next);
+    emit(next);
+  }
+
+  /// Update screen sleep time for the selected controller and persist.
+  void setSleepTime(int seconds) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    final ConfigControlLoaded next = loaded.copyWith(sleepTime: seconds);
+    _persistDisplayConfig(next);
+    emit(next);
+  }
+
   /// Toggle message-player checkbox.
   /// Checking ON  → adds a page to the PAGES panel and makes it active.
   /// Checking OFF → removes the corresponding page; if it was active, the last
@@ -628,6 +688,25 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
       if (match != null) return match;
     }
     return controllers.first;
+  }
+
+  /// Returns true if [controller] is a Pro type (same logic as [ControlTabBar]).
+  bool _isProController(FusionController controller) {
+    final String sku = controller.sku.toLowerCase();
+    final String name = controller.name.toLowerCase();
+    return sku.contains('pro') || name.contains('pro');
+  }
+
+  /// Returns the tabs available for [controller].
+  List<ConfigControlTab> _availableTabsFor(FusionController controller) {
+    if (_isProController(controller)) return ConfigControlTab.values;
+    return <ConfigControlTab>[ConfigControlTab.zoneControl, ConfigControlTab.settings];
+  }
+
+  /// Returns [tab] if it is available for [controller], otherwise [ConfigControlTab.zoneControl].
+  ConfigControlTab _resolveTab(ConfigControlTab tab, FusionController controller) {
+    final List<ConfigControlTab> available = _availableTabsFor(controller);
+    return available.contains(tab) ? tab : ConfigControlTab.zoneControl;
   }
 
   _ZoneSelection _buildZoneSelection(FusionController controller) {

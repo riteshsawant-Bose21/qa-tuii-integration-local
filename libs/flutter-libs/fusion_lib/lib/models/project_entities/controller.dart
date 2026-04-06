@@ -18,6 +18,9 @@ class FusionController extends HardwareComponent {
   /// Persisted schedule-tab settings.
   final ControllerSchedulePageConfig schedulePageConfig;
 
+  /// Persisted display/settings-tab configuration (screen mode, saver, sleep time).
+  final ControllerDisplayConfig displayConfig;
+
   FusionController({
     String? id,
     required super.name,
@@ -40,11 +43,13 @@ class FusionController extends HardwareComponent {
     List<ControllerPageModel>? pages,
     List<ControllerMessagePageModel>? messagePages,
     ControllerSchedulePageConfig? schedulePageConfig,
+    ControllerDisplayConfig? displayConfig,
   }) : sku = sku ?? name,
        assignedZoneIds = assignedZoneIds ?? <String>{},
        pages = pages ?? <ControllerPageModel>[],
        messagePages = messagePages ?? <ControllerMessagePageModel>[],
        schedulePageConfig = schedulePageConfig ?? const ControllerSchedulePageConfig(),
+       displayConfig = displayConfig ?? const ControllerDisplayConfig(),
        super(
          hardwareName: hardwareName ?? name,
          locationEntity: locationEntity ?? LocationModel(),
@@ -73,6 +78,7 @@ class FusionController extends HardwareComponent {
     List<ControllerPageModel>? pages,
     List<ControllerMessagePageModel>? messagePages,
     ControllerSchedulePageConfig? schedulePageConfig,
+    ControllerDisplayConfig? displayConfig,
   }) {
     return FusionController(
       id: id ?? this.id,
@@ -95,6 +101,7 @@ class FusionController extends HardwareComponent {
       pages: pages ?? this.pages,
       messagePages: messagePages ?? this.messagePages,
       schedulePageConfig: schedulePageConfig ?? this.schedulePageConfig,
+      displayConfig: displayConfig ?? this.displayConfig,
     );
   }
 
@@ -121,6 +128,7 @@ class FusionController extends HardwareComponent {
       'pages': pages.map((ControllerPageModel p) => p.toJson()).toList(),
       'messagePages': messagePages.map((ControllerMessagePageModel p) => p.toJson()).toList(),
       'schedulePageConfig': schedulePageConfig.toJson(),
+      'displayConfig': displayConfig.toJson(),
     };
   }
 
@@ -151,6 +159,9 @@ class FusionController extends HardwareComponent {
       schedulePageConfig: json['schedulePageConfig'] != null
           ? ControllerSchedulePageConfig.fromJson(Map<String, dynamic>.from(json['schedulePageConfig'] as Map))
           : const ControllerSchedulePageConfig(),
+      displayConfig: json['displayConfig'] != null
+          ? ControllerDisplayConfig.fromJson(Map<String, dynamic>.from(json['displayConfig'] as Map))
+          : const ControllerDisplayConfig(),
     );
   }
 
