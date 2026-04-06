@@ -226,6 +226,7 @@ static int si5351b_write_gain(struct fusion_gpt *g, u32 gain);
 static struct fusion_gpt *fusion_gpt_get_locked(void);
 static void fusion_gpt_put_locked(struct fusion_gpt *g);
 static void cal_prepare_points(struct fusion_gpt *g);
+static s64 cal_div_round_closest_s64(s64 num, s64 den);
 
 static void cal_config_set_defaults(struct fusion_gpt_cal_config *cfg)
 {
@@ -995,6 +996,8 @@ static bool cal_fit_model(struct fusion_gpt *g, u32 *mean_residual_out)
 	s64 dg4 = (s64)g->cal_probe_gain[4] - (s64)g->cal_center_gain;
 	s64 dd4 = (s64)g->cal_probe_dac[4] - (s64)g->cal_center_dac;
 	s64 denom_g = dg1 - dg2;
+	s64 k3_num;
+	s64 k3_den;
 	s64 k1_q16, k2_q16, k3_q16;
 	s64 pred_q16, residual_sum = 0;
 	int i;
@@ -1002,9 +1005,19 @@ static bool cal_fit_model(struct fusion_gpt *g, u32 *mean_residual_out)
 	if (denom_g == 0 || dd3 == 0 || dg4 == 0 || dd4 == 0)
 		return false;
 
-	k1_q16 = div_s64((e1 - e2) << 16, denom_g);
-	k2_q16 = div_s64((e3 - e0) << 16, dd3);
-	k3_q16 = div_s64(((e4 - e0) << 16) - k1_q16 * dg4 - k2_q16 * dd4, dg4 * dd4);
+	k1_q16 = cal_div_round_closest_s64((e1 - e2) << 16, denom_g);
+	k2_q16 = cal_div_round_closest_s64((e3 - e0) << 16, dd3);
+	k3_num = ((e4 - e0) << 16) - k1_q16 * dg4 - k2_q16 * dd4;
+	k3_den = dg4 * dd4;
+	k3_q16 = cal_div_round_closest_s64(k3_num, k3_den);
+
+	pr_info("fusion_gpt: cal fit raw center gain=%u dac=%d e=[%lld %lld %lld %lld %lld] dg=[%lld %lld %lld] dd=[%lld %lld] k3_num=%lld k3_den=%lld\n",
+		g->cal_center_gain, g->cal_center_dac,
+		(long long)e0, (long long)e1, (long long)e2,
+		(long long)e3, (long long)e4,
+		(long long)dg1, (long long)dg2, (long long)dg4,
+		(long long)dd3, (long long)dd4,
+		(long long)k3_num, (long long)k3_den);
 
 	for (i = 0; i < 5; i++) {
 		s64 dg = (s64)g->cal_probe_gain[i] - (s64)g->cal_center_gain;
@@ -1016,9 +1029,9 @@ static bool cal_fit_model(struct fusion_gpt *g, u32 *mean_residual_out)
 	}
 
 	pred_q16 = (e0 << 16) + k1_q16 * dg4 + k2_q16 * dd4 + k3_q16 * dg4 * dd4;
-	pr_debug("fusion_gpt: cal fit k1_q16=%lld k2_q16=%lld k3_q16=%lld p4_meas=%lld p4_pred=%lld\n",
-			(long long)k1_q16, (long long)k2_q16, (long long)k3_q16,
-			(long long)e4, (long long)(pred_q16 >> 16));
+	pr_info("fusion_gpt: cal fit k1_q16=%lld k2_q16=%lld k3_q16=%lld p4_meas=%lld p4_pred=%lld\n",
+		(long long)k1_q16, (long long)k2_q16, (long long)k3_q16,
+		(long long)e4, (long long)(pred_q16 >> 16));
 
 	g->cal_k1_q16 = (s32)k1_q16;
 	g->cal_k2_q16 = (s32)k2_q16;
@@ -1061,8 +1074,8 @@ static bool cal_find_best_target(struct fusion_gpt *g, u32 *best_gain, int *best
 		s64 pred_err_q16;
 
 		if (denom == 0) {
-			pr_debug("fusion_gpt: cal inverse reject gain=%u dac=undefined dd=undefined pred_err=undefined numer=%lld denom=0\n",
-					gv, (long long)numer);
+			pr_info("fusion_gpt: cal inverse reject gain=%u dac=undefined dd=undefined pred_err=undefined numer=%lld denom=0\n",
+				gv, (long long)numer);
 			goto next_gain;
 		}
 
@@ -1073,23 +1086,23 @@ static bool cal_find_best_target(struct fusion_gpt *g, u32 *best_gain, int *best
 				dv <= cal_jump_dac_max_value(&g->cal_cfg)) {
 			*best_gain = gv;
 			*best_dac = (int)dv;
-			pr_debug("fusion_gpt: cal inverse target gain=%u dac=%d dd=%lld pred_err=%lld (q16=%lld center gain=%u dac=%d)\n",
-					*best_gain, *best_dac,
-					(long long)dd,
-					(long long)(pred_err_q16 >> 16),
-					(long long)pred_err_q16,
-					g->cal_center_gain, g->cal_center_dac);
-			return true;
-		}
-
-		pr_debug("fusion_gpt: cal inverse reject gain=%u dac=%lld dd=%lld pred_err=%lld (q16=%lld allowed %d..%d numer=%lld denom=%lld)\n",
-				gv, (long long)dv,
+			pr_info("fusion_gpt: cal inverse target gain=%u dac=%d dd=%lld pred_err=%lld (q16=%lld center gain=%u dac=%d)\n",
+				*best_gain, *best_dac,
 				(long long)dd,
 				(long long)(pred_err_q16 >> 16),
 				(long long)pred_err_q16,
-				cal_jump_dac_min_value(&g->cal_cfg),
-				cal_jump_dac_max_value(&g->cal_cfg),
-				(long long)numer, (long long)denom);
+				g->cal_center_gain, g->cal_center_dac);
+			return true;
+		}
+
+		pr_info("fusion_gpt: cal inverse reject gain=%u dac=%lld dd=%lld pred_err=%lld (q16=%lld allowed %d..%d numer=%lld denom=%lld)\n",
+			gv, (long long)dv,
+			(long long)dd,
+			(long long)(pred_err_q16 >> 16),
+			(long long)pred_err_q16,
+			cal_jump_dac_min_value(&g->cal_cfg),
+			cal_jump_dac_max_value(&g->cal_cfg),
+			(long long)numer, (long long)denom);
 
 next_gain:
 		if (gv > g->si_gain_max - gain_step)
