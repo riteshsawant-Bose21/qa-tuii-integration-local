@@ -254,7 +254,7 @@ class Coverage {
 /// Represents a speaker product from the product catalog API.
 /// Field names follow the README specification.
 class SpeakerProduct {
-  final int id;
+  final int productId;
   final ProductAsset assets;
   final String modelName;
   final String modelFamily;
@@ -275,11 +275,11 @@ class SpeakerProduct {
   final PowerHandling? powerHandling;
   final Sensitivity? sensitivity;
   final String? shortDescription;
-  final List<String> skus;
+  final List<int> skus;
   final bool isFusionCompatible;
 
   const SpeakerProduct({
-    required this.id,
+    required this.productId,
     required this.assets,
     required this.modelName,
     required this.modelFamily,
@@ -305,59 +305,63 @@ class SpeakerProduct {
   });
 
   factory SpeakerProduct.fromJson(Map<String, dynamic> json) {
+    final specs = json['specifications'] as Map<String, dynamic>? ?? {};
+
     return SpeakerProduct(
-      id: (json['id'] as num?)?.toInt() ?? 0,
+      productId: (json['product_id'] as num?)?.toInt() ?? 0,
       assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?, productType: 'speaker'),
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
       description: json['description'] as String? ?? 'Professional speaker delivering exceptional audio quality',
-      availableTaps: json['available_taps'] != null ? AvailableTaps.fromJson(json['available_taps'] as Map<String, dynamic>) : null,
-      bsfFileUrl: json['bsf_file_url'] as String?,
-      coverage: (json['coverage'] as List<dynamic>?)?.map((e) => Coverage.fromJson(e as Map<String, dynamic>)).toList() ?? [],
-      environment: json['environment'] as String?,
-      frequencyRange: json['frequency_range'] != null ? FrequencyRange.fromJson(json['frequency_range'] as Map<String, dynamic>) : null,
-      highImpedanceTaps: (json['high_impedance_taps'] as List<dynamic>?)?.map((e) => (e as num).toDouble()).toList() ?? [],
-      impedance: json['impedance'] != null ? ImpedanceSpec.fromJson(json['impedance'] as Map<String, dynamic>) : null,
-      isHighImpedanceRated: json['is_high_impedance_rated'] as bool? ?? false,
-      isSubwoofer: json['is_subwoofer'] as bool? ?? false,
-      isWeatherRated: json['is_weather_rated'] as bool? ?? false,
-      maxSpl: json['max_spl'] != null ? MaxSpl.fromJson(json['max_spl'] as Map<String, dynamic>) : null,
-      mountType: json['mount_type'] as String?,
-      nominalImpedance: json['nominal_impedance'] != null ? NominalImpedance.fromJson(json['nominal_impedance'] as Map<String, dynamic>) : null,
-      powerHandling: json['power_handling'] != null ? PowerHandling.fromJson(json['power_handling'] as Map<String, dynamic>) : null,
-      sensitivity: json['sensitivity'] != null ? Sensitivity.fromJson(json['sensitivity'] as Map<String, dynamic>) : null,
-      shortDescription: json['short_description'] as String?,
-      skus: (json['skus'] as List<dynamic>?)?.map((e) => e as String).toList() ?? [],
+      availableTaps: specs['available_taps'] != null ? AvailableTaps.fromJson(specs['available_taps'] as Map<String, dynamic>) : null,
+      bsfFileUrl: specs['bsf_file_url'] as String?,
+      coverage: (specs['coverage'] as List<dynamic>?)?.map((e) => Coverage.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      environment: specs['environment'] as String?,
+      frequencyRange: specs['frequency_range'] != null ? FrequencyRange.fromJson(specs['frequency_range'] as Map<String, dynamic>) : null,
+      highImpedanceTaps: (specs['high_impedance_taps'] as List<dynamic>?)?.map((e) => (e as num).toDouble()).toList() ?? [],
+      impedance: specs['impedance'] != null ? ImpedanceSpec.fromJson(specs['impedance'] as Map<String, dynamic>) : null,
+      isHighImpedanceRated: specs['is_high_impedance_rated'] as bool? ?? false,
+      isSubwoofer: specs['is_subwoofer'] as bool? ?? false,
+      isWeatherRated: specs['is_weather_rated'] as bool? ?? false,
+      maxSpl: specs['max_spl'] != null ? MaxSpl.fromJson(specs['max_spl'] as Map<String, dynamic>) : null,
+      mountType: specs['mount_type'] as String?,
+      nominalImpedance: specs['nominal_impedance'] != null ? NominalImpedance.fromJson(specs['nominal_impedance'] as Map<String, dynamic>) : null,
+      powerHandling: specs['power_handling'] != null ? PowerHandling.fromJson(specs['power_handling'] as Map<String, dynamic>) : null,
+      sensitivity: specs['sensitivity'] != null ? Sensitivity.fromJson(specs['sensitivity'] as Map<String, dynamic>) : null,
+      shortDescription: specs['short_description'] as String?,
+      skus: (specs['skus'] as List<dynamic>?)?.map((e) => (e as num).toInt()).toList() ?? [],
       isFusionCompatible: json['is_fusion_compatible'] as bool? ?? false,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
+    'product_id': productId,
     'assets': [assets.toJson()],
     'model_name': modelName,
     'model_family': modelFamily,
     'description': description,
-    if (availableTaps != null) 'available_taps': availableTaps!.toJson(),
-    if (bsfFileUrl != null) 'bsf_file_url': bsfFileUrl,
-    'coverage': coverage.map((e) => e.toJson()).toList(),
-    if (environment != null) 'environment': environment,
-    if (frequencyRange != null) 'frequency_range': frequencyRange!.toJson(),
-    'high_impedance_taps': highImpedanceTaps,
-    if (impedance != null) 'impedance': impedance!.toJson(),
-    'is_high_impedance_rated': isHighImpedanceRated,
-    'is_subwoofer': isSubwoofer,
-    'is_weather_rated': isWeatherRated,
-    if (maxSpl != null) 'max_spl': maxSpl!.toJson(),
-    if (mountType != null) 'mount_type': mountType,
-    if (nominalImpedance != null) 'nominal_impedance': nominalImpedance!.toJson(),
-    if (powerHandling != null) 'power_handling': powerHandling!.toJson(),
-    if (sensitivity != null) 'sensitivity': sensitivity!.toJson(),
-    if (shortDescription != null) 'short_description': shortDescription,
-    'skus': skus,
+    'specifications': {
+      if (availableTaps != null) 'available_taps': availableTaps!.toJson(),
+      if (bsfFileUrl != null) 'bsf_file_url': bsfFileUrl,
+      'coverage': coverage.map((e) => e.toJson()).toList(),
+      if (environment != null) 'environment': environment,
+      if (frequencyRange != null) 'frequency_range': frequencyRange!.toJson(),
+      'high_impedance_taps': highImpedanceTaps,
+      if (impedance != null) 'impedance': impedance!.toJson(),
+      'is_high_impedance_rated': isHighImpedanceRated,
+      'is_subwoofer': isSubwoofer,
+      'is_weather_rated': isWeatherRated,
+      if (maxSpl != null) 'max_spl': maxSpl!.toJson(),
+      if (mountType != null) 'mount_type': mountType,
+      if (nominalImpedance != null) 'nominal_impedance': nominalImpedance!.toJson(),
+      if (powerHandling != null) 'power_handling': powerHandling!.toJson(),
+      if (sensitivity != null) 'sensitivity': sensitivity!.toJson(),
+      if (shortDescription != null) 'short_description': shortDescription,
+      'skus': skus,
+    },
     'is_fusion_compatible': isFusionCompatible,
   };
 
   @override
-  String toString() => 'SpeakerProduct(id: $id, modelName: $modelName)';
+  String toString() => 'SpeakerProduct(productId: $productId, modelName: $modelName)';
 }

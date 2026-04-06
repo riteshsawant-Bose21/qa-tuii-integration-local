@@ -41,7 +41,7 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
           searchingFields: '${element.modelName} ${element.description}',
           deviceType: EQLDeviceType.amplifier,
           portData: element.numberOfInputsAndOutputs ?? ProductPortData(),
-          price: datasource.getPrice(element.id),
+          price: datasource.getPrice(element.productId),
           specifications: <String, String>{
             "Power ": element.power?.at.map((AmplifierMeasurementValue e) => "${e.value} ${e.unit}").join(", ") ?? "",
             "No.Of Loudspeaker Input": element.numberOfLoudspeakerInputs.toString(),
@@ -66,7 +66,7 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
           searchingFields: '${element.modelName} ${element.description}',
           deviceType: EQLDeviceType.endpoint,
           description: element.shortDescription ?? element.description,
-          price: datasource.getPrice(element.id),
+          price: datasource.getPrice(element.productId),
           specifications: <String, String>{
             // "Input Type": element.inputs?.type ?? "-",
             // "no.Of inputs": element.inputs?.quantity.toString() ?? "-",
@@ -89,7 +89,7 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
           data: element,
           searchingFields: '${element.modelName} ${element.description}',
           deviceType: EQLDeviceType.processor,
-          price: datasource.getPrice(element.id),
+          price: datasource.getPrice(element.productId),
           description: element.shortDescription ?? element.description,
           specifications: <String, String>{
             "Max Analog Control": element.maxNumberOfAnalogControl.toString() ?? "0",

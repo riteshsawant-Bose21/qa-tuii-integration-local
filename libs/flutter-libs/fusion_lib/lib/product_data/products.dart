@@ -752,17 +752,17 @@ class Products {
 
   // ============= Lookup by ID =============
 
-  SpeakerProduct? getSpeaker(int productId) => speakers.where((s) => s.id == productId).firstOrNull;
+  SpeakerProduct? getSpeaker(int productId) => speakers.where((s) => s.productId == productId).firstOrNull;
 
-  AmplifierProduct? getAmplifier(int productId) => amplifiers.where((a) => a.id == productId).firstOrNull;
+  AmplifierProduct? getAmplifier(int productId) => amplifiers.where((a) => a.productId == productId).firstOrNull;
 
-  ControllerProduct? getController(int productId) => controllers.where((c) => c.id == productId).firstOrNull;
+  ControllerProduct? getController(int productId) => controllers.where((c) => c.productId == productId).firstOrNull;
 
-  DspProduct? getDsp(int productId) => dsps.where((d) => d.id == productId).firstOrNull;
+  DspProduct? getDsp(int productId) => dsps.where((d) => d.productId == productId).firstOrNull;
 
-  AccessoryProduct? getAccessory(int productId) => accessories.where((a) => a.id == productId).firstOrNull;
+  AccessoryProduct? getAccessory(int productId) => accessories.where((a) => a.productId == productId).firstOrNull;
 
-  IoEndpointProduct? getIoEndpoint(int productId) => ioEndpoints.where((e) => e.id == productId).firstOrNull;
+  IoEndpointProduct? getIoEndpoint(int productId) => ioEndpoints.where((e) => e.productId == productId).firstOrNull;
 }
 
 class ProductCachedImage {
@@ -796,9 +796,9 @@ class ProductCachedImage {
     }
 
     return ProductCachedImage(
-      productId: (json['productId'] as num).toInt(),
+      productId: (json['product_id'] as num).toInt(),
       category: json['category'] as String? ?? '',
-      modelName: json['modelName'] as String? ?? '',
+      modelName: json['model_name'] as String? ?? '',
       black: (json['black'] as List<dynamic>? ?? const <dynamic>[]).whereType<String>().toList(),
       white: (json['white'] as List<dynamic>? ?? const <dynamic>[]).whereType<String>().toList(),
       others: parseOthers(json['others']),
@@ -807,9 +807,9 @@ class ProductCachedImage {
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
-      'productId': productId,
+      'product_id': productId,
       'category': category,
-      'modelName': modelName,
+      'model_name': modelName,
       'black': black,
       'white': white,
       'others': others,
