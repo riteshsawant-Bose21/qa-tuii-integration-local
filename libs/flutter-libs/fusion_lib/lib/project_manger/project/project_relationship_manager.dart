@@ -32,15 +32,20 @@ enum RelationshipType {
   aes67InputStreams,
   aes67OutputStreams,
 
-  /// Maps a [FusionController] → its assigned zone/sub-zone IDs.
-  /// Mirrors the [messageZones] pattern used by the message player.
-  controllerZones,
+  // /// Maps a [FusionController] → its assigned zone/sub-zone IDs.
+  // /// Mirrors the [messageZones] pattern used by the message player.
+  // controllerZones,
+  controllerAssignedZones,
 
-  /// Maps a [FusionController] → scene-set + snapshot-page IDs (Snapshots/Scenes tab).
-  controllerSnapshotPages,
+  controllerPages, //
+  controllerSchedules,
 
-  /// Maps a [FusionController] → selected message-player source IDs (Message tab).
-  controllerMessagePages,
+  controllerPageSnapshots,
+  controllerPageSceneSets,
+  controllerPageMessages,
+
+  // /// Maps a [FusionController] → selected message-player source IDs (Message tab).
+  // controllerMessagePages,
 }
 
 class RelationshipManager {

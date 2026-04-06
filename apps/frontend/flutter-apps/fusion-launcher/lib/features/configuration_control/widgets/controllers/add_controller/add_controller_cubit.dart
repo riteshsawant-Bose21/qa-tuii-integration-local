@@ -246,7 +246,6 @@ class AddControllerCubit extends Cubit<AddControllerState> {
       price: price,
       sku: state.controllerType?.displayName ?? 'Controller',
       addedFromBuildingPage: false,
-      assignedZoneIds: state.selectedControlZoneIds,
     );
   }
 

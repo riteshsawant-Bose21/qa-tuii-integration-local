@@ -3,23 +3,22 @@ import 'dart:ui';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller_page_model.dart';
 
+/// A wall-controller hardware component.
+///
+/// Per-controller pages and zone assignments are stored in repositories /
+/// relationships on [ProjectService].  Display settings and schedule-tab UI
+/// preferences live directly on this model.
 class FusionController extends HardwareComponent {
   final String sku;
 
-  /// Zone/SubZone IDs this controller is assigned to control
-  final Set<String> assignedZoneIds;
-
-  /// Persisted snapshot pages — scene-set selections and user-created snapshot pages.
-  final List<ControllerPageModel> pages;
-
-  /// Persisted message pages — checked message-player sources and their selected messages.
-  final List<ControllerMessagePageModel> messagePages;
-
-  /// Persisted schedule-tab settings.
-  final ControllerSchedulePageConfig schedulePageConfig;
-
-  /// Persisted display/settings-tab configuration (screen mode, saver, sleep time).
+  /// Screen mode / saver / sleep-time settings for the physical controller.
   final ControllerDisplayConfig displayConfig;
+
+  /// Whether "Show upcoming items" is checked in the Schedule tab.
+  final bool showUpcoming;
+
+  /// Schedule filter radio-button selection: 'none' | 'all' | 'selected'.
+  final String scheduleDisplayMode;
 
   FusionController({
     String? id,
@@ -39,17 +38,13 @@ class FusionController extends HardwareComponent {
     super.outputPortsData,
     super.equipmentLocationPosition,
     required super.addedFromBuildingPage,
-    Set<String>? assignedZoneIds,
-    List<ControllerPageModel>? pages,
-    List<ControllerMessagePageModel>? messagePages,
-    ControllerSchedulePageConfig? schedulePageConfig,
     ControllerDisplayConfig? displayConfig,
+    bool showUpcoming = false,
+    String scheduleDisplayMode = 'all',
   }) : sku = sku ?? name,
-       assignedZoneIds = assignedZoneIds ?? <String>{},
-       pages = pages ?? <ControllerPageModel>[],
-       messagePages = messagePages ?? <ControllerMessagePageModel>[],
-       schedulePageConfig = schedulePageConfig ?? const ControllerSchedulePageConfig(),
        displayConfig = displayConfig ?? const ControllerDisplayConfig(),
+       showUpcoming = showUpcoming,
+       scheduleDisplayMode = scheduleDisplayMode,
        super(
          hardwareName: hardwareName ?? name,
          locationEntity: locationEntity ?? LocationModel(),
@@ -74,11 +69,9 @@ class FusionController extends HardwareComponent {
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
     bool? addedFromBuildingPage,
-    Set<String>? assignedZoneIds,
-    List<ControllerPageModel>? pages,
-    List<ControllerMessagePageModel>? messagePages,
-    ControllerSchedulePageConfig? schedulePageConfig,
     ControllerDisplayConfig? displayConfig,
+    bool? showUpcoming,
+    String? scheduleDisplayMode,
   }) {
     return FusionController(
       id: id ?? this.id,
@@ -97,11 +90,9 @@ class FusionController extends HardwareComponent {
       outputPortsData: outputPortsData ?? this.outputPortsData,
       addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
       equipmentLocationPosition: equipmentLocationPosition ?? this.equipmentLocationPosition,
-      assignedZoneIds: assignedZoneIds ?? this.assignedZoneIds,
-      pages: pages ?? this.pages,
-      messagePages: messagePages ?? this.messagePages,
-      schedulePageConfig: schedulePageConfig ?? this.schedulePageConfig,
       displayConfig: displayConfig ?? this.displayConfig,
+      showUpcoming: showUpcoming ?? this.showUpcoming,
+      scheduleDisplayMode: scheduleDisplayMode ?? this.scheduleDisplayMode,
     );
   }
 
@@ -124,15 +115,23 @@ class FusionController extends HardwareComponent {
       'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
       'addedFromBuildingPage': addedFromBuildingPage,
       'equipmentLocationPosition': equipmentLocationPosition,
-      'assignedZoneIds': assignedZoneIds.toList(),
-      'pages': pages.map((ControllerPageModel p) => p.toJson()).toList(),
-      'messagePages': messagePages.map((ControllerMessagePageModel p) => p.toJson()).toList(),
-      'schedulePageConfig': schedulePageConfig.toJson(),
       'displayConfig': displayConfig.toJson(),
+      'showUpcoming': showUpcoming,
+      'scheduleDisplayMode': scheduleDisplayMode,
     };
   }
 
   factory FusionController.fromJson(Map<String, dynamic> json) {
+    // ── Display config ──────────────────────────────────────────────────────
+    final ControllerDisplayConfig displayConfig = json['displayConfig'] != null
+        ? ControllerDisplayConfig.fromJson(Map<String, dynamic>.from(json['displayConfig'] as Map))
+        : const ControllerDisplayConfig();
+
+    // ── Schedule fields — with backward compat from old 'schedulePageConfig' ─
+    final Map<String, dynamic>? legacySched = json['schedulePageConfig'] != null ? Map<String, dynamic>.from(json['schedulePageConfig'] as Map) : null;
+    final bool showUpcoming = json['showUpcoming'] as bool? ?? legacySched?['showUpcoming'] as bool? ?? false;
+    final String scheduleDisplayMode = json['scheduleDisplayMode'] as String? ?? legacySched?['displayMode'] as String? ?? 'all';
+
     return FusionController(
       id: json['id'] as String?,
       name: json['name'] as String,
@@ -151,37 +150,9 @@ class FusionController extends HardwareComponent {
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
       equipmentLocationPosition: DeserializationUtil.intDeserializer.deserialize(json['equipmentLocationPosition']),
-      assignedZoneIds: (json['assignedZoneIds'] as List<dynamic>?)?.map((dynamic e) => e as String).toSet() ?? <String>{},
-      pages: _pagesFromJson(json),
-      messagePages:
-          (json['messagePages'] as List<dynamic>?)?.map((dynamic e) => ControllerMessagePageModel.fromJson(Map<String, dynamic>.from(e as Map))).toList() ??
-          <ControllerMessagePageModel>[],
-      schedulePageConfig: json['schedulePageConfig'] != null
-          ? ControllerSchedulePageConfig.fromJson(Map<String, dynamic>.from(json['schedulePageConfig'] as Map))
-          : const ControllerSchedulePageConfig(),
-      displayConfig: json['displayConfig'] != null
-          ? ControllerDisplayConfig.fromJson(Map<String, dynamic>.from(json['displayConfig'] as Map))
-          : const ControllerDisplayConfig(),
+      displayConfig: displayConfig,
+      showUpcoming: showUpcoming,
+      scheduleDisplayMode: scheduleDisplayMode,
     );
-  }
-
-  static List<ControllerPageModel> _pagesFromJson(Map<String, dynamic> json) {
-    // New key: 'pages'
-    if (json['pages'] != null) {
-      return (json['pages'] as List<dynamic>).map((dynamic e) => ControllerPageModel.fromJson(Map<String, dynamic>.from(e as Map))).toList();
-    }
-    // Backward compat: old 'snapshotPagesData' key — migrate as snapshotPage type
-    if (json['snapshotPagesData'] != null) {
-      return (json['snapshotPagesData'] as List<dynamic>).map((dynamic e) {
-        final Map<String, dynamic> m = Map<String, dynamic>.from(e as Map);
-        return ControllerPageModel(
-          id: m['id'] as String,
-          type: ControllerPageType.snapshotPage,
-          name: m['name'] as String,
-          snapshotIds: (m['snapshotIds'] as List<dynamic>?)?.cast<String>() ?? <String>[],
-        );
-      }).toList();
-    }
-    return <ControllerPageModel>[];
   }
 }

@@ -5,16 +5,9 @@ import 'package:fusion_lib/models/project_entities/controller_page_model.dart';
 
 /// Extension on [ProjectViewModel] providing FusionController-specific
 /// **write** operations with undo/redo, auto-save, and project-update signals.
-///
-/// The **read** getter `fusionControllers` intentionally lives in
-/// [ProjectPropertiesViewModel] alongside `fusionEndpoints`, `sources`, etc.
-/// so all screens share the same single access point.
-///
-/// Mirrors the [SubzoneViewModel] / [HardwareViewModel] pattern.
 extension ControllerViewModel on ProjectViewModel {
   // ─── Read ─────────────────────────────────────────────────────────────────
 
-  /// Returns the [FusionController] with [controllerId], or null if not found.
   FusionController? getControllerById(String controllerId) {
     try {
       return projectManager.getControllerById(controllerId);
@@ -23,7 +16,6 @@ extension ControllerViewModel on ProjectViewModel {
     }
   }
 
-  /// Zone / sub-zone IDs assigned to [controllerId] via [RelationshipType.controllerZones].
   Set<String> getAssignedZoneIds(String controllerId) {
     try {
       return projectManager.getAssignedZoneIds(controllerId);
@@ -32,7 +24,6 @@ extension ControllerViewModel on ProjectViewModel {
     }
   }
 
-  /// Returns controllers that have [zoneId] in their assigned zone IDs.
   List<FusionController> getControllersForZone(String zoneId) {
     try {
       return projectManager.getControllersForZone(zoneId);
@@ -43,9 +34,6 @@ extension ControllerViewModel on ProjectViewModel {
 
   // ─── Write ────────────────────────────────────────────────────────────────
 
-  // ─── Zone-assignment ──────────────────────────────────────────────────────
-
-  /// Assigns [zoneId] to the controller and persists.
   void assignZoneToController({
     required String controllerId,
     required String zoneId,
@@ -53,22 +41,15 @@ extension ControllerViewModel on ProjectViewModel {
   }) {
     try {
       if (autoSave) recordSnapshot();
-      projectManager.assignZoneToController(
-        controllerId: controllerId,
-        zoneId: zoneId,
-      );
+      projectManager.assignZoneToController(controllerId: controllerId, zoneId: zoneId);
       if (autoSave) saveProject();
       updateProject();
     } catch (e) {
-      FusionLogger.log(
-        tag: LogTag.project,
-        message: 'ControllerViewModel: failed to assign zone: $e',
-      );
+      FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to assign zone: $e');
       throwError('Failed to assign zone to controller: $e');
     }
   }
 
-  /// Removes [zoneId] from the controller's zone list and persists.
   void unassignZoneFromController({
     required String controllerId,
     required String zoneId,
@@ -76,86 +57,17 @@ extension ControllerViewModel on ProjectViewModel {
   }) {
     try {
       if (autoSave) recordSnapshot();
-      projectManager.unassignZoneFromController(
-        controllerId: controllerId,
-        zoneId: zoneId,
-      );
+      projectManager.unassignZoneFromController(controllerId: controllerId, zoneId: zoneId);
       if (autoSave) saveProject();
       updateProject();
     } catch (e) {
-      FusionLogger.log(
-        tag: LogTag.project,
-        message: 'ControllerViewModel: failed to unassign zone: $e',
-      );
+      FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to unassign zone: $e');
       throwError('Failed to unassign zone from controller: $e');
     }
   }
 
-  // ─── Page-assignment (controllerSnapshotPages) ──────────────────────────
+  // ─── Pages ────────────────────────────────────────────────────────────────
 
-  /// Page IDs linked to [controllerId] via [RelationshipType.controllerSnapshotPages].
-  Set<String> getControllerPageIds(String controllerId) {
-    try {
-      return projectManager.getControllerPageIds(controllerId);
-    } catch (_) {
-      return <String>{};
-    }
-  }
-
-  /// Links [pageId] to the controller and persists.
-  void linkPageToController({
-    required String controllerId,
-    required String pageId,
-    bool autoSave = true,
-  }) {
-    try {
-      if (autoSave) recordSnapshot();
-      projectManager.linkPageToController(controllerId: controllerId, pageId: pageId);
-      if (autoSave) saveProject();
-      updateProject();
-    } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to link page: $e');
-      throwError('Failed to link page to controller: $e');
-    }
-  }
-
-  /// Unlinks [pageId] from the controller and persists.
-  void unlinkPageFromController({
-    required String controllerId,
-    required String pageId,
-    bool autoSave = true,
-  }) {
-    try {
-      if (autoSave) recordSnapshot();
-      projectManager.unlinkPageFromController(controllerId: controllerId, pageId: pageId);
-      if (autoSave) saveProject();
-      updateProject();
-    } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to unlink page: $e');
-      throwError('Failed to unlink page from controller: $e');
-    }
-  }
-
-  /// Replaces ALL page links for [controllerId] and persists.
-  void setControllerPageIds({
-    required String controllerId,
-    required Set<String> pageIds,
-    bool autoSave = true,
-  }) {
-    try {
-      if (autoSave) recordSnapshot();
-      projectManager.setControllerPageIds(controllerId: controllerId, pageIds: pageIds);
-      if (autoSave) saveProject();
-      updateProject();
-    } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to set page IDs: $e');
-      throwError('Failed to set controller page IDs: $e');
-    }
-  }
-
-  // ─── Typed snapshot pages data ───────────────────────────────────────────
-
-  /// Returns all [ControllerPageModel] entries stored on the controller model.
   List<ControllerPageModel> getControllerPages(String controllerId) {
     try {
       return projectManager.getControllerPages(controllerId);
@@ -164,7 +76,6 @@ extension ControllerViewModel on ProjectViewModel {
     }
   }
 
-  /// Replaces the full [ControllerPageModel] list on the controller model and persists.
   void setControllerPages({
     required String controllerId,
     required List<ControllerPageModel> pages,
@@ -181,37 +92,52 @@ extension ControllerViewModel on ProjectViewModel {
     }
   }
 
-  // ─── Typed message pages data ─────────────────────────────────────────────
+  // ─── Page-item relationships ──────────────────────────────────────────────
 
-  /// Returns all [ControllerMessagePageModel] entries stored on the controller model.
-  List<ControllerMessagePageModel> getControllerMessagePages(String controllerId) {
+  Set<String> getSnapshotIdsForPage(String pageId) {
     try {
-      return projectManager.getControllerMessagePages(controllerId);
+      return projectManager.getSnapshotIdsForPage(pageId);
     } catch (_) {
-      return <ControllerMessagePageModel>[];
+      return <String>{};
     }
   }
 
-  /// Replaces the full [ControllerMessagePageModel] list on the controller model and persists.
-  void setControllerMessagePages({
-    required String controllerId,
-    required List<ControllerMessagePageModel> messagePages,
-    bool autoSave = true,
+  void setSnapshotIdsForPage({
+    required String pageId,
+    required Set<String> snapshotIds,
+    bool autoSave = false,
   }) {
     try {
-      if (autoSave) recordSnapshot();
-      projectManager.setControllerMessagePages(controllerId: controllerId, messagePages: messagePages);
+      projectManager.setSnapshotIdsForPage(pageId: pageId, snapshotIds: snapshotIds);
       if (autoSave) saveProject();
-      updateProject();
     } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to set controller message pages: $e');
-      throwError('Failed to set controller message pages: $e');
+      FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to set snapshot IDs for page: $e');
     }
   }
 
-  // ─── Schedule page config ─────────────────────────────────────────────────
+  Set<String> getMessageIdsForPage(String pageId) {
+    try {
+      return projectManager.getMessageIdsForPage(pageId);
+    } catch (_) {
+      return <String>{};
+    }
+  }
 
-  /// Returns the persisted [ControllerSchedulePageConfig] for [controllerId].
+  void setMessageIdsForPage({
+    required String pageId,
+    required Set<String> messageIds,
+    bool autoSave = false,
+  }) {
+    try {
+      projectManager.setMessageIdsForPage(pageId: pageId, messageIds: messageIds);
+      if (autoSave) saveProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to set message IDs for page: $e');
+    }
+  }
+
+  // ─── Schedule config ──────────────────────────────────────────────────────
+
   ControllerSchedulePageConfig getControllerScheduleConfig(String controllerId) {
     try {
       return projectManager.getControllerScheduleConfig(controllerId);
@@ -220,7 +146,6 @@ extension ControllerViewModel on ProjectViewModel {
     }
   }
 
-  /// Persists updated [ControllerSchedulePageConfig] for [controllerId].
   void setControllerScheduleConfig({
     required String controllerId,
     required ControllerSchedulePageConfig config,
@@ -237,9 +162,29 @@ extension ControllerViewModel on ProjectViewModel {
     }
   }
 
+  Set<String> getSelectedScheduleIds(String controllerId) {
+    try {
+      return projectManager.getSelectedScheduleIds(controllerId);
+    } catch (_) {
+      return <String>{};
+    }
+  }
+
+  void setSelectedScheduleIds({
+    required String controllerId,
+    required Set<String> scheduleIds,
+    bool autoSave = true,
+  }) {
+    try {
+      projectManager.setSelectedScheduleIds(controllerId: controllerId, scheduleIds: scheduleIds);
+      if (autoSave) saveProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to set selected schedule IDs: $e');
+    }
+  }
+
   // ─── Display config ───────────────────────────────────────────────────────
 
-  /// Returns the persisted [ControllerDisplayConfig] for [controllerId].
   ControllerDisplayConfig getControllerDisplayConfig(String controllerId) {
     try {
       return projectManager.getControllerDisplayConfig(controllerId);
@@ -248,7 +193,6 @@ extension ControllerViewModel on ProjectViewModel {
     }
   }
 
-  /// Persists updated [ControllerDisplayConfig] for [controllerId].
   void setControllerDisplayConfig({
     required String controllerId,
     required ControllerDisplayConfig config,

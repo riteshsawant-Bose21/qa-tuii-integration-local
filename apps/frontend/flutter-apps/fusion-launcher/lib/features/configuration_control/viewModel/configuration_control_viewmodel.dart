@@ -100,6 +100,8 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
 
       // Restore persisted schedule config for selected controller
       final ControllerSchedulePageConfig schedCfg = _loadPersistedScheduleConfig(selected);
+      // Selected schedule IDs come from the controllerSchedules relationship
+      final Set<String> persistedScheduleIds = _projectViewModel.getSelectedScheduleIds(selected.id);
 
       // Restore persisted display config (screen mode/saver/sleep) for selected controller
       final ControllerDisplayConfig displayCfg = _loadPersistedDisplayConfig(selected);
@@ -151,7 +153,7 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
           allSchedules: allSchedules,
           showUpcoming: schedCfg.showUpcoming,
           scheduleDisplayMode: ScheduleDisplayModeX.fromKey(schedCfg.displayMode),
-          selectedScheduleIds: Set<String>.from(schedCfg.selectedScheduleIds),
+          selectedScheduleIds: persistedScheduleIds,
           // Display config (restore per-controller settings)
           screenMode: ScreenModeX.fromKey(displayCfg.screenMode),
           screenSaver: ScreenSaverOptionLabel.fromKey(displayCfg.screenSaver),
@@ -474,8 +476,12 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
       config: ControllerSchedulePageConfig(
         displayMode: state.scheduleDisplayMode.key,
         showUpcoming: state.showUpcoming,
-        selectedScheduleIds: state.selectedScheduleIds.toList(),
       ),
+    );
+    // Persist selected schedule IDs via the controllerSchedules relationship
+    _projectViewModel.setSelectedScheduleIds(
+      controllerId: state.selectedControllerId!,
+      scheduleIds: state.selectedScheduleIds,
     );
   }
 
@@ -609,30 +615,6 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
     return _projectViewModel.getSnapshotInSceneSet(sceneSetId: sceneSetId);
   }
 
-  /// Reload only scene set / snapshot data and re-emit.
-  void _reloadSceneData() {
-    final ConfigControlLoaded? loaded = _loaded;
-    if (loaded == null) return;
-    try {
-      final List<SceneSetModel> sceneSets = _projectViewModel.getAllSceneSets();
-      final Map<String, List<SnapshotsModel>> snapshotsInSceneSets = _buildSnapshotsInSceneSetsMap(sceneSets);
-      final List<SnapshotsModel> allSnapshots = _projectViewModel.getAllSnapshots();
-      final Map<String, List<SnapshotsModel>> snapshotsPerPage = _computeSnapshotsPerPage(snapshotsInSceneSets);
-      final Set<String> usedSnapshotIds = _computeUsedSnapshotIds(snapshotsPerPage);
-      emit(
-        loaded.copyWith(
-          sceneSets: sceneSets,
-          snapshotsInSceneSets: snapshotsInSceneSets,
-          allSnapshots: allSnapshots,
-          snapshotsPerPage: snapshotsPerPage,
-          usedSnapshotIds: usedSnapshotIds,
-        ),
-      );
-    } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: 'ConfigControl: failed to reload scene data: $e');
-    }
-  }
-
   /// For each snapshot page, collect the SnapshotsModel linked as recall actions.
   Map<String, List<SnapshotsModel>> _computeSnapshotsPerPage(
     Map<String, List<SnapshotsModel>> snapshotsInSceneSets,
@@ -710,11 +692,8 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
   }
 
   _ZoneSelection _buildZoneSelection(FusionController controller) {
-    // Read from ControllerViewModel → ControllerManager → ControllerService
-    // (RelationshipType.controllerZones) — the authoritative source.
-    // Falls back to model's assignedZoneIds for backward compatibility.
-    final Set<String> relZoneIds = _projectViewModel.getAssignedZoneIds(controller.id);
-    final Set<String> assigned = relZoneIds.isNotEmpty ? relZoneIds : controller.assignedZoneIds;
+    // All zone assignments are stored exclusively in the controllerAssignedZones relationship.
+    final Set<String> assigned = _projectViewModel.getAssignedZoneIds(controller.id);
 
     final Set<String> allSubZoneIds = _projectViewModel.subZones.map((SubZone s) => s.id).toSet();
 
@@ -739,18 +718,15 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
     };
   }
 
-  // ─── Persistence helpers (controllerPages relationship) ────────────────────
+  // ─── Persistence helpers (controllerPages) ────────────────────────────────
 
-  /// Restores the pages state for [controller] from [FusionController.pages] —
-  /// partitions [ControllerPageType.sceneSet] entries into [selectedSceneSetIds]
-  /// and [ControllerPageType.snapshotPage] entries into [snapshotPages].
+  /// Loads scene-set and snapshot pages from the [ControllerPageRepository].
+  /// Snapshot IDs for each page come from the [controllerPageSnapshots] relationship.
   _PersistedPages _loadPersistedPages(
     FusionController controller,
     List<SceneSetModel> sceneSets,
   ) {
     final List<ControllerPageModel> allPages = _projectViewModel.getControllerPages(controller.id);
-
-    // Valid scene-set IDs (guard against stale IDs if sets were deleted)
     final Set<String> validSceneSetIds = sceneSets.map((SceneSetModel s) => s.id).toSet();
 
     final Set<String> selectedSceneSetIds = <String>{};
@@ -761,78 +737,66 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
         if (validSceneSetIds.contains(page.id)) {
           selectedSceneSetIds.add(page.id);
         }
-      } else {
-        snapshotPages.add(
-          SnapshotPageModel(
-            id: page.id,
-            name: page.name,
-            snapshotIds: page.snapshotIds,
-          ),
-        );
+      } else if (page.type == ControllerPageType.snapshotPage) {
+        // Fetch snapshot IDs from the relationship — NOT stored on the model
+        final List<String> snapshotIds = _projectViewModel.getSnapshotIdsForPage(page.id).toList();
+        snapshotPages.add(SnapshotPageModel(id: page.id, name: page.name, snapshotIds: snapshotIds));
       }
+      // message pages are handled by _loadPersistedMessagePages
     }
 
-    return _PersistedPages(
-      selectedSceneSetIds: selectedSceneSetIds,
-      snapshotPages: snapshotPages,
-    );
+    return _PersistedPages(selectedSceneSetIds: selectedSceneSetIds, snapshotPages: snapshotPages);
   }
 
-  /// Persists both scene-set selections and snapshot pages as a unified
-  /// [ControllerPageModel] list on the controller model.
-  ///
-  /// Scene sets need [sceneSets] to resolve their display names.
+  /// Persists scene-set and snapshot pages.
+  /// Preserves existing message pages so they are not overwritten.
+  /// Snapshot IDs are stored in the [controllerPageSnapshots] relationship.
   void _persistControllerPages({
     required String controllerId,
     required Set<String> selectedSceneSetIds,
     required List<SnapshotPageModel> snapshotPages,
   }) {
-    // Resolve scene-set names from the current loaded state
     final List<SceneSetModel> allSceneSets = _loaded?.sceneSets ?? <SceneSetModel>[];
 
-    final List<ControllerPageModel> pages = <ControllerPageModel>[
-      // Scene-set entries (type = sceneSet) — snapshotIds = snapshots inside the scene set
+    // Build scene-set and snapshot pages (no snapshotIds in the model)
+    final List<ControllerPageModel> newPages = <ControllerPageModel>[
       for (final String id in selectedSceneSetIds)
         ControllerPageModel(
           id: id,
           type: ControllerPageType.sceneSet,
-          name:
-              allSceneSets
-                  .firstWhere(
-                    (SceneSetModel s) => s.id == id,
-                    orElse: () => SceneSetModel(id: id, name: id),
-                  )
-                  .name,
-          snapshotIds: (_loaded?.snapshotsInSceneSets[id] ?? <SnapshotsModel>[]).map((SnapshotsModel s) => s.id).toList(),
+          name: allSceneSets.firstWhere((SceneSetModel s) => s.id == id, orElse: () => SceneSetModel(id: id, name: id)).name,
         ),
-
-      // Snapshot-page entries (type = snapshotPage)
-      for (final SnapshotPageModel p in snapshotPages)
-        ControllerPageModel(
-          id: p.id,
-          type: ControllerPageType.snapshotPage,
-          name: p.name,
-          snapshotIds: p.snapshotIds,
-        ),
+      for (final SnapshotPageModel p in snapshotPages) ControllerPageModel(id: p.id, type: ControllerPageType.snapshotPage, name: p.name),
     ];
+
+    // Preserve existing message pages
+    final List<ControllerPageModel> existingMessagePages =
+        _projectViewModel.getControllerPages(controllerId).where((ControllerPageModel p) => p.type == ControllerPageType.message).toList();
 
     _projectViewModel.setControllerPages(
       controllerId: controllerId,
-      pages: pages,
+      pages: <ControllerPageModel>[...newPages, ...existingMessagePages],
     );
-  }
-  // ─── Persistence helpers (controllerMessagePages relationship) ────────────
 
-  /// Restores the message-pages state for [controller] from [FusionController.messagePages].
+    // Update snapshot ID relationships for each snapshot page
+    for (final SnapshotPageModel p in snapshotPages) {
+      _projectViewModel.setSnapshotIdsForPage(pageId: p.id, snapshotIds: p.snapshotIds.toSet());
+    }
+  }
+
+  // ─── Persistence helpers (message pages) ──────────────────────────────────
+
+  /// Loads message-player pages from the [ControllerPageRepository].
+  /// Selected message IDs come from the [controllerPageMessages] relationship.
   _PersistedMessagePages _loadPersistedMessagePages(FusionController controller) {
-    final List<ControllerMessagePageModel> allPages = _projectViewModel.getControllerMessagePages(controller.id);
+    final List<ControllerPageModel> allPages = _projectViewModel.getControllerPages(controller.id);
 
     final Set<String> selectedPlayerIds = <String>{};
     final Map<String, Set<String>> selectedMessageIdsPerPlayer = <String, Set<String>>{};
 
-    for (final ControllerMessagePageModel page in allPages) {
-      selectedPlayerIds.add(page.sourceId);
-      selectedMessageIdsPerPlayer[page.sourceId] = Set<String>.from(page.selectedMessageIds);
+    for (final ControllerPageModel page in allPages.where((ControllerPageModel p) => p.type == ControllerPageType.message)) {
+      selectedPlayerIds.add(page.id); // page.id == sourceId for message pages
+      selectedMessageIdsPerPlayer[page.id] = _projectViewModel.getMessageIdsForPage(page.id);
     }
 
     return _PersistedMessagePages(
@@ -841,25 +805,34 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
     );
   }
 
-  /// Persists message-player selections and per-player message checkboxes as a
-  /// [ControllerMessagePageModel] list on the controller model.
+  /// Persists message-player pages.
+  /// Preserves existing scene-set and snapshot pages so they are not overwritten.
+  /// Selected message IDs are stored in the [controllerPageMessages] relationship.
   void _persistControllerMessagePages({
     required String controllerId,
     required Set<String> selectedPlayerIds,
     required Map<String, Set<String>> selectedMessageIdsPerPlayer,
   }) {
-    final List<ControllerMessagePageModel> pages = <ControllerMessagePageModel>[
-      for (final String sourceId in selectedPlayerIds)
-        ControllerMessagePageModel(
-          sourceId: sourceId,
-          selectedMessageIds: (selectedMessageIdsPerPlayer[sourceId] ?? <String>{}).toList(),
-        ),
+    final List<ControllerPageModel> newMessagePages = <ControllerPageModel>[
+      for (final String sourceId in selectedPlayerIds) ControllerPageModel(id: sourceId, type: ControllerPageType.message, name: ''),
     ];
 
-    _projectViewModel.setControllerMessagePages(
+    // Preserve existing non-message pages
+    final List<ControllerPageModel> existingOtherPages =
+        _projectViewModel.getControllerPages(controllerId).where((ControllerPageModel p) => p.type != ControllerPageType.message).toList();
+
+    _projectViewModel.setControllerPages(
       controllerId: controllerId,
-      messagePages: pages,
+      pages: <ControllerPageModel>[...existingOtherPages, ...newMessagePages],
     );
+
+    // Update message ID relationships for each player
+    for (final String sourceId in selectedPlayerIds) {
+      _projectViewModel.setMessageIdsForPage(
+        pageId: sourceId,
+        messageIds: selectedMessageIdsPerPlayer[sourceId] ?? <String>{},
+      );
+    }
   }
 }
 

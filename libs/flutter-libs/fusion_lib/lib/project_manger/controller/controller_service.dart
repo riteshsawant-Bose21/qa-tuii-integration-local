@@ -4,13 +4,9 @@ import 'package:fusion_lib/models/project_entities/controller_page_model.dart';
 
 /// Extension on [ProjectService] providing FusionController-specific data access.
 ///
-/// Zone assignments are stored exclusively in the [RelationshipManager] under
-/// [RelationshipType.controllerZones] — mirrors the [MessagePlayerService]
-/// pattern for [RelationshipType.messageZones].
-///
-/// [FusionController.assignedZoneIds] (model field) is used only for
-/// backwards-compatible JSON deserialization; on first add, those IDs are
-/// migrated into the relationship manager automatically.
+/// Pages are stored in [controllerPages] repository + [RelationshipManager].
+/// Display settings and schedule preferences live directly on [FusionController].
+/// Selected schedule IDs are stored in the [controllerSchedules] relationship.
 extension ControllerService on ProjectService {
   // ─── Read ──────────────────────────────────────────────────────────────────
 
@@ -21,35 +17,31 @@ extension ControllerService on ProjectService {
     return hw is FusionController ? hw : null;
   }
 
-  /// Zone / sub-zone IDs assigned to [controllerId] via the relationship manager.
-  Set<String> getAssignedZoneIds(String controllerId) => relationships.getChildren(RelationshipType.controllerZones, controllerId);
+  /// Zone / sub-zone IDs assigned to [controllerId] via [controllerAssignedZones].
+  Set<String> getAssignedZoneIds(String controllerId) => relationships.getChildren(RelationshipType.controllerAssignedZones, controllerId);
 
-  /// Controllers that have [zoneId] in their [RelationshipType.controllerZones] set.
-  List<FusionController> getControllersForZone(String zoneId) {
-    return getAllControllers().where((FusionController c) => getAssignedZoneIds(c.id).contains(zoneId)).toList();
-  }
+  /// Controllers that have [zoneId] in their assigned zone IDs.
+  List<FusionController> getControllersForZone(String zoneId) =>
+      getAllControllers().where((FusionController c) => getAssignedZoneIds(c.id).contains(zoneId)).toList();
 
   // ─── Write ─────────────────────────────────────────────────────────────────
 
-  /// Adds [controller] to the hardware repository and migrates any zone IDs
-  /// already present in [FusionController.assignedZoneIds] into the
-  /// [RelationshipManager] so the relationship layer is always authoritative.
   void addController(FusionController controller) {
     addHardware(hw: controller, addToCircuit: false);
-
-    // Migrate model-level zone IDs → relationship manager (backward compat)
-    for (final String zoneId in controller.assignedZoneIds) {
-      relationships.link(RelationshipType.controllerZones, controller.id, zoneId);
-    }
   }
 
-  /// Removes [controller] and cleans up all its [controllerZones] relationships.
   void removeController(String controllerId) {
     relationships.removeAllRelationships(controllerId);
+    // Clean up all pages belonging to this controller
+    final Set<String> pageIds = Set<String>.from(
+      relationships.getChildren(RelationshipType.controllerPages, controllerId),
+    );
+    for (final String pageId in pageIds) {
+      controllerPages.remove(pageId);
+    }
     removeHardware(controllerId);
   }
 
-  /// Replaces the stored record with [controller] (model data only).
   void updateController(FusionController controller) {
     if (!hardware.exists(controller.id)) {
       throw Exception('Controller ${controller.id} does not exist');
@@ -57,161 +49,117 @@ extension ControllerService on ProjectService {
     hardware.add(controller.id, controller);
   }
 
-  // ─── Zone-assignment (via RelationshipManager) ─────────────────────────────
+  // ─── Zone-assignment (via controllerAssignedZones relationship) ────────────
 
-  /// Links [zoneId] to [controllerId] in the relationship manager.
-  void assignZoneToController({
-    required String controllerId,
-    required String zoneId,
-  }) {
-    relationships.link(RelationshipType.controllerZones, controllerId, zoneId);
-  }
+  void assignZoneToController({required String controllerId, required String zoneId}) =>
+      relationships.link(RelationshipType.controllerAssignedZones, controllerId, zoneId);
 
-  /// Unlinks [zoneId] from [controllerId] in the relationship manager.
-  void unassignZoneFromController({
-    required String controllerId,
-    required String zoneId,
-  }) {
-    relationships.unlink(RelationshipType.controllerZones, controllerId, zoneId);
-  }
+  void unassignZoneFromController({required String controllerId, required String zoneId}) =>
+      relationships.unlink(RelationshipType.controllerAssignedZones, controllerId, zoneId);
 
-  // ─── Page-assignment (via RelationshipManager — controllerSnapshotPages) ──
+  // ─── Pages (controllerPages repo + controllerPages relationship) ───────────
 
-  /// Page IDs linked to [controllerId] (scene-set IDs + snapshot-page IDs).
-  Set<String> getControllerPageIds(String controllerId) => relationships.getChildren(RelationshipType.controllerSnapshotPages, controllerId);
-
-  /// Links [pageId] to [controllerId] in the relationship manager.
-  void linkPageToController({
-    required String controllerId,
-    required String pageId,
-  }) {
-    relationships.link(RelationshipType.controllerSnapshotPages, controllerId, pageId);
-  }
-
-  /// Unlinks [pageId] from [controllerId] in the relationship manager.
-  void unlinkPageFromController({
-    required String controllerId,
-    required String pageId,
-  }) {
-    relationships.unlink(RelationshipType.controllerSnapshotPages, controllerId, pageId);
-  }
-
-  /// Replaces ALL page links for [controllerId] with [pageIds].
-  void setControllerPageIds({
-    required String controllerId,
-    required Set<String> pageIds,
-  }) {
-    // Remove existing links
-    final Set<String> existing = Set<String>.from(getControllerPageIds(controllerId));
-    for (final String id in existing) {
-      relationships.unlink(RelationshipType.controllerSnapshotPages, controllerId, id);
-    }
-    // Add new links
-    for (final String id in pageIds) {
-      relationships.link(RelationshipType.controllerSnapshotPages, controllerId, id);
-    }
-  }
-
-  // ─── Typed snapshot pages data (persisted on the FusionController model) ──
-
-  /// Returns all [ControllerPageModel] entries stored on the controller model.
+  /// All pages (scene-set, snapshot, message) linked to [controllerId].
   List<ControllerPageModel> getControllerPages(String controllerId) {
-    final FusionController? controller = getControllerById(controllerId);
-    return controller?.pages ?? <ControllerPageModel>[];
+    final Set<String> pageIds = relationships.getChildren(RelationshipType.controllerPages, controllerId);
+    return pageIds.map((String id) => controllerPages.get(id)).whereType<ControllerPageModel>().toList();
   }
 
-  /// Replaces the full [ControllerPageModel] list on the controller model.
+  /// Replaces ALL pages for [controllerId] with [pages].
   void setControllerPages({
     required String controllerId,
     required List<ControllerPageModel> pages,
   }) {
-    final FusionController? controller = getControllerById(controllerId);
-    if (controller == null) return;
-    final FusionController updated = controller.copyWith(pages: pages);
-    hardware.add(controllerId, updated);
-
-    // Keep the controllerSnapshotPages relationship in sync with the page IDs
-    setControllerPageIds(
-      controllerId: controllerId,
-      pageIds: pages.map((ControllerPageModel p) => p.id).toSet(),
+    final Set<String> existingIds = Set<String>.from(
+      relationships.getChildren(RelationshipType.controllerPages, controllerId),
     );
+    for (final String pageId in existingIds) {
+      controllerPages.remove(pageId);
+      relationships.unlink(RelationshipType.controllerPages, controllerId, pageId);
+    }
+    for (final ControllerPageModel p in pages) {
+      controllerPages.add(p.id, p);
+      relationships.link(RelationshipType.controllerPages, controllerId, p.id);
+    }
   }
 
-  // ─── Message pages (via RelationshipManager — controllerMessagePages) ──────
+  // ─── Page-item relationships ───────────────────────────────────────────────
 
-  /// Source IDs of checked message players for [controllerId].
-  Set<String> getControllerMessagePageIds(String controllerId) => relationships.getChildren(RelationshipType.controllerMessagePages, controllerId);
+  Set<String> getSnapshotIdsForPage(String pageId) => relationships.getChildren(RelationshipType.controllerPageSnapshots, pageId);
 
-  /// Replaces ALL message-page source-ID links for [controllerId] with [sourceIds].
-  void setControllerMessagePageIds({
-    required String controllerId,
-    required Set<String> sourceIds,
-  }) {
-    final Set<String> existing = Set<String>.from(getControllerMessagePageIds(controllerId));
+  void setSnapshotIdsForPage({required String pageId, required Set<String> snapshotIds}) {
+    final Set<String> existing = Set<String>.from(
+      relationships.getChildren(RelationshipType.controllerPageSnapshots, pageId),
+    );
     for (final String id in existing) {
-      relationships.unlink(RelationshipType.controllerMessagePages, controllerId, id);
+      relationships.unlink(RelationshipType.controllerPageSnapshots, pageId, id);
     }
-    for (final String id in sourceIds) {
-      relationships.link(RelationshipType.controllerMessagePages, controllerId, id);
+    for (final String id in snapshotIds) {
+      relationships.link(RelationshipType.controllerPageSnapshots, pageId, id);
     }
   }
 
-  // ─── Typed message pages data (persisted on the FusionController model) ────
+  Set<String> getMessageIdsForPage(String pageId) => relationships.getChildren(RelationshipType.controllerPageMessages, pageId);
 
-  /// Returns all [ControllerMessagePageModel] entries stored on the controller model.
-  List<ControllerMessagePageModel> getControllerMessagePages(String controllerId) {
-    final FusionController? controller = getControllerById(controllerId);
-    return controller?.messagePages ?? <ControllerMessagePageModel>[];
+  void setMessageIdsForPage({required String pageId, required Set<String> messageIds}) {
+    final Set<String> existing = Set<String>.from(
+      relationships.getChildren(RelationshipType.controllerPageMessages, pageId),
+    );
+    for (final String id in existing) {
+      relationships.unlink(RelationshipType.controllerPageMessages, pageId, id);
+    }
+    for (final String id in messageIds) {
+      relationships.link(RelationshipType.controllerPageMessages, pageId, id);
+    }
   }
 
-  /// Replaces the full [ControllerMessagePageModel] list on the controller model.
-  void setControllerMessagePages({
-    required String controllerId,
-    required List<ControllerMessagePageModel> messagePages,
-  }) {
-    final FusionController? controller = getControllerById(controllerId);
-    if (controller == null) return;
-    final FusionController updated = controller.copyWith(messagePages: messagePages);
-    hardware.add(controllerId, updated);
+  // ─── Schedule config (stored directly on FusionController) ────────────────
 
-    // Keep the controllerMessagePages relationship in sync
-    setControllerMessagePageIds(
-      controllerId: controllerId,
-      sourceIds: messagePages.map((ControllerMessagePageModel p) => p.sourceId).toSet(),
+  /// Returns schedule preferences from the controller model.
+  ControllerSchedulePageConfig getControllerScheduleConfig(String controllerId) {
+    final FusionController? c = getControllerById(controllerId);
+    return ControllerSchedulePageConfig(
+      displayMode: c?.scheduleDisplayMode ?? 'all',
+      showUpcoming: c?.showUpcoming ?? false,
     );
   }
 
-  // ─── Schedule page config (persisted on the FusionController model) ─────────
-
-  /// Returns the [ControllerSchedulePageConfig] stored on the controller model.
-  ControllerSchedulePageConfig getControllerScheduleConfig(String controllerId) {
-    final FusionController? controller = getControllerById(controllerId);
-    return controller?.schedulePageConfig ?? const ControllerSchedulePageConfig();
-  }
-
-  /// Replaces the [ControllerSchedulePageConfig] on the controller model.
+  /// Persists [showUpcoming] and [displayMode] directly onto the controller model.
   void setControllerScheduleConfig({
     required String controllerId,
     required ControllerSchedulePageConfig config,
   }) {
-    final FusionController? controller = getControllerById(controllerId);
-    if (controller == null) return;
-    hardware.add(controllerId, controller.copyWith(schedulePageConfig: config));
+    final FusionController? c = getControllerById(controllerId);
+    if (c == null) return;
+    hardware.add(
+      controllerId,
+      c.copyWith(showUpcoming: config.showUpcoming, scheduleDisplayMode: config.displayMode),
+    );
   }
 
-  /// Returns the [ControllerDisplayConfig] stored on the controller model.
-  ControllerDisplayConfig getControllerDisplayConfig(String controllerId) {
-    final FusionController? controller = getControllerById(controllerId);
-    return controller?.displayConfig ?? const ControllerDisplayConfig();
+  /// Schedule IDs selected for [controllerId] (via [controllerSchedules] relationship).
+  Set<String> getSelectedScheduleIds(String controllerId) => relationships.getChildren(RelationshipType.controllerSchedules, controllerId);
+
+  /// Replaces the selected schedule IDs for [controllerId].
+  void setSelectedScheduleIds({required String controllerId, required Set<String> scheduleIds}) {
+    final Set<String> existing = Set<String>.from(
+      relationships.getChildren(RelationshipType.controllerSchedules, controllerId),
+    );
+    for (final String id in existing) {
+      relationships.unlink(RelationshipType.controllerSchedules, controllerId, id);
+    }
+    for (final String id in scheduleIds) {
+      relationships.link(RelationshipType.controllerSchedules, controllerId, id);
+    }
   }
 
-  /// Replaces the [ControllerDisplayConfig] on the controller model.
-  void setControllerDisplayConfig({
-    required String controllerId,
-    required ControllerDisplayConfig config,
-  }) {
-    final FusionController? controller = getControllerById(controllerId);
-    if (controller == null) return;
-    hardware.add(controllerId, controller.copyWith(displayConfig: config));
+  // ─── Display config (stored directly on FusionController) ─────────────────
+
+  ControllerDisplayConfig getControllerDisplayConfig(String controllerId) => getControllerById(controllerId)?.displayConfig ?? const ControllerDisplayConfig();
+
+  void setControllerDisplayConfig({required String controllerId, required ControllerDisplayConfig config}) {
+    final FusionController? c = getControllerById(controllerId);
+    if (c == null) return;
+    hardware.add(controllerId, c.copyWith(displayConfig: config));
   }
 }

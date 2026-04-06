@@ -1,4 +1,5 @@
 import '../../../fusion_lib.dart';
+import '../../../models/project_entities/controller_page_model.dart';
 
 /// -------------------
 /// Base Repository
@@ -293,3 +294,9 @@ class PrioritySourceDataRepository extends Repository<PrioritySourceData> {
 }
 
 class EquipLocationRepository extends Repository<EquipLocation> {}
+
+// ─── Controller repositories ──────────────────────────────────────────────────
+
+/// Stores all [ControllerPageModel] entries (scene-set, snapshot, and message
+/// pages) keyed by page ID.
+class ControllerPageRepository extends Repository<ControllerPageModel> {}

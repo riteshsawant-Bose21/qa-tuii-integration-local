@@ -30,59 +30,42 @@ extension ControllerManager on ProjectManager {
   void unassignZoneFromController({required String controllerId, required String zoneId}) =>
       _service.unassignZoneFromController(controllerId: controllerId, zoneId: zoneId);
 
-  // ─── Snapshot page-assignment (controllerSnapshotPages) ───────────────────
+  // ─── Pages ────────────────────────────────────────────────────────────────
 
-  Set<String> getControllerPageIds(String controllerId) => _service.getControllerPageIds(controllerId);
-
-  void linkPageToController({required String controllerId, required String pageId}) =>
-      _service.linkPageToController(controllerId: controllerId, pageId: pageId);
-
-  void unlinkPageFromController({required String controllerId, required String pageId}) =>
-      _service.unlinkPageFromController(controllerId: controllerId, pageId: pageId);
-
-  void setControllerPageIds({required String controllerId, required Set<String> pageIds}) =>
-      _service.setControllerPageIds(controllerId: controllerId, pageIds: pageIds);
-
-  // ─── Typed snapshot pages data ────────────────────────────────────────────
-
-  /// Returns all [ControllerPageModel] entries stored on the controller model.
   List<ControllerPageModel> getControllerPages(String controllerId) => _service.getControllerPages(controllerId);
 
-  /// Replaces the full [ControllerPageModel] list on the controller model
-  /// and keeps [RelationshipType.controllerSnapshotPages] in sync.
   void setControllerPages({required String controllerId, required List<ControllerPageModel> pages}) =>
       _service.setControllerPages(controllerId: controllerId, pages: pages);
 
-  // ─── Typed message pages data ─────────────────────────────────────────────
+  // ─── Page-item relationships ──────────────────────────────────────────────
 
-  /// Source IDs of checked message players for [controllerId].
-  Set<String> getControllerMessagePageIds(String controllerId) => _service.getControllerMessagePageIds(controllerId);
+  Set<String> getSnapshotIdsForPage(String pageId) => _service.getSnapshotIdsForPage(pageId);
 
-  /// Returns all [ControllerMessagePageModel] entries stored on the controller model.
-  List<ControllerMessagePageModel> getControllerMessagePages(String controllerId) => _service.getControllerMessagePages(controllerId);
+  void setSnapshotIdsForPage({required String pageId, required Set<String> snapshotIds}) =>
+      _service.setSnapshotIdsForPage(pageId: pageId, snapshotIds: snapshotIds);
 
-  /// Replaces the full [ControllerMessagePageModel] list on the controller model
-  /// and keeps [RelationshipType.controllerMessagePages] in sync.
-  void setControllerMessagePages({required String controllerId, required List<ControllerMessagePageModel> messagePages}) =>
-      _service.setControllerMessagePages(controllerId: controllerId, messagePages: messagePages);
+  Set<String> getMessageIdsForPage(String pageId) => _service.getMessageIdsForPage(pageId);
 
-  // ─── Schedule page config ─────────────────────────────────────────────────
+  void setMessageIdsForPage({required String pageId, required Set<String> messageIds}) => _service.setMessageIdsForPage(pageId: pageId, messageIds: messageIds);
 
-  /// Returns the persisted [ControllerSchedulePageConfig] for [controllerId].
+  // ─── Schedule config ──────────────────────────────────────────────────────
+
   ControllerSchedulePageConfig getControllerScheduleConfig(String controllerId) => _service.getControllerScheduleConfig(controllerId);
 
-  /// Replaces the [ControllerSchedulePageConfig] for [controllerId].
   void setControllerScheduleConfig({
     required String controllerId,
     required ControllerSchedulePageConfig config,
   }) => _service.setControllerScheduleConfig(controllerId: controllerId, config: config);
 
+  Set<String> getSelectedScheduleIds(String controllerId) => _service.getSelectedScheduleIds(controllerId);
+
+  void setSelectedScheduleIds({required String controllerId, required Set<String> scheduleIds}) =>
+      _service.setSelectedScheduleIds(controllerId: controllerId, scheduleIds: scheduleIds);
+
   // ─── Display config ───────────────────────────────────────────────────────
 
-  /// Returns the persisted [ControllerDisplayConfig] for [controllerId].
   ControllerDisplayConfig getControllerDisplayConfig(String controllerId) => _service.getControllerDisplayConfig(controllerId);
 
-  /// Replaces the [ControllerDisplayConfig] for [controllerId].
   void setControllerDisplayConfig({
     required String controllerId,
     required ControllerDisplayConfig config,
