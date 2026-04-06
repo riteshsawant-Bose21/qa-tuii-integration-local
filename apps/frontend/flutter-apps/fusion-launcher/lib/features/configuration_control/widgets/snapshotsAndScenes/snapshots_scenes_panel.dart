@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/snapshotsAndScenes/pages_panel.dart';
-import 'package:fusion_launcher/features/configuration_control/widgets/snapshotsAndScenes/scenes_list_panel.dart';
+import 'package:fusion_launcher/features/configuration_control/widgets/snapshotsAndScenes/snapshot_and_scenes_section.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/snapshotsAndScenes/snapshot_vc_panel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -26,7 +26,7 @@ class SnapshotsScenesPanel extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               /// Left: SCENES + SNAPSHOT PAGE panel
-              Expanded(flex: 3, child: ScenesListPanel()),
+              Expanded(flex: 3, child: SnapshotAndScenesSection()),
               SizedBox(width: 12),
 
               /// Middle: PAGES panel
