@@ -8,15 +8,15 @@ class AudioInputUsageRow extends StatelessWidget {
   final IconData? icon;
   final String? name;
   final String? subLabel;
-  final bool hasSignal;
   final bool isStereo;
+  final String blockId;
 
   const AudioInputUsageRow({
     this.icon,
     this.name,
     this.subLabel,
-    this.hasSignal = false,
     this.isStereo = false,
+    required this.blockId,
     super.key,
   });
 
@@ -59,11 +59,11 @@ class AudioInputUsageRow extends StatelessWidget {
                 Row(
                   children: <Widget>[
                     if (isStereo) ...<Widget>[
-                      const StatusIndicator(isActive: true, label: "L"),
+                       StatusIndicator(blockId: blockId, label: "L"),
                       const SizedBox(width: 8),
-                      const StatusIndicator(isActive: true, label: "R"),
+                       StatusIndicator(blockId: blockId, label: "R"),
                     ] else ...<Widget>[
-                      StatusIndicator(isActive: hasSignal, label: subLabel ?? ""),
+                      StatusIndicator(blockId: blockId, label: subLabel ?? ""),
                     ],
                   ],
                 ),

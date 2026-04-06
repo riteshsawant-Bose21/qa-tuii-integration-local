@@ -141,6 +141,7 @@ class FusionNetworkClient {
     dynamic data,
     String? additionalPath,
     String? baseUrlToOverride,
+    Map<String, dynamic>? urlParameters,
     bool isSecure = true,
     T Function(dynamic)? fromJson,
   }) async {
@@ -162,7 +163,12 @@ class FusionNetworkClient {
 
       // final dynamic body = data is FormData ? data : jsonEncode(data);
 
-      final Response<dynamic> response = await httpClient.dioInstance.post(url, data: data, options: options);
+      final Response<dynamic> response = await httpClient.dioInstance.post(
+        url,
+        data: data,
+        options: options,
+        queryParameters: urlParameters,
+      );
 
       if (response.statusCode! >= 200 && response.statusCode! < 300) {
         T data = fromJson != null ? fromJson(response.data) : response.data;
@@ -275,6 +281,16 @@ class FusionNetworkClient {
 
   Future<ResponseCallback<T>> connect<T>({required String vip}) async {
     try {
+      // Close any existing socket to prevent leaks on reconnect.
+      if (subscriberSocket != null) {
+        try {
+          subscriberSocket?.close();
+        } catch (_) {
+          // Best-effort cleanup — the old socket may already be dead.
+        }
+        subscriberSocket = null;
+      }
+
       await telemetryData.initializeTelemetryAddresses(this, vip);
       subscriberSocket = _context.createSocket(SocketType.sub);
       for (String url in TelemetryData.telemetryAddresses) {
@@ -306,9 +322,16 @@ class FusionNetworkClient {
   Stream<ResponseCallback<dynamic>> get responseMessages async* {
     if (subscriberSocket == null) {
       yield ResponseCallback<dynamic>(success: false, message: 'No server socket available');
+      return;
     }
 
-    await for (final ZFrame frame in subscriberSocket!.frames) {
+    final ZSocket socket = subscriberSocket!;
+
+    await for (final ZFrame frame in socket.frames) {
+      // If the socket was replaced by a reconnect while iterating, stop
+      // this generator so the old subscription can be garbage-collected.
+      if (subscriberSocket != socket) return;
+
       try {
         final String message = utf8.decode(frame.payload, allowMalformed: true);
         yield ResponseCallback<dynamic>(success: true, message: "New data received", data: jsonDecode(message));

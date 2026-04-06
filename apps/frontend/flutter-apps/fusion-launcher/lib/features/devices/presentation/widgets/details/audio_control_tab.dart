@@ -35,19 +35,29 @@ class AudioControlTab extends StatelessWidget {
             Row(
               children: <Widget>[
                 Expanded(
-                  child: AudioStatusCard(
-                    title: "AUDIO INPUTS",
-                    content: AudioInputsUsageSection(
-                      hardwareComponent: hardwareComponent,
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      minHeight: 250,
+                    ),
+                    child: AudioStatusCard(
+                      title: "AUDIO INPUTS",
+                      content: AudioInputsUsageSection(
+                        hardwareComponent: hardwareComponent,
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 4),
                 Expanded(
-                  child: AudioStatusCard(
-                    title: "AUDIO OUTPUTS",
-                    content: AudioOutputsUsageSection(
-                      hardwareComponent: hardwareComponent,
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      minHeight: 250,
+                    ),
+                    child: AudioStatusCard(
+                      title: "AUDIO OUTPUTS",
+                      content: AudioOutputsUsageSection(
+                        hardwareComponent: hardwareComponent,
+                      ),
                     ),
                   ),
                 ),
@@ -58,10 +68,15 @@ class AudioControlTab extends StatelessWidget {
             Row(
               children: <Widget>[
                 Expanded(
-                  child: AudioStatusCard(
-                    title: "CONTROL I/O",
-                    content: ControlIOSection(
-                      hardwareComponent: hardwareComponent,
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      minHeight: 250,
+                    ),
+                    child: AudioStatusCard(
+                      title: "CONTROL I/O",
+                      content: ControlIOSection(
+                        hardwareComponent: hardwareComponent,
+                      ),
                     ),
                   ),
                 ),
@@ -69,9 +84,14 @@ class AudioControlTab extends StatelessWidget {
                 Expanded(
                   child:
                       isDsp
-                          ? const AudioStatusCard(
-                            title: "AES67 I/O",
-                            content: Aes67IOUsageSection(),
+                          ? Container(
+                            constraints: const BoxConstraints(
+                              minHeight: 250,
+                            ),
+                            child: const AudioStatusCard(
+                              title: "AES67 I/O",
+                              content: Aes67IOUsageSection(),
+                            ),
                           )
                           : Container(),
                 ),

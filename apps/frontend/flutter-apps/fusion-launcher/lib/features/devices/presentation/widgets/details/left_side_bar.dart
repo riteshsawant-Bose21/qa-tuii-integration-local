@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/assets/asset_icons.dart';
+import 'package:fusion_launcher/features/projects/models/device_system_info.dart';
+import 'package:fusion_launcher/features/projects/view_model/meter_data/meter_data_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/service_locator.dart';
@@ -7,7 +10,7 @@ import '../../../../configuration/presentation/viewmodel/project_view_model.dart
 import 'device_details_footer.dart';
 import 'device_info_card.dart';
 
-class DeviceLeftSideBar extends StatelessWidget {
+class DeviceLeftSideBar extends StatefulWidget {
   final HardwareComponent device;
 
   const DeviceLeftSideBar({
@@ -15,30 +18,43 @@ class DeviceLeftSideBar extends StatelessWidget {
     required this.device,
   });
 
+  @override
+  State<DeviceLeftSideBar> createState() => _DeviceLeftSideBarState();
+}
+
+class _DeviceLeftSideBarState extends State<DeviceLeftSideBar> {
+  @override
+  void initState() {
+    super.initState();
+    serviceLocator<MeterDataViewModel>().registerObserver();
+  }
+
+  @override
+  void dispose() {
+    serviceLocator<MeterDataViewModel>().unregisterObserver();
+    super.dispose();
+  }
+
   String _getDeviceLocation(HardwareComponent device) {
     if (device.locationEntity.listeningAreaId != null) {
-      final Zone? zone = serviceLocator<ProjectViewModel>()
-          .getZonesForListeningArea(
-            areaId: device.locationEntity.listeningAreaId!,
-          );
+      final Zone? zone = serviceLocator<ProjectViewModel>().getZonesForListeningArea(
+        areaId: device.locationEntity.listeningAreaId!,
+      );
       if (zone != null) {
         return zone.name;
       }
-      final SubZone? subZone = serviceLocator<ProjectViewModel>()
-          .getSubZoneForListeningArea(
-            areaId: device.locationEntity.listeningAreaId!,
-          );
+      final SubZone? subZone = serviceLocator<ProjectViewModel>().getSubZoneForListeningArea(
+        areaId: device.locationEntity.listeningAreaId!,
+      );
       if (subZone != null) {
-        final Zone? parentZone = serviceLocator<ProjectViewModel>()
-            .getZoneForSubZone(subZoneId: subZone.id);
+        final Zone? parentZone = serviceLocator<ProjectViewModel>().getZoneForSubZone(subZoneId: subZone.id);
         if (parentZone != null) {
           return "${parentZone.name} > ${subZone.name}";
         }
         return subZone.name;
       }
     }
-    final EquipLocation? location = serviceLocator<ProjectViewModel>()
-        .getEquipLocationForHardware(hardwareId: device.id);
+    final EquipLocation? location = serviceLocator<ProjectViewModel>().getEquipLocationForHardware(hardwareId: device.id);
     if (location != null) {
       return location.name;
     }
@@ -102,14 +118,14 @@ class DeviceLeftSideBar extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             FusionAppText(
-                              text: device.name,
+                              text: widget.device.name,
                               style: context.textTheme.labelLarge!.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             const SizedBox(height: 4),
                             FusionAppText(
-                              text: device.hardwareName,
+                              text: widget.device.hardwareName,
                               style: context.textTheme.labelSmall!.copyWith(
                                 color: context.colorScheme.textSecondary,
                               ),
@@ -187,57 +203,72 @@ class DeviceLeftSideBar extends StatelessWidget {
                     ),
                     alignment: Alignment.center,
                     child: FusionImage.asset(
-                      device.assetImagePath,
+                      widget.device.assetImagePath,
 
                       height: 64,
                       fit: BoxFit.contain,
                     ), // Placeholder
                   ),
 
-                  // 5. Stats Grid
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Column(
-                      children: <Widget>[
-                        // Location
-                        DeviceInfoCard(
-                          label: "Equipment Location",
-                          value: _getDeviceLocation(device),
-                          assetPath: AssetIcons.eqLocation,
-                        ),
-                        const SizedBox(height: 8),
-                        // Temp
-                        const DeviceInfoCard(
-                          label: "Temperature / Moderate",
-                          value: "35°C",
-                          assetPath: AssetIcons.temperature,
-                        ),
-                        const SizedBox(height: 8),
-                        // CPU / Disk Row
-                        Row(
-                          children: <Widget>[
-                            const Expanded(
-                              child: DeviceInfoCard(
-                                label: "CPU Usage",
-                                value: "63%",
-                                assetPath: AssetIcons.levelIndicator,
-                              ),
-                            ),
+                  // 5. Stats Grid — driven by live meter data
+                  BlocBuilder<MeterDataViewModel, MeterDataState>(
+                    bloc: serviceLocator<MeterDataViewModel>(),
+                    buildWhen: (MeterDataState prev, MeterDataState curr) {
+                      return prev.isConnected != curr.isConnected || prev.deviceSystemInfo != curr.deviceSystemInfo;
+                    },
+                    builder: (BuildContext context, MeterDataState meterState) {
+                      final DeviceSystemInfo? sysInfo = meterState.systemInfoFor(widget.device.id);
+                      final bool hasLiveData = meterState.isConnected && sysInfo != null && sysInfo.hasData;
 
-                            if (device is FusionDsp) ...<Widget>[
-                              const SizedBox(width: 8),
-                              const Expanded(
-                                child: DeviceInfoCard(
-                                  label: "Disk Usage",
-                                  value: "63%",
-                                  assetPath: AssetIcons.diskUsage,
+                      final String tempLabel = hasLiveData ? "${sysInfo.temperature.toStringAsFixed(1)}°C" : "--";
+                      final String cpuLabel = hasLiveData ? "${sysInfo.ram.toStringAsFixed(1)}%" : "--";
+                      final String diskLabel = hasLiveData ? "${sysInfo.emmc.toStringAsFixed(1)}%" : "--";
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Column(
+                          children: <Widget>[
+                            // Location
+                            DeviceInfoCard(
+                              label: "Equipment Location",
+                              value: _getDeviceLocation(widget.device),
+                              assetPath: AssetIcons.eqLocation,
+                            ),
+                            const SizedBox(height: 8),
+                            // Temp
+                            DeviceInfoCard(
+                              label: hasLiveData ? "Temperature" : "Temperature",
+                              value: tempLabel,
+                              assetPath: AssetIcons.temperature,
+                            ),
+                            const SizedBox(height: 8),
+                            // CPU / Disk Row
+                            Row(
+                              children: <Widget>[
+                                Expanded(
+                                  child: DeviceInfoCard(
+                                    label: "CPU Usage",
+                                    value: cpuLabel,
+                                    assetPath: AssetIcons.levelIndicator,
+                                  ),
                                 ),
-                              ),
-                            ],
+
+                                if (widget.device is FusionDsp) ...<Widget>[
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: DeviceInfoCard(
+                                      label: "Disk Usage",
+                                      value: diskLabel,
+                                      assetPath: AssetIcons.diskUsage,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
                           ],
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 16),
@@ -249,7 +280,7 @@ class DeviceLeftSideBar extends StatelessWidget {
                       semanticId: 'left_side_bar_reboot_button',
                       text: "Reboot Device",
                       onTap: () {
-                        _showRebootConfirmation(context, device);
+                        _showRebootConfirmation(context, widget.device);
                       },
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       borderRadius: 8,
@@ -275,37 +306,17 @@ class DeviceLeftSideBar extends StatelessWidget {
 
                         DeviceDetailsFooter(
                           label: "Model",
-                          value: device.hardwareName,
+                          value: widget.device.hardwareName,
                         ),
                         const SizedBox(height: 8),
-                        DeviceDetailsFooter(
+                        const DeviceDetailsFooter(
                           label: "Firmware Version",
-                          value: "v1.0.1 ",
-                          info: Row(
-                            children: <Widget>[
-                              Container(
-                                width: 6,
-                                height: 6,
-                                decoration: BoxDecoration(
-                                  color: context.colorScheme.green,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-
-                              const SizedBox(width: 4),
-                              FusionAppText(
-                                text: "Up to Date",
-                                style: context.textTheme.labelSmall!.copyWith(
-                                  color: context.colorScheme.textPrimary,
-                                ),
-                              ),
-                            ],
-                          ),
+                          value: "--",
                         ),
                         const SizedBox(height: 8),
                         const DeviceDetailsFooter(
                           label: "Serial Number",
-                          value: "DG221G28983",
+                          value: "--",
                         ),
                       ],
                     ),
