@@ -79,6 +79,8 @@ func (h *Handler) routeWebSocketMessageWithConn(request *api.WebSocketRequest, c
 		return h.handlePing(request)
 	case api.WSMsgTypeStartUpdate:
 		return h.handleStartUpdate(request)
+	case api.WSMsgTypeSwUpdateInfo:
+		return h.handleSwUpdateInfo(request)
 	default:
 		return createErrorResponse(&request.ID, api.WSCodeInvalidType, fmt.Sprintf("Unknown message type: %s", request.Type)), nil
 	}

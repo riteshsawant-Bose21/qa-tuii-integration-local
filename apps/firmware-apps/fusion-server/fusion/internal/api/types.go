@@ -372,6 +372,21 @@ type SoftwareUpdateUploadResponse struct {
 	Uploaded  time.Time `json:"uploaded"`
 }
 
+// SwUpdateInfo represents the contents of the /etc/swupdate file.
+type SwUpdateInfo struct {
+	SerialNumber          string `json:"serial_number"`
+	CurrentBundleVersion  string `json:"current_bundle_version"`
+	PreviousBundleVersion string `json:"previous_bundle_version"`
+	Mount                 string `json:"mount"`
+	PreviousMount         string `json:"previous_mount"`
+	Status                string `json:"status"`
+	CurrentState          string `json:"current_state"`
+	BootPartition         string `json:"boot_partition"`
+	PreviousBootPartition string `json:"previous_boot_partition"`
+	Error                 string `json:"error"`
+	UpdatedAt             string `json:"updated_at"`
+}
+
 // softwareUpdateErrorResponse is the JSON body returned on bundle upload errors.
 type SoftwareUpdateErrorResponse struct {
 	Error   string `json:"error"`

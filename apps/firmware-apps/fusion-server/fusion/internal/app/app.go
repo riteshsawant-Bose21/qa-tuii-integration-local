@@ -316,6 +316,8 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivateDELETE(routes.DevicesIDResetEndpoint, app.Server.ResetDeviceCertificate)
 	app.registerPrivatePOST(routes.DevicesIDCertificateEndpoint, app.Server.SetDeviceCertificate)
 
+	app.registerPrivateGET(routes.SoftwareUpdateInfoLocalEndpoint, app.Server.GetLocalSwUpdateInfo)
+
 	app.registerPrivateGET(routes.DataEndpoint, app.Server.ExportData)
 	app.registerPrivatePOST(routes.DataEndpoint, app.Server.ImportData)
 

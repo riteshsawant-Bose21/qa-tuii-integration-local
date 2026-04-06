@@ -540,6 +540,12 @@ func (h *Handler) processSoftwareUpdateStream(part *multipart.Part, origName str
 	return checksum, written, tmpPath, nil
 }
 
+// handleSwUpdateInfo fetches /etc/swupdate from all cluster nodes and returns the aggregated results.
+func (h *Handler) handleSwUpdateInfo(request *api.WebSocketRequest) (*api.WebSocketResponse, error) {
+	infos := h.clusterTransport.GetAllSwUpdateInfo()
+	return createSuccessResponse(&request.ID, api.WSMsgTypeSwUpdateInfo, api.WSCodeOK, "OK", infos), nil
+}
+
 // Helper functions for improved error handling and validation
 
 // validateChecksum validates the computed checksum against expected value
@@ -558,7 +564,7 @@ func validateChecksum(actual, expected string) error {
 		return fmt.Errorf("invalid checksum format - not valid hex: %w", err)
 	}
 	if !strings.EqualFold(actual, expected) {
-		return fmt.Errorf("checksum mismatch: computed=%s, expected=%s", actual, expected)
+		return fmt.Errorf("SHA-256 of received bundle does not match X-Checksum-SHA256 header. Bundle discarded.")
 	}
 	return nil
 }

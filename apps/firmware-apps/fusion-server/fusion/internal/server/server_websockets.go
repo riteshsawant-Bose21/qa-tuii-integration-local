@@ -3,12 +3,15 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	"fusion/internal/utils"
 
+	json "github.com/goccy/go-json"
 	"github.com/gorilla/websocket"
 )
 
@@ -414,4 +417,24 @@ func (s *FusionServer) broadcastToAllClients(message *api.WebSocketResponse) err
 	}
 
 	return nil
+}
+
+// GetLocalSwUpdateInfo handles GET requests for the local /etc/swupdate contents.
+func (s *FusionServer) GetLocalSwUpdateInfo(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+
+	var info api.SwUpdateInfo
+	data, err := os.ReadFile(api.SwUpdateInfoPath)
+	if err != nil {
+		logging.GetLogger().Error("Failed to read %s: %v", api.SwUpdateInfoPath, err)
+	} else if err := json.Unmarshal(data, &info); err != nil {
+		logging.GetLogger().Error("Failed to parse %s: %v", api.SwUpdateInfoPath, err)
+	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	if err := json.NewEncoder(w).Encode(info); err != nil {
+		logging.GetLogger().Error("Error encoding sw update info: %v", err)
+	}
 }

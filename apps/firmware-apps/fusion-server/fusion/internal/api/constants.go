@@ -46,6 +46,7 @@ const (
 	WSMsgTypeError              = "error"
 	WSMsgTypeStartUpdate        = "start_update"
 	WSMsgTypeUpdateProgress     = "update_progress"
+	WSMsgTypeSwUpdateInfo       = "sw_update_info"
 
 	// WS event types (server -> client)
 	WSMsgTypeDeviceUpdate = "device_update"
@@ -113,6 +114,7 @@ const (
 	DefaultCertFileName     = "device.x509.cert"
 	DefaultKeyFileName      = "device.key"
 	SoftwareUpdateInfoPath  = "/etc/buildinfo"
+	SwUpdateInfoPath        = "/etc/swupdate-status"
 	SerialPath              = "/sys/firmware/devicetree/base/serial-number"
 )
 
