@@ -235,7 +235,22 @@ class ProductQuerySpeakerList extends StatelessWidget {
 
                     // In non-withSubwoofer mode, hide the card entirely when nothing is placed
                     final bool isWithSubwooferMode = speakerSelectionViewModel.selectedListeningArea?.lowFrequency == LowFrequency.withSubwoofer;
-                    if (!isWithSubwooferMode && categorizedSpeakers.isEmpty) return const SizedBox.shrink();
+                    if (!isWithSubwooferMode && categorizedSpeakers.isEmpty) {
+                      return Expanded(
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: FusionAppText(
+                              text: 'No speakers selected yet. Select a speaker from the list.',
+                              textAlign: TextAlign.center,
+                              style: context.textTheme.bodySmall?.copyWith(
+                                color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
 
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -630,11 +645,12 @@ class ProductQuerySpeakerList extends StatelessWidget {
                             SemanticTypes.container,
                             "speaker_products_empty_indicator",
                           ),
-                          child: const Center(
+                          child: Center(
                             child: Padding(
-                              padding: EdgeInsets.all(16.0),
+                              padding: const EdgeInsets.all(16.0),
                               child: FusionAppText(
                                 text: 'No products found',
+                                style: context.textTheme.l1Regular,
                               ),
                             ),
                           ),
