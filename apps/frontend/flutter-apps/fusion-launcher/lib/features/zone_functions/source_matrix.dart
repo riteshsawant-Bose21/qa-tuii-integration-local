@@ -82,195 +82,201 @@ class _SourceMatrixZoneControlPanelState extends State<SourceMatrixZoneControlPa
                   border: Border.all(color: context.colorScheme.strokeLight),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Stack(
-                  fit: StackFit.loose,
-                  children: <Widget>[
-                    // TITLTE
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-                        child: FusionAppText(
-                          semanticId: "zone_control_panel_heading",
-                          text: "ZONE CONTROL PANEL - SOURCE MATRIX",
-                          style: context.textTheme.titleSmall,
-                          maxLine: 1,
+                child: SemanticHelper.container(
+                  testId: SemanticHelper.createTestId(SemanticTypes.container, 'zone_control_panel'),
+                  child: Stack(
+                    fit: StackFit.loose,
+                    children: <Widget>[
+                      // TITLTE
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                          child: FusionAppText(
+                            semanticId: "zone_control_panel_heading",
+                            text: "ZONE CONTROL PANEL - SOURCE MATRIX",
+                            style: context.textTheme.titleSmall,
+                            maxLine: 1,
+                          ),
                         ),
                       ),
-                    ),
-
-                    // CLOSE BUTTON
-                    Positioned(
-                      top: 0,
-                      right: 0,
-                      child: Material(
-                        color: Colors.transparent,
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: SemanticHelper.button(
-                            testId: SemanticHelper.createTestId(SemanticTypes.button, "zone_control_panel_close_button"),
-                            child: InkWell(
-                              onTap: Navigator.of(context).pop,
-                              customBorder: const CircleBorder(),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Icon(
-                                  LucideIcons.x200,
-                                  color: context.colorScheme.iconDefault,
+                  
+                      // CLOSE BUTTON
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: SemanticHelper.button(
+                              testId: SemanticHelper.createTestId(SemanticTypes.button, "zone_control_panel_close_button"),
+                              child: InkWell(
+                                onTap: Navigator.of(context).pop,
+                                customBorder: const CircleBorder(),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Icon(
+                                    LucideIcons.x200,
+                                    color: context.colorScheme.iconDefault,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-
-                    /// --------------------------------------------------------------------------------
-                    ///                             MAIN CONTENT
-                    /// --------------------------------------------------------------------------------
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 50.0).copyWith(bottom: hasPriority ? null : 0),
-                      child: SemanticHelper.container(
-                        testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_main_container"),
-                        child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
-                          listener: (BuildContext context, ProjectViewModelState state) {
-                            zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
-                          },
-                          builder: (BuildContext context, ProjectViewModelState state) {
-                            return Container(
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  top: BorderSide(
-                                    color: context.colorScheme.strokeLight,
-                                    width: 0.5,
+                  
+                      /// --------------------------------------------------------------------------------
+                      ///                             MAIN CONTENT
+                      /// --------------------------------------------------------------------------------
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 50.0).copyWith(bottom: hasPriority ? null : 0),
+                        child: SemanticHelper.container(
+                          testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_main_container"),
+                          child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+                            listener: (BuildContext context, ProjectViewModelState state) {
+                              zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
+                            },
+                            builder: (BuildContext context, ProjectViewModelState state) {
+                              return Container(
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                    top: BorderSide(
+                                      color: context.colorScheme.strokeLight,
+                                      width: 0.5,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              padding: const EdgeInsets.all(16.0),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: Container(
+                                padding: const EdgeInsets.all(16.0),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: context.colorScheme.elevation2,
+                                      border: Border.all(color: context.colorScheme.strokeLight),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        Flexible(
+                                          flex: 2,
+                                          fit: FlexFit.loose,
+                                          child: SemanticHelper.container(
+                                            testId: SemanticHelper.createTestId(SemanticTypes.container, 'zone_control_sources'),
+                                            child: SourceMatrixControls(
+                                              zoneID: widget.zoneID,
+                                              zoneFunctions: zoneFunction,
+                                            ),
+                                          ),
+                                        ),
+                  
+                                        VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+                                        MixScenes(
+                                          selectedMixSceneName: selectedMixScene(zoneFunction)?.name,
+                                          zoneId: widget.zoneID,
+                                          onStoreTap: (String? value) {
+                                            if (value == null || value.isEmpty) {
+                                              return FusionToast.error(
+                                                context,
+                                                message: "Please enter a name for the mix scene",
+                                              );
+                                            } else {
+                                              projectViewModel.saveCurrentSettingsAsMixScene(
+                                                functionId: zoneFunction.id,
+                                                sceneName: value,
+                                              );
+                                            }
+                                          },
+                                          mixScenes: zoneFunction.mixScenes.map((MixScene e) => e.name).toList(),
+                                          onMixSceneSelect: (String value) {
+                                            try {
+                                              final MixScene scene = zoneFunction.mixScenes.firstWhere((MixScene scene) => scene.name == value);
+                                              projectViewModel.applyMixSceneToFunction(functionId: zoneFunction.id, sceneId: scene.id);
+                                            } catch (e) {
+                                              // We might get StateError if the scene is not found.
+                                            }
+                                          },
+                                          onDeleteTap: () {
+                                            final MixScene? scene = selectedMixScene(zoneFunction);
+                                            if (scene != null) {
+                                              projectViewModel.removeMixScene(
+                                                sceneId: scene.id,
+                                                functionId: zoneFunction.id,
+                                              );
+                                            }
+                                          },
+                                        ),
+                  
+                                        VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+                  
+                                        PrioritySelectionWidget(zoneId: widget.zoneID),
+                  
+                                        // RIGHT COLUMN (Static)
+                                        Flexible(
+                                          flex: 2,
+                                          child: ZoneControlSliderBuilder(zoneID: widget.zoneID),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      if (hasPriority) ...<Widget>[
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              child: InkWell(
+                                onTap: () {
+                                  SourceMatrixAdditionalSettingsDialog.showDialog(
+                                    context,
+                                    zoneID: widget.zoneID,
+                                  );
+                                },
+                                borderRadius: BorderRadius.circular(8),
+                                splashColor: Colors.transparent,
+                                child: Ink(
+                                  padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
                                     color: context.colorScheme.elevation2,
-                                    border: Border.all(color: context.colorScheme.strokeLight),
-                                    borderRadius: BorderRadius.circular(16),
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: <Widget>[
                                       Flexible(
-                                        flex: 2,
-                                        fit: FlexFit.loose,
-                                        child: SourceMatrixControls(
-                                          zoneID: widget.zoneID,
-                                          zoneFunctions: zoneFunction,
+                                        child: FusionAppText(
+                                          text: "Additional Settings",
+                                          style: Theme.of(context).textTheme.labelSmall,
                                         ),
                                       ),
-
-                                      VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
-                                      MixScenes(
-                                        selectedMixSceneName: selectedMixScene(zoneFunction)?.name,
-                                        zoneId: widget.zoneID,
-                                        onStoreTap: (String? value) {
-                                          if (value == null || value.isEmpty) {
-                                            return FusionToast.error(
-                                              context,
-                                              message: "Please enter a name for the mix scene",
-                                            );
-                                          } else {
-                                            projectViewModel.saveCurrentSettingsAsMixScene(
-                                              functionId: zoneFunction.id,
-                                              sceneName: value,
-                                            );
-                                          }
-                                        },
-                                        mixScenes: zoneFunction.mixScenes.map((MixScene e) => e.name).toList(),
-                                        onMixSceneSelect: (String value) {
-                                          try {
-                                            final MixScene scene = zoneFunction.mixScenes.firstWhere((MixScene scene) => scene.name == value);
-                                            projectViewModel.applyMixSceneToFunction(functionId: zoneFunction.id, sceneId: scene.id);
-                                          } catch (e) {
-                                            // We might get StateError if the scene is not found.
-                                          }
-                                        },
-                                        onDeleteTap: () {
-                                          final MixScene? scene = selectedMixScene(zoneFunction);
-                                          if (scene != null) {
-                                            projectViewModel.removeMixScene(
-                                              sceneId: scene.id,
-                                              functionId: zoneFunction.id,
-                                            );
-                                          }
-                                        },
-                                      ),
-
-                                      VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
-
-                                      PrioritySelectionWidget(zoneId: widget.zoneID),
-
-                                      // RIGHT COLUMN (Static)
-                                      Flexible(
-                                        flex: 2,
-                                        child: ZoneControlSliderBuilder(zoneID: widget.zoneID),
+                                      const SizedBox(width: 8),
+                                      Icon(
+                                        LucideIcons.arrowUpRight200,
+                                        size: 16,
+                                        color: context.colorScheme.iconDefault,
                                       ),
                                     ],
                                   ),
                                 ),
                               ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                    if (hasPriority) ...<Widget>[
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Material(
-                          color: Colors.transparent,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            child: InkWell(
-                              onTap: () {
-                                SourceMatrixAdditionalSettingsDialog.showDialog(
-                                  context,
-                                  zoneID: widget.zoneID,
-                                );
-                              },
-                              borderRadius: BorderRadius.circular(8),
-                              splashColor: Colors.transparent,
-                              child: Ink(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: context.colorScheme.elevation2,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: <Widget>[
-                                    Flexible(
-                                      child: FusionAppText(
-                                        text: "Additional Settings",
-                                        style: Theme.of(context).textTheme.labelSmall,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Icon(
-                                      LucideIcons.arrowUpRight200,
-                                      size: 16,
-                                      color: context.colorScheme.iconDefault,
-                                    ),
-                                  ],
-                                ),
-                              ),
                             ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -370,73 +376,82 @@ class _SourceMatrixControlsState extends State<SourceMatrixControls> {
                       final MonoMatrixSettings matrixSetting =
                           widget.zoneFunctions.matrixMixer!.settings.firstWhere((MatrixSettings ms) => ms.sourceId == source.id) as MonoMatrixSettings;
 
-                      return Row(
-                        children: <Widget>[
-                          Expanded(
-                            flex: 2,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              child: Row(
-                                spacing: 6,
-                                children: <Widget>[
-                                  Container(
-                                    height: 16,
-                                    width: 16,
-                                    decoration: BoxDecoration(
-                                      color: context.colorScheme.primaryColor,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Center(
-                                      child: FusionAppText(
-                                        text: source.name,
-                                        maxLine: 1,
-                                        style: Theme.of(context).textTheme.labelSmall,
+                      return SemanticHelper.container(
+                        testId: SemanticHelper.createTestId(SemanticTypes.container, "sourcemtx_source_$index"),
+                        child: Row(
+                          children: <Widget>[
+                            Expanded(
+                              flex: 2,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                child: Row(
+                                  spacing: 6,
+                                  children: <Widget>[
+                                    SemanticHelper.container(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "signal"),
+                                      child: Container(
+                                        height: 16,
+                                        width: 16,
+                                        decoration: BoxDecoration(
+                                          color: context.colorScheme.primaryColor,
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  FusionNeumorphicButton(
-                                    semanticId: 'source_matrix_icon',
-                                    onTap: () {
-                                      projectViewModel.updateMatrixSettings(
-                                        matrixSettings: matrixSetting.copyWith(
-                                          muted: !matrixSetting.muted,
+                                    Expanded(
+                                      child: Center(
+                                        child: FusionAppText(
+                                          semanticId: 'source_name',
+                                          text: source.name,
+                                          maxLine: 1,
+                                          style: Theme.of(context).textTheme.labelSmall,
                                         ),
-                                        functionId: widget.zoneFunctions.id,
-                                      );
-                                    },
-                                    width: 24,
-                                    height: 24,
-                                    borderRadius: 6,
-                                    child: SvgPicture.asset(
-                                      'assets/svg/volume.svg',
-                                      width: 12,
-                                      height: 12,
-                                      // ignore: deprecated_member_use
-                                      color: matrixSetting.muted ? context.colorScheme.iconDisabled : context.colorScheme.primaryWhite,
+                                      ),
                                     ),
-                                  ),
-                                  Expanded(
-                                    child: NeumorphicTextWithPopupSliderButton(
-                                      isActive: false, // DONT ALLOW ACTIVE STATE.
-                                      value: matrixSetting.gain,
-                                      borderRadius: 6,
-                                      onChanged: (double value) {
+                                    FusionNeumorphicButton(
+                                      semanticId: 'mute_unmute',
+                                      selected: matrixSetting.muted,
+                                      onTap: () {
                                         projectViewModel.updateMatrixSettings(
                                           matrixSettings: matrixSetting.copyWith(
-                                            gain: value,
+                                            muted: !matrixSetting.muted,
                                           ),
                                           functionId: widget.zoneFunctions.id,
                                         );
                                       },
+                                      width: 24,
+                                      height: 24,
+                                      borderRadius: 6,
+                                      child: SvgPicture.asset(
+                                        'assets/svg/volume.svg',
+                                        width: 12,
+                                        height: 12,
+                                        // ignore: deprecated_member_use
+                                        color: matrixSetting.muted ? context.colorScheme.iconDisabled : context.colorScheme.primaryWhite,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                    Expanded(
+                                      child: NeumorphicTextWithPopupSliderButton(
+                                        isActive: false, // DONT ALLOW ACTIVE STATE.
+                                        value: matrixSetting.gain,
+                                        borderRadius: 6,
+                                        onChanged: (double value) {
+                                          projectViewModel.updateMatrixSettings(
+                                            matrixSettings: matrixSetting.copyWith(
+                                              gain: value,
+                                            ),
+                                            functionId: widget.zoneFunctions.id,
+                                          );
+                                        },
+                                        semanticId: 'input_channel_gain',
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       );
                     },
                   ),
@@ -447,119 +462,132 @@ class _SourceMatrixControlsState extends State<SourceMatrixControls> {
         ),
         VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
         Expanded(
-          child: Column(
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Center(
-                  child: FusionAppText(
-                    text: "OUT",
-                    style: Theme.of(context).textTheme.labelSmall,
+          child: SemanticHelper.container(
+            testId: SemanticHelper.createTestId(SemanticTypes.container, 'source_matrix_out_column'),
+            child: Column(
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Center(
+                    child: FusionAppText(
+                      text: "OUT",
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
                   ),
                 ),
-              ),
-              Divider(color: context.colorScheme.strokeLight, height: 0),
-              //
-              // TOP OUT MUTE / UNMUTE BUTTON
-              //
-              SizedBox(
-                height: 120,
-                child: Column(
-                  children: <Widget>[
-                    NeumorphicAudioToggleButton(
-                      isActive: widget.zoneFunctions.matrixMixer! is MonoMatrixMixer ? (widget.zoneFunctions.matrixMixer! as MonoMatrixMixer).outMuted : false,
-                      iconSize: 16,
-                      backgroundColor: context.colorScheme.elevation2,
-                      onTap: () {
-                        projectViewModel.updateMatrixMixer(
-                          matrixMixer:
-                              widget.zoneFunctions.matrixMixer! is MonoMatrixMixer
-                                  ? (widget.zoneFunctions.matrixMixer! as MonoMatrixMixer).copyWith(
-                                    outMuted: !(widget.zoneFunctions.matrixMixer! as MonoMatrixMixer).outMuted,
-                                  )
-                                  : widget.zoneFunctions.matrixMixer!,
-                          functionId: widget.zoneFunctions.id,
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    //
-                    // OUT GAIN SLIDER
-                    //
-                    Builder(
-                      builder: (BuildContext context) {
-                        final MonoMatrixMixer? monoMatrixMixer =
-                            widget.zoneFunctions.matrixMixer is MonoMatrixMixer ? widget.zoneFunctions.matrixMixer as MonoMatrixMixer : null;
-
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: GestureDetector(
-                            onTap: () {
-                              if (monoMatrixMixer == null) return;
-                              projectViewModel.updateMatrixMixer(
-                                matrixMixer: monoMatrixMixer.copyWith(outActive: !monoMatrixMixer.outActive),
-                                functionId: widget.zoneFunctions.id,
-                              );
-                            },
-                            child: NeumorphicTextWithPopupSliderButton(
-                              isActive: monoMatrixMixer != null ? monoMatrixMixer.outActive : false,
-                              value: monoMatrixMixer != null ? monoMatrixMixer.outGain : 0.0,
-                              onChanged: (double value) {
+                Divider(color: context.colorScheme.strokeLight, height: 0),
+                //
+                // TOP OUT MUTE / UNMUTE BUTTON
+                //
+                SizedBox(
+                  height: 120,
+                  child: Column(
+                    children: <Widget>[
+                      NeumorphicAudioToggleButton(
+                        isActive: widget.zoneFunctions.matrixMixer! is MonoMatrixMixer ? (widget.zoneFunctions.matrixMixer! as MonoMatrixMixer).outMuted : false,
+                        iconSize: 16,
+                        backgroundColor: context.colorScheme.elevation2,
+                        onTap: () {
+                          projectViewModel.updateMatrixMixer(
+                            matrixMixer:
+                                widget.zoneFunctions.matrixMixer! is MonoMatrixMixer
+                                    ? (widget.zoneFunctions.matrixMixer! as MonoMatrixMixer).copyWith(
+                                      outMuted: !(widget.zoneFunctions.matrixMixer! as MonoMatrixMixer).outMuted,
+                                    )
+                                    : widget.zoneFunctions.matrixMixer!,
+                            functionId: widget.zoneFunctions.id,
+                          );
+                        },
+                      ),
+            
+                      const SizedBox(height: 16),
+            
+                      //
+                      // OUT GAIN SLIDER
+                      //
+                      Builder(
+                        builder: (BuildContext context) {
+                          final MonoMatrixMixer? monoMatrixMixer =
+                              widget.zoneFunctions.matrixMixer is MonoMatrixMixer ? widget.zoneFunctions.matrixMixer as MonoMatrixMixer : null;
+            
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: GestureDetector(
+                              onTap: () {
+                                if (monoMatrixMixer == null) return;
                                 projectViewModel.updateMatrixMixer(
-                                  matrixMixer: monoMatrixMixer != null ? monoMatrixMixer.copyWith(outGain: value) : widget.zoneFunctions.matrixMixer!,
+                                  matrixMixer: monoMatrixMixer.copyWith(outActive: !monoMatrixMixer.outActive),
                                   functionId: widget.zoneFunctions.id,
                                 );
                               },
+                              child: SemanticHelper.container(
+                                testId: SemanticHelper.createTestId(SemanticTypes.container, 'output_channel_gain'),
+                                isChecked: monoMatrixMixer != null ? monoMatrixMixer.outActive : false,
+                                child: NeumorphicTextWithPopupSliderButton(
+                                  semanticId: 'output_channel_gain',
+                                  isActive: monoMatrixMixer != null ? monoMatrixMixer.outActive : false,
+                                  value: monoMatrixMixer != null ? monoMatrixMixer.outGain : 0.0,
+                                  onChanged: (double value) {
+                                    projectViewModel.updateMatrixMixer(
+                                      matrixMixer: monoMatrixMixer != null ? monoMatrixMixer.copyWith(outGain: value) : widget.zoneFunctions.matrixMixer!,
+                                      functionId: widget.zoneFunctions.id,
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                Divider(color: context.colorScheme.strokeLight, height: 0),
+                Expanded(
+                  child: ListView.separated(
+                    controller: outScrollController,
+                    itemCount: sourcesLength,
+                    padding: EdgeInsets.zero,
+                    physics: const ClampingScrollPhysics(),
+                    separatorBuilder: (BuildContext context, int index) => Divider(color: context.colorScheme.strokeLight, height: 0),
+                    itemBuilder: (BuildContext context, int index) {
+                      final Source source = sources[index];
+            
+                      final MonoMatrixSettings matrixSetting =
+                          widget.zoneFunctions.matrixMixer!.settings.firstWhere((MatrixSettings ms) => ms.sourceId == source.id) as MonoMatrixSettings;
+            
+                      return GestureDetector(
+                        onTap: () {
+                          projectViewModel.updateMatrixSettings(
+                            matrixSettings: matrixSetting.copyWith(outActive: !matrixSetting.outActive),
+                            functionId: widget.zoneFunctions.id,
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          child: SemanticHelper.container(
+                            testId: SemanticHelper.createTestId(SemanticTypes.container, "crosspoint_channel_gain_$index"),
+                            child: NeumorphicTextWithPopupSliderButton(
+                              
+                              isActive: matrixSetting.outActive,
+                              value: matrixSetting.mixLevel,
+                              borderRadius: 6,
+                              onChanged: (double value) {
+                                projectViewModel.updateMatrixSettings(
+                                  matrixSettings: matrixSetting.copyWith(mixLevel: value),
+                                  functionId: widget.zoneFunctions.id,
+                                );
+                              },
+                              semanticId: 'crosspoint_channel_gain',
                             ),
                           ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              Divider(color: context.colorScheme.strokeLight, height: 0),
-              Expanded(
-                child: ListView.separated(
-                  controller: outScrollController,
-                  itemCount: sourcesLength,
-                  padding: EdgeInsets.zero,
-                  physics: const ClampingScrollPhysics(),
-                  separatorBuilder: (BuildContext context, int index) => Divider(color: context.colorScheme.strokeLight, height: 0),
-                  itemBuilder: (BuildContext context, int index) {
-                    final Source source = sources[index];
-
-                    final MonoMatrixSettings matrixSetting =
-                        widget.zoneFunctions.matrixMixer!.settings.firstWhere((MatrixSettings ms) => ms.sourceId == source.id) as MonoMatrixSettings;
-
-                    return GestureDetector(
-                      onTap: () {
-                        projectViewModel.updateMatrixSettings(
-                          matrixSettings: matrixSetting.copyWith(outActive: !matrixSetting.outActive),
-                          functionId: widget.zoneFunctions.id,
-                        );
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        child: NeumorphicTextWithPopupSliderButton(
-                          isActive: matrixSetting.outActive,
-                          value: matrixSetting.mixLevel,
-                          borderRadius: 6,
-                          onChanged: (double value) {
-                            projectViewModel.updateMatrixSettings(
-                              matrixSettings: matrixSetting.copyWith(mixLevel: value),
-                              functionId: widget.zoneFunctions.id,
-                            );
-                          },
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ],

@@ -31,13 +31,20 @@ class SemanticHelper {
 
   static Widget slider({
     required String testId,
+    String? label,
+    num? value,
+    num? minValue,
+    num? maxValue,
     required Widget child,
-    double? value,
   }) {
     return Semantics(
       identifier: testId,
+      container: true,
       slider: true,
-      value: value.toString(),
+      label: label,
+      value: value?.toString(),
+      increasedValue: maxValue?.toString(),
+      decreasedValue: minValue?.toString(),
       child: child,
     );
   }
@@ -243,4 +250,5 @@ class SemanticHelper {
       focusable: blur,
     );
   }
+
 }

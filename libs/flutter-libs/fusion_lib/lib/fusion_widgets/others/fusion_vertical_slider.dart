@@ -148,12 +148,15 @@ class _VerticalSliderState extends State<VerticalSlider> {
 
   @override
   Widget build(BuildContext context) {
-    return SemanticHelper.button(
+    return SemanticHelper.slider(
       testId: SemanticHelper.createTestId(
-        SemanticTypes.button,
+        SemanticTypes.slider,
         'fusion_vertical_slider${widget.semanticId ?? ''}',
       ),
-      label: widget.value.toString(),
+      label: 'max:${widget.max}/min:${widget.min}',
+      value: widget.value,
+      minValue: widget.min,
+      maxValue: widget.max,
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
           final double height = constraints.maxHeight;
@@ -260,17 +263,20 @@ class _VerticalSliderState extends State<VerticalSlider> {
                                       ),
                                     ),
                                     // Active (bottom)
-                                    Container(
-                                      width: widget.trackWidth,
-                                      height: activeHeight,
-                                      decoration: BoxDecoration(
-                                        color:
-                                            widget.activeColor ??
-                                            context.colorScheme.primaryColor,
-                                        borderRadius:
-                                            const BorderRadius.vertical(
-                                              bottom: Radius.circular(100),
-                                            ),
+                                    SemanticHelper.container(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, 'slider_track'),
+                                      child: Container(
+                                        width: widget.trackWidth,
+                                        height: activeHeight,
+                                        decoration: BoxDecoration(
+                                          color:
+                                              widget.activeColor ??
+                                              context.colorScheme.primaryColor,
+                                          borderRadius:
+                                              const BorderRadius.vertical(
+                                                bottom: Radius.circular(100),
+                                              ),
+                                        ),
                                       ),
                                     ),
                                   ],

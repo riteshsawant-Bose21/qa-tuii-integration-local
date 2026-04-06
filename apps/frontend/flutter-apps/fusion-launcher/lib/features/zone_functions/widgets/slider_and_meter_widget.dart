@@ -34,6 +34,7 @@ class SliderAndMeterWidget extends StatelessWidget {
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 4),
             child: VerticalMeter(
+              semanticId: '_output',
               value: 0,
               min: -60,
               max: 12,

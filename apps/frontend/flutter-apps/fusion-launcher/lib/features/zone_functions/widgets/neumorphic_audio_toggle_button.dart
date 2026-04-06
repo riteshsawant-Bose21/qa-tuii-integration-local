@@ -40,23 +40,27 @@ class NeumorphicAudioToggleButton extends StatelessWidget {
             color: backgroundColor,
             borderRadius: borderRadius,
             child: Center(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  FusionAppText(
-                    semanticId: "audio_toggle",
-                    text: !isActive ? "Mute" : "Unmute",
-                    style: context.textTheme.bodyMedium,
-                  ),
-                  const SizedBox(width: 8),
-                  SvgPicture.asset(
-                    'assets/svg/volume.svg',
-                    height: iconSize,
-                    width: iconSize,
-                    // ignore: deprecated_member_use
-                    color: !isActive ? context.colorScheme.iconDefault : context.colorScheme.errorContainer,
-                  ),
-                ],
+              child: SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, "audio_toggle"),
+                isSelected: isActive,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    FusionAppText(
+                      semanticId: "audio_toggle",
+                      text: !isActive ? "Mute" : "Unmute",
+                      style: context.textTheme.bodyMedium,
+                    ),
+                    const SizedBox(width: 8),
+                    SvgPicture.asset(
+                      'assets/svg/volume.svg',
+                      height: iconSize,
+                      width: iconSize,
+                      // ignore: deprecated_member_use
+                      color: !isActive ? context.colorScheme.iconDefault : context.colorScheme.errorContainer,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

@@ -11,6 +11,7 @@ class NeumorphicTextWithPopupSliderButton extends StatefulWidget {
   final Color? backgroundColor;
   final double borderRadius;
   final double iconSize;
+  final String semanticId;
 
   const NeumorphicTextWithPopupSliderButton({
     super.key,
@@ -23,6 +24,7 @@ class NeumorphicTextWithPopupSliderButton extends StatefulWidget {
     this.backgroundColor,
     this.borderRadius = 8,
     this.iconSize = 24,
+    this.semanticId = 'undefined'
   });
 
   @override
@@ -58,6 +60,7 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
                         width: widget.width ?? double.infinity,
                         child: Center(
                           child: FusionAppText(
+                            semanticId: widget.semanticId,
                             text: "${widget.value ?? 0.0}db",
                             maxLine: 1,
                             style: Theme.of(context).textTheme.labelSmall,
@@ -66,7 +69,7 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
                       ),
                     ),
                   ),
-
+              
                   VerticalDivider(
                     color: context.colorScheme.strokeLight,
                     thickness: 1,
@@ -84,71 +87,74 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
                       highlightColor: Colors.transparent, // Disable tap highlight
                       hoverColor: Colors.transparent, // Disable hover color
                     ),
-                    child: PopupMenuButton<String>(
-                      color: context.colorScheme.elevation2,
-                      shadowColor: Colors.transparent,
-                      position: PopupMenuPosition.under,
-                      tooltip: '',
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(9),
-                        side: BorderSide(
-                          color: context.colorScheme.strokeLight,
-                          width: 1,
+                    child: SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, widget.semanticId),
+                      child: PopupMenuButton<String>(
+                        color: context.colorScheme.elevation2,
+                        shadowColor: Colors.transparent,
+                        position: PopupMenuPosition.under,
+                        tooltip: '',
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(9),
+                          side: BorderSide(
+                            color: context.colorScheme.strokeLight,
+                            width: 1,
+                          ),
                         ),
-                      ),
-                      offset: const Offset(0, 10),
-                      padding: EdgeInsets.zero,
-                      menuPadding: EdgeInsets.zero,
-                      clipBehavior: Clip.none,
-                      elevation: 2,
-                      constraints: const BoxConstraints(
-                        maxWidth: 60,
-                        maxHeight: 250,
-                      ),
-                      itemBuilder: (BuildContext context) {
-                        return <PopupMenuEntry<String>>[
-                          PopupMenuItem<String>(
-                            enabled: false,
-                            padding: const EdgeInsets.all(8).copyWith(right: 0),
-                            child: SizedBox(
-                              width: 60,
-                              height: 200,
-                              child: Center(
-                                child: SemanticHelper.button(
-                                  testId: SemanticHelper.createTestId(
-                                    SemanticTypes.button,
-                                    "neumorphic_text_with_popup_slider_button",
-                                  ),
-                                  child: VerticalSlider(
-                                    semanticId: 'neumorphic_text_with_popup_slider_button',
-                                    value: widget.value ?? 0.0,
-                                    min: -60,
-                                    max: 12,
-                                    intervalGap: 12,
-                                    onChanged: (num value) {
-                                      widget.onChanged?.call(
-                                        value.toDouble(),
-                                      );
-                                    },
+                        offset: const Offset(0, 10),
+                        padding: EdgeInsets.zero,
+                        menuPadding: EdgeInsets.zero,
+                        clipBehavior: Clip.none,
+                        elevation: 2,
+                        constraints: const BoxConstraints(
+                          maxWidth: 60,
+                          maxHeight: 250,
+                        ),
+                        itemBuilder: (BuildContext context) {
+                          return <PopupMenuEntry<String>>[
+                            PopupMenuItem<String>(
+                              enabled: false,
+                              padding: const EdgeInsets.all(8).copyWith(right: 0),
+                              child: SizedBox(
+                                width: 60,
+                                height: 200,
+                                child: Center(
+                                  child: SemanticHelper.button(
+                                    testId: SemanticHelper.createTestId(
+                                      SemanticTypes.button,
+                                      "neumorphic_text_with_popup_slider_button",
+                                    ),
+                                    child: VerticalSlider(
+                                      semanticId: 'neumorphic_text_with_popup_slider_button',
+                                      value: widget.value ?? 0.0,
+                                      min: -60,
+                                      max: 12,
+                                      intervalGap: 12,
+                                      onChanged: (num value) {
+                                        widget.onChanged?.call(
+                                          value.toDouble(),
+                                        );
+                                      },
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
+                          ];
+                        },
+                        child: SemanticHelper.button(
+                          testId: SemanticHelper.createTestId(
+                            SemanticTypes.button,
+                            "neumorphic_text_with_popup_slider_button",
                           ),
-                        ];
-                      },
-                      child: SemanticHelper.button(
-                        testId: SemanticHelper.createTestId(
-                          SemanticTypes.button,
-                          "neumorphic_text_with_popup_slider_button",
-                        ),
-                        child: AbsorbPointer(
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 2),
-                            child: Icon(
-                              Icons.keyboard_arrow_down,
-                              color: Colors.grey[600],
-                              size: 16,
+                          child: AbsorbPointer(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 2),
+                              child: Icon(
+                                Icons.keyboard_arrow_down,
+                                color: Colors.grey[600],
+                                size: 16,
+                              ),
                             ),
                           ),
                         ),
