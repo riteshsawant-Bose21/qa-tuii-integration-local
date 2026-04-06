@@ -530,7 +530,8 @@ static void gpt_reset_timing_state_locked(struct fusion_gpt *g)
 	g->pending_future_phc_ns = 0;
 }
 
-static void gpt_reset_control_state_locked(struct fusion_gpt *g)
+static void gpt_reset_control_state_locked(struct fusion_gpt *g,
+					   bool preserve_calibration)
 {
 	g->latest_freq_error = 0;
 	g->error_integrator = 0;
@@ -554,8 +555,10 @@ static void gpt_reset_control_state_locked(struct fusion_gpt *g)
 	g->cal_k1_q16 = 0;
 	g->cal_k2_q16 = 0;
 	g->cal_k3_q16 = 0;
-	cal_config_set_defaults(&g->cal_cfg);
-	g->cal_config_checked = false;
+	if (!preserve_calibration) {
+		cal_config_set_defaults(&g->cal_cfg);
+		g->cal_config_checked = false;
+	}
 }
 
 static struct fusion_gpt *fusion_gpt_get_locked(void)
@@ -837,7 +840,7 @@ int fusion_gpt_reset_timing_state(void)
 		 g->cal_state != CAL_FAIL) ||
 		g->latest_freq_error || g->error_integrator;
 	gpt_reset_timing_state_locked(g);
-	gpt_reset_control_state_locked(g);
+	gpt_reset_control_state_locked(g, true);
 	raw_spin_unlock(&g->ctrl_lock);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
@@ -1806,7 +1809,7 @@ static int gpt_start(struct fusion_gpt *g)
 	raw_spin_lock_irqsave(&g->pps_lock, flags);
 	raw_spin_lock(&g->ctrl_lock);
 	gpt_reset_timing_state_locked(g);
-	gpt_reset_control_state_locked(g);
+	gpt_reset_control_state_locked(g, false);
 	raw_spin_unlock(&g->ctrl_lock);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
