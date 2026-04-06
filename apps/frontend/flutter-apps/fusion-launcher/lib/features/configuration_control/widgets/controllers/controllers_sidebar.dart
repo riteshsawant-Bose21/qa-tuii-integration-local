@@ -60,8 +60,8 @@ class ControllersSidebar extends StatelessWidget {
   void _handleAddController(BuildContext context) {
     AddControllerDialog.show(
       context,
-      onControllerAdded: () {
-        context.read<ConfigurationControlViewmodel>().refresh();
+      onControllerAdded: (String newControllerId) {
+        context.read<ConfigurationControlViewmodel>().selectController(newControllerId);
       },
     );
   }

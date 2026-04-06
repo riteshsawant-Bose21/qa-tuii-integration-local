@@ -10,7 +10,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Dialog for adding a new controller
 class AddControllerDialog extends StatelessWidget {
-  final VoidCallback? onControllerAdded;
+  /// Called with the new controller's ID when it is successfully created.
+  final void Function(String controllerId)? onControllerAdded;
 
   const AddControllerDialog({
     super.key,
@@ -18,7 +19,7 @@ class AddControllerDialog extends StatelessWidget {
   });
 
   /// Show the dialog using showGeneralDialog like MessagePlayerConfigDialog
-  static Future<bool?> show(BuildContext context, {VoidCallback? onControllerAdded}) async {
+  static Future<bool?> show(BuildContext context, {void Function(String controllerId)? onControllerAdded}) async {
     return await showGeneralDialog<bool>(
       context: context,
       barrierDismissible: true,
@@ -44,7 +45,7 @@ class AddControllerDialog extends StatelessWidget {
 }
 
 class _AddControllerDialogContent extends StatefulWidget {
-  final VoidCallback? onControllerAdded;
+  final void Function(String controllerId)? onControllerAdded;
 
   const _AddControllerDialogContent({this.onControllerAdded});
 
@@ -1005,9 +1006,9 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
   }
 
   Future<void> _onAddButtonPressed(BuildContext context) async {
-    final bool success = await context.read<AddControllerCubit>().addController();
-    if (success && context.mounted) {
-      widget.onControllerAdded?.call();
+    final String? newControllerId = await context.read<AddControllerCubit>().addController();
+    if (newControllerId != null && context.mounted) {
+      widget.onControllerAdded?.call(newControllerId);
       Navigator.of(context).pop(true);
     }
   }

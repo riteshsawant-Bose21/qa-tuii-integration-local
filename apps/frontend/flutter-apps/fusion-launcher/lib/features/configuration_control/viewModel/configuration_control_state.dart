@@ -2,8 +2,8 @@ import 'package:equatable/equatable.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 
-/// A user-created snapshot page — groups selected snapshots under a name.
-/// Displayed in the SNAPSHOT PAGE list and on the wall controller.
+const Object _kClear = Object();
+
 class SnapshotPageModel extends Equatable {
   final String id;
   final String name;
@@ -302,7 +302,8 @@ class ConfigControlLoaded extends ConfigurationControlState {
   /// Screen sleep time in seconds for the controller settings tab (per-controller).
   final int sleepTime;
 
-  const ConfigControlLoaded({
+  // ignore: prefer_const_constructors_in_immutables
+  ConfigControlLoaded({
     required this.controllers,
     required this.zones,
     this.subZonesInZones = const <String, List<SubZone>>{},
@@ -337,7 +338,36 @@ class ConfigControlLoaded extends ConfigurationControlState {
     this.sleepTime = 30,
   });
 
-  /// Create a copy with updated values
+  // ── Computed / cached properties ───────────────────────────────────────────
+
+  /// Filtered controllers matching [searchQuery] — computed once per instance.
+  late final List<FusionController> filteredControllers =
+      searchQuery.isEmpty ? controllers : controllers.where((FusionController c) => c.name.toLowerCase().contains(searchQuery.toLowerCase())).toList();
+
+  /// The currently selected [FusionController], or `null` if not found.
+  late final FusionController? selectedController = controllers.where((FusionController c) => c.id == selectedControllerId).firstOrNull;
+
+  /// Whether the selected controller is a Pro type (SKU or name contains "pro").
+  late final bool isProController = () {
+    final FusionController? c = selectedController;
+    if (c == null) return false;
+    final String sku = c.sku.toLowerCase();
+    final String name = c.name.toLowerCase();
+    return sku.contains('pro') || name.contains('pro');
+  }();
+
+  /// Zones associated with the selected controller.
+  // TODO(future): filter by controller-zone mapping when available.
+  List<Zone> get controllerZones => zones;
+
+  // ── copyWith ───────────────────────────────────────────────────────────────
+
+  /// Returns a copy with updated values.
+  ///
+  /// Nullable fields use the [_kClear] sentinel:
+  /// - **Omit** the parameter → keeps the existing value.
+  /// - Pass **`null`** → explicitly sets the field to `null`.
+  /// - Pass a **value** → sets the field to that value.
   ConfigControlLoaded copyWith({
     List<FusionController>? controllers,
     List<Zone>? zones,
@@ -350,31 +380,24 @@ class ConfigControlLoaded extends ConfigurationControlState {
     List<SnapshotPageModel>? snapshotPages,
     List<Source>? messagePlayers,
     Set<String>? selectedMessagePlayerIds,
-    String? selectedMessagePageId,
+    Object? selectedMessagePageId = _kClear,
     Map<String, List<MessageModel>>? messagesPerPlayer,
     Map<String, Set<String>>? selectedMessageIdsPerPlayer,
     List<ScheduleConfig>? allSchedules,
     bool? showUpcoming,
     ScheduleDisplayMode? scheduleDisplayMode,
     Set<String>? selectedScheduleIds,
-    String? selectedControllerId,
-    String? selectedZoneId,
+    Object? selectedControllerId = _kClear,
+    Object? selectedZoneId = _kClear,
     ConfigControlTab? currentTab,
     String? searchQuery,
     Set<String>? selectedZoneIds,
     Set<String>? selectedSubZoneIds,
-    String? activeSubZoneId,
+    Object? activeSubZoneId = _kClear,
     Set<String>? selectedSceneSetIds,
-    String? selectedSceneSetId,
-    String? activeSnapshotId,
-    String? selectedSnapshotPageId,
-    bool clearSelectedControllerId = false,
-    bool clearSelectedZoneId = false,
-    bool clearActiveSubZoneId = false,
-    bool clearSelectedSceneSetId = false,
-    bool clearActiveSnapshotId = false,
-    bool clearSelectedSnapshotPageId = false,
-    bool clearSelectedMessagePageId = false,
+    Object? selectedSceneSetId = _kClear,
+    Object? activeSnapshotId = _kClear,
+    Object? selectedSnapshotPageId = _kClear,
     ScreenMode? screenMode,
     ScreenSaverOption? screenSaver,
     int? sleepTime,
@@ -391,62 +414,28 @@ class ConfigControlLoaded extends ConfigurationControlState {
       snapshotPages: snapshotPages ?? this.snapshotPages,
       messagePlayers: messagePlayers ?? this.messagePlayers,
       selectedMessagePlayerIds: selectedMessagePlayerIds ?? this.selectedMessagePlayerIds,
-      selectedMessagePageId: clearSelectedMessagePageId ? null : (selectedMessagePageId ?? this.selectedMessagePageId),
+      selectedMessagePageId: identical(selectedMessagePageId, _kClear) ? this.selectedMessagePageId : selectedMessagePageId as String?,
       messagesPerPlayer: messagesPerPlayer ?? this.messagesPerPlayer,
       selectedMessageIdsPerPlayer: selectedMessageIdsPerPlayer ?? this.selectedMessageIdsPerPlayer,
       allSchedules: allSchedules ?? this.allSchedules,
       showUpcoming: showUpcoming ?? this.showUpcoming,
       scheduleDisplayMode: scheduleDisplayMode ?? this.scheduleDisplayMode,
       selectedScheduleIds: selectedScheduleIds ?? this.selectedScheduleIds,
-      selectedControllerId: clearSelectedControllerId ? null : (selectedControllerId ?? this.selectedControllerId),
-      selectedZoneId: clearSelectedZoneId ? null : (selectedZoneId ?? this.selectedZoneId),
+      selectedControllerId: identical(selectedControllerId, _kClear) ? this.selectedControllerId : selectedControllerId as String?,
+      selectedZoneId: identical(selectedZoneId, _kClear) ? this.selectedZoneId : selectedZoneId as String?,
       currentTab: currentTab ?? this.currentTab,
       searchQuery: searchQuery ?? this.searchQuery,
       selectedZoneIds: selectedZoneIds ?? this.selectedZoneIds,
       selectedSubZoneIds: selectedSubZoneIds ?? this.selectedSubZoneIds,
-      activeSubZoneId: clearActiveSubZoneId ? null : (activeSubZoneId ?? this.activeSubZoneId),
+      activeSubZoneId: identical(activeSubZoneId, _kClear) ? this.activeSubZoneId : activeSubZoneId as String?,
       selectedSceneSetIds: selectedSceneSetIds ?? this.selectedSceneSetIds,
-      selectedSceneSetId: clearSelectedSceneSetId ? null : (selectedSceneSetId ?? this.selectedSceneSetId),
-      activeSnapshotId: clearActiveSnapshotId ? null : (activeSnapshotId ?? this.activeSnapshotId),
-      selectedSnapshotPageId: clearSelectedSnapshotPageId ? null : (selectedSnapshotPageId ?? this.selectedSnapshotPageId),
+      selectedSceneSetId: identical(selectedSceneSetId, _kClear) ? this.selectedSceneSetId : selectedSceneSetId as String?,
+      activeSnapshotId: identical(activeSnapshotId, _kClear) ? this.activeSnapshotId : activeSnapshotId as String?,
+      selectedSnapshotPageId: identical(selectedSnapshotPageId, _kClear) ? this.selectedSnapshotPageId : selectedSnapshotPageId as String?,
       screenMode: screenMode ?? this.screenMode,
       screenSaver: screenSaver ?? this.screenSaver,
       sleepTime: sleepTime ?? this.sleepTime,
     );
-  }
-
-  /// Get filtered controllers based on search query
-  List<FusionController> get filteredControllers {
-    if (searchQuery.isEmpty) {
-      return controllers;
-    }
-    final String query = searchQuery.toLowerCase();
-    return controllers.where((FusionController c) => c.name.toLowerCase().contains(query)).toList();
-  }
-
-  /// Get the currently selected controller
-  FusionController? get selectedController {
-    if (selectedControllerId == null) return null;
-    try {
-      return controllers.firstWhere((FusionController c) => c.id == selectedControllerId);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// Check if the selected controller is a Pro type
-  bool get isProController {
-    final FusionController? controller = selectedController;
-    if (controller == null) return false;
-    final String sku = controller.sku.toLowerCase();
-    final String name = controller.name.toLowerCase();
-    return sku.contains('pro') || name.contains('pro');
-  }
-
-  /// Get zones associated with the selected controller
-  List<Zone> get controllerZones {
-    // For now, return all zones. In future, this can be filtered based on controller-zone mapping
-    return zones;
   }
 
   @override

@@ -1,17 +1,28 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
 
+import '../../../../core/service_locator.dart';
+import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../viewModel/configuration_control_state.dart';
+
 /// Virtual Control section — shows a QR code for mobile virtual wall controller access
 class VirtualControlSection extends StatelessWidget {
   final String? controllerUrl;
+  final ConfigurationControlState state;
 
-  const VirtualControlSection({super.key, this.controllerUrl});
+  const VirtualControlSection({super.key, this.controllerUrl, required this.state});
 
   @override
   Widget build(BuildContext context) {
-    final String qrData = controllerUrl?.isNotEmpty == true ? controllerUrl! : 'https://fusion-virtual-controller.local';
+    final String qrData = jsonEncode(<String, String>{
+      "vip": serviceLocator<ProjectViewModel>().virtualIP ?? "192.168.1.110",
+      // "controller_id": state.selectedControllerId ?? "No Controller ID",
+      "controller_id": "CTRL1762958340064766236",
+    });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -27,7 +38,7 @@ class VirtualControlSection extends StatelessWidget {
             children: <Widget>[
               _buildQrCode(context, qrData),
               const SizedBox(width: 18),
-              _buildDescription(context, qrData),
+              _buildDescription(context),
             ],
           ),
         ),
@@ -54,7 +65,7 @@ class VirtualControlSection extends StatelessWidget {
     );
   }
 
-  Widget _buildDescription(BuildContext context, String qrData) {
+  Widget _buildDescription(BuildContext context) {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

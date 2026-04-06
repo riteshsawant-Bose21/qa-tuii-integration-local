@@ -167,11 +167,12 @@ class AddControllerCubit extends Cubit<AddControllerState> {
     return projectViewModel.getSubZonesForZone(parentZoneId: zoneId);
   }
 
-  /// Add the controller to the project
-  Future<bool> addController() async {
+  /// Add the controller to the project.
+  /// Returns the new controller's ID on success, or `null` on failure.
+  Future<String?> addController() async {
     if (!state.isValid) {
       emit(state.copyWith(errorMessage: 'Please fill in all required fields'));
-      return false;
+      return null;
     }
 
     emit(state.copyWith(isLoading: true, clearErrorMessage: true));
@@ -183,9 +184,15 @@ class AddControllerCubit extends Cubit<AddControllerState> {
       // Add controller to project
       projectViewModel.addHardware(hardware: controller);
 
-      // If location is zone, associate controller with zone
-      if (state.locationType == LocationType.zone && state.selectedZoneId != null) {
-        // TODO: Add controller-zone association when API is available
+      // Persist all zone assignments selected in "Assign Control"
+      if (state.assignControl && state.selectedControlZoneIds.isNotEmpty) {
+        for (final String zoneId in state.selectedControlZoneIds) {
+          projectViewModel.assignZoneToController(
+            controllerId: controller.id,
+            zoneId: zoneId,
+            autoSave: false,
+          );
+        }
       }
 
       // If location is equipment location, associate controller
@@ -197,7 +204,7 @@ class AddControllerCubit extends Cubit<AddControllerState> {
       }
 
       emit(state.copyWith(isLoading: false));
-      return true;
+      return controller.id;
     } catch (e) {
       emit(
         state.copyWith(
@@ -205,7 +212,7 @@ class AddControllerCubit extends Cubit<AddControllerState> {
           errorMessage: 'Failed to add controller: $e',
         ),
       );
-      return false;
+      return null;
     }
   }
 

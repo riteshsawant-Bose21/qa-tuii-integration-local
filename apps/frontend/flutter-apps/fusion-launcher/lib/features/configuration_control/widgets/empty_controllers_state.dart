@@ -105,10 +105,9 @@ class EmptyControllersState extends StatelessWidget {
   void _showAddControllerDialog(BuildContext context) {
     AddControllerDialog.show(
       context,
-      onControllerAdded: () {
-        // Refresh the viewmodel when a controller is added
+      onControllerAdded: (String newControllerId) {
         if (context.mounted) {
-          context.read<ConfigurationControlViewmodel>().refresh();
+          context.read<ConfigurationControlViewmodel>().selectController(newControllerId);
         }
       },
     );

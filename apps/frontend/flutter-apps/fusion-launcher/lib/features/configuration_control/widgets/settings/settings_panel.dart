@@ -33,7 +33,7 @@ class SettingsPanel extends StatelessWidget {
                   child: _buildCard(
                     context,
                     child: VirtualControlSection(
-                      controllerUrl: _buildControllerUrl(state),
+                      state: state,
                     ),
                   ),
                 ),

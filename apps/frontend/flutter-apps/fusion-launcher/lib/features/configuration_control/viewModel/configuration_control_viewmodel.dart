@@ -22,8 +22,6 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
     _projectSubscription = _projectViewModel.stream.listen((_) => _sync());
   }
 
-  // ─── Service-locator accessor (same pattern as MessagePlayerConfigCubit) ───
-
   /// Lazy reference — never hold a field copy, always read from the locator.
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
 
@@ -44,18 +42,10 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
   // ─── Data loading ──────────────────────────────────────────────────────────
 
   /// Loads (or reloads) data from the project view model.
-  ///
-  /// Pass [preserveControllerId] to keep the current selection; otherwise the
-  /// first controller is selected.
-  /// When [preserveControllerId] differs from the currently selected controller
-  /// (i.e. the user deliberately switched controllers) transient UI selections
-  /// (active scene set, active snapshot, selected pages) are reset so the new
-  /// controller starts with a clean slate while still restoring its own
-  /// persisted data.
   void _loadData({String? preserveControllerId}) {
     if (_loaded == null) emit(const ConfigControlLoading());
 
-    // Detect whether we are switching to a different controller.
+    /// Detect whether we are switching to a different controller.
     final bool isControllerSwitch =
         preserveControllerId != null && _loaded?.selectedControllerId != null && preserveControllerId != _loaded!.selectedControllerId;
 
@@ -78,7 +68,6 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
       final Set<String> usedSnapshotIds = _computeUsedSnapshotIds(snapshotsPerPage);
 
       // Load message players
-      // Load message players
       final List<Source> messagePlayers =
           _projectViewModel.sources
               .where(
@@ -94,7 +83,7 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
       // Load schedules
       final List<ScheduleConfig> allSchedules = _projectViewModel.getAllSchedules();
 
-      // Keep the previously selected controller when syncing; fall back to first.
+      // Keep the previously selected controller
       final FusionController selected = _resolveController(controllers, preserveControllerId);
       final _ZoneSelection sel = _buildZoneSelection(selected);
 
@@ -183,7 +172,7 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
       final SubZone? sub = _projectViewModel.getSubZoneForListeningArea(areaId: areaId);
       if (sub != null) {
         final Zone? parent = _projectViewModel.getZoneForSubZone(subZoneId: sub.id);
-        return parent != null ? '${parent.name} > ${sub.name}' : sub.name;
+        return /*parent != null ? '${parent.name} > ${sub.name}' :*/ sub.name;
       }
     }
     return _projectViewModel.getEquipLocationForHardware(hardwareId: controller.id)?.name ?? '--';
@@ -242,7 +231,7 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
   void selectZone(String zoneId) {
     final ConfigControlLoaded? loaded = _loaded;
     if (loaded == null) return;
-    emit(loaded.copyWith(selectedZoneId: zoneId, clearActiveSubZoneId: true));
+    emit(loaded.copyWith(selectedZoneId: zoneId, activeSubZoneId: null));
   }
 
   void toggleZoneSelection(String zoneId) {
@@ -258,7 +247,7 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
   void selectSubZone(String subZoneId) {
     final ConfigControlLoaded? loaded = _loaded;
     if (loaded == null) return;
-    emit(loaded.copyWith(activeSubZoneId: subZoneId, clearSelectedZoneId: true));
+    emit(loaded.copyWith(activeSubZoneId: subZoneId, selectedZoneId: null));
   }
 
   void toggleSubZoneSelection(String subZoneId) {
@@ -321,7 +310,7 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
         loaded.copyWith(
           selectedSceneSetIds: updated,
           selectedSceneSetId: sceneSetId,
-          clearSelectedSnapshotPageId: true,
+          selectedSnapshotPageId: null,
         ),
       );
     } else {
@@ -330,7 +319,7 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
       emit(
         loaded.copyWith(
           selectedSceneSetIds: updated,
-          clearSelectedSceneSetId: wasActive,
+          selectedSceneSetId: wasActive ? null : loaded.selectedSceneSetId,
         ),
       );
     }
@@ -344,8 +333,8 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
     emit(
       loaded.copyWith(
         selectedSceneSetId: sceneSetId,
-        clearActiveSnapshotId: true,
-        clearSelectedSnapshotPageId: true,
+        activeSnapshotId: null,
+        selectedSnapshotPageId: null,
       ),
     );
   }
@@ -388,7 +377,7 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
       loaded.copyWith(
         snapshotPages: updatedPages,
         selectedSnapshotPageId: newPage.id,
-        clearSelectedSceneSetId: true,
+        selectedSceneSetId: null,
       ),
     );
   }
@@ -414,7 +403,7 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
     emit(
       loaded.copyWith(
         snapshotPages: updatedPages,
-        clearSelectedSnapshotPageId: loaded.selectedSnapshotPageId == pageId,
+        selectedSnapshotPageId: loaded.selectedSnapshotPageId == pageId ? null : loaded.selectedSnapshotPageId,
       ),
     );
   }
@@ -424,7 +413,7 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
   void selectSnapshotPage(String pageId) {
     final ConfigControlLoaded? loaded = _loaded;
     if (loaded == null) return;
-    emit(loaded.copyWith(selectedSnapshotPageId: pageId, clearSelectedSceneSetId: true));
+    emit(loaded.copyWith(selectedSnapshotPageId: pageId, selectedSceneSetId: null));
   }
 
   // ─── Schedule tab actions ─────────────────────────────────────────────────
@@ -569,7 +558,6 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
       loaded.copyWith(
         selectedMessagePlayerIds: updated,
         selectedMessagePageId: newPageId,
-        clearSelectedMessagePageId: newPageId == null,
       ),
     );
   }
