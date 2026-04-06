@@ -4,13 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/fusion_canvas_element_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canvas_painter.dart';
+import 'package:fusion_launcher/features/wiring_design/algorithm/connection_manager.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'port_painter.dart';
 
 class WiringDevicesPainter extends FusionCanvasElementPainter with PortPainter {
+  final ConnectionManager  connectionManager;
   final HardwareComponent device;
-  WiringDevicesPainter({required this.device}) : super(item: FusionCanvasItem(id: device.id)) {
+  WiringDevicesPainter({required this.device, required this.connectionManager}) : super(item: FusionCanvasItem(id: device.id)) {
     double maxHeight = 0;
     double inputPosY = portRadius;
     for (int i = 0; i < device.inputPortsData.length; i++) {

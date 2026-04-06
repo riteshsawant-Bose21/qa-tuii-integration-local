@@ -88,148 +88,150 @@ class FusionCanvas extends StatelessWidget {
             toolbarEvents: toolbarEvents,
             child: BlocBuilder<FusionCanvasStateViewModel, FusionCanvasState>(
               builder: (BuildContext context, FusionCanvasState state) {
-                return Stack(
-                  children: <Widget>[
-                    BlocBuilder<FusionCanvasInputViewModel, FusionCanvasInputState>(
+                return BlocBuilder<FusionCanvasInputViewModel, FusionCanvasInputState>(
+                  builder: (
+                    BuildContext context,
+                    FusionCanvasInputState inputState,
+                  ) {
+                    return BlocBuilder<FusionSnapViewModel, FusionSnapState>(
                       builder: (
                         BuildContext context,
-                        FusionCanvasInputState inputState,
+                        FusionSnapState snapState,
                       ) {
-                        return BlocBuilder<FusionSnapViewModel, FusionSnapState>(
-                          builder: (
+                        final FusionToolState toolState = context.watch<FusionCanvasToolViewModel>().state;
+                        final FusionCanvasPainter fusionCanvasPainter = FusionCanvasPainter(
+                          state: state,
+                          context: context,
+                          layers: <FusionBasePainter>[
+                            ...elements,
+
+                            // Selection tool painter for highlighting selected elements
+                            ToolPainter(
+                              state: toolState,
+                              cursor: snapState.effectivePosition,
+                            ),
+                            if (toolState is SelectToolState)
+                              SelectionToolPainter(
+                                state: toolState,
+                                allPainters: elements,
+                              ),
+
+                            if (toolState is! IdleSelectToolState)
+                              SnapPainter(
+                                snapResult: snapState.snapResult,
+                              ),
+                            LineCenterHandlePainter(),
+                          ],
+                        );
+
+                        context.read<FusionCanvasStateViewModel>().updateContentSize(elements, fusionCanvasPainter);
+                        return BlocListener<FusionCanvasInputViewModel, FusionCanvasInputState>(
+                          listener: (
                             BuildContext context,
-                            FusionSnapState snapState,
+                            FusionCanvasInputState inputState,
                           ) {
-                            final FusionToolState toolState = context.watch<FusionCanvasToolViewModel>().state;
-                            final FusionCanvasPainter fusionCanvasPainter = FusionCanvasPainter(
-                              state: state,
-                              context: context,
-                              layers: <FusionBasePainter>[
-                                ...elements,
-
-                                // Selection tool painter for highlighting selected elements
-                                ToolPainter(
-                                  state: toolState,
-                                  cursor: snapState.effectivePosition,
-                                ),
-                                if (toolState is SelectToolState)
-                                  SelectionToolPainter(
-                                    state: toolState,
-                                    allPainters: elements,
-                                  ),
-
-                                if (toolState is! IdleSelectToolState)
-                                  SnapPainter(
-                                    snapResult: snapState.snapResult,
-                                  ),
-                                LineCenterHandlePainter(),
-                              ],
+                            final bool? shouldSkipEvent = switch (inputState) {
+                              FusionCanvasInputTapDownState _ => toolbarEvents?.inputEvents?.onMouseDown?.call(inputState),
+                              FusionCanvasInputTapUpState _ => toolbarEvents?.inputEvents?.onMouseUp?.call(inputState),
+                              FusionCanvasInputDraggingState _ => toolbarEvents?.inputEvents?.onDrag?.call(inputState),
+                              FusionCanvasInputDoubleTapState _ => toolbarEvents?.inputEvents?.onDoubleTap?.call(inputState),
+                              FusionCanvasInputLongPressState _ => toolbarEvents?.inputEvents?.onLongPress?.call(inputState),
+                              FusionCanvasInputSecondaryTapState _ => toolbarEvents?.inputEvents?.onSecondaryClick?.call(inputState),
+                              _ => null,
+                            };
+                            if (shouldSkipEvent == true) {
+                              return;
+                            }
+                            // Update hover position
+                            context.read<FusionCanvasHoverViewModel>().updateHoverPosition(
+                              inputState.mousePosition,
+                              fusionCanvasPainter,
                             );
 
-                            context.read<FusionCanvasStateViewModel>().updateContentSize(elements, fusionCanvasPainter);
-                            return BlocListener<FusionCanvasInputViewModel, FusionCanvasInputState>(
-                              listener: (
-                                BuildContext context,
-                                FusionCanvasInputState inputState,
-                              ) {
-                                final bool? shouldSkipEvent = switch (inputState) {
-                                  FusionCanvasInputTapDownState _ => toolbarEvents?.inputEvents?.onMouseDown?.call(inputState),
-                                  FusionCanvasInputTapUpState _ => toolbarEvents?.inputEvents?.onMouseUp?.call(inputState),
-                                  FusionCanvasInputDraggingState _ => toolbarEvents?.inputEvents?.onDrag?.call(inputState),
-                                  FusionCanvasInputDoubleTapState _ => toolbarEvents?.inputEvents?.onDoubleTap?.call(inputState),
-                                  FusionCanvasInputLongPressState _ => toolbarEvents?.inputEvents?.onLongPress?.call(inputState),
-                                  FusionCanvasInputSecondaryTapState _ => toolbarEvents?.inputEvents?.onSecondaryClick?.call(inputState),
-                                  _ => null,
-                                };
-                                if (shouldSkipEvent == true) {
-                                  return;
-                                }
-                                // Update hover position
-                                context.read<FusionCanvasHoverViewModel>().updateHoverPosition(
-                                  inputState.mousePosition,
+                            final FusionHoverState hoverState = context.read<FusionCanvasHoverViewModel>().state;
+                            // if(hoverState.)
+                            // print(
+                            //   "Hover state updated: hoveredPainterId=${hoverState.hoveredPainterId}, hoveredElement=${hoverState.hoveredElement}, hoveredElement interaction=${hoverState.hoveredElementInteractions}",
+                            // );
+                            if (inputState is FusionCanvasInputTapUpState &&
+                                inputState.gestureOrigin == FusionGestureOrigin.click &&
+                                hoverState.isCenterHandleHovered &&
+                                hoverState.hoveredElement is FusionCanvasLine) {
+                              final FusionBasePainter? hoveredPainter = fusionCanvasPainter.layers.cast<FusionBasePainter?>().firstWhere(
+                                (FusionBasePainter? layer) => layer?.id == hoverState.hoveredPainterId,
+                                orElse: () => null,
+                              );
+
+                              if (hoveredPainter != null) {
+                                final Offset center = LineCenterHandlePainter.getLineCenter(
+                                  hoverState.hoveredElement! as FusionCanvasLine,
+                                  hoveredPainter,
                                   fusionCanvasPainter,
                                 );
 
-                                final FusionHoverState hoverState = context.read<FusionCanvasHoverViewModel>().state;
-                                // if(hoverState.)
-                                // print(
-                                //   "Hover state updated: hoveredPainterId=${hoverState.hoveredPainterId}, hoveredElement=${hoverState.hoveredElement}, hoveredElement interaction=${hoverState.hoveredElementInteractions}",
-                                // );
-                                if (inputState is FusionCanvasInputTapUpState &&
-                                    inputState.gestureOrigin == FusionGestureOrigin.click &&
-                                    hoverState.isCenterHandleHovered &&
-                                    hoverState.hoveredElement is FusionCanvasLine) {
-                                  final FusionBasePainter? hoveredPainter = fusionCanvasPainter.layers.cast<FusionBasePainter?>().firstWhere(
-                                    (FusionBasePainter? layer) => layer?.id == hoverState.hoveredPainterId,
-                                    orElse: () => null,
-                                  );
-
-                                  if (hoveredPainter != null) {
-                                    final Offset center = LineCenterHandlePainter.getLineCenter(
-                                      hoverState.hoveredElement! as FusionCanvasLine,
-                                      hoveredPainter,
-                                      fusionCanvasPainter,
-                                    );
-
-                                    toolbarEvents?.onAddPoints?.call(
-                                      hoveredPainter,
-                                      <FusionCanvasPoint>[FusionCanvasPoint(position: center)],
-                                      hoverState.hoveredElement as FusionCanvasLine,
-                                    );
-                                    return;
-                                  }
-                                }
-
-                                // Build input context with all required state
-                                final FusionCanvasInputContext inputContext = FusionCanvasInputContext(
-                                  hoverState: hoverState,
-                                  snapState: context.read<FusionSnapViewModel>().state,
-                                  inputState: inputState,
-                                  // selectionToolParams: selectionToolParams,
-                                  fusionCanvasPainter: fusionCanvasPainter,
+                                toolbarEvents?.onAddPoints?.call(
+                                  hoveredPainter,
+                                  <FusionCanvasPoint>[FusionCanvasPoint(position: center)],
+                                  hoverState.hoveredElement as FusionCanvasLine,
                                 );
+                                return;
+                              }
+                            }
 
-                                // Delegate all input handling to the tool viewmodel
-                                final FusionCanvasToolViewModel toolVm = context.read<FusionCanvasToolViewModel>();
-                                final bool isHandled = toolVm.onInputStateChanged(inputState, inputContext, tools);
+                            // Build input context with all required state
+                            final FusionCanvasInputContext inputContext = FusionCanvasInputContext(
+                              hoverState: hoverState,
+                              snapState: context.read<FusionSnapViewModel>().state,
+                              inputState: inputState,
+                              // selectionToolParams: selectionToolParams,
+                              fusionCanvasPainter: fusionCanvasPainter,
+                            );
 
-                                if (!isHandled) {
-                                  if (inputState is FusionCanvasInputDraggingState && inputState.button != FusionMouseButton.left) {
-                                    context.read<FusionCanvasStateViewModel>().onPanUpdate(
-                                      inputState.delta,
-                                    );
-                                  }
-                                }
-                              },
+                            // Delegate all input handling to the tool viewmodel
+                            final FusionCanvasToolViewModel toolVm = context.read<FusionCanvasToolViewModel>();
+                            final bool isHandled = toolVm.onInputStateChanged(inputState, inputContext, tools);
 
-                              child: CanvasControlWrapper(
-                                painter: fusionCanvasPainter,
-                                onKeyEvent: (KeyEvent event) {
-                                  _handleDeleteKeyEvent(context, event);
-                                },
-                                child: CustomPaint(
+                            if (!isHandled) {
+                              if (inputState is FusionCanvasInputDraggingState && inputState.button != FusionMouseButton.left) {
+                                context.read<FusionCanvasStateViewModel>().onPanUpdate(
+                                  inputState.delta,
+                                );
+                              }
+                            }
+                          },
+
+                          child: FusionCanvasPainterProvider(
+                            value: fusionCanvasPainter,
+                            child: Stack(
+                              children: <Widget>[
+                                CanvasControlWrapper(
                                   painter: fusionCanvasPainter,
-                                  child: SizedBox(
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                    child: Stack(
-                                      children: <Widget>[
-                                        FusionCanvasCursor(
-                                          builder: cursorBuilder,
-                                        ),
-                                      ],
+                                  onKeyEvent: (KeyEvent event) {
+                                    _handleDeleteKeyEvent(context, event);
+                                  },
+                                  child: CustomPaint(
+                                    painter: fusionCanvasPainter,
+                                    child: SizedBox(
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                      child: Stack(
+                                        children: <Widget>[
+                                          FusionCanvasCursor(
+                                            builder: cursorBuilder,
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            );
-                          },
+                                if (builder != null) builder!(context),
+                              ],
+                            ),
+                          ),
                         );
                       },
-                    ),
-
-                    if (builder != null) builder!(context),
-                  ],
+                    );
+                  },
                 );
               },
             ),
@@ -430,4 +432,21 @@ class _SelectionSyncState extends State<_SelectionSync> {
 
   @override
   Widget build(BuildContext context) => widget.child;
+}
+
+/// create a Inherited Widget  for FusionCanvasPainter
+///
+
+class FusionCanvasPainterProvider extends InheritedWidget {
+  final FusionCanvasPainter value;
+
+  const FusionCanvasPainterProvider({super.key, required this.value, required super.child});
+
+  // Helper method for descendants to access the data
+  static FusionCanvasPainterProvider? of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<FusionCanvasPainterProvider>();
+  }
+
+  @override
+  bool updateShouldNotify(FusionCanvasPainterProvider oldWidget) => value != oldWidget.value;
 }

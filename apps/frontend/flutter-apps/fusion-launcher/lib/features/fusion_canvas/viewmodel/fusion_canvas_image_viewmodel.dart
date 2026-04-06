@@ -12,8 +12,10 @@ class FusionCanvasImageViewModel extends Cubit<Map<String, ui.Image>> {
     String key,
   ) async {
     final ImageLoaderService loader = fusionLibLocator<ImageLoaderService>();
-    final ui.Image image = await loader.loadImage(key);
-    emit(Map<String, ui.Image>.from(state)..[key] = image);
+    try {
+      final ui.Image image = await loader.loadImage(key);
+      emit(Map<String, ui.Image>.from(state)..[key] = image);
+    } catch (e) {}
   }
 
   ui.Image? getImage(String key) {

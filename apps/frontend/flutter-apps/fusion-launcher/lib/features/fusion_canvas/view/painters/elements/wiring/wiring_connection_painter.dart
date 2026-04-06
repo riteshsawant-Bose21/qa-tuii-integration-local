@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/select_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canvas_painter.dart';
+import 'package:fusion_launcher/features/wiring_design/algorithm/intersection_manager.dart';
+import 'package:fusion_launcher/features/wiring_design/algorithm/path_system_storage.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../../../../wiring_design/view/wiring_page.dart';
 import '../../../../state/fusion_tool_state.dart';
 import '../mixin/fusion_canvas_interactable_mixin.dart';
+import 'connection_color_util.dart';
 
 class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInteractibleMixin {
   final WiringConnectionModel connection;
@@ -97,7 +99,7 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
 
       rawPoints = _buildPathPoints(path);
     } else {
-      _connectionPaint.color = Colors.green;
+      _connectionPaint.color = ConnectionColorUtil.getColorForConnectionType(connection.type);
     }
 
     // Resolve all positions in a single pass to avoid repeated toolState /

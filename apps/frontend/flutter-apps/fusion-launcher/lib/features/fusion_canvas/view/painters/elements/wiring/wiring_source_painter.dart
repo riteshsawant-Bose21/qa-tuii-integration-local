@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/fusion_canvas_element_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canvas_painter.dart';
+import 'package:fusion_launcher/features/wiring_design/algorithm/connection_manager.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'port_painter.dart';
 
 class WiringSourcePainter extends FusionCanvasElementPainter with PortPainter {
+  @override
+  final ConnectionManager connectionManager;
+
   final Source source;
-  WiringSourcePainter({required this.source}) : super(item: FusionCanvasItem(id: source.id));
+  WiringSourcePainter({required this.source, required this.connectionManager}) : super(item: FusionCanvasItem(id: source.id));
 
   @override
   Offset getOffset() {
@@ -23,20 +27,16 @@ class WiringSourcePainter extends FusionCanvasElementPainter with PortPainter {
   @override
   List<WiringPortData> getPorts(Rect rect, FusionCanvasPainter painter) {
     return source.outputPortsData
-        .map((PortData port) => WiringPortData(position: rect.centerRight - Offset(portRadius + 20, 0), port: port, deviceId: source.id))
+        .map(
+          (PortData port) => WiringPortData(
+            position: rect.centerRight - Offset(portRadius + 20, 0),
+            port: port,
+            deviceId: source.id,
+            image: 'assets/icons/wiring_ports/link.png',
+          ),
+        )
         .toList();
   }
-
-  // @override
-  // Rect getTransformedRect(FusionCanvasPainter painter) {
-  //   final Offset offset = getOffset();
-  //   final Size size = getSize();
-  //   return Rect.fromCenter(
-  //     center: transformOffsetForLayer(offset, painter, id),
-  //     width: size.width,
-  //     height: size.height,
-  //   );
-  // }
 
   @override
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter) {
