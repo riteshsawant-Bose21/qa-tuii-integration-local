@@ -493,7 +493,7 @@ func (app *App) logControlPlaneHealth() {
 			aliveCount++
 		}
 		if localName != "" && member.Name == localName {
-			localState = member.State.String()
+			localState = cluster.GetStateString(member.State)
 		}
 	}
 

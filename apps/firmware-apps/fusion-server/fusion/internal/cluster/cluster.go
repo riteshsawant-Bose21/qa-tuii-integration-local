@@ -316,8 +316,8 @@ func (c *Cluster) startStateMonitor() {
 	}()
 }
 
-// getStateString converts memberlist state to human-readable string
-func getStateString(state hashicorpMemberlist.NodeStateType) string {
+// GetStateString converts memberlist state to human-readable string
+func GetStateString(state hashicorpMemberlist.NodeStateType) string {
 	switch state {
 	case hashicorpMemberlist.StateAlive:
 		return "ALIVE"
@@ -340,7 +340,7 @@ func (c *Cluster) getMembers() []ClusterMember {
 			Name:    member.Name,
 			Address: member.Addr.String(),
 			Port:    member.Port,
-			State:   getStateString(member.State),
+			State:   GetStateString(member.State),
 		}
 	}
 
