@@ -1,4 +1,55 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:path/path.dart' as p;
+import 'package:uuid/uuid.dart';
+
+class FirmwareUpdateCheckResult {
+  final bool updateAvailable;
+  final bool appUpdateRequired;
+  final String? bundleId;
+  final String? version;
+  final String? releaseNotes;
+  final String? minDesktopAppVersion;
+
+  const FirmwareUpdateCheckResult({
+    required this.updateAvailable,
+    required this.appUpdateRequired,
+    this.bundleId,
+    this.version,
+    this.releaseNotes,
+    this.minDesktopAppVersion,
+  });
+
+  factory FirmwareUpdateCheckResult.fromJson(Map<String, dynamic> json) {
+    return FirmwareUpdateCheckResult(
+      updateAvailable: json['update_available'] as bool? ?? false,
+      appUpdateRequired: json['app_update_required'] as bool? ?? false,
+      bundleId: json['bundle_id'] as String?,
+      version: json['version'] as String?,
+      releaseNotes: json['release_notes'] as String?,
+      minDesktopAppVersion: json['min_desktop_app_version'] as String?,
+    );
+  }
+}
+
+class BundleDownloadUrlResult {
+  final String downloadUrl;
+  final String checksum;
+
+  const BundleDownloadUrlResult({
+    required this.downloadUrl,
+    required this.checksum,
+  });
+
+  factory BundleDownloadUrlResult.fromJson(Map<String, dynamic> json) {
+    return BundleDownloadUrlResult(
+      downloadUrl: json['download_url'] as String? ?? '',
+      checksum: json['checksum'] as String? ?? '',
+    );
+  }
+}
 
 /// Cloud-side registration + claim status for a single device.
 class CloudDeviceStatus {
@@ -45,6 +96,150 @@ class FusionDeviceService {
   final FusionNetworkClient networkClient;
 
   FusionDeviceService({required this.networkClient});
+
+  Future<ResponseCallback<FirmwareUpdateCheckResult>> checkForFirmwareUpdates({
+    required String currentFirmwareVersion,
+    required String currentDesktopAppVersion,
+    String? channel,
+  }) async {
+    try {
+      final ResponseCallback<FirmwareUpdateCheckResult> response = await networkClient.get<FirmwareUpdateCheckResult>(
+        api: FusionApiEndpoint.firmwareUpdateCheck,
+        urlParameters: <String, dynamic>{
+          'current_firmware_version': currentFirmwareVersion,
+          'current_desktop_app_version': currentDesktopAppVersion,
+          if (channel != null && channel.trim().isNotEmpty) 'channel': channel.trim(),
+        },
+        fromJson: (dynamic json) {
+          if (json is! Map<String, dynamic>) {
+            throw Exception('Unexpected firmware update check response format.');
+          }
+          return FirmwareUpdateCheckResult.fromJson(json);
+        },
+      );
+      return response;
+    } catch (e) {
+      return ResponseCallback<FirmwareUpdateCheckResult>.failure(e.toString());
+    }
+  }
+
+  Future<ResponseCallback<BundleDownloadUrlResult>> requestFirmwareBundleDownloadUrl({required String bundleId}) async {
+    try {
+      final String trimmedBundleId = bundleId.trim();
+      if (trimmedBundleId.isEmpty) {
+        return ResponseCallback<BundleDownloadUrlResult>.failure('bundleId is required');
+      }
+
+      final ResponseCallback<BundleDownloadUrlResult> response = await networkClient.get<BundleDownloadUrlResult>(
+        api: FusionApiEndpoint.firmwareBundleDownloadUrl,
+        additionalPath: '$trimmedBundleId/request-download-url',
+        fromJson: (dynamic json) {
+          if (json is! Map<String, dynamic>) {
+            throw Exception('Unexpected firmware bundle download response format.');
+          }
+          return BundleDownloadUrlResult.fromJson(json);
+        },
+      );
+
+      return response;
+    } catch (e) {
+      return ResponseCallback<BundleDownloadUrlResult>.failure(e.toString());
+    }
+  }
+
+  Future<ResponseCallback<void>> logFirmwareUpdateStatus({
+    required String projectId,
+    required String bundleVersion,
+    required String previousVersion,
+    required String launcherVersion,
+    required String status,
+  }) async {
+    try {
+      final ResponseCallback<dynamic> response = await networkClient.post<dynamic>(
+        api: FusionApiEndpoint.firmwareUpdateStatus,
+        data: <String, dynamic>{
+          'update_id': const Uuid().v4(),
+          'project_id': projectId,
+          'bundle_version': bundleVersion,
+          'previous_version': previousVersion,
+          'status': status,
+          'launcher_version': launcherVersion,
+          'installed_at': DateTime.now().toUtc().toIso8601String(),
+        },
+      );
+
+      if (response.success) {
+        return ResponseCallback<void>.success(null);
+      }
+
+      return ResponseCallback<void>.failure(response.message);
+    } catch (e) {
+      return ResponseCallback<void>.failure(e.toString());
+    }
+  }
+
+  Future<ResponseCallback<void>> downloadFirmwareBundle({
+    required String downloadUrl,
+    required String targetFilePath,
+    required CancelToken cancelToken,
+    required void Function(int received, int total) onProgress,
+  }) async {
+    try {
+      await networkClient.downloadFile(
+        url: downloadUrl,
+        savePath: targetFilePath,
+        cancelToken: cancelToken,
+        onProgress: onProgress,
+      );
+
+      return ResponseCallback<void>.success(null);
+    } on DioException {
+      // Delete the partial file, then re-throw so callers can distinguish
+      // a user cancellation (CancelToken.isCancel) from a network error.
+      try {
+        final File partial = File(targetFilePath);
+        if (await partial.exists()) {
+          await partial.delete();
+        }
+      } catch (_) {}
+      rethrow;
+    } catch (e) {
+      // Non-Dio failure: clean up and return a plain failure result.
+      try {
+        final File partial = File(targetFilePath);
+        if (await partial.exists()) {
+          await partial.delete();
+        }
+      } catch (_) {}
+      return ResponseCallback<void>.failure(e.toString());
+    }
+  }
+
+  Future<ResponseCallback<void>> uploadFirmwareBundleToFusionServer({
+    required String vip,
+    required String bundleFilePath,
+    required String checksum,
+    required CancelToken cancelToken,
+    required void Function(int sent, int total) onProgress,
+  }) async {
+    try {
+      final String host = vip.contains(':') ? vip : '$vip:8080';
+      await networkClient.httpClient.dioInstance.post(
+        'http://$host/softwareUpdate/upload',
+        cancelToken: cancelToken,
+        data: FormData.fromMap(
+          <String, dynamic>{
+            'checksum': checksum,
+            'bundle': await MultipartFile.fromFile(bundleFilePath, filename: p.basename(bundleFilePath)),
+          },
+        ),
+        onSendProgress: onProgress,
+      );
+      return ResponseCallback<void>.success(null);
+    } catch (e) {
+      return ResponseCallback<void>.failure(e.toString());
+    }
+  }
 
   /// Fetches the cloud registration + claim status for all devices belonging
   /// to the given project from the cloud backend.

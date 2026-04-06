@@ -279,6 +279,37 @@ class FusionNetworkClient {
     }
   }
 
+  // Downloads a file from an external pre-signed URL (e.g. S3) directly to disk.
+  // Uses a clean Dio instance with no auth headers — pre-signed URLs are self-authenticating
+  // and adding an Authorization header causes the remote server to reject the request.
+  // Streams the response body directly to disk to avoid loading the entire file into RAM.
+  Future<ResponseCallback<T>> downloadFile<T>({
+    required String url,
+    required String savePath,
+    required CancelToken cancelToken,
+    required void Function(int received, int total) onProgress,
+  }) async {
+    final Dio cleanDio = Dio();
+    try {
+      await cleanDio.download(
+        url,
+        savePath,
+        cancelToken: cancelToken,
+        onReceiveProgress: onProgress,
+        options: Options(
+          // No Authorization header — the pre-signed URL carries its own credentials.
+          headers: <String, dynamic>{'Accept': '*/*'},
+        ),
+      );
+      return ResponseCallback<T>(success: true, message: 'File downloaded successfully');
+    } catch (ex) {
+      debugPrint('Exception in FusionNetworkClient.downloadFile() - $ex');
+      return ResponseCallback<T>(success: false, message: 'Exception in FusionNetworkClient.downloadFile() - $ex');
+    } finally {
+      cleanDio.close();
+    }
+  }
+
   Future<ResponseCallback<T>> connect<T>({required String vip}) async {
     try {
       // Close any existing socket to prevent leaks on reconnect.
@@ -424,6 +455,9 @@ enum FusionApiEndpoint {
   products('/products', FusionApiType.backendServer),
   devicesBulkCloud('/devices/bulk', FusionApiType.backendServer),
   devicesCloud('/devices', FusionApiType.backendServer),
+  firmwareUpdateCheck('/firmware/updates/check', FusionApiType.backendServer),
+  firmwareBundleDownloadUrl('/firmware/bundles', FusionApiType.backendServer),
+  firmwareUpdateStatus('/firmware/updates/status', FusionApiType.backendServer),
 
   //fusion server setup apis
   fusionDevice('/devices', FusionApiType.fusionServer),

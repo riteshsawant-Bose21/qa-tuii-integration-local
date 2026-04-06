@@ -1,186 +1,14 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/config/app_config.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/devices/view_model/firmware_update/firmware_update_vm.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/service/auth/fusion_auth_service.dart';
-import 'package:package_info_plus/package_info_plus.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uuid/uuid.dart';
-
-enum _UpdateViewState {
-  checking,
-  noUpdate,
-  updateAvailable,
-  downloading,
-  downloaded,
-  downloadFailed,
-  installing,
-  installFailed,
-  installed,
-}
-
-class _FirmwareUpdateCheckResult {
-  final bool updateAvailable;
-  final bool appUpdateRequired;
-  final String? bundleId;
-  final String? version;
-  final String? releaseNotes;
-  final String? minDesktopAppVersion;
-
-  const _FirmwareUpdateCheckResult({
-    required this.updateAvailable,
-    required this.appUpdateRequired,
-    this.bundleId,
-    this.version,
-    this.releaseNotes,
-    this.minDesktopAppVersion,
-  });
-
-  factory _FirmwareUpdateCheckResult.fromJson(Map<String, dynamic> json) {
-    return _FirmwareUpdateCheckResult(
-      updateAvailable: json['update_available'] as bool? ?? false,
-      appUpdateRequired: json['app_update_required'] as bool? ?? false,
-      bundleId: json['bundle_id'] as String?,
-      version: json['version'] as String?,
-      releaseNotes: json['release_notes'] as String?,
-      minDesktopAppVersion: json['min_desktop_app_version'] as String?,
-    );
-  }
-}
-
-class _BundleDownloadUrlResult {
-  final String downloadUrl;
-  final String checksum;
-
-  const _BundleDownloadUrlResult({
-    required this.downloadUrl,
-    required this.checksum,
-  });
-
-  factory _BundleDownloadUrlResult.fromJson(Map<String, dynamic> json) {
-    return _BundleDownloadUrlResult(
-      downloadUrl: json['download_url'] as String? ?? '',
-      checksum: json['checksum'] as String? ?? '',
-    );
-  }
-}
-
-class _FirmwareCloudApi {
-  _FirmwareCloudApi(this._authService, this._dio);
-
-  final FusionAuthService _authService;
-  final Dio _dio;
-
-  Future<Map<String, String>> _authHeaders() async {
-    final String? token = await _authService.getValidAccessToken();
-    if (token == null || token.isEmpty) {
-      return <String, String>{};
-    }
-    return <String, String>{'Authorization': 'Bearer $token'};
-  }
-
-  Future<_FirmwareUpdateCheckResult> checkForUpdates({
-    required String currentFirmwareVersion,
-    required String desktopVersion,
-    String? channel,
-  }) async {
-    final Response<dynamic> response = await _dio.get(
-      '${AppConfig.awsApiBaseUrl}/firmware/updates/check',
-      queryParameters: <String, dynamic>{
-        'current_firmware_version': currentFirmwareVersion,
-        'current_desktop_app_version': desktopVersion,
-        if (channel != null && channel.isNotEmpty) 'channel': channel,
-      },
-      options: Options(headers: await _authHeaders()),
-    );
-
-    final dynamic data = response.data;
-    if (data is! Map<String, dynamic>) {
-      throw Exception('Unexpected update-check response.');
-    }
-
-    return _FirmwareUpdateCheckResult.fromJson(data);
-  }
-
-  Future<_BundleDownloadUrlResult> getDownloadUrl({required String bundleId}) async {
-    final Response<dynamic> response = await _dio.get(
-      '${AppConfig.awsApiBaseUrl}/firmware/bundles/$bundleId/request-download-url',
-      options: Options(headers: await _authHeaders()),
-    );
-
-    final dynamic data = response.data;
-    if (data is! Map<String, dynamic>) {
-      throw Exception('Unexpected request-download-url response.');
-    }
-
-    return _BundleDownloadUrlResult.fromJson(data);
-  }
-
-  Future<void> logInstallStatus({
-    required String projectId,
-    required String bundleVersion,
-    required String previousVersion,
-    required String launcherVersion,
-    required String status,
-  }) async {
-    await _dio.post(
-      '${AppConfig.awsApiBaseUrl}/firmware/updates/status',
-      data: <String, dynamic>{
-        'update_id': const Uuid().v4(),
-        'project_id': projectId,
-        'bundle_version': bundleVersion,
-        'previous_version': previousVersion,
-        'status': status,
-        'launcher_version': launcherVersion,
-        'installed_at': DateTime.now().toUtc().toIso8601String(),
-      },
-      options: Options(headers: await _authHeaders()),
-    );
-  }
-
-  Future<void> downloadBundle({
-    required String downloadUrl,
-    required String targetFilePath,
-    required CancelToken cancelToken,
-    required void Function(int received, int total) onProgress,
-  }) async {
-    await _dio.download(
-      downloadUrl,
-      targetFilePath,
-      cancelToken: cancelToken,
-      options: Options(responseType: ResponseType.bytes),
-      onReceiveProgress: onProgress,
-    );
-  }
-
-  Future<void> uploadToFusionServer({
-    required String vip,
-    required String bundleFilePath,
-    required String checksum,
-    required CancelToken cancelToken,
-    required void Function(int sent, int total) onProgress,
-  }) async {
-    final String host = vip.contains(':') ? vip : '$vip:8080';
-    await _dio.post(
-      'http://$host/softwareUpdate/upload',
-      cancelToken: cancelToken,
-      data: FormData.fromMap(
-        <String, dynamic>{
-          'checksum': checksum,
-          'bundle': await MultipartFile.fromFile(bundleFilePath, filename: p.basename(bundleFilePath)),
-        },
-      ),
-      onSendProgress: onProgress,
-    );
-  }
-}
 
 class DeviceUpdatesTab extends StatefulWidget {
   const DeviceUpdatesTab({super.key});
@@ -192,27 +20,10 @@ class DeviceUpdatesTab extends StatefulWidget {
 class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
   static const String _prefsKey = 'firmware_updates_state_v1';
 
-  final _FirmwareCloudApi _api = _FirmwareCloudApi(
-    serviceLocator<FusionAuthService>(),
-    serviceLocator<FusionNetworkClient>().httpClient.dioInstance,
-  );
-
-  _UpdateViewState _state = _UpdateViewState.checking;
-  bool _isProgressExpanded = false;
-  double _progress = 0;
-
-  String _inUseVersion = '1.2.1';
-  String _availableVersion = '';
-  String _releaseNotes = '';
-  String _bundleId = '';
-  String _downloadChecksum = '';
-  String _downloadedFilePath = '';
-  String _errorText = '';
+  final FirmwareUpdateViewModel _firmwareUpdateViewModel = serviceLocator<FirmwareUpdateViewModel>();
 
   CancelToken? _downloadCancelToken;
   CancelToken? _installCancelToken;
-
-  String _desktopVersion = '0.5.0';
 
   List<HardwareComponent> get _fusionDevices {
     final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
@@ -244,146 +55,94 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
   }
 
   Future<void> _loadDesktopVersion() async {
-    try {
-      final PackageInfo info = await PackageInfo.fromPlatform();
-      _desktopVersion = info.version;
-    } catch (_) {
-      _desktopVersion = '0.5.0';
-    }
+    final String desktopVersion = await _firmwareUpdateViewModel.loadDesktopVersion();
+    _firmwareUpdateViewModel.setDesktopVersion(desktopVersion);
   }
 
   Future<void> _restoreState() async {
     final SharedPreferences prefs = serviceLocator<SharedPreferences>();
     final String? raw = prefs.getString(_prefsKey);
-    if (raw == null || raw.isEmpty) return;
+    final FirmwareLocalState restored = _firmwareUpdateViewModel.restoreLocalState(
+      rawState: raw,
+      fallbackInUseVersion: _firmwareUpdateViewModel.state.inUseVersion,
+    );
+    _firmwareUpdateViewModel.hydrateLocalState(restored);
 
-    try {
-      final Map<String, dynamic> json = jsonDecode(raw) as Map<String, dynamic>;
-      _inUseVersion = json['in_use_version'] as String? ?? _inUseVersion;
-      _downloadedFilePath = json['downloaded_file_path'] as String? ?? '';
-      _downloadChecksum = json['download_checksum'] as String? ?? '';
-      _availableVersion = json['available_version'] as String? ?? '';
-
-      if (_downloadedFilePath.isNotEmpty && !File(_downloadedFilePath).existsSync()) {
-        _downloadedFilePath = '';
-      }
-    } catch (_) {
-      // Ignore corrupted local state and continue with fresh state.
+    if (restored.downloadedFilePath.isNotEmpty) {
+      debugPrint('Firmware bundle cached at: ${restored.downloadedFilePath}');
     }
   }
 
   Future<void> _persistState() async {
+    final FirmwareUpdateViewModelState state = _firmwareUpdateViewModel.state;
     final SharedPreferences prefs = serviceLocator<SharedPreferences>();
     await prefs.setString(
       _prefsKey,
-      jsonEncode(
-        <String, dynamic>{
-          'in_use_version': _inUseVersion,
-          'available_version': _availableVersion,
-          'download_checksum': _downloadChecksum,
-          'downloaded_file_path': _downloadedFilePath,
-        },
+      _firmwareUpdateViewModel.serializeLocalState(
+        inUseVersion: state.inUseVersion,
+        availableVersion: state.availableVersion,
+        downloadChecksum: state.downloadChecksum,
+        downloadedFilePath: state.downloadedFilePath,
       ),
     );
   }
 
   Future<void> _checkForUpdates() async {
-    setState(() {
-      _state = _UpdateViewState.checking;
-      _errorText = '';
-    });
+    // Don't re-check while a download or install is actively in progress.
+    // Re-initialization (tab reopen) must not overwrite an active operation.
+    final FirmwareUpdateUiState current = _firmwareUpdateViewModel.state.uiState;
+    if (current == FirmwareUpdateUiState.downloading || current == FirmwareUpdateUiState.installing) {
+      return;
+    }
+
+    _firmwareUpdateViewModel.setChecking();
 
     try {
-      final _FirmwareUpdateCheckResult result = await _api.checkForUpdates(
-        currentFirmwareVersion: _inUseVersion,
-        desktopVersion: _desktopVersion,
+      final FirmwareUpdateViewModelState state = _firmwareUpdateViewModel.state;
+      final FirmwareCheckDecision decision = await _firmwareUpdateViewModel.checkForUpdatesDecision(
+        inUseVersion: state.inUseVersion,
+        desktopVersion: state.desktopVersion,
+        downloadedFilePath: state.downloadedFilePath,
       );
 
       if (!mounted) {
         return;
       }
 
-      if (result.appUpdateRequired) {
-        setState(() {
-          _state = _UpdateViewState.downloadFailed;
-          _errorText = 'Launcher update required (min ${result.minDesktopAppVersion ?? 'unknown'}).';
-        });
-        return;
-      }
-
-      if (!result.updateAvailable || (result.version ?? '').isEmpty) {
-        setState(() {
-          _state = _UpdateViewState.noUpdate;
-          _availableVersion = '';
-          _bundleId = '';
-          _releaseNotes = '';
-        });
-        return;
-      }
-
-      _availableVersion = result.version ?? '';
-      _bundleId = result.bundleId ?? '';
-      _releaseNotes = result.releaseNotes ?? '';
-
-      if (_inUseVersion == _availableVersion) {
-        setState(() => _state = _UpdateViewState.installed);
-        return;
-      }
-
-      if (_downloadedFilePath.isNotEmpty && File(_downloadedFilePath).existsSync()) {
-        setState(() => _state = _UpdateViewState.downloaded);
-      } else {
-        setState(() => _state = _UpdateViewState.updateAvailable);
-      }
+      _firmwareUpdateViewModel.applyCheckDecision(decision);
     } catch (e) {
       if (!mounted) {
         return;
       }
-      setState(() {
-        _state = _UpdateViewState.downloadFailed;
-        _errorText = 'Failed to check updates: $e';
-      });
+      _firmwareUpdateViewModel.setDownloadFailed('Failed to check updates: $e');
     }
-  }
-
-  Future<Directory> _updatesDirectory() async {
-    final Directory supportDir = await getApplicationSupportDirectory();
-    final Directory updatesDir = Directory(p.join(supportDir.path, 'firmware-updates'));
-    if (!await updatesDir.exists()) {
-      await updatesDir.create(recursive: true);
-    }
-    return updatesDir;
   }
 
   Future<void> _downloadNow() async {
-    if (_bundleId.isEmpty) {
-      setState(() {
-        _state = _UpdateViewState.downloadFailed;
-        _errorText = 'Bundle id is missing.';
-      });
+    if (_firmwareUpdateViewModel.state.bundleId.isEmpty) {
+      _firmwareUpdateViewModel.setDownloadFailed('Bundle id is missing.');
       return;
     }
 
     _downloadCancelToken?.cancel();
     _downloadCancelToken = CancelToken();
 
-    setState(() {
-      _state = _UpdateViewState.downloading;
-      _progress = 0;
-      _errorText = '';
-    });
+    _firmwareUpdateViewModel.setDownloadStarted();
 
     try {
-      final _BundleDownloadUrlResult downloadInfo = await _api.getDownloadUrl(bundleId: _bundleId);
+      final String bundleId = _firmwareUpdateViewModel.state.bundleId;
+      final BundleDownloadUrlResult downloadInfo = await _firmwareUpdateViewModel.getDownloadUrl(bundleId: bundleId);
       if (downloadInfo.downloadUrl.isEmpty) {
         throw Exception('Cloud did not return a download URL.');
       }
 
-      final Directory dir = await _updatesDirectory();
-      final String safeVersion = _availableVersion.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
-      final String targetFilePath = p.join(dir.path, 'bundle_$safeVersion.swu');
+      final Directory dir = await _firmwareUpdateViewModel.updatesDirectory();
+      final String targetFilePath = _firmwareUpdateViewModel.buildBundleTargetFilePath(
+        directoryPath: dir.path,
+        availableVersion: _firmwareUpdateViewModel.state.availableVersion,
+      );
 
-      await _api.downloadBundle(
+      await _firmwareUpdateViewModel.downloadBundle(
         downloadUrl: downloadInfo.downloadUrl,
         targetFilePath: targetFilePath,
         cancelToken: _downloadCancelToken!,
@@ -391,9 +150,7 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
           if (!mounted || total <= 0) {
             return;
           }
-          setState(() {
-            _progress = (received / total).clamp(0, 1);
-          });
+          _firmwareUpdateViewModel.setDownloadProgress(received / total);
         },
       );
 
@@ -401,84 +158,58 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
         return;
       }
 
-      _downloadedFilePath = targetFilePath;
-      _downloadChecksum = downloadInfo.checksum;
+      _firmwareUpdateViewModel.setDownloaded(filePath: targetFilePath, checksum: downloadInfo.checksum);
+      debugPrint('Firmware bundle downloaded at: $targetFilePath');
       await _persistState();
-
-      setState(() {
-        _state = _UpdateViewState.downloaded;
-        _progress = 1;
-      });
     } on DioException catch (e) {
       if (!mounted) {
         return;
       }
       if (CancelToken.isCancel(e)) {
-        setState(() {
-          _state = _UpdateViewState.updateAvailable;
-          _progress = 0;
-        });
+        _firmwareUpdateViewModel.setDownloadCancelled();
         return;
       }
-
-      setState(() {
-        _state = _UpdateViewState.downloadFailed;
-        _errorText = 'Device Timeout';
-      });
+      _firmwareUpdateViewModel.setDownloadFailed('Download failed. Please try again.');
     } catch (e) {
       if (!mounted) {
         return;
       }
-      setState(() {
-        _state = _UpdateViewState.downloadFailed;
-        _errorText = 'Download failed: $e';
-      });
+      _firmwareUpdateViewModel.setDownloadFailed('Download failed: $e');
     }
   }
 
   Future<void> _installNow() async {
+    final FirmwareUpdateViewModelState state = _firmwareUpdateViewModel.state;
     final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
     if (vip == null || vip.isEmpty) {
-      setState(() {
-        _state = _UpdateViewState.installFailed;
-        _errorText = 'Virtual IP is not configured.';
-      });
+      _firmwareUpdateViewModel.setInstallFailed('Virtual IP is not configured.');
       return;
     }
 
-    if (_downloadedFilePath.isEmpty || !File(_downloadedFilePath).existsSync()) {
-      setState(() {
-        _state = _UpdateViewState.installFailed;
-        _errorText = 'Downloaded file not found.';
-      });
+    if (state.downloadedFilePath.isEmpty || !File(state.downloadedFilePath).existsSync()) {
+      _firmwareUpdateViewModel.setInstallFailed('Downloaded file not found.');
       return;
     }
 
     _installCancelToken?.cancel();
     _installCancelToken = CancelToken();
 
-    final String previousVersion = _inUseVersion;
+    final String previousVersion = state.inUseVersion;
+    final String installedBundlePath = state.downloadedFilePath;
 
-    setState(() {
-      _state = _UpdateViewState.installing;
-      _progress = 0;
-      _errorText = '';
-      _isProgressExpanded = false;
-    });
+    _firmwareUpdateViewModel.setInstallStarted();
 
     try {
-      await _api.uploadToFusionServer(
+      await _firmwareUpdateViewModel.uploadToFusionServer(
         vip: vip,
-        bundleFilePath: _downloadedFilePath,
-        checksum: _downloadChecksum,
+        bundleFilePath: state.downloadedFilePath,
+        checksum: state.downloadChecksum,
         cancelToken: _installCancelToken!,
         onProgress: (int sent, int total) {
           if (!mounted || total <= 0) {
             return;
           }
-          setState(() {
-            _progress = (sent / total).clamp(0, 1);
-          });
+          _firmwareUpdateViewModel.setInstallProgress(sent / total);
         },
       );
 
@@ -486,38 +217,41 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
         return;
       }
 
-      _inUseVersion = _availableVersion;
-      _state = _UpdateViewState.installed;
-      _progress = 1;
+      _firmwareUpdateViewModel.setInstalledSuccess();
+
+      // Keep cached file through install, then clean it up after successful upload.
+      try {
+        final File cachedBundle = File(installedBundlePath);
+        if (await cachedBundle.exists()) {
+          await cachedBundle.delete();
+        }
+      } catch (_) {
+        // Install already succeeded; ignore cache cleanup errors.
+      }
+
       await _persistState();
 
       final String projectId = serviceLocator<ProjectViewModel>().projectId;
-      await _api.logInstallStatus(
+      await _firmwareUpdateViewModel.logInstallStatus(
         projectId: projectId,
-        bundleVersion: _availableVersion,
+        bundleVersion: _firmwareUpdateViewModel.state.availableVersion,
         previousVersion: previousVersion,
-        launcherVersion: _desktopVersion,
+        launcherVersion: _firmwareUpdateViewModel.state.desktopVersion,
         status: 'INSTALL_SUCCESS',
       );
-
-      setState(() {});
     } catch (_) {
       if (!mounted) {
         return;
       }
-
-      setState(() {
-        _state = _UpdateViewState.installFailed;
-        _errorText = 'Device Timeout';
-      });
+      _firmwareUpdateViewModel.setInstallFailed('Install failed. Please retry.');
 
       try {
         final String projectId = serviceLocator<ProjectViewModel>().projectId;
-        await _api.logInstallStatus(
+        await _firmwareUpdateViewModel.logInstallStatus(
           projectId: projectId,
-          bundleVersion: _availableVersion,
+          bundleVersion: _firmwareUpdateViewModel.state.availableVersion,
           previousVersion: previousVersion,
-          launcherVersion: _desktopVersion,
+          launcherVersion: _firmwareUpdateViewModel.state.desktopVersion,
           status: 'INSTALL_FAIL',
         );
       } catch (_) {
@@ -539,22 +273,12 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
   }
 
   void _rollbackToDownloaded() {
-    if (_downloadedFilePath.isNotEmpty && File(_downloadedFilePath).existsSync()) {
-      setState(() {
-        _state = _UpdateViewState.downloaded;
-        _errorText = '';
-      });
-      return;
-    }
-
-    setState(() {
-      _state = _UpdateViewState.updateAvailable;
-      _errorText = '';
-    });
+    _firmwareUpdateViewModel.rollbackToDownloadedOrAvailable();
   }
 
   String get _description {
-    if (_releaseNotes.trim().isNotEmpty) return _releaseNotes;
+    final String releaseNotes = _firmwareUpdateViewModel.state.releaseNotes;
+    if (releaseNotes.trim().isNotEmpty) return releaseNotes;
     return 'A new update is ready. Download it now to get all the latest features and improvements. '
         'It only takes a moment, and updating ensures everything works smoothly and feels better than before. '
         'Don\'t miss out grab the newest version.';
@@ -562,108 +286,99 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
 
   @override
   Widget build(BuildContext context) {
-    if (_state == _UpdateViewState.noUpdate) {
-      return _buildNoUpdateView(context);
-    }
+    return BlocBuilder<FirmwareUpdateViewModel, FirmwareUpdateViewModelState>(
+      bloc: _firmwareUpdateViewModel,
+      builder: (BuildContext context, FirmwareUpdateViewModelState state) {
+        if (state.uiState == FirmwareUpdateUiState.noUpdate) {
+          return _buildNoUpdateView(context, state);
+        }
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
+        return Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    _buildHeading(context),
-                    const SizedBox(height: 10),
-                    FusionAppText(
-                      text: _description,
-                      style: context.textTheme.h6Regular,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        _buildHeading(context, state),
+                        const SizedBox(height: 10),
+                        FusionAppText(
+                          text: _description,
+                          style: context.textTheme.h6Regular,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 28),
+                  _buildActionPanel(context, state),
+                ],
               ),
-              const SizedBox(width: 28),
-              _buildActionPanel(context),
+              const SizedBox(height: 18),
+              if ((state.uiState == FirmwareUpdateUiState.installing || state.uiState == FirmwareUpdateUiState.installed) && state.isProgressExpanded)
+                _buildDeviceProgressTable(context, state),
+              if ((state.uiState == FirmwareUpdateUiState.installing || state.uiState == FirmwareUpdateUiState.installed) && state.isProgressExpanded)
+                const SizedBox(height: 18),
+              _buildInUseVersionRow(context, state),
             ],
           ),
-          const SizedBox(height: 18),
-          if ((_state == _UpdateViewState.installing || _state == _UpdateViewState.installed) && _isProgressExpanded) _buildDeviceProgressTable(context),
-          if ((_state == _UpdateViewState.installing || _state == _UpdateViewState.installed) && _isProgressExpanded) const SizedBox(height: 18),
-          _buildInUseVersionRow(context),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildNoUpdateView(BuildContext context) {
+  Widget _buildNoUpdateView(BuildContext context, FirmwareUpdateViewModelState state) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Container(
-            width: 126,
-            height: 126,
-            decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFFDFDFDF), width: 2),
-              shape: BoxShape.circle,
-            ),
-            child: const Center(
-              child: Text(
-                ':(',
-                style: TextStyle(
-                  fontSize: 54,
-                  color: Color(0xFFDFDFDF),
-                  fontWeight: FontWeight.w300,
-                ),
-              ),
-            ),
+          FusionIcon.svg(
+            AssetSvg.sadFace,
+            color: context.colorScheme.textPrimary,
           ),
           const SizedBox(height: 24),
           FusionAppText(
             text: 'Oh no! No new updates available',
-            style: context.textTheme.titleMedium?.copyWith(
-              color: const Color(0xFFD0D0D0),
-              fontSize: 38,
-              fontWeight: FontWeight.w400,
-            ),
+            style: context.textTheme.h4SemiBold,
           ),
           const SizedBox(height: 18),
           SizedBox(
             width: 560,
-            child: _buildInUseVersionRow(context),
+            child: _buildInUseVersionRow(context, state),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHeading(BuildContext context) {
-    final String version = _availableVersion.isEmpty ? _inUseVersion : _availableVersion;
+  Widget _buildHeading(BuildContext context, FirmwareUpdateViewModelState state) {
+    final String version = state.availableVersion.isEmpty ? state.inUseVersion : state.availableVersion;
     final String stateText;
-    switch (_state) {
-      case _UpdateViewState.updateAvailable:
+    switch (state.uiState) {
+      case FirmwareUpdateUiState.updateAvailable:
         stateText = 'available for download';
-      case _UpdateViewState.downloading:
+      case FirmwareUpdateUiState.downloading:
         stateText = 'is downloading';
-      case _UpdateViewState.downloaded:
+      case FirmwareUpdateUiState.downloaded:
         stateText = 'available to install';
-      case _UpdateViewState.downloadFailed:
+      case FirmwareUpdateUiState.downloadFailed:
         stateText = 'failed to download';
-      case _UpdateViewState.installing:
+      case FirmwareUpdateUiState.installing:
         stateText = 'is installing';
-      case _UpdateViewState.installFailed:
+      case FirmwareUpdateUiState.installFailed:
         stateText = 'failed to install';
-      case _UpdateViewState.installed:
+      case FirmwareUpdateUiState.installed:
         stateText = 'is installed successfully';
-      case _UpdateViewState.checking:
+      case FirmwareUpdateUiState.checking:
         stateText = 'is checking';
-      case _UpdateViewState.noUpdate:
+      case FirmwareUpdateUiState.noUpdate:
         stateText = 'is up to date';
+      case FirmwareUpdateUiState.appUpdateRequired:
+        stateText = 'requires launcher update';
     }
 
     return RichText(
@@ -682,33 +397,31 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
     );
   }
 
-  Widget _buildActionPanel(BuildContext context) {
+  Widget _buildActionPanel(BuildContext context, FirmwareUpdateViewModelState state) {
     Widget content;
 
-    switch (_state) {
-      case _UpdateViewState.updateAvailable:
+    switch (state.uiState) {
+      case FirmwareUpdateUiState.updateAvailable:
         content = _buildButton(context, 'Download Now', _downloadNow);
-      case _UpdateViewState.downloading:
+      case FirmwareUpdateUiState.downloading:
         content = Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            _buildProgressCircle(),
+            _buildProgressCircle(state),
             const SizedBox(width: 14),
             _buildButton(context, 'Cancel', _cancelDownload, width: 170),
           ],
         );
-      case _UpdateViewState.downloaded:
+      case FirmwareUpdateUiState.downloaded:
         content = Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
           children: <Widget>[
             _buildButton(context, 'Install Now', _installNow),
             const SizedBox(height: 14),
             _buildSuccessLabel('Downloaded Successfully'),
           ],
         );
-      case _UpdateViewState.downloadFailed:
+      case FirmwareUpdateUiState.downloadFailed:
         content = Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
           children: <Widget>[
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -719,16 +432,15 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
               ],
             ),
             const SizedBox(height: 14),
-            // _buildErrorLabel(_errorText.isEmpty ? 'Device Timeout' : _errorText),
           ],
         );
-      case _UpdateViewState.installing:
+      case FirmwareUpdateUiState.installing:
         content = InkWell(
-          onTap: () => setState(() => _isProgressExpanded = !_isProgressExpanded),
+          onTap: _firmwareUpdateViewModel.toggleProgressExpanded,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              _buildProgressCircle(),
+              _buildProgressCircle(state),
               const SizedBox(width: 14),
               FusionAppText(
                 text: 'View Device Progress',
@@ -736,15 +448,14 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
               ),
               const SizedBox(width: 10),
               Icon(
-                _isProgressExpanded ? Icons.keyboard_arrow_up : Icons.chevron_right,
+                state.isProgressExpanded ? Icons.keyboard_arrow_up : Icons.chevron_right,
                 color: const Color(0xFFB9B9B9),
               ),
             ],
           ),
         );
-      case _UpdateViewState.installFailed:
+      case FirmwareUpdateUiState.installFailed:
         content = Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
           children: <Widget>[
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -755,30 +466,26 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
               ],
             ),
             const SizedBox(height: 14),
-            _buildErrorLabel(_errorText.isEmpty ? 'Device Timeout' : _errorText),
+            _buildErrorLabel(state.errorText.isEmpty ? 'Device Timeout' : state.errorText),
           ],
         );
-      case _UpdateViewState.installed:
+      case FirmwareUpdateUiState.installed:
         content = Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
           children: <Widget>[
             _buildSuccessLabel('Installed Successfully'),
             const SizedBox(height: 12),
             InkWell(
-              onTap: () => setState(() => _isProgressExpanded = !_isProgressExpanded),
+              onTap: _firmwareUpdateViewModel.toggleProgressExpanded,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   FusionAppText(
                     text: 'View Device Progress',
-                    style: context.textTheme.labelMedium?.copyWith(
-                      color: const Color(0xFFB9B9B9),
-                      fontSize: 32,
-                    ),
+                    style: context.textTheme.b2Medium,
                   ),
                   const SizedBox(width: 8),
                   Icon(
-                    _isProgressExpanded ? Icons.keyboard_arrow_up : Icons.chevron_right,
+                    state.isProgressExpanded ? Icons.keyboard_arrow_up : Icons.chevron_right,
                     color: const Color(0xFFB9B9B9),
                   ),
                 ],
@@ -786,27 +493,33 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
             ),
           ],
         );
-      case _UpdateViewState.checking:
+      case FirmwareUpdateUiState.checking:
         content = Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             const SizedBox(
-              width: 26,
-              height: 26,
+              width: 18,
+              height: 18,
               child: CircularProgressIndicator(
-                strokeWidth: 2,
+                strokeWidth: 1,
                 color: Color(0xFF27B177),
               ),
             ),
             const SizedBox(width: 10),
             FusionAppText(
               text: 'Checking',
-              style: context.textTheme.labelMedium?.copyWith(color: const Color(0xFFD0D0D0)),
+              style: context.textTheme.b2Medium,
             ),
           ],
         );
-      case _UpdateViewState.noUpdate:
+      case FirmwareUpdateUiState.noUpdate:
         content = const SizedBox.shrink();
+      case FirmwareUpdateUiState.appUpdateRequired:
+        content = Column(
+          children: <Widget>[
+            _buildErrorLabel(state.errorText.isEmpty ? 'Launcher update required.' : state.errorText),
+          ],
+        );
     }
 
     return content;
@@ -827,8 +540,8 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
     );
   }
 
-  Widget _buildProgressCircle() {
-    final int percent = (_progress * 100).round().clamp(0, 100);
+  Widget _buildProgressCircle(FirmwareUpdateViewModelState state) {
+    final int percent = (state.progress * 100).round().clamp(0, 100);
     return Stack(
       alignment: Alignment.center,
       children: <Widget>[
@@ -836,7 +549,7 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
           width: 34,
           height: 34,
           child: CircularProgressIndicator(
-            value: _progress,
+            value: state.progress,
             strokeWidth: 3,
             backgroundColor: const Color(0xFF3A3A3A),
             color: const Color(0xFF27B177),
@@ -844,7 +557,10 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
         ),
         FusionAppText(
           text: '$percent%',
-          style: const TextStyle(color: Color(0xFFC7C7C7), fontSize: 10),
+          style: context.textTheme.l1Regular.copyWith(
+            color: const Color(0xFF27B177),
+            fontSize: 12,
+          ),
         ),
       ],
     );
@@ -882,13 +598,13 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
     );
   }
 
-  Widget _buildInUseVersionRow(BuildContext context) {
+  Widget _buildInUseVersionRow(BuildContext context, FirmwareUpdateViewModelState state) {
     return Container(
       height: 52,
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF313131), width: 1),
+        border: Border.all(color: context.colorScheme.strokeLight),
       ),
       child: Row(
         children: <Widget>[
@@ -900,7 +616,7 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
           ),
           const Spacer(),
           FusionAppText(
-            text: 'v $_inUseVersion',
+            text: 'v ${state.inUseVersion}',
             style: context.textTheme.b3Bold,
           ),
         ],
@@ -908,7 +624,7 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
     );
   }
 
-  Widget _buildDeviceProgressTable(BuildContext context) {
+  Widget _buildDeviceProgressTable(BuildContext context, FirmwareUpdateViewModelState state) {
     final List<HardwareComponent> devices = _fusionDevices;
 
     return Container(
@@ -932,14 +648,14 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
               ],
             ),
           ),
-          for (int i = 0; i < devices.length; i++) _buildDeviceRow(devices[i], i),
+          for (int i = 0; i < devices.length; i++) _buildDeviceRow(devices[i], i, state),
         ],
       ),
     );
   }
 
-  Widget _buildDeviceRow(HardwareComponent device, int index) {
-    final double shifted = (_progress * 1.2) - (index * 0.02);
+  Widget _buildDeviceRow(HardwareComponent device, int index, FirmwareUpdateViewModelState state) {
+    final double shifted = (state.progress * 1.2) - (index * 0.02);
     final double rowProgress = shifted.clamp(0, 0.99);
 
     final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
@@ -976,14 +692,14 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
             flex: 1,
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Icon(Icons.circle, color: Color(0xFF5CC59A), size: 10),
+              child: Icon(Icons.square_rounded, color: Color(0xFF5CC59A), size: 10),
             ),
           ),
           Expanded(flex: 3, child: _TableValueText(device.name, color: const Color(0xFF2FA16B), underline: true)),
           Expanded(flex: 3, child: _TableValueText(device.hardwareName)),
           Expanded(flex: 3, child: _TableValueText(location)),
           Expanded(flex: 2, child: _TableValueText('192.168.0.${index + 1}')),
-          const Expanded(flex: 2, child: _TableValueText('v1.0.1')),
+          Expanded(flex: 2, child: _TableValueText('v${state.inUseVersion}')),
           Expanded(
             flex: 4,
             child: ClipRRect(
@@ -1011,10 +727,8 @@ class _TableHeaderText extends StatelessWidget {
   Widget build(BuildContext context) {
     return FusionAppText(
       text: text,
-      style: const TextStyle(
-        color: Color(0xFF888888),
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
+      style: context.textTheme.l1Regular.copyWith(
+        color: context.colorScheme.textSecondary,
       ),
       maxLine: 1,
     );
@@ -1022,7 +736,11 @@ class _TableHeaderText extends StatelessWidget {
 }
 
 class _TableValueText extends StatelessWidget {
-  const _TableValueText(this.text, {this.color = const Color(0xFFD3D3D3), this.underline = false});
+  const _TableValueText(
+    this.text, {
+    this.color = const Color(0xFFD3D3D3),
+    this.underline = false,
+  });
 
   final String text;
   final Color color;
@@ -1032,7 +750,7 @@ class _TableValueText extends StatelessWidget {
   Widget build(BuildContext context) {
     return FusionAppText(
       text: text,
-      style: TextStyle(
+      style: context.textTheme.b2Medium.copyWith(
         color: color,
         fontSize: 14,
         decoration: underline ? TextDecoration.underline : TextDecoration.none,

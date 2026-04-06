@@ -4,20 +4,21 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/devices/view_model/devices/fusion_network_device_vm.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+
 import '../hardware_card.dart';
 
 class NetworkHardwarePanel extends StatelessWidget {
   final List<FusionNetworkDevice> networkDevices;
   final Function(String) onDragStarted;
   final VoidCallback onDragEnded;
-  final VoidCallback onRecommission;
+  final VoidCallback onRegisterDevicesTap;
 
   const NetworkHardwarePanel({
     super.key,
     required this.networkDevices,
     required this.onDragStarted,
     required this.onDragEnded,
-    required this.onRecommission,
+    required this.onRegisterDevicesTap,
   });
 
   @override
@@ -85,10 +86,10 @@ class NetworkHardwarePanel extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         FusionNeumorphicButton(
-          semanticId: "recommission_network_btn",
-          text: "Recommission Network",
+          semanticId: "register_devices_btn",
+          text: "Register devices",
           height: 48,
-          onTap: onRecommission,
+          onTap: onRegisterDevicesTap,
         ),
       ],
     );

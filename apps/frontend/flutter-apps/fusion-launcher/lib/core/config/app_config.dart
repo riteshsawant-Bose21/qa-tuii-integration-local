@@ -8,6 +8,7 @@ class AppConfig {
   static late final String auth0NativeRedirectUri;
   static late final String auth0Schema;
   static late final String awsApiBaseUrl;
+  static late final String firmwareUpdateChannel;
 
   static Future<void> initialize() async {
     await dotenv.load(fileName: ".env");
@@ -18,6 +19,7 @@ class AppConfig {
     auth0NativeRedirectUri = dotenv.env['AUTH0_NATIVE_REDIRECT_URI'] ?? '';
     auth0Schema = dotenv.env['AUTH0_SCHEMA'] ?? '';
     awsApiBaseUrl = dotenv.env['API_BASE_URL'] ?? '';
+    firmwareUpdateChannel = dotenv.env['FIRMWARE_UPDATE_CHANNEL'] ?? '';
 
     _validateConfig();
   }

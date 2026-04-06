@@ -23,6 +23,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/authentication/viewmodel/session_view_model.dart';
 import '../features/configuration/presentation/viewmodel/project_view_model.dart';
+import '../features/devices/view_model/firmware_update/firmware_update_vm.dart';
 import '../features/dynamic_config/data/datasources/panel_datasource.dart';
 import '../features/dynamic_config/data/datasources/panel_datasource_impl.dart';
 import '../features/dynamic_config/data/repositories/panel_repository_impl.dart';
@@ -191,6 +192,10 @@ Future<void> setupServiceLocator() async {
     FusionDeviceService(
       networkClient: serviceLocator<FusionNetworkClient>(),
     ),
+  );
+
+  serviceLocator.registerLazySingleton<FirmwareUpdateViewModel>(
+    () => FirmwareUpdateViewModel(serviceLocator<FusionDeviceService>()),
   );
 
   serviceLocator.registerSingleton<FusionConfigSyncService>(
