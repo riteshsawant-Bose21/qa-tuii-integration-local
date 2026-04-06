@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_web/features/devices/presentation/widgets/common_widgets/filter_dropdown.dart';
 import 'package:fusion_web/features/devices/presentation/widgets/devices_page_widgets/view_toggle_button.dart';
-import 'package:fusion_lib/fusion_widgets/form_fields/fusion_custom_textfield.dart';
-import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
-import 'package:fusion_lib/fusion_widgets/others/hover_dropdown.dart';
+
 class DeviceFilters extends StatelessWidget {
   final TextEditingController searchController;
 
@@ -194,31 +192,20 @@ class DeviceFilters extends StatelessWidget {
     return Row(
       children: [
         ViewToggleButton(
-          icon: Icons.view_list_rounded,
-          isSelected: !isGridView,
-          onTap: onListTap,
-        ),
-        const SizedBox(width: 8),
-        ViewToggleButton(
           icon: Icons.grid_view_rounded,
           isSelected: isGridView,
           onTap: onGridTap,
+        ),
+        const SizedBox(width: 8),
+        ViewToggleButton(
+          icon: Icons.view_list_rounded,
+          isSelected: !isGridView,
+          onTap: onListTap,
         ),
       ],
     );
   }
 
-  InputDecoration _inputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(icon, color: Colors.grey[400]),
-      filled: true,
-      fillColor: Colors.grey[50],
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
-    );
-  }
 }
 
 class _ClearFilterButton extends StatefulWidget {

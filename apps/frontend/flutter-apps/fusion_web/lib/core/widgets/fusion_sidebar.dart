@@ -33,9 +33,7 @@ class FusionSidebar extends StatelessWidget {
           return Container(
             width: AppConstants.sidebarWidth,
             height: double.infinity,
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor
-              ),
+            decoration: BoxDecoration(color: Theme.of(context).cardColor),
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
@@ -54,6 +52,8 @@ class FusionSidebar extends StatelessWidget {
                     //     ),
                     //   ),
                     // ),
+                    
+                    
 
                     const SizedBox(height: 16),
 
@@ -129,7 +129,9 @@ class FusionSidebar extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           FusionAppText(
-                  text:viewModel.userName, style: context.textTheme.titleMedium),
+            text: viewModel.userName,
+            style: context.textTheme.titleMedium,
+          ),
         ],
       ),
     );

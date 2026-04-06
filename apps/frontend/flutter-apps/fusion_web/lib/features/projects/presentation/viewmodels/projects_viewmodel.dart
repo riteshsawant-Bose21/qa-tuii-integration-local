@@ -13,9 +13,9 @@ class ProjectsViewModel extends BaseViewModel<List<ProjectModel>>
 
   // ================= STATE =================
   String _searchQuery = '';
-  String region = 'All';
-  String status = 'All';
-  bool isGridView = false;
+  String region = 'All Regions';
+  String status = 'All Status';
+  bool isGridView = true;
 
   // ================= MAIN METHOD =================
   Future<void> applyFilters({bool showLoader = true}) async {
@@ -24,8 +24,8 @@ class ProjectsViewModel extends BaseViewModel<List<ProjectModel>>
 
       final projects = await repository.getProjectsFiltered(
         search: _searchQuery,
-        region: region == 'All' ? null : region,
-        status: status == 'All' ? null : status,
+        region: region == 'All Regions' ? null : region,
+        status: status == 'All Status' ? null : status,
       );
 
       setLoaded(projects);
@@ -57,8 +57,8 @@ class ProjectsViewModel extends BaseViewModel<List<ProjectModel>>
 
   void clearFilters() {
     _searchQuery = '';
-    region = 'All';
-    status = 'All';
+    region = 'All Regions';
+    status = 'All Status';
 
     applyFilters();
   }
@@ -114,7 +114,7 @@ class ProjectsViewModel extends BaseViewModel<List<ProjectModel>>
 
   bool get hasActiveFilters {
     return _searchQuery.isNotEmpty ||
-        region != 'All' ||
-        status != 'All';
+        region != 'All Regions' ||
+        status != 'All Status';
   }
 }

@@ -39,14 +39,11 @@ class StatCard extends StatelessWidget {
               Text(title),
             ],
           ),
-
           SizedBox(height: 12),
-        
           Text(
             value,
             style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
           ),
-
           SizedBox(
             height: 18,
             child: subtitle != null

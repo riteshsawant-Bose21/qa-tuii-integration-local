@@ -32,9 +32,35 @@ class ProjectActionsMenu extends StatelessWidget {
           case 'delete':
             onDelete();
             break;
+          case 'transfer ownership':
+            // Handle transfer ownership action
+            break;
+          case 'move project':
+            // Handle move project action
+            break;
         }
       },
       itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'transfer ownership',
+          child: Row(
+            children: [
+              FusionIcon.icon(Icons.file_copy, size: 16),
+              const SizedBox(width: 8),
+              const FusionAppText(text: 'Transfer Ownership'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'move project',
+          child: Row(
+            children: [
+              FusionIcon.icon(Icons.drive_file_move_outlined, size: 16),
+              const SizedBox(width: 8),
+              const FusionAppText(text: 'Move Project'),
+            ],
+          ),
+        ),
         PopupMenuItem(
           value: 'invite',
           child: Row(
@@ -72,6 +98,7 @@ class ProjectActionsMenu extends StatelessWidget {
             ],
           ),
         ),
+        
       ],
     );
   }

@@ -20,7 +20,7 @@ class ConfirmationDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     
-    final confirmColor = isDestructive ? context.colorScheme.error : context.colorScheme.primary;
+    final confirmColor = isDestructive ? context.colorScheme.volumeRed : context.colorScheme.primary;
 
     return AlertDialog(
       backgroundColor: context.colorScheme.elevation2,

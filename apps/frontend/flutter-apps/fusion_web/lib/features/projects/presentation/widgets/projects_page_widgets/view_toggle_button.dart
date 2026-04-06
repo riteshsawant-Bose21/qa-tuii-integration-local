@@ -21,12 +21,12 @@ class ViewToggleButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: isSelected ? context.colorScheme.elevation3.withAlpha(200) : context.colorScheme.white,
+          color: isSelected ? context.colorScheme.white : context.colorScheme.elevation3.withAlpha(200),
           borderRadius: BorderRadius.circular(8),
         ),
         child: FusionIcon.icon(
           icon,
-          color: isSelected ? context.colorScheme.white : context.colorScheme.elevation3.withAlpha(200),
+          color: isSelected ? context.colorScheme.elevation3.withAlpha(200) : context.colorScheme.white,
         ),
       ),
     );

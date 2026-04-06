@@ -52,7 +52,13 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
           Navigator.pop(context);
 
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Users invited successfully")),
+             SnackBar(
+              backgroundColor: context.colorScheme.elevation2,
+               behavior: SnackBarBehavior.floating,
+              content: FusionAppText(text: "Users invited successfully",
+              style: TextStyle(
+        color: context.colorScheme.onSurface,
+      ),)),
           );
         }
 
@@ -78,7 +84,9 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
           child: BlocBuilder<InviteUserCubit, BaseState<List<UserModel>>>(
             builder: (context, state) {
               if (state is LoadingState<List<UserModel>>) {
-                return const Center(child: CircularProgressIndicator());
+                return Center(child: CircularProgressIndicator(
+                    color: context.colorScheme.white,
+                ));
               }
 
               if (state is LoadedState<List<UserModel>>) {
@@ -139,7 +147,7 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
                           onPressed: _submit,
                           style: ElevatedButton.styleFrom(
                             // backgroundColor: Colors.black,
-                            // foregroundColor: Colors.white,
+                            foregroundColor: context.colorScheme.onPrimary,
                           ),
                           child: const Text("Send Invite"),
                         ),
@@ -183,44 +191,56 @@ class _MultiSelectUserField extends StatefulWidget {
 class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
   final TextEditingController _controller = TextEditingController();
   List<UserModel> filteredUsers = [];
+  List<UserModel> _localSelectedUsers = [];
   bool isOpen = false;
   int? hoveredIndex;
 
   @override
   void initState() {
     super.initState();
-    filteredUsers = widget.users;
+
+    _localSelectedUsers = [...widget.selectedUsers];
+
+    _refreshList();
   }
 
   void _filter(String query) {
     setState(() {
-      filteredUsers = widget.users
-          .where(
-            (u) =>
-                u.name.toLowerCase().contains(query.toLowerCase()) ||
-                u.email.toLowerCase().contains(query.toLowerCase()),
-          )
-          .toList();
+      _refreshList();
     });
   }
 
   void _selectUser(UserModel user) {
-    final isSelected = widget.selectedUsers.contains(user);
+  setState(() {
+    _localSelectedUsers.add(user);
 
-    List<UserModel> updated;
+    _controller.clear();
+    _refreshList();
+  });
 
-    if (isSelected) {
-      updated = [...widget.selectedUsers]..remove(user);
-    } else {
-      updated = [...widget.selectedUsers, user];
-    }
-
-    widget.onChanged(updated);
-  }
+  widget.onChanged(_localSelectedUsers);
+}
 
   void _removeUser(UserModel user) {
-    final updated = [...widget.selectedUsers]..remove(user);
-    widget.onChanged(updated);
+  setState(() {
+    _localSelectedUsers.remove(user);
+    _refreshList();
+  });
+
+  widget.onChanged(_localSelectedUsers);
+}
+
+  void _refreshList() {
+    final query = _controller.text;
+
+    filteredUsers = widget.users
+        .where(
+          (u) =>
+              !_localSelectedUsers.contains(u) &&
+              (u.name.toLowerCase().contains(query.toLowerCase()) ||
+                  u.email.toLowerCase().contains(query.toLowerCase())),
+        )
+        .toList();
   }
 
   @override
@@ -244,12 +264,12 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
                 ),
               ],
             ),
-            child: widget.selectedUsers.isEmpty
+            child: _localSelectedUsers.isEmpty
                 ? const FusionAppText(text: "Select users...")
                 : Wrap(
                     spacing: 6,
                     runSpacing: 6,
-                    children: widget.selectedUsers.map((user) {
+                    children: _localSelectedUsers.map((user) {
                       return Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
@@ -257,7 +277,11 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
                         ),
 
                         decoration: BoxDecoration(
-                          color: context.colorScheme.elevation2,
+                          color: context.colorScheme.elevation3,
+                          border: Border.all(
+                            color: context.colorScheme.elevation6,
+                            width: 1,
+                          ),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
@@ -289,7 +313,6 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
               constraints: const BoxConstraints(maxHeight: 250),
               child: Column(
                 children: [
-            
                   Padding(
                     padding: const EdgeInsets.all(0),
                     child: TextField(
@@ -297,7 +320,7 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
                       decoration: InputDecoration(
                         hintText: "Search users...",
                         prefixIcon: FusionIcon.icon(Icons.search),
-            
+
                         filled: true,
                         fillColor: context.colorScheme.elevation2,
                         // border: InputBorder.none,
@@ -329,8 +352,8 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
                       itemCount: filteredUsers.length,
                       itemBuilder: (context, index) {
                         final user = filteredUsers[index];
-                        final isSelected = widget.selectedUsers.contains(user);
-            
+                        final isSelected = _localSelectedUsers.contains(user);
+
                         return MouseRegion(
                           onEnter: (_) => setState(() => hoveredIndex = index),
                           onExit: (_) => setState(() => hoveredIndex = null),
@@ -358,7 +381,7 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-            
+
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
@@ -372,9 +395,9 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
                                             fontSize: 14,
                                           ),
                                         ),
-            
+
                                         const SizedBox(height: 2),
-            
+
                                         /// email with role
                                         Row(
                                           children: [
@@ -384,13 +407,14 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
                                                 style: const TextStyle(
                                                   fontSize: 12,
                                                   // color: Colors.black,
-                                                  overflow: TextOverflow.ellipsis,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                 ),
                                               ),
                                             ),
-            
+
                                             const SizedBox(width: 6),
-            
+
                                             /// DOT
                                             const FusionAppText(
                                               text: "•",
@@ -398,15 +422,16 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
                                                 // color: Colors.black,
                                               ),
                                             ),
-            
+
                                             const SizedBox(width: 6),
-            
+
                                             /// role
                                             Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 8,
-                                                vertical: 2,
-                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 2,
+                                                  ),
                                               decoration: BoxDecoration(
                                                 // color: const Color.fromARGB(255, 211, 213, 219),
                                                 borderRadius:
@@ -429,8 +454,6 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
                                       ],
                                     ),
                                   ),
-            
-                                  if (isSelected) const Icon(Icons.check),
                                 ],
                               ),
                             ),

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_web/features/common-widgets/page_header.dart';
 import 'package:fusion_web/features/devices/presentation/viewmodels/devices_viewmodel.dart';
 import 'package:fusion_web/features/devices/data/repositories/devices_repository_impl.dart';
 import 'package:fusion_web/features/devices/data/datasources/device_datasource.dart';
 import 'package:fusion_web/features/devices/presentation/widgets/devices_page_widgets/common_device_section.dart';
 import 'package:fusion_web/features/devices/presentation/widgets/devices_page_widgets/device_grid_view.dart';
-import 'package:fusion_web/features/devices/presentation/widgets/devices_page_widgets/device_overview.dart';
-import 'package:fusion_web/features/devices/presentation/widgets/devices_page_widgets/devices_header.dart';
 import 'package:fusion_web/features/devices/presentation/widgets/devices_page_widgets/device_filters.dart';
 import 'package:fusion_web/features/devices/presentation/widgets/devices_page_widgets/devices_list_view.dart';
 import 'package:fusion_web/core/presentation/base_viewmodel.dart';
@@ -53,7 +53,9 @@ class _DevicesView extends StatelessWidget {
       child: BlocBuilder<DevicesViewModel, BaseState<DevicesModel>>(
         builder: (context, state) {
           if (state is LoadingState) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator(
+                    color: context.colorScheme.white,
+                ));
           }
 
           if (state is LoadedState<DevicesModel>) {
@@ -64,22 +66,26 @@ class _DevicesView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const DevicesHeader(),
-
-                  const SizedBox(height: 24),
-
-                  DevicesOverview(
-                    total: stats.total,
-                    healthy: stats.healthy,
-                    critical: stats.critical,
-                    inactive: stats.inactive,
+                  const PageHeader(
+                    title: 'Devices',
+                    subtitle:
+                        'Monitor and manage all devices across your ecosystem',
                   ),
 
                   const SizedBox(height: 24),
 
+                  // DevicesOverview(
+                  //   total: stats.total,
+                  //   healthy: stats.healthy,
+                  //   critical: stats.critical,
+                  //   inactive: stats.inactive,
+                  // ),
+
+                  // const SizedBox(height: 24),
+
                   CommonDeviceSection(
-                    title: "All Devices",
-                    count: stats.devices.length,
+                    // title: "All Devices",
+                    // count: stats.devices.length,
 
                     filters: DeviceFilters(
                       searchController: searchController,

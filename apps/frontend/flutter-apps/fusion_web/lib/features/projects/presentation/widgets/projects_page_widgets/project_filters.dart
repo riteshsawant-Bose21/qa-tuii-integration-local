@@ -27,7 +27,9 @@ class ProjectsFilters extends StatelessWidget {
                 labelText: 'Search projects...',
                 prefixIcon: Icon(Icons.search),
                 filled: true,
-                fillColor: context.colorScheme.onSurface.withValues(alpha: 0.05),
+                fillColor: context.colorScheme.onSurface.withValues(
+                  alpha: 0.05,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide.none,
@@ -59,7 +61,7 @@ class ProjectsFilters extends StatelessWidget {
           Expanded(
             child: FilterDropdown(
               value: vm.region,
-              items: const ['All', 'indoor', 'outdoor', 'hybrid'],
+              items: const ['All Regions', 'indoor', 'outdoor', 'hybrid'],
               onChanged: (v) => vm.updateRegion(v!),
               backgroundColor: context.colorScheme.elevation2,
             ),
@@ -70,7 +72,7 @@ class ProjectsFilters extends StatelessWidget {
           Expanded(
             child: FilterDropdown(
               value: vm.status,
-              items: const ['All', 'Proposal', 'Development', 'Commissioned'],
+              items: const ['All Status', 'Proposal', 'Development', 'Commissioned'],
               onChanged: (v) => vm.updateStatus(v!),
               backgroundColor: context.colorScheme.elevation2,
             ),
@@ -81,15 +83,15 @@ class ProjectsFilters extends StatelessWidget {
           Row(
             children: [
               ViewToggleButton(
-                icon: Icons.view_list_rounded,
-                isSelected: !vm.isGridView,
-                onTap: () => vm.toggleView(false),
-              ),
-              const SizedBox(width: 8),
-              ViewToggleButton(
                 icon: Icons.grid_view_rounded,
                 isSelected: vm.isGridView,
                 onTap: () => vm.toggleView(true),
+              ),
+              const SizedBox(width: 8),
+              ViewToggleButton(
+                icon: Icons.view_list_rounded,
+                isSelected: !vm.isGridView,
+                onTap: () => vm.toggleView(false),
               ),
             ],
           ),
@@ -97,5 +99,4 @@ class ProjectsFilters extends StatelessWidget {
       ),
     );
   }
-
 }

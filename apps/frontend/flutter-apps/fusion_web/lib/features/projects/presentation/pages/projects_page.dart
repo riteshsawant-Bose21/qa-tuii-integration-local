@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
+import 'package:fusion_web/features/common-widgets/page_header.dart';
 //Routes
 import 'package:go_router/go_router.dart';
 //base viewmodel
@@ -52,7 +53,11 @@ class _ProjectsPageState extends State<ProjectsPage> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeader(),
+                  const PageHeader(
+                    title: 'Projects',
+                    subtitle:
+                        'Manage and monitor all projects across your organization',
+                  ),
                   const SizedBox(height: 24),
                   Expanded(
                     child: Container(
@@ -62,7 +67,6 @@ class _ProjectsPageState extends State<ProjectsPage> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            // color: context.colorScheme.shadow,
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -71,10 +75,10 @@ class _ProjectsPageState extends State<ProjectsPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // const SizedBox(height: 24),
                           const SizedBox(height: 12),
                           const ProjectsFilters(),
                           const SizedBox(height: 24),
-
                           Expanded(child: _buildContent(context, state)),
                         ],
                       ),
@@ -90,36 +94,6 @@ class _ProjectsPageState extends State<ProjectsPage> {
   }
 
   // ======================================================
-  // HEADER
-  // ======================================================
-
-  Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // LEFT SIDE (Title + subtitle)
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            FusionAppText(
-              text: 'Projects',
-              style: context.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-              maxLine: 2,
-            ),
-            const SizedBox(height: 4),
-            FusionAppText(
-              text: 'Manage and monitor all projects across your organization',
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  // ======================================================
   // CONTENT
   // ======================================================
 
@@ -130,7 +104,9 @@ class _ProjectsPageState extends State<ProjectsPage> {
     final viewModel = context.watch<ProjectsViewModel>();
 
     if (state is LoadingState) {
-      return const Center(child: CircularProgressIndicator());
+      return  Center(child: CircularProgressIndicator(
+                    color: context.colorScheme.white,
+                ));
     }
 
     if (state is ErrorState<List<ProjectModel>>) {

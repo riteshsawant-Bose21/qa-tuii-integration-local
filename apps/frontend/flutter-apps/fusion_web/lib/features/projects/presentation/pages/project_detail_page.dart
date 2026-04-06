@@ -5,7 +5,6 @@ import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
 import 'package:fusion_web/core/presentation/base_viewmodel.dart';
 import 'package:fusion_web/core/services/service_locator.dart';
-
 import 'package:fusion_web/features/projects/data/models/project_model.dart';
 import 'package:fusion_web/features/projects/presentation/widgets/empty_state_widget.dart';
 import 'package:fusion_web/features/projects/presentation/widgets/projects_page_widgets/status_badge.dart';
@@ -75,8 +74,12 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
       child: BlocBuilder<ProjectDetailViewmodel, BaseState<ProjectModel>>(
         builder: (context, state) {
           if (state is LoadingState) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
+            return Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(
+                  color: context.colorScheme.white,
+                ),
+              ),
             );
           }
 
@@ -287,10 +290,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
 
                                 const SizedBox(height: 24),
 
-                                
-                                  _cardTitle("Device Health Status"),
-                                  
-                                
+                                _cardTitle("Device Health Status"),
 
                                 const SizedBox(height: 16),
 
@@ -385,8 +385,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                             >(
                               builder: (context, state) {
                                 if (state is LoadingState) {
-                                  return const Center(
-                                    child: CircularProgressIndicator(),
+                                  return Center(
+                                    child: CircularProgressIndicator(
+                                      color: context.colorScheme.white,
+                                    ),
                                   );
                                 }
 
@@ -508,7 +510,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                                 }
 
                                 if (state is ErrorState<DevicesModel>) {
-                                  return Center(child: FusionAppText(text: state.message));
+                                  return Center(
+                                    child: FusionAppText(text: state.message),
+                                  );
                                 }
 
                                 return const SizedBox();
@@ -556,13 +560,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FusionAppText(
-          text: label,
-        ),
+        FusionAppText(text: label),
         const SizedBox(height: 4),
-        FusionAppText(
-          text: value,
-        ),
+        FusionAppText(text: value),
       ],
     ),
   );
@@ -577,9 +577,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          FusionAppText(
-            text: label,
-          ),
+          FusionAppText(text: label),
           const SizedBox(height: 8),
           FusionAppText(
             text: value,
@@ -627,40 +625,26 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
   );
 
   Widget _tabButton(String text, DetailTab tab) {
-  final selected = _selectedTab == tab;
+    final selected = _selectedTab == tab;
 
-  return InkWell(
-    borderRadius: BorderRadius.circular(20),
-    onTap: () => setState(() => _selectedTab = tab),
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: selected
-            ? context.colorScheme.elevation2
-            : Colors.transparent,
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () => setState(() => _selectedTab = tab),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? context.colorScheme.elevation2 : Colors.transparent,
 
-        borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(20),
 
-        // ✅ ADD THIS
-        border: Border.all(
-          color: selected
-              ? context.colorScheme.elevation4 
-              : context.colorScheme.elevation3,
+          border: Border.all(
+            color: selected
+                ? context.colorScheme.elevation4
+                : context.colorScheme.elevation3,
+          ),
         ),
+        child: FusionAppText(text: text),
       ),
-      child: FusionAppText(text: text),
-    ),
-  );
-}
-
-//   Widget _smallPill(String text) => Container(
-//     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-//     decoration: BoxDecoration(
-//       color: context.colorScheme.elevation6,
-//       borderRadius: BorderRadius.circular(20),
-//     ),
-//     child: FusionAppText(
-//       text: text,
-//     ),
-//   );
+    );
+  }
 }
