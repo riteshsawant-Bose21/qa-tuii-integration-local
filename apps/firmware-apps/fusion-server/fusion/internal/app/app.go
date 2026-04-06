@@ -584,12 +584,14 @@ func initTaskManager(config *api.AppConfig, persistence *persistence.Persistence
 // initBLEServer initializes the Bluetooth server.
 func initBLEServer() *network.BLEServer {
 
-	bleServer, err := network.NewBLEServer(bleServiceUUID, bleCharacterUUID)
-	if err != nil {
-		logging.GetLogger().Info("Bluetooth not available: %v", err)
-		return nil
-	}
-	return bleServer
+	// bleServer, err := network.NewBLEServer(bleServiceUUID, bleCharacterUUID)
+	// if err != nil {
+	// 	logging.GetLogger().Info("Bluetooth not available: %v", err)
+	// 	return nil
+	// }
+	// return bleServer
+	logging.GetLogger().Info("BLE Server is disabled")
+	return nil
 }
 
 // initSAPServer initializes the SAP server
