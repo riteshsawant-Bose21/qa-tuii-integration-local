@@ -79,7 +79,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
                 child: SizedBox(
                   width: width2,
                   child: Padding(
-                    padding: itemPadding!,
+                    padding: itemPadding ?? EdgeInsets.all(8.0),
                     child: itemBuilder != null
                         ? itemBuilder!(context, item)
                         : FusionAppText(

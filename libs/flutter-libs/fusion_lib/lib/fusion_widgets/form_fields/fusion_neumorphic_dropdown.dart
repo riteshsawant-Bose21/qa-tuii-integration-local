@@ -107,7 +107,7 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
       popupOffset: widget.popupOffset,
       matchChildWidth: widget.matchChildWidth,
       isItemEnabled: widget.isItemEnabled,
-      itemPadding: widget.itemPadding,
+      itemPadding: widget.itemPadding ?? EdgeInsets.all(8.0),
       constraints: widget.constraints,
       itemBuilder: (context, item) {
         final bool isSelected = item == _selectedValue;
@@ -141,22 +141,22 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
           ),
         );
       },
-      child: Container(
-        key: ValueKey(_selectedValue ?? widget.displayValue),
-        width: widget.width,
-        height: widget.height,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: context.colorScheme.elevation1,
-          borderRadius: widget.borderRadius ?? BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(color: context.colorScheme.elevation2, blurRadius: 1, offset: const Offset(-2, -3)),
-            BoxShadow(color: context.colorScheme.black, blurRadius: 1, offset: const Offset(2, 3)),
-          ],
-        ),
-        child:
-            widget.child ??
-            Center(
+      child:
+          widget.child ??
+          Container(
+            key: ValueKey(_selectedValue ?? widget.displayValue),
+            width: widget.width,
+            height: widget.height,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: context.colorScheme.elevation1,
+              borderRadius: widget.borderRadius ?? BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(color: context.colorScheme.elevation2, blurRadius: 1, offset: const Offset(-2, -3)),
+                BoxShadow(color: context.colorScheme.black, blurRadius: 1, offset: const Offset(2, 3)),
+              ],
+            ),
+            child: Center(
               child: Row(
                 children: [
                   Expanded(
@@ -179,7 +179,7 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
                 ],
               ),
             ),
-      ),
+          ),
     );
   }
 }
