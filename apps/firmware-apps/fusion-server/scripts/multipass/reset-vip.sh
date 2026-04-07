@@ -2,111 +2,192 @@
 
 set -euo pipefail
 
-show_help() {
-    cat << EOF
-Usage: $0 [OPTIONS]
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-Reset the current Multipass Fusion cluster back to a single target VIP without
-recreating instances.
+# Script configuration
+KEEPALIVED_CONF="/etc/keepalived/keepalived.conf"
+VIP_PLACEHOLDER="VIP_NOT_SET/24"
 
-Options:
-    --prefix PREFIX     Instance name prefix (default: fusion)
-    --vip VIP           Target VIP to write and apply on all nodes
-                        (default: 192.168.2.100)
-    -h, --help          Show this help text
+print_status() {
+	echo -e "${BLUE}[INFO]${NC} $1"
+}
 
-Examples:
-    $0
-    $0 --vip 192.168.2.101
-    $0 --prefix test --vip 192.168.2.100
-EOF
-    exit 0
+print_success() {
+	echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+print_error() {
+	echo -e "${RED}[ERROR]${NC} $1"
+}
+
+print_warning() {
+	echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+command_exists() {
+	command -v "$1" >/dev/null 2>&1
+}
+
+validate_instance() {
+	local instance=$1
+	print_status "Validating multipass instance $instance..."
+
+	if multipass exec "$instance" -- true >/dev/null 2>&1; then
+		print_success "Instance $instance is reachable"
+		return 0
+	fi
+
+	print_error "Cannot execute commands on instance $instance"
+	return 1
+}
+
+reset_vip_in_keepalived() {
+	local instance=$1
+	print_status "Resetting VIP in $instance:$KEEPALIVED_CONF to $VIP_PLACEHOLDER..."
+
+	if ! multipass exec "$instance" -- sudo grep -qE '^[[:space:]]*virtual_ipaddress[[:space:]]*\{' "$KEEPALIVED_CONF"; then
+		print_error "virtual_ipaddress block not found in $KEEPALIVED_CONF on $instance"
+		return 1
+	fi
+
+	if multipass exec "$instance" -- sudo cp "$KEEPALIVED_CONF" "${KEEPALIVED_CONF}.bak.$(date +%s)"; then
+		print_success "Backup created on instance"
+	else
+		print_error "Failed to backup $KEEPALIVED_CONF on $instance"
+		return 1
+	fi
+
+	if multipass exec "$instance" -- sudo bash -c "awk -v vip='$VIP_PLACEHOLDER' '
+		/^[[:space:]]*virtual_ipaddress[[:space:]]*\\{/ {
+			print
+			print \"    \" vip
+			in_vip=1
+			next
+		}
+		in_vip && /^[[:space:]]*\\}/ {
+			in_vip=0
+			print
+			next
+		}
+		in_vip { next }
+		{ print }
+	' '$KEEPALIVED_CONF' > '$KEEPALIVED_CONF.tmp' && mv '$KEEPALIVED_CONF.tmp' '$KEEPALIVED_CONF'"; then
+		print_success "VIP block reset"
+		print_success "Updated keepalived config"
+	else
+		print_error "Failed to rewrite $KEEPALIVED_CONF on $instance"
+		return 1
+	fi
+
+	if multipass exec "$instance" -- sudo grep -qE "^[[:space:]]*$VIP_PLACEHOLDER[[:space:]]*$" "$KEEPALIVED_CONF"; then
+		print_success "Verified VIP placeholder is set"
+	else
+		print_error "VIP placeholder was not found after edit"
+		return 1
+	fi
+}
+
+reload_keepalived() {
+	local instance=$1
+	print_status "Reloading keepalived on $instance..."
+
+	if multipass exec "$instance" -- sudo systemctl reload keepalived 2>/dev/null; then
+		print_success "keepalived reloaded"
+		return 0
+	fi
+
+	print_warning "Reload failed, attempting restart"
+	if multipass exec "$instance" -- sudo systemctl restart keepalived 2>/dev/null; then
+		print_success "keepalived restarted"
+	else
+		print_warning "Could not reload/restart keepalived. Please check service state manually"
+	fi
+}
+
+usage() {
+	echo "Usage: $0 [OPTIONS]"
+	echo
+	echo "Reset keepalived VIP on multipass instances matching prefix."
+	echo
+	echo "Options:"
+	echo "  --prefix PREFIX  Instance name prefix (default: fusion)"
+	echo "  -h, --help       Show this help message"
+	echo
+	echo "Examples:"
+	echo "  $0"
+	echo "  $0 --prefix fusion"
+	echo "  $0 --prefix test"
+	echo
 }
 
 PREFIX="fusion"
-TARGET_VIP="192.168.2.100"
 
 while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --prefix)
-            PREFIX="${2:?Error: --prefix requires a value}"
-            shift 2
-            ;;
-        --vip)
-            TARGET_VIP="${2:?Error: --vip requires a value}"
-            shift 2
-            ;;
-        -h|--help)
-            show_help
-            ;;
-        *)
-            echo "Unknown argument: $1"
-            echo "Use --help for usage."
-            exit 1
-            ;;
-    esac
+	case $1 in
+		--prefix)
+			if [[ -z ${2:-} ]]; then
+				print_error "Missing value for --prefix"
+				usage
+				exit 1
+			fi
+			PREFIX="$2"
+			shift 2
+			;;
+		-h|--help)
+			usage
+			exit 0
+			;;
+		-*)
+			print_error "Unknown option: $1"
+			usage
+			exit 1
+			;;
+		*)
+			print_error "Unknown argument: $1"
+			usage
+			exit 1
+			;;
+	esac
 done
 
-instances_csv=$(multipass list --format csv | tail -n +2 || true)
-if [[ -z "$instances_csv" ]]; then
-    echo "No multipass instances found"
-    exit 1
+if ! command_exists multipass; then
+	print_error "multipass command not found"
+	exit 1
 fi
 
-instances=()
-instance_ips=()
-while IFS=',' read -r name state ipv4 _; do
-    [[ "$name" =~ ^$PREFIX ]] || continue
-    first_ip="${ipv4%% *}"
-    if [[ -z "$first_ip" || "$first_ip" == "--" ]]; then
-        echo "Skipping $name: no IPv4 address reported by multipass"
-        continue
-    fi
-    instances+=("$name")
-    instance_ips+=("$first_ip")
-done <<< "$instances_csv"
+INSTANCES=$(multipass list --format csv | tail -n +2 | cut -d',' -f1 | grep "^$PREFIX" || true)
 
-if [[ ${#instances[@]} -eq 0 ]]; then
-    echo "No multipass instances found with prefix '$PREFIX'"
-    exit 1
+if [[ -z "$INSTANCES" ]]; then
+	print_warning "No multipass instances found with prefix '$PREFIX'"
+	exit 0
 fi
 
-echo "Resetting VIP across instances with prefix '$PREFIX' to $TARGET_VIP"
+echo -e "${YELLOW}Warning: This will replace configured VIPs with '$VIP_PLACEHOLDER' on:${NC}"
+for instance in $INSTANCES; do
+	echo "  - $instance"
+done
+read -p "Do you want to continue? [y/N]: " -n 1 -r
 echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+	print_status "Operation cancelled"
+	exit 0
+fi
 
-for i in "${!instances[@]}"; do
-    name="${instances[$i]}"
-    ip="${instance_ips[$i]}"
-    echo "Writing VIP config on $name ($ip)"
-    curl -fsS -m 5 -X POST "http://$ip:9090/devices/vip/$TARGET_VIP" >/dev/null
+for instance in $INSTANCES; do
+	echo
+	echo "######################################"
+	print_status "Resetting VIP on $instance"
+	echo "######################################"
+
+	validate_instance "$instance"
+	reset_vip_in_keepalived "$instance"
+	reload_keepalived "$instance"
 done
 
 echo
-
-for i in "${!instances[@]}"; do
-    name="${instances[$i]}"
-    ip="${instance_ips[$i]}"
-    echo "Applying VIP config on $name ($ip)"
-    curl -fsS -m 10 -X POST "http://$ip:9090/device/reload/vip" >/dev/null
-done
-
-echo
-echo "Verification:"
-
-candidate_vips=("$TARGET_VIP" "192.168.2.100" "192.168.2.101" "192.168.2.102")
-seen=""
-unique_candidates=()
-for vip in "${candidate_vips[@]}"; do
-    [[ " $seen " == *" $vip "* ]] && continue
-    seen+=" $vip"
-    unique_candidates+=("$vip")
-done
-
-for vip in "${unique_candidates[@]}"; do
-    echo "=== $vip ==="
-    curl -m 2 -sS "http://$vip:8080/devices/vip" || true
-    echo
-    echo
-done
-
-echo "Done."
+print_success "VIP reset operation completed"
