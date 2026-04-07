@@ -1,31 +1,34 @@
 #!/bin/bash
 
 function show_help() {
-    echo "Usage: ./run_tests.sh [--all|--cluster|--fusion] [--vip IP:PORT] [--test-name NAME] [--list] [--list-all]"
+    echo "Usage: ./run_tests.sh [--all|--cluster|--fusion|--convergence|--vip-api] [--vip IP:PORT] [--test-name NAME] [--list] [--list-all]"
     echo "Options:"
-    echo "  --vip         VIP address and port (default: 192.168.2.100:8080)"
-    echo "  --all         Run all tests (default)"
-    echo "  --audio       Run only audio tests"
-    echo "  --bluetooth   Run only bluetooth tests"
-    echo "  --certs       Run only certificate tests (GetCSR, SetDeviceCertificate, ResetDeviceCertificate)"
-    echo "  --cluster     Run only cluster tests"
-    echo "  --controllers Run only controller tests"
-    echo "  --fusion      Run only fusion tests"     
-    echo "  --logger      Run only logger tests"     
-    echo "  --persistence Run only persistence tests"     
-    echo "  --sap         Run only SAP tests"     
-    echo "  --scheduler   Run only scheduler tests"     
-    echo "  --snapshot    Run only snapshot tests"     
-    echo "  --software-update  Run only software update tests (add FUSION_SWUPDATE_TEST=1 to include progress tests, requires swupdate on device)"     
-    echo "  --state       Run only state manager tests"     
-    echo "  --tasks       Run only tasks tests"     
-    echo "  --udp         Run only UDP tests"     
-    echo "  --udp-chaos   Run UDP chaos mesh test (multi-node virtual devices + fault injection)"
-    echo "  --integration Run only integration tests (ex: --integration --size 5) (build tag integration)"
-    echo "  --websocket   Run only websocket tests"
-    echo "  --test-name   Run only a specific Go test name or subtest"
-    echo "  --list        List tests for the selected category"
-    echo "  --list-all    List all tests in fusion/test"
+    echo "  --list              List tests for the selected category"
+    echo "  --list-all          List all tests in fusion/test"
+    echo "  --test-name         Run only a specific Go test name or subtest"
+    echo "  --vip               VIP address and port passed to multipass/package tests (default: 192.168.2.100:8080)"
+    echo "Tests:"
+    echo "  --all               Run all tests (default)"
+    echo "  --audio             Run only audio tests"
+    echo "  --bluetooth         Run only bluetooth tests"
+    echo "  --certs             Run only certificate tests (GetCSR, SetDeviceCertificate, ResetDeviceCertificate)"
+    echo "  --cluster           Run only cluster tests"
+    echo "  --controllers       Run only controller tests"
+    echo "  --fusion            Run only fusion tests"     
+    echo "  --integration       Run only integration tests (ex: --integration --size 5) (build tag integration)"
+    echo "  --logger            Run only logger tests"     
+    echo "  --persistence       Run only persistence tests"     
+    echo "  --sap               Run only SAP tests"     
+    echo "  --scheduler         Run only scheduler tests"     
+    echo "  --snapshot          Run only snapshot tests"     
+    echo "  --software-update   Run only software update tests"     
+    echo "  --state             Run only state manager tests"     
+    echo "  --tasks             Run only tasks tests"     
+    echo "  --udp               Run only UDP tests"     
+    echo "  --udp-chaos         Run UDP chaos mesh test (multi-node virtual devices + fault injection)"
+    echo "  --vip-api           Run VIP REST API tests"
+    echo "  --vip-convergence   Run VIP/mDNS convergence tests"
+    echo "  --websocket         Run only websocket tests"
     exit 1
 }
 
@@ -38,27 +41,29 @@ cluster_size="3"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --all)          test_type="all"; shift ;;
-        --audio)        test_type="audio"; shift ;;
-        --certs)        test_type="certs"; shift ;;
-        --bluetooth)    test_type="bluetooth"; shift ;;
-        --cluster)      test_type="cluster"; shift ;;
-        --controllers)  test_type="controllers"; shift ;;
-        --fusion)       test_type="fusion"; shift ;;
-        --logger)       test_type="logger"; shift ;;
-        --persistence)  test_type="persistence"; shift ;;
-        --sap)          test_type="sap"; shift ;;
-        --scheduler)    test_type="scheduler"; shift ;;
-        --snapshot)     test_type="snapshot"; shift ;;
-        --software-update) test_type="software-update"; shift ;;
-        --state)        test_type="state"; shift ;;
-        --tasks)        test_type="tasks"; shift ;;
-        --udp)          test_type="udp"; shift ;;
-        --udp-chaos)    test_type="udp-chaos"; shift ;;
-        --websocket)    test_type="websocket"; shift ;;
-        --integration)  test_type="integration"; shift ;;
-        --size)         cluster_size="$2"; shift 2 ;;
-        --vip)          vip="$2"; shift 2 ;;
+        --all)              test_type="all"; shift ;;
+        --audio)            test_type="audio"; shift ;;
+        --certs)            test_type="certs"; shift ;;
+        --bluetooth)        test_type="bluetooth"; shift ;;
+        --cluster)          test_type="cluster"; shift ;;
+        --controllers)      test_type="controllers"; shift ;;
+        --fusion)           test_type="fusion"; shift ;;
+        --logger)           test_type="logger"; shift ;;
+        --persistence)      test_type="persistence"; shift ;;
+        --sap)              test_type="sap"; shift ;;
+        --scheduler)        test_type="scheduler"; shift ;;
+        --snapshot)         test_type="snapshot"; shift ;;
+        --software-update)  test_type="software-update"; shift ;;
+        --state)            test_type="state"; shift ;;
+        --tasks)            test_type="tasks"; shift ;;
+        --udp)              test_type="udp"; shift ;;
+        --udp-chaos)        test_type="udp-chaos"; shift ;;
+        --vip-api)          test_type="vip-api"; shift ;;
+        --vip-convergence)  test_type="vip-convergence"; shift ;;
+        --websocket)        test_type="websocket"; shift ;;
+        --integration)      test_type="integration"; shift ;;
+        --size)             cluster_size="$2"; shift 2 ;;
+        --vip)              vip="$2"; shift 2 ;;
         --test-name)
             if [[ $# -ge 2 && "$2" != --* ]]; then
                 test_name="$2"
@@ -89,7 +94,7 @@ export FUSION_AUTO_DISCOVER=true
 function list_tests_from_file() {
     local file="$1"
     echo "Tests in $file:"
-    go test -list . "$file" | grep '^Test' | sort
+    rg -o '^func (Test[^(: ]+)' "$file" -r '$1' | sort
     echo ""
 }
 
@@ -121,6 +126,8 @@ function test_file_for_type() {
         tasks)        echo "tasks_test.go" ;;
         udp)          echo "udp_test.go" ;;
         udp-chaos)    echo "udp_chaos_test.go" ;;
+        vip-api)      echo "vip_endpoints_test.go" ;;
+        vip-convergence) echo "setup_vip_test.go" ;;
         websocket)    echo "websocket_test.go" ;;
         integration)  echo "integration tests" ;;
         all)          echo "" ;;
@@ -135,12 +142,12 @@ fi
 
 # Handle list for a specific category
 if [[ "$list_tests" = true ]]; then
-    cd fusion/test || exit 1
-    
     if [[ "$test_type" == "all" ]]; then
         echo "Use --list-all for all test files."
         exit 0
     fi
+
+    cd fusion/test || exit 1
 
     file=$(test_file_for_type)
     if [[ -z "$file" ]]; then
@@ -159,13 +166,27 @@ if [[ "$list_tests" = true ]]; then
     exit 0
 fi
 
-# Helper to run a go test with or without -run
-function run_test_file() {
+# Build a -run regex from top-level Test* functions declared in a file.
+function regex_for_test_file() {
     local file="$1"
+    local tests
+    tests=$(rg -o '^func (Test[^(: ]+)' "$file" -r '$1' | paste -sd'|' -)
+    if [[ -z "$tests" ]]; then
+        return 1
+    fi
+    printf '^(%s)$' "$tests"
+}
+
+# Helper to run fusion/test in package mode so shared TestMain/helpers are available.
+function run_package_tests() {
+    local run_regex="${1:-}"
+
     if [[ -n "$test_name" ]]; then
-        go test -v --race "$file" -run "$test_name" -- -auto --vip "$vip"
+        go test -v --race . -run "$test_name" -args -auto -vip "$vip"
+    elif [[ -n "$run_regex" ]]; then
+        go test -v --race . -run "$run_regex" -args -auto -vip "$vip"
     else
-        go test -v --race "$file" -- -auto --vip "$vip"
+        go test -v --race . -args -auto -vip "$vip"
     fi
 }
 
@@ -183,45 +204,40 @@ cd fusion/test || exit 1
 
 case "$test_type" in
     "all")
-        test_files=$(ls *_test.go)
-
-        for tf in $test_files; do
-            echo "=============================================="
-            echo "Running: $tf"
-            echo "=============================================="
-
-            run_test_file "./$tf"
-
-            echo " "
-            sleep 2
-        done
+        echo "=============================================="
+        echo "Running package: ./fusion/test"
+        echo "VIP: $vip"
+        echo "=============================================="
+        run_package_tests
         ;;
 
-    certs)        run_test_file ./cluster_certs_test.go ;;
-    audio)        run_test_file ./audio_test.go ;;
-    bluetooth)    run_test_file ./bluetooth_test.go ;;
-    cluster)      run_test_file ./cluster_test.go ;;
-    controllers)  run_test_file ./controllers_test.go ;;
-    fusion)       run_test_file ./fusion_test.go ;;
-    logger)       run_test_file ./logger_test.go ;;
-    persistence)  run_test_file ./persistence_test.go ;;
-    sap)          run_test_file ./sap_test.go ;;
-    scheduler)    run_test_file ./scheduler_test.go ;;
-    snapshot)     run_test_file ./snapshot_test.go ;;
-    software-update) run_test_file ./software_update_test.go ;;
-    state)        run_test_file ./state_test.go ;;
-    tasks)        run_test_file ./tasks_test.go ;;
-    udp)          run_test_file ./udp_test.go ;;
+    certs)        run_package_tests "$(regex_for_test_file ./cluster_certs_test.go)" ;;
+    audio)        run_package_tests "$(regex_for_test_file ./audio_test.go)" ;;
+    bluetooth)    run_package_tests "$(regex_for_test_file ./bluetooth_test.go)" ;;
+    cluster)      run_package_tests "$(regex_for_test_file ./cluster_test.go)" ;;
+    controllers)  run_package_tests "$(regex_for_test_file ./controllers_test.go)" ;;
+    fusion)       run_package_tests "$(regex_for_test_file ./fusion_test.go)" ;;
+    logger)       run_package_tests "$(regex_for_test_file ./logger_test.go)" ;;
+    persistence)  run_package_tests "$(regex_for_test_file ./persistence_test.go)" ;;
+    sap)          run_package_tests "$(regex_for_test_file ./sap_test.go)" ;;
+    scheduler)    run_package_tests "$(regex_for_test_file ./scheduler_test.go)" ;;
+    snapshot)     run_package_tests "$(regex_for_test_file ./snapshot_test.go)" ;;
+    software-update) run_package_tests "$(regex_for_test_file ./software_update_test.go)" ;;
+    state)        run_package_tests "$(regex_for_test_file ./state_test.go)" ;;
+    tasks)        run_package_tests "$(regex_for_test_file ./tasks_test.go)" ;;
+    udp)          run_package_tests "$(regex_for_test_file ./udp_test.go)" ;;
+    vip-api)      run_package_tests "$(regex_for_test_file ./vip_endpoints_test.go)" ;;
+    vip-convergence) run_package_tests "$(regex_for_test_file ./setup_vip_test.go)" ;;
     udp-chaos)
         export FUSION_UDP_CHAOS_TEST=1
         # Run package mode (not single-file mode) so shared TestMain/helpers are available.
         if [[ -n "$test_name" ]]; then
-            go test -v --race ./ -run "$test_name" -- -auto --vip "$vip"
+            go test -v --race . -run "$test_name" -args -auto -vip "$vip"
         else
-            go test -v --race ./ -run "ChaosMesh" -- -auto --vip "$vip"
+            go test -v --race . -run "ChaosMesh" -args -auto -vip "$vip"
         fi
         ;;
-    websocket)    run_test_file ./websocket_test.go ;;
+    websocket)    run_package_tests "$(regex_for_test_file ./websocket_test.go)" ;;
     integration)
         # Export env for integration helpers
         export FUSION_VIP="${vip%%:*}"
