@@ -16,6 +16,7 @@ extension ConfigationEventsKeys on FusionTestKeys {
 
   String get events_trigger_panel => "events_trigger_panel";
   String get events_trigger_noevent => "events_trigger_no_event_section";
+  String get events_trigger_noaction => "events_trigger_no_action_section";
   String get events_trigger_noevent_desc1 => "events_trigger_no_event_section_desc_1";
   String get events_trigger_noevent_desc2 => "events_trigger_no_event_section_desc_2";
   String get events_trigger_noevent_desc3 => "events_trigger_no_event_section_desc_3";
@@ -30,4 +31,30 @@ extension ConfigationEventsKeys on FusionTestKeys {
   String get eventtriggerrowheaderparmandaction => "events_trigger_row_header_parm_and_action";
   String get eventtriggerrowheadercondition => "events_trigger_row_header_condition";
   String get eventtriggerrowheadervalue => "events_trigger_row_header_value";
+
+  String get eventtriggertype => "event_trigger_type";
+  String get eventtriggeritem => "event_trigger_item";
+  String get eventtriggeraction => "event_action_type";
+  String get eventtriggercondition => "event_action_condition";
+  String get eventtriggervalueslider => "event_action_value_slider";
+  String get eventtriggervaluethresholdslider => "event_action_value_threshold_slider";
+  String get eventtriggervaluethresholdslidertext => "event_action_value_threshold_slider_text";
+
+  String get eventtriggeractionstxt => "event_trigger_actions_text";
+  String get eventtriggeractionsicon => "event_trigger_actions_icon";
+  String get eventtriggeractionstoogletxt1 => "event_trigger_actions_toogle_text_1";
+  String get eventtriggeractionstoogletxt2 => "event_trigger_actions_toogle_text_2";
+  String get eventtriggeractiontype => "event_trigger_action_header_type";
+  String get eventtriggeractionitem => "event_trigger_action_header_item";
+  String get eventtriggeractionparm => "event_trigger_action_header_param";
+  String get eventtriggeractionvalue => "event_trigger_action_header_value";
+
+  String get eventactionrowdata => "event_action_row_data";
+  String get eventsactiondragicon => "event_action_drag_icon";
+  String get eventsactiontype => "event_action_type";
+  String get eventsactionitem => "event_action_item";
+  String get eventsactionparm => "event_action_parm";
+  String get eventsactionvalue => "event_action_value";
+  String get eventsactiondelete => "event_action_delete_icon";
+  String get eventsactionduplicate  => "event_action_duplicate_icon";
 }

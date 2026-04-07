@@ -14,6 +14,7 @@ class FusionContainer extends StatelessWidget {
     this.padding,
     this.margin,
     this.semanticId,
+    this.isChecked,
   });
   final double? width;
   final String? semanticId;
@@ -25,6 +26,7 @@ class FusionContainer extends StatelessWidget {
   final AlignmentGeometry? alignment;
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? margin;
+  final bool? isChecked;
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +35,7 @@ class FusionContainer extends StatelessWidget {
         SemanticTypes.container,
         "fusion_container_${semanticId ?? ""}",
       ),
+      isChecked: isChecked,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 100),
         width: width,

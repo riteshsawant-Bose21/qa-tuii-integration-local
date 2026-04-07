@@ -31,18 +31,15 @@ class SourceMatrixAdditionalSettingsDialog extends StatefulWidget {
   }
 
   @override
-  State<SourceMatrixAdditionalSettingsDialog> createState() =>
-      _SourceMatrixAdditionalSettingsState();
+  State<SourceMatrixAdditionalSettingsDialog> createState() => _SourceMatrixAdditionalSettingsState();
 }
 
-class _SourceMatrixAdditionalSettingsState
-    extends State<SourceMatrixAdditionalSettingsDialog> {
+class _SourceMatrixAdditionalSettingsState extends State<SourceMatrixAdditionalSettingsDialog> {
   late ZoneFunctions zoneFunction;
   @override
   void initState() {
     super.initState();
-    zoneFunction =
-        projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
+    zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
   }
 
   final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
@@ -134,26 +131,14 @@ class _SourceMatrixAdditionalSettingsState
                           SemanticTypes.container,
                           "source_select_main_container",
                         ),
-                        child: BlocProvider<
-                          SourceMatrixAdditionalSettingsViewmodel
-                        >(
-                          create:
-                              (_) =>
-                                  SourceMatrixAdditionalSettingsViewmodel()
-                                    ..init(zoneID: widget.zoneID),
-                          child: BlocBuilder<
-                            SourceMatrixAdditionalSettingsViewmodel,
-                            SourceMatrixSettingsVmState
-                          >(
+                        child: BlocProvider<SourceMatrixAdditionalSettingsViewmodel>(
+                          create: (_) => SourceMatrixAdditionalSettingsViewmodel()..init(zoneID: widget.zoneID),
+                          child: BlocBuilder<SourceMatrixAdditionalSettingsViewmodel, SourceMatrixSettingsVmState>(
                             builder: (
                               BuildContext context,
                               SourceMatrixSettingsVmState state,
                             ) {
-                              final SourceMatrixAdditionalSettingsViewmodel vm =
-                                  context
-                                      .watch<
-                                        SourceMatrixAdditionalSettingsViewmodel
-                                      >();
+                              final SourceMatrixAdditionalSettingsViewmodel vm = context.watch<SourceMatrixAdditionalSettingsViewmodel>();
 
                               return Container(
                                 decoration: BoxDecoration(
@@ -177,8 +162,7 @@ class _SourceMatrixAdditionalSettingsState
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: <Widget>[
                                         Flexible(
                                           flex: 2,
@@ -190,13 +174,11 @@ class _SourceMatrixAdditionalSettingsState
 
                                         VerticalDivider(
                                           width: 1,
-                                          color:
-                                              context.colorScheme.strokeLight,
+                                          color: context.colorScheme.strokeLight,
                                         ),
                                         Flexible(
                                           child: _MixSceneSetting(
-                                            allowController:
-                                                vm.isAssignToControllersEnabled,
+                                            allowController: vm.isAssignToControllersEnabled,
                                             zoneId: widget.zoneID,
                                             onAllowControllerChanged: () {
                                               vm.toggleAssignToControllers();
@@ -206,36 +188,23 @@ class _SourceMatrixAdditionalSettingsState
 
                                         VerticalDivider(
                                           width: 1,
-                                          color:
-                                              context.colorScheme.strokeLight,
+                                          color: context.colorScheme.strokeLight,
                                         ),
                                         PrioritySettingsWidget(
                                           zoneId: widget.zoneID,
-                                          isStateActive:
-                                              (int index) =>
-                                                  vm.isPriorityControlTypeThreshold(
-                                                    index,
-                                                  ) ||
-                                                  vm.isPriorityStateActive(
-                                                    index,
-                                                  ),
-                                          onStateActiveChanged: (int index) {
+                                          isStateActive: (int index) => vm.isPriorityControlTypeThreshold(index) || vm.isPriorityStateActive(index),
+                                          onStateActivePressAndHoldChanged: (int index, bool isPressed) {
                                             vm.updatePriorityProperties(
                                               zoneOrSubzoneId: widget.zoneID,
                                               index: index,
-                                              isStateActive:
-                                                  !vm.isPriorityControlTypeThreshold(
-                                                    index,
-                                                  ),
+                                              isStateActive: isPressed,
                                             );
                                           },
                                           onPTTControlTypeChanged: (int index) {
                                             vm.updatePriorityProperties(
                                               zoneOrSubzoneId: widget.zoneID,
                                               index: index,
-                                              priorityControlType:
-                                                  AdditionalSettingsPriorityControlType
-                                                      .pttControler,
+                                              priorityControlType: AdditionalSettingsPriorityControlType.pttControler,
                                             );
                                           },
                                           onThresholdControlTypeChanged: (
@@ -244,45 +213,28 @@ class _SourceMatrixAdditionalSettingsState
                                             vm.updatePriorityProperties(
                                               zoneOrSubzoneId: widget.zoneID,
                                               index: index,
-                                              priorityControlType:
-                                                  AdditionalSettingsPriorityControlType
-                                                      .threshold,
+                                              priorityControlType: AdditionalSettingsPriorityControlType.threshold,
                                             );
                                           },
                                           isPriorityControlTypePTT:
-                                              (int index) =>
-                                                  vm.isPriorityControlTypePTT(
-                                                    index,
-                                                  ),
+                                              (int index) => vm.isPriorityControlTypePTT(
+                                                index,
+                                              ),
                                           isPriorityControlTypeThreshold:
-                                              (int index) => vm
-                                                  .isPriorityControlTypeThreshold(
-                                                    index,
-                                                  ),
+                                              (int index) => vm.isPriorityControlTypeThreshold(
+                                                index,
+                                              ),
                                           enableBehaviorSettingsFields:
-                                              (int index) => vm
-                                                  .enableBehaviorSettingsFields(
-                                                    index,
-                                                  ),
-                                          getThresholdValue:
-                                              (int index) =>
-                                                  vm.getThresholdValue(index),
-                                          getDepth:
-                                              (int index) => vm.getDepth(index),
-                                          getAttack:
-                                              (int index) =>
-                                                  vm.getAttack(index),
-                                          getHold:
-                                              (int index) => vm.getHold(index),
-                                          getRelease:
-                                              (int index) =>
-                                                  vm.getRelease(index),
-                                          getReductionValue:
-                                              (int index) =>
-                                                  vm.getReductionValue(index),
-                                          getPriorityBehavior:
-                                              (int index) =>
-                                                  vm.getPriorityBehavior(index),
+                                              (int index) => vm.enableBehaviorSettingsFields(
+                                                index,
+                                              ),
+                                          getThresholdValue: (int index) => vm.getThresholdValue(index),
+                                          getDepth: (int index) => vm.getDepth(index),
+                                          getAttack: (int index) => vm.getAttack(index),
+                                          getHold: (int index) => vm.getHold(index),
+                                          getRelease: (int index) => vm.getRelease(index),
+                                          getReductionValue: (int index) => vm.getReductionValue(index),
+                                          getPriorityBehavior: (int index) => vm.getPriorityBehavior(index),
                                           onThresholdValueChanged: (
                                             int index,
                                             num value,
@@ -335,8 +287,7 @@ class _SourceMatrixAdditionalSettingsState
                                           },
                                           onPriorityBehaviorChanged: (
                                             int index,
-                                            AdditionalSettingPriorityBehavior
-                                            value,
+                                            AdditionalSettingPriorityBehavior value,
                                           ) {
                                             vm.updatePriorityProperties(
                                               zoneOrSubzoneId: widget.zoneID,
@@ -352,27 +303,23 @@ class _SourceMatrixAdditionalSettingsState
                                           child: ZoneSubZoneBuilderWidget(
                                             zoneID: widget.zoneID,
                                             getLowerGain:
-                                                (String zoneOrSubzoneID) =>
-                                                    vm.getLowerGain(
-                                                      zoneOrSubzoneID,
-                                                    ),
+                                                (String zoneOrSubzoneID) => vm.getLowerGain(
+                                                  zoneOrSubzoneID,
+                                                ),
                                             getUpperGain:
-                                                (String zoneOrSubzoneID) =>
-                                                    vm.getUpperGain(
-                                                      zoneOrSubzoneID,
-                                                    ),
+                                                (String zoneOrSubzoneID) => vm.getUpperGain(
+                                                  zoneOrSubzoneID,
+                                                ),
                                             isAllowMute:
-                                                (String zoneOrSubzoneID) =>
-                                                    vm.isAllowMute(
-                                                      zoneOrSubzoneID,
-                                                    ),
+                                                (String zoneOrSubzoneID) => vm.isAllowMute(
+                                                  zoneOrSubzoneID,
+                                                ),
                                             onLowerRangeChanged: (
                                               String zoneOrSubzoneID,
                                               num value,
                                             ) {
                                               vm.updateZoneProperties(
-                                                zoneOrSubzoneId:
-                                                    zoneOrSubzoneID,
+                                                zoneOrSubzoneId: zoneOrSubzoneID,
                                                 lowerLimit: value.toDouble(),
                                               );
                                             },
@@ -381,8 +328,7 @@ class _SourceMatrixAdditionalSettingsState
                                               num value,
                                             ) {
                                               vm.updateZoneProperties(
-                                                zoneOrSubzoneId:
-                                                    zoneOrSubzoneID,
+                                                zoneOrSubzoneId: zoneOrSubzoneID,
                                                 upperLimit: value.toDouble(),
                                               );
                                             },
@@ -391,8 +337,7 @@ class _SourceMatrixAdditionalSettingsState
                                               bool newValue,
                                             ) {
                                               vm.updateZoneProperties(
-                                                zoneOrSubzoneId:
-                                                    zoneOrSubzoneID,
+                                                zoneOrSubzoneId: zoneOrSubzoneID,
                                                 allowMuteUnmute: newValue,
                                               );
                                             },
@@ -440,8 +385,7 @@ class __SourcesSettingState extends State<_SourcesSetting> {
   @override
   void initState() {
     super.initState();
-    late final ProjectViewModel projectViewModel =
-        serviceLocator<ProjectViewModel>();
+    late final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
     sources = projectViewModel.getSourcesAndSourceSetSourcesInZone(
       zoneId: widget.zoneID,
     );
@@ -530,8 +474,7 @@ class __SourcesSettingState extends State<_SourcesSetting> {
                                   child: FusionAppText(
                                     text: source.name,
                                     maxLine: 1,
-                                    style:
-                                        Theme.of(context).textTheme.labelSmall,
+                                    style: Theme.of(context).textTheme.labelSmall,
                                   ),
                                 ),
                               ),
@@ -540,9 +483,7 @@ class __SourcesSettingState extends State<_SourcesSetting> {
                         ),
                       );
                     },
-                    separatorBuilder:
-                        (BuildContext context, int index) =>
-                            const SizedBox(height: 10),
+                    separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 10),
                     itemCount: sources.length,
                     physics: const ClampingScrollPhysics(),
                   ),

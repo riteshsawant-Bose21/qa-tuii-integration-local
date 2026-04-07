@@ -1,9 +1,9 @@
 project:
   name: cloud-backend
-  description: Cloud backend services for Fusion
+  description: Fusion Cloud backend services and push images to ECR repo
 
 tasks:
   build-all:
     deps:
       - "fusion-core:build"
-    description: Build all cloud backend services
+    description: Build all cloud backend services and publish docker images to ECR registry

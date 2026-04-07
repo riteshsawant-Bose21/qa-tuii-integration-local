@@ -80,6 +80,7 @@ class FusionNeumorphicButton extends StatefulWidget {
   final double? height;
   final double borderRadius;
   final VoidCallback onTap;
+  final ValueChanged<bool>? onPressedChanged;
   final TextStyle? textStyle;
   final Widget? child;
   final Color? color;
@@ -102,6 +103,7 @@ class FusionNeumorphicButton extends StatefulWidget {
     this.margin,
     this.enabled = true,
     required this.semanticId,
+    this.onPressedChanged,
   });
 
   @override
@@ -125,13 +127,19 @@ class _FusionNeumorphicButtonState extends State<FusionNeumorphicButton> {
         onTapDown: (_) {
           if (!widget.enabled) return;
           setState(() => _isPressed = true);
+          widget.onPressedChanged?.call(true);
         },
-        onTapCancel: () => setState(() => _isPressed = false),
+        onTapCancel: () {
+          setState(() => _isPressed = false);
+          widget.onPressedChanged?.call(false);
+        },
         onTapUp: (_) {
           if (!widget.enabled) return;
           setState(() => _isPressed = false);
           widget.onTap();
+          widget.onPressedChanged?.call(false);
         },
+
         child: ClipRRect(
           borderRadius: BorderRadius.circular(widget.borderRadius),
           clipBehavior: _isPressed ? Clip.hardEdge : Clip.none,

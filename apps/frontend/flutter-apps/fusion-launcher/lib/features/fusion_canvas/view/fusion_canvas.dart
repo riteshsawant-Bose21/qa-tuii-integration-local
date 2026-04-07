@@ -117,6 +117,8 @@ class FusionCanvas extends StatelessWidget {
                                 LineCenterHandlePainter(),
                               ],
                             );
+
+                            context.read<FusionCanvasStateViewModel>().updateContentSize(elements, fusionCanvasPainter);
                             return BlocListener<FusionCanvasInputViewModel, FusionCanvasInputState>(
                               listener: (
                                 BuildContext context,
@@ -170,6 +172,8 @@ class FusionCanvas extends StatelessWidget {
                                 final FusionCanvasInputContext inputContext = FusionCanvasInputContext(
                                   hoverState: hoverState,
                                   snapState: context.read<FusionSnapViewModel>().state,
+                                  resolveInteractionTargetAt: fusionCanvasPainter.getInteractionTargetAt,
+                                  resolveBoundedDeltaForLayer: fusionCanvasPainter.getBoundedDeltaForLayer,
                                 );
 
                                 // Delegate all input handling to the tool viewmodel
@@ -177,7 +181,7 @@ class FusionCanvas extends StatelessWidget {
                                 final bool isHandled = toolVm.onInputStateChanged(inputState, inputContext);
 
                                 if (!isHandled) {
-                                  if (inputState is FusionCanvasInputDraggingState) {
+                                  if (inputState is FusionCanvasInputDraggingState && inputState.button != FusionMouseButton.left) {
                                     context.read<FusionCanvasStateViewModel>().onPanUpdate(
                                       inputState.delta,
                                     );

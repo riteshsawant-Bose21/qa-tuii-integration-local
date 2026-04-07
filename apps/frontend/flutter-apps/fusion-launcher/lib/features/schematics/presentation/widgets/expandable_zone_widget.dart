@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/select_speaker_popup.dart';
+import 'package:fusion_launcher/features/speaker_selection_popup/views/speaker_selection_popup.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -178,7 +178,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 ),
                 child: FusionArrowPopup(
                   semanticId: 'add_speakers_menu',
-                  content: SpeakerQueryPopup(
+                  content: SpeakerSelectionPopup(
                     isFromBuildingPage: false,
                     zoneId: widget.zoneId,
                   ),
@@ -365,6 +365,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                                   absorbing: true,
 
                                   child: CircuitDeviceWidget(
+                                    caller: 'zone',
                                     prefix: "feedback_",
                                     index: index,
                                     deviceId: deviceId,
@@ -399,6 +400,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                                     width: 220,
 
                                     child: CircuitDeviceWidget(
+                                      caller: 'zone',
                                       prefix: "child_drag_",
                                       index: index,
                                       deviceId: deviceId,
@@ -425,6 +427,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                               ),
                             ),
                             child: CircuitDeviceWidget(
+                              caller: 'zone',
                               prefix: "child_",
                               index: index,
                               deviceId: deviceId,
@@ -1188,7 +1191,11 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               /// Location name and zone
               Expanded(
                 child: FusionAppText(
-                  text: area.name.isNotEmpty ? "${floorName ?? floorData?.name ?? ''}/${area.name}" : 'Unnamed Area',
+                  semanticId: "floor_name",
+                  text:
+                      area.name.isNotEmpty
+                          ? "${floorName ?? floorData?.name ?? ''}/${area.name}"
+                          : 'Unnamed Area',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w500,
                     fontSize: 10,
@@ -1197,6 +1204,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 ),
               ),
               FusionAppText(
+                semanticId: "zone_name",
                 text: zoneData?.name ?? "No zone",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 9,

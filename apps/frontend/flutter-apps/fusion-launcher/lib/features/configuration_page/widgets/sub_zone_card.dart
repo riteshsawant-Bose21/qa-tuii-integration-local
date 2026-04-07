@@ -5,7 +5,8 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../core/constants/assets_constants.dart';
-import '../../configuration/presentation/viewmodel/project_view_model.dart' show SelectedItem, SelectedItemType;
+import '../../../core/service_locator.dart';
+import '../../configuration/presentation/viewmodel/project_view_model.dart' show SelectedItem, SelectedItemType, ProjectViewModel, HardwareViewModel;
 import '../viewModel/zones_viewmodel/config_zones_state.dart';
 import '../viewModel/zones_viewmodel/config_zones_viewmodel.dart';
 import '../../processing_block/view/processing_chain_view.dart';
@@ -240,6 +241,12 @@ class _SubZoneCardState extends State<SubZoneCard> {
   /// Build individual circuit card to avoid recursion
   Widget _buildCircuitCard({required int index, required CircuitModel circuitData, required List<Speaker> speakersList}) {
     final bool isThisCircuitHovered = _hoveredCircuitIndex == index;
+    final String assetImagePath =
+        serviceLocator<ProjectViewModel>().getHardwareImage(
+          productId: speakersList.isNotEmpty ? speakersList.first.productId ?? 0 : 0,
+          currentImagePath: speakersList.isNotEmpty ? speakersList.first.assetImagePath : '',
+        ) ??
+        "";
 
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
@@ -260,7 +267,8 @@ class _SubZoneCardState extends State<SubZoneCard> {
                 FusionTestKeys.instance.circuitimg,
               ),
               child: FusionImage.asset(
-                speakersList.isNotEmpty ? speakersList.first.assetImagePath : "",
+                // speakersList.isNotEmpty ? speakersList.first.assetImagePath : "",
+                assetImagePath,
                 width: 24,
                 height: 24,
                 fit: BoxFit.contain,

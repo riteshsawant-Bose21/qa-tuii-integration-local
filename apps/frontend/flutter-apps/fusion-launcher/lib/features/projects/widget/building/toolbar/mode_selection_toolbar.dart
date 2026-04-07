@@ -12,26 +12,25 @@ class ModeSelectionToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ToolbarMode currentMode = context.watch<ProjectViewModel>().currentToolbarMode;
+    final ToolbarMode currentMode = context.watch<BuildingPageViewModel>().state.toolbarMode;
 
     return FusionFlatContainer(
       semanticsId: "building_mode_selection_toolbar",
       padding: const EdgeInsets.all(5),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
+        spacing: 5,
         children: <Widget>[
           for (final ToolbarMode mode in ToolbarMode.values)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4.0),
-              child: InkWell(
-                onTap: () => serviceLocator<ProjectViewModel>().setToolbarMode(mode),
+            InkWell(
+              onTap: () => context.read<BuildingPageViewModel>().toggleMode(mode),
 
-                child: FusionFlatContainer(
-                  semanticsId: "toolbar_mode_${mode.name.toLowerCase()}",
-                  color: currentMode == mode ? context.colorScheme.primary : Colors.transparent,
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                  borderColor: Colors.transparent,
-                  child: Text(mode.name.toUpperCase()),
-                ),
+              child: FusionFlatContainer(
+                semanticsId: "toolbar_mode_${mode.name.toLowerCase()}",
+                color: currentMode == mode ? context.colorScheme.primary : Colors.transparent,
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                borderColor: Colors.transparent,
+                child: Text(mode.name.toUpperCase()),
               ),
             ),
         ],

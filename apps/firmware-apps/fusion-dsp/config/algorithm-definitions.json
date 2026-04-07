@@ -1,5 +1,5 @@
 {
-    "version": "0.1.14",
+    "version": "0.1.17",
     "algorithms": [
         {
             "name": "alsa_in",
@@ -16,6 +16,11 @@
                     "default_value": 0,
                     "minimum_value": 0,
                     "maximum_value": 96000
+                },
+                {
+                    "name": "use_asrc",
+                    "value_type": "bool",
+                    "default_value": true
                 },
                 {
                     "name": "period_size",
@@ -71,6 +76,11 @@
                     "value_type": "string",
                     "default_value": "",
                     "maximum_length": 256
+                },
+                {
+                    "name": "use_asrc",
+                    "value_type": "bool",
+                    "default_value": true
                 },
                 {
                     "name": "period_size",
@@ -1561,6 +1571,20 @@
                     "default_value": false
                 },
                 {
+                    "name": "out_mute",
+                    "dimensions": ["out"],
+                    "value_type": "bool",
+                    "default_value": false
+                },
+                {
+                    "name": "out_gain",
+                    "value_type": "float",
+                    "dimensions": ["out"],
+                    "default_value": 0.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 12.0
+                },
+                {
                     "name": "routing",
                     "value_type": "bool",
                     "dimensions": ["in", "out"],
@@ -1659,8 +1683,8 @@
                     "default_value": false
                 },
                 {
-                    "name": "output_mute",
-                    "dimensions": ["in"],
+                    "name": "out_mute",
+                    "dimensions": ["out"],
                     "value_type": "bool",
                     "default_value": false
                 }
@@ -2263,6 +2287,15 @@
         },
         {
             "name": "source_selector",
+            "properties": [
+                {
+                    "name": "source_channels",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 32
+                }
+            ],
             "terminals": [
                 {
                     "name": "in",
@@ -2275,7 +2308,7 @@
                     "name": "out",
                     "signal_type": "audio",
                     "direction": "output",
-                    "channels": 1
+                    "channels": "source_channels"
                 }
             ],
             "parameters": [
@@ -2288,7 +2321,7 @@
                 },
                 {
                     "name": "out_gain",
-                    "dimensions": [1],
+                    "dimensions": ["source_channels"],
                     "value_type": "float",
                     "default_value": 0.0,
                     "minimum_value": -60.0,
@@ -2296,7 +2329,7 @@
                 },
                 {
                     "name": "out_mute",
-                    "dimensions": [1],
+                    "dimensions": ["source_channels"],
                     "value_type": "bool",
                     "default_value": false
                 }
@@ -2304,7 +2337,7 @@
             "telemetry": [
                 {
                     "name": "out_meter",
-                    "dimensions": [1],
+                    "dimensions": ["source_channels"],
                     "value_type": "float",
                     "default_value": -60.0,
                     "minimum_value": -60.0,
@@ -2715,7 +2748,29 @@
                     "period_type": "HI"
                 }
             ]
-        }
-        
+        },
+        {
+            "name": "meter",
+            "terminals": [
+                
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "minimum_channels": 1,
+                    "maximum_channels": 128
+                }
+            ],
+            "telemetry": [
+                {
+                    "name": "level",
+                    "dimensions": ["in"],
+                    "value_type": "float",
+                    "default_value": -60.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 0.0
+                }
+            ]
+        } 
     ]
 }

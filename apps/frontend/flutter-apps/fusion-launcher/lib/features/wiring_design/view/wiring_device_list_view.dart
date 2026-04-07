@@ -1,4 +1,3 @@
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
@@ -63,6 +62,7 @@ class _DeviceListSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FusionExpansionPanel(
+      semanticsId: "wiring_${label.toLowerCase()}_section",
       initiallyExpanded: true,
       titleBuilder:
           (BuildContext context, bool isExpanded) => Padding(

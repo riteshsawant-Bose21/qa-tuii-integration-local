@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_events/viewModel/actions_viewmodel/config_event_actions_state.dart';
 import 'package:fusion_launcher/features/configuration_events/viewModel/actions_viewmodel/config_event_actions_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_events/widgets/events/event_value_widget.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/events/configation_events_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
@@ -79,7 +80,7 @@ class _EventActionRowContent extends StatelessWidget {
     final bool isItemEnabled = action.actionType == null || itemList.isNotEmpty;
 
     return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_row_data_$index"),
+      testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.eventactionrowdata}$index"),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         decoration: BoxDecoration(
@@ -138,7 +139,12 @@ class _EventActionRowContent extends StatelessWidget {
         width: context.screenWidth * 0.01,
         child: Opacity(
           opacity: 0.4,
-          child: Icon(Icons.drag_indicator, size: 16, color: context.colorScheme.iconWhite),
+          child: FusionIcon.icon(
+            semanticId: '${FusionTestKeys.instance.eventsactiondragicon}_$index',
+            Icons.drag_indicator,
+            size: 16,
+            color: context.colorScheme.iconWhite,
+          ),
         ),
       ),
     );
@@ -147,7 +153,7 @@ class _EventActionRowContent extends StatelessWidget {
   Widget _buildActionTypeDropdown(BuildContext context, ConfigEventActionsViewmodel cubit) {
     return Expanded(
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_type_$index"),
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.eventsactiontype}_$index"),
         child: FusionDropdown<SceneActionType>(
           value: action.actionType,
           hint: "Select Action Type",
@@ -183,7 +189,7 @@ class _EventActionRowContent extends StatelessWidget {
 
     return Expanded(
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_item_$index"),
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.eventsactionitem}_$index"),
         child: FusionDropdown<SceneItemDropdown>(
           value: selected,
           items: itemList,
@@ -217,7 +223,7 @@ class _EventActionRowContent extends StatelessWidget {
 
     return Expanded(
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_param_$index"),
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.eventsactionparm}_$index"),
         child: FusionDropdown<SceneParam>(
           hint: "Select Parameter",
           value: selected,
@@ -239,23 +245,26 @@ class _EventActionRowContent extends StatelessWidget {
     final EventStateTypes stateType = event.selectedState?.stateType ?? EventStateTypes.off;
 
     return Expanded(
-      child: EventValueWidget(
-        // Include stateType in the key so the StatefulWidget (and its internal
-        // TextFormField / slider state) is fully recreated when switching
-        // between above / below.
-        key: ValueKey<String>('${action.id}_${stateType.name}'),
-        actionId: action.id,
-        stateType: stateType,
-        value:
-            action.value ??
-            SceneValue(
-              value: null,
-              label: action.param!.label,
-              valueType: action.param!.valueType,
-            ),
-        onChanged: (SceneValue value) {
-          cubit.updateActionValue(actionId: action.id, value: value);
-        },
+      child: SemanticHelper.container(
+        testId: SemanticHelper.createTestId(SemanticTypes.container, "${FusionTestKeys.instance.eventsactionvalue}_$index"),
+        child: EventValueWidget(
+          // Include stateType in the key so the StatefulWidget (and its internal
+          // TextFormField / slider state) is fully recreated when switching
+          // between above / below.
+          key: ValueKey<String>('${action.id}_${stateType.name}'),
+          actionId: action.id,
+          stateType: stateType,
+          value:
+              action.value ??
+              SceneValue(
+                value: null,
+                label: action.param!.label,
+                valueType: action.param!.valueType,
+              ),
+          onChanged: (SceneValue value) {
+            cubit.updateActionValue(actionId: action.id, value: value);
+          },
+        ),
       ),
     );
   }
@@ -266,38 +275,34 @@ class _EventActionRowContent extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
-          SemanticHelper.button(
-            testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_event_action_$index"),
-            child: GestureDetector(
-              onTap: () {
-                cubit.deleteAction(actionId: action.id);
-                FusionToast.success(context, message: "Action deleted successfully");
-              },
-              child: FusionImage.asset(
-                Assets.deleteIcon,
-                width: 20,
-                height: 20,
-                assetColor: context.colorScheme.iconWhite,
-                fit: BoxFit.contain,
-              ),
+          GestureDetector(
+            onTap: () {
+              cubit.deleteAction(actionId: action.id);
+              FusionToast.success(context, message: "Action deleted successfully");
+            },
+            child: FusionImage.asset(
+              semanticId: "${FusionTestKeys.instance.eventsactiondelete}_$index",
+              Assets.deleteIcon,
+              width: 20,
+              height: 20,
+              assetColor: context.colorScheme.iconWhite,
+              fit: BoxFit.contain,
             ),
           ),
           const SizedBox(width: 6),
-          SemanticHelper.button(
-            testId: SemanticHelper.createTestId(SemanticTypes.button, "duplicate_event_action_$index"),
-            child: GestureDetector(
-              onTap: () {
-                cubit.duplicateAction(actionId: action.id);
-                FusionToast.success(context, message: "Action duplicated successfully");
-              },
-              child: FusionImage.asset(
-                Assets.duplicateIcon,
-                width: 20,
-                height: 20,
-                assetColor: context.colorScheme.iconWhite,
+          GestureDetector(
+            onTap: () {
+              cubit.duplicateAction(actionId: action.id);
+              FusionToast.success(context, message: "Action duplicated successfully");
+            },
+            child: FusionImage.asset(
+              semanticId: "${FusionTestKeys.instance.eventsactionduplicate}_$index",
+              Assets.duplicateIcon,
+              width: 20,
+              height: 20,
+              assetColor: context.colorScheme.iconWhite,
 
-                fit: BoxFit.contain,
-              ),
+              fit: BoxFit.contain,
             ),
           ),
         ],

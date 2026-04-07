@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/message_player_config/viewmodel/message_player_config_cubit.dart';
+import 'package:fusion_lib/constants/semantics/features/message_player/messageplayerKeys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -10,38 +11,48 @@ class MessageListPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: context.colorScheme.elevation1,
-      child: Column(
-        children: <Widget>[
-          /// Add Message button at top
-          _buildAddMessageButton(context),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.messageplayerconfigmessagelist),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: context.colorScheme.elevation1,
+        ),
+        child: Column(
+          children: <Widget>[
+            /// Add Message button at top
+            _buildAddMessageButton(context),
 
-          /// Message list
-          Expanded(
-            child: BlocBuilder<MessagePlayerConfigCubit, MessagePlayerConfigState>(
-              builder: (BuildContext context, MessagePlayerConfigState state) {
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  itemCount: state.messages.length,
-                  itemBuilder: (BuildContext context, int index) {
-                    final MessageModel message = state.messages[index];
-                    final bool isSelected = message.id == state.selectedMessageId;
+            /// Message list
+            Expanded(
+              child: SemanticHelper.container(
+                testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.messageplayerconfigmessagelistpanellist),
+                child: BlocBuilder<MessagePlayerConfigCubit, MessagePlayerConfigState>(
+                  builder: (BuildContext context, MessagePlayerConfigState state) {
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      itemCount: state.messages.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        final MessageModel message = state.messages[index];
+                        final bool isSelected = message.id == state.selectedMessageId;
 
-                    return _MessageListItem(
-                      message: message,
-                      isSelected: isSelected,
-                      onTap: () {
-                        context.read<MessagePlayerConfigCubit>().selectMessage(message.id);
+                        return _MessageListItem(
+                          index: index,
+                          message: message,
+                          isSelected: isSelected,
+                          onTap: () {
+                            context.read<MessagePlayerConfigCubit>().selectMessage(message.id);
+                          },
+                          onDelete: isSelected ? () => context.read<MessagePlayerConfigCubit>().deleteSelectedMessage() : null,
+                        );
                       },
-                      onDelete: isSelected ? () => context.read<MessagePlayerConfigCubit>().deleteSelectedMessage() : null,
                     );
                   },
-                );
-              },
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -50,7 +61,7 @@ class MessageListPanel extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(12),
       child: NeumorphicButton(
-        semanticId: 'add_message_panel',
+        semanticId: FusionTestKeys.instance.messageplayerconfigmessagelistbutton,
         onTap: () {
           context.read<MessagePlayerConfigCubit>().addMessage();
         },
@@ -59,7 +70,7 @@ class MessageListPanel extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Icon(
+            FusionIcon.icon(
               Icons.add,
               size: 18,
               color: context.colorScheme.iconWhite,
@@ -78,23 +89,20 @@ class _MessageListItem extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
   final VoidCallback? onDelete;
+  final int? index;
 
-  const _MessageListItem({
-    required this.message,
-    required this.isSelected,
-    required this.onTap,
-    this.onDelete,
-  });
+  const _MessageListItem({required this.message, required this.isSelected, required this.onTap, this.onDelete, this.index});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.only(bottom: 8),
       child: SemanticHelper.button(
         testId: SemanticHelper.createTestId(
           SemanticTypes.button,
-          'message_item_${message.id}',
+          '${FusionTestKeys.instance.messageplayerconfigmessage}_${index}',
         ),
+        isSelected: isSelected,
         child: Material(
           color: Colors.transparent,
           child: InkWell(
@@ -111,8 +119,10 @@ class _MessageListItem extends StatelessWidget {
                 children: <Widget>[
                   Expanded(
                     child: FusionAppText(
+                      semanticId: FusionTestKeys.instance.messageplayerconfigmessagetxt,
                       text: message.name,
                       style: context.textTheme.l1Regular,
+                      capitalize: false,
                       maxLine: 1,
                       textOverflow: TextOverflow.ellipsis,
                     ),
@@ -123,7 +133,8 @@ class _MessageListItem extends StatelessWidget {
                       borderRadius: BorderRadius.circular(4),
                       child: Padding(
                         padding: const EdgeInsets.all(0),
-                        child: Icon(
+                        child: FusionIcon.icon(
+                          semanticId: FusionTestKeys.instance.messageplayerconfigmessageicon,
                           LucideIcons.trash2,
                           size: 16,
                           color: context.colorScheme.iconDefault,

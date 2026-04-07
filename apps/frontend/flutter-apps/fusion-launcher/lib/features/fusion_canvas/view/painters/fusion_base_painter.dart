@@ -18,7 +18,11 @@ abstract class FusionBasePainter {
   }
 
   List<FusionCanvasElement> get elements => <FusionCanvasElement>[];
-  // List<FusionCanvasPoint> get points => <FusionCanvasPoint>[];
+
+  Rect getBounds(FusionCanvasPainter painter) {
+    // By default, return an empty rect. Override this method to provide actual bounds for interactive painters.
+    return Rect.zero;
+  }
 
   ///
   /// Util function for number that should not scale with canvas zoom
@@ -35,7 +39,7 @@ abstract class FusionBasePainter {
     required FusionCanvasPainter painter,
     Paint? paint,
   }) {
-    final ui.Image? image = painter.getImage(imagePath);
+    final ui.Image? image = imagePath.trim().isNotEmpty ? painter.getImage(imagePath) : null;
     if (image != null) {
       final Rect src = Rect.fromLTWH(
         0,

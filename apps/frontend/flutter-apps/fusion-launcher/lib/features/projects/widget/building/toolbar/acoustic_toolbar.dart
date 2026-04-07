@@ -1,5 +1,3 @@
-
-
 part of 'canvas_toolbar.dart';
 
 class AcousticToolBar extends StatelessWidget {
@@ -7,34 +5,36 @@ class AcousticToolBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final FusionToolState toolState = context.watch<FusionCanvasToolViewModel>().state;
-    return FusionFlatContainer(
-      semanticsId: "acoustic_toolbar",
-      padding: const EdgeInsets.all(5),
-      child: Row(
-        children: <Widget>[
-          _ToolBarIcon(
-            icon: LucideIcons.pencil100,
-            label: "Pen",
-            isSelected: toolState is PenToolState,
-            onTap: () => context.read<FusionCanvasToolViewModel>().setTool(IdlePenToolState()),
-          ),
-          const SizedBox(width: 8),
-          _ToolBarIcon(
-            icon: LucideIcons.rulerDimensionLine200,
-            label: "Measure",
-            isSelected: toolState is MeasureToolState,
-            onTap: () => context.read<FusionCanvasToolViewModel>().setTool(IdleMeasureToolState()),
-          ),
-          const SizedBox(width: 8),
-          _ToolBarIcon(
-            icon: LucideIcons.pointer,
-            label: "Select",
-            isSelected: toolState is SelectToolState,
-            onTap: () => context.read<FusionCanvasToolViewModel>().setTool(IdleSelectToolState()),
-          ),
-        ],
-      ),
+    final BuildingPageToolState toolState = context.watch<BuildingPageViewModel>().state.toolState;
+    return Row(
+      spacing: 8,
+      children: <Widget>[
+        _ToolBarIcon(
+          icon: "listening_area.png",
+          label: "Listening Area",
+          isSelected: toolState is ListeningAreaToolState,
+          onTap: () => context.read<BuildingPageViewModel>().setTool(DrawingListeningAreaState()),
+        ),
+
+        _ToolBarIcon(
+          icon: "spl.png",
+          label: "SPL",
+          isSelected: toolState is SplToolState,
+          onTap: () => context.read<BuildingPageViewModel>().setTool(SplSelectToolState()),
+        ),
+        _ToolBarIcon(
+          icon: "measure.png",
+          label: "Measure",
+          isSelected: toolState is MeasuringToolState,
+          onTap: () => context.read<BuildingPageViewModel>().setTool(MeasuringToolState()),
+        ),
+        // _ToolBarIcon(
+        //   icon: "pointer.png",
+        //   label: "Select",
+        //   isSelected: toolState is SelectToolState,
+        //   onTap: () => context.read<BuildingPageViewModel>().setTool(SelectToolState()),
+        // ),
+      ],
     );
   }
 }

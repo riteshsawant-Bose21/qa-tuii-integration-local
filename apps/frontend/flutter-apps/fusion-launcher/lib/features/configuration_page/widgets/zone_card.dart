@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/sub_zone_card.dart';
+import 'package:fusion_launcher/features/configuration_page/widgets/zoneControlmode/config_zone_control_mode_panel.dart';
 import 'package:fusion_launcher/features/zone_functions/source_select.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_zones_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../core/constants/assets_constants.dart';
-import '../../configuration/presentation/viewmodel/project_view_model.dart' show SelectedItemType;
+import '../../../core/service_locator.dart';
+import '../../configuration/presentation/viewmodel/project_view_model.dart'
+    show SelectedItemType, ProjectViewModel, ProjectPropertiesViewModel, HardwareViewModel;
+import '../../processing_block/view/processing_chain_view.dart';
+import '../../zone_functions/source_matrix.dart';
+import '../../zone_functions/source_mix.dart';
 import '../viewModel/source_sets_viewmodel/config_source_sets_viewmodel.dart';
 import '../viewModel/sources_viewmodel/config_sources_viewmodel.dart';
 import '../viewModel/zones_viewmodel/config_zones_state.dart';
 import '../viewModel/zones_viewmodel/config_zones_viewmodel.dart';
-import '../../processing_block/view/processing_chain_view.dart';
-import '../../zone_functions/source_matrix.dart';
-import '../../zone_functions/source_mix.dart';
 
 class ZoneCard extends StatefulWidget {
   final String zoneId;
@@ -38,6 +41,7 @@ class ZoneCard extends StatefulWidget {
 }
 
 class _ZoneCardState extends State<ZoneCard> {
+  Set<dynamic> _tempSelectedItems = <dynamic>{};
   late ValueNotifier<bool> _isZoneExpanded;
   bool isHovered = false;
 
@@ -52,6 +56,8 @@ class _ZoneCardState extends State<ZoneCard> {
   ConfigZonesViewmodel get _zonesViewmodel => context.read<ConfigZonesViewmodel>();
   ConfigSourcesViewmodel get _sourcesViewmodel => context.read<ConfigSourcesViewmodel>();
   ConfigSourceSetsViewmodel get _sourceSetsViewmodel => context.read<ConfigSourceSetsViewmodel>();
+  bool get isInControlMode => serviceLocator<ProjectViewModel>().isInControlMode;
+  int popupRefreshKey = 0;
 
   @override
   void initState() {
@@ -114,7 +120,7 @@ class _ZoneCardState extends State<ZoneCard> {
                         ),
                       ),
                     ),
-                
+
                     /// Zone Content - shows subzones when expanded
                     if (zoneExpanded) _buildZoneContent(),
                   ],
@@ -199,9 +205,6 @@ class _ZoneCardState extends State<ZoneCard> {
         return BlocBuilder<ConfigZonesViewmodel, ConfigZonesState>(
           builder: (BuildContext context, ConfigZonesState state) {
             final List<SubZone> subZonesForZone = _zonesViewmodel.getSubZonesForZone(parentZoneId: widget.zoneId);
-            final int subZoneCount = subZonesForZone.length;
-            final double calculatedHeight = subZoneCount * 100.0;
-            final double constrainedHeight = calculatedHeight.clamp(200.0, 400.0);
 
             return SemanticHelper.container(
               testId: SemanticHelper.createTestId(
@@ -209,7 +212,6 @@ class _ZoneCardState extends State<ZoneCard> {
                 FusionTestKeys.instance.zonelistcontent,
               ),
               child: Container(
-                height: constrainedHeight,
                 margin: const EdgeInsets.symmetric(horizontal: 12),
                 color: context.colorScheme.elevation2.withAlpha(100),
 
@@ -220,33 +222,37 @@ class _ZoneCardState extends State<ZoneCard> {
                     SemanticHelper.container(
                       testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.zonelistfunctionspanel),
                       child: Container(
-                        width: constraints.maxWidth * 0.34,
-                        height: constrainedHeight,
-
-                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
+                          //left border
                           border: Border(
-                            bottom: BorderSide(
+                            right: BorderSide(
                               color: context.colorScheme.elevation2,
                             ),
                           ),
                         ),
+                        width: constraints.maxWidth * 0.34,
+                        padding: const EdgeInsets.all(12),
                         child: _buildZoneFunctionsPanel(),
                       ),
                     ),
 
-                    /// Full height divider
-                    Container(
-                      width: 1,
-                      height: constrainedHeight,
-                      color: context.colorScheme.elevation2,
-                    ),
-
                     /// Subzone Panel
                     Expanded(
-                      child: SizedBox(
-                        height: constrainedHeight,
-                        child: _buildSubZonePanel(subZonesForZone),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          //left border
+                          border: Border(
+                            left: BorderSide(
+                              color: context.colorScheme.elevation2,
+                            ),
+                          ),
+                        ),
+                        child:
+                            isInControlMode
+                                ? ConfigZoneControlModePanel(
+                                  zone: widget.zoneData,
+                                )
+                                : _buildSubZonePanel(subZonesForZone),
                       ),
                     ),
                   ],
@@ -297,9 +303,9 @@ class _ZoneCardState extends State<ZoneCard> {
         ),
         const SizedBox(height: 12),
         buildFunctionWidget(),
+        const SizedBox(height: 24),
 
-        const Spacer(),
-
+        // const Spacer(),
         _buildReorderablePriorityWidgets(),
         const SizedBox(height: 8),
         buildSourceSelectionForZone(),
@@ -677,7 +683,7 @@ class _ZoneCardState extends State<ZoneCard> {
                   },
                   child: Container(
                     height: 22,
-                    width: 170,
+                    width: 160,
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color:
@@ -916,6 +922,13 @@ class _ZoneCardState extends State<ZoneCard> {
   }
 
   /// Multi-select source selection for zone (checkboxes)
+  void _initializeTempSelection() {
+    _tempSelectedItems = <dynamic>{
+      ..._zonesViewmodel.getSourcesInZone(zoneId: widget.zoneId),
+      ..._zonesViewmodel.getSourceSetsInZone(zoneId: widget.zoneId),
+    };
+  }
+
   Widget buildSourceSelectionForZone() {
     /// Get current selections from the zone
     final List<Source> currentZoneSources = _zonesViewmodel.getSourcesInZone(zoneId: widget.zoneId);
@@ -936,378 +949,286 @@ class _ZoneCardState extends State<ZoneCard> {
           textStyle: context.textTheme.bodySmall,
         ),
       ),
-      child: SemanticHelper.container(
-        testId: SemanticHelper.createTestId(SemanticTypes.container, "${FusionTestKeys.instance.selectsrc}_${widget.index}"),
-        child: PopupMenuButton<String>(
-          key: const Key('zone_sources_selection_popup'),
-          onSelected: (String? value) {
-            if (value == 'add') {
-              setState(() {});
+      child: Builder(
+        builder: (BuildContext context) {
+          _initializeTempSelection();
 
-              /// refresh zone tile UI
-            }
-          },
-          offset: const Offset(0, 25),
-          tooltip: "Select Sources",
-          padding: EdgeInsets.zero,
-          color: context.colorScheme.elevation1,
-          itemBuilder: (BuildContext context) {
-            /// Temporary selections mirror existing selections
-            final List<String> tempSelectedSources = currentZoneSources.map((Source e) => e.id).toList();
+          return FusionMultiSelectPopupMenu<dynamic>(
+            maxHeight: 450,
+            semanticsId: FusionTestKeys.instance.selectsrc,
+            saveButtonLabel: "ADD",
+            tooltip: "Select Sources",
 
-            final List<String> tempSelectedSourceSets = currentZoneSourceSets.map((SourceSet e) => e.id).toList();
+            items: <dynamic>[
+              _HeaderItem('SOURCES_BLOCK'),
+              _HeaderItem('DIVIDER'),
+              _HeaderItem('SOURCE_SETS_BLOCK'),
+            ],
 
-            /// Get priority sources to disable them in source list
-            final List<String> prioritySources = _zonesViewmodel.getPrioritySourcesInZone(zoneId: widget.zoneId);
+            selectedItems: <dynamic>{
+              ...currentZoneSources,
+              ...currentZoneSourceSets,
+            },
 
-            final List<PopupMenuEntry<String>> entries = <PopupMenuEntry<String>>[];
+            onSave: (Set<dynamic> _) {
+              final List<String> priorityIds = _zonesViewmodel.getPrioritySourcesInZone(zoneId: widget.zoneId);
 
-            // ----------------------------------------------------------
-            // SOURCES HEADER
-            // ----------------------------------------------------------
-            entries.add(
-              PopupMenuItem<String>(
-                key: const Key('sources_header'),
-                enabled: false,
-                height: 24,
-                child: FusionAppText(
-                  semanticId: "${FusionTestKeys.instance.selectsrcpopupupheader}_${widget.index}",
-                  text: 'SOURCES',
-                  maxLine: 1,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            );
+              final List<Source> selectedSources = _tempSelectedItems.whereType<Source>().where((Source s) => !priorityIds.contains(s.id)).toList();
 
-            // ----------------------------------------------------------
-            // SOURCES LIST
-            // ----------------------------------------------------------
-            if (availableSources.isEmpty) {
-              entries.add(
-                PopupMenuItem<String>(
-                  enabled: false,
-                  height: 20,
-                  child: Center(
-                    child: FusionAppText(
-                      semanticId: "${FusionTestKeys.instance.selectsrcpopupupempty}_${widget.index}",
-                      text: 'No available sources',
-                      maxLine: 1,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
-                    ),
-                  ),
-                ),
+              final List<SourceSet> selectedSourceSets = _tempSelectedItems.whereType<SourceSet>().toList();
+
+              _zonesViewmodel.updateSourcesInZone(
+                zoneId: widget.zoneId,
+                sourceIds: selectedSources.map((Source e) => e.id).toList(),
               );
-            } else {
-              for (final Source src in availableSources) {
-                final String id = src.id;
 
-                /// Check if this source is already a priority source
-                final bool isPrioritySource = prioritySources.contains(id);
+              _zonesViewmodel.updateSourceSets(
+                zoneId: widget.zoneId,
+                sourceSetIds: selectedSourceSets.map((SourceSet e) => e.id).toList(),
+              );
 
-                entries.add(
-                  PopupMenuItem<String>(
-                    enabled: false,
-                    height: 20,
-                    child: StatefulBuilder(
-                      builder: (BuildContext c, StateSetter setPopupState) {
-                        return GestureDetector(
-                          onTap:
-                              isPrioritySource
-                                  ? null
-                                  : () {
-                                    if (tempSelectedSources.contains(id)) {
-                                      tempSelectedSources.remove(id);
-                                    } else {
-                                      tempSelectedSources.add(id);
-                                    }
-                                    setPopupState(() {});
-                                  },
-                          child: Row(
-                            children: <Widget>[
-                              Transform.scale(
-                                scale: 0.7,
-                                child: Checkbox(
-                                  value: tempSelectedSources.contains(id),
-                                  activeColor: isPrioritySource ? context.colorScheme.elevation5 : context.colorScheme.primaryBlack,
-                                  onChanged:
-                                      isPrioritySource
-                                          ? null
-                                          : (bool? _) {
-                                            if (tempSelectedSources.contains(id)) {
-                                              tempSelectedSources.remove(id);
-                                            } else {
-                                              tempSelectedSources.add(id);
-                                            }
-                                            setPopupState(() {});
-                                          },
-                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                                  checkColor: context.colorScheme.primaryWhite,
-                                  side: BorderSide(
-                                    width: 1,
-                                    color: isPrioritySource ? context.colorScheme.elevation5 : context.colorScheme.primaryWhite,
+              setState(() {
+                _tempSelectedItems.clear(); // optional cleanup
+              });
+            },
+
+            itemBuilder: (BuildContext context, dynamic item, bool _) {
+              // -------- DIVIDER --------
+              if (item is _HeaderItem && item.title == 'DIVIDER') {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 6),
+                  child: Divider(thickness: 1),
+                );
+              }
+
+              // -------- SOURCES --------
+              if (item is _HeaderItem && item.title == 'SOURCES_BLOCK') {
+                return StatefulBuilder(
+                  builder: (BuildContext context, StateSetter setPopupState) {
+                    return SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(
+                        SemanticTypes.container,
+                        FusionTestKeys.instance.srcSection,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          const SizedBox(height: 4),
+
+                          FusionAppText(
+                            text: 'SOURCES',
+                            semanticId: FusionTestKeys.instance.sourceText,
+                            maxLine: 1,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+
+                          const SizedBox(height: 10),
+
+                          ...availableSources.asMap().entries.map((MapEntry<int, Source> entry) {
+                            final Source src = entry.value;
+
+                            final bool isPrioritySource = _zonesViewmodel.getPrioritySourcesInZone(zoneId: widget.zoneId).contains(src.id);
+
+                            final bool isSelected = _tempSelectedItems.contains(src);
+
+                            return GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () {
+                                if (isPrioritySource) return;
+
+                                isSelected ? _tempSelectedItems.remove(src) : _tempSelectedItems.add(src);
+
+                                setPopupState(() {});
+                              },
+                              child: Opacity(
+                                opacity: isPrioritySource ? 0.5 : 1,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 5.0),
+                                  child: Row(
+                                    children: <Widget>[
+                                      FusionCheckbox(
+                                        semanticId: FusionTestKeys.instance.srcSetListCheckbox,
+                                        value: isSelected,
+                                        onChanged: () {
+                                          if (isPrioritySource) return;
+
+                                          isSelected ? _tempSelectedItems.remove(src) : _tempSelectedItems.add(src);
+
+                                          setPopupState(() {});
+                                        },
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Row(
+                                          children: <Widget>[
+                                            Expanded(
+                                              child: FusionAppText(
+                                                semanticId: FusionTestKeys.instance.srcListTxt,
+                                                text: src.name,
+                                                maxLine: 1,
+                                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
+                                              ),
+                                            ),
+                                            if (isPrioritySource)
+                                              FusionAppText(
+                                                text: '(Priority source)',
+                                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                  fontSize: 9,
+                                                  fontStyle: FontStyle.italic,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 4),
-                              Expanded(
+                            );
+                          }),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              }
+
+              // -------- SOURCE SETS --------
+              if (item is _HeaderItem && item.title == 'SOURCE_SETS_BLOCK') {
+                return StatefulBuilder(
+                  builder: (BuildContext context, StateSetter setPopupState) {
+                    return SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(
+                        SemanticTypes.container,
+                        FusionTestKeys.instance.srcSetSection,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          FusionAppText(
+                            semanticId: FusionTestKeys.instance.sourceSetText,
+                            text: 'SOURCE SETS',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+
+                          const SizedBox(height: 10),
+
+                          ...sourceSetList.asMap().entries.map((MapEntry<int, SourceSet> entry) {
+                            final SourceSet setItem = entry.value;
+
+                            final List<Source> sourcesInSet = _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: setItem.id);
+
+                            final bool isSelected = _tempSelectedItems.contains(setItem);
+
+                            return GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () {
+                                isSelected ? _tempSelectedItems.remove(setItem) : _tempSelectedItems.add(setItem);
+
+                                setPopupState(() {});
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 5.0),
                                 child: Row(
                                   children: <Widget>[
+                                    FusionCheckbox(
+                                      semanticId: FusionTestKeys.instance.sourceSetListCheckbox,
+                                      value: isSelected,
+                                      onChanged: () {
+                                        isSelected ? _tempSelectedItems.remove(setItem) : _tempSelectedItems.add(setItem);
+
+                                        setPopupState(() {});
+                                      },
+                                    ),
+                                    const SizedBox(width: 6),
                                     Expanded(
                                       child: FusionAppText(
-                                        semanticId: "${FusionTestKeys.instance.selectsrcpopupuptext}_${widget.index}",
-                                        text: src.name,
-                                        capitalize: true,
+                                        semanticId: FusionTestKeys.instance.srcSetListTxt,
+                                        text: '${setItem.name} (${sourcesInSet.length} sources)',
                                         maxLine: 1,
-                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                          fontSize: 10,
-                                          color: isPrioritySource ? context.colorScheme.elevation5 : null,
-                                        ),
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
                                       ),
                                     ),
-                                    if (isPrioritySource) const SizedBox(width: 4),
-                                    if (isPrioritySource)
-                                      FusionAppText(
-                                        text: '(Priority source)',
-                                        maxLine: 1,
-                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                          fontSize: 9,
-                                          fontStyle: FontStyle.italic,
-                                          color: context.colorScheme.elevation5,
-                                        ),
-                                      ),
                                   ],
                                 ),
                               ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+                            );
+                          }),
+                        ],
+                      ),
+                    );
+                  },
                 );
               }
-            }
 
-            entries.add(const PopupMenuDivider(height: 12));
+              return const SizedBox();
+            },
 
-            // ----------------------------------------------------------
-            // SOURCE SETS HEADER
-            // ----------------------------------------------------------
-            entries.add(
-              PopupMenuItem<String>(
-                enabled: false,
-                height: 24,
-                child: FusionAppText(
-                  semanticId: "${FusionTestKeys.instance.selectsrcpopupupsetsheader}_${widget.index}",
-                  text: 'SOURCE SETS',
-                  maxLine: 1,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+            child: SemanticHelper.button(
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.container,
+                FusionTestKeys.instance.selectSourceButton,
               ),
-            );
-
-            // ----------------------------------------------------------
-            // SOURCE SETS LIST
-            // ----------------------------------------------------------
-            if (sourceSetList.isEmpty) {
-              entries.add(
-                PopupMenuItem<String>(
-                  enabled: false,
-                  height: 20,
-                  child: Center(
-                    child: FusionAppText(
-                      semanticId: "${FusionTestKeys.instance.selectsrcpopupupsetsempty}_${widget.index}",
-                      text: 'No available source sets',
-                      maxLine: 1,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
-                    ),
+              child: Container(
+                height: 22,
+                width: 160,
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: hasSelection ? context.colorScheme.elevation5 : context.colorScheme.elevation5.withAlpha(150),
                   ),
+                  borderRadius: BorderRadius.circular(3),
                 ),
-              );
-            } else {
-              for (final SourceSet s in sourceSetList) {
-                final String id = s.id;
-                final List<Source> sourcesInSet = _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: s.id);
-
-                entries.add(
-                  PopupMenuItem<String>(
-                    enabled: false,
-                    height: 20,
-                    child: StatefulBuilder(
-                      builder: (BuildContext c, StateSetter setPopupState) {
-                        return GestureDetector(
-                          onTap: () {
-                            if (tempSelectedSourceSets.contains(id)) {
-                              tempSelectedSourceSets.remove(id);
-                            } else {
-                              tempSelectedSourceSets.add(id);
-                            }
-                            setPopupState(() {});
-                          },
-                          child: Row(
-                            children: <Widget>[
-                              Transform.scale(
-                                scale: 0.7,
-                                child: Checkbox(
-                                  value: tempSelectedSourceSets.contains(id),
-                                  activeColor: context.colorScheme.primaryBlack,
-                                  onChanged: (bool? _) {
-                                    if (tempSelectedSourceSets.contains(id)) {
-                                      tempSelectedSourceSets.remove(id);
-                                    } else {
-                                      tempSelectedSourceSets.add(id);
-                                    }
-                                    setPopupState(() {});
-                                  },
-                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                                  checkColor: context.colorScheme.primaryWhite,
-                                  side: BorderSide(
-                                    width: 1,
-                                    color: context.colorScheme.primaryWhite,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: FusionAppText(
-                                  semanticId: "${FusionTestKeys.instance.selectsrcpopupupsettext}_${widget.index}",
-                                  text: '${s.name} (${sourcesInSet.length} sources)',
-                                  maxLine: 1,
-                                  capitalize: true,
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                );
-              }
-            }
-
-            entries.add(
-              const PopupMenuDivider(height: 14, color: Colors.transparent),
-            );
-
-            // ----------------------------------------------------------
-            // ADD BUTTON – FINAL SAVE
-            // ----------------------------------------------------------
-            entries.add(
-              PopupMenuItem<String>(
-                enabled: true,
-                height: 28,
-                value: 'add',
-                child: Center(
-                  child: SemanticHelper.button(
-                    testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.selectsrcpopupupaddbutton}_${widget.index}"),
-                    child: FusionButton(
-                      label: 'Add',
-                      height: 28,
-                      width: double.infinity,
-                      onTap: () {
-                        /// Save full final selected lists
-                        _zonesViewmodel.updateSourcesInZone(
-                          zoneId: widget.zoneId,
-                          sourceIds: tempSelectedSources,
-                        );
-
-                        _zonesViewmodel.updateSourceSets(
-                          zoneId: widget.zoneId,
-                          sourceSetIds: tempSelectedSourceSets,
-                        );
-
-                        Navigator.pop(context, 'add');
-                        setState(() {});
-
-                        /// rebuild UI
-                      },
-                      accessLabel: 'zone_add_button',
-                    ),
-                  ),
-                ),
-              ),
-            );
-
-            return entries;
-          },
-
-          // ----------------------------------------------------------
-          // BUTTON VIEW (with count)
-          // ----------------------------------------------------------
-          child: Container(
-            height: 22,
-            width: 170,
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: hasSelection ? context.colorScheme.elevation5 : context.colorScheme.elevation5.withAlpha(150),
-              ),
-              borderRadius: BorderRadius.circular(3),
-            ),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: FusionAppText(
-                    semanticId: FusionTestKeys.instance.selectsrctxt,
-                    text: hasSelection ? 'Sources selected' : 'Select sources',
-                    maxLine: 1,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 11,
-                      color:
-                          hasSelection
-                              ? context.colorScheme.primaryWhite
-                              : context.colorScheme.primaryWhite.withAlpha(
-                                150,
-                              ),
-                    ),
-                  ),
-                ),
-                hasSelection
-                    ? IntrinsicWidth(
-                      child: Container(
-                        height: 14,
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: context.colorScheme.primaryWhite,
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                        child: FusionAppText(
-                          semanticId: FusionTestKeys.instance.selectsrccountbtn,
-                          text: _zonesViewmodel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontSize: 8,
-                            color: context.colorScheme.primaryBlack,
-                            fontWeight: FontWeight.w600,
-                          ),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: FusionAppText(
+                        text: hasSelection ? 'Sources selected' : 'Select sources',
+                        maxLine: 1,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontSize: 11,
+                          color: hasSelection ? context.colorScheme.primaryWhite : context.colorScheme.primaryWhite.withAlpha(150),
                         ),
                       ),
-                    )
-                    : SemanticHelper.button(
-                      testId: SemanticHelper.createTestId(
-                        SemanticTypes.button,
-                        FusionTestKeys.instance.selectsrcbtn,
-                      ),
-                      child: Icon(
-                        Icons.add,
-                        color: context.colorScheme.primaryWhite.withAlpha(150),
-                        size: 16,
-                      ),
                     ),
-              ],
+                    hasSelection
+                        ? IntrinsicWidth(
+                          child: Container(
+                            height: 14,
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: context.colorScheme.primaryWhite,
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: FusionAppText(
+                              semanticId: FusionTestKeys.instance.selectSourceText,
+                              text: _zonesViewmodel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontSize: 8,
+                                color: context.colorScheme.primaryBlack,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        )
+                        : Icon(
+                          Icons.add,
+                          color: context.colorScheme.primaryWhite.withAlpha(150),
+                          size: 16,
+                        ),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -1322,11 +1243,6 @@ class _ZoneCardState extends State<ZoneCard> {
         FusionTestKeys.instance.zonecircuit,
       ),
       child: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: context.colorScheme.elevation2),
-          ),
-        ),
         child:
             /// circuit and subzone list
             (subZonesForZone.isEmpty && zoneCircuit.isEmpty)
@@ -1429,10 +1345,17 @@ class _ZoneCardState extends State<ZoneCard> {
   Widget _buildCircuitCard({required int index, required CircuitModel circuitData, required List<Speaker> speakersList}) {
     final bool isThisCircuitHovered = _hoveredCircuitIndex == index;
 
+    final String assetImagePath =
+        serviceLocator<ProjectViewModel>().getHardwareImage(
+          productId: speakersList.isNotEmpty ? speakersList.first.productId ?? 0 : 0,
+          currentImagePath: speakersList.isNotEmpty ? speakersList.first.assetImagePath : '',
+        ) ??
+        "";
+
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,
-        "${FusionTestKeys.instance.zonecircuititm}_${widget.index}",
+        "${FusionTestKeys.instance.zonecircuititm}_$index",
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -1445,7 +1368,8 @@ class _ZoneCardState extends State<ZoneCard> {
           children: <Widget>[
             FusionImage.asset(
               semanticId: "${FusionTestKeys.instance.zonecircuititmimg}_${widget.index}",
-              speakersList.isNotEmpty ? speakersList.first.assetImagePath : "",
+              // speakersList.isNotEmpty ? speakersList.first.assetImagePath : "",
+              assetImagePath,
               width: 24,
               height: 24,
               fit: BoxFit.contain,
@@ -1477,4 +1401,9 @@ class _ZoneCardState extends State<ZoneCard> {
       ),
     );
   }
+}
+
+class _HeaderItem {
+  final String title;
+  _HeaderItem(this.title);
 }

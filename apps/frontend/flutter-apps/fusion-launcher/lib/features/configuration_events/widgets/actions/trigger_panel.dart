@@ -111,7 +111,7 @@ class TriggerPanel extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Icon(Icons.error_outline, size: 48, color: context.colorScheme.error),
+            FusionIcon.icon(Icons.error_outline, size: 48, color: context.colorScheme.error),
             const SizedBox(height: 16),
             FusionAppText(
               semanticId: FusionTestKeys.instance.events_trigger_event_error,
@@ -172,6 +172,7 @@ class TriggerPanel extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: <Widget>[
                                   FusionAppText(
+                                    semanticId: FusionTestKeys.instance.events_trigger_noaction,
                                     text: "No actions added to this event yet.",
                                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                       fontSize: 12,
