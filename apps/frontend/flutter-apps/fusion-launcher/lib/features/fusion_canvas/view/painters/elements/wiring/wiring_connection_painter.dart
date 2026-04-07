@@ -29,6 +29,7 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
   Path? paintedPath;
   FusionPath? fusionPath;
   List<FusionCanvasPoint>? pathPoints;
+  List<AxisLock>? axisLocks;
   // Cached paint object — color/style/strokeWidth are constant for this painter.
   late final Paint _connectionPaint =
       Paint()
@@ -63,41 +64,34 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
       final FusionToolState toolState = painter.toolState;
       final Set<String> selectedElements = toolState is SelectToolState ? toolState.selectedElementIds : <String>{};
 
-      final List<FusionCanvasPathSegment> lines = <FusionCanvasPathSegment>[];
+      final Map<int, AxisLock> selectedAxisLocksBySegmentIndex = <int, AxisLock>{};
       for (int i = 0; i < rawPoints.length - 1; i++) {
         final FusionCanvasPathSegment line = FusionCanvasPathSegment(start: rawPoints[i], end: rawPoints[i + 1]);
         if (!selectedElements.contains(line.id)) {
           continue;
         }
-        lines.add(line);
+
+        final Offset start = transformOffsetForLayer(rawPoints[i].position, painter, id);
+        selectedAxisLocksBySegmentIndex[i] = line.isVerticalLine ? AxisLock(x: start.dx) : AxisLock(y: start.dy);
       }
       // print("Lenght of selected points: ${selectedElements.length}, lines: ${lines.length}, rawPoints: ${rawPoints.length}");
-      path =
-          pathStorage.getLivePath(
-            connection,
-            painter,
-            // _normalizeStops(
-            lines
-                .map(
-                  (FusionCanvasPathSegment e) {
-                    final Offset originalStart = e.start.position;
-                    final Offset originalEnd = e.end.position;
-                    final Offset start = transformOffsetForLayer(e.start.position, painter, id);
-                    final Offset end = transformOffsetForLayer(e.end.position, painter, id);
-                    final bool isVertical = e.isVerticalLine;
-                    return <Offset>[
-                      isVertical ? Offset(start.dx, originalStart.dy) : Offset(originalStart.dx, start.dy),
-                      isVertical ? Offset(end.dx, originalEnd.dy) : Offset(originalEnd.dx, end.dy),
-                    ];
-                  },
-                )
-                .expand((List<Offset> e) => e)
-                .toList(growable: false),
-            // ),
-          ) ??
-          path;
-
-      rawPoints = _buildPathPoints(path);
+      if (selectedAxisLocksBySegmentIndex.isNotEmpty) {
+        final List<AxisLock> previousAxisLocks = connection.axisLocks;
+        axisLocks = _mergeAxisLocksByPathOrder(
+          rawPoints: rawPoints,
+          painter: painter,
+          previousAxisLocks: previousAxisLocks,
+          selectedAxisLocksBySegmentIndex: selectedAxisLocksBySegmentIndex,
+        );
+        path =
+            pathStorage.getLivePath(
+              connection,
+              painter,
+              axisLocks ?? <AxisLock>[],
+            ) ??
+            path;
+        rawPoints = _buildPathPoints(path);
+      }
     } else {
       _connectionPaint.color = ConnectionColorUtil.getColorForConnectionType(connection.type);
     }
@@ -308,6 +302,77 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
       ...path.points,
       FusionCanvasPoint(position: path.end, id: '${connection.id}_end'),
     ];
+  }
+
+  List<AxisLock> _mergeAxisLocksByPathOrder({
+    required List<FusionCanvasPoint> rawPoints,
+    required FusionCanvasPainter painter,
+    required List<AxisLock> previousAxisLocks,
+    required Map<int, AxisLock> selectedAxisLocksBySegmentIndex,
+  }) {
+    final List<AxisLock> orderedPathLocks = <AxisLock>[];
+    for (int i = 0; i < rawPoints.length - 1; i++) {
+      final Offset start = transformOffsetForLayer(rawPoints[i].position, painter, id);
+      final Offset end = transformOffsetForLayer(rawPoints[i + 1].position, painter, id);
+      final bool isVertical = (start.dx - end.dx).abs() <= 0.001;
+      final bool isHorizontal = (start.dy - end.dy).abs() <= 0.001;
+
+      if (!isVertical && !isHorizontal) {
+        continue;
+      }
+
+      orderedPathLocks.add(isVertical ? AxisLock(x: start.dx) : AxisLock(y: start.dy));
+    }
+
+    final List<bool> consumedPrevious = List<bool>.filled(previousAxisLocks.length, false);
+    final List<AxisLock?> mergedBySegment = List<AxisLock?>.filled(orderedPathLocks.length, null);
+
+    for (int i = 0; i < orderedPathLocks.length; i++) {
+      final AxisLock pathLock = orderedPathLocks[i];
+      final int previousIndex = _findUnconsumedMatchingAxisLock(previousAxisLocks, consumedPrevious, pathLock);
+      if (previousIndex != -1) {
+        consumedPrevious[previousIndex] = true;
+        mergedBySegment[i] = previousAxisLocks[previousIndex];
+      }
+    }
+
+    selectedAxisLocksBySegmentIndex.forEach((int segmentIndex, AxisLock selectedLock) {
+      if (segmentIndex >= 0 && segmentIndex < mergedBySegment.length) {
+        mergedBySegment[segmentIndex] = selectedLock;
+      }
+    });
+
+    final List<AxisLock> merged = mergedBySegment.whereType<AxisLock>().toList(growable: false);
+
+    if (merged.isEmpty && selectedAxisLocksBySegmentIndex.isNotEmpty) {
+      final List<int> sortedIndexes = selectedAxisLocksBySegmentIndex.keys.toList()..sort();
+      return sortedIndexes.map((int index) => selectedAxisLocksBySegmentIndex[index]!).toList(growable: false);
+    }
+
+    return merged;
+  }
+
+  int _findUnconsumedMatchingAxisLock(List<AxisLock> source, List<bool> consumed, AxisLock target) {
+    for (int i = 0; i < source.length; i++) {
+      if (consumed[i]) {
+        continue;
+      }
+      if (_axisLocksMatch(source[i], target)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  bool _axisLocksMatch(AxisLock a, AxisLock b) {
+    const double epsilon = 0.001;
+    if (a.x != null && b.x != null) {
+      return (a.x! - b.x!).abs() <= epsilon;
+    }
+    if (a.y != null && b.y != null) {
+      return (a.y! - b.y!).abs() <= epsilon;
+    }
+    return false;
   }
 }
 

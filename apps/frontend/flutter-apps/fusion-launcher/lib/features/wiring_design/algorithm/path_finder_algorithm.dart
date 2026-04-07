@@ -2,6 +2,8 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:collection/collection.dart';
+import 'package:fusion_launcher/features/wiring_design/algorithm/orthogonal_path_service.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class Obstacle {
   const Obstacle(this.rect);
@@ -128,29 +130,58 @@ class OrthogonalRouter {
     return p;
   }
 
-  /// Public API: finds a path through optional stops
+  /// Public API: finds a path through axis-locked intermediate waypoints.
+  /// Each [AxisLock] constrains the path to pass through a vertical line (x set)
+  /// or a horizontal line (y set). The opposite coordinate is derived from the
+  /// previous waypoint so the path moves orthogonally into the lock first.
   List<Offset> findPath(
     Offset start,
     Offset end, {
-    List<Offset> stops = const <Offset>[],
+    List<AxisLock> axisLocks = const <AxisLock>[],
     List<Offset>? previousPath,
+    List<List<Offset>>? otherPaths,
   }) {
-    final List<Offset> points = <Offset>[start, ...stops, end];
-    final List<Offset> result = <Offset>[];
-
-    for (int i = 0; i < points.length - 1; i++) {
-      final List<Offset> seg = _findPathSegment(
-        points[i],
-        points[i + 1],
+    final Offset actualStart = _snapOutside(start);
+    final Offset actualEnd = _snapOutside(end);
+    print("Calculating path from $actualStart to $actualEnd with axis locks: $axisLocks");
+    return <Offset>[
+      start,
+      ...OrthogonalPathService().findPath(
+        start: actualStart,
+        end: actualEnd,
+        obstacles: obstacles,
+        axisLocks: axisLocks,
+        otherPaths: <List<Offset>>[],
         previousPath: previousPath,
-      );
-      if (seg.isEmpty) return <Offset>[];
-      if (result.isNotEmpty) {
-        result.removeLast(); // avoid duplicating joints
-      }
-      result.addAll(seg);
-    }
-    return result;
+        // otherPaths: previousPath != null ? <List<Offset>>[previousPath] : <List<Offset>>[],
+      ),
+      end,
+    ];
+    // Convert axis locks to concrete intermediate stops.
+    // final List<Offset> stops = <Offset>[];
+    // Offset from = start;
+    // for (final AxisLock lock in axisLocks) {
+    //   final Offset stop = lock.x != null ? Offset(lock.x!, from.dy) : Offset(from.dx, lock.y!);
+    //   stops.add(stop);
+    //   from = stop;
+    // }
+
+    // final List<Offset> points = <Offset>[start, ...stops, end];
+    // final List<Offset> result = <Offset>[];
+
+    // for (int i = 0; i < points.length - 1; i++) {
+    //   final List<Offset> seg = _findPathSegment(
+    //     points[i],
+    //     points[i + 1],
+    //     previousPath: previousPath,
+    //   );
+    //   if (seg.isEmpty) return <Offset>[];
+    //   if (result.isNotEmpty) {
+    //     result.removeLast(); // avoid duplicating joints
+    //   }
+    //   result.addAll(seg);
+    // }
+    // return result;
   }
 
   List<Offset> _findPathSegment(

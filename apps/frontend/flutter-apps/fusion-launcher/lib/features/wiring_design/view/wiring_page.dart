@@ -137,23 +137,24 @@ class _WiringPageState extends State<WiringPage> {
             },
             onMovePoints: (FusionBasePainter painter, List<String> points, Offset delta) {
               if (painter is WiringConnectionPainter) {
-                // print(" Moving points for connection ${painter.connection.id}, delta=$delta");
-                // final WiringConnectionModel connection = painter.connection;
-                // final List<FusionCanvasPoint>? updatedPoints = painter.pathPoints;
-                // if (updatedPoints == null) return;
-                // final Map<int, FusionCanvasPoint> newPoints = <int, FusionCanvasPoint>{};
-                // for (String pointId in points) {
-                //   if (updatedPoints.any((FusionCanvasPoint p) => p.id == pointId)) {
-                //     final int index = updatedPoints.indexWhere((FusionCanvasPoint p) => p.id == pointId);
-                //     // updatedPoints[index] = FusionCanvasPoint(position: updatedPoints[index].position);
-                //     newPoints[index] = updatedPoints[index].copyWith(position: updatedPoints[index].position);
+                print(" Moving points for connection ${painter.connection.id}, delta=$delta ");
+                final WiringConnectionModel connection = painter.connection;
+                // final List<FusionCanvasPoint>? allPoints = painter.pathPoints;
+                // if (allPoints == null) return;
+                // final List<FusionCanvasLine> lines = <FusionCanvasLine>[];
+                // for (int i = 0; i < allPoints.length - 1; i++) {
+                //   if (points.contains(allPoints[i].id) && points.contains(allPoints[i + 1].id)) {
+                //     lines.add(FusionCanvasLine(start: allPoints[i], end: allPoints[i + 1]));
                 //   }
                 // }
-                // projectViewModel.updateWiringConnection(
-                //   connection: connection.copyWith(
-                //     points: newPoints.isEmpty ? <FusionCanvasPoint>[] : newPoints.entries.map((MapEntry<int, FusionCanvasPoint> e) => e.value).toList(),
-                //   ),
-                // );
+                final List<AxisLock> axisLocks = painter.axisLocks ?? <AxisLock>[];
+
+                print("Calculated axis locks: $axisLocks");
+                projectViewModel.updateWiringConnection(
+                  connection: connection.copyWith(
+                    axisLocks: axisLocks,
+                  ),
+                );
                 pathStorage.clearPathForLayer(painter.id);
               }
             },

@@ -62,4 +62,12 @@ class FusionCanvasPoint extends FusionCanvasElement {
 
   @override
   List<String> get pointIds => [id];
+
+  FusionCanvasPoint operator +(Offset other) {
+    return copyWith(
+      position: position + other,
+      handleIn: handleIn != null ? handleIn! + other : null,
+      handleOut: handleOut != null ? handleOut! + other : null,
+    );
+  }
 }

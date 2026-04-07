@@ -11,14 +11,16 @@ class PathSystemStorage {
   final Map<String, FusionPath> _livePaths = <String, FusionPath>{};
   final Map<String, List<Offset>> _previousPolylines = <String, List<Offset>>{};
   final Map<String, _ConnectionPathMeta> _pathMeta = <String, _ConnectionPathMeta>{};
+  final Map<String, List<AxisLock>> _pathAxisLocks = <String, List<AxisLock>>{};
   void removeKeysExcept(Set<String> keysToKeep) {
     _paths.removeWhere((String key, _) => !keysToKeep.contains(key));
     _livePaths.removeWhere((String key, _) => !keysToKeep.contains(key));
     _previousPolylines.removeWhere((String key, _) => !keysToKeep.contains(key));
     _pathMeta.removeWhere((String key, _) => !keysToKeep.contains(key));
+    _pathAxisLocks.removeWhere((String key, _) => !keysToKeep.contains(key));
   }
 
-  FusionPath? getPath(WiringConnectionModel connection, FusionCanvasPainter painter, [List<Offset>? additionalStops]) {
+  FusionPath? getPath(WiringConnectionModel connection, FusionCanvasPainter painter, [List<AxisLock>? additionalStops]) {
     final String key = _keyOf(connection);
     if (_paths.containsKey(key)) {
       final FusionPath? path = _paths[key];
@@ -37,7 +39,8 @@ class PathSystemStorage {
         }
 
         if (start != null && end != null) {
-          if (path.start == start && path.end == end && additionalStops == null) {
+          final List<AxisLock> cachedLocks = _pathAxisLocks[key] ?? const <AxisLock>[];
+          if (path.start == start && path.end == end && _axisLocksEqual(cachedLocks, connection.axisLocks)) {
             return path;
           }
         }
@@ -48,9 +51,8 @@ class PathSystemStorage {
       connection,
       painter,
       connectionKey: key,
-      additionalStops: additionalStops ?? <Offset>[],
+      axisLocks: connection.axisLocks,
     );
-    // print("Constructed path for connection ${connection.id}: $constructPath");
     if (constructPath == null) {
       return null;
     }
@@ -58,15 +60,14 @@ class PathSystemStorage {
     return _paths[key];
   }
 
-  FusionPath? getLivePath(WiringConnectionModel connection, FusionCanvasPainter painter, List<Offset> additionalStops) {
+  FusionPath? getLivePath(WiringConnectionModel connection, FusionCanvasPainter painter, List<AxisLock> additionalStops) {
     // return getPath(connection, painter, additionalStops);
     final String key = _keyOf(connection);
-    final List<Offset> normalizedStops = _normalizeStops(additionalStops);
     final FusionPath? livePath = _constructPath(
       connection,
       painter,
       connectionKey: key,
-      additionalStops: normalizedStops,
+      axisLocks: additionalStops,
     );
     if (livePath == null) {
       return null;
@@ -93,7 +94,8 @@ class PathSystemStorage {
     WiringConnectionModel connection,
     FusionCanvasPainter painter, {
     required String connectionKey,
-    List<Offset> additionalStops = const <Offset>[],
+    required List<AxisLock> axisLocks,
+    // List<Offset> additionalStops = const <Offset>[],
   }) {
     final FusionBasePainter? sourceLayer = painter.getLayerById(connection.deviceId);
     final FusionBasePainter? destLayer = painter.getLayerById(connection.targetDeviceId);
@@ -114,17 +116,23 @@ class PathSystemStorage {
     // if (points.isNotEmpty) {
     //   return FusionPath(start: start, end: end, points: points);
     // }
-    final List<Rect> obstacles = painter.layers.whereType<FusionCanvasElementPainter>().map((FusionCanvasElementPainter p) => p.getBounds(painter)).toList();
+    final List<Rect> obstacles =
+        painter.layers.whereType<FusionCanvasElementPainter>().map((FusionCanvasElementPainter p) => p.getBounds(painter).inflate(40)).toList();
     // final List<PathSegment> segments = segmentsOfAllPathExcept(connection.id);
+    // final Map<String, List<Offset>> allPolylines2 = allPolylines();
+    // allPolylines2.remove(connectionKey);
     final List<Offset> pathPoints = OrthogonalRouter(<Rect>[
       ...obstacles,
       // ...segments.map((PathSegment e) => Rect.fromCircle(center: e.start, radius: 10)),
-      // .expand((List<Offset> elements) => elements.map((Offset p) => Rect.fromCircle(center: p, radius: 10))),
     ]).findPath(
       start,
       end,
-      stops: additionalStops,
+      // stops: additionalStops,
+      // otherPaths: allPolylines2.values.toList(growable: false),
       previousPath: _previousPolylines[connectionKey],
+      axisLocks: <AxisLock>[
+        ...axisLocks,
+      ],
     );
     final List<Offset> intermediatePoints = _extractIntermediatePoints(pathPoints, start, end);
     // print(
@@ -154,6 +162,7 @@ class PathSystemStorage {
       _previousPolylines.remove(key);
       _pathMeta.remove(key);
       _livePaths.remove(key);
+      _pathAxisLocks.remove(key);
     }
   }
 
@@ -162,19 +171,18 @@ class PathSystemStorage {
   void _storePath(String key, WiringConnectionModel connection, FusionPath path) {
     _paths[key] = path;
     _previousPolylines[key] = _polylineForPath(path);
+    _pathAxisLocks[key] = List<AxisLock>.unmodifiable(connection.axisLocks);
     _pathMeta[key] = _ConnectionPathMeta(
       deviceId: connection.deviceId,
       targetDeviceId: connection.targetDeviceId,
     );
+    _livePaths.remove(key);
   }
 
   void _storeLivePath(String key, WiringConnectionModel connection, FusionPath path) {
     _livePaths[key] = path;
     _previousPolylines[key] = _polylineForPath(path);
-    _pathMeta[key] = _ConnectionPathMeta(
-      deviceId: connection.deviceId,
-      targetDeviceId: connection.targetDeviceId,
-    );
+    // _pathMeta is already set by _storePath — no need to update here
   }
 
   List<Offset> _polylineForPath(FusionPath path) {
@@ -203,14 +211,12 @@ class PathSystemStorage {
     return deduped.sublist(from, to);
   }
 
-  List<Offset> _normalizeStops(List<Offset> stops) {
-    final List<Offset> normalized = <Offset>[];
-    for (final Offset stop in stops) {
-      if (normalized.isEmpty || normalized.last != stop) {
-        normalized.add(stop);
-      }
+  bool _axisLocksEqual(List<AxisLock> a, List<AxisLock> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i].x != b[i].x || a[i].y != b[i].y) return false;
     }
-    return normalized;
+    return true;
   }
 
   List<PathSegment> segmentsOfAllPathExcept(String connectionId) {

@@ -49,7 +49,13 @@ abstract class FusionBasePainter {
         image.height.toDouble(),
       );
 
-      canvas.drawImageRect(image, src, rect, (paint ?? Paint())..colorFilter = color != null ? ColorFilter.mode(color, BlendMode.srcIn) : null);
+      canvas.drawImageRect(
+        image,
+        src,
+        rect,
+        paint ?? Paint()
+          ..colorFilter = color != null ? ColorFilter.mode(color, BlendMode.srcIn) : paint?.colorFilter,
+      );
 
       return true;
     }
