@@ -163,7 +163,7 @@ The WebSocket API uses a **Pull-then-Push** pattern where requesting device data
    }
    ```
 
-6. **`start_update`** - Trigger coordinated software update across cluster
+9. **`start_update`** - Trigger coordinated software update across cluster
    ```json
    {
      "id": "sw-update-001", 
@@ -171,19 +171,19 @@ The WebSocket API uses a **Pull-then-Push** pattern where requesting device data
      "type": "start_update"
    }
    ```
-   
-   **Execution Flow**: 
+
+   **Execution Flow**:
    - Broadcasts cluster message to all nodes via gossip protocol
    - Each node's delegate receives the message and executes `systemctl start swupdate-ota-install.service`
    - Uses reliable cluster messaging for coordination across all cluster members
    - After the update starts, the server pushes real-time `update_progress` events to all WebSocket clients (see [Software Update Progress Push Format](#software-update-progress-push-format))
-   
+
    **Response**:
    ```json
    {
      "id": "sw-update-001",
      "version": 1,
-     "type": "start_update", 
+     "type": "start_update",
      "code": 3005,
      "status": "success",
      "message": "Software update broadcasted to all cluster nodes",
@@ -194,6 +194,120 @@ The WebSocket API uses a **Pull-then-Push** pattern where requesting device data
      "timestamp": "2026-04-01T10:15:30Z"
    }
    ```
+
+10. **`sw_update_info`** - Read `/etc/swupdate-status` from **all cluster nodes** and return the aggregated results
+    ```json
+    {
+      "id": "req-sw-info-001",
+      "version": 1,
+      "type": "sw_update_info"
+    }
+    ```
+
+    **Response**:
+    ```json
+    {
+      "id": "req-sw-info-001",
+      "version": 1,
+      "type": "sw_update_info",
+      "code": 3000,
+      "status": "success",
+      "message": "OK",
+      "data": [
+        {
+          "serial_number": "SN123456789",
+          "current_bundle_version": "2.3.1",
+          "previous_bundle_version": "2.3.0",
+          "mount": "rootfsB",
+          "previous_mount": "rootfsA",
+          "status": "SUCCESS",
+          "current_state": "UPDATED",
+          "boot_partition": "B",
+          "previous_boot_partition": "A",
+          "error": "",
+          "updated_at": "2026-04-06T10:15:22Z"
+        },
+        {
+          "serial_number": "SN987654321",
+          "current_bundle_version": "2.3.1",
+          "previous_bundle_version": "2.3.0",
+          "mount": "rootfsB",
+          "previous_mount": "rootfsA",
+          "status": "SUCCESS",
+          "current_state": "UPDATED",
+          "boot_partition": "B",
+          "previous_boot_partition": "A",
+          "error": "",
+          "updated_at": "2026-04-06T10:15:30Z"
+        }
+      ],
+      "timestamp": "2026-04-06T10:16:00Z"
+    }
+    ```
+
+    **Data field**: An array of `SwUpdateInfo` objects, one per cluster node. Each object reflects the contents of `/etc/swupdate-status` on that node. If the file cannot be read on a node, an empty object is included so the array always has one entry per cluster member.
+
+    | Field | Type | Description |
+    |-------|------|-------------|
+    | `serial_number` | string | Device serial number |
+    | `current_bundle_version` | string | Currently running firmware bundle version |
+    | `previous_bundle_version` | string | Previously installed firmware bundle version |
+    | `mount` | string | Current active rootfs mount point |
+    | `previous_mount` | string | Previously active rootfs mount point |
+    | `status` | string | Last swupdate operation status (e.g. `SUCCESS`, `FAILED`) |
+    | `current_state` | string | Current device state (e.g. `UPDATED`) |
+    | `boot_partition` | string | Active boot partition (e.g. `A` or `B`) |
+    | `previous_boot_partition` | string | Previously active boot partition |
+    | `error` | string | Error message from last swupdate run, empty if none |
+    | `updated_at` | string | RFC3339 timestamp of the last update |
+
+11. **`list_sw_update_files`** - List OTA bundles from **all cluster nodes** (de-duplicated union by filename)
+    ```json
+    {
+      "id": "req-list-001",
+      "version": 1,
+      "type": "list_sw_update_files"
+    }
+    ```
+
+    **Response**:
+    ```json
+    {
+      "id": "req-list-001",
+      "version": 1,
+      "type": "list_sw_update_files",
+      "code": 3000,
+      "status": "success",
+      "message": "OK",
+      "data": [
+        {
+          "filename": "bundle_v2.3.1.swu",
+          "checksum": "a1b2c3d4e5f6...",
+          "size_bytes": 15728640,
+          "uploaded": "2026-04-05T14:22:00Z",
+          "source_ip": "192.168.2.100"
+        },
+        {
+          "filename": "bundle_v2.3.2.swu",
+          "checksum": "f6e5d4c3b2a1...",
+          "size_bytes": 15831552,
+          "uploaded": "2026-04-06T09:10:00Z",
+          "source_ip": "192.168.2.101"
+        }
+      ],
+      "timestamp": "2026-04-06T10:20:00Z"
+    }
+    ```
+
+    **Data field**: An array of `SoftwareUpdateSync` objects representing every OTA bundle present across the cluster.
+
+    | Field | Type | Description |
+    |-------|------|-------------|
+    | `filename` | string | Bundle filename (e.g. `bundle_v2.3.1.swu`) |
+    | `checksum` | string | SHA-256 hex digest of the bundle file |
+    | `size_bytes` | int64 | File size in bytes |
+    | `uploaded` | string | RFC3339 UTC timestamp of when the file was stored |
+    | `source_ip` | string | IP address of the node that holds the file |
 
 ## Pull-then-Push Pattern
 
@@ -524,7 +638,7 @@ FUSION_TEST_LOCAL=1 go test -v ./test/websocket_test.go -timeout 60s
    - Check that `data` field is included when required
 
 3. **Invalid Message Type**
-   - Use supported types: `devices`, `device_by_id`, `update_device_info`, `ping`
+   - Use supported types: `devices`, `device_by_id`, `update_device_info`, `ping`, `config`, `patch_config`, `unsubscribe_config`, `unsubscribe_devices`, `start_update`, `sw_update_info`, `list_sw_update_files`
    - Check for typos in message type names
    - Verify protocol version compatibility
 
@@ -616,6 +730,8 @@ FUSION_TEST_LOCAL=1 go test -v ./test/websocket_test.go -timeout 60s
 | `ping` | Health check | ❌ No | None |
 | `unsubscribe_devices` | Stop device updates | ❌ No | None |
 | `start_update` | Trigger software update | ❌ No | None |
+| `sw_update_info` | Read `/etc/swupdate-status` from all nodes | ❌ No | None |
+| `list_sw_update_files` | List OTA bundles from all nodes (de-duplicated union) | ❌ No | None |
 
 *Server-initiated push types (cannot be requested by client)*
 
@@ -642,5 +758,7 @@ FUSION_TEST_LOCAL=1 go test -v ./test/websocket_test.go -timeout 60s
 | `unsubscribe_devices` | Response to unsubscribe | 3000 | Unsubscribe confirmation |
 | `start_update` | Response to update trigger | 3005 | Software update coordination |
 | `update_progress` | Push notification | 3004 | Real-time per-node software update progress |
+| `sw_update_info` | Response to sw_update_info request | 3000 | Array of `/etc/swupdate-status` contents from all cluster nodes |
+| `list_sw_update_files` | Response to list_sw_update_files request | 3000 | De-duplicated union of OTA bundles from all cluster nodes |
 | `pong` | Response to ping | 3003 | Health check response |
 | `error` | Request processing error | 4xxx | Error details |

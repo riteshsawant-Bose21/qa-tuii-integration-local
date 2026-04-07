@@ -1,0 +1,20 @@
+info:
+  name: SoftwareUpdate Status
+  type: websocket
+  seq: 4
+
+websocket:
+  url: ws://{{api_url}}/ws
+  message:
+    type: json
+    data: |-
+      {
+        "id": "req-1",
+        "version": 1,
+        "type": "sw_update_info"
+      }
+  auth: inherit
+
+settings:
+  timeout: 0
+  keepAliveInterval: 0

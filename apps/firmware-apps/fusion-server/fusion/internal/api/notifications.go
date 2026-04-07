@@ -140,7 +140,8 @@ func (msg *NotifyMessage) IsPublic() bool {
 		msg.Operation == NotifyOpDeviceUpdate ||
 		msg.Operation == NotifyOpSoftwareUpdate ||
 		msg.Operation == NotifyOpSoftwareUpdateAvailable ||
-		msg.Operation == NotifyOpSoftwareUpdateSyncAck
+		msg.Operation == NotifyOpSoftwareUpdateSyncAck ||
+		msg.Operation == NotifyOpSoftwareUpdateProgress
 }
 
 func WithAudioRemove(update *AudioRemoveUpdate) func(*NotifyMessage) {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	"path/filepath"
 	"time"
 
 	json "github.com/goccy/go-json"
@@ -81,6 +82,8 @@ func (h *Handler) routeWebSocketMessageWithConn(request *api.WebSocketRequest, c
 		return h.handleStartUpdate(request)
 	case api.WSMsgTypeSwUpdateInfo:
 		return h.handleSwUpdateInfo(request)
+	case api.WSMsgTypeListSoftwareUpdates:
+		return h.handleListSoftwareUpdates(request)
 	default:
 		return createErrorResponse(&request.ID, api.WSCodeInvalidType, fmt.Sprintf("Unknown message type: %s", request.Type)), nil
 	}
@@ -224,6 +227,18 @@ func (h *Handler) handleStartUpdate(request *api.WebSocketRequest) (*api.WebSock
 	logger := logging.GetLogger()
 
 	logger.Info("Received software update start request - broadcasting to cluster")
+
+	// Check that at least one .swu file is present in the OTA directory before triggering an update
+	swuFiles, err := filepath.Glob(filepath.Join(api.SoftwareUpdateOTAPath, "*.swu"))
+	if err != nil {
+		logger.Error("Failed to check OTA directory for .swu files: %v", err)
+		return createErrorResponse(&request.ID, api.WSCodeApplicationError, fmt.Sprintf("Failed to check OTA directory: %v", err)), nil
+	}
+	if len(swuFiles) == 0 {
+		logger.Warn("Software update requested but no .swu files found in %s", api.SoftwareUpdateOTAPath)
+		return createErrorResponse(&request.ID, api.WSCodeUpdateFailed, fmt.Sprintf("No .swu bundle found in %s — upload a bundle before triggering an update", api.SoftwareUpdateOTAPath)), nil
+	}
+	logger.Info("Found %d .swu file(s) in %s, proceeding with update", len(swuFiles), api.SoftwareUpdateOTAPath)
 
 	// Create a cluster message to broadcast the software update trigger to all nodes
 	// This will call the delegate's handleSoftwareUpdate method on each node
