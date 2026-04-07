@@ -71,22 +71,22 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
 
       if (hasCloudAccess) {
         for (SpeakerProduct element in speakers) {
-          _fetchProductPrices(element.productId);
+          _fetchProductPrices(element.id);
         }
         for (AmplifierProduct element in amplifiers) {
-          _fetchProductPrices(element.productId);
+          _fetchProductPrices(element.id);
         }
         for (IoEndpointProduct element in ioEndpoints) {
-          _fetchProductPrices(element.productId);
+          _fetchProductPrices(element.id);
         }
         for (DspProduct element in dsps) {
-          _fetchProductPrices(element.productId);
+          _fetchProductPrices(element.id);
         }
         for (ControllerProduct element in controllers) {
-          _fetchProductPrices(element.productId);
+          _fetchProductPrices(element.id);
         }
         for (AccessoryProduct element in accessories) {
-          _fetchProductPrices(element.productId);
+          _fetchProductPrices(element.id);
         }
       }
     } catch (e) {

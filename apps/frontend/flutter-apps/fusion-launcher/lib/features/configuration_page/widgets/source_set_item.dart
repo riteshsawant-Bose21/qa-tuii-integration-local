@@ -232,6 +232,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                       },
                                       child: FusionImage.asset(
                                         semanticId: FusionTestKeys.instance.sourcesetdataitmheaderlink,
+                                        semanticLabel: widget.sourceSet.isLinked ? 'unlink_source_set' : 'link_source_set',
                                         widget.sourceSet.isLinked ? Assets.unLinkIcon : Assets.linkIcon,
                                         width: 22,
                                         height: 22,
@@ -771,9 +772,9 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                                   side: BorderSide(width: 0.5),
                                                                 ),
 
-                                                                side: MaterialStateBorderSide.resolveWith(
+                                                                side: WidgetStateBorderSide.resolveWith(
                                                                   (Set<WidgetState> states) {
-                                                                    if (states.contains(MaterialState.selected)) {
+                                                                    if (states.contains(WidgetState.selected)) {
                                                                       return BorderSide(
                                                                         color: context.colorScheme.primaryWhite,
                                                                         width: 1,
