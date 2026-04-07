@@ -1,9 +1,24 @@
 import 'dart:ui';
 
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/controller_page_model.dart';
 
+/// A wall-controller hardware component.
+///
+/// Per-controller pages and zone assignments are stored in repositories /
+/// relationships on [ProjectService].  Display settings and schedule-tab UI
+/// preferences live directly on this model.
 class FusionController extends HardwareComponent {
   final String sku;
+
+  /// Screen mode / saver / sleep-time settings for the physical controller.
+  final ControllerDisplayConfig displayConfig;
+
+  /// Whether "Show upcoming items" is checked in the Schedule tab.
+  final bool showUpcoming;
+
+  /// Schedule filter radio-button selection: 'none' | 'all' | 'selected'.
+  final String scheduleDisplayMode;
 
   FusionController({
     String? id,
@@ -23,7 +38,13 @@ class FusionController extends HardwareComponent {
     super.outputPortsData,
     super.equipmentLocationPosition,
     required super.addedFromBuildingPage,
+    ControllerDisplayConfig? displayConfig,
+    bool showUpcoming = false,
+    String scheduleDisplayMode = 'all',
   }) : sku = sku ?? name,
+       displayConfig = displayConfig ?? const ControllerDisplayConfig(),
+       showUpcoming = showUpcoming,
+       scheduleDisplayMode = scheduleDisplayMode,
        super(
          hardwareName: hardwareName ?? name,
          locationEntity: locationEntity ?? LocationModel(),
@@ -48,6 +69,9 @@ class FusionController extends HardwareComponent {
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
     bool? addedFromBuildingPage,
+    ControllerDisplayConfig? displayConfig,
+    bool? showUpcoming,
+    String? scheduleDisplayMode,
   }) {
     return FusionController(
       id: id ?? this.id,
@@ -66,6 +90,9 @@ class FusionController extends HardwareComponent {
       outputPortsData: outputPortsData ?? this.outputPortsData,
       addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
       equipmentLocationPosition: equipmentLocationPosition ?? this.equipmentLocationPosition,
+      displayConfig: displayConfig ?? this.displayConfig,
+      showUpcoming: showUpcoming ?? this.showUpcoming,
+      scheduleDisplayMode: scheduleDisplayMode ?? this.scheduleDisplayMode,
     );
   }
 
@@ -88,10 +115,23 @@ class FusionController extends HardwareComponent {
       'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
       'addedFromBuildingPage': addedFromBuildingPage,
       'equipmentLocationPosition': equipmentLocationPosition,
+      'displayConfig': displayConfig.toJson(),
+      'showUpcoming': showUpcoming,
+      'scheduleDisplayMode': scheduleDisplayMode,
     };
   }
 
   factory FusionController.fromJson(Map<String, dynamic> json) {
+    // ── Display config ──────────────────────────────────────────────────────
+    final ControllerDisplayConfig displayConfig = json['displayConfig'] != null
+        ? ControllerDisplayConfig.fromJson(Map<String, dynamic>.from(json['displayConfig'] as Map))
+        : const ControllerDisplayConfig();
+
+    // ── Schedule fields — with backward compat from old 'schedulePageConfig' ─
+    final Map<String, dynamic>? legacySched = json['schedulePageConfig'] != null ? Map<String, dynamic>.from(json['schedulePageConfig'] as Map) : null;
+    final bool showUpcoming = json['showUpcoming'] as bool? ?? legacySched?['showUpcoming'] as bool? ?? false;
+    final String scheduleDisplayMode = json['scheduleDisplayMode'] as String? ?? legacySched?['displayMode'] as String? ?? 'all';
+
     return FusionController(
       id: json['id'] as String?,
       name: json['name'] as String,
@@ -110,6 +150,9 @@ class FusionController extends HardwareComponent {
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
       equipmentLocationPosition: DeserializationUtil.intDeserializer.deserialize(json['equipmentLocationPosition']),
+      displayConfig: displayConfig,
+      showUpcoming: showUpcoming,
+      scheduleDisplayMode: scheduleDisplayMode,
     );
   }
 }

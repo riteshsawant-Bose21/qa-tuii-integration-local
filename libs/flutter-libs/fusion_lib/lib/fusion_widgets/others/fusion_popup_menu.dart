@@ -14,6 +14,9 @@ class FusionPopupMenu<T> extends StatelessWidget {
     this.tooltip,
     this.popupOffset = const Offset(10, 10),
     this.semanticsId,
+    this.isItemEnabled,
+    this.itemPadding = const EdgeInsets.all(16.0),
+    this.constraints,
   }) : matchChildWidth = matchChildWidth ?? (popupwidth == null);
 
   final double? popupwidth;
@@ -26,6 +29,13 @@ class FusionPopupMenu<T> extends StatelessWidget {
   final String? tooltip;
   final Offset popupOffset;
   final String? semanticsId;
+  final bool Function(T)? isItemEnabled;
+  final EdgeInsets? itemPadding;
+
+  /// Optional size constraints forwarded to [CustomPopupMenuButton].
+  /// Use [BoxConstraints.tightFor] or [BoxConstraints(maxHeight: …)] to cap
+  /// popup height and enable scrolling.
+  final BoxConstraints? constraints;
   @override
   Widget build(BuildContext context) {
     final childKey = GlobalKey();
@@ -43,6 +53,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
         position: PopupMenuPosition.under,
         menuPadding: EdgeInsets.zero,
         offset: popupOffset,
+        constraints: constraints,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.0),
           side: BorderSide(color: context.colorScheme.strokeLight, width: 1),
@@ -54,9 +65,10 @@ class FusionPopupMenu<T> extends StatelessWidget {
             final T item = items[index];
             var findRenderObject = (childKey.currentContext?.findRenderObject() as RenderBox?);
             var width2 = matchChildWidth ? findRenderObject?.size.width : popupwidth;
+            final bool enabled = isItemEnabled?.call(item) ?? true;
             return PopupMenuItem<T>(
               value: item,
-
+              enabled: enabled,
               padding: EdgeInsets.all(0),
               child: SemanticHelper.dropdown(
                 testId: SemanticHelper.createTestId(
@@ -67,7 +79,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
                 child: SizedBox(
                   width: width2,
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: itemPadding ?? EdgeInsets.all(8.0),
                     child: itemBuilder != null
                         ? itemBuilder!(context, item)
                         : FusionAppText(

@@ -21,7 +21,6 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
   }) {
     isFromBuildingPage = fromBuildingPage;
     this.onSaved = onSaved;
-
     if (isFromBuildingPage) {
       final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
       final ListeningArea? currentSelectedListeningArea = projectViewModel.getCurrentSelectedListeningArea();
@@ -29,6 +28,22 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
         emit(state.copyWith(selectedListeningArea: currentSelectedListeningArea));
       }
     }
+  }
+
+  void setSelectedStream(Aes67Config stream) {
+    emit(state.copyWith(selectedStream: stream));
+  }
+
+  void setSelectedMonoChannel(int channel) {
+    emit(state.copyWith(selectedMonoChannel: channel));
+  }
+
+  void setSelectedLeftChannel(int channel) {
+    emit(state.copyWith(selectedLeftChannel: channel));
+  }
+
+  void setSelectedRightChannel(int channel) {
+    emit(state.copyWith(selectedRightChannel: channel));
   }
 
   void setSourceSectionType(SourceSectionType sourceSectionType) {

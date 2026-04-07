@@ -9,6 +9,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/project_manger/dro/dro_input_mapper.dart';
 
 export 'circuit/circuit_viewmodel.dart';
+export 'controller/controller_view_model.dart';
 export 'equip_location/equip_location_view_model.dart';
 export 'events/events_view_model.dart';
 
@@ -30,6 +31,7 @@ export 'subzones/subzone_view_model.dart';
 export 'undo_redo/undo_redo_view_model.dart';
 export 'wiring_connection/wiring_connection_view_model.dart';
 export 'zone/zone_view_model.dart';
+export 'aes67/aes67_view_model.dart';
 
 part 'project_view_model_state.dart';
 
@@ -44,7 +46,7 @@ enum ProjectMode {
 
 enum ToolbarMode { acoustics, system }
 
-enum ConfigurationMenuMode { processing, snapshots, events, gpio, scheduling, mediaFiles }
+enum ConfigurationMenuMode { processing, snapshots, events, gpio, scheduling, mediaFiles, aes67, controllers }
 
 enum SelectedItemType {
   source,

@@ -1,0 +1,248 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
+import 'package:fusion_lib/fusion_lib.dart';
+
+/// Controller Settings section — Screen Mode, Screen Saver, and Sleep Time.
+///
+/// All state is driven by [ConfigControlLoaded] in the BLoC so each controller
+/// has independent, persisted settings.
+class ControllerSettingsSection extends StatelessWidget {
+  const ControllerSettingsSection({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
+      builder: (BuildContext context, ConfigurationControlState state) {
+        if (state is! ConfigControlLoaded) return const SizedBox.shrink();
+
+        final ConfigurationControlViewmodel vm = context.read<ConfigurationControlViewmodel>();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const PanelSectionHeader(title: 'CONTROLLER SETTINGS'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  _buildScreenModeRow(context, state, vm),
+                  const SizedBox(height: 16),
+                  _buildDivider(context),
+                  const SizedBox(height: 16),
+                  _buildScreenSaverRow(context, state, vm),
+                  const SizedBox(height: 16),
+                  _buildDivider(context),
+                  const SizedBox(height: 16),
+                  _buildSleepTimeRow(context, state, vm),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDivider(BuildContext context) {
+    return Divider(height: 1, thickness: 1, color: context.colorScheme.strokeLight);
+  }
+
+  // ─── Screen Mode ─────────────────────────────────────────────────────────────
+
+  Widget _buildScreenModeRow(
+    BuildContext context,
+    ConfigControlLoaded state,
+    ConfigurationControlViewmodel vm,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        FusionAppText(
+          text: 'SCREEN MODE',
+          style: Theme.of(context).textTheme.l1Regular.withColor(
+            context.colorScheme.textBody,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: <Widget>[
+            _buildRadioOption<ScreenMode>(
+              context: context,
+              label: 'Light',
+              value: ScreenMode.light,
+              groupValue: state.screenMode,
+              onChanged: (ScreenMode? v) {
+                if (v != null) vm.setScreenMode(v);
+              },
+            ),
+            const SizedBox(width: 32),
+            _buildRadioOption<ScreenMode>(
+              context: context,
+              label: 'Dark',
+              value: ScreenMode.dark,
+              groupValue: state.screenMode,
+              onChanged: (ScreenMode? v) {
+                if (v != null) vm.setScreenMode(v);
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ─── Screen Saver ─────────────────────────────────────────────────────────────
+
+  Widget _buildScreenSaverRow(
+    BuildContext context,
+    ConfigControlLoaded state,
+    ConfigurationControlViewmodel vm,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        FusionAppText(
+          text: 'SCREEN SAVER',
+          style: Theme.of(context).textTheme.l1Regular.withColor(
+            context.colorScheme.textBody,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 32,
+          runSpacing: 8,
+          children:
+              ScreenSaverOption.values
+                  .map(
+                    (ScreenSaverOption option) => _buildRadioOption<ScreenSaverOption>(
+                      context: context,
+                      label: option.label,
+                      value: option,
+                      groupValue: state.screenSaver,
+                      onChanged: (ScreenSaverOption? v) {
+                        if (v != null) vm.setScreenSaver(v);
+                      },
+                    ),
+                  )
+                  .toList(),
+        ),
+      ],
+    );
+  }
+
+  // ─── Screen Sleep Time ────────────────────────────────────────────────────────
+
+  static const int _minSleep = 5;
+  static const int _maxSleep = 300;
+
+  Widget _buildSleepTimeRow(
+    BuildContext context,
+    ConfigControlLoaded state,
+    ConfigurationControlViewmodel vm,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        FusionAppText(
+          text: 'SCREEN SLEEP TIME AFTER',
+          style: Theme.of(context).textTheme.l1Regular.withColor(
+            context.colorScheme.textBody,
+          ),
+        ),
+        const SizedBox(height: 2),
+        FusionAppText(
+          text: 'Note: Enter the time in seconds, allowed range $_minSleep-$_maxSleep seconds.',
+          style: Theme.of(context).textTheme.l2Regular.withColor(
+            context.colorScheme.textBody,
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildSleepDropdown(context, state, vm),
+      ],
+    );
+  }
+
+  Widget _buildSleepDropdown(
+    BuildContext context,
+    ConfigControlLoaded state,
+    ConfigurationControlViewmodel vm,
+  ) {
+    final List<int> values = List<int>.generate(
+      _maxSleep - _minSleep + 1,
+      (int i) => _minSleep + i,
+    );
+
+    return FusionNeumorphicDropdown<int>(
+      value: state.sleepTime,
+      height: 38,
+      width: 120,
+      borderRadius: BorderRadius.circular(8),
+      hintText: 'Select',
+      items: values,
+      matchChildWidth: true,
+      itemLabelBuilder: (int v) => '$v sec',
+      itemPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      constraints: const BoxConstraints(maxHeight: 400),
+      onChanged: (int v) => vm.setSleepTime(v),
+    );
+  }
+
+  // ─── Shared radio option ──────────────────────────────────────────────────────
+
+  Widget _buildRadioOption<T>({
+    required BuildContext context,
+    required String label,
+    required T value,
+    required T groupValue,
+    required ValueChanged<T?> onChanged,
+  }) {
+    final bool isSelected = value == groupValue;
+    final Color activeColor = context.colorScheme.primary;
+
+    return GestureDetector(
+      onTap: () => onChanged(value),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+            width: 16,
+            height: 16,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isSelected ? activeColor : context.colorScheme.elevation4,
+                width: 2,
+              ),
+            ),
+            child:
+                isSelected
+                    ? Center(
+                      child: Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: activeColor,
+                        ),
+                      ),
+                    )
+                    : null,
+          ),
+          const SizedBox(width: 6),
+          FusionAppText(
+            text: label,
+            style: Theme.of(context).textTheme.l1Regular.withColor(
+              isSelected ? context.colorScheme.textPrimary : context.colorScheme.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// end of file

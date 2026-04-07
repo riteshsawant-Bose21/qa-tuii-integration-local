@@ -26,7 +26,7 @@ enum FusionFieldVariant {
 
 class FusionCustomTextField extends StatefulWidget {
   final String? label;
-  final String hint;
+  final String? hint;
   final TextEditingController? controller;
 
   final bool enabled;
@@ -80,7 +80,7 @@ class FusionCustomTextField extends StatefulWidget {
     required this.semanticId,
     this.showRupee = false,
     this.label,
-    required this.hint,
+    this.hint,
     this.controller,
     this.enabled = true,
     this.hasErrorText = false,
@@ -683,7 +683,7 @@ class _FusionCustomTextFieldState extends State<FusionCustomTextField> {
                             enabledBorder: InputBorder.none,
                             focusedBorder: InputBorder.none,
 
-                            hintText: widget.hint,
+                            hintText: widget.hint ?? '',
                             hintStyle: context.textTheme.bodySmall?.withColor(context.colorScheme.textPlaceholder),
                             filled: false,
                             isDense: true,

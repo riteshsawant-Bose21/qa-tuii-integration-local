@@ -70,6 +70,7 @@ dependencies:
   flutter_colorpicker: ^1.1.0
   audioplayers: ^6.5.1
   package_info_plus: ^8.1.2
+  printing: ^5.14.3
 
 
   # Authentication

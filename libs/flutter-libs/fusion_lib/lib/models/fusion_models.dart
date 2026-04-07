@@ -38,6 +38,7 @@ export 'project_entities/non_processing/snapshot_model.dart';
 export 'project_entities/non_processing/scene_set_model.dart';
 export 'project_entities/non_processing/scheduler_config.dart';
 export 'project_entities/non_processing/fusion_event.dart';
+export 'project_entities/non_processing/aes67_config.dart';
 export 'fusion_auth/user_model.dart';
 export 'project_cloud/project_list_response.dart';
 export 'project_entities/media_files/media_file_model.dart';
@@ -51,6 +52,10 @@ export 'timezones/time_zone.dart';
 export 'project_entities/message_player_model.dart';
 
 export 'mdns/mdns_device.dart';
+
+export 'project_entities/controller_page_model.dart';
+
+export 'controller_config/controller_config.dart';
 
 export 'dro/dro_input_model.dart';
 

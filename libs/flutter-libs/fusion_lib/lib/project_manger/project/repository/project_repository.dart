@@ -1,4 +1,5 @@
 import '../../../fusion_lib.dart';
+import '../../../models/project_entities/controller_page_model.dart';
 
 /// -------------------
 /// Base Repository
@@ -168,6 +169,16 @@ class MessageRepository extends Repository<MessageModel> {
   }
 }
 
+// repository for aes67
+
+class Aes67Repository extends Repository<Aes67Config> {
+  Aes67Repository copyWith(Map<String, Aes67Config> items) {
+    final newRepo = Aes67Repository();
+    newRepo._items.addAll(items);
+    return newRepo;
+  }
+}
+
 class ZoneFunctionRepository extends Repository<ZoneFunctions> {
   // Get ZoneFunction by function id
   ZoneFunctions? getByFunctionId({required String functionId}) {
@@ -283,3 +294,9 @@ class PrioritySourceDataRepository extends Repository<PrioritySourceData> {
 }
 
 class EquipLocationRepository extends Repository<EquipLocation> {}
+
+// ─── Controller repositories ──────────────────────────────────────────────────
+
+/// Stores all [ControllerPageModel] entries (scene-set, snapshot, and message
+/// pages) keyed by page ID.
+class ControllerPageRepository extends Repository<ControllerPageModel> {}
