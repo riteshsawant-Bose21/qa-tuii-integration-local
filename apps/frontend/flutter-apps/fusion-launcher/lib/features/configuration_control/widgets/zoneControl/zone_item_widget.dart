@@ -114,19 +114,20 @@ class _ZoneItemWidgetState extends State<ZoneItemWidget> {
             /// Only show if it's a source select/mix/matrix function, as those have additional settings to configure
             GestureDetector(
               onTap: () {
-                if (zoneFunction != null ||
-                    zoneFunction!.type == ZoneFunctionsType.sourceSelect ||
-                    zoneFunction.type == ZoneFunctionsType.sourceSelectWithPriority) {
+                if (zoneFunction != null &&
+                    (zoneFunction.type == ZoneFunctionsType.sourceSelect || zoneFunction.type == ZoneFunctionsType.sourceSelectWithPriority)) {
                   return SourceSelectAdditionalSettingsDialog.showDialog(
                     context,
                     zoneID: widget.zone.id,
                   );
-                } else if (zoneFunction.type == ZoneFunctionsType.sourceMix || zoneFunction.type == ZoneFunctionsType.sourceMixWithPriority) {
+                } else if (zoneFunction != null &&
+                    (zoneFunction.type == ZoneFunctionsType.sourceMix || zoneFunction.type == ZoneFunctionsType.sourceMixWithPriority)) {
                   return SourceMixAdditionalSettingsDialog.showDialog(
                     context,
                     zoneID: widget.zone.id,
                   );
-                } else if (zoneFunction.type == ZoneFunctionsType.sourceMatrix || zoneFunction.type == ZoneFunctionsType.sourceMatrixWithPriority) {
+                } else if (zoneFunction != null &&
+                    (zoneFunction.type == ZoneFunctionsType.sourceMatrix || zoneFunction.type == ZoneFunctionsType.sourceMatrixWithPriority)) {
                   return SourceMatrixAdditionalSettingsDialog.showDialog(
                     context,
                     zoneID: widget.zone.id,
