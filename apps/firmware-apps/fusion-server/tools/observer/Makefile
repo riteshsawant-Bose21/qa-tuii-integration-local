@@ -64,6 +64,7 @@ BUILD_DIR_OSX_ARM := $(BUILD_DIR)/osx-arm64
 # Sources
 MAIN_SRCS := observer.cpp
 INCLUDES  := -I$(SRC_DIR)
+COMMON_HEADERS := $(SRC_DIR)/observer.h
 
 # Objects
 OBJS_X86      := $(MAIN_SRCS:%.cpp=$(BUILD_DIR_X86)/%.o)
@@ -108,7 +109,7 @@ $(TARGET_X86): $(OBJS_X86)
 	@mkdir -p $(dir $@)
 	$(CXX_X86) $(OBJS_X86) -o $@ $(LINUX_LIBS)
 
-$(BUILD_DIR_X86)/%.o: $(SRC_DIR)/%.cpp
+$(BUILD_DIR_X86)/%.o: $(SRC_DIR)/%.cpp $(COMMON_HEADERS)
 	@mkdir -p $(dir $@)
 	$(CXX_X86) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
@@ -117,7 +118,7 @@ $(TARGET_ARM): $(OBJS_ARM)
 	@mkdir -p $(dir $@)
 	$(CXX_ARM) $(OBJS_ARM) -o $@ $(LINUX_LIBS)
 
-$(BUILD_DIR_ARM)/%.o: $(SRC_DIR)/%.cpp
+$(BUILD_DIR_ARM)/%.o: $(SRC_DIR)/%.cpp $(COMMON_HEADERS)
 	@mkdir -p $(dir $@)
 	$(CXX_ARM) $(CXXFLAGS) $(INCLUDES) $(LINUX_INCLUDES) -c $< -o $@
 
@@ -131,7 +132,7 @@ $(TARGET_OSX_ARM): $(OBJS_OSX_ARM)
 	$(CXX) $(OSX_ARM_FLAGS) $(OBJS_OSX_ARM) -o $@ \
 		$(OSX_ARM_LIB_PATHS) $(OSX_ARM_JSONCPP_LIBS) -lfmt
 
-$(BUILD_DIR_OSX_ARM)/%.o: $(SRC_DIR)/%.cpp
+$(BUILD_DIR_OSX_ARM)/%.o: $(SRC_DIR)/%.cpp $(COMMON_HEADERS)
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(OSX_ARM_FLAGS) $(INCLUDES) \
 		$(OSX_ARM_INCLUDES) $(OSX_ARM_JSONCPP_CFLAGS) $(OSX_ARM_GTEST_CFLAGS) -c $< -o $@

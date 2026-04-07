@@ -51,7 +51,7 @@ Fusion Server can be run:
 ## Networking Interfaces
 - REST API (primary control interface)
 - WebSocket streaming endpoint (`/ws`)
-- UDP control channel on port `7947`
+- UDP control channel on port `7947` supporting `get`, `put`, and `patch`
 - Bluetooth Low Energy (BLE) GATT service for mobile provisioning  
   - Service ID: `B053`  
   - Characteristic ID: `AD10`

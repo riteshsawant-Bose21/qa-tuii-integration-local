@@ -854,7 +854,10 @@ public:
    */
   void watch(const std::string &path, JsonMonitor::ChangeCallback callback)
   {
-    targetPaths_.push_back(path);
+    {
+      std::lock_guard<std::mutex> lk(targetPaths_mutex_);
+      targetPaths_.push_back(path);
+    }
     jsonMonitor_.watch(path, callback);
   }
 
@@ -868,7 +871,10 @@ public:
    */
   void watchPattern(const std::string &pattern, JsonMonitor::ChangeCallback callback)
   {
-    targetPaths_.push_back(pattern);
+    {
+      std::lock_guard<std::mutex> lk(targetPaths_mutex_);
+      targetPaths_.push_back(pattern);
+    }
     jsonMonitor_.watchPattern(pattern, callback);
   }
 
@@ -1060,7 +1066,13 @@ private:
       }
     }
 
-    for (const auto &path : targetPaths_)
+    std::vector<std::string> targetPaths;
+    {
+      std::lock_guard<std::mutex> lk(targetPaths_mutex_);
+      targetPaths = targetPaths_;
+    }
+
+    for (const auto &path : targetPaths)
     {
       if (path.find('*') != std::string::npos)
       {
@@ -1268,6 +1280,7 @@ private:
   std::thread receiveThread_;
   std::string deviceID_{""};
   std::vector<std::string> targetPaths_;
+  mutable std::mutex targetPaths_mutex_;
   JsonMonitor jsonMonitor_;
   sockaddr_in serverAddr_{};
   bool receivedInitialState_{false};

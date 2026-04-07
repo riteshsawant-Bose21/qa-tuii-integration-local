@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"fusion/internal/api"
 	"io"
-	"maps"
 	"net/http"
 	"os"
 	"os/exec"
@@ -1245,28 +1244,28 @@ func TestUDPGet(t *testing.T) {
 	}
 }
 
-// TestUDPSet runs the "set" command inside the default instance.
-func TestUDPSet(t *testing.T) {
+// TestUDPPut runs the "put" command inside the default instance.
+func TestUDPPut(t *testing.T) {
 	if isLocalTestMode() {
 		t.Skip("Skipping multipass UDP test in local mode; use fusion/test/udp_test.go instead.")
 	}
-	command := fmt.Sprintf(`echo '{"action":"set","test":"hello"}' | %s %s`, ncCommand, instancePort)
+	command := fmt.Sprintf(`echo '{"action":"put","payload":{"test":"hello"}}' | %s %s`, ncCommand, instancePort)
 	out, err := runMultipassCommand(t, command)
 	if err != nil {
-		t.Fatalf("Multipass set command failed: %v, output: %s", err, out)
+		t.Fatalf("Multipass put command failed: %v, output: %s", err, out)
 	}
 }
 
-// TestUDPSetAndGet sets a value and then verifies it with a get command on the default instance.
-func TestUDPSetAndGet(t *testing.T) {
+// TestUDPPutAndGet sets a value and then verifies it with a get command on the default instance.
+func TestUDPPutAndGet(t *testing.T) {
 	if isLocalTestMode() {
 		t.Skip("Skipping multipass UDP test in local mode; use fusion/test/udp_test.go instead.")
 	}
 	// Set the value on instance1.
-	setCommand := fmt.Sprintf(`echo '{"action":"set","payload":{"test":"hello"}}' | %s %s`, ncCommand, instancePort)
+	setCommand := fmt.Sprintf(`echo '{"action":"put","payload":{"test":"hello"}}' | %s %s`, ncCommand, instancePort)
 	setOut, err := runMultipassCommand(t, setCommand)
 	if err != nil {
-		t.Fatalf("Multipass set command failed: %v, output: %s", err, setOut)
+		t.Fatalf("Multipass put command failed: %v, output: %s", err, setOut)
 	}
 
 	// Retrieve the value from instance1.
@@ -1282,13 +1281,42 @@ func TestUDPSetAndGet(t *testing.T) {
 	}
 }
 
-// TestUDPPropagation sets a value on instance1 and verifies that it propagates to instance2.
+// TestUDPPatchAndGetKey patches a nested value and then verifies it with a keyed UDP get.
+func TestUDPPatchAndGetKey(t *testing.T) {
+	if isLocalTestMode() {
+		t.Skip("Skipping multipass UDP test in local mode; use fusion/test/udp_test.go instead.")
+	}
+
+	putCommand := fmt.Sprintf(`echo '{"action":"put","payload":{"settings":{"audio":{"gain":1}}}}' | %s %s`, ncCommand, instancePort)
+	putOut, err := runMultipassCommand(t, putCommand)
+	if err != nil {
+		t.Fatalf("Multipass put command failed: %v, output: %s", err, putOut)
+	}
+
+	patchCommand := fmt.Sprintf(`echo '{"action":"patch","key":"settings.audio.gain","value":5}' | %s %s`, ncCommand, instancePort)
+	patchOut, err := runMultipassCommand(t, patchCommand)
+	if err != nil {
+		t.Fatalf("Multipass patch command failed: %v, output: %s", err, patchOut)
+	}
+
+	getCommand := fmt.Sprintf(`echo '{"action":"get","key":"settings.audio.gain"}' | %s %s`, ncCommand, instancePort)
+	getOut, err := runMultipassCommand(t, getCommand)
+	if err != nil {
+		t.Fatalf("Multipass keyed get command failed: %v, output: %s", err, getOut)
+	}
+
+	if !strings.Contains(getOut, `"exists":true`) || !strings.Contains(getOut, `"value":5`) {
+		t.Fatalf("Expected keyed get output to contain exists=true and value=5, got: %s", getOut)
+	}
+}
+
+// TestUDPPropagation puts a value on instance1 and verifies that it propagates to instance2.
 func TestUDPPropagation(t *testing.T) {
 	if isLocalTestMode() {
 		t.Skip("Skipping multipass UDP test in local mode; use fusion/test/udp_test.go instead.")
 	}
 	// Build commands once
-	setCmd := fmt.Sprintf(`echo '{"action":"set","payload":{"test":"hello"}}' | %s %s`, ncCommand, instancePort)
+	setCmd := fmt.Sprintf(`echo '{"action":"put","payload":{"test":"hello"}}' | %s %s`, ncCommand, instancePort)
 	getCmd := fmt.Sprintf(`echo '{"action":"get"}' | %s %s`, ncCommand, instancePort)
 
 	// Set on the "master" node
@@ -1398,7 +1426,7 @@ func TestHTTPSetAndVerifyViaUDP(t *testing.T) {
 	}
 }
 
-func TestUDPSetAndVerifyViaHTTP(t *testing.T) {
+func TestUDPPutAndVerifyViaHTTP(t *testing.T) {
 	if isLocalTestMode() {
 		t.Skip("Skipping multipass UDP test in local mode; use fusion/test/udp_test.go instead.")
 	}
@@ -1410,8 +1438,8 @@ func TestUDPSetAndVerifyViaHTTP(t *testing.T) {
 	}
 
 	udpPacket := make(map[string]any, len(payload)+1)
-	udpPacket["action"] = "set"
-	maps.Copy(udpPacket, payload)
+	udpPacket["action"] = "put"
+	udpPacket["payload"] = payload
 	udpData, err := json.Marshal(udpPacket)
 	if err != nil {
 		t.Fatalf("Failed to marshal UDP packet: %v", err)
@@ -1423,7 +1451,7 @@ func TestUDPSetAndVerifyViaHTTP(t *testing.T) {
 		instancePort,
 	)
 	if _, err := runMultipassCommand(t, cmd); err != nil {
-		t.Fatalf("UDP set failed: %v", err)
+		t.Fatalf("UDP put failed: %v", err)
 	}
 
 	deadline := time.Now().Add(5 * time.Second)

@@ -362,7 +362,7 @@ func (d *virtualUDPDevice) run(deadline time.Time) {
 		seq++
 		payload := d.makePayload(seq)
 		if d.rng.Float64() < 0.02 {
-			payload = []byte(`{"action":"set","payload":{"broken":`)
+			payload = []byte(`{"action":"put","payload":{"broken":`)
 			d.metrics.CorruptPayloadSent.Add(1)
 		}
 
@@ -415,7 +415,7 @@ func (d *virtualUDPDevice) run(deadline time.Time) {
 
 func (d *virtualUDPDevice) makePayload(seq uint64) []byte {
 	setPayload := map[string]any{
-		"action": "set",
+		"action": "put",
 		"payload": map[string]any{
 			"vd_id": d.id,
 			"seq":   seq,

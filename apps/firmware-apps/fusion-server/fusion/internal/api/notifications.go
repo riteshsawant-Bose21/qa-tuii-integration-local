@@ -27,6 +27,8 @@ const (
 	NotifyOpTaskUpdate                NotifyOp = "task_update"
 	NotifyOpVIPStatus                 NotifyOp = "vip_status"
 	NotifyOpValueGet                  NotifyOp = "get"
+	NotifyOpValuePut                  NotifyOp = "put"
+	NotifyOpValuePatch                NotifyOp = "patch"
 	NotifyOpValueSet                  NotifyOp = "set"
 	NotifyOpSoftwareUpdateAvailable   NotifyOp = "software_update_available"
 	NotifyOpSoftwareUpdateSyncAck     NotifyOp = "software_update_sync_ack"
