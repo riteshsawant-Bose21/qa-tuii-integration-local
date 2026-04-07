@@ -143,14 +143,20 @@ class _FusionKebabPopupState extends State<FusionKebabPopup> {
   }
 
   void _closePopup() {
+    _cleanupPopup();
     _overlayEntry?.remove();
     _overlayEntry = null;
     setState(() => _isMenuOpen = false);
   }
 
+  void _cleanupPopup() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
   @override
   void dispose() {
-    _closePopup();
+    _cleanupPopup();
     super.dispose();
   }
 

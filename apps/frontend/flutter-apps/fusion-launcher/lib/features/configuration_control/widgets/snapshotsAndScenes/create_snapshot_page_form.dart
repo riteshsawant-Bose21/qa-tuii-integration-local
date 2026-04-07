@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_widgets/form_fields/fusion_custom_textfield.dart';
 
 /// Shows the "CREATE SNAPSHOT PAGE" dialog and returns the result.
 Future<CreateSnapshotPageResult?> showCreateSnapshotPageDialog({
@@ -65,9 +66,10 @@ class _CreateSnapshotPageDialogState extends State<_CreateSnapshotPageDialog> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 360),
         child: Container(
+          width: 256,
           decoration: BoxDecoration(
-            color: context.colorScheme.elevation2,
-            borderRadius: BorderRadius.circular(12),
+            color: context.colorScheme.elevation1,
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: context.colorScheme.strokeLight, width: 1),
           ),
           child: Column(
@@ -87,7 +89,7 @@ class _CreateSnapshotPageDialogState extends State<_CreateSnapshotPageDialog> {
 
   Widget _buildHeader(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 12),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(color: context.colorScheme.strokeLight, width: 1),
@@ -96,18 +98,11 @@ class _CreateSnapshotPageDialogState extends State<_CreateSnapshotPageDialog> {
       child: Row(
         children: <Widget>[
           Expanded(
-            child: Text(
-              'CREATE SNAPSHOT PAGE',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: context.colorScheme.textPrimary,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.6,
-              ),
-            ),
+            child: FusionAppText(text: 'CREATE SNAPSHOT PAGE', style: Theme.of(context).textTheme.l1Regular),
           ),
           GestureDetector(
             onTap: () => Navigator.of(context).pop(),
-            child: Icon(Icons.close, size: 18, color: context.colorScheme.iconDefault),
+            child: FusionIcon.icon(Icons.close, size: 12, color: context.colorScheme.iconDefault),
           ),
         ],
       ),
@@ -118,32 +113,33 @@ class _CreateSnapshotPageDialogState extends State<_CreateSnapshotPageDialog> {
 
   Widget _buildBody(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      padding: const EdgeInsets.all(16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           // ── Name field ──────────────────────────────────────────────
-          Text(
-            'Name',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: context.colorScheme.textSecondary,
-              fontWeight: FontWeight.w500,
-            ),
+          FusionCustomTextField(
+            label: 'Name',
+            borderRadius: 8,
+            variant: FusionFieldVariant.neumorphic,
+            semanticId: '',
+            controller: _nameController,
+            height: 24,
           ),
-          const SizedBox(height: 8),
-          _NameField(controller: _nameController),
-          const SizedBox(height: 20),
+
+          const SizedBox(height: 12),
+          Divider(color: context.colorScheme.strokeLight, thickness: 0.75),
+          const SizedBox(height: 7),
 
           // ── Available snapshots ─────────────────────────────────────
-          Text(
-            'Available snapshots',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: context.colorScheme.textSecondary,
-              fontWeight: FontWeight.w500,
+          FusionAppText(
+            text: 'Available snapshots',
+            style: Theme.of(context).textTheme.l1Regular.copyWith(
+              color: context.colorScheme.textPrimary,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 16),
           _SnapshotCheckboxList(
             snapshots: widget.availableSnapshots,
             selectedIds: _selectedIds,
@@ -153,12 +149,23 @@ class _CreateSnapshotPageDialogState extends State<_CreateSnapshotPageDialog> {
               });
             },
           ),
-          const SizedBox(height: 20),
+          Divider(color: context.colorScheme.strokeLight, thickness: 0.75),
+          const SizedBox(height: 12),
 
           // ── Create button ───────────────────────────────────────────
           Align(
             alignment: Alignment.centerRight,
-            child: _CreateButton(onPressed: _onCreate),
+            child: FusionAppButton(
+              width: 68,
+              height: 32,
+              text: 'Create',
+              textstyle: context.textTheme.l1Regular,
+              semanticId: '',
+              borderRadius: 8,
+              style: FusionAppButtonStyle.neumorphic,
+              onPressed: _onCreate,
+            ),
+            // child: _CreateButton(onPressed: _onCreate),
           ),
         ],
       ),
@@ -175,29 +182,11 @@ class _NameField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return FusionCustomTextField(
+      variant: FusionFieldVariant.neumorphic,
+      semanticId: '',
       controller: controller,
-      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-        color: context.colorScheme.textPrimary,
-      ),
-      cursorColor: context.colorScheme.primaryColor,
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: context.colorScheme.elevation3,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(6),
-          borderSide: BorderSide(color: context.colorScheme.strokeLight, width: 1),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(6),
-          borderSide: BorderSide(color: context.colorScheme.strokeLight, width: 1),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(6),
-          borderSide: BorderSide(color: context.colorScheme.primaryColor, width: 1.5),
-        ),
-      ),
+      height: 30,
     );
   }
 }
@@ -233,7 +222,7 @@ class _SnapshotCheckboxList extends StatelessWidget {
     final double listHeight = (snapshots.length.clamp(1, 5) * 44).toDouble();
 
     return SizedBox(
-      height: listHeight,
+      height: 100,
       child: Scrollbar(
         thumbVisibility: true,
         child: ListView.builder(
@@ -270,16 +259,21 @@ class _SnapshotCheckboxItem extends StatelessWidget {
     return GestureDetector(
       onTap: onToggle,
       child: Container(
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        padding: const EdgeInsets.only(bottom: 12),
         child: Row(
           children: <Widget>[
-            _CheckboxIcon(isChecked: isChecked),
-            const SizedBox(width: 10),
+            FusionCheckbox(
+              semanticId: '',
+              width: 16,
+              height: 16,
+              onChanged: onToggle,
+              value: isChecked,
+            ),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 snapshot.name,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                style: Theme.of(context).textTheme.l2Regular.copyWith(
                   color: context.colorScheme.textPrimary,
                 ),
                 overflow: TextOverflow.ellipsis,

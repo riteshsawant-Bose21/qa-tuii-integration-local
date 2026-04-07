@@ -47,7 +47,7 @@ class SnapshotPageSection extends StatelessWidget {
               onTap: () => _openCreateForm(context, state),
               child: Padding(
                 padding: const EdgeInsets.only(right: 4),
-                child: Icon(
+                child: FusionIcon.icon(
                   Icons.add,
                   size: 18,
                   color: context.colorScheme.iconDefault,
@@ -96,11 +96,12 @@ class _SnapshotPageItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      height: 32,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: context.colorScheme.elevation2,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: context.colorScheme.strokeLight,
           width: 1,
@@ -111,7 +112,9 @@ class _SnapshotPageItem extends StatelessWidget {
           Expanded(
             child: FusionAppText(text: page.name, style: Theme.of(context).textTheme.l1Regular),
           ),
-          _PageContextMenu(page: page, onDelete: onDelete),
+          FusionKebabPopup(
+            onDelete: onDelete,
+          ),
         ],
       ),
     );

@@ -120,10 +120,10 @@ class _ZoneItemWidgetState extends State<ZoneItemWidget> {
                   },
                 );
               },
-              child: FusionIcon.icon(
-                Icons.settings_outlined,
+              child: FusionIcon.svg(
+                "assets/svg/Settings.svg",
                 size: 16,
-                color: context.colorScheme.iconDefault,
+                color: context.colorScheme.iconWhite,
               ),
             ),
           ],
@@ -134,49 +134,21 @@ class _ZoneItemWidgetState extends State<ZoneItemWidget> {
 
   Widget _buildZoneSelectionControl(BuildContext context) {
     if (widget.isProController) {
-      return GestureDetector(
-        onTap: widget.onToggleSelection,
-        child: Container(
-          width: 16,
-          height: 16,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(3),
-            border: Border.all(
-              color: widget.isSelected ? context.colorScheme.iconWhite : context.colorScheme.iconDefault,
-              width: 2,
-            ),
-            color: widget.isSelected ? context.colorScheme.iconWhite : Colors.transparent,
-          ),
-          child: widget.isSelected ? Icon(Icons.check, size: 12, color: context.colorScheme.black) : null,
-        ),
+      return FusionCheckbox(
+        semanticId: '',
+        value: widget.isSelected,
+        onChanged: () {
+          widget.onToggleSelection?.call();
+        },
       );
     } else {
-      return GestureDetector(
-        onTap: widget.onSelectZone,
-        child: Container(
-          width: 16,
-          height: 16,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: widget.isActiveZone ? context.colorScheme.iconWhite : context.colorScheme.iconDefault,
-              width: 2,
-            ),
-          ),
-          child:
-              widget.isActiveZone
-                  ? Center(
-                    child: Container(
-                      width: 9,
-                      height: 9,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: context.colorScheme.iconWhite,
-                      ),
-                    ),
-                  )
-                  : null,
-        ),
+      return FusionCheckbox(
+        semanticId: '',
+        value: widget.isSelected,
+        shape: BoxShape.circle,
+        onChanged: () {
+          widget.onSelectZone?.call();
+        },
       );
     }
   }

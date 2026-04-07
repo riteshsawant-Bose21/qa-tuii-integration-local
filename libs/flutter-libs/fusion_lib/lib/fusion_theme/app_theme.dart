@@ -804,9 +804,7 @@ extension type FusionInputDecoration(InputDecoration _) {
   }) {
     final finalFillColor = fillColor ?? colorScheme.primaryWhite;
     final isError = errorText != null && errorText.isNotEmpty;
-    final borderColor = isError
-        ? const Color(0xFFD32F2F)
-        : colorScheme.primaryBlack;
+    final borderColor = isError ? const Color(0xFFD32F2F) : colorScheme.primaryBlack;
 
     return InputDecoration(
       labelText: labelText,
@@ -821,9 +819,7 @@ extension type FusionInputDecoration(InputDecoration _) {
       isDense: isDense,
       enabled: isEnabled,
       floatingLabelBehavior: floatingLabelBehavior,
-      contentPadding:
-          contentPadding ??
-          const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      contentPadding: contentPadding ?? const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       labelStyle: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w400,
@@ -844,12 +840,8 @@ extension type FusionInputDecoration(InputDecoration _) {
         fontWeight: FontWeight.w400,
         color: Color(0xFFD32F2F),
       ),
-      prefixIcon: prefixIcon != null
-          ? Icon(prefixIcon, color: colorScheme.elevation1)
-          : null,
-      suffixIcon: suffixIcon != null
-          ? Icon(suffixIcon, color: colorScheme.elevation1)
-          : null,
+      prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: colorScheme.elevation1) : null,
+      suffixIcon: suffixIcon != null ? Icon(suffixIcon, color: colorScheme.elevation1) : null,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(borderRadius),
         borderSide: BorderSide(color: borderColor),
@@ -915,12 +907,8 @@ extension type FusionInputDecoration(InputDecoration _) {
       filled: true,
       fillColor: colorScheme.elevation1,
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      prefixIcon: prefixIcon != null
-          ? Icon(prefixIcon, color: colorScheme.elevation1)
-          : null,
-      suffixIcon: suffixIcon != null
-          ? Icon(suffixIcon, color: colorScheme.elevation1)
-          : null,
+      prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: colorScheme.elevation1) : null,
+      suffixIcon: suffixIcon != null ? Icon(suffixIcon, color: colorScheme.elevation1) : null,
       labelStyle: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w400,
@@ -959,12 +947,8 @@ extension type FusionInputDecoration(InputDecoration _) {
       labelText: labelText,
       hintText: hintText,
       errorText: errorText,
-      prefixIcon: prefixIcon != null
-          ? Icon(prefixIcon, color: colorScheme.elevation1)
-          : null,
-      suffixIcon: suffixIcon != null
-          ? Icon(suffixIcon, color: colorScheme.elevation1)
-          : null,
+      prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: colorScheme.elevation1) : null,
+      suffixIcon: suffixIcon != null ? Icon(suffixIcon, color: colorScheme.elevation1) : null,
       labelStyle: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w400,
@@ -1009,12 +993,8 @@ extension type FusionInputDecoration(InputDecoration _) {
       fillColor: colorScheme.primaryBlack,
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-      prefixIcon: prefixIcon != null
-          ? Icon(prefixIcon, color: colorScheme.elevation1)
-          : null,
-      suffixIcon: suffixIcon != null
-          ? Icon(suffixIcon, color: colorScheme.elevation1)
-          : null,
+      prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: colorScheme.elevation1) : null,
+      suffixIcon: suffixIcon != null ? Icon(suffixIcon, color: colorScheme.elevation1) : null,
       hintStyle: TextStyle(
         color: colorScheme.elevation1,
         fontSize: 12,

@@ -71,13 +71,9 @@ class _SceneSetItem extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
       child: Row(
         children: <Widget>[
-          GestureDetector(
-            onTap: onToggle,
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 10),
-              child: _FusionCheckbox(isChecked: isChecked),
-            ),
+          Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: FusionCheckbox(semanticId: '', value: isChecked, onChanged: onToggle),
           ),
           Expanded(
             child: FusionAppText(

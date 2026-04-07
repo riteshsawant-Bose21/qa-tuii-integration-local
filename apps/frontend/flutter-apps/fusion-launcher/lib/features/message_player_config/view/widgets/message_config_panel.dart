@@ -331,9 +331,10 @@ class _AudioFileDropdownState extends State<_AudioFileDropdown> {
   //   );
   // }
   Widget _buildMainPopup(BuildContext context, MessagePlayerConfigCubit cubit, String? audioFileName) {
+    final double availableWidth = MediaQuery.of(context).size.width;
     return FusionNeumorphicDropdown<_AudioFileOption>(
       hintText: 'Select Audio File',
-      width: 400,
+      width: availableWidth * 0.21,
       items: const <_AudioFileOption>[
         _AudioFileOption.selectAudioFile,
         _AudioFileOption.uploadAudioFile,
@@ -786,10 +787,12 @@ class _DropdownField extends StatelessWidget {
           ),
           FusionNeumorphicDropdown<int>(
             // semanticsId: '${label}_dropdown',
+            matchChildWidth: true,
+            popupWidth: 53,
             items: items,
+
             // popupOffset: const Offset(0, 6),
             onChanged: onChanged,
-            matchChildWidth: true,
             itemBuilder: (BuildContext context, int item) {
               final bool isSelected = item == value;
               return FusionAppText(
@@ -801,7 +804,6 @@ class _DropdownField extends StatelessWidget {
             },
             child: FusionContainer(
               color: context.colorScheme.elevation1,
-              width: 53,
               height: 24,
               raised: true,
               borderRadius: 5,
@@ -811,6 +813,7 @@ class _DropdownField extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
                     FusionAppText(text: value.toString(), style: context.textTheme.b3Regular),
+                    const SizedBox(width: 5),
                     Icon(
                       Icons.keyboard_arrow_down,
                       color: context.colorScheme.iconDefault,
