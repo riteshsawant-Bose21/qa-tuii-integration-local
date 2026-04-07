@@ -11,7 +11,6 @@ import (
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"go.uber.org/zap"
 
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
@@ -39,26 +38,18 @@ type s3Config struct {
 	region string
 }
 
-// NewS3Client creates a new S3 client with the specified region
-func NewS3Client(ctx context.Context, region string) (*S3, error) {
+// NewS3Client creates a new S3 client with the specified AWS configuration
+func NewS3Client(ctx context.Context, awsConfig aws.Config) (*S3, error) {
 
-	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
-	if err != nil {
-		return nil, fmt.Errorf("failed to load AWS config: %w", err)
-	}
-
-	client := s3.NewFromConfig(cfg)
+	client := s3.NewFromConfig(awsConfig)
 	presignClient := s3.NewPresignClient(client)
-
-	// Create config from loaded AWS config
-	s3Cfg := &s3Config{
-		region: cfg.Region,
-	}
 
 	return &S3{
 		Client:        client,
 		PresignClient: presignClient,
-		config:        s3Cfg,
+		config: &s3Config{
+			region: awsConfig.Region,
+		},
 	}, nil
 }
 
