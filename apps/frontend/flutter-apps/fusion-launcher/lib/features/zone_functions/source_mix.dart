@@ -136,7 +136,7 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         vertical: 50.0,
-                      ).copyWith(bottom: hasPriority ? null : 0),
+                      ).copyWith(bottom: hasPriority ? null : null),
                       child: SemanticHelper.container(
                         testId: SemanticHelper.createTestId(
                           SemanticTypes.container,
@@ -262,58 +262,56 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
                       ),
                     ),
 
-                    if (hasPriority) ...<Widget>[
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Material(
-                          color: Colors.transparent,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            child: InkWell(
-                              onTap: () {
-                                SourceMixAdditionalSettingsDialog.showDialog(
-                                  context,
-                                  zoneID: widget.zoneID,
-                                );
-                              },
-                              borderRadius: BorderRadius.circular(8),
-                              splashColor: Colors.transparent,
-                              child: Ink(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: context.colorScheme.elevation2,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: <Widget>[
-                                    Flexible(
-                                      child: FusionAppText(
-                                        text: "Additional Settings",
-                                        style:
-                                            Theme.of(
-                                              context,
-                                            ).textTheme.labelSmall,
-                                      ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          child: InkWell(
+                            onTap: () {
+                              SourceMixAdditionalSettingsDialog.showDialog(
+                                context,
+                                zoneID: widget.zoneID,
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            splashColor: Colors.transparent,
+                            child: Ink(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: context.colorScheme.elevation2,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  Flexible(
+                                    child: FusionAppText(
+                                      text: "Additional Settings",
+                                      style:
+                                          Theme.of(
+                                            context,
+                                          ).textTheme.labelSmall,
                                     ),
-                                    const SizedBox(width: 8),
-                                    Icon(
-                                      LucideIcons.arrowUpRight200,
-                                      size: 16,
-                                      color: context.colorScheme.iconDefault,
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Icon(
+                                    LucideIcons.arrowUpRight200,
+                                    size: 16,
+                                    color: context.colorScheme.iconDefault,
+                                  ),
+                                ],
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ],
+                    ),
                   ],
                 ),
               ),

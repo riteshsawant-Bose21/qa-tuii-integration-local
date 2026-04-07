@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../../zone_function_settings/matrix_settings/matrix_settings.dart';
+import '../../../zone_function_settings/mix_settings/mix_settings.dart';
 import '../../../zone_function_settings/select_settings/select_settings.dart';
 
 class ZoneItemWidget extends StatefulWidget {
@@ -64,6 +68,8 @@ class _ZoneItemWidgetState extends State<ZoneItemWidget> {
   }
 
   Widget _buildZoneRow(BuildContext context) {
+    final ZoneFunctions? zoneFunction = serviceLocator<ProjectViewModel>().getZoneFunctionForZone(zoneId: widget.zone.id);
+
     return GestureDetector(
       onTap: _hasSubZones ? null : widget.onSelectZone,
       child: Container(
@@ -105,20 +111,27 @@ class _ZoneItemWidgetState extends State<ZoneItemWidget> {
             if (!_hasSubZones) const SizedBox(width: 8),
 
             /// Settings icon
+            /// Only show if it's a source select/mix/matrix function, as those have additional settings to configure
             GestureDetector(
               onTap: () {
-                showGeneralDialog(
-                  context: context,
-                  barrierDismissible: true,
-                  barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-                  barrierColor: Colors.black54,
-                  transitionDuration: const Duration(milliseconds: 200),
-                  pageBuilder: (BuildContext buildContext, _, __) {
-                    return SourceSelectAdditionalSettingsDialog(
-                      zoneID: widget.zone.id,
-                    );
-                  },
-                );
+                if (zoneFunction != null ||
+                    zoneFunction!.type == ZoneFunctionsType.sourceSelect ||
+                    zoneFunction.type == ZoneFunctionsType.sourceSelectWithPriority) {
+                  return SourceSelectAdditionalSettingsDialog.showDialog(
+                    context,
+                    zoneID: widget.zone.id,
+                  );
+                } else if (zoneFunction.type == ZoneFunctionsType.sourceMix || zoneFunction.type == ZoneFunctionsType.sourceMixWithPriority) {
+                  return SourceMixAdditionalSettingsDialog.showDialog(
+                    context,
+                    zoneID: widget.zone.id,
+                  );
+                } else if (zoneFunction.type == ZoneFunctionsType.sourceMatrix || zoneFunction.type == ZoneFunctionsType.sourceMatrixWithPriority) {
+                  return SourceMatrixAdditionalSettingsDialog.showDialog(
+                    context,
+                    zoneID: widget.zone.id,
+                  );
+                }
               },
               child: FusionIcon.icon(
                 Icons.settings_outlined,
