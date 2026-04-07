@@ -25,6 +25,7 @@ function show_help() {
     echo "  --state             Run only state manager tests"     
     echo "  --tasks             Run only tasks tests"     
     echo "  --udp               Run only UDP tests"     
+    echo "  --udp-observer-latency  Run UDP observer latency diagnostic"
     echo "  --udp-chaos         Run UDP chaos mesh test (multi-node virtual devices + fault injection)"
     echo "  --vip-api           Run VIP REST API tests"
     echo "  --vip-convergence   Run VIP/mDNS convergence tests"
@@ -57,6 +58,7 @@ while [[ $# -gt 0 ]]; do
         --state)            test_type="state"; shift ;;
         --tasks)            test_type="tasks"; shift ;;
         --udp)              test_type="udp"; shift ;;
+        --udp-observer-latency) test_type="udp-observer-latency"; shift ;;
         --udp-chaos)        test_type="udp-chaos"; shift ;;
         --vip-api)          test_type="vip-api"; shift ;;
         --vip-convergence)  test_type="vip-convergence"; shift ;;
@@ -89,6 +91,53 @@ done
 
 export FUSION_TEST_VIP="$vip"
 export FUSION_AUTO_DISCOVER=true
+
+function multipass_instances_for_prefix() {
+    local prefix="${1:-fusion}"
+    multipass list --format csv \
+        | tail -n +2 \
+        | cut -d',' -f1 \
+        | grep "^${prefix}" || true
+}
+
+function set_udp_diagnostics_on_instances() {
+    local prefix="${1:-fusion}"
+    local instances
+    instances=$(multipass_instances_for_prefix "$prefix")
+    if [[ -z "$instances" ]]; then
+        echo "No multipass instances found with prefix '$prefix' to enable UDP diagnostics" >&2
+        return 1
+    fi
+
+    echo "Enabling UDP diagnostics on instances with prefix '$prefix'..."
+    for instance in $instances; do
+        echo "  -> $instance"
+        multipass exec "$instance" -- sudo bash -lc '
+            set -euo pipefail
+            systemctl set-environment FUSION_UDP_DIAGNOSTICS=1
+            systemctl restart fusion-server
+        '
+    done
+}
+
+function clear_udp_diagnostics_on_instances() {
+    local prefix="${1:-fusion}"
+    local instances
+    instances=$(multipass_instances_for_prefix "$prefix")
+    if [[ -z "$instances" ]]; then
+        return 0
+    fi
+
+    echo "Disabling UDP diagnostics on instances with prefix '$prefix'..."
+    for instance in $instances; do
+        echo "  -> $instance"
+        multipass exec "$instance" -- sudo bash -lc '
+            set -euo pipefail
+            systemctl unset-environment FUSION_UDP_DIAGNOSTICS || true
+            systemctl restart fusion-server
+        '
+    done
+}
 
 # Helper to list tests from a file
 function list_tests_from_file() {
@@ -125,6 +174,7 @@ function test_file_for_type() {
         state)        echo "state_test.go" ;;
         tasks)        echo "tasks_test.go" ;;
         udp)          echo "udp_test.go" ;;
+        udp-observer-latency) echo "udp_observer_latency_test.go" ;;
         udp-chaos)    echo "udp_chaos_test.go" ;;
         vip-api)      echo "vip_endpoints_test.go" ;;
         vip-convergence) echo "setup_vip_test.go" ;;
@@ -226,6 +276,12 @@ case "$test_type" in
     state)        run_package_tests "$(regex_for_test_file ./state_test.go)" ;;
     tasks)        run_package_tests "$(regex_for_test_file ./tasks_test.go)" ;;
     udp)          run_package_tests "$(regex_for_test_file ./udp_test.go)" ;;
+    udp-observer-latency)
+        trap 'clear_udp_diagnostics_on_instances "fusion"' EXIT
+        set_udp_diagnostics_on_instances "fusion"
+        export FUSION_UDP_OBSERVER_LATENCY_TEST=1
+        run_package_tests "$(regex_for_test_file ./udp_observer_latency_test.go)"
+        ;;
     vip-api)      run_package_tests "$(regex_for_test_file ./vip_endpoints_test.go)" ;;
     vip-convergence) run_package_tests "$(regex_for_test_file ./setup_vip_test.go)" ;;
     udp-chaos)
