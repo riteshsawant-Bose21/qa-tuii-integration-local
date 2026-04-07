@@ -234,8 +234,11 @@ static inline void fusion_cn_metrics_tx_stash(struct fusion_cn_stream_metrics *m
     }
 }
 
-void fusion_cn_metrics_aggregate_tx(struct fusion_cn_stream_metrics *m);
-void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m, u32 jb_depth_samples);
+void fusion_cn_metrics_aggregate_tx(struct fusion_cn_stream_metrics *m,
+                                    u64 snapshot_ns);
+void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
+                                    u32 jb_depth_samples,
+                                    u64 snapshot_ns);
 
 void fusion_cn_metrics_read_snapshot(const struct fusion_cn_stream_metrics *m,
                                      struct fusion_cn_metrics_snapshot *out);

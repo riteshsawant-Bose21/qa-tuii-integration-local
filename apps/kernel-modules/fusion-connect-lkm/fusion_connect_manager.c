@@ -241,7 +241,6 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
 
     /* execute */
     for (int i = 0; i < fn_sink_cnt; i++) {
-        struct stream_node *sn = fn_sink[i].rtp->stream_node;
         for (int k = 0; k < fn_sink[i].n; k++)
             fusion_cn_alsa_pcm_interrupt(mgr->alsa.alsa_chip, fn_sink[i].alsa);
 
