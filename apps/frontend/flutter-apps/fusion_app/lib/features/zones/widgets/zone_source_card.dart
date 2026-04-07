@@ -6,7 +6,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 class ZoneSourceCard extends StatelessWidget {
   final String title;
   final IconData icon;
-  final int volume;
+  final double volume;
   final bool muted;
   final VoidCallback? onTap;
   final ValueChanged<double>? onVolumeChanged;
@@ -118,7 +118,7 @@ class ZoneSourceCard extends StatelessWidget {
                 SizedBox(
                   width: 32,
                   child: Text(
-                    "$volume",
+                    "${volume.toInt()}",
                     textAlign: TextAlign.end,
                     style: Theme.of(context).textTheme.b3Medium.copyWith(
                       color: context.colorScheme.textPrimary,

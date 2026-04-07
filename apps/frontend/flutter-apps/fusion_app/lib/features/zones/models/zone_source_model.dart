@@ -50,8 +50,9 @@ class ZoneSourceModel {
   final String id;
   final String name;
   final IconData icon;
-  final int volume;
+  final double volume;
   final bool muted;
+  final int? timestamp;
 
   bool selected = false;
 
@@ -61,14 +62,16 @@ class ZoneSourceModel {
     required this.icon,
     required this.volume,
     this.muted = false,
+    this.timestamp,
   });
 
   ZoneSourceModel copyWith({
     String? id,
     String? name,
     IconData? icon,
-    int? volume,
+    double? volume,
     bool? muted,
+    int? timestamp,
   }) {
     return ZoneSourceModel(
       id: id ?? this.id,
@@ -76,6 +79,7 @@ class ZoneSourceModel {
       icon: icon ?? this.icon,
       volume: volume ?? this.volume,
       muted: muted ?? this.muted,
+      timestamp: timestamp ?? this.timestamp,
     )..selected = selected;
   }
 
@@ -85,6 +89,7 @@ class ZoneSourceModel {
       name: json['name'],
       icon: json['icon'],
       volume: json['volume'],
+      timestamp: json['timestamp'],
       muted: json['muted'] ?? false,
     );
 

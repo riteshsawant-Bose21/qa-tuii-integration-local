@@ -16,7 +16,7 @@ class FusionQRService {
 
     ResponseCallback<SchemaModel> response  = await networkClient.get(
         api: FusionApiEndpoint.fusionGetValue,
-        baseUrlToOverride: "192.168.1.100:8080",
+        baseUrlToOverride: "192.168.1.110:8080",
         fromJson: (Map<String, dynamic> json) => SchemaModel.fromJson(json),
     );
     return response;

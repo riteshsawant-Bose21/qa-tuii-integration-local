@@ -109,7 +109,7 @@ class _ZoneVolumeControlState extends State<ZoneVolumeControl> {
                               return current is GainUpdated || current is SourceSelected;
                             },
                             builder: (context, gainState) {
-                              int volume = selectedSource.volume;
+                              double volume = selectedSource.volume;
                               if(gainState is GainUpdated){
                                 volume = gainState.zoneSourceModel.volume;
                               }
@@ -127,7 +127,7 @@ class _ZoneVolumeControlState extends State<ZoneVolumeControl> {
 
                                   /// Volume value
                                   Text(
-                                    volume.toString(),
+                                    volume.toInt().toString(),
                                     style: Theme
                                         .of(context)
                                         .textTheme
@@ -185,10 +185,13 @@ class _ZoneVolumeControlState extends State<ZoneVolumeControl> {
                                                           initialValue: selectedSource.volume.toDouble(),
                                                           onChanged: (volume) {
 
+
+
+
                                                             context
                                                                 .read<
                                                                 ControlPalZonesViewModel>()
-                                                                .updateVolume(state.zoneIndex,selectedSource,volume.toInt());
+                                                                .updateVolume(state.zoneIndex,selectedSource,volume);
 
                                                           },
                                                         ),

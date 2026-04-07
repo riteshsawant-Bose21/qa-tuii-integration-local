@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:bloc/bloc.dart';
-import 'package:flutter/foundation.dart';
+
 import 'package:flutter/material.dart';
 import 'package:fusion_app/core/models/scheme_model.dart';
+import 'package:fusion_app/core/services/websocket_service.dart';
 import 'package:fusion_app/core/utils/qr_data_parser.dart';
 import 'package:fusion_app/features/scanner/view_model/fusion_qr_service.dart';
 import 'package:fusion_app/features/zones/models/zone_source_model.dart';
@@ -81,6 +82,8 @@ class QrScannerViewModel extends Cubit<QrScannerState> {
   /// Connect to device/server
   Future<void> _connect(QRConnectionDetails details) async {
     print("Attempting connection with VIP: ${details.vip}, Controller ID: ${details.configId}");
+    await FusionWebSocketService().connect(host:details.vip);
+
 
       emit(QrConnecting());
         ResponseCallback<SchemaModel> model = await _qrService.getSchema();
@@ -118,7 +121,7 @@ class QrScannerViewModel extends Cubit<QrScannerState> {
                             id: src.sourceId!,
                             name: src.sourceName!,
                             icon: Icons.yard_outlined,
-                            volume: int.parse(
+                            volume: double.parse(
                                 item.gain?.defaultGainValue ?? "0")
                         )).toList()
                 ));
@@ -159,7 +162,7 @@ class QrScannerViewModel extends Cubit<QrScannerState> {
     print("Attempting connection with VIP: ${details['vip']}, Controller ID: ${details['controller_id']}");
 
     emit(QrConnecting());
-    //ResponseCallback<SchemaModel> model = await _qrService.getSchema();
+   // ResponseCallback<SchemaModel> model = await _qrService.getSchema();
 
     if(true) {
       FusionLogger.log(
@@ -194,7 +197,7 @@ class QrScannerViewModel extends Cubit<QrScannerState> {
                         id: src.sourceId!,
                         name: src.sourceName!,
                         icon: Icons.yard_outlined,
-                        volume: int.parse(
+                        volume: double.parse(
                             item.gain?.defaultGainValue ?? "0")
                     )).toList()
             ));

@@ -6,17 +6,14 @@ import 'package:fusion_app/features/dashboard/presentation/widgets/message_playe
 import 'package:fusion_app/features/dashboard/presentation/widgets/section_notification.dart';
 import 'package:fusion_app/features/dashboard/presentation/widgets/section_stats.dart';
 import 'package:fusion_app/features/dashboard/presentation/widgets/wall_controller_card.dart';
-import 'package:fusion_app/features/notification/models/notification_model.dart';
-import 'package:fusion_app/features/notification/presentation/notification_screen.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/app_bar/app_bar.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/box_state_card.dart';
-import 'package:fusion_app/features/shared/presentation/widgets/common/button/button.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 bool showData=false;
 class DashboardScreen extends StatelessWidget {
 
-   DashboardScreen({super.key});
+   const DashboardScreen({super.key});
 
 
   @override

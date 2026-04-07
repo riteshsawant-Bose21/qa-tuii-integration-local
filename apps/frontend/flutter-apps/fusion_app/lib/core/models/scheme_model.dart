@@ -427,9 +427,10 @@ class TaskConnections {
 
 class WallControllerConfig {
   List<Controllers>? controllers;
-  List<Zones>? zones;
+  List<Zones> zones = const [];
+  List<Zones> subzones = const [];
 
-  WallControllerConfig({this.controllers, this.zones});
+  WallControllerConfig({this.controllers, this.zones = const [],this.subzones = const []});
 
   WallControllerConfig.fromJson(Map<String, dynamic> json) {
     if (json['controllers'] != null) {
@@ -442,6 +443,12 @@ class WallControllerConfig {
       zones = <Zones>[];
       json['zones'].forEach((v) {
         zones!.add(Zones.fromJson(v));
+      });
+    }
+    if (json['subzones'] != null) {
+      subzones = <Zones>[];
+      json['subzones'].forEach((v) {
+        subzones!.add(Zones.fromJson(v));
       });
     }
   }

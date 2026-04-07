@@ -473,8 +473,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
           child: ScanInstruction(
             isFlashOn: _isTorchOn,
             onClickFlash: (value) {
-              context.read<QrScannerViewModel>().onQrScanned("com.bosepro.fusion://connect?vip=192.168.1.100&controller_id=CTRL1762958340064766236");
-              //context.read<QrScannerViewModel>().local("com.bosepro.fusion://connect?vip=192.168.1.100&controller_id=CTRL1762958340064766236");
+              context.read<QrScannerViewModel>().onQrScanned("com.bosepro.fusion://connect?vip=192.168.1.110&controller_id=CTRL1762958340064766236");
               _isTorchOn.value = value;
               controller?.toggleTorch();
             },
