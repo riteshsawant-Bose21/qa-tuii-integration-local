@@ -214,6 +214,13 @@ const docTemplate = `{
                         "name": "action",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Unique identifier of the firmware bundle (UUID format)",
+                        "name": "bundleID",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -353,7 +360,7 @@ const docTemplate = `{
         },
         "/firmware/updates/status": {
             "post": {
-                "description": "Records the success or failure of a firmware bundle update installation.",
+                "description": "Records the success or failure of a firmware bundle update installation. Allowed values: INSTALL_SUCCESS, INSTALL_FAIL",
                 "consumes": [
                     "application/json"
                 ],
@@ -2986,13 +2993,13 @@ const docTemplate = `{
                 "bundle_version": {
                     "type": "string"
                 },
+                "desktop_app_version": {
+                    "type": "string"
+                },
                 "installed_at": {
                     "type": "string"
                 },
-                "launcher_version": {
-                    "type": "string"
-                },
-                "previous_version": {
+                "previous_bundle_version": {
                     "type": "string"
                 },
                 "project_id": {

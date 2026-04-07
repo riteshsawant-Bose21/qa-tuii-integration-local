@@ -267,9 +267,9 @@ CREATE TABLE bundle_update_status (
     update_id UUID NOT null UNIQUE,
     project_id UUID NOT NULL references project(id),
     bundle_version TEXT NOT NULL,      
-    previous_version TEXT,
+    previous_bundle_version TEXT,
     status bundle_update_status_enum NOT NULL,             
-    launcher_version TEXT,    
+    desktop_app_version TEXT,    
     installed_at TIMESTAMPTZ NOT null,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

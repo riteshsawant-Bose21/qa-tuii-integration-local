@@ -775,12 +775,12 @@ func TestInsertBundleUpdateStatus(t *testing.T) {
 		{
 			name: "success - INSTALL_FAIL logged",
 			requestBody: types.LogBundleUpdateStatusPayload{
-				UpdateID:        "550e8400-e29b-41d4-a716-446655440000",
-				ProjectID:       "550e8400-e29b-41d4-a716-446655440001",
-				BundleVersion:   "2.0.0",
-				PreviousVersion: "1.0.0",
-				Status:          "INSTALL_FAIL",
-				InstalledAt:     installedAt,
+				UpdateID:              "550e8400-e29b-41d4-a716-446655440000",
+				ProjectID:             "550e8400-e29b-41d4-a716-446655440001",
+				BundleVersion:         "2.0.0",
+				PreviousBundleVersion: "1.0.0",
+				Status:                "INSTALL_FAIL",
+				InstalledAt:           installedAt,
 			},
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {

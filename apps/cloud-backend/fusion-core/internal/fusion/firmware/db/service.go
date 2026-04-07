@@ -221,14 +221,14 @@ func (s *Service) GetLatestCompatibleBundle(ctx context.Context, currentFirmware
 
 func (s *Service) InsertBundleUpdateStatus(ctx context.Context, payload *apiTypes.LogBundleUpdateStatusPayload) error {
 	status := &models.BundleUpdateStatus{
-		ID:              uuid.New().String(),
-		UpdateID:        payload.UpdateID,
-		ProjectID:       payload.ProjectID,
-		BundleVersion:   payload.BundleVersion,
-		PreviousVersion: null.NewString(payload.PreviousVersion, payload.PreviousVersion != ""),
-		Status:          payload.Status,
-		LauncherVersion: null.NewString(payload.LauncherVersion, payload.LauncherVersion != ""),
-		InstalledAt:     payload.InstalledAt,
+		ID:                    uuid.New().String(),
+		UpdateID:              payload.UpdateID,
+		ProjectID:             payload.ProjectID,
+		BundleVersion:         payload.BundleVersion,
+		PreviousBundleVersion: null.NewString(payload.PreviousBundleVersion, payload.PreviousBundleVersion != ""),
+		Status:                payload.Status,
+		DesktopAppVersion:     null.NewString(payload.DesktopAppVersion, payload.DesktopAppVersion != ""),
+		InstalledAt:           payload.InstalledAt,
 	}
 
 	return status.Insert(ctx, s.db, boil.Infer())

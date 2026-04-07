@@ -330,11 +330,11 @@ definitions:
     properties:
       bundle_version:
         type: string
+      desktop_app_version:
+        type: string
       installed_at:
         type: string
-      launcher_version:
-        type: string
-      previous_version:
+      previous_bundle_version:
         type: string
       project_id:
         type: string
@@ -1261,6 +1261,11 @@ paths:
         name: action
         required: true
         type: string
+      - description: Unique identifier of the firmware bundle (UUID format)
+        in: path
+        name: bundleID
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -1387,7 +1392,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Records the success or failure of a firmware bundle update installation.
+      description: 'Records the success or failure of a firmware bundle update installation.
+        Allowed values: INSTALL_SUCCESS, INSTALL_FAIL'
       parameters:
       - description: Bundle update status details
         in: body

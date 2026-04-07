@@ -140,6 +140,7 @@ func (h *FirmwareUpdateHandler) ListBundles(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param action query string true "Action to perform" Enums(approve, revoke)
+// @Param bundleID path string true "Unique identifier of the firmware bundle (UUID format)"
 // @Success 204 "Bundle successfully approved or revoked"
 // @Failure 400 {object} types.ErrorResponse "Invalid bundleID or request payload or bundle not approved"
 // @Failure 404 {object} types.ErrorResponse "Bundle not found"
@@ -305,7 +306,7 @@ func (h *FirmwareUpdateHandler) GetBundleDownloadURL(c *gin.Context) {
 
 // LogBundleUpdateStatus records the status of a firmware bundle update
 // @Summary Log Bundle Update Status
-// @Description Records the success or failure of a firmware bundle update installation.
+// @Description Records the success or failure of a firmware bundle update installation. Allowed values: INSTALL_SUCCESS, INSTALL_FAIL
 // @Tags Firmware Update - Client API
 // @Accept json
 // @Produce json
