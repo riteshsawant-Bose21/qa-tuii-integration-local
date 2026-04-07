@@ -2,9 +2,11 @@ package iot
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iot"
 	"github.com/aws/aws-sdk-go-v2/service/iot/types"
@@ -56,6 +58,9 @@ func NewIoTClient(ctx context.Context, awsConfig aws.Config, iotEndpoint string,
 
 // CreateCertificateFromCSR creates a certificate in AWS IoT from a given CSR (Certificate Signing Request).
 func (c IoTClient) CreateCertificateFromCSR(ctx context.Context, csrPem *string, logger *zap.Logger) (certificatePem *string, certificateId *string, certificateArn *string, err error) {
+	if csrPem == nil || *csrPem == "" {
+		return nil, nil, nil, errors.New(errorutil.ErrMsgCSRPemEmpty)
+	}
 	input := &iot.CreateCertificateFromCsrInput{
 		CertificateSigningRequest: csrPem,
 		SetAsActive:               true,
@@ -72,6 +77,9 @@ func (c IoTClient) CreateCertificateFromCSR(ctx context.Context, csrPem *string,
 
 // RegisterThing registers a new thing in AWS IoT with the given thing name.
 func (c IoTClient) RegisterThing(ctx context.Context, thingName string, logger *zap.Logger) error {
+	if thingName == "" {
+		return errors.New(errorutil.ErrMsgThingNameEmpty)
+	}
 	input := &iot.CreateThingInput{
 		ThingName: &thingName,
 	}
@@ -87,6 +95,9 @@ func (c IoTClient) RegisterThing(ctx context.Context, thingName string, logger *
 
 // DeleteThing deletes a thing from AWS IoT.
 func (c IoTClient) DeleteThing(ctx context.Context, thingName string, logger *zap.Logger) error {
+	if thingName == "" {
+		return errors.New(errorutil.ErrMsgThingNameEmpty)
+	}
 	input := &iot.DeleteThingInput{
 		ThingName: &thingName,
 	}
@@ -102,6 +113,12 @@ func (c IoTClient) DeleteThing(ctx context.Context, thingName string, logger *za
 
 // AttachCertificateToThing attaches a certificate to a thing in AWS IoT.
 func (c IoTClient) AttachCertificateToThing(ctx context.Context, thingName string, certificateArn string, logger *zap.Logger) error {
+	if thingName == "" {
+		return errors.New(errorutil.ErrMsgThingNameEmpty)
+	}
+	if certificateArn == "" {
+		return errors.New(errorutil.ErrMsgCertificateArnEmpty)
+	}
 	input := &iot.AttachThingPrincipalInput{
 		Principal: &certificateArn,
 		ThingName: &thingName,
@@ -118,6 +135,12 @@ func (c IoTClient) AttachCertificateToThing(ctx context.Context, thingName strin
 
 // AttachPolicyToCertificate attaches a policy to a certificate in AWS IoT.
 func (c IoTClient) AttachPolicyToCertificate(ctx context.Context, policyName string, certificateArn string, logger *zap.Logger) error {
+	if policyName == "" {
+		return errors.New(errorutil.ErrMsgPolicyNameEmpty)
+	}
+	if certificateArn == "" {
+		return errors.New(errorutil.ErrMsgCertificateArnEmpty)
+	}
 	input := &iot.AttachPolicyInput{
 		PolicyName: &policyName,
 		Target:     &certificateArn,
@@ -134,6 +157,12 @@ func (c IoTClient) AttachPolicyToCertificate(ctx context.Context, policyName str
 
 // DetachCertificateFromThing detaches a certificate from a thing in AWS IoT.
 func (c IoTClient) DetachCertificateFromThing(ctx context.Context, thingName string, certificateArn string, logger *zap.Logger) error {
+	if thingName == "" {
+		return errors.New(errorutil.ErrMsgThingNameEmpty)
+	}
+	if certificateArn == "" {
+		return errors.New(errorutil.ErrMsgCertificateArnEmpty)
+	}
 	input := &iot.DetachThingPrincipalInput{
 		Principal: &certificateArn,
 		ThingName: &thingName,
@@ -150,6 +179,9 @@ func (c IoTClient) DetachCertificateFromThing(ctx context.Context, thingName str
 
 // SetCertificateInactive sets a certificate to inactive in AWS IoT.
 func (c IoTClient) SetCertificateInactive(ctx context.Context, certificateId string, logger *zap.Logger) error {
+	if certificateId == "" {
+		return errors.New(errorutil.ErrMsgCertificateIDEmpty)
+	}
 	input := &iot.UpdateCertificateInput{
 		CertificateId: &certificateId,
 		NewStatus:     types.CertificateStatusInactive,
@@ -166,6 +198,12 @@ func (c IoTClient) SetCertificateInactive(ctx context.Context, certificateId str
 
 // DetachPolicyFromCertificate detaches a policy from a certificate in AWS IoT.
 func (c IoTClient) DetachPolicyFromCertificate(ctx context.Context, policyName string, certificateArn string, logger *zap.Logger) error {
+	if policyName == "" {
+		return errors.New(errorutil.ErrMsgPolicyNameEmpty)
+	}
+	if certificateArn == "" {
+		return errors.New(errorutil.ErrMsgCertificateArnEmpty)
+	}
 	input := &iot.DetachPolicyInput{
 		PolicyName: &policyName,
 		Target:     &certificateArn,
@@ -182,6 +220,9 @@ func (c IoTClient) DetachPolicyFromCertificate(ctx context.Context, policyName s
 
 // Publish publishes a message to a specified topic in AWS IoT.
 func (c IoTClient) Publish(ctx context.Context, topic string, payload []byte, logger *zap.Logger) error {
+	if topic == "" {
+		return errors.New(errorutil.ErrMsgTopicEmpty)
+	}
 	input := &iotdataplane.PublishInput{
 		Topic:   &topic,
 		Qos:     0,

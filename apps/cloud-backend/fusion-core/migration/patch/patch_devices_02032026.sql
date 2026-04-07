@@ -9,18 +9,17 @@ CREATE TABLE device (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- Globally unique device identity
     serial_number VARCHAR(100) UNIQUE NOT NULL, -- Manufacturer serial number
 
-    client_device_id VARCHAR(100) NOT NULL, -- device identifier set by frontend
+    client_device_id VARCHAR(100), -- device identifier set by frontend
     name VARCHAR(255), -- User-friendly device name
 
     model_name VARCHAR(100) NOT NULL, -- Model identifier
-    thing_name VARCHAR(255) UNIQUE NOT NULL, -- AWS Thing name
     mac_address VARCHAR(20) UNIQUE, -- MAC address for network identification
 
     is_primary BOOLEAN DEFAULT FALSE, -- Flag to indicate if this is the primary device in a project
 
     certificate_id VARCHAR(255) UNIQUE, -- The certificate ID associated with the device for AWS IoT authentication
     certificate_arn VARCHAR(500) UNIQUE, -- The ARN of the certificate in AWS IoT
-    claim_status claim_status_enum NOT NULL DEFAULT 'UNCLAIMED', -- UNCLAIMED / CLAIMED / COMMISSIONED
+    claim_status claim_status_enum NOT NULL DEFAULT 'UNCLAIMED', -- UNCLAIMED / CLAIMED
 
     claimed_by UUID REFERENCES account(id), -- Org id
 
@@ -69,14 +68,14 @@ CREATE TABLE device_command_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     command_id VARCHAR(255) NOT NULL,
     project_id UUID REFERENCES project(id) NOT NULL,
-    device_id VARCHAR(100) NOT NULL,
+    device_id UUID REFERENCES device(id),
     command_name VARCHAR(255) NOT NULL,
     status command_status_enum NOT NULL DEFAULT 'UNPUBLISHED',
     issued_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
 
-    CONSTRAINT unique_command_per_device UNIQUE (command_id, device_id)
+    CONSTRAINT unique_command_per_device UNIQUE (command_id, project_id, device_id)
 );
 
 COMMIT;

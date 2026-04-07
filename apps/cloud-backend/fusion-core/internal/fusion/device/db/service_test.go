@@ -331,11 +331,10 @@ func TestClaimDevice(t *testing.T) {
 	createTestDevice := func() models.Device {
 		return models.Device{
 			ID:             testDeviceUUID,
-			ClientDeviceID: testDeviceID,
+			ClientDeviceID: null.NewString(testDeviceID, testDeviceID != ""),
 			Name:           null.NewString("", false),
 			SerialNumber:   testSerialNumber,
 			ModelName:      testModelName,
-			ThingName:      testDeviceID,
 			MacAddress:     null.NewString("", false),
 			IsPrimary:      null.NewBool(false, false),
 			CertificateID:  null.NewString("", false),
@@ -348,18 +347,15 @@ func TestClaimDevice(t *testing.T) {
 		}
 	}
 
-	createTestRequest := func() *types.DeviceCreateRequest {
-		return &types.DeviceCreateRequest{
+	createTestClaimRequest := func() *types.DeviceClaimRequest {
+		return &types.DeviceClaimRequest{
 			ClientDeviceID:  testDeviceID,
 			DeviceName:      testDeviceName,
-			ModelName:       testModelName,
 			FirmwareVersion: testFirmwareVersion,
-			SerialNumber:    testSerialNumber,
-			MacAddress:      testMacAddress,
 			DeviceZone:      testDeviceZone,
 			DeviceLocation:  testDeviceLocation,
 			ProjectID:       testProjectID,
-			IsPrimary:       true,
+			IsPrimary:       func(b bool) *bool { return &b }(true),
 			CSR:             "test-csr",
 		}
 	}
@@ -375,7 +371,7 @@ func TestClaimDevice(t *testing.T) {
 
 		logger := getTestLogger(t)
 		device := createTestDevice()
-		req := createTestRequest()
+		req := createTestClaimRequest()
 
 		mock.ExpectBegin()
 		tx, err := db.BeginTx(ctx, nil)
@@ -407,7 +403,7 @@ func TestClaimDevice(t *testing.T) {
 
 		logger := getTestLogger(t)
 		device := createTestDevice()
-		req := createTestRequest()
+		req := createTestClaimRequest()
 
 		mock.ExpectBegin()
 		tx, err := db.BeginTx(ctx, nil)
@@ -427,7 +423,7 @@ func TestClaimDevice(t *testing.T) {
 
 		logger := getTestLogger(t)
 		device := createTestDevice()
-		req := createTestRequest()
+		req := createTestClaimRequest()
 
 		mock.ExpectBegin()
 		tx, err := db.BeginTx(ctx, nil)
@@ -450,7 +446,7 @@ func TestClaimDevice(t *testing.T) {
 
 		logger := getTestLogger(t)
 		device := createTestDevice()
-		req := createTestRequest()
+		req := createTestClaimRequest()
 
 		mock.ExpectBegin()
 		tx, err := db.BeginTx(ctx, nil)
@@ -484,11 +480,10 @@ func TestUpdate(t *testing.T) {
 	createClaimedDevice := func() models.Device {
 		return models.Device{
 			ID:              testDeviceUUID,
-			ClientDeviceID:  testDeviceID,
+			ClientDeviceID:  null.NewString(testDeviceID, testDeviceID != ""),
 			Name:            null.NewString(testDeviceName, true),
 			SerialNumber:    testSerialNumber,
 			ModelName:       testModelName,
-			ThingName:       testDeviceID,
 			MacAddress:      null.NewString(testMacAddress, true),
 			IsPrimary:       null.NewBool(true, true),
 			CertificateID:   null.NewString(testCertID, true),
@@ -663,7 +658,7 @@ func TestUpdate(t *testing.T) {
 		}).AddRow(
 			1, testDeviceUUID, testProjectID, time.Now(), nil, time.Now(), time.Now(),
 		)
-		mock.ExpectQuery(`SELECT "device_project_history"\.\* FROM "device_project_history" WHERE \("device_project_history"\."device_id" = \$1\) AND \("device_project_history"\."project_id" = \$2\) LIMIT 1`).
+		mock.ExpectQuery(`SELECT "device_project_history"\.\* FROM "device_project_history" WHERE \("device_project_history"\."device_id" = \$1\) AND \("device_project_history"\."project_id" = \$2\) AND \("device_project_history"\."decommissioned_at" is null\) LIMIT 1`).
 			WithArgs(testDeviceUUID, testProjectID).
 			WillReturnRows(projectHistoryRows)
 
@@ -724,7 +719,7 @@ func TestUpdate(t *testing.T) {
 		require.NoError(t, err)
 
 		// Note: Project validation is done by the business layer
-		mock.ExpectQuery(`SELECT "device_project_history"\.\* FROM "device_project_history" WHERE \("device_project_history"\."device_id" = \$1\) AND \("device_project_history"\."project_id" = \$2\) LIMIT 1`).
+		mock.ExpectQuery(`SELECT "device_project_history"\.\* FROM "device_project_history" WHERE \("device_project_history"\."device_id" = \$1\) AND \("device_project_history"\."project_id" = \$2\) AND \("device_project_history"\."decommissioned_at" is null\) LIMIT 1`).
 			WithArgs(testDeviceUUID, testProjectID).
 			WillReturnError(sql.ErrNoRows)
 
@@ -764,11 +759,10 @@ func TestReset(t *testing.T) {
 	createClaimedDevice := func() models.Device {
 		return models.Device{
 			ID:              testDeviceUUID,
-			ClientDeviceID:  testDeviceID,
+			ClientDeviceID:  null.NewString(testDeviceID, testDeviceID != ""),
 			Name:            null.NewString(testDeviceName, true),
 			SerialNumber:    testSerialNumber,
 			ModelName:       testModelName,
-			ThingName:       testDeviceID,
 			MacAddress:      null.NewString(testMacAddress, true),
 			IsPrimary:       null.NewBool(true, true),
 			CertificateID:   null.NewString(testCertID, true),
@@ -814,7 +808,7 @@ func TestReset(t *testing.T) {
 		}).AddRow(
 			1, testDeviceUUID, testProjectID, time.Now(), nil, time.Now(), time.Now(),
 		)
-		mock.ExpectQuery(`SELECT "device_project_history"\.\* FROM "device_project_history" WHERE \("device_project_history"\."device_id" = \$1\) AND \("device_project_history"\."project_id" = \$2\) LIMIT 1`).
+		mock.ExpectQuery(`SELECT "device_project_history"\.\* FROM "device_project_history" WHERE \("device_project_history"\."device_id" = \$1\) AND \("device_project_history"\."project_id" = \$2\) AND \("device_project_history"\."decommissioned_at" is null\) LIMIT 1`).
 			WithArgs(testDeviceUUID, testProjectID).
 			WillReturnRows(projectHistoryRows)
 
@@ -904,7 +898,7 @@ func TestReset(t *testing.T) {
 		mock.ExpectExec(`UPDATE "device_ownership_history"`).
 			WillReturnResult(sqlmock.NewResult(1, 1))
 
-		mock.ExpectQuery(`SELECT "device_project_history"\.\* FROM "device_project_history" WHERE \("device_project_history"\."device_id" = \$1\) AND \("device_project_history"\."project_id" = \$2\) LIMIT 1`).
+		mock.ExpectQuery(`SELECT "device_project_history"\.\* FROM "device_project_history" WHERE \("device_project_history"\."device_id" = \$1\) AND \("device_project_history"\."project_id" = \$2\) AND \("device_project_history"\."decommissioned_at" is null\) LIMIT 1`).
 			WithArgs(testDeviceUUID, testProjectID).
 			WillReturnError(assert.AnError)
 
@@ -943,7 +937,7 @@ func TestReset(t *testing.T) {
 		}).AddRow(
 			1, testDeviceUUID, testProjectID, time.Now(), nil, time.Now(), time.Now(),
 		)
-		mock.ExpectQuery(`SELECT "device_project_history"\.\* FROM "device_project_history" WHERE \("device_project_history"\."device_id" = \$1\) AND \("device_project_history"\."project_id" = \$2\) LIMIT 1`).
+		mock.ExpectQuery(`SELECT "device_project_history"\.\* FROM "device_project_history" WHERE \("device_project_history"\."device_id" = \$1\) AND \("device_project_history"\."project_id" = \$2\) AND \("device_project_history"\."decommissioned_at" is null\) LIMIT 1`).
 			WithArgs(testDeviceUUID, testProjectID).
 			WillReturnRows(projectHistoryRows)
 
@@ -977,6 +971,19 @@ func TestInsertCommand(t *testing.T) {
 			DeviceIDs: []string{testDeviceID},
 		}
 
+		deviceRows := sqlmock.NewRows([]string{
+			"id", "serial_number", "client_device_id", "name", "model_name", "mac_address",
+			"is_primary", "certificate_id", "certificate_arn", "claim_status", "claimed_by",
+			"project_id", "firmware_version", "device_zone", "device_location", "created_at", "updated_at",
+		}).AddRow(
+			testDeviceUUID, testDeviceID, nil, nil, testModelName, nil,
+			nil, nil, nil, "CLAIMED", testAccountID,
+			testProjectID, testFirmwareVersion, nil, nil, time.Now(), time.Now(),
+		)
+		mock.ExpectQuery(`SELECT "device"\.\* FROM "device" WHERE \("device"\."serial_number" = \$1\) LIMIT 1`).
+			WithArgs(testDeviceID).
+			WillReturnRows(deviceRows)
+
 		returnRows := sqlmock.NewRows([]string{"id"}).AddRow("db-generated-uuid")
 		mock.ExpectQuery(`INSERT INTO "device_command_history"`).
 			WillReturnRows(returnRows)
@@ -997,7 +1004,8 @@ func TestInsertCommand(t *testing.T) {
 		}
 
 		// Empty device IDs now inserts a single command row without device_id
-		returnRows := sqlmock.NewRows([]string{"id"}).AddRow("db-generated-uuid")
+		// device_id is not set so it appears in RETURNING along with id
+		returnRows := sqlmock.NewRows([]string{"id", "device_id"}).AddRow("db-generated-uuid", nil)
 		mock.ExpectQuery(`INSERT INTO "device_command_history"`).
 			WillReturnRows(returnRows)
 
@@ -1016,6 +1024,19 @@ func TestInsertCommand(t *testing.T) {
 			ProjectID: testProjectID,
 			DeviceIDs: []string{testDeviceID},
 		}
+
+		deviceRows := sqlmock.NewRows([]string{
+			"id", "serial_number", "client_device_id", "name", "model_name", "mac_address",
+			"is_primary", "certificate_id", "certificate_arn", "claim_status", "claimed_by",
+			"project_id", "firmware_version", "device_zone", "device_location", "created_at", "updated_at",
+		}).AddRow(
+			testDeviceUUID, testDeviceID, nil, nil, testModelName, nil,
+			nil, nil, nil, "CLAIMED", testAccountID,
+			testProjectID, testFirmwareVersion, nil, nil, time.Now(), time.Now(),
+		)
+		mock.ExpectQuery(`SELECT "device"\.\* FROM "device" WHERE \("device"\."serial_number" = \$1\) LIMIT 1`).
+			WithArgs(testDeviceID).
+			WillReturnRows(deviceRows)
 
 		mock.ExpectQuery(`INSERT INTO "device_command_history"`).
 			WillReturnError(assert.AnError)

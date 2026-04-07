@@ -2,14 +2,14 @@ package types
 
 // DeviceCreateRequest represents the request payload for creating a new device.
 type DeviceCreateRequest struct {
-	ClientDeviceID  string `json:"client_device_id" binding:"required"`
-	DeviceName      string `json:"device_name" binding:"required"`
-	ModelName       string `json:"model_name" binding:"required"`
-	FirmwareVersion string `json:"firmware_version" binding:"required"`
-	SerialNumber    string `json:"serial_number" binding:"required"`
-	MacAddress      string `json:"mac_address" binding:"required"`
-	DeviceZone      string `json:"device_zone" binding:"required"`
-	DeviceLocation  string `json:"device_location" binding:"required"`
+	ClientDeviceID  string `json:"client_device_id" binding:"required,max=100"`
+	DeviceName      string `json:"device_name" binding:"required,max=255"`
+	ModelName       string `json:"model_name" binding:"required,max=100"`
+	FirmwareVersion string `json:"firmware_version" binding:"required,max=50"`
+	SerialNumber    string `json:"serial_number" binding:"required,max=100"`
+	MacAddress      string `json:"mac_address" binding:"required,max=20"`
+	DeviceZone      string `json:"device_zone" binding:"required,max=100"`
+	DeviceLocation  string `json:"device_location" binding:"required,max=255"`
 	ProjectID       string `json:"project_id" binding:"required"`
 	IsPrimary       bool   `json:"is_primary"`
 	CSR             string `json:"csr" binding:"required"`
@@ -22,19 +22,25 @@ type DeviceCreateResponse struct {
 
 // DeviceUpdateRequest represents the request payload for updating an existing device.
 type DeviceUpdateRequest struct {
-	DeviceName      string `json:"device_name"`
-	ClientDeviceID  string `json:"client_device_id"`
-	FirmwareVersion string `json:"firmware_version"`
-	DeviceZone      string `json:"device_zone"`
-	DeviceLocation  string `json:"device_location"`
+	DeviceName      string `json:"device_name" binding:"max=255"`
+	ClientDeviceID  string `json:"client_device_id" binding:"max=100"`
+	FirmwareVersion string `json:"firmware_version" binding:"max=50"`
+	DeviceZone      string `json:"device_zone" binding:"max=100"`
+	DeviceLocation  string `json:"device_location" binding:"max=255"`
 	ProjectID       string `json:"project_id"`
 	IsPrimary       *bool  `json:"is_primary"`
 }
 
 // DeviceClaimRequest represents the request payload for claiming an unclaimed device.
 type DeviceClaimRequest struct {
-	CSR       string `json:"csr" binding:"required"`
-	ProjectID string `json:"project_id" binding:"required"`
+	CSR             string `json:"csr" binding:"required"`
+	ProjectID       string `json:"project_id" binding:"required"`
+	DeviceName      string `json:"device_name" binding:"max=255"`
+	ClientDeviceID  string `json:"client_device_id" binding:"max=100"`
+	DeviceZone      string `json:"device_zone" binding:"max=100"`
+	DeviceLocation  string `json:"device_location" binding:"max=255"`
+	IsPrimary       *bool  `json:"is_primary"`
+	FirmwareVersion string `json:"firmware_version" binding:"max=50"`
 }
 
 // DeviceClaimResponse represents the response payload after successfully claiming a device.
@@ -63,11 +69,12 @@ type CommandType string
 
 const (
 	CommandRestart CommandType = "REBOOT"
+	CommandStandby CommandType = "STANDBY"
 )
 
 // CommandRequest represents the request payload for sending a command to the device cluster.
 type CommandRequest struct {
-	Command   CommandType `json:"command" binding:"required" example:"REBOOT" enums:"REBOOT" validate:"oneof=REBOOT"`
+	Command   CommandType `json:"command" binding:"required,oneof=REBOOT STANDBY" example:"REBOOT" enums:"REBOOT,STANDBY"`
 	ProjectID string      `json:"project_id" binding:"required"`
 	DeviceIDs []string    `json:"device_ids"`
 }

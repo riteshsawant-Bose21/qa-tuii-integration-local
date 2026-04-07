@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
@@ -23,15 +24,15 @@ import (
 
 // DeviceCommandHistory is an object representing the database table.
 type DeviceCommandHistory struct {
-	ID          string    `boil:"id" json:"id" toml:"id" yaml:"id"`
-	CommandID   string    `boil:"command_id" json:"command_id" toml:"command_id" yaml:"command_id"`
-	ProjectID   string    `boil:"project_id" json:"project_id" toml:"project_id" yaml:"project_id"`
-	DeviceID    string    `boil:"device_id" json:"device_id" toml:"device_id" yaml:"device_id"`
-	CommandName string    `boil:"command_name" json:"command_name" toml:"command_name" yaml:"command_name"`
-	Status      string    `boil:"status" json:"status" toml:"status" yaml:"status"`
-	IssuedAt    time.Time `boil:"issued_at" json:"issued_at" toml:"issued_at" yaml:"issued_at"`
-	CreatedAt   time.Time `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
-	UpdatedAt   time.Time `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	ID          string      `boil:"id" json:"id" toml:"id" yaml:"id"`
+	CommandID   string      `boil:"command_id" json:"command_id" toml:"command_id" yaml:"command_id"`
+	ProjectID   string      `boil:"project_id" json:"project_id" toml:"project_id" yaml:"project_id"`
+	DeviceID    null.String `boil:"device_id" json:"device_id,omitempty" toml:"device_id" yaml:"device_id,omitempty"`
+	CommandName string      `boil:"command_name" json:"command_name" toml:"command_name" yaml:"command_name"`
+	Status      string      `boil:"status" json:"status" toml:"status" yaml:"status"`
+	IssuedAt    time.Time   `boil:"issued_at" json:"issued_at" toml:"issued_at" yaml:"issued_at"`
+	CreatedAt   time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	UpdatedAt   time.Time   `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 
 	R *deviceCommandHistoryR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L deviceCommandHistoryL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -87,7 +88,7 @@ var DeviceCommandHistoryWhere = struct {
 	ID          whereHelperstring
 	CommandID   whereHelperstring
 	ProjectID   whereHelperstring
-	DeviceID    whereHelperstring
+	DeviceID    whereHelpernull_String
 	CommandName whereHelperstring
 	Status      whereHelperstring
 	IssuedAt    whereHelpertime_Time
@@ -97,7 +98,7 @@ var DeviceCommandHistoryWhere = struct {
 	ID:          whereHelperstring{field: "\"device_command_history\".\"id\""},
 	CommandID:   whereHelperstring{field: "\"device_command_history\".\"command_id\""},
 	ProjectID:   whereHelperstring{field: "\"device_command_history\".\"project_id\""},
-	DeviceID:    whereHelperstring{field: "\"device_command_history\".\"device_id\""},
+	DeviceID:    whereHelpernull_String{field: "\"device_command_history\".\"device_id\""},
 	CommandName: whereHelperstring{field: "\"device_command_history\".\"command_name\""},
 	Status:      whereHelperstring{field: "\"device_command_history\".\"status\""},
 	IssuedAt:    whereHelpertime_Time{field: "\"device_command_history\".\"issued_at\""},
@@ -107,19 +108,38 @@ var DeviceCommandHistoryWhere = struct {
 
 // DeviceCommandHistoryRels is where relationship names are stored.
 var DeviceCommandHistoryRels = struct {
+	Device  string
 	Project string
 }{
+	Device:  "Device",
 	Project: "Project",
 }
 
 // deviceCommandHistoryR is where relationships are stored.
 type deviceCommandHistoryR struct {
+	Device  *Device  `boil:"Device" json:"Device" toml:"Device" yaml:"Device"`
 	Project *Project `boil:"Project" json:"Project" toml:"Project" yaml:"Project"`
 }
 
 // NewStruct creates a new relationship struct
 func (*deviceCommandHistoryR) NewStruct() *deviceCommandHistoryR {
 	return &deviceCommandHistoryR{}
+}
+
+func (o *DeviceCommandHistory) GetDevice() *Device {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetDevice()
+}
+
+func (r *deviceCommandHistoryR) GetDevice() *Device {
+	if r == nil {
+		return nil
+	}
+
+	return r.Device
 }
 
 func (o *DeviceCommandHistory) GetProject() *Project {
@@ -143,8 +163,8 @@ type deviceCommandHistoryL struct{}
 
 var (
 	deviceCommandHistoryAllColumns            = []string{"id", "command_id", "project_id", "device_id", "command_name", "status", "issued_at", "created_at", "updated_at"}
-	deviceCommandHistoryColumnsWithoutDefault = []string{"command_id", "project_id", "device_id", "command_name", "issued_at"}
-	deviceCommandHistoryColumnsWithDefault    = []string{"id", "status", "created_at", "updated_at"}
+	deviceCommandHistoryColumnsWithoutDefault = []string{"command_id", "project_id", "command_name", "issued_at"}
+	deviceCommandHistoryColumnsWithDefault    = []string{"id", "device_id", "status", "created_at", "updated_at"}
 	deviceCommandHistoryPrimaryKeyColumns     = []string{"id"}
 	deviceCommandHistoryGeneratedColumns      = []string{}
 )
@@ -454,6 +474,17 @@ func (q deviceCommandHistoryQuery) Exists(ctx context.Context, exec boil.Context
 	return count > 0, nil
 }
 
+// Device pointed to by the foreign key.
+func (o *DeviceCommandHistory) Device(mods ...qm.QueryMod) deviceQuery {
+	queryMods := []qm.QueryMod{
+		qm.Where("\"id\" = ?", o.DeviceID),
+	}
+
+	queryMods = append(queryMods, mods...)
+
+	return Devices(queryMods...)
+}
+
 // Project pointed to by the foreign key.
 func (o *DeviceCommandHistory) Project(mods ...qm.QueryMod) projectQuery {
 	queryMods := []qm.QueryMod{
@@ -463,6 +494,130 @@ func (o *DeviceCommandHistory) Project(mods ...qm.QueryMod) projectQuery {
 	queryMods = append(queryMods, mods...)
 
 	return Projects(queryMods...)
+}
+
+// LoadDevice allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for an N-1 relationship.
+func (deviceCommandHistoryL) LoadDevice(ctx context.Context, e boil.ContextExecutor, singular bool, maybeDeviceCommandHistory interface{}, mods queries.Applicator) error {
+	var slice []*DeviceCommandHistory
+	var object *DeviceCommandHistory
+
+	if singular {
+		var ok bool
+		object, ok = maybeDeviceCommandHistory.(*DeviceCommandHistory)
+		if !ok {
+			object = new(DeviceCommandHistory)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeDeviceCommandHistory)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeDeviceCommandHistory))
+			}
+		}
+	} else {
+		s, ok := maybeDeviceCommandHistory.(*[]*DeviceCommandHistory)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeDeviceCommandHistory)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeDeviceCommandHistory))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &deviceCommandHistoryR{}
+		}
+		if !queries.IsNil(object.DeviceID) {
+			args[object.DeviceID] = struct{}{}
+		}
+
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &deviceCommandHistoryR{}
+			}
+
+			if !queries.IsNil(obj.DeviceID) {
+				args[obj.DeviceID] = struct{}{}
+			}
+
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`device`),
+		qm.WhereIn(`device.id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load Device")
+	}
+
+	var resultSlice []*Device
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice Device")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results of eager load for device")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for device")
+	}
+
+	if len(deviceAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+
+	if len(resultSlice) == 0 {
+		return nil
+	}
+
+	if singular {
+		foreign := resultSlice[0]
+		object.R.Device = foreign
+		if foreign.R == nil {
+			foreign.R = &deviceR{}
+		}
+		foreign.R.DeviceCommandHistories = append(foreign.R.DeviceCommandHistories, object)
+		return nil
+	}
+
+	for _, local := range slice {
+		for _, foreign := range resultSlice {
+			if queries.Equal(local.DeviceID, foreign.ID) {
+				local.R.Device = foreign
+				if foreign.R == nil {
+					foreign.R = &deviceR{}
+				}
+				foreign.R.DeviceCommandHistories = append(foreign.R.DeviceCommandHistories, local)
+				break
+			}
+		}
+	}
+
+	return nil
 }
 
 // LoadProject allows an eager lookup of values, cached into the
@@ -582,6 +737,86 @@ func (deviceCommandHistoryL) LoadProject(ctx context.Context, e boil.ContextExec
 		}
 	}
 
+	return nil
+}
+
+// SetDevice of the deviceCommandHistory to the related item.
+// Sets o.R.Device to related.
+// Adds o to related.R.DeviceCommandHistories.
+func (o *DeviceCommandHistory) SetDevice(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Device) error {
+	var err error
+	if insert {
+		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
+			return errors.Wrap(err, "failed to insert into foreign table")
+		}
+	}
+
+	updateQuery := fmt.Sprintf(
+		"UPDATE \"device_command_history\" SET %s WHERE %s",
+		strmangle.SetParamNames("\"", "\"", 1, []string{"device_id"}),
+		strmangle.WhereClause("\"", "\"", 2, deviceCommandHistoryPrimaryKeyColumns),
+	)
+	values := []interface{}{related.ID, o.ID}
+
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, updateQuery)
+		fmt.Fprintln(writer, values)
+	}
+	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+		return errors.Wrap(err, "failed to update local table")
+	}
+
+	queries.Assign(&o.DeviceID, related.ID)
+	if o.R == nil {
+		o.R = &deviceCommandHistoryR{
+			Device: related,
+		}
+	} else {
+		o.R.Device = related
+	}
+
+	if related.R == nil {
+		related.R = &deviceR{
+			DeviceCommandHistories: DeviceCommandHistorySlice{o},
+		}
+	} else {
+		related.R.DeviceCommandHistories = append(related.R.DeviceCommandHistories, o)
+	}
+
+	return nil
+}
+
+// RemoveDevice relationship.
+// Sets o.R.Device to nil.
+// Removes o from all passed in related items' relationships struct.
+func (o *DeviceCommandHistory) RemoveDevice(ctx context.Context, exec boil.ContextExecutor, related *Device) error {
+	var err error
+
+	queries.SetScanner(&o.DeviceID, nil)
+	if _, err = o.Update(ctx, exec, boil.Whitelist("device_id")); err != nil {
+		return errors.Wrap(err, "failed to update local table")
+	}
+
+	if o.R != nil {
+		o.R.Device = nil
+	}
+	if related == nil || related.R == nil {
+		return nil
+	}
+
+	for i, ri := range related.R.DeviceCommandHistories {
+		if queries.Equal(o.DeviceID, ri.DeviceID) {
+			continue
+		}
+
+		ln := len(related.R.DeviceCommandHistories)
+		if ln > 1 && i < ln-1 {
+			related.R.DeviceCommandHistories[i] = related.R.DeviceCommandHistories[ln-1]
+		}
+		related.R.DeviceCommandHistories = related.R.DeviceCommandHistories[:ln-1]
+		break
+	}
 	return nil
 }
 

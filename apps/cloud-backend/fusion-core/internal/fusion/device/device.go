@@ -205,8 +205,18 @@ func (s *Service) CreateDevice(ctx context.Context, request *types.DeviceCreateR
 		if device == nil {
 			return s.dbService.Insert(ctx, request, user.Account.ID, cert, tx, logger)
 		}
-		return s.dbService.ClaimDevice(ctx, *device, user.Account.ID, cert, request, tx, logger)
+
+		return s.dbService.ClaimDevice(ctx, *device, user.Account.ID, cert, &types.DeviceClaimRequest{
+			ProjectID:       request.ProjectID,
+			DeviceName:      request.DeviceName,
+			ClientDeviceID:  request.ClientDeviceID,
+			DeviceZone:      request.DeviceZone,
+			DeviceLocation:  request.DeviceLocation,
+			IsPrimary:       &request.IsPrimary,
+			FirmwareVersion: request.FirmwareVersion,
+		}, tx, logger)
 	})
+
 	if err != nil {
 		logger.Warn("Database transaction failed, cleaning up IoT resources",
 			zap.String("deviceID", request.SerialNumber))
@@ -348,7 +358,7 @@ func (s *Service) ClaimDevice(ctx context.Context, deviceID string, request *typ
 	}
 
 	err = s.withTransaction(ctx, logger, func(tx model.DBTxExecutor) error {
-		return s.dbService.Claim(ctx, *device, user.Account.ID, cert, request.ProjectID, tx, logger)
+		return s.dbService.ClaimDevice(ctx, *device, user.Account.ID, cert, request, tx, logger)
 	})
 	if err != nil {
 		logger.Warn("Database transaction failed, cleaning up IoT resources",
@@ -406,7 +416,7 @@ func (s *Service) RotateCertificate(ctx context.Context, deviceID string, reques
 		return nil, err
 	}
 
-	// DB succeeded - now safe to revoke old certificate (best-effort)
+	// DB succeeded - now safe to revoke old certificate
 	s.revokeOldCertificate(ctx, deviceID, oldCertID, oldCertArn, logger)
 
 	return &types.DeviceRotateCertResponse{Certificate: *certPem}, nil
@@ -478,7 +488,7 @@ func (s *Service) GetCommandStatus(ctx context.Context, commandID string, logger
 		results = append(results, types.CommandStatusResult{
 			CommandID:   command.CommandID,
 			CommandName: command.CommandName,
-			DeviceID:    command.DeviceID,
+			DeviceID:    command.DeviceID.String,
 			Status:      command.Status,
 			IssuedAt:    command.IssuedAt.Format("2006-01-02T15:04:05Z07:00"),
 			UpdatedAt:   command.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),

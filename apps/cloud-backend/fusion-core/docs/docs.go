@@ -3212,7 +3212,8 @@ const docTemplate = `{
             "properties": {
                 "command": {
                     "enum": [
-                        "REBOOT"
+                        "REBOOT",
+                        "STANDBY"
                     ],
                     "allOf": [
                         {
@@ -3277,10 +3278,12 @@ const docTemplate = `{
         "types.CommandType": {
             "type": "string",
             "enum": [
-                "REBOOT"
+                "REBOOT",
+                "STANDBY"
             ],
             "x-enum-varnames": [
-                "CommandRestart"
+                "CommandRestart",
+                "CommandStandby"
             ]
         },
         "types.CreateOrganizationRequest": {
@@ -3378,8 +3381,31 @@ const docTemplate = `{
                 "project_id"
             ],
             "properties": {
+                "client_device_id": {
+                    "type": "string",
+                    "maxLength": 100
+                },
                 "csr": {
                     "type": "string"
+                },
+                "device_location": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "device_name": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "device_zone": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "firmware_version": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "is_primary": {
+                    "type": "boolean"
                 },
                 "project_id": {
                     "type": "string"
@@ -3410,37 +3436,45 @@ const docTemplate = `{
             ],
             "properties": {
                 "client_device_id": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100
                 },
                 "csr": {
                     "type": "string"
                 },
                 "device_location": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255
                 },
                 "device_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255
                 },
                 "device_zone": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100
                 },
                 "firmware_version": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 50
                 },
                 "is_primary": {
                     "type": "boolean"
                 },
                 "mac_address": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 20
                 },
                 "model_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100
                 },
                 "project_id": {
                     "type": "string"
                 },
                 "serial_number": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100
                 }
             }
         },
@@ -3475,19 +3509,24 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "client_device_id": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100
                 },
                 "device_location": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255
                 },
                 "device_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255
                 },
                 "device_zone": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100
                 },
                 "firmware_version": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 50
                 },
                 "is_primary": {
                     "type": "boolean"
