@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -86,6 +87,7 @@ class FusionImage extends StatelessWidget {
   final Color? assetColor;
 
   final String? semanticId;
+  final String? semanticLabel;
 
   /// Creates a [FusionImage] that loads from a network URL.
   const FusionImage.network(
@@ -99,6 +101,7 @@ class FusionImage extends StatelessWidget {
     this.borderRadius,
     this.assetColor,
     this.semanticId,
+    this.semanticLabel,
   }) : file = null,
        asset = null,
        isCircle = false;
@@ -115,6 +118,7 @@ class FusionImage extends StatelessWidget {
     this.placeholder,
     this.errorBuilder,
     this.assetColor,
+    this.semanticLabel,
   }) : imageUrl = null,
        asset = null,
        isCircle = false;
@@ -131,6 +135,7 @@ class FusionImage extends StatelessWidget {
     this.placeholder,
     this.errorBuilder,
     this.assetColor,
+    this.semanticLabel,
   }) : file = null,
        imageUrl = null,
        isCircle = false;
@@ -150,6 +155,7 @@ class FusionImage extends StatelessWidget {
     double? size,
     this.fit = BoxFit.cover,
     this.assetColor,
+    this.semanticLabel,
   }) : width = size,
        height = size,
        borderRadius = null,
@@ -171,8 +177,9 @@ class FusionImage extends StatelessWidget {
               SemanticHelper.image(
                 testId: SemanticHelper.createTestId(
                   SemanticTypes.icon,
-                  "fusion_image_${semanticId}",
+                  "fusion_image_$semanticId",
                 ),
+                label: semanticLabel,
                 child: SizedBox(
                   width: 24,
                   height: 24,
@@ -195,8 +202,9 @@ class FusionImage extends StatelessWidget {
       image = SemanticHelper.image(
         testId: SemanticHelper.createTestId(
           SemanticTypes.icon,
-          "fusion_image_${semanticId}",
+          "fusion_image_$semanticId",
         ),
+        label: semanticLabel,
         child: Image.file(
           file!,
           width: width,
@@ -215,8 +223,9 @@ class FusionImage extends StatelessWidget {
       image = SemanticHelper.image(
         testId: SemanticHelper.createTestId(
           SemanticTypes.icon,
-          "fusion_image_${semanticId}",
+          "fusion_image_$semanticId",
         ),
+        label: semanticLabel,
         child: Image.asset(
           asset!,
           width: width,

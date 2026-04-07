@@ -71,7 +71,7 @@ func CreateMemberlist(appConfig *api.AppConfig, delegate *ClusterDelegate) *memb
 	}
 
 	logger := logging.GetLogger()
-	logger.Info("[GOSSIP] config bind=%s:%d advertise=%s:%d name=%s",
+	logger.Debug("[GOSSIP] config bind=%s:%d advertise=%s:%d name=%s",
 		config.BindAddr, config.BindPort, config.AdvertiseAddr, config.AdvertisePort, config.Name)
 
 	config.Delegate = delegate
@@ -87,7 +87,7 @@ func CreateMemberlist(appConfig *api.AppConfig, delegate *ClusterDelegate) *memb
 	if err != nil {
 		logger.Fatal("Failed to create memberlist: %v", err)
 	}
-	logger.Info("gossip config bind=%s:%d advertise=%s:%d ",
+	logger.Debug("gossip config bind=%s:%d advertise=%s:%d ",
 		config.BindAddr, config.BindPort, config.AdvertiseAddr, config.AdvertisePort)
 
 	return list
@@ -103,7 +103,7 @@ func (c *Cluster) JoinMemberlist() error {
 	}
 
 	logger := logging.GetLogger()
-	logger.Info("[GOSSIP] seeds=%v self=%s:%d", joinAddrs, c.appConfig.BindAddr, c.appConfig.BindPort)
+	logger.Debug("[GOSSIP] seeds=%v self=%s:%d", joinAddrs, c.appConfig.BindAddr, c.appConfig.BindPort)
 
 	if len(joinAddrs) == 0 {
 		// This is the first node in the cluster
@@ -175,7 +175,7 @@ func (c *Cluster) GetLiveNodeAddresses() ([]string, error) {
 func (c *Cluster) getClusterMembersFromVip() ([]*memberlist.Node, error) {
 	vip := c.getCurrentVIP()
 	if vip == "" {
-		logging.GetLogger().Warn("getClusterMembersFromVip: VIP not configured yet")
+		logging.GetLogger().Debug("getClusterMembersFromVip: VIP not configured yet")
 		// it could be the VIP is not configured yet
 		// OR
 		// the vip monitor is still stabilizing and hasn't detected the VIP
@@ -206,7 +206,7 @@ func (c *Cluster) getClusterMembersFromVip() ([]*memberlist.Node, error) {
 				} else {
 					resp.Body.Close()
 					if attempt > 1 {
-						logger.Info("getClusterMembersFromVip: succeeded after %d attempts", attempt)
+						logger.Debug("getClusterMembersFromVip: succeeded after %d attempts", attempt)
 					}
 					return members, nil
 				}

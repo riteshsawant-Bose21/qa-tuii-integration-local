@@ -32,12 +32,10 @@ class SourceSelectAdditionalSettingsDialog extends StatefulWidget {
   }
 
   @override
-  State<SourceSelectAdditionalSettingsDialog> createState() =>
-      _SourceSelectAdditionalSettingsState();
+  State<SourceSelectAdditionalSettingsDialog> createState() => _SourceSelectAdditionalSettingsState();
 }
 
-class _SourceSelectAdditionalSettingsState
-    extends State<SourceSelectAdditionalSettingsDialog> {
+class _SourceSelectAdditionalSettingsState extends State<SourceSelectAdditionalSettingsDialog> {
   late List<Source> sources;
   final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
   ZoneFunctions? zoneFunction;
@@ -124,24 +122,13 @@ class _SourceSelectAdditionalSettingsState
                     ///                             MAIN CONTENT
                     /// --------------------------------------------------------------------------------
                     BlocProvider<SourceSelectAdditionalSettingsViewmodel>(
-                      create:
-                          (_) =>
-                              SourceSelectAdditionalSettingsViewmodel()
-                                ..init(zoneID: widget.zoneID),
-                      child: BlocBuilder<
-                        SourceSelectAdditionalSettingsViewmodel,
-                        SourceSelectAdditionalSettingsVmState
-                      >(
+                      create: (_) => SourceSelectAdditionalSettingsViewmodel()..init(zoneID: widget.zoneID),
+                      child: BlocBuilder<SourceSelectAdditionalSettingsViewmodel, SourceSelectAdditionalSettingsVmState>(
                         builder: (
                           BuildContext context,
-                          SourceSelectAdditionalSettingsVmState
-                          SourceSelectAdditionalSettingsVmState,
+                          SourceSelectAdditionalSettingsVmState sourceSelectAdditionalSettingsVmState,
                         ) {
-                          final SourceSelectAdditionalSettingsViewmodel vm =
-                              context
-                                  .watch<
-                                    SourceSelectAdditionalSettingsViewmodel
-                                  >();
+                          final SourceSelectAdditionalSettingsViewmodel vm = context.watch<SourceSelectAdditionalSettingsViewmodel>();
 
                           context.watch<ProjectViewModel>();
 
@@ -169,15 +156,13 @@ class _SourceSelectAdditionalSettingsState
                                       decoration: BoxDecoration(
                                         color: context.colorScheme.elevation2,
                                         border: Border.all(
-                                          color:
-                                              context.colorScheme.strokeLight,
+                                          color: context.colorScheme.strokeLight,
                                         ),
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: <Widget>[
                                           // LEFT COLUMN (Reorderable List)
                                           Flexible(
@@ -192,148 +177,84 @@ class _SourceSelectAdditionalSettingsState
                                                   ),
                                                   child: FusionAppText(
                                                     text: "SOURCES",
-                                                    style:
-                                                        Theme.of(
-                                                          context,
-                                                        ).textTheme.labelSmall,
+                                                    style: Theme.of(context).textTheme.labelSmall,
                                                   ),
                                                 ),
                                                 Divider(
-                                                  color:
-                                                      context
-                                                          .colorScheme
-                                                          .strokeLight,
+                                                  color: context.colorScheme.strokeLight,
                                                   height: 0,
                                                 ),
 
                                                 Flexible(
                                                   child: Builder(
-                                                    builder: (
-                                                      BuildContext context,
-                                                    ) {
+                                                    builder: (BuildContext context) {
                                                       if (sources.isEmpty) {
                                                         return Center(
                                                           child: FusionAppText(
-                                                            text:
-                                                                "No sources selected for this function",
-                                                            style: Theme.of(
-                                                                  context,
-                                                                )
-                                                                .textTheme
-                                                                .labelSmall
-                                                                ?.copyWith(
-                                                                  color:
-                                                                      context
-                                                                          .colorScheme
-                                                                          .primaryWhite,
-                                                                ),
+                                                            text: "No sources selected for this function",
+                                                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                                              color: context.colorScheme.primaryWhite,
+                                                            ),
                                                           ),
                                                         );
                                                       }
 
-                                                      return CommonReorderableListView<
-                                                        Source
-                                                      >(
+                                                      return CommonReorderableListView<Source>(
                                                         items: sources,
-                                                        emptyMessage:
-                                                            "No sources selected for this function",
-                                                        keyExtractor:
-                                                            (Source item) =>
-                                                                item.id,
-                                                        onReorder:
-                                                            (
-                                                              int oldIndex,
-                                                              int newIndex,
-                                                            ) {},
-                                                        itemBuilder: (
-                                                          BuildContext context,
-                                                          Source item,
-                                                          int index,
-                                                        ) {
-                                                          final Source source =
-                                                              sources[index];
+                                                        emptyMessage: "No sources selected for this function",
+                                                        keyExtractor: (Source item) => item.id,
+                                                        onReorder: (int oldIndex, int newIndex) {},
+                                                        itemBuilder: (BuildContext context, Source item, int index) {
+                                                          final Source source = sources[index];
 
-                                                          final bool
-                                                          isSourceSelected = vm
-                                                              .isSourceSelect(
-                                                                source.id,
-                                                              );
+                                                          final bool isSourceSelected = vm.isSourceSelect(source.id);
 
                                                           return MouseRegion(
-                                                            cursor:
-                                                                SystemMouseCursors
-                                                                    .click,
+                                                            cursor: SystemMouseCursors.click,
                                                             child: GestureDetector(
                                                               onTap: () {
-                                                                vm.toggleSourceSelect(
-                                                                  source.id,
-                                                                );
+                                                                vm.toggleSourceSelect(source.id);
                                                               },
-                                                              behavior:
-                                                                  HitTestBehavior
-                                                                      .opaque,
+                                                              behavior: HitTestBehavior.opaque,
                                                               child: Padding(
-                                                                padding:
-                                                                    const EdgeInsets.symmetric(
-                                                                      horizontal:
-                                                                          12,
-                                                                    ),
+                                                                padding: const EdgeInsets.symmetric(
+                                                                  horizontal: 12,
+                                                                ),
                                                                 child: Container(
-                                                                  key: ValueKey<
-                                                                    String
-                                                                  >(source.id),
-                                                                  padding:
-                                                                      const EdgeInsets.all(
-                                                                        12,
-                                                                      ),
+                                                                  key: ValueKey<String>(source.id),
+                                                                  padding: const EdgeInsets.all(12),
 
                                                                   decoration: BoxDecoration(
                                                                     border: Border(
                                                                       bottom: BorderSide(
-                                                                        color: Theme.of(
-                                                                          context,
-                                                                        ).colorScheme.outline.withValues(
-                                                                          alpha:
-                                                                              0.3,
+                                                                        color: Theme.of(context).colorScheme.outline.withValues(
+                                                                          alpha: 0.3,
                                                                         ),
                                                                       ),
                                                                     ),
                                                                   ),
                                                                   child: Row(
-                                                                    children: <
-                                                                      Widget
-                                                                    >[
+                                                                    children: <Widget>[
                                                                       Icon(
-                                                                        Icons
-                                                                            .drag_indicator,
-                                                                        size:
-                                                                            FusionSizes.iconSize16,
-                                                                        color:
-                                                                            context.colorScheme.iconDefault,
+                                                                        Icons.drag_indicator,
+                                                                        size: FusionSizes.iconSize16,
+                                                                        color: context.colorScheme.iconDefault,
                                                                       ),
                                                                       Expanded(
                                                                         flex: 2,
                                                                         child: Center(
                                                                           child: FusionAppText(
-                                                                            text:
-                                                                                source.name,
-                                                                            maxLine:
-                                                                                1,
-                                                                            style:
-                                                                                Theme.of(
-                                                                                  context,
-                                                                                ).textTheme.labelSmall,
+                                                                            text: source.name,
+                                                                            maxLine: 1,
+                                                                            style: Theme.of(context).textTheme.labelSmall,
                                                                           ),
                                                                         ),
                                                                       ),
                                                                       MouseRegion(
-                                                                        cursor:
-                                                                            SystemMouseCursors.click,
+                                                                        cursor: SystemMouseCursors.click,
                                                                         child: FusionCheckbox(
-                                                                          semanticId:
-                                                                              'source_select_checkbox',
-                                                                          value:
-                                                                              isSourceSelected,
+                                                                          semanticId: 'source_select_checkbox',
+                                                                          value: isSourceSelected,
                                                                           onChanged: () {
                                                                             vm.toggleSourceSelect(
                                                                               source.id,
@@ -353,34 +274,22 @@ class _SourceSelectAdditionalSettingsState
                                                   ),
                                                 ),
                                                 MouseRegion(
-                                                  cursor:
-                                                      SystemMouseCursors.click,
+                                                  cursor: SystemMouseCursors.click,
                                                   child: GestureDetector(
                                                     onTap: () {},
-                                                    behavior:
-                                                        HitTestBehavior.opaque,
+                                                    behavior: HitTestBehavior.opaque,
                                                     child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 12,
-                                                          ),
+                                                      padding: const EdgeInsets.symmetric(
+                                                        horizontal: 12,
+                                                      ),
                                                       child: Container(
-                                                        padding:
-                                                            const EdgeInsets.all(
-                                                              12,
-                                                            ),
+                                                        padding: const EdgeInsets.all(12),
                                                         child: Row(
                                                           children: <Widget>[
                                                             Icon(
-                                                              Icons
-                                                                  .drag_indicator,
-                                                              size:
-                                                                  FusionSizes
-                                                                      .iconSize16,
-                                                              color:
-                                                                  context
-                                                                      .colorScheme
-                                                                      .iconDefault,
+                                                              Icons.drag_indicator,
+                                                              size: FusionSizes.iconSize16,
+                                                              color: context.colorScheme.iconDefault,
                                                             ),
                                                             Expanded(
                                                               flex: 2,
@@ -388,26 +297,16 @@ class _SourceSelectAdditionalSettingsState
                                                                 child: FusionAppText(
                                                                   text: "Off",
                                                                   maxLine: 1,
-                                                                  style:
-                                                                      Theme.of(
-                                                                        context,
-                                                                      ).textTheme.labelSmall,
+                                                                  style: Theme.of(context).textTheme.labelSmall,
                                                                 ),
                                                               ),
                                                             ),
                                                             MouseRegion(
-                                                              cursor:
-                                                                  SystemMouseCursors
-                                                                      .click,
+                                                              cursor: SystemMouseCursors.click,
                                                               child: FusionCheckbox(
-                                                                semanticId:
-                                                                    'select_settings_off',
-                                                                value:
-                                                                    SourceSelectAdditionalSettingsVmState
-                                                                        .useOff,
-                                                                onChanged:
-                                                                    () =>
-                                                                        vm.toggleUseOff(),
+                                                                semanticId: 'select_settings_off',
+                                                                value: sourceSelectAdditionalSettingsVmState.useOff,
+                                                                onChanged: () => vm.toggleUseOff(),
                                                               ),
                                                             ),
                                                           ],
@@ -417,65 +316,43 @@ class _SourceSelectAdditionalSettingsState
                                                   ),
                                                 ),
                                                 Padding(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 12,
-                                                      ),
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                  ),
                                                   child: Divider(
-                                                    color:
-                                                        context
-                                                            .colorScheme
-                                                            .strokeLight,
+                                                    color: context.colorScheme.strokeLight,
                                                     height: 0,
                                                   ),
                                                 ),
                                                 MouseRegion(
-                                                  cursor:
-                                                      SystemMouseCursors.click,
+                                                  cursor: SystemMouseCursors.click,
                                                   child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          horizontal: 12,
-                                                        ),
+                                                    padding: const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                    ),
                                                     child: Container(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                            12,
-                                                          ),
+                                                      padding: const EdgeInsets.all(
+                                                        12,
+                                                      ),
                                                       child: Row(
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .spaceEvenly,
+                                                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                                         children: <Widget>[
                                                           Flexible(
                                                             flex: 2,
                                                             child: Center(
                                                               child: FusionAppText(
-                                                                text:
-                                                                    "Use crossfade",
+                                                                text: "Use crossfade",
                                                                 maxLine: 1,
-                                                                style:
-                                                                    Theme.of(
-                                                                          context,
-                                                                        )
-                                                                        .textTheme
-                                                                        .labelSmall,
+                                                                style: Theme.of(context).textTheme.labelSmall,
                                                               ),
                                                             ),
                                                           ),
                                                           MouseRegion(
-                                                            cursor:
-                                                                SystemMouseCursors
-                                                                    .click,
+                                                            cursor: SystemMouseCursors.click,
                                                             child: FusionCheckbox(
-                                                              semanticId:
-                                                                  'select_settings_crossfade',
-                                                              value:
-                                                                  SourceSelectAdditionalSettingsVmState
-                                                                      .useCrossfade,
-                                                              onChanged:
-                                                                  () =>
-                                                                      vm.toggleUseCrossfade(),
+                                                              semanticId: 'select_settings_crossfade',
+                                                              value: sourceSelectAdditionalSettingsVmState.useCrossfade,
+                                                              onChanged: () => vm.toggleUseCrossfade(),
                                                             ),
                                                           ),
                                                         ],
@@ -488,144 +365,79 @@ class _SourceSelectAdditionalSettingsState
                                           ),
                                           VerticalDivider(
                                             width: 1,
-                                            color:
-                                                context.colorScheme.strokeLight,
+                                            color: context.colorScheme.strokeLight,
                                           ),
 
                                           PrioritySettingsWidget(
                                             zoneId: widget.zoneID,
-                                            isStateActive:
-                                                (int index) =>
-                                                    vm.isPriorityControlTypeThreshold(
-                                                      index,
-                                                    ) ||
-                                                    vm.isPriorityStateActive(
-                                                      index,
-                                                    ),
-                                            onStateActiveChanged: (int index) {
+                                            isStateActive: (int index) => vm.isPriorityControlTypeThreshold(index) || vm.isPriorityStateActive(index),
+                                            onStateActivePressAndHoldChanged: (int index, bool isPressed) {
                                               vm.updatePriorityProperties(
                                                 zoneOrSubzoneId: widget.zoneID,
                                                 index: index,
-                                                isStateActive:
-                                                    !vm.isPriorityControlTypeThreshold(
-                                                      index,
-                                                    ),
+                                                isStateActive: isPressed,
                                               );
                                             },
-                                            onPTTControlTypeChanged: (
-                                              int index,
-                                            ) {
+                                            onPTTControlTypeChanged: (int index) {
                                               vm.updatePriorityProperties(
                                                 zoneOrSubzoneId: widget.zoneID,
                                                 index: index,
-                                                priorityControlType:
-                                                    AdditionalSettingsPriorityControlType
-                                                        .pttControler,
+                                                priorityControlType: AdditionalSettingsPriorityControlType.pttControler,
                                               );
                                             },
-                                            onThresholdControlTypeChanged: (
-                                              int index,
-                                            ) {
+                                            onThresholdControlTypeChanged: (int index) {
                                               vm.updatePriorityProperties(
                                                 zoneOrSubzoneId: widget.zoneID,
                                                 index: index,
-                                                priorityControlType:
-                                                    AdditionalSettingsPriorityControlType
-                                                        .threshold,
+                                                priorityControlType: AdditionalSettingsPriorityControlType.threshold,
                                               );
                                             },
-                                            isPriorityControlTypePTT:
-                                                (int index) =>
-                                                    vm.isPriorityControlTypePTT(
-                                                      index,
-                                                    ),
-                                            isPriorityControlTypeThreshold:
-                                                (int index) => vm
-                                                    .isPriorityControlTypeThreshold(
-                                                      index,
-                                                    ),
-                                            enableBehaviorSettingsFields:
-                                                (int index) => vm
-                                                    .enableBehaviorSettingsFields(
-                                                      index,
-                                                    ),
-                                            getThresholdValue:
-                                                (int index) =>
-                                                    vm.getThresholdValue(index),
-                                            getDepth:
-                                                (int index) =>
-                                                    vm.getDepth(index),
-                                            getAttack:
-                                                (int index) =>
-                                                    vm.getAttack(index),
-                                            getHold:
-                                                (int index) =>
-                                                    vm.getHold(index),
-                                            getRelease:
-                                                (int index) =>
-                                                    vm.getRelease(index),
-                                            getReductionValue:
-                                                (int index) =>
-                                                    vm.getReductionValue(index),
-                                            getPriorityBehavior:
-                                                (int index) => vm
-                                                    .getPriorityBehavior(index),
-                                            onThresholdValueChanged: (
-                                              int index,
-                                              num value,
-                                            ) {
+                                            isPriorityControlTypePTT: (int index) => vm.isPriorityControlTypePTT(index),
+                                            isPriorityControlTypeThreshold: (int index) => vm.isPriorityControlTypeThreshold(index),
+                                            enableBehaviorSettingsFields: (int index) => vm.enableBehaviorSettingsFields(index),
+                                            getThresholdValue: (int index) => vm.getThresholdValue(index),
+                                            getDepth: (int index) => vm.getDepth(index),
+                                            getAttack: (int index) => vm.getAttack(index),
+                                            getHold: (int index) => vm.getHold(index),
+                                            getRelease: (int index) => vm.getRelease(index),
+                                            getReductionValue: (int index) => vm.getReductionValue(index),
+                                            getPriorityBehavior: (int index) => vm.getPriorityBehavior(index),
+                                            onThresholdValueChanged: (int index, num value) {
                                               vm.updatePriorityProperties(
                                                 zoneOrSubzoneId: widget.zoneID,
                                                 index: index,
-                                                thresholdValue:
-                                                    value.toDouble(),
+                                                thresholdValue: value.toDouble(),
                                               );
                                             },
-                                            onDepthValueChanged: (
-                                              int index,
-                                              num value,
-                                            ) {
+                                            onDepthValueChanged: (int index, num value) {
                                               vm.updatePriorityProperties(
                                                 zoneOrSubzoneId: widget.zoneID,
                                                 index: index,
                                                 depthValue: value.toDouble(),
                                               );
                                             },
-                                            onAttackValueChanged: (
-                                              int index,
-                                              num value,
-                                            ) {
+                                            onAttackValueChanged: (int index, num value) {
                                               vm.updatePriorityProperties(
                                                 zoneOrSubzoneId: widget.zoneID,
                                                 index: index,
                                                 attackValue: value.toDouble(),
                                               );
                                             },
-                                            onHoldValueChanged: (
-                                              int index,
-                                              num value,
-                                            ) {
+                                            onHoldValueChanged: (int index, num value) {
                                               vm.updatePriorityProperties(
                                                 zoneOrSubzoneId: widget.zoneID,
                                                 index: index,
                                                 holdValue: value.toDouble(),
                                               );
                                             },
-                                            onReleaseValueChanged: (
-                                              int index,
-                                              num value,
-                                            ) {
+                                            onReleaseValueChanged: (int index, num value) {
                                               vm.updatePriorityProperties(
                                                 zoneOrSubzoneId: widget.zoneID,
                                                 index: index,
                                                 releaseValue: value.toDouble(),
                                               );
                                             },
-                                            onPriorityBehaviorChanged: (
-                                              int index,
-                                              AdditionalSettingPriorityBehavior
-                                              value,
-                                            ) {
+                                            onPriorityBehaviorChanged: (int index, AdditionalSettingPriorityBehavior value) {
                                               vm.updatePriorityProperties(
                                                 zoneOrSubzoneId: widget.zoneID,
                                                 index: index,
@@ -639,48 +451,24 @@ class _SourceSelectAdditionalSettingsState
                                             flex: 3,
                                             child: ZoneSubZoneBuilderWidget(
                                               zoneID: widget.zoneID,
-                                              getLowerGain:
-                                                  (String zoneOrSubzoneID) =>
-                                                      vm.getLowerGain(
-                                                        zoneOrSubzoneID,
-                                                      ),
-                                              getUpperGain:
-                                                  (String zoneOrSubzoneID) =>
-                                                      vm.getUpperGain(
-                                                        zoneOrSubzoneID,
-                                                      ),
-                                              isAllowMute:
-                                                  (String zoneOrSubzoneID) =>
-                                                      vm.isAllowMute(
-                                                        zoneOrSubzoneID,
-                                                      ),
-                                              onLowerRangeChanged: (
-                                                String zoneOrSubzoneID,
-                                                num value,
-                                              ) {
+                                              getLowerGain: (String zoneOrSubzoneID) => vm.getLowerGain(zoneOrSubzoneID),
+                                              getUpperGain: (String zoneOrSubzoneID) => vm.getUpperGain(zoneOrSubzoneID),
+                                              isAllowMute: (String zoneOrSubzoneID) => vm.isAllowMute(zoneOrSubzoneID),
+                                              onLowerRangeChanged: (String zoneOrSubzoneID, num value) {
                                                 vm.updateZoneProperties(
-                                                  zoneOrSubzoneId:
-                                                      zoneOrSubzoneID,
+                                                  zoneOrSubzoneId: zoneOrSubzoneID,
                                                   lowerLimit: value.toDouble(),
                                                 );
                                               },
-                                              onUpperRangeChanged: (
-                                                String zoneOrSubzoneID,
-                                                num value,
-                                              ) {
+                                              onUpperRangeChanged: (String zoneOrSubzoneID, num value) {
                                                 vm.updateZoneProperties(
-                                                  zoneOrSubzoneId:
-                                                      zoneOrSubzoneID,
+                                                  zoneOrSubzoneId: zoneOrSubzoneID,
                                                   upperLimit: value.toDouble(),
                                                 );
                                               },
-                                              onAllowMuteChanged: (
-                                                String zoneOrSubzoneID,
-                                                bool newValue,
-                                              ) {
+                                              onAllowMuteChanged: (String zoneOrSubzoneID, bool newValue) {
                                                 vm.updateZoneProperties(
-                                                  zoneOrSubzoneId:
-                                                      zoneOrSubzoneID,
+                                                  zoneOrSubzoneId: zoneOrSubzoneID,
                                                   allowMuteUnmute: newValue,
                                                 );
                                               },

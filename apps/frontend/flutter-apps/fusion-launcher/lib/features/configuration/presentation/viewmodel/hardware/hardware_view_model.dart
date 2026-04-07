@@ -381,7 +381,7 @@ extension HardwareViewModel on ProjectViewModel {
       final int? productId = speaker.productId;
       if (productId == null) return true;
 
-      final SpeakerProduct? product = catalogSpeakers.where((SpeakerProduct p) => p.productId == productId).firstOrNull;
+      final SpeakerProduct? product = catalogSpeakers.where((SpeakerProduct p) => p.id == productId).firstOrNull;
       return !(product?.isSubwoofer ?? false);
     }).toList();
   }
@@ -405,7 +405,7 @@ extension HardwareViewModel on ProjectViewModel {
 
     final Speaker referenceSpeaker = targetSpeakers.first;
 
-    final SpeakerProduct? speakerProduct = catalogSpeakers.where((SpeakerProduct p) => p.productId == referenceSpeaker.productId).firstOrNull;
+    final SpeakerProduct? speakerProduct = catalogSpeakers.where((SpeakerProduct p) => p.id == referenceSpeaker.productId).firstOrNull;
     final double coverageAngle = _resolveCoverageAngle(speakerProduct);
 
     final ListeningAreaRoomBounds bounds = listeningArea.getBoundsForVertices();
@@ -742,7 +742,7 @@ extension HardwareViewModel on ProjectViewModel {
     return Speaker(
       locationEntity: locationEntity,
       name: product.modelName,
-      productId: product.productId,
+      productId: product.id,
       pos: null,
       zAxis: 300.0,
       speakerSKU: product.modelName,
@@ -808,6 +808,7 @@ extension HardwareViewModel on ProjectViewModel {
           SourceConnectionType.xlr => PortType.xlrOutput,
           SourceConnectionType.hdmi => PortType.hdmiOut,
           SourceConnectionType.rca => PortType.rcaOutput,
+          SourceConnectionType.endpoint => PortType.endpointOutput,
         };
         return Source(
           locationEntity: locationEntity,
@@ -1053,7 +1054,7 @@ extension HardwareViewModel on ProjectViewModel {
         return currentImagePath;
       }
       final List<SpeakerProduct> speaker = serviceLocator<ProductQueryViewModel>().speakers;
-      final SpeakerProduct hardware = speaker.firstWhere((SpeakerProduct element) => element.productId == productId);
+      final SpeakerProduct hardware = speaker.firstWhere((SpeakerProduct element) => element.id == productId);
       return serviceLocator<ProductQueryViewModel>().getImagePath(hardware.assets.assets.values.first.first);
     } catch (e) {
       return null;

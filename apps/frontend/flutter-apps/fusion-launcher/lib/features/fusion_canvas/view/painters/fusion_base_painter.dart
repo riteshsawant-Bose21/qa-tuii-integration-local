@@ -39,7 +39,7 @@ abstract class FusionBasePainter {
     required FusionCanvasPainter painter,
     Paint? paint,
   }) {
-    final ui.Image? image = painter.getImage(imagePath);
+    final ui.Image? image = imagePath.trim().isNotEmpty ? painter.getImage(imagePath) : null;
     if (image != null) {
       final Rect src = Rect.fromLTWH(
         0,

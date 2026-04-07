@@ -1,0 +1,23 @@
+info:
+  name: Unsubscribe from Devices
+  type: websocket
+  seq: 4
+
+websocket:
+  url: ws://{{api_url}}/ws
+  message:
+    type: json
+    data: |
+      {
+        "id": "unsub-devices-001",
+        "version": 1,
+        "type": "unsubscribe_devices"
+      }
+  auth: inherit
+
+settings:
+  timeout: 0
+  keepAliveInterval: 0
+
+docs: |
+  Stop receiving device update push notifications.
