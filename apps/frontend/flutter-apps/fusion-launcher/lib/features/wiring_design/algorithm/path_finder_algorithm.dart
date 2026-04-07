@@ -42,26 +42,74 @@ class _Node implements Comparable<_Node> {
   }
 }
 
-class OrthogonalRouter {
-  OrthogonalRouter(this.obstacles);
-  final List<Rect> obstacles;
+class _SegmentData {
+  const _SegmentData({
+    required this.ax,
+    required this.ay,
+    required this.bx,
+    required this.by,
+    required this.abx,
+    required this.aby,
+    required this.lengthSquared,
+  });
 
-  double get padding => 10;
+  final double ax;
+  final double ay;
+  final double bx;
+  final double by;
+  final double abx;
+  final double aby;
+  final double lengthSquared;
+}
+
+class OrthogonalRouter {
+  OrthogonalRouter(this.obstacles)
+    : _obstacleLeft = obstacles.map((Rect r) => r.left).toList(growable: false),
+      _obstacleRight = obstacles.map((Rect r) => r.right).toList(growable: false),
+      _obstacleTop = obstacles.map((Rect r) => r.top).toList(growable: false),
+      _obstacleBottom = obstacles.map((Rect r) => r.bottom).toList(growable: false);
+
+  final List<Rect> obstacles;
+  final List<double> _obstacleLeft;
+  final List<double> _obstacleRight;
+  final List<double> _obstacleTop;
+  final List<double> _obstacleBottom;
+
+  static const double _padding = 10;
+  static const double _probeSize = 50;
+
+  double get padding => _padding;
   double get spacing => 10;
-  Rect _expandPoint(Offset p) => p & const Size(50, 50);
-  bool _isBlocked(Offset p) => obstacles.any((Rect r) => r.overlaps(_expandPoint(p)));
+
+  bool _isBlocked(Offset p) {
+    final double probeLeft = p.dx;
+    final double probeRight = p.dx + _probeSize;
+    final double probeTop = p.dy;
+    final double probeBottom = p.dy + _probeSize;
+
+    for (int i = 0; i < obstacles.length; i++) {
+      if (_obstacleLeft[i] < probeRight && _obstacleRight[i] > probeLeft && _obstacleTop[i] < probeBottom && _obstacleBottom[i] > probeTop) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   double _manhattan(Offset a, Offset b) => (a.dx - b.dx).abs() + (a.dy - b.dy).abs();
 
   Offset _snapOutside(Offset p) {
     const double tieTolerance = 0.1;
-    for (final Rect r in obstacles) {
-      if (r.overlaps(_expandPoint(p))) {
+    for (int i = 0; i < obstacles.length; i++) {
+      if (_isBlockedByObstacle(i, p.dx, p.dy)) {
+        final double left = _obstacleLeft[i];
+        final double right = _obstacleRight[i];
+        final double top = _obstacleTop[i];
+        final double bottom = _obstacleBottom[i];
         final List<Offset> candidates = <Offset>[
-          Offset(r.left - padding, p.dy),
-          Offset(r.right + padding, p.dy),
-          Offset(p.dx, r.top - padding),
-          Offset(p.dx, r.bottom + padding),
+          Offset(left - padding, p.dy),
+          Offset(right + padding, p.dy),
+          Offset(p.dx, top - padding),
+          Offset(p.dx, bottom + padding),
         ];
 
         Offset best = candidates.first;
@@ -124,20 +172,36 @@ class OrthogonalRouter {
     final List<double> ysList = ys.toList()..sort();
 
     final Set<Offset> nodes = <Offset>{};
+    final Map<double, List<double>> xToYs = <double, List<double>>{};
+    final Map<double, List<double>> yToXs = <double, List<double>>{};
+
+    void addNode(Offset p) {
+      if (!nodes.add(p)) return;
+      xToYs.putIfAbsent(p.dx, () => <double>[]).add(p.dy);
+      yToXs.putIfAbsent(p.dy, () => <double>[]).add(p.dx);
+    }
+
     for (final double x in xsList) {
       for (final double y in ysList) {
         final Offset p = Offset(x, y);
-        if (!_isBlocked(p)) nodes.add(p);
+        if (!_isBlocked(p)) addNode(p);
       }
     }
-    nodes.add(actualStart);
-    nodes.add(actualEnd);
+    addNode(actualStart);
+    addNode(actualEnd);
+
+    for (final List<double> values in xToYs.values) {
+      values.sort();
+    }
+    for (final List<double> values in yToXs.values) {
+      values.sort();
+    }
 
     bool verticalClear(double x, double y1, double y2) {
       final double top = min(y1, y2);
       final double bottom = max(y1, y2);
-      for (final Rect r in obstacles) {
-        if (x >= r.left && x <= r.right && bottom >= r.top && top <= r.bottom) {
+      for (int i = 0; i < obstacles.length; i++) {
+        if (x >= _obstacleLeft[i] && x <= _obstacleRight[i] && bottom >= _obstacleTop[i] && top <= _obstacleBottom[i]) {
           return false;
         }
       }
@@ -147,17 +211,20 @@ class OrthogonalRouter {
     bool horizontalClear(double y, double x1, double x2) {
       final double left = min(x1, x2);
       final double right = max(x1, x2);
-      for (final Rect r in obstacles) {
-        if (y >= r.top && y <= r.bottom && right >= r.left && left <= r.right) {
+      for (int i = 0; i < obstacles.length; i++) {
+        if (y >= _obstacleTop[i] && y <= _obstacleBottom[i] && right >= _obstacleLeft[i] && left <= _obstacleRight[i]) {
           return false;
         }
       }
       return true;
     }
 
+    final List<_SegmentData>? previousSegments = _buildSegments(previousPath);
+
     final Map<Offset, List<Offset>> neighbors = <Offset, List<Offset>>{};
     for (final double x in xsList) {
-      final List<double> columnYs = ysList.where((double y) => nodes.contains(Offset(x, y))).toList();
+      final List<double>? columnYs = xToYs[x];
+      if (columnYs == null || columnYs.length < 2) continue;
       for (int i = 0; i < columnYs.length - 1; i++) {
         final Offset p1 = Offset(x, columnYs[i]);
         final Offset p2 = Offset(x, columnYs[i + 1]);
@@ -168,7 +235,8 @@ class OrthogonalRouter {
       }
     }
     for (final double y in ysList) {
-      final List<double> rowXs = xsList.where((double x) => nodes.contains(Offset(x, y))).toList();
+      final List<double>? rowXs = yToXs[y];
+      if (rowXs == null || rowXs.length < 2) continue;
       for (int i = 0; i < rowXs.length - 1; i++) {
         final Offset p1 = Offset(rowXs[i], y);
         final Offset p2 = Offset(rowXs[i + 1], y);
@@ -179,7 +247,7 @@ class OrthogonalRouter {
       }
     }
 
-    const double INF = 1e9;
+    const double inf = 1e9;
     final Map<Offset, double> gScore = <Offset, double>{};
     final Map<Offset, int> turnScore = <Offset, int>{};
     final Map<Offset, Offset> cameFrom = <Offset, Offset>{};
@@ -187,7 +255,7 @@ class OrthogonalRouter {
     final PriorityQueue<_Node> open = PriorityQueue<_Node>();
 
     for (final Offset n in nodes) {
-      gScore[n] = INF;
+      gScore[n] = inf;
       turnScore[n] = 1 << 30;
     }
     gScore[actualStart] = 0;
@@ -211,17 +279,19 @@ class OrthogonalRouter {
       }
 
       closed.add(cur);
+      final double currentG = gScore[cur]!;
+      final int currentTurns = turnScore[cur]!;
+      final Offset? prevOfCur = cameFrom[cur];
       for (final Offset nb in neighbors[cur] ?? <Offset>[]) {
         if (closed.contains(nb)) continue;
 
-        final double tentative = gScore[cur]! + _manhattan(cur, nb);
+        final double tentative = currentG + _manhattan(cur, nb);
 
         // Add turn penalty if direction changes
         double turnPenalty = 0;
-        int turns = turnScore[cur]!;
-        if (cameFrom.containsKey(cur)) {
-          final Offset prev = cameFrom[cur]!;
-          final bool wasVertical = prev.dx == cur.dx;
+        int turns = currentTurns;
+        if (prevOfCur != null) {
+          final bool wasVertical = prevOfCur.dx == cur.dx;
           final bool nowVertical = cur.dx == nb.dx;
           if (wasVertical != nowVertical) {
             turnPenalty = 50;
@@ -229,9 +299,9 @@ class OrthogonalRouter {
           }
         }
 
-        final double continuityPenalty = _continuityPenalty(nb, previousPath);
+        final double continuityPenalty = _continuityPenalty(nb, previousSegments);
         final double newCost = tentative + turnPenalty + continuityPenalty;
-        final double oldCost = gScore[nb] ?? INF;
+        final double oldCost = gScore[nb] ?? inf;
         final int oldTurns = turnScore[nb] ?? (1 << 30);
         if (newCost < oldCost || (newCost == oldCost && turns < oldTurns)) {
           cameFrom[nb] = cur;
@@ -280,19 +350,53 @@ class OrthogonalRouter {
     return res;
   }
 
-  double _continuityPenalty(Offset p, List<Offset>? previousPath) {
+  bool _isBlockedByObstacle(int index, double pointX, double pointY) {
+    final double probeLeft = pointX;
+    final double probeRight = pointX + _probeSize;
+    final double probeTop = pointY;
+    final double probeBottom = pointY + _probeSize;
+    return _obstacleLeft[index] < probeRight && _obstacleRight[index] > probeLeft && _obstacleTop[index] < probeBottom && _obstacleBottom[index] > probeTop;
+  }
+
+  List<_SegmentData>? _buildSegments(List<Offset>? previousPath) {
     if (previousPath == null || previousPath.length < 2) {
+      return null;
+    }
+
+    final List<_SegmentData> segments = <_SegmentData>[];
+    for (int i = 0; i < previousPath.length - 1; i++) {
+      final Offset a = previousPath[i];
+      final Offset b = previousPath[i + 1];
+      final double abx = b.dx - a.dx;
+      final double aby = b.dy - a.dy;
+      segments.add(
+        _SegmentData(
+          ax: a.dx,
+          ay: a.dy,
+          bx: b.dx,
+          by: b.dy,
+          abx: abx,
+          aby: aby,
+          lengthSquared: abx * abx + aby * aby,
+        ),
+      );
+    }
+    return segments;
+  }
+
+  double _continuityPenalty(Offset p, List<_SegmentData>? previousSegments) {
+    if (previousSegments == null || previousSegments.isEmpty) {
       return 0;
     }
 
-    final double distance = _distanceToPolyline(p, previousPath);
+    final double distance = _distanceToPolyline(p, previousSegments);
     return min(distance, 80) * 0.25;
   }
 
-  double _distanceToPolyline(Offset p, List<Offset> polyline) {
+  double _distanceToPolyline(Offset p, List<_SegmentData> segments) {
     double best = double.infinity;
-    for (int i = 0; i < polyline.length - 1; i++) {
-      final double d = _distanceToSegment(p, polyline[i], polyline[i + 1]);
+    for (final _SegmentData segment in segments) {
+      final double d = _distanceToSegment(p, segment);
       if (d < best) {
         best = d;
       }
@@ -300,19 +404,28 @@ class OrthogonalRouter {
     return best.isFinite ? best : 0;
   }
 
-  double _distanceToSegment(Offset p, Offset a, Offset b) {
-    final double lengthSquared = (b - a).distanceSquared;
-    if (lengthSquared == 0) {
-      return (p - a).distance;
+  double _distanceToSegment(Offset p, _SegmentData segment) {
+    final double pax = p.dx - segment.ax;
+    final double pay = p.dy - segment.ay;
+
+    if (segment.lengthSquared == 0) {
+      return sqrt(pax * pax + pay * pay);
     }
-    final double t = ((p - a).dx * (b - a).dx + (p - a).dy * (b - a).dy) / lengthSquared;
+
+    final double t = (pax * segment.abx + pay * segment.aby) / segment.lengthSquared;
     if (t <= 0) {
-      return (p - a).distance;
+      return sqrt(pax * pax + pay * pay);
     }
     if (t >= 1) {
-      return (p - b).distance;
+      final double pbx = p.dx - segment.bx;
+      final double pby = p.dy - segment.by;
+      return sqrt(pbx * pbx + pby * pby);
     }
-    final Offset projection = a + (b - a) * t;
-    return (p - projection).distance;
+
+    final double projX = segment.ax + segment.abx * t;
+    final double projY = segment.ay + segment.aby * t;
+    final double dx = p.dx - projX;
+    final double dy = p.dy - projY;
+    return sqrt(dx * dx + dy * dy);
   }
 }
