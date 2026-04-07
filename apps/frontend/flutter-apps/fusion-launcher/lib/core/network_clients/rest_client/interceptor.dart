@@ -12,7 +12,7 @@ class AppInterceptors extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
-    if (kDebugMode) log("---API REQUEST CREATED---");
+    if (kDebugMode) log("---API [${options.method}] REQUEST CREATED---");
 
     // final String? token = serviceLocator<FusionConfig>().accessToken;
     // if (token != null) {
@@ -24,7 +24,7 @@ class AppInterceptors extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
-    log(" Dio Error Code is ${err.response?.statusCode} ");
+    log(" Dio Error Code is ${err.response?.statusCode} for ${err.requestOptions.method} ${err.requestOptions.path} ");
     // if (err.response?.statusCode == 401 && err.requestOptions.path.isBackendServerEndpoint() && err.requestOptions.path.isTokenRequired()) {
     //   // Handle 401 error - token expired
     //   await _handleTokenExpiry(err, handler);
