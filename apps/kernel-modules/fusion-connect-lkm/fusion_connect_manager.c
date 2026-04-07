@@ -45,6 +45,10 @@ struct fusion_cn_worker_profile {
     struct fusion_cn_phase_profile other_phase;
     u64 rx_packets_sum;
     u32 rx_packets_max;
+    u64 rx_q_depth_sum;
+    u32 rx_q_depth_max;
+    u32 rx_q_depth_last;
+    u32 rx_budget_hits;
     unsigned long next_jiffies;
 };
 
@@ -265,6 +269,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
     bool profiling = READ_ONCE(fusion_cn_profile_param);
     u64 t0, dt_ns;
     u32 drained;
+    u32 rx_q_depth = 0;
 
     struct {
         struct fusion_cn_rtp_stream *rtp;
@@ -278,14 +283,28 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
 
     tick_ns = READ_ONCE(mgr->tick_ns);
 
+    if (profiling) {
+        unsigned long rx_flags;
+
+        spin_lock_irqsave(&mgr->rtp.rx_queue_lock, rx_flags);
+        rx_q_depth = mgr->rtp.rx_queue_count;
+        spin_unlock_irqrestore(&mgr->rtp.rx_queue_lock, rx_flags);
+    }
+
     t0 = profiling ? ktime_get_ns() : 0;
     drained = fusion_cn_rtp_drain_rx_queue(&mgr->rtp, FUSION_CN_RX_DRAIN_BUDGET);
     if (profiling) {
         dt_ns = ktime_get_ns() - t0;
         fusion_cn_prof_add(&fusion_cn_worker_prof.rx_drain, dt_ns);
         fusion_cn_worker_prof.rx_packets_sum += drained;
+        fusion_cn_worker_prof.rx_q_depth_sum += rx_q_depth;
+        fusion_cn_worker_prof.rx_q_depth_last = rx_q_depth;
+        if (rx_q_depth > fusion_cn_worker_prof.rx_q_depth_max)
+            fusion_cn_worker_prof.rx_q_depth_max = rx_q_depth;
         if (drained > fusion_cn_worker_prof.rx_packets_max)
             fusion_cn_worker_prof.rx_packets_max = drained;
+        if (drained >= FUSION_CN_RX_DRAIN_BUDGET)
+            fusion_cn_worker_prof.rx_budget_hits++;
     }
 
     /* -------- Phase 1: FusionConnect sinks (low latency priority) -------- */
