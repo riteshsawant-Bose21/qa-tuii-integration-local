@@ -61,7 +61,7 @@ class FusionNetworkDevice {
       id: json['id'] as String? ?? '',
       location: json['location'] as String? ?? '',
       name: json['name'] as String? ?? '',
-      modelName: json['model_name'] as String? ?? '',
+      modelName: 'FM8Y', // json['model_name'] as String? ??
       serialNumber: json['serial_number'] as String? ?? '',
       isPrimary: json['is_primary'] as bool? ?? false,
       macAddress: json['mac_address'] as String? ?? '',
