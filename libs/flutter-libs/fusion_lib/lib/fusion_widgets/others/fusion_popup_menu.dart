@@ -7,13 +7,16 @@ class FusionPopupMenu<T> extends StatelessWidget {
     required this.items,
     required this.onSelected,
     this.itemBuilder,
+    this.popupwidth,
     this.itemLabels,
-    this.matchChildWidth = true,
+    bool? matchChildWidth, // make nullable input
     required this.child,
     this.tooltip,
     this.popupOffset = const Offset(10, 10),
     this.semanticsId,
-  });
+  }) : matchChildWidth = matchChildWidth ?? (popupwidth == null);
+
+  final double? popupwidth;
   final List<T> items;
   final ValueChanged<T> onSelected;
   final Widget Function(BuildContext, T)? itemBuilder;
@@ -50,7 +53,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
           (index) {
             final T item = items[index];
             var findRenderObject = (childKey.currentContext?.findRenderObject() as RenderBox?);
-            var width2 = matchChildWidth ? findRenderObject?.size.width : null;
+            var width2 = matchChildWidth ? findRenderObject?.size.width : popupwidth;
             return PopupMenuItem<T>(
               value: item,
 
@@ -410,13 +413,18 @@ class _CustomPopupMenuButtonState<T> extends State<CustomPopupMenuButton<T>> {
   ///
   /// You would access your [_CustomPopupMenuButtonState] using a [GlobalKey] and
   /// show the menu of the button with `globalKey.currentState.showButtonMenu`.
+
   void showButtonMenu() {
     final PopupMenuThemeData popupMenuTheme = PopupMenuTheme.of(context);
+
+    final BoxConstraints? finalConstraints = widget.constraints;
+
     final List<PopupMenuEntry<T>> items = widget.itemBuilder(context);
-    // Only show the menu if there is something to show
+
     if (items.isNotEmpty) {
       widget.onOpened?.call();
       _isMenuExpanded = true;
+
       showMenu<T?>(
         context: context,
         elevation: widget.elevation ?? popupMenuTheme.elevation,
@@ -428,7 +436,7 @@ class _CustomPopupMenuButtonState<T> extends State<CustomPopupMenuButton<T>> {
         shape: widget.shape ?? popupMenuTheme.shape,
         menuPadding: widget.menuPadding ?? popupMenuTheme.menuPadding,
         color: widget.color ?? popupMenuTheme.color,
-        constraints: widget.constraints,
+        constraints: finalConstraints,
         clipBehavior: widget.clipBehavior,
         useRootNavigator: widget.useRootNavigator,
         popUpAnimationStyle: widget.popUpAnimationStyle,
@@ -436,12 +444,10 @@ class _CustomPopupMenuButtonState<T> extends State<CustomPopupMenuButton<T>> {
         semanticLabel: widget.menuSemanticLabel,
         requestFocus: widget.requestFocus,
       ).then<void>((T? newValue) {
-        if (!mounted) {
-          return null;
-        }
+        if (!mounted) return;
         if (newValue == null) {
           widget.onCanceled?.call();
-          return null;
+          return;
         }
         widget.onSelected?.call(newValue);
         _isMenuExpanded = false;

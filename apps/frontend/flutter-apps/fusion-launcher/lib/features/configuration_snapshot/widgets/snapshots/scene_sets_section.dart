@@ -109,6 +109,7 @@ class _SceneSetsState extends State<SceneSets> {
         child: Container(
           alignment: Alignment.center,
           child: FusionAppText(
+            semanticId: 'scene_sets_empty_text',
             text: 'No scenes available',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontSize: 12,

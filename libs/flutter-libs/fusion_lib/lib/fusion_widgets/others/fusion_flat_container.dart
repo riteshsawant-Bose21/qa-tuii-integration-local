@@ -34,21 +34,21 @@ class FusionFlatContainer extends StatelessWidget {
       testId: SemanticHelper.createTestId(SemanticTypes.container, "fusion_flat_container_${semanticsId ?? ""}"),
       child: Tooltip(
         message: toolTip ?? "",
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 100),
-          width: width,
-          height: height,
-          alignment: alignment,
-          margin: margin ?? const EdgeInsets.all(2),
-          padding: padding ?? EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: color ?? context.colorScheme.elevation1,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(borderRadius),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 100),
+            width: width,
+            height: height,
+            alignment: alignment,
+            margin: margin ?? const EdgeInsets.all(2),
+            padding: padding ?? EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: color ?? context.colorScheme.elevation1,
 
-            borderRadius: BorderRadius.circular(borderRadius),
-            border: Border.all(color: borderColor ?? context.colorScheme.elevation2, width: 1),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(borderRadius),
+              borderRadius: BorderRadius.circular(borderRadius),
+              border: Border.all(color: borderColor ?? context.colorScheme.elevation2, width: 1),
+            ),
             child: child,
           ),
         ),

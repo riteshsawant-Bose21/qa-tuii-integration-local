@@ -3,8 +3,9 @@ import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../fusion_canvas_painter.dart';
+import 'mixin/fusion_canvas_interactable_mixin.dart';
 
-abstract class FusionPolygonPainter extends FusionBasePainter {
+abstract class FusionPolygonPainter extends FusionBasePainter with FusionCanvasInteractibleMixin {
   final FusionCanvasPolygon polygon;
   FusionPolygonPainter({
     required this.polygon,
@@ -14,15 +15,34 @@ abstract class FusionPolygonPainter extends FusionBasePainter {
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter) {
     path = getPolygonPath(polygon, painter);
     if (path != null) {
-      canvas.drawPath(
-        path!,
-        getFillPaint(painter, id != null && painter.hoverViewModel.hoveredPainterId == id),
-      );
-      canvas.drawPath(
-        path!,
-        getStrokePaint(painter, id != null && painter.hoverViewModel.hoveredPainterId == id),
-      );
+      final Paint? fillPaint = getFillPaint(painter, id != null && painter.hoverViewModel.hoveredPainterId == id);
+      if (fillPaint != null) {
+        canvas.drawPath(
+          path!,
+          fillPaint,
+        );
+      }
+      final Paint? strokePaint = getStrokePaint(painter, id != null && painter.hoverViewModel.hoveredPainterId == id);
+      if (strokePaint != null) {
+        canvas.drawPath(
+          path!,
+          strokePaint,
+        );
+      }
     }
+  }
+
+  @override
+  Rect getBounds(FusionCanvasPainter painter) {
+    path = getPolygonPath(polygon, painter);
+    if (path != null) {
+      return path!.getBounds();
+    }
+    return Rect.zero;
+  }
+
+  Path? getPath(FusionCanvasPainter painter) {
+    return getPolygonPath(polygon, painter);
   }
 
   @override
@@ -44,9 +64,8 @@ abstract class FusionPolygonPainter extends FusionBasePainter {
     ...polygon.points,
   ];
 
-
-  Paint getFillPaint(FusionCanvasPainter painter, bool isHovered);
-  Paint getStrokePaint(FusionCanvasPainter painter, bool isHovered);
+  Paint? getFillPaint(FusionCanvasPainter painter, bool isHovered);
+  Paint? getStrokePaint(FusionCanvasPainter painter, bool isHovered);
 
   @override
   bool shouldRepaint(covariant FusionBasePainter oldDelegate) {

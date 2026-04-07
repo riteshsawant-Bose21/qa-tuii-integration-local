@@ -7,6 +7,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../core/widgets/configuration_widgets/drag_divider.dart';
+import '../../control_dashboard/presentation/widgets/alerts/alerts_dashboard.dart';
 import '../viewModel/sources_viewmodel/config_sources_viewmodel.dart';
 import '../viewModel/source_sets_viewmodel/config_source_sets_viewmodel.dart';
 import '../viewModel/zones_viewmodel/config_zones_state.dart';
@@ -60,11 +61,10 @@ class _ConfigurationProcessingPageBody extends StatefulWidget {
 
 class _ConfigurationProcessingPageBodyState extends State<_ConfigurationProcessingPageBody> {
   final TextEditingController _sourceSetNameController = TextEditingController();
-  final List<SelectedSource> _selectedSources = <SelectedSource>[];
   ConfigSourceSetsViewmodel get _sourceSetsViewmodel => context.read<ConfigSourceSetsViewmodel>();
   final ScrollController _zonesScrollController = ScrollController();
   ConfigSourcesViewmodel get _sourcesViewmodel => context.read<ConfigSourcesViewmodel>();
-
+  bool get isInControlMode => serviceLocator<ProjectViewModel>().isInControlMode;
   ConfigZonesViewmodel get _zonesViewmodel => context.read<ConfigZonesViewmodel>();
 
   /// Map to store GlobalKeys for each SourceSetItem
@@ -198,9 +198,13 @@ class _ConfigurationProcessingPageBodyState extends State<_ConfigurationProcessi
             if (isWideScreen) {
               return Row(
                 children: <Widget>[
-                  SizedBox(width: constraints.maxWidth * 0.3, child: _buildInputPanel(context)),
+                  Expanded(flex: isInControlMode ? 3 : 2, child: SizedBox(/*width: constraints.maxWidth * 0.3,*/ child: _buildInputPanel(context))),
                   const SizedBox(width: 4),
-                  Expanded(child: _buildOutputPanel()),
+                  Expanded(flex: 6, child: _buildOutputPanel()),
+                  const SizedBox(width: 4),
+
+                  /// Alerts Dashboard (only in design mode)
+                  if (isInControlMode) const Expanded(flex: 3, child: AlertsDashboard()),
                 ],
               );
             } else {
@@ -235,7 +239,7 @@ class _ConfigurationProcessingPageBodyState extends State<_ConfigurationProcessi
             DragDivider(onDragUpdate: _updateSourcesHeight),
 
             /// Sources Sets Section
-            const SourceSetSection(),
+            const Expanded(child: SourceSetSection()),
           ],
         ),
       ),
@@ -338,7 +342,7 @@ class _ConfigurationProcessingPageBodyState extends State<_ConfigurationProcessi
                                   zoneData: zoneData,
                                   onExpansionChanged: (bool isExpanded) {
                                     if (isExpanded) {
-                                      // Small delay to allow the widget to expand first
+                                      /// Small delay to allow the widget to expand first
                                       Future<void>.delayed(const Duration(milliseconds: 100), () {
                                         _scrollZoneIntoView(zoneData.id);
                                       });

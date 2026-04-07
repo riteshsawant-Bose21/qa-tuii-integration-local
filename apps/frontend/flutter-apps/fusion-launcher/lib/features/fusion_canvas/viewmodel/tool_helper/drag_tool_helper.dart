@@ -7,6 +7,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 import '../../state/fusion_canvas_input_state.dart';
 import '../../state/fusion_snap_state.dart';
 import '../../state/tools/select_tool_state.dart';
+import '../../view/painters/elements/mixin/fusion_canvas_interactable_mixin.dart';
 import '../fusion_canvas_tool_viewmodel.dart';
 
 class DragToolHelper {
@@ -20,18 +21,18 @@ class DragToolHelper {
     }
 
     if (inputState is FusionCanvasInputDraggingState) {
-      return _handleDragging(inputState, currentState);
+      return _handleDragging(inputState, context, currentState);
     }
 
     if (inputState is FusionCanvasInputTapUpState) {
       if (inputState.gestureOrigin == FusionGestureOrigin.drag) {
-        return _handleDragEnd(context.snapState, currentState);
+        return _handleDragEnd(context, currentState);
       } else if (inputState.gestureOrigin == FusionGestureOrigin.click && inputState.button == FusionMouseButton.left) {
         // Handle click gestures for selection
         final String? hoveredPainterId = context.hoverState.hoveredPainterId;
         final String? hoveredElementId = context.hoverState.hoveredElement?.id;
 
-        if (hoveredPainterId != null) {
+        if (hoveredPainterId != null && context.hoverState.supportsInteraction(FusionCanvasLayerInteraction.select)) {
           // Clicked on a layer - select it
           return IdleSelectToolState(
             selectedLayerIds: <String>{hoveredPainterId},
@@ -54,7 +55,7 @@ class DragToolHelper {
   ) {
     final String? hoveredPainterId = context.hoverState.hoveredPainterId;
 
-    if (hoveredPainterId != null) {
+    if (hoveredPainterId != null && context.hoverState.supportsInteraction(FusionCanvasLayerInteraction.drag)) {
       // User tapped on an element - determine if it's points or layer drag
       final List<FusionCanvasElement> elements =
           context.hoverState.hoveredElement != null && context.hoverState.hoveredElement!.pointIds.isNotEmpty
@@ -74,30 +75,47 @@ class DragToolHelper {
 
   FusionToolState _handleDragging(
     FusionCanvasInputDraggingState inputState,
+    FusionCanvasInputContext context,
     DragToolState currentState,
   ) {
     final Offset delta = inputState.delta;
 
     if (currentState is LayerDragStartState) {
-      return LayerDraggingState(layerId: currentState.layerId, delta: delta);
+      final Offset boundedDelta = context.resolveBoundedDeltaForLayer(
+        currentState.layerId,
+        delta,
+      );
+      return LayerDraggingState(layerId: currentState.layerId, delta: boundedDelta);
     } else if (currentState is LayerDraggingState) {
+      final Offset boundedDelta = context.resolveBoundedDeltaForLayer(
+        currentState.layerId,
+        currentState.delta + delta,
+      );
       return LayerDraggingState(
         layerId: currentState.layerId,
-        delta: currentState.delta + delta,
+        delta: boundedDelta,
       );
     }
 
     if (currentState is PointsDragStartState) {
+      final Offset boundedDelta = context.resolveBoundedDeltaForLayer(
+        currentState.layerId,
+        delta,
+      );
       return PointsDraggingState(
         layerId: currentState.layerId,
         elements: currentState.elements,
-        delta: delta,
+        delta: boundedDelta,
       );
     } else if (currentState is PointsDraggingState) {
+      final Offset boundedDelta = context.resolveBoundedDeltaForLayer(
+        currentState.layerId,
+        currentState.delta + delta,
+      );
       return PointsDraggingState(
         layerId: currentState.layerId,
         elements: currentState.elements,
-        delta: currentState.delta + delta,
+        delta: boundedDelta,
       );
     }
 
@@ -105,22 +123,30 @@ class DragToolHelper {
   }
 
   FusionToolState _handleDragEnd(
-    FusionSnapState snapState,
+    FusionCanvasInputContext context,
     DragToolState currentState,
   ) {
     // Calculate snap adjustment if snapping is active
-    final Offset snapAdjustment = _calculateSnapAdjustment(snapState);
-  
+    final Offset snapAdjustment = _calculateSnapAdjustment(context.snapState);
+
     if (currentState is LayerDraggingState) {
+      final Offset boundedDelta = context.resolveBoundedDeltaForLayer(
+        currentState.layerId,
+        currentState.delta + snapAdjustment,
+      );
       return LayerDragEndState(
         layerId: currentState.layerId,
-        delta: currentState.delta + snapAdjustment,
+        delta: boundedDelta,
       );
     } else if (currentState is PointsDraggingState) {
+      final Offset boundedDelta = context.resolveBoundedDeltaForLayer(
+        currentState.layerId,
+        currentState.delta + snapAdjustment,
+      );
       return PointsDragEndState(
         layerId: currentState.layerId,
         elements: currentState.elements,
-        delta: currentState.delta + snapAdjustment,
+        delta: boundedDelta,
       );
     }
 

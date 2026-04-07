@@ -30,7 +30,7 @@ func init() {
 		DatabaseHost: os.Getenv("DB_HOST"),
 		DatabasePort: os.Getenv("DB_PORT"),
 		DatabaseUser: os.Getenv("DB_USER"),
-		DatabasePass: os.Getenv("DB_PASS"),
+		DatabasePass: os.Getenv("DB_PASSWORD"),
 		DatabaseName: os.Getenv("DB_NAME"),
 		DatabaseSSL:  os.Getenv("DB_SSLMODE"),
 	}

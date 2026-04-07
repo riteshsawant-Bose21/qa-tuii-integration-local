@@ -1,0 +1,29 @@
+info:
+  name: SoftwareUpdate Upload
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{api_url}}/softwareUpdate/upload"
+  params:
+    - name: ""
+      value: ""
+      type: query
+  body:
+    type: multipart-form
+    data:
+      - name: bundle
+        type: file
+        value:
+          - ./fusion-update-bundle-fusion-nano.rootfs-20260403064046.swu
+      - name: checksum
+        type: text
+        value: 899e0993c0379b1459353d690d08462e3809a5325e9a9fd0697302ddece1feeb
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

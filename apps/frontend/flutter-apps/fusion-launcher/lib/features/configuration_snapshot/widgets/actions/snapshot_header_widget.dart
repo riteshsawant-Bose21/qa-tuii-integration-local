@@ -12,6 +12,7 @@ class SnapshotHeaderWidget extends StatefulWidget {
   final VoidCallback onAdd;
   final VoidCallback onReorder;
   final String snapshotName;
+  final String? sceneSetNameName;
   final Function(String)? onNameChanged;
 
   const SnapshotHeaderWidget({
@@ -20,6 +21,7 @@ class SnapshotHeaderWidget extends StatefulWidget {
     required this.onReorder,
     required this.snapshotName,
     this.onNameChanged,
+    this.sceneSetNameName,
   });
 
   @override
@@ -68,9 +70,11 @@ class _SnapshotHeaderWidgetState extends State<SnapshotHeaderWidget> {
   }
 
   void _stopEditing() {
+    if (!_isEditing) return;
     setState(() {
       _isEditing = false;
     });
+
     if (widget.onNameChanged != null && _textController.text.trim().isNotEmpty && _textController.text.trim() != widget.snapshotName) {
       widget.onNameChanged!(_textController.text.trim());
       FusionToast.success(context, message: 'Snapshot renamed to "${_textController.text.trim()}"');
@@ -111,34 +115,51 @@ class _SnapshotHeaderWidgetState extends State<SnapshotHeaderWidget> {
             FusionIcon.icon(semanticId: FusionTestKeys.instance.actionlistpanelheaderlayers, Icons.layers, size: 16),
             const SizedBox(width: 10),
             Expanded(
-              child: SemanticHelper.textInput(
-                testId: SemanticHelper.createTestId(SemanticTypes.textInput, FusionTestKeys.instance.actionlistpanelheaderlabel),
-                child:
-                    _isEditing
-                        ? TextField(
-                          controller: _textController,
-                          focusNode: _focusNode,
-                          style: context.textTheme.bodyMedium?.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            filled: false,
-                            focusedBorder: InputBorder.none,
-                            errorBorder: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            contentPadding: EdgeInsets.zero,
-                            isDense: true,
-                          ),
-                          onSubmitted: (_) => _stopEditing(),
-                          onTapOutside: (_) => _stopEditing(),
-                        )
-                        : GestureDetector(
-                          onTap: _startEditing,
-                          child: FusionAppText(
-                            text: widget.snapshotName,
-                            style: context.textTheme.bodyMedium?.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
-                            maxLine: 1,
-                          ),
-                        ),
+              child: Row(
+                children: <Widget>[
+                  if (widget.sceneSetNameName != null) ...<Widget>[
+                    FusionAppText(
+                      semanticId: FusionTestKeys.instance.actionlistpanelheaderlabel,
+                      text: "${widget.sceneSetNameName} > ",
+                      style: context.textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+
+                  Expanded(
+                    child:
+                        _isEditing
+                            ? TextField(
+                              controller: _textController,
+                              focusNode: _focusNode,
+                              style: context.textTheme.bodyMedium?.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
+                              decoration: const InputDecoration(
+                                border: InputBorder.none,
+                                filled: false,
+                                focusedBorder: InputBorder.none,
+                                errorBorder: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                                isDense: true,
+                              ),
+                              onSubmitted: (_) => _stopEditing(),
+                              onTapOutside: (_) => _stopEditing(),
+                            )
+                            : GestureDetector(
+                              onTap: _startEditing,
+                              child: FusionAppText(
+                                text: widget.snapshotName,
+                                style: context.textTheme.bodyMedium?.copyWith(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                maxLine: 1,
+                              ),
+                            ),
+                  ),
+                ],
               ),
             ),
             GestureDetector(

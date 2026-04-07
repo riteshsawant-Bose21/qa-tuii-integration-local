@@ -61,7 +61,7 @@ class DeserializationUtil {
   static final Deserializer<Offset> offsetDeserializer = Deserializer<Offset>(
     fromMap: (Map<dynamic, dynamic> map) {
       final double? x = doubleDeserializer.deserialize(map['x'] ?? map['dx']);
-      final double? y = doubleDeserializer.deserialize(map['y'] ?? map['dx']);
+      final double? y = doubleDeserializer.deserialize(map['y'] ?? map['dy']);
       if (x is double && y is double) {
         return Offset(x.toDouble(), y.toDouble());
       }
@@ -80,6 +80,12 @@ class DeserializationUtil {
       return null;
     },
   );
+
+  static Deserializer<T> classDeserializer<T>(T Function(Map<String, dynamic> map) fromMap) {
+    return Deserializer<T>(
+      fromMap: (Map<dynamic, dynamic> map) => fromMap(map.cast<String, dynamic>()),
+    );
+  }
 }
 
 class Deserializer<T> {

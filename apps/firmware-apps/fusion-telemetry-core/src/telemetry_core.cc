@@ -19,7 +19,7 @@
 #include <poll.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/ostr.h>
-#include "observer.h"
+#include <observer/observer.h>
 #include "telemetry_core.h"
 #include "telemetry_msg_handler.h"
 #include "telemetry_utils.h"
@@ -35,9 +35,34 @@
 
 sig_atomic_t volatile telm_running = 1;
 
+#if defined(__APPLE__)
+static int ppoll(struct pollfd *fds, nfds_t nfds,
+                 const struct timespec *timeout_ts,
+                 const sigset_t * /*sigmask*/)
+{
+    int timeout_ms = -1;
+    if (timeout_ts != nullptr)
+    {
+        if ((timeout_ts->tv_sec < 0) || (timeout_ts->tv_nsec < 0) ||
+            (timeout_ts->tv_nsec >= 1000000000L))
+        {
+            errno = EINVAL;
+            return -1;
+        }
+
+        const long long ms_from_sec = static_cast<long long>(timeout_ts->tv_sec) * 1000LL;
+        const long long ms_from_nsec = timeout_ts->tv_nsec / 1000000LL;
+        const long long total_ms = ms_from_sec + ms_from_nsec;
+        timeout_ms = (total_ms > 2147483647LL) ? 2147483647 : static_cast<int>(total_ms);
+    }
+
+    return poll(fds, nfds, timeout_ms);
+}
+#endif
+
 void sig_handler(int signum)
 {
-    SPDLOG_CRITICAL("Caught Signal ({})", strsignal(signum));
+    (void) signum;
     telm_running = 0;
 }
 
@@ -72,6 +97,10 @@ int register_message_handlers(bosepro::telemetryManager& telm_mgr)
     ret_val = telm_mgr.register_message_handler("update_meters_rsp",
                                        process_update_meters_rsp,
                                        process_meter_data);
+    if (ret_val != 0)
+    {
+        return ret_val;
+    }
 
     // Message: send_meter_req
     ret_val = telm_mgr.register_message_handler("send_meter_req",
@@ -143,21 +172,50 @@ void handle_update(const std::string &update_setting)
     SPDLOG_DEBUG("server update: {}", update_setting);
 }
 
+static void handle_device_id(const std::string &new_device_id)
+{
+    set_device_id(new_device_id);
+}
+
+static void handle_parameter(const std::string &path,
+                             const Json::Value &old_value,
+                             const Json::Value &new_value)
+{
+    if (old_value == new_value)
+    {
+        return;
+    }
+
+    std::vector<PathComponent> path_parts = JsonMonitor::splitPath(path);
+
+    Json::Value message_json;
+    message_json["message_name"] = path_parts[2].key;
+    message_json["packet_id"] = 12345678;
+    message_json["parameters"]["name"] = "observer";
+    message_json["parameters"][path_parts[3].key] = new_value;
+
+    Json::StreamWriterBuilder writer;
+    writer["indentation"] = "";
+    std::string rx_message = Json::writeString(writer, message_json);
+
+    handle_update(rx_message);
+}
+
+
 #define HI_METERS_UPDATE_PERIOD_NS  600000.0  // 2/3 ms (approx. )
 
 int main(int argc, char* argv[])
 {
-    std::vector<uint32_t> update_periods = {0, 0, 0};
-    std::vector<uint32_t> report_periods = {0, 0, 0};
+    std::vector<int_fast32_t> update_periods = {0, 0, 0};
+    std::vector<int_fast32_t> report_periods = {0, 0, 0};
     std::string core_path;
     std::string core_ip;
     std::string core_pub_addr;
     uint64_t start_tstamp_ns;
-    uint32_t fus_serv_port = FUSION_SERVER_PORT_DEFAULT;
+    int_fast32_t fus_serv_port = FUSION_SERVER_PORT_DEFAULT;
 
     signal(SIGINT, &sig_handler);
     signal(SIGTERM, &sig_handler);
-    signal(SIGKILL, &sig_handler);
 
     // Note: on actual devices CONFIG_PATH will be set appropriately. And shared configuration 
     // like telemetry-configuration.json will have symlinks to the "real" file.
@@ -172,21 +230,43 @@ int main(int argc, char* argv[])
         ("configuration,c", boost::program_options::value<std::string>()->default_value(config_path + "/telemetry-configuration.json"), "configuration file")
         ("socket-path,p", boost::program_options::value<std::string>(&core_path), "Core UNIX Domain Socket Path")
         ("system-ip,i", boost::program_options::value<std::string>(&core_ip)->required(), "System IP Address")
-        ("update-period,u", boost::program_options::value<std::vector<uint32_t>>(&update_periods)->multitoken(), "HI Freq., MED Freq. & LO Freq. update periods (Frames)")
-        ("report-period,r", boost::program_options::value<std::vector<uint32_t>>(&report_periods)->multitoken(), "HI Freq., MED Freq. & LO Freq. report periods (Frames)")
+        ("update-period,u", boost::program_options::value<std::vector<int_fast32_t>>(&update_periods)->multitoken(), "HI Freq., MED Freq. & LO Freq. update periods (Frames)")
+        ("report-period,r", boost::program_options::value<std::vector<int_fast32_t>>(&report_periods)->multitoken(), "HI Freq., MED Freq. & LO Freq. report periods (Frames)")
         ("debug-log-enable,d", boost::program_options::bool_switch(), "Set logging level to DEBUG")
         ("help,h", "print this message and exit")
     ;
 
     boost::program_options::variables_map vm;
-    boost::program_options::store(
-            boost::program_options::parse_command_line(argc, argv, desc), vm);
-    boost::program_options::notify(vm);
-
-    if (vm.count("help"))
+    try
     {
-        std::cout << desc << std::endl;
-        return 0;
+        boost::program_options::store(
+                boost::program_options::parse_command_line(argc, argv, desc), vm);
+
+        if (vm.count("help"))
+        {
+            std::cout << desc << std::endl;
+            return 0;
+        }
+
+        boost::program_options::notify(vm);
+    }
+    catch (const boost::program_options::error &e)
+    {
+        std::cerr << "Argument error: " << e.what() << std::endl;
+        std::cerr << desc << std::endl;
+        return 1;
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "Argument error: " << e.what() << std::endl;
+        std::cerr << desc << std::endl;
+        return 1;
+    }
+    catch (...)
+    {
+        std::cerr << "Argument error: unknown option parsing failure" << std::endl;
+        std::cerr << desc << std::endl;
+        return 1;
     }
 
     // Check if DEBUG log level is enabled
@@ -355,12 +435,11 @@ int main(int argc, char* argv[])
 
     // Initialize Observer framework
     UDPValueMonitor *client = nullptr;
-    std::vector<std::string> target_paths;
 
-    target_paths.push_back("settings.telemetry.*.*");
+    client = new UDPValueMonitor("127.0.0.1", fus_serv_port);
 
-    client = new UDPValueMonitor("127.0.0.1", fus_serv_port,
-                                 target_paths, handle_update);
+    client->watchDeviceID(handle_device_id);
+    client->watchPattern("settings.telemetry.*.*", handle_parameter);
 
     // Initialize manager
     if (telmMgr->init(core_ip, core_path, core_pub_addr,
@@ -403,17 +482,16 @@ int main(int argc, char* argv[])
     // Block during ppoll()
     sigaddset(&sigmask, SIGINT);
     sigaddset(&sigmask, SIGTERM);
-    sigaddset(&sigmask, SIGKILL);
 
     poll_timeout.tv_sec  = 0;
     poll_timeout.tv_nsec = calibrated_period_ns;
 
-    SPDLOG_INFO("Telemetry Core startring ...");
+    SPDLOG_INFO("Telemetry Core starting ...");
     while(telm_running)
     {
         char        recv_data[RX_BUFFER_SIZE];
         std::string rx_string;
-        uint32_t    recv_size;
+        ssize_t    recv_size = 0;
 
         start_tstamp_ns = get_realtime_ns();
 
@@ -494,10 +572,9 @@ int main(int argc, char* argv[])
                 continue;
             }
 
-            rx_string.assign(recv_data);
-
-            if (rx_string.size() > 0)
+            if (recv_size > 0)
             {
+                rx_string.assign(recv_data, static_cast<std::size_t>(recv_size));
                 telmMgr->process_rx_packet(rx_string);
             }
             else

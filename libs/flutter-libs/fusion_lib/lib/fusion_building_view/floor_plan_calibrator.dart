@@ -140,6 +140,9 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
   // --- crop state (normalized to the displayed image rect 0..1) ---
   Rect _cropRectN = const Rect.fromLTWH(0, 0, 1, 1);
   _CropHandle _activeHandle = _CropHandle.none;
+  _CropHandle _hoveredCropHandle = _CropHandle.none;
+  Offset _cropCursorPosition = Offset.zero;
+  bool _isCropCursorVisible = false;
   bool _hasPendingCrop = false; // true when crop rect is modified but not yet applied
 
   // Helper to get the current display image
@@ -273,6 +276,9 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
       // Check if the touch is within the hit area of this handle
       if (distance <= hitSize) {
         _activeHandle = entry.key;
+        _hoveredCropHandle = entry.key;
+        _cropCursorPosition = p;
+        _isCropCursorVisible = true;
         break;
       }
     }
@@ -287,6 +293,8 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     // Allow pan updates even if they're outside the image bounds
     // but clamp the resulting crop rectangle to valid ranges
     final screenPos = d.localPosition;
+    _cropCursorPosition = screenPos;
+    _isCropCursorVisible = true;
 
     final local = _screenToCanvas(screenPos);
 
@@ -389,7 +397,88 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
   }
 
   void _onCropPanEnd(DragEndDetails d) {
-    _activeHandle = _CropHandle.none;
+    setState(() {
+      _activeHandle = _CropHandle.none;
+      _hoveredCropHandle = _hitTestCropHandle(_cropCursorPosition);
+      _isCropCursorVisible = _hoveredCropHandle != _CropHandle.none;
+    });
+  }
+
+  _CropHandle _hitTestCropHandle(Offset localPosition) {
+    final r = _imageRect;
+    if (r == null) return _CropHandle.none;
+
+    final handles = _handlesInScreen(r, _cropRectN);
+    const hitSize = 20.0;
+    for (final entry in handles.entries) {
+      if ((entry.value - localPosition).distance <= hitSize) {
+        return entry.key;
+      }
+    }
+
+    return _CropHandle.none;
+  }
+
+  void _onCropHover(PointerHoverEvent e) {
+    final hovered = _hitTestCropHandle(e.localPosition);
+    final showCursor = hovered != _CropHandle.none;
+    if (hovered == _hoveredCropHandle && _cropCursorPosition == e.localPosition && _isCropCursorVisible == showCursor) {
+      return;
+    }
+    setState(() {
+      _hoveredCropHandle = hovered;
+      _cropCursorPosition = e.localPosition;
+      _isCropCursorVisible = showCursor;
+    });
+  }
+
+  _CropHandle get _cursorCropHandle {
+    if (_activeHandle != _CropHandle.none) return _activeHandle;
+    if (_hoveredCropHandle != _CropHandle.none) return _hoveredCropHandle;
+    return _CropHandle.topLeft;
+  }
+
+  bool get _isOnCropHandle => _activeHandle != _CropHandle.none || _hoveredCropHandle != _CropHandle.none;
+
+  static const double _cropCursorSize = 28;
+
+  Offset get _cropCursorHotspot {
+    const center = Offset(_cropCursorSize / 2, _cropCursorSize / 2);
+
+    switch (_cursorCropHandle) {
+      case _CropHandle.topLeft:
+      case _CropHandle.none:
+        return const Offset(6, 8);
+      case _CropHandle.topRight:
+        return const Offset(20, 6);
+      case _CropHandle.bottomRight:
+        return const Offset(22, 20);
+      case _CropHandle.bottomLeft:
+        return const Offset(8, 22);
+      case _CropHandle.top:
+      case _CropHandle.bottom:
+      case _CropHandle.left:
+      case _CropHandle.right:
+        return center;
+    }
+  }
+
+  void _onCanvasMouseEnter(PointerEnterEvent e) {
+    if (_mode != _ToolMode.crop) return;
+    final hovered = _hitTestCropHandle(e.localPosition);
+    setState(() {
+      _cropCursorPosition = e.localPosition;
+      _hoveredCropHandle = hovered;
+      _isCropCursorVisible = hovered != _CropHandle.none;
+    });
+  }
+
+  void _onCanvasMouseExit(PointerExitEvent e) {
+    if (_mode != _ToolMode.crop) return;
+    setState(() {
+      _isCropCursorVisible = false;
+      _hoveredCropHandle = _CropHandle.none;
+    });
   }
 
   // ---------- rotation interactions ----------
@@ -1306,6 +1395,8 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     );
   }
 
+  bool get _hasSelectedMeasurementLine => _startPointNormalized != null && _endPointNormalized != null && !_isDrawing;
+
   final GlobalKey _customPaintKey = GlobalKey();
 
   // ---------- build ----------
@@ -1547,93 +1638,118 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                             _ToolMode.measure => SystemMouseCursors.precise,
                             _ToolMode.rotate => (_isRotating ? SystemMouseCursors.grabbing : SystemMouseCursors.alias),
                             _ToolMode.skew => (_isSkewing ? SystemMouseCursors.grabbing : SystemMouseCursors.grab),
-                            _ => SystemMouseCursors.resizeUpLeftDownRight,
+                            _ToolMode.crop => _isOnCropHandle ? SystemMouseCursors.none : SystemMouseCursors.basic,
                           },
-                          onHover: _mode == _ToolMode.measure ? _onMeasureHover : null,
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTapDown: _mode == _ToolMode.measure ? _onMeasureTapDown : null,
-                            onPanStart: switch (_mode) {
-                              _ToolMode.crop => _onCropPanStart,
-                              _ToolMode.rotate => _onRotatePanStart,
-                              _ToolMode.skew => _onSkewPanStart,
-                              _ => null,
-                            },
-                            onPanUpdate: switch (_mode) {
-                              _ToolMode.measure => _onMeasurePanUpdate,
-                              _ToolMode.crop => _onCropPanUpdate,
-                              _ToolMode.rotate => _onRotatePanUpdate,
-                              _ToolMode.skew => _onSkewPanUpdate,
-                            },
-                            onPanEnd: (d) {
-                              if (_mode == _ToolMode.crop) _onCropPanEnd(d);
-                              if (_mode == _ToolMode.rotate) _onRotatePanEnd(d);
-                              if (_mode == _ToolMode.skew) _onSkewPanEnd(d);
-                              if (_mode == _ToolMode.measure && _isDrawing) {
-                                setState(() => _isDrawing = false);
-                              }
-                            },
-                            child: GuideShowcaseWrapper(
-                              semanticId: "guide_showcase_floor_calibration",
-                              step: GuideShowCaseSteps.showFloorPickCalibration,
-                              onHighlightedSpotTap: (TapDownDetails details) {
-                                if (_mode == _ToolMode.measure) {
-                                  // Get the exact RenderBox of the CustomPaint
-                                  final RenderBox? renderBox = _customPaintKey.currentContext?.findRenderObject() as RenderBox?;
-                                  if (renderBox != null) {
-                                    final Offset localPosition = renderBox.globalToLocal(details.globalPosition);
-
-                                    // Create new TapDownDetails with local position
-                                    final TapDownDetails localDetails = TapDownDetails(
-                                      globalPosition: details.globalPosition,
-                                      localPosition: localPosition,
-                                      kind: details.kind,
-                                    );
-
-                                    _onMeasureTapDown(localDetails);
+                          onEnter: _onCanvasMouseEnter,
+                          onExit: _onCanvasMouseExit,
+                          onHover: switch (_mode) {
+                            _ToolMode.measure => _onMeasureHover,
+                            _ToolMode.crop => _onCropHover,
+                            _ => null,
+                          },
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTapDown: _mode == _ToolMode.measure ? _onMeasureTapDown : null,
+                                onPanStart: switch (_mode) {
+                                  _ToolMode.crop => _onCropPanStart,
+                                  _ToolMode.rotate => _onRotatePanStart,
+                                  _ToolMode.skew => _onSkewPanStart,
+                                  _ => null,
+                                },
+                                onPanUpdate: switch (_mode) {
+                                  _ToolMode.measure => _onMeasurePanUpdate,
+                                  _ToolMode.crop => _onCropPanUpdate,
+                                  _ToolMode.rotate => _onRotatePanUpdate,
+                                  _ToolMode.skew => _onSkewPanUpdate,
+                                },
+                                onPanEnd: (d) {
+                                  if (_mode == _ToolMode.crop) _onCropPanEnd(d);
+                                  if (_mode == _ToolMode.rotate) _onRotatePanEnd(d);
+                                  if (_mode == _ToolMode.skew) _onSkewPanEnd(d);
+                                  if (_mode == _ToolMode.measure && _isDrawing) {
+                                    setState(() => _isDrawing = false);
                                   }
-                                }
-                              },
-                              child: Center(
-                                child: SemanticHelper.container(
-                                  testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.floorCalibrationCanvas),
-                                  child: CustomPaint(
-                                    key: _customPaintKey,
-                                    painter: FloorPlanCalibrationPainter(
-                                      image: _currentImage,
-                                      startPoint: _startPointDisplay,
-                                      endPoint: _endPointDisplay,
-                                      distanceText: _distanceController.text.trim(),
-                                      unit: _selectedUnit,
-                                      cropRectNormalized: _cropRectN,
-                                      showCropHandles: _mode == _ToolMode.crop,
-                                      showRotationHandles: _mode == _ToolMode.rotate,
-                                      showSkewHandles: _mode == _ToolMode.skew,
-                                      rotationAngle: _rotationAngle,
-                                      cornerOffsetTL: _cornerOffsetTL,
-                                      cornerOffsetTR: _cornerOffsetTR,
-                                      cornerOffsetBL: _cornerOffsetBL,
-                                      cornerOffsetBR: _cornerOffsetBR,
-                                      zoomScale: _zoomScale,
-                                      panOffset: _panOffset,
-                                      flipHorizontal: false,
-                                      flipVertical: false,
-                                      onImageRectChanged: (ui.Rect r) {
-                                        _imageRect = r;
-                                        // keep display points in sync if image rect changes
-                                        if (_startPointNormalized != null) {
-                                          _startPointDisplay = _normalizedToCanvas(_startPointNormalized!);
-                                        }
-                                        if (_endPointNormalized != null) {
-                                          _endPointDisplay = _normalizedToCanvas(_endPointNormalized!);
-                                        }
-                                      },
+                                },
+                                child: GuideShowcaseWrapper(
+                                  semanticId: "guide_showcase_floor_calibration",
+                                  step: GuideShowCaseSteps.showFloorPickCalibration,
+                                  onHighlightedSpotTap: (TapDownDetails details) {
+                                    if (_mode == _ToolMode.measure) {
+                                      // Get the exact RenderBox of the CustomPaint
+                                      final RenderBox? renderBox = _customPaintKey.currentContext?.findRenderObject() as RenderBox?;
+                                      if (renderBox != null) {
+                                        final Offset localPosition = renderBox.globalToLocal(details.globalPosition);
+
+                                        // Create new TapDownDetails with local position
+                                        final TapDownDetails localDetails = TapDownDetails(
+                                          globalPosition: details.globalPosition,
+                                          localPosition: localPosition,
+                                          kind: details.kind,
+                                        );
+
+                                        _onMeasureTapDown(localDetails);
+                                      }
+                                    }
+                                  },
+                                  child: Center(
+                                    child: SemanticHelper.container(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.floorCalibrationCanvas),
+                                      child: CustomPaint(
+                                        key: _customPaintKey,
+                                        painter: FloorPlanCalibrationPainter(
+                                          image: _currentImage,
+                                          startPoint: _startPointDisplay,
+                                          endPoint: _endPointDisplay,
+                                          distanceText: _distanceController.text.trim(),
+                                          unit: _selectedUnit,
+                                          cropRectNormalized: _cropRectN,
+                                          showCropHandles: _mode == _ToolMode.crop,
+                                          showRotationHandles: _mode == _ToolMode.rotate,
+                                          showSkewHandles: _mode == _ToolMode.skew,
+                                          rotationAngle: _rotationAngle,
+                                          cornerOffsetTL: _cornerOffsetTL,
+                                          cornerOffsetTR: _cornerOffsetTR,
+                                          cornerOffsetBL: _cornerOffsetBL,
+                                          cornerOffsetBR: _cornerOffsetBR,
+                                          zoomScale: _zoomScale,
+                                          panOffset: _panOffset,
+                                          flipHorizontal: false,
+                                          flipVertical: false,
+                                          onImageRectChanged: (ui.Rect r) {
+                                            _imageRect = r;
+                                            // keep display points in sync if image rect changes
+                                            if (_startPointNormalized != null) {
+                                              _startPointDisplay = _normalizedToCanvas(_startPointNormalized!);
+                                            }
+                                            if (_endPointNormalized != null) {
+                                              _endPointDisplay = _normalizedToCanvas(_endPointNormalized!);
+                                            }
+                                          },
+                                        ),
+                                        child: const SizedBox.expand(),
+                                      ),
                                     ),
-                                    child: const SizedBox.expand(),
                                   ),
                                 ),
                               ),
-                            ),
+                              if (_mode == _ToolMode.crop && _isCropCursorVisible && _isOnCropHandle)
+                                Positioned(
+                                  left: _cropCursorPosition.dx - _cropCursorHotspot.dx,
+                                  top: _cropCursorPosition.dy - _cropCursorHotspot.dy,
+                                  child: IgnorePointer(
+                                    child: CustomPaint(
+                                      size: const Size(_cropCursorSize, _cropCursorSize),
+                                      painter: _CropCursorPainter(
+                                        handle: _cursorCropHandle,
+                                        color: context.colorScheme.primary,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ),
@@ -1666,7 +1782,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                 semanticId: 'floor_plan_calibrator_confirm',
                 step: GuideShowCaseSteps.confirmFloorCalibrated,
                 onHighlightedSpotTap: (TapDownDetails details) {
-                  if (_startPointNormalized != null && _endPointNormalized != null && _distanceController.text.trim().isNotEmpty) {
+                  if (_hasSelectedMeasurementLine && _distanceController.text.trim().isNotEmpty) {
                     _completeCalibration();
                   }
                 },
@@ -1676,10 +1792,11 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                   width: 120,
                   height: 36,
                   borderRadius: 12,
+                  isActive: _hasSelectedMeasurementLine,
                   textStyle: context.textTheme.labelLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
                   activeBackgroundColor: context.colorScheme.primaryColor,
                   onTap: () {
-                    if (_startPointNormalized != null && _endPointNormalized != null && _distanceController.text.trim().isNotEmpty) {
+                    if (_hasSelectedMeasurementLine && _distanceController.text.trim().isNotEmpty) {
                       _completeCalibration();
                     }
                   },
@@ -1792,6 +1909,108 @@ enum _SkewHandle {
   topRight,
   bottomLeft,
   bottomRight,
+}
+
+class _CropCursorPainter extends CustomPainter {
+  final _CropHandle handle;
+  final Color color;
+
+  const _CropCursorPainter({
+    required this.handle,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint p = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..isAntiAlias = true;
+
+    final center = Offset(size.width / 2, size.height / 2);
+
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+
+    switch (handle) {
+      case _CropHandle.topRight:
+        canvas.rotate(math.pi / 2);
+        _drawCornerArrow(canvas, p);
+        break;
+      case _CropHandle.bottomRight:
+        canvas.rotate(math.pi);
+        _drawCornerArrow(canvas, p);
+        break;
+      case _CropHandle.bottomLeft:
+        canvas.rotate(-math.pi / 2);
+        _drawCornerArrow(canvas, p);
+        break;
+      case _CropHandle.topLeft:
+      case _CropHandle.none:
+        _drawCornerArrow(canvas, p);
+        break;
+      case _CropHandle.top:
+        _drawEdgeArrow(canvas, p, isHorizontal: false);
+        break;
+      case _CropHandle.bottom:
+        canvas.rotate(math.pi);
+        _drawEdgeArrow(canvas, p, isHorizontal: false);
+        break;
+      case _CropHandle.left:
+        canvas.rotate(-math.pi / 2);
+        _drawEdgeArrow(canvas, p, isHorizontal: true);
+        break;
+      case _CropHandle.right:
+        canvas.rotate(math.pi / 2);
+        _drawEdgeArrow(canvas, p, isHorizontal: true);
+        break;
+    }
+
+    canvas.restore();
+  }
+
+  void _drawCornerArrow(Canvas canvas, Paint p) {
+    // Half-square corner mark.
+    final Path corner = Path()
+      ..moveTo(-8, 8)
+      ..lineTo(-8, -6)
+      ..lineTo(6, -6);
+    canvas.drawPath(corner, p);
+
+    // // Arrow from corner toward opposite diagonal.
+    // canvas.drawLine(const Offset(-2, 0), const Offset(8, 10), p);
+
+    // final Path head = Path()
+    //   ..moveTo(8, 10)
+    //   ..lineTo(4, 10)
+    //   ..moveTo(8, 10)
+    //   ..lineTo(8, 6);
+    // canvas.drawPath(head, p);
+  }
+
+  void _drawEdgeArrow(Canvas canvas, Paint p, {required bool isHorizontal}) {
+    if (isHorizontal) {
+      canvas.drawLine(const Offset(-9, 0), const Offset(9, 0), p);
+      canvas.drawLine(const Offset(-9, 0), const Offset(-5, -3), p);
+      canvas.drawLine(const Offset(-9, 0), const Offset(-5, 3), p);
+      canvas.drawLine(const Offset(9, 0), const Offset(5, -3), p);
+      canvas.drawLine(const Offset(9, 0), const Offset(5, 3), p);
+      return;
+    }
+
+    canvas.drawLine(const Offset(0, -9), const Offset(0, 9), p);
+    canvas.drawLine(const Offset(0, -9), const Offset(-3, -5), p);
+    canvas.drawLine(const Offset(0, -9), const Offset(3, -5), p);
+    canvas.drawLine(const Offset(0, 9), const Offset(-3, 5), p);
+    canvas.drawLine(const Offset(0, 9), const Offset(3, 5), p);
+  }
+
+  @override
+  bool shouldRepaint(covariant _CropCursorPainter oldDelegate) {
+    return oldDelegate.handle != handle || oldDelegate.color != color;
+  }
 }
 
 /// Builds a subdivided triangle mesh that maps a source rectangle to an
@@ -2277,8 +2496,9 @@ class FloorPlanCalibrationPainter extends CustomPainter {
     }
 
     // --- crop overlay + handles (like screenshot) ---
-    if (cropRectNormalized != null) {
+    if (cropRectNormalized != null && showCropHandles) {
       final c = cropRectNormalized!;
+      final bool isFullCrop = c.left <= 0 && c.top <= 0 && c.right >= 1 && c.bottom >= 1;
       final Rect crop = Rect.fromLTRB(
         imageRect.left + c.left * imageRect.width,
         imageRect.top + c.top * imageRect.height,
@@ -2294,11 +2514,13 @@ class FloorPlanCalibrationPainter extends CustomPainter {
         canvas.translate(-cx, -cy);
       }
 
-      // darken outside
-      final Path outside = Path()..addRect(Offset.zero & size);
-      final Path hole = Path()..addRect(crop);
-      final Path overlay = Path.combine(PathOperation.difference, outside, hole);
-      canvas.drawPath(overlay, Paint()..color = Colors.transparent);
+      // Darken outside only while a non-full crop is active.
+      if (!isFullCrop) {
+        final Path outside = Path()..addRect(Offset.zero & size);
+        final Path hole = Path()..addRect(crop);
+        final Path overlay = Path.combine(PathOperation.difference, outside, hole);
+        canvas.drawPath(overlay, Paint()..color = Colors.black.withAlpha(120));
+      }
 
       // crop border
       final border = Paint()
@@ -2555,21 +2777,13 @@ enum MeasurementUnit {
   final String displayName;
 
   static MeasurementUnit? fromString(String value) {
-    try {
-      return MeasurementUnit.values.firstWhere(
-        (MeasurementUnit element) => element.name == value,
-      );
-    } catch (e) {
-      return null;
-    }
+    return MeasurementUnit.values.firstWhereOrNull(
+      (MeasurementUnit element) => element.name == value,
+    );
   }
 
-  static MeasurementUnit? fromJson(String value) {
-    try {
-      return MeasurementUnit.values.firstWhere((MeasurementUnit element) => element.name == value);
-    } catch (e) {
-      return null;
-    }
+  static MeasurementUnit? fromJson(String? value) {
+    return MeasurementUnit.values.firstWhereOrNull((MeasurementUnit element) => element.name == value);
   }
 
   String toJson() => name;

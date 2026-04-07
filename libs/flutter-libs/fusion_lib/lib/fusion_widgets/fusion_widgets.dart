@@ -5,6 +5,7 @@ library;
 /// appbar
 export 'appbar/fusion_app_bar.dart';
 export 'buttons/buttons.dart';
+
 /// dockable panel
 export 'dockable_side_bar/fusion_dock_floating_panel.dart';
 export 'dockable_side_bar/fusion_dock_side_bar.dart';
@@ -16,10 +17,10 @@ export 'dockable_side_bar/fusion_resizable_sidebar.dart';
 export 'form_fields/fusion_text_field.dart';
 export 'form_fields/fusion_text_form_field.dart';
 export 'form_fields/fusion_toggle_switch.dart';
-export 'form_fields/text_fleld.dart';
 export 'others/fusion_arrow_popup.dart';
 export 'others/fusion_checkbox.dart';
 export 'others/fusion_container.dart';
+
 ///other widgets
 export 'others/fusion_custom_loader.dart';
 export 'others/fusion_dialog.dart';
@@ -37,6 +38,7 @@ export 'others/others.dart';
 export 'popups/action_popup.dart';
 //popups
 export 'popups/confirmation_popup.dart';
+
 /// text views
 export 'text_views/fusion_app_text.dart';
 export 'text_views/fusion_countries.dart';

@@ -3,37 +3,39 @@ package handler
 import (
 	"fmt"
 	"fusion/internal/api"
+	"fusion/internal/cluster/transport"
 	"fusion/internal/controllers"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/utils"
 	"fusion/internal/version"
+	"net/http"
 	"reflect"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/memberlist"
 )
 
-// DeviceInfoProvider defines interface for getting and updating device information
-type DeviceInfoProvider interface {
-	GetAllDeviceInfos() []persistence.DeviceInfo
-	UpdateDeviceInfoForWebSocket(deviceID string, patch *persistence.DevicePatch) error
-}
-
-// Handler is the container for server implimentations.
+// Handler is the container for server implementations.
 type Handler struct {
-	appConfig      *api.AppConfig
-	memberlist     *memberlist.Memberlist
-	persistence    *persistence.Persistence
-	StateManager   *persistence.StateManager
-	hub            *pubsub.Hub
-	endpoints      []string
-	deviceProvider DeviceInfoProvider // Provides device info using same logic as REST API
+	appConfig        *api.AppConfig
+	clusterTransport transport.ClusterInterface
+
+	persistence  *persistence.Persistence
+	StateManager *persistence.StateManager
+	hub          *pubsub.Hub
+	endpoints    []string
 
 	sessions     map[string]*SAPSession
 	sessionsLock sync.RWMutex
 
 	controllerManager controllers.ControllerManagerInterface
+	httpClient        *http.Client
+
+	// Software update sync tracking
+	syncTrackers     map[string]*api.SoftwareUpdateSyncTracker
+	syncTrackersLock sync.RWMutex
 }
 
 type serverInfoResponse struct {
@@ -48,7 +50,7 @@ type serverInfoResponse struct {
 
 func NewHandler(
 	appConfig *api.AppConfig,
-	memberlist *memberlist.Memberlist,
+	clusterTransport transport.ClusterInterface,
 	persistence *persistence.Persistence,
 	stateManager *persistence.StateManager,
 	hub *pubsub.Hub,
@@ -56,12 +58,14 @@ func NewHandler(
 ) *Handler {
 	return &Handler{
 		appConfig:         appConfig,
-		memberlist:        memberlist,
+		clusterTransport:  clusterTransport,
 		persistence:       persistence,
 		StateManager:      stateManager,
 		hub:               hub,
 		controllerManager: controllerManager,
 		sessions:          make(map[string]*SAPSession),
+		httpClient:        &http.Client{Timeout: api.HTTPTimeout},
+		syncTrackers:      make(map[string]*api.SoftwareUpdateSyncTracker),
 	}
 }
 
@@ -69,13 +73,13 @@ func (h *Handler) SetEndpoints(endpoints []string) {
 	h.endpoints = endpoints
 }
 
-func (h *Handler) SetMemberlist(memberlist *memberlist.Memberlist) {
-	h.memberlist = memberlist
-}
-
 func (h *Handler) GetInitialState() (map[string]any, error) {
 	data := h.StateManager.GetStateMap()
 	return data, nil
+}
+
+func (h *Handler) SetClusterTransport(clusterTransport transport.ClusterInterface) {
+	h.clusterTransport = clusterTransport
 }
 
 func (h *Handler) HandleHTTPGet(key string) (any, error) {
@@ -167,7 +171,7 @@ func (h *Handler) HandleClearAllData() error {
 }
 
 func (h *Handler) GetMembers() []*memberlist.Node {
-	return h.memberlist.Members()
+	return h.clusterTransport.MemberListMembers()
 }
 
 func (h *Handler) GetServerInfo() (any, error) {
@@ -176,9 +180,9 @@ func (h *Handler) GetServerInfo() (any, error) {
 		Version:     version.Version,
 		Commit:      version.Commit,
 		BuildTime:   version.BuildTime,
-		NodeID:      h.memberlist.LocalNode().Name,
+		NodeID:      h.clusterTransport.LocalNode().Name,
 		Endpoints:   h.endpoints,
-		ClusterSize: len(h.memberlist.Members()),
+		ClusterSize: len(h.clusterTransport.MemberListMembers()),
 	}
 
 	return info, nil
@@ -211,7 +215,7 @@ func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
 
 	message := api.NewNotifyMessage(
 		api.NotifyOpConfigUpdate,
-		h.memberlist.LocalNode().Name,
+		h.clusterTransport.LocalNode().Name,
 		api.WithConfigUpdate(configUpdate),
 	)
 
@@ -222,7 +226,94 @@ func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
 	return nil
 }
 
-// SetDeviceProvider sets the device info provider
-func (h *Handler) SetDeviceProvider(provider DeviceInfoProvider) {
-	h.deviceProvider = provider
+// Software Update Sync Tracking Methods
+
+// StartSyncTracking creates a new sync tracker for a software update operation
+func (h *Handler) StartSyncTracking(syncID, filename, checksum string, expectedNodes []string, timeout time.Duration) *api.SoftwareUpdateSyncTracker {
+	h.syncTrackersLock.Lock()
+	defer h.syncTrackersLock.Unlock()
+
+	// Create expected nodes map
+	expectedNodesMap := make(map[string]bool)
+	for _, node := range expectedNodes {
+		expectedNodesMap[node] = false
+	}
+
+	tracker := &api.SoftwareUpdateSyncTracker{
+		SyncID:        syncID,
+		Filename:      filename,
+		Checksum:      checksum,
+		StartedAt:     time.Now(),
+		ExpectedNodes: expectedNodesMap,
+		CompletedCh:   make(chan bool, 1),
+		TimeoutCh:     make(chan bool, 1),
+	}
+
+	h.syncTrackers[syncID] = tracker
+
+	// Start timeout timer
+	go func() {
+		time.Sleep(timeout)
+		select {
+		case tracker.TimeoutCh <- true:
+		default:
+		}
+	}()
+
+	return tracker
+}
+
+// HandleSyncAck processes a sync acknowledgment from a cluster node
+func (h *Handler) HandleSyncAck(nodeName string, ack *api.SoftwareUpdateSyncAck) {
+	h.syncTrackersLock.Lock()
+	defer h.syncTrackersLock.Unlock()
+
+	tracker, exists := h.syncTrackers[ack.SyncID]
+	if !exists {
+		return // Tracker not found or already completed
+	}
+
+	// Mark this node as acknowledged
+	if _, expected := tracker.ExpectedNodes[nodeName]; expected {
+		tracker.ExpectedNodes[nodeName] = true
+	}
+
+	// Check if all nodes have acknowledged
+	allAcked := true
+	for _, acked := range tracker.ExpectedNodes {
+		if !acked {
+			allAcked = false
+			break
+		}
+	}
+
+	if allAcked {
+		select {
+		case tracker.CompletedCh <- true:
+		default:
+		}
+		delete(h.syncTrackers, ack.SyncID)
+	}
+}
+
+// WaitForSyncCompletion waits for either all nodes to acknowledge or timeout
+func (h *Handler) WaitForSyncCompletion(syncID string) (bool, error) {
+	h.syncTrackersLock.RLock()
+	tracker, exists := h.syncTrackers[syncID]
+	h.syncTrackersLock.RUnlock()
+
+	if !exists {
+		return false, fmt.Errorf("sync tracker not found for ID: %s", syncID)
+	}
+
+	select {
+	case <-tracker.CompletedCh:
+		return true, nil // All nodes acknowledged
+	case <-tracker.TimeoutCh:
+		// Clean up the tracker on timeout
+		h.syncTrackersLock.Lock()
+		delete(h.syncTrackers, syncID)
+		h.syncTrackersLock.Unlock()
+		return false, fmt.Errorf("sync operation timed out")
+	}
 }
