@@ -46,6 +46,25 @@ validate_instance() {
 	return 1
 }
 
+stop_services_on_instance() {
+	local instance=$1
+	print_status "Stopping fusion-server and keepalived on $instance..."
+
+	if multipass exec "$instance" -- sudo systemctl stop fusion-server; then
+		print_success "fusion-server stopped on $instance"
+	else
+		print_error "Failed to stop fusion-server on $instance"
+		return 1
+	fi
+
+	if multipass exec "$instance" -- sudo systemctl stop keepalived; then
+		print_success "keepalived stopped on $instance"
+	else
+		print_error "Failed to stop keepalived on $instance"
+		return 1
+	fi
+}
+
 reset_vip_in_keepalived() {
 	local instance=$1
 	print_status "Resetting VIP in $instance:$KEEPALIVED_CONF to $VIP_PLACEHOLDER..."
@@ -92,20 +111,22 @@ reset_vip_in_keepalived() {
 	fi
 }
 
-reload_keepalived() {
+start_services_on_instance() {
 	local instance=$1
-	print_status "Reloading keepalived on $instance..."
+	print_status "Starting keepalived and fusion-server on $instance..."
 
-	if multipass exec "$instance" -- sudo systemctl reload keepalived 2>/dev/null; then
-		print_success "keepalived reloaded"
-		return 0
+	if multipass exec "$instance" -- sudo systemctl start keepalived; then
+		print_success "keepalived started on $instance"
+	else
+		print_error "Failed to start keepalived on $instance"
+		return 1
 	fi
 
-	print_warning "Reload failed, attempting restart"
-	if multipass exec "$instance" -- sudo systemctl restart keepalived 2>/dev/null; then
-		print_success "keepalived restarted"
+	if multipass exec "$instance" -- sudo systemctl start fusion-server; then
+		print_success "fusion-server started on $instance"
 	else
-		print_warning "Could not reload/restart keepalived. Please check service state manually"
+		print_error "Failed to start fusion-server on $instance"
+		return 1
 	fi
 }
 
@@ -181,12 +202,31 @@ fi
 for instance in $INSTANCES; do
 	echo
 	echo "######################################"
-	print_status "Resetting VIP on $instance"
+	print_status "Phase 1/3: Stopping services on $instance"
+	echo "######################################"
+
+	validate_instance "$instance"
+	stop_services_on_instance "$instance"
+done
+
+for instance in $INSTANCES; do
+	echo
+	echo "######################################"
+	print_status "Phase 2/3: Resetting VIP on $instance"
 	echo "######################################"
 
 	validate_instance "$instance"
 	reset_vip_in_keepalived "$instance"
-	reload_keepalived "$instance"
+done
+
+for instance in $INSTANCES; do
+	echo
+	echo "######################################"
+	print_status "Phase 3/3: Starting services on $instance"
+	echo "######################################"
+
+	validate_instance "$instance"
+	start_services_on_instance "$instance"
 done
 
 echo
