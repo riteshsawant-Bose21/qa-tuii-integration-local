@@ -70,4 +70,8 @@ extension ControllerManager on ProjectManager {
     required String controllerId,
     required ControllerDisplayConfig config,
   }) => _service.setControllerDisplayConfig(controllerId: controllerId, config: config);
+
+  // wallcontrollerconfig
+
+  WallControllerConfig getWallControllerConfig() => _service.getWallControllerConfig();
 }

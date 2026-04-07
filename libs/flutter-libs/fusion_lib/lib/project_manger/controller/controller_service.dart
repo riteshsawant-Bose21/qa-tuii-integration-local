@@ -162,4 +162,86 @@ extension ControllerService on ProjectService {
     if (c == null) return;
     hardware.add(controllerId, c.copyWith(displayConfig: config));
   }
+
+  /// Builds a [WallControllerConfig] from the current project state.
+  WallControllerConfig getWallControllerConfig() {
+    /// Reset so the result is deterministic regardless of call order.
+    resetOnoCounter();
+
+    final List<FusionController> allControllers = getAllControllers();
+
+    // Collect all assigned zone IDs in stable insertion order.
+    final List<String> orderedZoneIds = <String>[];
+    final Set<String> seenZoneIds = <String>{};
+    for (final FusionController c in allControllers) {
+      for (final String zoneId in getAssignedZoneIds(c.id)) {
+        if (seenZoneIds.add(zoneId)) {
+          orderedZoneIds.add(zoneId);
+        }
+      }
+    }
+
+    // Build WallZone list.
+    final List<WallZone> wallZones = <WallZone>[];
+    for (final String zoneId in orderedZoneIds) {
+      final Zone? zone = zones.get(zoneId);
+      if (zone == null) continue;
+
+      // Sources (direct + source-set sources).
+      final List<Source> sources = getSourcesAndSourceSetSourcesInZone(zoneId: zoneId);
+      final List<WallZoneSource> wallSources = sources
+          .asMap()
+          .entries
+          .map(
+            (MapEntry<int, Source> e) => WallZoneSource(
+              index: e.key,
+              sourceId: e.value.id,
+              sourceName: e.value.name,
+            ),
+          )
+          .toList();
+
+      // Assign zone ONO first, then sub-zone ONOs so numbers are consecutive.
+      final WallZoneOno zoneOno = WallZoneOno.autoAssign();
+
+      final List<SubZone> subZonesList = getSubZones(zoneId);
+      final List<WallSubZone> wallSubZones = subZonesList
+          .map(
+            (SubZone sz) => WallSubZone(
+              id: sz.id,
+              name: sz.name,
+              gain: WallGainConfig(gainID: 'gain${sz.id}'),
+              ono: WallSubZoneOno.autoAssign(),
+            ),
+          )
+          .toList();
+
+      wallZones.add(
+        WallZone(
+          id: zone.id,
+          name: zone.name,
+          gain: WallGainConfig(gainID: 'gain${zone.id}'),
+          ono: zoneOno,
+          sources: wallSources,
+          subZones: wallSubZones,
+        ),
+      );
+    }
+
+    // Build WallController list.
+    final List<WallController> wallControllers = allControllers
+        .map(
+          (FusionController c) => WallController(
+            id: c.id,
+            name: c.name,
+            zoneIds: getAssignedZoneIds(c.id).toList(),
+          ),
+        )
+        .toList();
+
+    return WallControllerConfig(
+      controllers: wallControllers,
+      zones: wallZones,
+    );
+  }
 }

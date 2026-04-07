@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../../zone_function_settings/select_settings/select_settings.dart';
+
 class ZoneItemWidget extends StatefulWidget {
   final Zone zone;
   final List<SubZone> subZones;
@@ -105,7 +107,18 @@ class _ZoneItemWidgetState extends State<ZoneItemWidget> {
             /// Settings icon
             GestureDetector(
               onTap: () {
-                // TODO: Open zone settings
+                showGeneralDialog(
+                  context: context,
+                  barrierDismissible: true,
+                  barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+                  barrierColor: Colors.black54,
+                  transitionDuration: const Duration(milliseconds: 200),
+                  pageBuilder: (BuildContext buildContext, _, __) {
+                    return SourceSelectAdditionalSettingsDialog(
+                      zoneID: widget.zone.id,
+                    );
+                  },
+                );
               },
               child: FusionIcon.icon(
                 Icons.settings_outlined,

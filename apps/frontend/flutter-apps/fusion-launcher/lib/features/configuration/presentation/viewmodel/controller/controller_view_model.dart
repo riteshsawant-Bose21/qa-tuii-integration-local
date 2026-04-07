@@ -208,4 +208,15 @@ extension ControllerViewModel on ProjectViewModel {
       throwError('Failed to set controller display config: $e');
     }
   }
+
+  // ─── Wall-controller config ───────────────────────────────────────────────
+
+  WallControllerConfig getWallControllerConfig() {
+    try {
+      return projectManager.getWallControllerConfig();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to get wall controller config: $e');
+      rethrow;
+    }
+  }
 }
