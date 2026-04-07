@@ -5,6 +5,7 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_web/core/navigation/app_router.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
 import 'package:fusion_web/core/presentation/base_viewmodel.dart';
+import 'package:fusion_web/core/theme/theme_cubit.dart';
 import 'package:fusion_web/core/widgets/viewmodels/sidebar_viewmodel.dart';
 import 'package:fusion_web/core/permissions/permission_service.dart';
 import 'package:fusion_web/features/auth/data/datasources/auth0_datasource.dart';
@@ -12,18 +13,23 @@ import 'package:fusion_web/features/auth/data/repositories/auth_repository_impl.
 import 'package:fusion_web/features/auth/domain/usecases/auth_usecases.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-class FusionSidebar extends StatelessWidget {
+class FusionSidebar extends StatefulWidget {
   final ValueChanged<DashboardTabs>? onTabChanged;
   final DashboardTabs? selectedTab;
 
   const FusionSidebar({super.key, this.onTabChanged, this.selectedTab});
 
   @override
+  State<FusionSidebar> createState() => _FusionSidebarState();
+}
+
+class _FusionSidebarState extends State<FusionSidebar> {
+  @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) {
         final vm = SidebarViewModel();
-        vm.initialize(selectedTab);
+        vm.initialize(widget.selectedTab);
         return vm;
       },
       child: BlocBuilder<SidebarViewModel, BaseState<DashboardTabs?>>(
@@ -52,9 +58,6 @@ class FusionSidebar extends StatelessWidget {
                     //     ),
                     //   ),
                     // ),
-                    
-                    
-
                     const SizedBox(height: 16),
 
                     _buildUserSection(context, viewModel),
@@ -75,13 +78,9 @@ class FusionSidebar extends StatelessWidget {
   }
 
   // ===============================
-  // USER SECTION
-  // ===============================
-
   Widget _buildUserSection(BuildContext context, SidebarViewModel viewModel) {
     return Container(
       decoration: BoxDecoration(
-        // color: Colors.white,
         color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.circular(AppConstants.borderRadius),
         boxShadow: [BoxShadow(blurRadius: 6, color: Colors.black12)],
@@ -93,6 +92,26 @@ class FusionSidebar extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              // BlocBuilder<ThemeCubit, ThemeMode>(
+              //   builder: (context, themeMode) {
+              //     final isDark = themeMode == ThemeMode.dark;
+
+              //     return FusionSwitch(
+              //       semanticId: "theme_toggle",
+              //       value: isDark,
+              //       onChanged: (_) {
+              //         context.read<ThemeCubit>().toggleTheme();
+              //       },
+              //       height: 40,
+              //       width: 70,
+              //       radiusFactor: 0.5,
+              //       activeTrackColor: Colors.green,
+              //       inactiveTrackColor: Colors.grey,
+              //       activeThumbColor: Colors.white,
+              //       inactiveThumbColor: Colors.grey.shade300,
+              //     );
+              //   },
+              // ),
               GestureDetector(
                 onTap: viewModel.clearNotifications,
                 child: Badge(
@@ -138,9 +157,6 @@ class FusionSidebar extends StatelessWidget {
   }
 
   // ===============================
-  // NAVIGATION SECTION
-  // ===============================
-
   Widget _buildNavigationSection(
     BuildContext context,
     SidebarViewModel viewModel,
@@ -238,7 +254,7 @@ class FusionSidebar extends StatelessWidget {
       isSelected: viewModel.selectedTab == tab,
       onTap: () {
         viewModel.setSelectedTab(tab);
-        onTabChanged?.call(tab);
+        widget.onTabChanged?.call(tab);
       },
     );
   }
@@ -260,9 +276,6 @@ class FusionSidebar extends StatelessWidget {
   }
 
   // ===============================
-  // LOGOUT
-  // ===============================
-
   void _handleLogout(BuildContext context) async {
     try {
       final dataSource = Auth0DataSource();

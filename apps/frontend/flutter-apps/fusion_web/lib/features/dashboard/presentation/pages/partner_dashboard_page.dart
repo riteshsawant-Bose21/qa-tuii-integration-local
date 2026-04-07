@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_web/features/common-widgets/page_header.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fusion_web/features/dashboard/presentation/viewmodels/dashboard_viewmodel.dart';
 import 'package:fusion_web/features/dashboard/presentation/widgets/project_overview_widget.dart';
@@ -68,7 +69,7 @@ class _PartnerDashboardPageState extends State<PartnerDashboardPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      // backgroundColor: const Color(0xFFF8FAFC),
       body: ListenableBuilder(
         listenable: _viewModel,
         builder: (context, child) {
@@ -79,7 +80,7 @@ class _PartnerDashboardPageState extends State<PartnerDashboardPage>
                 width: double.infinity,
                 padding: const EdgeInsets.fromLTRB(32, 24, 32, 32),
                 decoration: const BoxDecoration(
-                  color: Colors.white,
+                  // color: Colors.white,
                   boxShadow: [
                     BoxShadow(
                       color: Color(0x0A000000),
@@ -95,23 +96,10 @@ class _PartnerDashboardPageState extends State<PartnerDashboardPage>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Dashboard',
-                            style: GoogleFonts.inter(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF0F172A),
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Overview of your Fusion ecosystem performance and insights',
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              color: const Color(0xFF64748B),
-                              height: 1.4,
-                            ),
+                          const PageHeader(
+                            title: 'Dashboard',
+                            subtitle:
+                                'Overview of your Fusion ecosystem performance and insights',
                           ),
                         ],
                       ),

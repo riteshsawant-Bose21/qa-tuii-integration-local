@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_web/core/theme/theme_cubit.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_web/core/navigation/app_router.dart';
@@ -33,21 +35,28 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: AppConstants.appName,
-      debugShowCheckedModeBanner: false,
-      theme: FusionAppTheme.lightTheme.copyWith(
-        textTheme: GoogleFonts.montserratTextTheme(
-          FusionAppTheme.lightTheme.textTheme,
-        ),
+    return BlocProvider(
+      create: (_) => ThemeCubit(),
+      child: BlocBuilder<ThemeCubit, ThemeMode>(
+        builder: (context, themeMode) {
+          return MaterialApp.router(
+            title: AppConstants.appName,
+            debugShowCheckedModeBanner: false,
+            theme: FusionAppTheme.lightTheme.copyWith(
+              textTheme: GoogleFonts.montserratTextTheme(
+                FusionAppTheme.lightTheme.textTheme,
+              ),
+            ),
+            darkTheme: FusionAppTheme.darkTheme.copyWith(
+              textTheme: GoogleFonts.montserratTextTheme(
+                FusionAppTheme.darkTheme.textTheme,
+              ),
+            ),
+            themeMode: themeMode, 
+            routerConfig: appRouter,
+          );
+        },
       ),
-      darkTheme: FusionAppTheme.darkTheme.copyWith(
-        textTheme: GoogleFonts.montserratTextTheme(
-          FusionAppTheme.darkTheme.textTheme,
-        ),
-      ),
-      themeMode: ThemeMode.dark,
-      routerConfig: appRouter,
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_web/features/common-widgets/page_header.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:data_table_2/data_table_2.dart';
 import 'package:fusion_web/features/roles/presentation/viewmodels/roles_viewmodel.dart';
@@ -54,7 +55,7 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      // backgroundColor: Colors.grey[50],
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -86,18 +87,10 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Roles & Access Control',
-          style: GoogleFonts.inter(
-            fontSize: 32,
-            fontWeight: FontWeight.w600,
-            color: Colors.black,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Define and manage what users can see and do within the Fusion ecosystem',
-          style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600]),
+        const PageHeader(
+          title: 'Roles & Access Control',
+          subtitle:
+              'Define and manage what users can see and do within the Fusion ecosystem',
         ),
       ],
     );

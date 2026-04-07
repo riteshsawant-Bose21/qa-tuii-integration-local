@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_web/features/common-widgets/page_header.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -10,17 +11,11 @@ class DashboardPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Dashboard',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'This is the main Dashboard page. Welcome to the application!',
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
+          const PageHeader(
+                    title: 'Dashboard',
+                    subtitle:
+                        'This is the main Dashboard page. Welcome to the application!',
+                  ),
         ],
       ),
     );

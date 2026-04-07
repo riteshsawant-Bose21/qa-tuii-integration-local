@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_web/features/common-widgets/page_header.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -10,17 +11,11 @@ class SettingsPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Settings',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'This is a Settings page',
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
+          const PageHeader(
+                      title: 'Settings',
+                      subtitle:
+                          'This is a Settings page',
+                    ),
         ],
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_web/features/common-widgets/page_header.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:data_table_2/data_table_2.dart';
 import 'package:intl/intl.dart';
@@ -60,7 +61,7 @@ class _UsersPageState extends State<UsersPage> {
     return BlocProvider.value(
       value: _viewModel,
       child: Scaffold(
-        backgroundColor: Colors.grey[50],
+        // backgroundColor: Colors.grey[50],
         body: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -114,21 +115,10 @@ class _UsersPageState extends State<UsersPage> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Users',
-                      style: GoogleFonts.inter(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Manage user lifecycle, invitations, and account-level access',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
+                    const PageHeader(
+                      title: 'Users',
+                      subtitle:
+                          'Manage user lifecycle, invitations, and account-level access',
                     ),
                   ],
                 ),
