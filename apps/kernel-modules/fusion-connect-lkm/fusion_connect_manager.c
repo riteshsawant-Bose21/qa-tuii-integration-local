@@ -24,13 +24,13 @@
 #define TIMER_BASE_INTERVAL_NS 333333
 #define FUSION_CN_METRICS_INTERVAL_MS 200
 
-static bool fusion_cn_profile_param;
-module_param(fusion_cn_profile_param, bool, 0644);
-MODULE_PARM_DESC(fusion_cn_profile_param, "Enable fusion-cn worker phase profiling");
+static bool profile;
+module_param(profile, bool, 0644);
+MODULE_PARM_DESC(profile, "Enable fusion-cn worker phase profiling");
 
-static uint fusion_cn_profile_log_ms_param = 1000;
-module_param(fusion_cn_profile_log_ms_param, uint, 0644);
-MODULE_PARM_DESC(fusion_cn_profile_log_ms_param, "fusion-cn profiling log period in milliseconds");
+static uint profile_log_ms = 1000;
+module_param(profile_log_ms, uint, 0644);
+MODULE_PARM_DESC(profile_log_ms, "fusion-cn profiling log period in milliseconds");
 
 struct fusion_cn_phase_profile {
     u64 sum_ns;
@@ -65,9 +65,9 @@ static inline void fusion_cn_prof_add(struct fusion_cn_phase_profile *p, u64 dt_
 static void fusion_cn_prof_maybe_log(void)
 {
     struct fusion_cn_worker_profile *prof = &fusion_cn_worker_prof;
-    unsigned long period_j = msecs_to_jiffies(max_t(uint, 1, READ_ONCE(fusion_cn_profile_log_ms_param)));
+    unsigned long period_j = msecs_to_jiffies(max_t(uint, 1, READ_ONCE(profile_log_ms)));
 
-    if (!READ_ONCE(fusion_cn_profile_param))
+    if (!READ_ONCE(profile))
         return;
 
     if (!prof->next_jiffies)
@@ -76,13 +76,17 @@ static void fusion_cn_prof_maybe_log(void)
     if (!time_after_eq(jiffies, prof->next_jiffies))
         return;
 
-    printk(KERN_DEBUG "fusion_cn: profile total avg=%lluns max=%lluns n=%u rx avg=%lluns max=%lluns n=%u pkts_avg=%llu pkts_max=%u fc avg=%lluns max=%lluns n=%u other avg=%lluns max=%lluns n=%u\n",
+    printk(KERN_DEBUG "fusion_cn: profile total avg=%lluns max=%lluns n=%u rx avg=%lluns max=%lluns n=%u pkts_avg=%llu pkts_max=%u q_avg=%llu q_max=%u q_last=%u budget_hits=%u fc avg=%lluns max=%lluns n=%u other avg=%lluns max=%lluns n=%u\n",
         prof->total.count ? div64_u64(prof->total.sum_ns, prof->total.count) : 0,
         prof->total.max_ns, prof->total.count,
         prof->rx_drain.count ? div64_u64(prof->rx_drain.sum_ns, prof->rx_drain.count) : 0,
         prof->rx_drain.max_ns, prof->rx_drain.count,
         prof->rx_drain.count ? div64_u64(prof->rx_packets_sum, prof->rx_drain.count) : 0,
         prof->rx_packets_max,
+        prof->rx_drain.count ? div64_u64(prof->rx_q_depth_sum, prof->rx_drain.count) : 0,
+        prof->rx_q_depth_max,
+        prof->rx_q_depth_last,
+        prof->rx_budget_hits,
         prof->fc_phase.count ? div64_u64(prof->fc_phase.sum_ns, prof->fc_phase.count) : 0,
         prof->fc_phase.max_ns, prof->fc_phase.count,
         prof->other_phase.count ? div64_u64(prof->other_phase.sum_ns, prof->other_phase.count) : 0,
@@ -266,7 +270,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
     struct stream_node *node, *tmp;
     unsigned long flags;
     u64 tick_ns;
-    bool profiling = READ_ONCE(fusion_cn_profile_param);
+    bool profiling = READ_ONCE(profile);
     u64 t0, dt_ns;
     u32 drained;
     u32 rx_q_depth = 0;
@@ -656,7 +660,7 @@ enum mgr_start_errno {
 static void audio_frame_process_work(struct kthread_work *work)
 {
     int n = atomic_xchg(&process_pending, 0);
-    bool profiling = READ_ONCE(fusion_cn_profile_param);
+    bool profiling = READ_ONCE(profile);
 
     while (n-- > 0) {
         u64 t0 = profiling ? ktime_get_ns() : 0;
