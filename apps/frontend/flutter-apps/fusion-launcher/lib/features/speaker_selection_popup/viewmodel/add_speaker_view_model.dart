@@ -575,7 +575,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     final String query = state.searchQuery.trim().toLowerCase();
     if (query.isNotEmpty) {
       filtered = filtered.where((SpeakerProduct p) {
-        final String hay = '${p.modelName} ${p.description} ${p.shortDescription ?? ''}'.toLowerCase();
+        final String hay = '${p.modelName} ${p.description}'.toLowerCase();
         return hay.contains(query);
       });
     }

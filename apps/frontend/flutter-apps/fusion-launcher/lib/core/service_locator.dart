@@ -6,7 +6,6 @@ import 'package:fusion_launcher/core/config/app_config.dart';
 import 'package:fusion_launcher/core/image_loader_service.dart';
 import 'package:fusion_launcher/core/models/algorithm/algorithm_metadata.dart';
 import 'package:fusion_launcher/core/network_clients/rest_client/interceptor.dart';
-import 'package:fusion_launcher/core/services/app_cache_service.dart';
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/dynamic_config/domain/usecases/get_panel_entity_usecase.dart';
@@ -58,8 +57,8 @@ Future<void> setupServiceLocator() async {
   final SharedPreferences prefs = await SharedPreferences.getInstance();
   serviceLocator.registerSingleton<SharedPreferences>(prefs);
 
-  final AppCacheService appCacheService = await AppCacheService.create();
-  serviceLocator.registerSingleton<AppCacheService>(appCacheService);
+  final AppCacheService appRootCacheService = await AppCacheService.root();
+  serviceLocator.registerSingleton<AppCacheService>(appRootCacheService);
 
   serviceLocator.registerSingleton<SharedPreferencesHandler>(SharedPreferencesHandler.getInstance(serviceLocator<SharedPreferences>()));
 
@@ -229,9 +228,11 @@ Future<void> setupServiceLocator() async {
     ),
   );
 
+  final AppCacheService productsCache = await appRootCacheService.scope('products');
   serviceLocator.registerLazySingleton<ProductQueryViewModel>(
     () => ProductQueryViewModel(
       networkClient: serviceLocator<FusionNetworkClient>(),
+      cacheService: productsCache,
     ),
   );
 

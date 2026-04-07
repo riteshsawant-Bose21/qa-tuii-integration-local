@@ -96,9 +96,8 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                         ),
                                         child: Builder(
                                           builder: (BuildContext ctx) {
-                                            final String? firstAsset = product.assets.assets.values.expand((List<String> v) => v).firstOrNull;
-                                            if (firstAsset == null) return const SizedBox();
-                                            final String path = pq.getImagePath(firstAsset);
+                                            final String? path = pq.getProductImage(productId!);
+                                            if (path == null) return const SizedBox();
                                             return Image.asset(path, fit: BoxFit.cover);
                                           },
                                         ),
@@ -185,9 +184,8 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                 ),
                                 child: Builder(
                                   builder: (BuildContext ctx) {
-                                    final String? firstAsset = suggestedProduct.assets.assets.values.expand((List<String> v) => v).firstOrNull;
-                                    if (firstAsset == null) return const SizedBox();
-                                    final String path = pq.getImagePath(firstAsset);
+                                    final String? path = pq.getProductImage(suggestedId);
+                                    if (path == null) return const SizedBox();
                                     return Image.asset(path, fit: BoxFit.cover);
                                   },
                                 ),
@@ -733,9 +731,8 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                                       ),
                                                       child: Builder(
                                                         builder: (BuildContext context) {
-                                                          final String? firstAsset = product.assets.assets.values.expand((List<String> v) => v).firstOrNull;
-                                                          if (firstAsset == null) return const SizedBox();
-                                                          final String path = productQueryViewModel.getImagePath(firstAsset);
+                                                          final String? path = productQueryViewModel.getProductImage(product.productId);
+                                                          if (path == null) return const SizedBox();
                                                           return Image.asset(path, fit: BoxFit.cover);
                                                         },
                                                       ),
@@ -801,9 +798,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                                     // Radio button
                                                     GestureDetector(
                                                       onTap: () async {
-                                                        final String? firstAsset = product.assets.assets.values.expand((List<String> v) => v).firstOrNull;
-                                                        final String? cachedImagePath =
-                                                            firstAsset != null ? productQueryViewModel.getImagePath(firstAsset) : null;
+                                                        final String? cachedImagePath = productQueryViewModel.getProductImage(product.productId);
 
                                                         await speakerSelectionViewModel.selectSuggestedSpeaker(
                                                           context: context,
@@ -950,7 +945,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
     widget.product.assets.assets.forEach(
       (String key, List<String> values) {
         if (values.isNotEmpty) {
-          final String assetImagePath = context.read<ProductQueryViewModel>().getImagePath(values.first);
+          final String? assetImagePath = context.read<ProductQueryViewModel>().getProductImage(widget.product.productId);
           // log("key: $key : ${values.first}");
           // final String? assetImagePath = context.read<ProductQueryViewModel>().getImagePath(widget.product.productId, key);
           // final String assetImagePath = context.read<ProductQueryViewModel>().cachedImages[widget.product.productId]?[key] ?? '';

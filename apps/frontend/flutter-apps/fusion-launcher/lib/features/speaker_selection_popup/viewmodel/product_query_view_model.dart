@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/config/app_config.dart';
-import 'package:fusion_launcher/core/services/app_cache_service.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/product_data.dart';
@@ -54,13 +53,16 @@ class ProductQueryViewModelState extends Equatable {
 
 class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
   final FusionNetworkClient networkClient;
-  ProductQueryViewModel({required this.networkClient}) : super(ProductQueryViewModelState.initial()) {
+  final AppCacheService cacheService;
+  ProductQueryViewModel({required this.networkClient, required this.cacheService}) : super(ProductQueryViewModelState.initial()) {
     _productsApi = Products(
       baseUrl: AppConfig.awsApiBaseUrl,
       networkClient: networkClient,
+      cacheService: cacheService,
       fusionOnly: true,
       loadFromZip: true,
     );
+
     loadProducts();
   }
 
@@ -120,13 +122,10 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
 
   void refresh() => loadProducts(refresh: true);
 
-  // ---------- get image ----------
-  String getImagePath(String imageUrl) => _productsApi.getImagePath(imageUrl);
-
-  // ---------- get image name ----------
-  String getImageName(String imageUrl) => _productsApi.getImageName(imageUrl);
+  String? getProductImage(int productId) => _productsApi.imageFor(productId: productId)?.firstPath;
 
   bool get isLoading => state.isLoading;
+
   String get errorMessage => state.errorMessage;
 
   // ---------- Convenience getters ----------

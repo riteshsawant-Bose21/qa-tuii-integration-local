@@ -1042,7 +1042,7 @@ extension HardwareViewModel on ProjectViewModel {
       }
       final List<SpeakerProduct> speaker = serviceLocator<ProductQueryViewModel>().speakers;
       final SpeakerProduct hardware = speaker.firstWhere((SpeakerProduct element) => element.productId == productId);
-      return serviceLocator<ProductQueryViewModel>().getImagePath(hardware.assets.assets.values.first.first);
+      return serviceLocator<ProductQueryViewModel>().getProductImage(hardware.productId);
     } catch (e) {
       return null;
     }
