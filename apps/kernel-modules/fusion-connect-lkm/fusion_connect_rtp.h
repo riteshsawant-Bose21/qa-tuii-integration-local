@@ -10,7 +10,6 @@
 #include <linux/if_ether.h>
 #include <linux/ip.h>
 #include <linux/udp.h>
-#include <linux/skbuff.h>
 #include <sound/asound.h>
 #include "fusion_connect_netfilter.h"
 
@@ -62,6 +61,8 @@ struct fusion_cn_rtp_header {
     u32 ssrc;
 } __attribute__((packed));
 
+#define FUSION_CN_RX_PAYLOAD_MAX_BYTES (ETH_DATA_LEN - sizeof(struct iphdr) - sizeof(struct udphdr) - sizeof(struct fusion_cn_rtp_header))
+
 struct fusion_cn_rtp_packet {
     struct ethhdr eth;
     struct iphdr ip;
@@ -97,8 +98,12 @@ struct fusion_cn_rtp_stream {
 struct fusion_cn_rx_packet {
     u64 stream_handle;
     u64 rx_phc_ns;
-    u32 packet_len;
-    struct sk_buff *skb;
+    u32 rtp_timestamp;
+    u32 ssrc;
+    u16 seq_num;
+    u16 payload_len;
+    u8 payload_type;
+    u8 payload[FUSION_CN_RX_PAYLOAD_MAX_BYTES];
 };
 
 struct fusion_cn_packet_map {
@@ -136,8 +141,7 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusio
                              struct fusion_cn_substream *alsa_stream, struct fusion_cn_rtp_stream **rtp_stream);
 int fusion_cn_rtp_remove_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_stream *stream);
 bool fusion_cn_rtp_lookup_packet_handle(struct fusion_cn_rtp_manager *rtp_mgr, const struct fusion_cn_rtp_packet *packet, u64 *stream_handle);
-int fusion_cn_rtp_enqueue_packet(struct fusion_cn_rtp_manager *rtp_mgr, u64 stream_handle, struct sk_buff *skb, u32 packet_len);
-void fusion_cn_rtp_purge_rx_queue(struct fusion_cn_rtp_manager *rtp_mgr, u64 stream_handle);
+int fusion_cn_rtp_enqueue_packet(struct fusion_cn_rtp_manager *rtp_mgr, u64 stream_handle, const struct fusion_cn_rtp_packet *packet, u32 packet_len);
 u32 fusion_cn_rtp_drain_rx_queue(struct fusion_cn_rtp_manager *rtp_mgr, u32 budget);
 void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_stream *stream, struct fusion_cn_substream *alsa_stream);
 struct fusion_cn_rtp_stream *fusion_cn_rtp_get_stream(struct fusion_cn_rtp_manager *rtp_mgr, u64 handle);

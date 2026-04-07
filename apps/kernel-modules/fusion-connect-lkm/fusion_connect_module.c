@@ -17,6 +17,7 @@ static bool trace_debug = false;
 module_param_named(trace_debug, trace_debug, bool, 0444);
 MODULE_PARM_DESC(trace_debug, "Enable high-volume Fusion Connect trace logging");
 
+
 static struct fusion_cn_manager fusion_cn_mgr;
 
 static int __init fusion_cn_init(void)

@@ -50,7 +50,7 @@ static unsigned int nf_hook_func(void *priv, struct sk_buff *skb, const struct n
     }
 
     {
-        int ret = fusion_cn_rtp_enqueue_packet(rtp_mgr, stream_handle, skb, skb->len + ETH_HLEN);
+        int ret = fusion_cn_rtp_enqueue_packet(rtp_mgr, stream_handle, packet, skb->len + ETH_HLEN);
 
         if (ret < 0 && ret != -EAGAIN)
             printk(KERN_DEBUG "fusion_cn: nf_hook: drop queued RX packet ret=%d\n", ret);
@@ -125,7 +125,6 @@ int fusion_cn_nf_tx_packet(void *rtp_mgr, struct sk_buff *skb, u32 data_size)
     struct fusion_cn_rtp_manager *mgr = rtp_mgr;
     struct fusion_cn_netfilter *nf = mgr->nf;
     struct iphdr *ip_header;
-    struct udphdr *udp_header;
     struct fusion_cn_rtp_packet *packet;
 
     ip_header = ip_hdr(skb);
@@ -143,13 +142,12 @@ int fusion_cn_nf_tx_packet(void *rtp_mgr, struct sk_buff *skb, u32 data_size)
             return -ENOMEM;
         }
 
-        udp_header = (struct udphdr *)((char *)ip_header + (ip_header->ihl * 4));
         packet = (struct fusion_cn_rtp_packet *)skb->data;
 
         if (!fusion_cn_rtp_lookup_packet_handle(mgr, packet, &stream_handle))
             return -ENOENT;
 
-        ret = fusion_cn_rtp_enqueue_packet(mgr, stream_handle, skb, skb->len);
+        ret = fusion_cn_rtp_enqueue_packet(mgr, stream_handle, packet, skb->len);
         kfree_skb(skb);
         return ret < 0 ? ret : 0;
     }

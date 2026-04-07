@@ -12,6 +12,7 @@
 #include <linux/smp.h>
 #include <linux/math64.h>
 #include <linux/jiffies.h>
+#include <linux/workqueue.h>
 #include <linux/netlink.h>
 #include <linux/if.h>
 #include <net/netlink.h>
@@ -21,9 +22,7 @@
 
 
 #define TIMER_BASE_INTERVAL_NS 333333
-#define GPT_TICK_NS            100
-
-#define FUSION_CN_RT_PRIO        80
+#define FUSION_CN_METRICS_INTERVAL_MS 200
 
 static bool fusion_cn_profile_param;
 module_param(fusion_cn_profile_param, bool, 0644);
@@ -44,7 +43,6 @@ struct fusion_cn_worker_profile {
     struct fusion_cn_phase_profile rx_drain;
     struct fusion_cn_phase_profile fc_phase;
     struct fusion_cn_phase_profile other_phase;
-    struct fusion_cn_phase_profile metrics;
     u64 rx_packets_sum;
     u32 rx_packets_max;
     unsigned long next_jiffies;
@@ -74,7 +72,7 @@ static void fusion_cn_prof_maybe_log(void)
     if (!time_after_eq(jiffies, prof->next_jiffies))
         return;
 
-    printk(KERN_DEBUG "fusion_cn: profile total avg=%lluns max=%lluns n=%u rx avg=%lluns max=%lluns n=%u pkts_avg=%llu pkts_max=%u fc avg=%lluns max=%lluns n=%u other avg=%lluns max=%lluns n=%u metrics avg=%lluns max=%lluns n=%u\n",
+    printk(KERN_DEBUG "fusion_cn: profile total avg=%lluns max=%lluns n=%u rx avg=%lluns max=%lluns n=%u pkts_avg=%llu pkts_max=%u fc avg=%lluns max=%lluns n=%u other avg=%lluns max=%lluns n=%u\n",
         prof->total.count ? div64_u64(prof->total.sum_ns, prof->total.count) : 0,
         prof->total.max_ns, prof->total.count,
         prof->rx_drain.count ? div64_u64(prof->rx_drain.sum_ns, prof->rx_drain.count) : 0,
@@ -84,9 +82,7 @@ static void fusion_cn_prof_maybe_log(void)
         prof->fc_phase.count ? div64_u64(prof->fc_phase.sum_ns, prof->fc_phase.count) : 0,
         prof->fc_phase.max_ns, prof->fc_phase.count,
         prof->other_phase.count ? div64_u64(prof->other_phase.sum_ns, prof->other_phase.count) : 0,
-        prof->other_phase.max_ns, prof->other_phase.count,
-        prof->metrics.count ? div64_u64(prof->metrics.sum_ns, prof->metrics.count) : 0,
-        prof->metrics.max_ns, prof->metrics.count);
+        prof->other_phase.max_ns, prof->other_phase.count);
 
     memset(prof, 0, sizeof(*prof));
     prof->next_jiffies = jiffies + period_j;
@@ -102,6 +98,7 @@ static struct kthread_worker *process_worker;
 static struct task_struct    *process_thread;
 static struct kthread_work    process_work;
 static atomic_t               process_pending;
+static struct delayed_work    metrics_work;
 
 static struct fusion_cn_manager *g_fusion_cn_mgr;
 
@@ -410,8 +407,6 @@ static void do_metrics(struct fusion_cn_manager *mgr)
 {
     struct stream_node *node, *tmp;
     unsigned long flags;
-    bool profiling = READ_ONCE(fusion_cn_profile_param);
-    u64 t0;
     struct {
         struct fusion_cn_rtp_stream *rtp;
         struct fusion_cn_substream  *alsa;
@@ -421,9 +416,6 @@ static void do_metrics(struct fusion_cn_manager *mgr)
 
     if (!atomic_read(&mgr->state.is_started))
         return;
-
-    if (profiling)
-        t0 = ktime_get_ns();
 
     read_lock_irqsave(&mgr->rtp.lock, flags);
 
@@ -477,9 +469,20 @@ static void do_metrics(struct fusion_cn_manager *mgr)
             kref_put(&todo[i].rtp->ref, fusion_cn_rtp_stream_release);
         }
     }
+}
 
-    if (profiling)
-        fusion_cn_prof_add(&fusion_cn_worker_prof.metrics, ktime_get_ns() - t0);
+static void fusion_cn_metrics_workfn(struct work_struct *work)
+{
+    struct fusion_cn_manager *mgr = READ_ONCE(g_fusion_cn_mgr);
+
+    if (!mgr || !atomic_read(&mgr->state.is_started))
+        return;
+
+    do_metrics(mgr);
+
+    if (atomic_read(&mgr->state.is_started))
+        queue_delayed_work(system_unbound_wq, &metrics_work,
+                           msecs_to_jiffies(FUSION_CN_METRICS_INTERVAL_MS));
 }
 
 /* Manager Functions */
@@ -640,7 +643,6 @@ static void audio_frame_process_work(struct kthread_work *work)
         u64 t0 = profiling ? ktime_get_ns() : 0;
 
         audio_frame_process(g_fusion_cn_mgr);
-        do_metrics(g_fusion_cn_mgr);
 
         if (profiling) {
             fusion_cn_prof_add(&fusion_cn_worker_prof.total, ktime_get_ns() - t0);
@@ -672,6 +674,7 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
         set_cpus_allowed_ptr(process_thread, cpumask_of(3));
         /* RT prio set from userspace (irq-affinity.sh) */
         kthread_init_work(&process_work, audio_frame_process_work);
+        INIT_DELAYED_WORK(&metrics_work, fusion_cn_metrics_workfn);
         atomic_set(&process_pending, 0);
         /* Publish the worker only after fully initialized */
         smp_wmb();
@@ -685,6 +688,8 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
 
     atomic_set(&mgr->netfilter.is_enabled, true);
     atomic_set(&mgr->state.is_started, true);
+    queue_delayed_work(system_unbound_wq, &metrics_work,
+                       msecs_to_jiffies(FUSION_CN_METRICS_INTERVAL_MS));
     pr_debug("fusion_cn: mgr_start: Started manager\n");
     return MGR_START_OK;
 }
@@ -696,6 +701,8 @@ bool fusion_cn_mgr_stop(struct fusion_cn_manager *mgr)
     fusion_gpt_unregister_client();
     
     /* Flush and destroy TX worker on stop */
+    cancel_delayed_work_sync(&metrics_work);
+
     if (process_worker) {
         kthread_flush_worker(process_worker);
         kthread_destroy_worker(process_worker);
