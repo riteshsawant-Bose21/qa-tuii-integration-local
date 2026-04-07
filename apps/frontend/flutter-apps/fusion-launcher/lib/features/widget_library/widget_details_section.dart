@@ -218,7 +218,6 @@ class _WidgetDetailsSectionState extends State<WidgetDetailsSection> {
   ) {
     return Container(
       width: double.infinity,
-      height: 500,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: context.colorScheme.elevation1,

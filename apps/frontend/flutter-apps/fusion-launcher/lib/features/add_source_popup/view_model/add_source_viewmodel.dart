@@ -143,7 +143,9 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
     if (state.selectedListeningArea == null) return FusionToast.error(context, message: "Please select a location");
 
     // if connection location is not selected
-    if (state.selectedConnectionType == null) return FusionToast.error(context, message: "Please select a connection type");
+    if (selectedSources.first == SourceType.paging && state.selectedConnectionType == null) {
+      return FusionToast.error(context, message: "Please select a connection type");
+    }
 
     // Save: add selected sources to chosen listening areas
     final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();

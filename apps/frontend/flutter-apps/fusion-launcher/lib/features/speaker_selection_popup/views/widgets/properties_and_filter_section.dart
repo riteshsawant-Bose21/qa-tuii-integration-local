@@ -630,12 +630,11 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
           flex: rightFlex,
           child: FusionNeumorphicDropdown<T>(
             popupOffset: const Offset(2, 4),
-            popupWidth: 150,
             onChanged: (T newValue) {
               final int selectedIndex = options.indexOf(newValue);
               onOptionSelected(selectedIndex, newValue);
             },
-            matchChildWidth: false,
+            matchChildWidth: true,
             items: options,
             itemBuilder: (BuildContext context, T option) {
               if (valueBuilder != null) {
@@ -653,7 +652,6 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     Expanded(
                       child: Builder(

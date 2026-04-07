@@ -90,7 +90,7 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
           /// Dialog content
           Center(
             child: Container(
-              width: 420,
+              width: 426,
               margin: const EdgeInsets.all(24.0),
               constraints: const BoxConstraints(maxHeight: 500),
               clipBehavior: Clip.hardEdge,
@@ -128,7 +128,7 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
 
                               /// Zone/Equipment Location selection
                               if (state.locationType != null) ...<Widget>[
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 12),
                                 _buildLocationSelectionDropdown(context, state),
                               ],
 
@@ -223,7 +223,7 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
         hint: 'Enter controller name',
         controller: _nameController,
         width: double.infinity,
-        height: 28,
+        height: 30,
         borderRadius: 8,
         variant: FusionFieldVariant.neumorphic,
         onChange: (String value) {
@@ -258,7 +258,7 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
         value: state.controllerType,
         displayValue: displayText,
         hintText: 'Select Controller',
-        height: 28,
+        height: 30,
         borderRadius: BorderRadius.circular(8),
         items: ControllerType.values,
         // itemLabelBuilder: (ControllerType type) => type.displayN?ame,
@@ -309,7 +309,7 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
         value: state.locationType,
         displayValue: displayText,
         hintText: 'Select Location',
-        height: 28,
+        height: 30,
         borderRadius: BorderRadius.circular(8),
         items: LocationType.values,
         itemBuilder: (BuildContext ctx, LocationType type) {
@@ -365,7 +365,7 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
             value: selectedItem,
             matchChildWidth: true,
             hintText: 'Select Zone',
-            height: 28,
+            height: 30,
             borderRadius: BorderRadius.circular(8),
             items: selectableItems,
             displayValue: selectedItem?.name,
@@ -409,7 +409,7 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
           child: FusionNeumorphicDropdown<EquipLocation>(
             value: selectedLocation,
             hintText: 'Select equipment location',
-            height: 28,
+            height: 30,
             borderRadius: BorderRadius.circular(8),
             items: equipLocations,
             displayValue: selectedLocation?.name,
@@ -496,30 +496,42 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
   Widget? _buildZoneDropdownChild(BuildContext context, _ZoneSelectItem? selectedItem) {
     if (selectedItem == null) return null;
 
-    return Row(
-      children: <Widget>[
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: selectedItem.color,
-            borderRadius: BorderRadius.circular(3),
+    return Container(
+      height: 30,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation1,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: <BoxShadow>[
+          BoxShadow(color: context.colorScheme.elevation2, blurRadius: 1, offset: const Offset(-2, -3)),
+          BoxShadow(color: context.colorScheme.black, blurRadius: 1, offset: const Offset(2, 3)),
+        ],
+      ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: selectedItem.color,
+              borderRadius: BorderRadius.circular(3),
+            ),
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: FusionAppText(
-            text: selectedItem.name,
-            style: Theme.of(context).textTheme.bodySmall,
-            textOverflow: TextOverflow.ellipsis,
+          const SizedBox(width: 8),
+          Expanded(
+            child: FusionAppText(
+              text: selectedItem.name,
+              style: Theme.of(context).textTheme.bodySmall,
+              textOverflow: TextOverflow.ellipsis,
+            ),
           ),
-        ),
-        FusionIcon.icon(
-          Icons.keyboard_arrow_down_rounded,
-          size: 22,
-          color: context.colorScheme.onSurface.withAlpha(200),
-        ),
-      ],
+          FusionIcon.icon(
+            Icons.keyboard_arrow_down_rounded,
+            size: 22,
+            color: context.colorScheme.onSurface.withAlpha(200),
+          ),
+        ],
+      ),
     );
   }
 
@@ -643,25 +655,12 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Container(
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                color: state.assignControl ? context.colorScheme.iconWhite : Colors.transparent,
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(
-                  color: state.assignControl ? context.colorScheme.iconWhite : context.colorScheme.strokeDark,
-                  width: 2,
-                ),
-              ),
-              child:
-                  state.assignControl
-                      ? Icon(
-                        Icons.check,
-                        size: 12,
-                        color: context.colorScheme.primaryBlack,
-                      )
-                      : null,
+            FusionCheckbox(
+              semanticId: '',
+              value: state.assignControl,
+              onChanged: () {
+                context.read<AddControllerCubit>().toggleAssignControl(!state.assignControl);
+              },
             ),
             const SizedBox(width: 8),
             FusionAppText(
@@ -723,12 +722,12 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
             value: selectedItem,
             matchChildWidth: true,
             hintText: 'Select zone',
-            height: 28,
+            height: 30,
             borderRadius: BorderRadius.circular(8),
             items: selectableItems,
             displayValue: displayText,
             isItemEnabled: (_ZoneSelectItem item) => item.isSelectable,
-            itemPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            itemPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
             child: _buildControlZoneDropdownChild(context, selectedItem, selectedControlZoneIds, isProController, thisZoneId),
             itemBuilder: (BuildContext ctx, _ZoneSelectItem item) {
               final bool isSelected = selectedControlZoneIds.contains(item.id);
@@ -753,13 +752,64 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
     String? thisZoneId,
   ) {
     if (selectedControlZoneIds.isEmpty) return null;
-
     if (selectedControlZoneIds.length > 1) {
-      return Row(
+      return Container(
+        height: 30,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: context.colorScheme.elevation1,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: <BoxShadow>[
+            BoxShadow(color: context.colorScheme.elevation2, blurRadius: 1, offset: const Offset(-2, -3)),
+            BoxShadow(color: context.colorScheme.black, blurRadius: 1, offset: const Offset(2, 3)),
+          ],
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: FusionAppText(
+                text: '${selectedControlZoneIds.length} zones selected',
+                style: Theme.of(context).textTheme.bodySmall,
+                textOverflow: TextOverflow.ellipsis,
+              ),
+            ),
+            FusionIcon.icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 22,
+              color: context.colorScheme.onSurface.withAlpha(200),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (selectedItem == null) return null;
+
+    return Container(
+      height: 30,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation1,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: <BoxShadow>[
+          BoxShadow(color: context.colorScheme.elevation2, blurRadius: 1, offset: const Offset(-2, -3)),
+          BoxShadow(color: context.colorScheme.black, blurRadius: 1, offset: const Offset(2, 3)),
+        ],
+      ),
+      child: Row(
         children: <Widget>[
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: selectedItem.color,
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+          const SizedBox(width: 8),
           Expanded(
             child: FusionAppText(
-              text: '${selectedControlZoneIds.length} zones selected',
+              text: selectedItem.id == thisZoneId ? 'This Zone (${selectedItem.name})' : selectedItem.name,
               style: Theme.of(context).textTheme.bodySmall,
               textOverflow: TextOverflow.ellipsis,
             ),
@@ -770,35 +820,7 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
             color: context.colorScheme.onSurface.withAlpha(200),
           ),
         ],
-      );
-    }
-
-    if (selectedItem == null) return null;
-
-    return Row(
-      children: <Widget>[
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: selectedItem.color,
-            borderRadius: BorderRadius.circular(3),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: FusionAppText(
-            text: selectedItem.id == thisZoneId ? 'This Zone (${selectedItem.name})' : selectedItem.name,
-            style: Theme.of(context).textTheme.bodySmall,
-            textOverflow: TextOverflow.ellipsis,
-          ),
-        ),
-        FusionIcon.icon(
-          Icons.keyboard_arrow_down_rounded,
-          size: 22,
-          color: context.colorScheme.onSurface.withAlpha(200),
-        ),
-      ],
+      ),
     );
   }
 

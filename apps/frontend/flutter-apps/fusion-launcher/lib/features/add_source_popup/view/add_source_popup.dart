@@ -465,8 +465,7 @@ class AddSourcePopup extends StatelessWidget {
                                                     semanticsId: 'stream_popup_menu',
                                                     popupOffset: const Offset(0, 2),
                                                     itemPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                                                    matchChildWidth: false,
-                                                    popupwidth: 120,
+                                                    matchChildWidth: true,
                                                     onSelected: (dynamic option) {
                                                       if (option is AddStreamAction) {
                                                         InputStreamDialog.show(
@@ -496,11 +495,28 @@ class AddSourcePopup extends StatelessWidget {
                                                             const SizedBox(height: 4),
                                                             SizedBox(
                                                               width: double.infinity,
-                                                              child: FusionPrimaryButton(
-                                                                label: "ADD STREAM",
-                                                                accessLabel: 'add_stream_button',
+                                                              child: FusionAppButton(
+                                                                style: FusionAppButtonStyle.primary,
+                                                                semanticId: 'add_stream_button',
+                                                                text: "ADD STREAM",
                                                                 height: 28,
-                                                                onTap: () {},
+
+                                                                onPressed: () {
+                                                                  InputStreamDialog.show(
+                                                                    context,
+                                                                    onSave: (Aes67Config stream) {
+                                                                      context.read<ProjectViewModel>().addAes67InputStream(stream: stream);
+                                                                      final List<Aes67Config> updatedStreams =
+                                                                          context.read<ProjectViewModel>().getAllAes67InputStreams();
+                                                                      final Aes67Config matchedStream = updatedStreams.firstWhere(
+                                                                        (Aes67Config s) => s.id == stream.id,
+                                                                        orElse: () => stream,
+                                                                      );
+                                                                      context.read<AddSourceViewModel>().setSelectedStream(matchedStream);
+                                                                      context.read<InputStreamViewmodel>().init(existingStream: matchedStream);
+                                                                    },
+                                                                  );
+                                                                },
                                                               ),
                                                             ),
                                                           ],
@@ -608,21 +624,26 @@ class AddSourcePopup extends StatelessWidget {
                                           BlocBuilder<InputStreamViewmodel, InputStreamState>(
                                             builder: (BuildContext context, InputStreamState inputState) {
                                               final Aes67Config? selectedStream = state.selectedStream;
-                                              final Aes67SessionEntry? selectedSession =
-                                                  selectedStream?.sessions
-                                                      .where((Aes67SessionEntry s) => s.sessionId == selectedStream.selectedSessionId)
-                                                      .firstOrNull;
-                                              final List<String> channelOptions = context.read<InputStreamViewmodel>().selectedSessionChannelOptions;
 
-                                              // Helper to convert stored int channel number back to label
+                                              // Get channel options from channelConfigs
+                                              final List<String> channelOptions =
+                                                  selectedStream?.channelConfigs.map((Aes67ChannelConfig c) => c.label ?? 'Ch ${c.channelNumber}').toList() ??
+                                                  <String>[];
+
+                                              // Helper to convert stored 1-based channel number back to label
                                               String? channelLabel(int? channelNumber) {
-                                                if (channelNumber == null || channelNumber < 1 || channelNumber > channelOptions.length) return null;
+                                                if (channelNumber == null ||
+                                                    channelNumber < 1 ||
+                                                    channelNumber > channelOptions.length ||
+                                                    channelOptions.isEmpty) {
+                                                  return null;
+                                                }
                                                 return channelOptions[channelNumber - 1];
                                               }
 
                                               return Column(
                                                 children: <Widget>[
-                                                  if (state.selectedSignalType == SignalType.mono) ...<Widget>[
+                                                  if (state.selectedSignalType == SignalType.mono && channelOptions.isNotEmpty) ...<Widget>[
                                                     BuildRowPropertyWidget<String>(
                                                       label: "Channel 1",
                                                       hint: "Assign",
@@ -634,7 +655,7 @@ class AddSourcePopup extends StatelessWidget {
                                                       },
                                                     ),
                                                   ],
-                                                  if (state.selectedSignalType == SignalType.stereo) ...<Widget>[
+                                                  if (state.selectedSignalType == SignalType.stereo && channelOptions.isNotEmpty) ...<Widget>[
                                                     BuildRowPropertyWidget<String>(
                                                       label: "Channel 1 (Left)",
                                                       hint: "Assign",
