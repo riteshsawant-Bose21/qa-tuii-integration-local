@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/circuit_controller.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/state/wiring_state.dart';
 import 'package:fusion_launcher/features/wiring_design/model/circuit_port.dart';
 import 'package:fusion_launcher/features/wiring_design/view/painters/circuit_painter.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:provider/provider.dart';
 
+import '../usecase/auto_wiring.dart';
 import 'port_connection/port_connection_overlay.dart';
 import 'widgets/canvas_control_wrapper.dart';
 import 'widgets/overlay_container.dart';
@@ -189,6 +191,53 @@ class CircuitView extends StatelessWidget {
                                     },
                                     child: const Icon(
                                       Icons.fit_screen_rounded,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                ),
+                                Tooltip(
+                                  message: "Make Connection",
+                                  child: InkWell(
+                                    onTap: () {
+                                      final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+                                      final List<HardwareComponent> components = projectViewModel.hardwareComponents;
+
+                                      final List<WiringConnectionModel> existingConnections = projectViewModel.getAllWiringConnections();
+
+                                      final List<WiringConnectionModel> newConnectios = AutoWiringUseCase().autoWire(
+                                        components: components,
+                                        existingConnections: existingConnections,
+                                        circuits: projectViewModel.circuits,
+                                      );
+
+                                      projectViewModel.recordSnapshot();
+                                      for (final WiringConnectionModel connection in newConnectios) {
+                                        projectViewModel.addWiringConnection(connection: connection, autoSave: false);
+                                      }
+                                      projectViewModel.saveProject();
+                                    },
+                                    child: const Icon(
+                                      Icons.add,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                ),
+
+                                Tooltip(
+                                  message: "Clear Connections",
+                                  child: InkWell(
+                                    onTap: () {
+                                      final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+                                      final List<WiringConnectionModel> existingConnections = projectViewModel.getAllWiringConnections();
+                                      projectViewModel.recordSnapshot();
+                                      for (final WiringConnectionModel connection in existingConnections) {
+                                        projectViewModel.removeWiringConnection(connectionId: connection.id, autoSave: false);
+                                      }
+                                      projectViewModel.saveProject();
+                                      // controller.fitToViewPort();
+                                    },
+                                    child: const Icon(
+                                      Icons.clear,
                                       color: Colors.black54,
                                     ),
                                   ),

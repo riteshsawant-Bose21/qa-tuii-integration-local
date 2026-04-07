@@ -286,7 +286,7 @@ func (mc *MetricsCollector) monitorCluster() {
 				Name:    member.Name,
 				Address: member.Addr.String(),
 				Port:    member.Port,
-				State:   getStateString(member.State),
+				State:   GetStateString(member.State),
 			}
 
 			switch member.State {
@@ -314,7 +314,7 @@ func (mc *MetricsCollector) monitorCluster() {
 		}
 
 		mc.metrics.NodeHealth = NodeHealth{
-			Status:           getStateString(memberlist.StateAlive),
+			Status:           GetStateString(memberlist.StateAlive),
 			LastHeartbeat:    time.Now(),
 			UptimeSeconds:    int64(time.Since(startTime).Seconds()),
 			StartTime:        startTime,

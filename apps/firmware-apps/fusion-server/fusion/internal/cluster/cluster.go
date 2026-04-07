@@ -223,6 +223,64 @@ func (c *Cluster) restartSystem() error {
 	return exec.Command("systemd-run", "--on-active=5s", "/usr/bin/systemctl", "reboot").Run()
 }
 
+// SoftwareUpdateSystem handles coordinated software updates across the cluster
+func (c *Cluster) SoftwareUpdateSystem(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+	defer r.Body.Close()
+
+	go func() {
+		// Trigger software update on all nodes using remote-first, local-last pattern
+		if err := postGenericToAdminLast(c, routes.ClusterSoftwareUpdateEndpoint, c.softwareUpdateSystem); err != nil {
+			// Log the error. Don't respond to client because it's async
+			logging.GetLogger().Error("Failed to coordinate software update: %v", err)
+		}
+	}()
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// SoftwareUpdateSystemLocal handles software update on local node only
+func (c *Cluster) SoftwareUpdateSystemLocal(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+	defer r.Body.Close()
+
+	if err := c.softwareUpdateSystem(); err != nil {
+		logging.GetLogger().Error("Failed to start local software update: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+}
+
+// softwareUpdateSystem executes the software update on the local node
+func (c *Cluster) softwareUpdateSystem() error {
+	logger := logging.GetLogger()
+	logger.Info("Starting software update via swupdate-ota-install.service")
+
+	// If running in local mode, skip software update
+	if c.appConfig != nil && c.appConfig.Local {
+		logger.Info("Local mode enabled (appConfig.Local), skipping software update.")
+		return nil
+	}
+
+	// Execute the systemctl command to start the swupdate service
+	cmd := exec.Command("systemctl", "start", "swupdate-ota-install.service")
+	err := cmd.Run()
+
+	if err != nil {
+		logger.Error("Failed to start swupdate-ota-install.service: %v", err)
+		return err
+	}
+
+	logger.Info("Successfully started swupdate-ota-install.service")
+	return nil
+}
+
 // monitorState continuously monitors the cluster membership state
 func (c *Cluster) startStateMonitor() {
 	go func() {
@@ -259,8 +317,8 @@ func (c *Cluster) startStateMonitor() {
 	}()
 }
 
-// getStateString converts memberlist state to human-readable string
-func getStateString(state hashicorpMemberlist.NodeStateType) string {
+// GetStateString converts memberlist state to human-readable string
+func GetStateString(state hashicorpMemberlist.NodeStateType) string {
 	switch state {
 	case hashicorpMemberlist.StateAlive:
 		return "ALIVE"
@@ -283,7 +341,7 @@ func (c *Cluster) getMembers() []ClusterMember {
 			Name:    member.Name,
 			Address: member.Addr.String(),
 			Port:    member.Port,
-			State:   getStateString(member.State),
+			State:   GetStateString(member.State),
 		}
 	}
 
@@ -461,26 +519,7 @@ func (c *Cluster) PostGenericToAdmin(
 	endpoint string,
 	localFn func() error,
 ) error {
-
-	for _, addr := range c.getNodeAdminAddresses() {
-		if c.hostIsLocal(addr) {
-			// If this is the local address, invoke localFn() directly:
-			if err := localFn(); err != nil {
-				return fmt.Errorf("local function failed: %w", err)
-			}
-			continue
-		}
-
-		// POST to the remote node’s admin endpoint
-		urlStr := utils.GetLocalURL(addr, endpoint)
-		resp, err := http.Post(urlStr, "", nil)
-		if err != nil {
-			return err
-		}
-		resp.Body.Close()
-	}
-
-	return nil
+	return postGenericToAdminLast(c, endpoint, localFn)
 }
 
 func postGenericToAdminLast(

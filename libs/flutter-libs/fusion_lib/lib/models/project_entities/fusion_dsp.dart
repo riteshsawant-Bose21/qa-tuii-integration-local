@@ -54,7 +54,7 @@ class FusionDsp extends HardwareComponent {
                    portNumber: index + 3,
                    description: "${(portData?.inputPortType ?? PortType.analogInput).description} ${index + 3}",
                    position: portData?.portPosition ?? PortPosition.topLeft,
-                   compatibleTypes: portData?.compatibleInputTypes ?? [],
+
                  );
                },
              ),

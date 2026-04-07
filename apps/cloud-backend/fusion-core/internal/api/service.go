@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
-	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
 	"go.uber.org/zap"
@@ -18,16 +17,16 @@ import (
 
 // API is a service for the main API.
 type API struct {
-	engine                *gin.Engine
-	server                *http.Server
-	product               fusion.Product
-	project               fusion.Project
-	user                  fusion.User
-	auth                  fusion.Auth
-	firmware              fusion.Firmware
-	roleManagementService *userdb.RoleManagementService
-	authMiddleware        middleware.AuthMiddleware
-	appLog                *zap.Logger
+	engine         *gin.Engine
+	server         *http.Server
+	product        fusion.Product
+	project        fusion.Project
+	user           fusion.User
+	organization   fusion.Organization
+	auth           fusion.Auth
+	firmware       fusion.Firmware
+	authMiddleware middleware.AuthMiddleware
+	appLog         *zap.Logger
 }
 
 // Config holds the API server configuration settings.
@@ -42,6 +41,7 @@ func New(cfg *Config,
 	productSvc fusion.Product,
 	project fusion.Project,
 	userSvc fusion.User,
+	organizationSvc fusion.Organization,
 	authSvc fusion.Auth,
 	firmwareSvc fusion.Firmware,
 	authMiddleware middleware.AuthMiddleware,
@@ -73,6 +73,10 @@ func New(cfg *Config,
 		return nil, errors.New("missing user service")
 	}
 
+	if organizationSvc == nil {
+		return nil, errors.New("missing organization service")
+	}
+
 	if authSvc == nil {
 		return nil, errors.New("missing auth service")
 	}
@@ -90,6 +94,7 @@ func New(cfg *Config,
 		product:        productSvc,
 		project:        project,
 		user:           userSvc,
+		organization:   organizationSvc,
 		auth:           authSvc,
 		firmware:       firmwareSvc,
 		authMiddleware: authMiddleware,

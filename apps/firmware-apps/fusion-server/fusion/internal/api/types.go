@@ -71,6 +71,66 @@ type AudioSyncUpdate struct {
 	URL      string        `json:"url"`
 }
 
+// SoftwareUpdateSync carries the metadata for a bundle that is
+// available for followers to pull from the VIP node.
+type SoftwareUpdateSync struct {
+	Filename  string    `json:"filename"`
+	Checksum  string    `json:"checksum"`
+	SizeBytes int64     `json:"size_bytes"`
+	Uploaded  time.Time `json:"uploaded"`
+	SourceIP  string    `json:"source_ip"`
+	SyncID    string    `json:"sync_id,omitempty"` // For tracking cluster-wide sync
+}
+
+// SoftwareUpdateSyncAck carries acknowledgment information when a node
+// successfully completes syncing a software update bundle.
+type SoftwareUpdateSyncAck struct {
+	Filename string    `json:"filename"`
+	Checksum string    `json:"checksum"`
+	SyncedAt time.Time `json:"synced_at"`
+	SyncID   string    `json:"sync_id"` // Unique ID to track this sync operation
+	Success  bool      `json:"success"`
+	ErrorMsg string    `json:"error_msg,omitempty"`
+}
+
+// SoftwareUpdateSyncTracker tracks the status of a cluster-wide software update sync
+type SoftwareUpdateSyncTracker struct {
+	SyncID        string          `json:"sync_id"`
+	Filename      string          `json:"filename"`
+	Checksum      string          `json:"checksum"`
+	StartedAt     time.Time       `json:"started_at"`
+	ExpectedNodes map[string]bool `json:"expected_nodes"` // node_name -> acknowledged
+	CompletedCh   chan bool       `json:"-"`              // Channel to signal completion
+	TimeoutCh     chan bool       `json:"-"`              // Channel for timeout
+}
+
+// SWUpdateStatus represents the RECOVERY_STATUS enum values from SWUpdate.
+type SWUpdateStatus int32
+
+// SoftwareUpdateProgress represents real-time progress information from SWUpdate
+type SoftwareUpdateProgress struct {
+	NodeName     string         `json:"node_name"`
+	APIVersion   uint32         `json:"api_version"`
+	Status       SWUpdateStatus `json:"status"`                  // RECOVERY_STATUS enum
+	Source       int32          `json:"source"`                  // sourcetype enum
+	DwlPercent   uint32         `json:"dwl_percent"`             // Download percentage
+	DwlBytes     uint64         `json:"dwl_bytes"`               // Download bytes
+	NSteps       uint32         `json:"n_steps"`                 // Total number of steps
+	CurStep      uint32         `json:"cur_step"`                // Current step number
+	CurPercent   uint32         `json:"cur_percent"`             // Current step percentage
+	CurImage     string         `json:"cur_image"`               // Current image name
+	HndName      string         `json:"hnd_name"`                // Handler name
+	Info         string         `json:"info,omitempty"`          // Optional info message
+	SerialNumber string         `json:"serial_number,omitempty"` // API v2.1.0+ (string to preserve uint64 precision)
+	Timestamp    time.Time      `json:"timestamp"`               // When this progress was captured
+}
+
+// VersionUpdate represents version information to sync across nodes
+type VersionUpdate struct {
+	Version Version `json:"version"`
+	NodeID  string  `json:"node_id"`
+}
+
 // ConfigUpdate represents a full or partial snapshot of state for a top-level key.
 //
 //   - ConfigUpdate is a replication primitive used by memberlist to achieve
@@ -115,16 +175,20 @@ type ConfigValue struct {
 // DeviceInfo represents device configuration data.
 type DeviceInfo struct {
 	Address                  string `json:"address"`
-	FirmwareVersion          string `json:"firmware_version"`
 	Id                       string `json:"id"`
-	IsDeviceCertificateValid bool   `json:"is_device_certificate_valid"`
-	IsPrimaryNode            bool   `json:"is_primary"`
 	Location                 string `json:"location"`
-	MacAddress               string `json:"mac_address"`
-	ModelName                string `json:"model_name"`
 	Name                     string `json:"name"`
+	ModelName                string `json:"model_name"`
+	MacAddress               string `json:"mac_address"`
 	SerialNumber             string `json:"serial_number"`
+	IsPrimaryNode            bool   `json:"is_primary"`
+	SoftwareUpdateVersion    string `json:"software_update_version"`
+	IsDeviceCertificateValid bool   `json:"is_device_certificate_valid"`
+	FusionMonorepoBranch     string `json:"fusion_monorepo_branch,omitempty"`
+	FusionMonorepoCommitHash string `json:"fusion_monorepo_commit_hash,omitempty"`
+	JenkinsBuildNumber       string `json:"jenkins_build_number,omitempty"`
 	VrrpPriority             int    `json:"vrrp_priority"`
+
 }
 
 // DevicePatch represents patchable device configuration data.
@@ -290,8 +354,37 @@ type WebSocketStats struct {
 	MessagesByType map[string]int64 `json:"messages_by_type,omitempty"` // Messages by type
 }
 
-type FirmwareInfo struct {
+// SoftwareUpdateProgressResponse is the JSON body for software update progress events.
+type SoftwareUpdateProgressResponse struct {
+	UpdateState  string `json:"update_state"`
+	Step         string `json:"step"`
+	CurrentTask  string `json:"current_task"`
+	Progress     string `json:"progress"`
+	Node         string `json:"node"`
+	Handler      string `json:"handler"`
+	Timestamp    string `json:"timestamp"`
+	SerialNumber string `json:"serial_number,omitempty"`
+}
+
+// SoftwareUpdateUploadResponse is the JSON body returned after a successful bundle upload.
+type SoftwareUpdateUploadResponse struct {
+	Filename  string    `json:"filename"`
+	Checksum  string    `json:"checksum"`
+	SizeBytes int64     `json:"size_bytes"`
+	Uploaded  time.Time `json:"uploaded"`
+}
+
+// softwareUpdateErrorResponse is the JSON body returned on bundle upload errors.
+type SoftwareUpdateErrorResponse struct {
+	Error   string `json:"error"`
+	Message string `json:"message,omitempty"`
+}
+
+type SoftwareUpdateInfo struct {
 	BuildConfiguration struct {
-		FirmwareBundleVersion string `json:"FIRMWARE_BUNDLE_VERSION"`
+		SoftwareUpdateBundleVersion string `json:"FIRMWARE_BUNDLE_VERSION"`
+		FusionMonorepoBranch        string `json:"FUSION_MONOREPO_BRANCH"`
+		FusionMonorepoCommitHash    string `json:"FUSION_MONOREPO_COMMIT_HASH"`
+		JenkinsBuildNumber          string `json:"JENKINS_BUILD_NUMBER"`
 	} `json:"build_configuration"`
 }

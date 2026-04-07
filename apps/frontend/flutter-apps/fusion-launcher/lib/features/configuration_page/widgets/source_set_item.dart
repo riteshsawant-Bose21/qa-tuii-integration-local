@@ -227,6 +227,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                       },
                                       child: FusionImage.asset(
                                         semanticId: FusionTestKeys.instance.sourcesetdataitmheaderlink,
+                                        semanticLabel: widget.sourceSet.isLinked ? 'unlink_source_set' : 'link_source_set',
                                         widget.sourceSet.isLinked ? Assets.unLinkIcon : Assets.linkIcon,
                                         width: 22,
                                         height: 22,
@@ -725,61 +726,66 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                     (Source s) => s.id == sel.id,
                                                     // orElse: () => Source(id: sel.id, name: sel.name),
                                                   );
+                                                  final int index = widget.availableSources.indexOf(source);
                                                   return InkWell(
                                                     onTap: () {
                                                       widget.onSourceChanged(source, false);
                                                       setPopupState(() {});
                                                       setState(() {});
                                                     },
-                                                    child: Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                                      child: Row(
-                                                        children: <Widget>[
-                                                          SizedBox(
-                                                            width: 14,
-                                                            height: 14,
-                                                            child: Checkbox(
-                                                              value: true,
-                                                              onChanged: (bool? value) {
-                                                                widget.onSourceChanged(source, false);
-                                                                setPopupState(() {});
-                                                                setState(() {});
-                                                              },
-                                                              activeColor: context.colorScheme.elevation4,
-                                                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                                              visualDensity: VisualDensity.compact,
-                                                              shape: const RoundedRectangleBorder(
-                                                                borderRadius: BorderRadius.zero,
-                                                                side: BorderSide(width: 0.5),
-                                                              ),
 
-                                                              side: MaterialStateBorderSide.resolveWith(
-                                                                (Set<WidgetState> states) {
-                                                                  if (states.contains(MaterialState.selected)) {
+                                                    child: SemanticHelper.container(
+                                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "source_container_$index"),
+                                                      child: Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                                        child: Row(
+                                                          children: <Widget>[
+                                                            SizedBox(
+                                                              width: 14,
+                                                              height: 14,
+                                                              child: Checkbox(
+                                                                value: true,
+                                                                onChanged: (bool? value) {
+                                                                  widget.onSourceChanged(source, false);
+                                                                  setPopupState(() {});
+                                                                  setState(() {});
+                                                                },
+                                                                activeColor: context.colorScheme.elevation4,
+                                                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                                visualDensity: VisualDensity.compact,
+                                                                shape: const RoundedRectangleBorder(
+                                                                  borderRadius: BorderRadius.zero,
+                                                                  side: BorderSide(width: 0.5),
+                                                                ),
+
+                                                                side: WidgetStateBorderSide.resolveWith(
+                                                                  (Set<WidgetState> states) {
+                                                                    if (states.contains(WidgetState.selected)) {
+                                                                      return BorderSide(
+                                                                        color: context.colorScheme.primaryWhite,
+                                                                        width: 1,
+                                                                      );
+                                                                    }
                                                                     return BorderSide(
                                                                       color: context.colorScheme.primaryWhite,
                                                                       width: 1,
                                                                     );
-                                                                  }
-                                                                  return BorderSide(
-                                                                    color: context.colorScheme.primaryWhite,
-                                                                    width: 1,
-                                                                  );
-                                                                },
+                                                                  },
+                                                                ),
                                                               ),
                                                             ),
-                                                          ),
-                                                          const SizedBox(width: 12),
-                                                          Expanded(
-                                                            child: FusionAppText(
-                                                              text: source.name ?? sel.name,
-                                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                                fontWeight: FontWeight.w500,
-                                                                fontSize: 10,
+                                                            const SizedBox(width: 12),
+                                                            Expanded(
+                                                              child: FusionAppText(
+                                                                text: source.name ?? sel.name,
+                                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                                  fontWeight: FontWeight.w500,
+                                                                  fontSize: 10,
+                                                                ),
                                                               ),
                                                             ),
-                                                          ),
-                                                        ],
+                                                          ],
+                                                        ),
                                                       ),
                                                     ),
                                                   );
@@ -797,45 +803,49 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                         .toList();
                                                 return remaining.map<Widget>((Source source) {
                                                   final bool isSelected = widget.selectedSources.any((SelectedSource sel) => sel.id == source.id);
+                                                  final int index = widget.availableSources.indexOf(source);
                                                   return InkWell(
                                                     onTap: () {
                                                       widget.onSourceChanged(source, !isSelected);
                                                       setPopupState(() {});
                                                       setState(() {});
                                                     },
-                                                    child: Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                                      color: Colors.transparent,
-                                                      child: Row(
-                                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                        children: <Widget>[
-                                                          SizedBox(
-                                                            width: 14,
-                                                            height: 14,
-                                                            child: Checkbox(
-                                                              value: isSelected,
-                                                              onChanged: (bool? value) {
-                                                                widget.onSourceChanged(source, value ?? false);
-                                                                setPopupState(() {});
-                                                                setState(() {});
-                                                              },
-                                                              activeColor: context.colorScheme.primaryBlack,
-                                                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                                              visualDensity: VisualDensity.compact,
-                                                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-                                                            ),
-                                                          ),
-                                                          const SizedBox(width: 12),
-                                                          Expanded(
-                                                            child: FusionAppText(
-                                                              text: source.name,
-                                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                                fontWeight: FontWeight.w500,
-                                                                fontSize: 10,
+                                                    child: SemanticHelper.container(
+                                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "source_container_$index"),
+                                                      child: Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                                        color: Colors.transparent,
+                                                        child: Row(
+                                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                          children: <Widget>[
+                                                            SizedBox(
+                                                              width: 14,
+                                                              height: 14,
+                                                              child: Checkbox(
+                                                                value: isSelected,
+                                                                onChanged: (bool? value) {
+                                                                  widget.onSourceChanged(source, value ?? false);
+                                                                  setPopupState(() {});
+                                                                  setState(() {});
+                                                                },
+                                                                activeColor: context.colorScheme.primaryBlack,
+                                                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                                visualDensity: VisualDensity.compact,
+                                                                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
                                                               ),
                                                             ),
-                                                          ),
-                                                        ],
+                                                            const SizedBox(width: 12),
+                                                            Expanded(
+                                                              child: FusionAppText(
+                                                                text: source.name,
+                                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                                  fontWeight: FontWeight.w500,
+                                                                  fontSize: 10,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
                                                       ),
                                                     ),
                                                   );

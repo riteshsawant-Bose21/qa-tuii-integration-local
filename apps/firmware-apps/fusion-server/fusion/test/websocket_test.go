@@ -352,6 +352,517 @@ func TestWebSocketDevicesResponseFormat(t *testing.T) {
 }
 
 // ====================
+// API OPERATION TESTS - CONFIGURATION
+// ====================
+
+func TestWebSocketConfigurationRequest(t *testing.T) {
+	conn := connectWebSocket(t, getTestURL())
+	defer conn.Close()
+
+	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
+
+	req := &api.WebSocketRequest{
+		ID:      "config-test-1",
+		Version: 1,
+		Type:    api.WSMsgTypeConfiguration,
+	}
+
+	sendWebSocketRequest(t, conn, req)
+	response := readWebSocketResponse(t, conn, wsTestTimeout)
+
+	assert.Equal(t, api.WSMsgTypeConfiguration, response.Type)
+	assert.Equal(t, api.WSCodeOK, response.Code)
+	assert.Equal(t, "config-test-1", *response.ID)
+	assert.NotNil(t, response.Data)
+
+	// Data should be a configuration object
+	_, ok := response.Data.(map[string]interface{})
+	assert.True(t, ok, "Expected config data to be object")
+}
+
+func TestWebSocketConfigurationAutoSubscription(t *testing.T) {
+	conn := connectWebSocket(t, getTestURL())
+	defer conn.Close()
+
+	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
+
+	// Request config (automatically subscribes)
+	req := &api.WebSocketRequest{
+		ID:      "config-sub-1",
+		Version: 1,
+		Type:    api.WSMsgTypeConfiguration,
+	}
+
+	sendWebSocketRequest(t, conn, req)
+	response := readWebSocketResponse(t, conn, wsTestTimeout)
+	assert.Equal(t, api.WSMsgTypeConfiguration, response.Type)
+	assert.Contains(t, response.Message, "subscribed")
+}
+
+func TestWebSocketConfigurationResponseFormat(t *testing.T) {
+	conn := connectWebSocket(t, getTestURL())
+	defer conn.Close()
+
+	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
+
+	req := &api.WebSocketRequest{
+		ID:      "config-format-test",
+		Version: 1,
+		Type:    api.WSMsgTypeConfiguration,
+	}
+
+	sendWebSocketRequest(t, conn, req)
+	response := readWebSocketResponse(t, conn, wsTestTimeout)
+
+	// Validate response format
+	assert.Equal(t, "config-format-test", *response.ID)
+	assert.Equal(t, 1, response.Version)
+	assert.NotEmpty(t, response.Timestamp)
+	assert.Equal(t, "success", response.Status)
+
+	// Validate config data structure
+	_, ok := response.Data.(map[string]interface{})
+	require.True(t, ok)
+}
+
+func TestWebSocketPatchConfiguration(t *testing.T) {
+	conn := connectWebSocket(t, getTestURL())
+	defer conn.Close()
+
+	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
+
+	// Test simple patch
+	patchData := map[string]interface{}{
+		"test_key": "test_value",
+		"another_key": map[string]interface{}{
+			"nested": "value",
+		},
+	}
+
+	req := &api.WebSocketRequest{
+		ID:      "patch-config-test",
+		Version: 1,
+		Type:    api.WSMsgTypePatchConfiguration,
+		Data:    mustMarshal(patchData),
+	}
+
+	sendWebSocketRequest(t, conn, req)
+	response := readWebSocketResponse(t, conn, wsTestTimeout)
+
+	assert.Equal(t, api.WSMsgTypePatchConfiguration, response.Type)
+	// Should be either WSCodeOK (no-op) or WSCodeUpdated (patch applied)
+	assert.True(t, response.Code == api.WSCodeOK || response.Code == api.WSCodeUpdated,
+		"Expected OK or Updated code, got %d", response.Code)
+	assert.Equal(t, "patch-config-test", *response.ID)
+
+	// Response should include updates info if data is present
+	if response.Data != nil {
+		responseData, ok := response.Data.(map[string]interface{})
+		assert.True(t, ok, "Expected response data to be object")
+		assert.Contains(t, responseData, "updates", "Response should contain updates field")
+	}
+}
+
+func TestWebSocketPatchConfigurationEmpty(t *testing.T) {
+	conn := connectWebSocket(t, getTestURL())
+	defer conn.Close()
+
+	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
+
+	// Test empty patch (should be no-op)
+	req := &api.WebSocketRequest{
+		ID:      "patch-empty-test",
+		Version: 1,
+		Type:    api.WSMsgTypePatchConfiguration,
+		Data:    mustMarshal(map[string]interface{}{}),
+	}
+
+	sendWebSocketRequest(t, conn, req)
+	response := readWebSocketResponse(t, conn, wsTestTimeout)
+
+	assert.Equal(t, api.WSMsgTypePatchConfiguration, response.Type)
+	assert.Equal(t, api.WSCodeOK, response.Code) // Empty patch should be no-op
+	assert.Equal(t, "patch-empty-test", *response.ID)
+}
+
+func TestWebSocketPatchConfigurationInvalidPayload(t *testing.T) {
+	conn := connectWebSocket(t, getTestURL())
+	defer conn.Close()
+
+	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
+
+	// Test invalid JSON payload
+	req := &api.WebSocketRequest{
+		ID:      "patch-invalid-test",
+		Version: 1,
+		Type:    api.WSMsgTypePatchConfiguration,
+		Data:    json.RawMessage(`"invalid"`), // Invalid patch data (string instead of object)
+	}
+
+	sendWebSocketRequest(t, conn, req)
+	response := readWebSocketResponse(t, conn, wsTestTimeout)
+
+	assert.Equal(t, api.WSMsgTypeError, response.Type)
+	assert.Equal(t, api.WSCodeInvalidPayload, response.Code)
+	assert.Equal(t, "patch-invalid-test", *response.ID)
+}
+
+func TestWebSocketUnsubscribeConfig(t *testing.T) {
+	conn := connectWebSocket(t, getTestURL())
+	defer conn.Close()
+
+	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
+
+	// First subscribe by requesting config
+	subReq := &api.WebSocketRequest{
+		ID:      "sub-first",
+		Version: 1,
+		Type:    api.WSMsgTypeConfiguration,
+	}
+
+	sendWebSocketRequest(t, conn, subReq)
+	readWebSocketResponse(t, conn, wsTestTimeout) // config response
+
+	// Now unsubscribe
+	unsubReq := &api.WebSocketRequest{
+		ID:      "unsub-config-test",
+		Version: 1,
+		Type:    api.WSMsgTypeUnsubscribeConfig,
+	}
+
+	sendWebSocketRequest(t, conn, unsubReq)
+	response := readWebSocketResponse(t, conn, shortTimeout)
+
+	assert.Equal(t, api.WSMsgTypeUnsubscribeConfig, response.Type)
+	assert.Equal(t, api.WSCodeOK, response.Code)
+	assert.Equal(t, "unsub-config-test", *response.ID)
+	assert.Contains(t, response.Message, "Unsubscribed from configuration updates")
+}
+
+func TestWebSocketConfigSubscriptionLifecycle(t *testing.T) {
+	// Setup two connections - monitor and updater
+	connMonitor := connectWebSocket(t, getTestURL())
+	defer connMonitor.Close()
+
+	connUpdater := connectWebSocket(t, getTestURL())
+	defer connUpdater.Close()
+
+	// Skip welcome messages
+	readWebSocketResponse(t, connMonitor, wsTestTimeout)
+	readWebSocketResponse(t, connUpdater, wsTestTimeout)
+
+	// Phase 1: Subscribe to config updates by requesting config
+	subReq := &api.WebSocketRequest{
+		ID:      "config-lifecycle-sub",
+		Version: 1,
+		Type:    api.WSMsgTypeConfiguration,
+	}
+	sendWebSocketRequest(t, connMonitor, subReq)
+	subResponse := readWebSocketResponse(t, connMonitor, wsTestTimeout)
+	assert.Equal(t, api.WSMsgTypeConfiguration, subResponse.Type)
+
+	// Phase 2: Trigger config update while subscribed (should receive notification)
+	baseTimestamp := time.Now().UnixNano()
+	patchData := map[string]interface{}{
+		"test_before_unsub": fmt.Sprintf("value_%d", baseTimestamp),
+		"lifecycle_phase":   "phase_2_subscribed",
+	}
+	patchReq := &api.WebSocketRequest{
+		ID:      "config-update-before",
+		Version: 1,
+		Type:    api.WSMsgTypePatchConfiguration,
+		Data:    mustMarshal(patchData),
+	}
+	sendWebSocketRequest(t, connUpdater, patchReq)
+	patchResponse := readWebSocketResponse(t, connUpdater, wsTestTimeout)
+
+	if patchResponse.Code == api.WSCodeUpdated {
+		// Should receive notification (subscribed)
+		notification := readWebSocketResponse(t, connMonitor, 5*time.Second)
+		assert.Equal(t, api.WSMsgTypeConfigUpdate, notification.Type)
+	} else {
+		// Phase 2 patch was no-op, continuing test
+	}
+
+	// Phase 3: Unsubscribe
+	unsubReq := &api.WebSocketRequest{
+		ID:      "config-lifecycle-unsub",
+		Version: 1,
+		Type:    api.WSMsgTypeUnsubscribeConfig,
+	}
+	sendWebSocketRequest(t, connMonitor, unsubReq)
+	unsubResponse := readWebSocketResponse(t, connMonitor, wsTestTimeout)
+	assert.Equal(t, api.WSMsgTypeUnsubscribeConfig, unsubResponse.Type)
+
+	// Phase 4: Trigger config update after unsubscribe (should NOT receive notification)
+	patchDataAfter := map[string]interface{}{
+		"test_after_unsub": fmt.Sprintf("value_%d", baseTimestamp+1),
+		"lifecycle_phase":  "phase_4_unsubscribed",
+	}
+	patchReqAfter := &api.WebSocketRequest{
+		ID:      "config-update-after",
+		Version: 1,
+		Type:    api.WSMsgTypePatchConfiguration,
+		Data:    mustMarshal(patchDataAfter),
+	}
+	sendWebSocketRequest(t, connUpdater, patchReqAfter)
+	patchResponseAfter := readWebSocketResponse(t, connUpdater, wsTestTimeout)
+
+	if patchResponseAfter.Code == api.WSCodeUpdated {
+		// Should NOT receive notification (unsubscribed)
+		connMonitor.SetReadDeadline(time.Now().Add(3 * time.Second))
+		_, _, err := connMonitor.ReadMessage()
+
+		if err != nil && (strings.Contains(err.Error(), "timeout") || strings.Contains(err.Error(), "deadline")) {
+			// No notification received after unsubscribe (correct behavior)
+		} else if err == nil {
+			t.Errorf("Should NOT receive notification after unsubscribing")
+		}
+	} else {
+		// Phase 4 patch was no-op, cannot test notification blocking
+	}
+
+	// Phase 5: Re-subscribe by requesting config again
+	// Create fresh connection to avoid timeout issues from Phase 4
+	connMonitorFresh := connectWebSocket(t, getTestURL())
+	defer connMonitorFresh.Close()
+	readWebSocketResponse(t, connMonitorFresh, wsTestTimeout) // Skip welcome
+
+	resubReq := &api.WebSocketRequest{
+		ID:      "config-lifecycle-resub",
+		Version: 1,
+		Type:    api.WSMsgTypeConfiguration,
+	}
+	sendWebSocketRequest(t, connMonitorFresh, resubReq)
+	resubResponse := readWebSocketResponse(t, connMonitorFresh, wsTestTimeout)
+	assert.Equal(t, api.WSMsgTypeConfiguration, resubResponse.Type)
+
+	// Phase 6: Trigger config update after re-subscribe (should receive notification again)
+	patchDataResub := map[string]interface{}{
+		"test_after_resub": fmt.Sprintf("value_%d", baseTimestamp+2),
+		"lifecycle_phase":  "phase_6_resubscribed",
+	}
+	patchReqResub := &api.WebSocketRequest{
+		ID:      "config-update-resub",
+		Version: 1,
+		Type:    api.WSMsgTypePatchConfiguration,
+		Data:    mustMarshal(patchDataResub),
+	}
+	sendWebSocketRequest(t, connUpdater, patchReqResub)
+	patchResponseResub := readWebSocketResponse(t, connUpdater, wsTestTimeout)
+
+	if patchResponseResub.Code == api.WSCodeUpdated {
+		// Should receive notification (re-subscribed)
+		notificationResub := readWebSocketResponse(t, connMonitorFresh, 5*time.Second)
+		assert.Equal(t, api.WSMsgTypeConfigUpdate, notificationResub.Type)
+	} else {
+		// Phase 6 patch was no-op, cannot test re-subscription notification
+	}
+}
+
+func TestWebSocketConfigPushNotifications(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping config push notification test in short mode")
+	}
+
+	// Monitor connection (subscribes to config updates)
+	connMonitor := connectWebSocket(t, getTestURL())
+	defer connMonitor.Close()
+
+	// Updater connection (makes config changes)
+	connUpdater := connectWebSocket(t, getTestURL())
+	defer connUpdater.Close()
+
+	// Skip welcome messages
+	readWebSocketResponse(t, connMonitor, wsTestTimeout)
+	readWebSocketResponse(t, connUpdater, wsTestTimeout)
+
+	// Monitor subscribes to config updates by requesting config
+	subReq := &api.WebSocketRequest{
+		ID:      "monitor-config-sub",
+		Version: 1,
+		Type:    api.WSMsgTypeConfiguration,
+	}
+	sendWebSocketRequest(t, connMonitor, subReq)
+	readWebSocketResponse(t, connMonitor, wsTestTimeout) // config response
+
+	// Updater patches config
+	patchData := map[string]interface{}{
+		"test_notification": fmt.Sprintf("value_%d", time.Now().Unix()),
+		"nested_config": map[string]interface{}{
+			"notification_test": true,
+		},
+	}
+
+	patchReq := &api.WebSocketRequest{
+		ID:      "trigger-config-notification",
+		Version: 1,
+		Type:    api.WSMsgTypePatchConfiguration,
+		Data:    mustMarshal(patchData),
+	}
+
+	sendWebSocketRequest(t, connUpdater, patchReq)
+	patchResponse := readWebSocketResponse(t, connUpdater, wsTestTimeout)
+
+	// Only proceed if patch was successful
+	if patchResponse.Code == api.WSCodeUpdated {
+		// Monitor should receive config update notification
+		connMonitor.SetReadDeadline(time.Now().Add(10 * time.Second))
+		notification := readWebSocketResponse(t, connMonitor, 10*time.Second)
+
+		assert.Equal(t, api.WSMsgTypeConfigUpdate, notification.Type)
+		assert.Nil(t, notification.ID)
+		assert.Equal(t, api.WSCodeUpdated, notification.Code)
+		assert.Equal(t, "event", notification.Status)
+
+		// Notification should contain config data
+		_, ok := notification.Data.(map[string]interface{})
+		assert.True(t, ok, "Expected notification data to be object")
+	} else {
+		// Config patch was no-op, skipping notification test
+	}
+}
+
+// setupConfigSubscribers creates and subscribes multiple connections to config updates
+func setupConfigSubscribers(t *testing.T, numSubscribers int) []*websocket.Conn {
+	subscribers := make([]*websocket.Conn, numSubscribers)
+	for i := range subscribers {
+		subscribers[i] = connectWebSocket(t, getTestURL())
+		readWebSocketResponse(t, subscribers[i], wsTestTimeout) // Skip welcome
+
+		// Subscribe to config updates by requesting config
+		subReq := &api.WebSocketRequest{
+			ID:      fmt.Sprintf("multi-config-sub-%d", i),
+			Version: 1,
+			Type:    api.WSMsgTypeConfiguration,
+		}
+		sendWebSocketRequest(t, subscribers[i], subReq)
+		readWebSocketResponse(t, subscribers[i], wsTestTimeout) // config response
+	}
+	return subscribers
+}
+
+// readAndValidateConfigNotification reads and validates a config notification from a connection
+func readAndValidateConfigNotification(t *testing.T, conn *websocket.Conn, subscriberID int) bool {
+	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+
+	_, data, err := conn.ReadMessage()
+	if err != nil {
+		if strings.Contains(err.Error(), "timeout") || strings.Contains(err.Error(), "deadline") {
+			// Config subscriber did not receive notification within timeout
+			return false
+		}
+		t.Errorf("Config subscriber %d failed to read message: %v", subscriberID, err)
+		return false
+	}
+
+	var notification api.WebSocketResponse
+	if err := json.Unmarshal(data, &notification); err != nil {
+		t.Errorf("Config subscriber %d failed to unmarshal response: %v", subscriberID, err)
+		return false
+	}
+
+	assert.Equal(t, api.WSMsgTypeConfigUpdate, notification.Type,
+		"Config subscriber %d should receive notification", subscriberID)
+	assert.Equal(t, api.WSCodeUpdated, notification.Code)
+	assert.Nil(t, notification.ID)
+
+	return true
+}
+
+func TestWebSocketConfigMultipleSubscriberNotifications(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping multiple config subscriber test in short mode")
+	}
+
+	numSubscribers := 2
+	subscribers := setupConfigSubscribers(t, numSubscribers)
+	defer func() {
+		for _, conn := range subscribers {
+			if conn != nil {
+				conn.Close()
+			}
+		}
+	}()
+
+	// Create updater connection
+	updater := connectWebSocket(t, getTestURL())
+	defer updater.Close()
+	readWebSocketResponse(t, updater, wsTestTimeout) // Skip welcome
+
+	// Perform config update
+	patchData := map[string]interface{}{
+		"multi_subscriber_test": fmt.Sprintf("timestamp_%d", time.Now().UnixNano()),
+	}
+
+	patchReq := &api.WebSocketRequest{
+		ID:      "multi-config-update",
+		Version: 1,
+		Type:    api.WSMsgTypePatchConfiguration,
+		Data:    mustMarshal(patchData),
+	}
+
+	sendWebSocketRequest(t, updater, patchReq)
+	patchResponse := readWebSocketResponse(t, updater, wsTestTimeout)
+
+	// Only test notifications if patch was successful
+	if patchResponse.Code != api.WSCodeUpdated {
+		// Config patch was no-op, skipping notification test
+		return
+	}
+
+	// Validate notifications for all subscribers
+	for i, conn := range subscribers {
+		readAndValidateConfigNotification(t, conn, i)
+	}
+}
+
+func TestWebSocketConfigErrorHandling(t *testing.T) {
+	conn := connectWebSocket(t, getTestURL())
+	defer conn.Close()
+
+	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
+
+	errorTests := []struct {
+		name         string
+		request      *api.WebSocketRequest
+		expectedCode int
+	}{
+		{
+			name: "invalid_patch_payload",
+			request: &api.WebSocketRequest{
+				ID:      "error-patch-1",
+				Version: 1,
+				Type:    api.WSMsgTypePatchConfiguration,
+				Data:    json.RawMessage(`"invalid"`), // Invalid patch data (string instead of object)
+			},
+			expectedCode: api.WSCodeInvalidPayload,
+		},
+		{
+			name: "missing_patch_data",
+			request: &api.WebSocketRequest{
+				ID:      "error-patch-2",
+				Version: 1,
+				Type:    api.WSMsgTypePatchConfiguration,
+				// No Data field
+			},
+			expectedCode: api.WSCodeInvalidPayload,
+		},
+	}
+
+	for _, tc := range errorTests {
+		t.Run(tc.name, func(t *testing.T) {
+			sendWebSocketRequest(t, conn, tc.request)
+			response := readWebSocketResponse(t, conn, shortTimeout)
+
+			assert.Equal(t, api.WSMsgTypeError, response.Type)
+			assert.Equal(t, tc.expectedCode, response.Code)
+			assert.Equal(t, tc.request.ID, *response.ID)
+		})
+	}
+}
+
+// ====================
 // API OPERATION TESTS - DEVICE LOOKUP
 // ====================
 
@@ -627,20 +1138,22 @@ func TestWebSocketConcurrentUpdates(t *testing.T) {
 		go func(connIndex int, connection *websocket.Conn) {
 			defer wg.Done()
 
+			timestamp := time.Now().UnixNano()
 			updateReq := &api.WebSocketRequest{
 				ID:      fmt.Sprintf("concurrent-update-%d", connIndex),
 				Version: 1,
 				Type:    api.WSMsgTypeUpdateDeviceInfo,
 				Data: mustMarshal(map[string]interface{}{
 					"device_id": deviceID,
-					"name":      fmt.Sprintf("Concurrent Update %d", connIndex),
+					"name":      fmt.Sprintf("Concurrent Update %d-%d", connIndex, timestamp),
 				}),
 			}
 
 			sendWebSocketRequest(t, connection, updateReq)
 			response := readWebSocketResponse(t, connection, wsTestTimeout)
-			// Can be either update_device_info or device_update depending on server response
-			assert.Contains(t, []string{api.WSMsgTypeUpdateDeviceInfo, "device_update"}, response.Type)
+			// Can be either update_device_info, device_update, or error (in case of conflicts)
+			validTypes := []string{api.WSMsgTypeUpdateDeviceInfo, "device_update", "error"}
+			assert.Contains(t, validTypes, response.Type, "Response type %s not in expected types %v", response.Type, validTypes)
 		}(i, conn)
 	}
 

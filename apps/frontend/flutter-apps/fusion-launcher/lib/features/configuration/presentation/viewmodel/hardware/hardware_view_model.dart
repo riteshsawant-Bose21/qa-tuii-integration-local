@@ -368,7 +368,7 @@ extension HardwareViewModel on ProjectViewModel {
       final int? productId = speaker.productId;
       if (productId == null) return true;
 
-      final SpeakerProduct? product = catalogSpeakers.where((SpeakerProduct p) => p.productId == productId).firstOrNull;
+      final SpeakerProduct? product = catalogSpeakers.where((SpeakerProduct p) => p.id == productId).firstOrNull;
       return !(product?.isSubwoofer ?? false);
     }).toList();
   }
@@ -392,7 +392,7 @@ extension HardwareViewModel on ProjectViewModel {
 
     final Speaker referenceSpeaker = targetSpeakers.first;
 
-    final SpeakerProduct? speakerProduct = catalogSpeakers.where((SpeakerProduct p) => p.productId == referenceSpeaker.productId).firstOrNull;
+    final SpeakerProduct? speakerProduct = catalogSpeakers.where((SpeakerProduct p) => p.id == referenceSpeaker.productId).firstOrNull;
     final double coverageAngle = _resolveCoverageAngle(speakerProduct);
 
     final ListeningAreaRoomBounds bounds = listeningArea.getBoundsForVertices();
@@ -729,7 +729,7 @@ extension HardwareViewModel on ProjectViewModel {
     return Speaker(
       locationEntity: locationEntity,
       name: product.modelName,
-      productId: product.productId,
+      productId: product.id,
       pos: null,
       zAxis: 300.0,
       speakerSKU: product.modelName,
@@ -746,7 +746,7 @@ extension HardwareViewModel on ProjectViewModel {
           name: "In",
           position: PortPosition.bottomRight,
           portNumber: 1,
-          compatibleTypes: <PortType>[PortType.amplifierOutput],
+          // compatibleTypes: <PortType>[PortType.amplifierOutput],
           type: PortType.speakerInput,
           description: PortType.speakerInput.description,
         ),
@@ -777,7 +777,7 @@ extension HardwareViewModel on ProjectViewModel {
               name: "In",
               position: PortPosition.bottomRight,
               portNumber: 1,
-              compatibleTypes: <PortType>[PortType.amplifierOutput],
+              // compatibleTypes: <PortType>[PortType.amplifierOutput],
               type: PortType.analogInput,
               description: PortType.analogInput.description,
             ),
@@ -794,6 +794,8 @@ extension HardwareViewModel on ProjectViewModel {
           SourceConnectionType.audioJack => PortType.audioJackOutput,
           SourceConnectionType.xlr => PortType.xlrOutput,
           SourceConnectionType.hdmi => PortType.hdmiOut,
+          SourceConnectionType.rca => PortType.rcaOutput,
+          SourceConnectionType.endpoint => PortType.endpointOutput,
         };
         return Source(
           locationEntity: locationEntity,
@@ -812,19 +814,19 @@ extension HardwareViewModel on ProjectViewModel {
               name: "1",
               position: PortPosition.bottomRight,
               portNumber: 1,
-              compatibleTypes: switch (connectionType) {
-                SourceConnectionType.analogInput || SourceConnectionType.aes67input => <PortType>[
-                  PortType.dspAnalogInput,
-                  PortType.endpointInput,
-                ],
-                SourceConnectionType.bluetooth => <PortType>[
-                  PortType.bleIn,
-                ],
-                SourceConnectionType.usb => <PortType>[PortType.usbIn],
-                SourceConnectionType.audioJack => <PortType>[PortType.audioJackInput],
-                SourceConnectionType.xlr => <PortType>[PortType.xlrInput],
-                SourceConnectionType.hdmi => <PortType>[PortType.hdmiIn],
-              },
+              // compatibleTypes: switch (connectionType) {
+              //   SourceConnectionType.analogInput || SourceConnectionType.aes67input => <PortType>[
+              //     PortType.dspAnalogInput,
+              //     PortType.endpointInput,
+              //   ],
+              //   SourceConnectionType.bluetooth => <PortType>[
+              //     PortType.bleIn,
+              //   ],
+              //   SourceConnectionType.usb => <PortType>[PortType.usbIn],
+              //   SourceConnectionType.audioJack => <PortType>[PortType.audioJackInput],
+              //   SourceConnectionType.xlr => <PortType>[PortType.xlrInput],
+              //   SourceConnectionType.hdmi => <PortType>[PortType.hdmiIn],
+              // },
               type: portType,
               description: portType.description,
             ),
@@ -860,7 +862,7 @@ extension HardwareViewModel on ProjectViewModel {
               portNumber: 3,
               type: PortType.networkSwitchOut,
               description: PortType.ethernet.description,
-              compatibleTypes: <PortType>[PortType.networkSwitchIn],
+              // compatibleTypes: <PortType>[PortType.networkSwitchIn],
             ),
           ],
           powerPerChannel: 100.0,
@@ -920,7 +922,7 @@ extension HardwareViewModel on ProjectViewModel {
               portNumber: 3,
               type: PortType.networkSwitchOut,
               description: PortType.networkSwitchOut.description,
-              compatibleTypes: <PortType>[PortType.networkSwitchIn],
+              // compatibleTypes: <PortType>[PortType.networkSwitchIn],
             ),
           ],
         );
@@ -954,7 +956,7 @@ extension HardwareViewModel on ProjectViewModel {
               portNumber: 1,
               type: PortType.wifiIn,
               description: PortType.wifiIn.description,
-              compatibleTypes: <PortType>[PortType.wifiOut],
+              // compatibleTypes: <PortType>[PortType.wifiOut],
             ),
             PortData(
               name: 'USB',
@@ -962,7 +964,7 @@ extension HardwareViewModel on ProjectViewModel {
               portNumber: 2,
               type: PortType.usbIn,
               description: PortType.usbIn.description,
-              compatibleTypes: <PortType>[PortType.usbOut],
+              // compatibleTypes: <PortType>[PortType.usbOut],
             ),
             PortData(
               name: 'ble',
@@ -970,7 +972,7 @@ extension HardwareViewModel on ProjectViewModel {
               portNumber: 3,
               type: PortType.bleIn,
               description: PortType.bleIn.description,
-              compatibleTypes: <PortType>[PortType.bleOut],
+              // compatibleTypes: <PortType>[PortType.bleOut],
             ),
           ],
           location: '',
@@ -993,7 +995,7 @@ extension HardwareViewModel on ProjectViewModel {
               name: "In",
               position: PortPosition.bottomRight,
               portNumber: 1,
-              compatibleTypes: <PortType>[PortType.analogOutput],
+              // compatibleTypes: <PortType>[PortType.analogOutput],
               type: PortType.endpointInput,
               description: PortType.endpointInput.description,
             ),
@@ -1005,7 +1007,7 @@ extension HardwareViewModel on ProjectViewModel {
               portNumber: 3,
               type: PortType.networkSwitchOut,
               description: PortType.ethernet.description,
-              compatibleTypes: <PortType>[PortType.networkSwitchIn],
+              // compatibleTypes: <PortType>[PortType.networkSwitchIn],
             ),
           ],
         );
@@ -1039,7 +1041,7 @@ extension HardwareViewModel on ProjectViewModel {
         return currentImagePath;
       }
       final List<SpeakerProduct> speaker = serviceLocator<ProductQueryViewModel>().speakers;
-      final SpeakerProduct hardware = speaker.firstWhere((SpeakerProduct element) => element.productId == productId);
+      final SpeakerProduct hardware = speaker.firstWhere((SpeakerProduct element) => element.id == productId);
       return serviceLocator<ProductQueryViewModel>().getImagePath(hardware.assets.assets.values.first.first);
     } catch (e) {
       return null;

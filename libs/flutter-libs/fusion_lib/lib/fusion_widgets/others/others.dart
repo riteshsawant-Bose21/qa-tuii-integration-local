@@ -30,3 +30,5 @@ export 'fusion_comma_seperated_tag_textfield.dart';
 export 'property_textfield.dart';
 export 'fusion_audio_progressbar.dart';
 export 'fusion_audio_gain_slider.dart';
+export 'fusion_row.dart';
+export 'fusion_column.dart';
