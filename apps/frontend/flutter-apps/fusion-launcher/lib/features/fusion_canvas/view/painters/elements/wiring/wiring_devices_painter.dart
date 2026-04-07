@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/fusion_canvas_element_painter.dart';
+import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/wiring/wiring_painter_helper.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canvas_painter.dart';
 import 'package:fusion_launcher/features/wiring_design/algorithm/connection_manager.dart';
@@ -9,14 +10,20 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import 'port_painter.dart';
 
-class WiringDevicesPainter extends FusionCanvasElementPainter with PortPainter {
-  final ConnectionManager  connectionManager;
+class WiringDevicesPainter extends FusionCanvasElementPainter with PortPainter, WiringPainterHelper {
+  @override
+  final ConnectionManager connectionManager;
   final HardwareComponent device;
   WiringDevicesPainter({required this.device, required this.connectionManager}) : super(item: FusionCanvasItem(id: device.id)) {
     double maxHeight = 0;
     double inputPosY = portRadius;
     for (int i = 0; i < device.inputPortsData.length; i++) {
-      final WiringPortData wiringPortData = WiringPortData(position: Offset(0, inputPosY), port: device.inputPortsData[i], deviceId: device.id);
+      final WiringPortData wiringPortData = WiringPortData(
+        position: Offset(0, inputPosY),
+        port: device.inputPortsData[i],
+        deviceId: device.id,
+        portAlignment: Alignment.centerLeft,
+      );
       _inputPorts.add(
         wiringPortData,
       );
@@ -29,6 +36,7 @@ class WiringDevicesPainter extends FusionCanvasElementPainter with PortPainter {
         position: Offset(0, outputPosY),
         port: device.outputPortsData[i],
         deviceId: device.id,
+        portAlignment: Alignment.centerRight,
       );
       _outputPorts.add(
         wiringPortData,
@@ -49,7 +57,7 @@ class WiringDevicesPainter extends FusionCanvasElementPainter with PortPainter {
 
   @override
   Size getSize() {
-    return Size(700, size.height + headerHeight);
+    return Size(700, math.max(size.height, 300) + headerHeight);
   }
 
   Offset get inputPortPadding => const Offset(40, 40);
@@ -106,7 +114,7 @@ class WiringDevicesPainter extends FusionCanvasElementPainter with PortPainter {
       positionAlignment: Alignment.center,
       style: painter.context.textTheme.l1Regular.copyWith(
         fontSize: headerHeight * 0.3,
-        color: painter.context.colorScheme.onPrimary,
+        color: painter.context.colorScheme.primaryWhite,
       ),
     );
 
@@ -134,7 +142,7 @@ class WiringDevicesPainter extends FusionCanvasElementPainter with PortPainter {
       positionAlignment: Alignment.center,
       style: painter.context.textTheme.l1Regular.copyWith(
         fontSize: headerHeight * 0.3,
-        color: painter.context.colorScheme.onPrimary,
+        color: painter.context.colorScheme.primaryWhite,
       ),
       maxWidth: outPutPort.width,
     );
@@ -153,16 +161,15 @@ class WiringDevicesPainter extends FusionCanvasElementPainter with PortPainter {
       imageRect.left,
       imageRect.bottom + imagePadding,
       imageRect.right,
-      math.max(outPutPort.bottom, inputRect.bottom),
+      math.max(math.max(outPutPort.bottom, inputRect.bottom), imageRect.bottom + imagePadding + 200),
     );
-    drawText(
+    drawDeviceInfo(
       canvas: canvas,
-      text: device.hardwareName,
-      position: textRect.topLeft,
-      positionAlignment: Alignment.topLeft,
-      style: painter.context.textTheme.b2Bold.copyWith(
-        fontSize: imageRect.height * 0.2,
-      ),
+      textRect: textRect,
+      name: device.name,
+      hardwareName: device.hardwareName,
+      location: device.locationEntity,
+      painter: painter,
     );
 
     paintPorts(canvas, size, painter);

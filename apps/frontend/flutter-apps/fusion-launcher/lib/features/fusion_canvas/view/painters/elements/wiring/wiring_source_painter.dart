@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/fusion_canvas_element_painter.dart';
+import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/wiring/wiring_painter_helper.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canvas_painter.dart';
 import 'package:fusion_launcher/features/wiring_design/algorithm/connection_manager.dart';
@@ -7,7 +8,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import 'port_painter.dart';
 
-class WiringSourcePainter extends FusionCanvasElementPainter with PortPainter {
+class WiringSourcePainter extends FusionCanvasElementPainter with PortPainter, WiringPainterHelper {
   @override
   final ConnectionManager connectionManager;
 
@@ -33,6 +34,7 @@ class WiringSourcePainter extends FusionCanvasElementPainter with PortPainter {
             port: port,
             deviceId: source.id,
             image: 'assets/icons/wiring_ports/link.png',
+            portAlignment: Alignment.centerRight,
           ),
         )
         .toList();
@@ -58,16 +60,25 @@ class WiringSourcePainter extends FusionCanvasElementPainter with PortPainter {
       rect.width - imageRect.width - 3 * imagePadding,
       rect.height - 2 * imagePadding,
     );
-    drawText(
+    // source.l
+    // drawText(
+    //   canvas: canvas,
+    //   text: source.hardwareName,
+    //   position: textRect.topLeft,
+    //   positionAlignment: Alignment.topLeft,
+    //   style: painter.context.textTheme.b2Bold.copyWith(
+    //     fontSize: imageRect.height * 0.2,
+    //   ),
+    // );
+    drawDeviceInfo(
       canvas: canvas,
-      text: source.hardwareName,
-      position: textRect.topLeft,
-      positionAlignment: Alignment.topLeft,
-      style: painter.context.textTheme.b2Bold.copyWith(
-        fontSize: imageRect.height * 0.2,
-      ),
+      textRect: textRect,
+      name: source.name,
+      textSize: 30,
+      hardwareName: source.hardwareName,
+      location: source.locationEntity,
+      painter: painter,
     );
-
     paintPorts(canvas, size, painter);
   }
 

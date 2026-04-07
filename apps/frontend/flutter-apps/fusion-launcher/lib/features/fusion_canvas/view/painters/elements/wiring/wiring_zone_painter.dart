@@ -294,6 +294,7 @@ class _CircuitPainter extends FusionCanvasElementPainter {
             ),
         port: circuit.inputPort,
         deviceId: circuit.id,
+        portAlignment: Alignment.centerLeft,
       ),
     ];
   }

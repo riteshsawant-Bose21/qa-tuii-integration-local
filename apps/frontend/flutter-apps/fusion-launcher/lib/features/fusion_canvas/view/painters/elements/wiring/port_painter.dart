@@ -44,16 +44,56 @@ mixin PortPainter on FusionCanvasElementPainter {
           isConnected: isConnected,
         );
       } else {
-        _drawDefaultPort(
-          canvas: canvas,
-          position: transformedPosition,
-          color: portColor,
-          painter: painter,
-          portData: portData,
-          isConnected: isConnected,
-        );
+        final String? imageForPort = switch (portData.port.type) {
+          PortType.ethernet || PortType.networkSwitchIn || PortType.networkSwitchOut => 'assets/icons/wiring_ports/ethernet.png',
+          PortType.wifiIn || PortType.wifiOut => 'assets/icons/wiring_ports/wifi.png',
+          PortType.bleIn || PortType.bleOut => 'assets/icons/wiring_ports/bluetooth.png',
+          PortType.hdmiIn || PortType.hdmiOut => 'assets/icons/wiring_ports/hdmi.png',
+          PortType.usbIn || PortType.usbOut || PortType.usb => 'assets/icons/wiring_ports/usb.png',
+          PortType.audioJackInput || PortType.audioJackOutput => 'assets/icons/wiring_ports/audio_jack.png',
+          PortType.rcaInput || PortType.rcaOutput => 'assets/icons/wiring_ports/stereo.png',
+          _ => null,
+        };
+        final Color? colorForImage = switch (portData.port.type) {
+          PortType.rcaInput || PortType.rcaOutput  ||  PortType.hdmiIn || PortType.hdmiOut => null,
+          
+          _ => painter.context.colorScheme.primaryWhite,
+        };
+        if (imageForPort != null) {
+          _drawImagePort(
+            canvas: canvas,
+            position: transformedPosition,
+            imagePath: imageForPort,
+            painter: painter,
+            portData: portData,
+            portColor: colorForImage,
+            isConnected: isConnected,
+          );
+        } else {
+          _drawDefaultPort(
+            canvas: canvas,
+            position: transformedPosition,
+            color: portColor,
+            painter: painter,
+            portData: portData,
+            isConnected: isConnected,
+          );
+        }
       }
     }
+  }
+
+  void _drawImagePort({
+    required Canvas canvas,
+    required Offset position,
+    required String imagePath,
+    required FusionCanvasPainter painter,
+    required WiringPortData portData,
+    required Color? portColor,
+    required bool isConnected,
+  }) {
+    final Rect portRect = Rect.fromCircle(center: position, radius: portRadius);
+    drawImage(canvas: canvas, imagePath: imagePath, rect: portRect.deflate(portRadius * 0.1), painter: painter, color: portColor);
   }
 
   void _drawDefaultPort({
@@ -79,7 +119,7 @@ mixin PortPainter on FusionCanvasElementPainter {
       positionAlignment: Alignment.center,
       style: painter.context.textTheme.b3Regular.copyWith(
         color: isConnected ? Colors.black : null,
-        // fontSize: ,
+        fontSize: portRadius * 0.8,
       ),
     );
   }
@@ -110,13 +150,14 @@ mixin PortPainter on FusionCanvasElementPainter {
         imagePath: portData.image!,
         rect: Rect.fromCircle(center: position, radius: portRadius).deflate(portRadius * 0.25),
         painter: painter,
-        paint:
-            Paint()
-              ..colorFilter = ColorFilter.mode(
-                !isConnected ? portColor : Colors.black, // The solid color you want
-                BlendMode.srcIn, // Replaces image pixels with the color
-              )
-              ..style = PaintingStyle.fill,
+        color: !isConnected ? portColor : Colors.black,
+        // paint:
+        //     Paint()
+        //       ..colorFilter = ColorFilter.mode(
+        //         !isConnected ? portColor : Colors.black, // The solid color you want
+        //         BlendMode.srcIn, // Replaces image pixels with the color
+        //       )
+        //       ..style = PaintingStyle.fill,
       );
     }
   }
@@ -125,7 +166,15 @@ mixin PortPainter on FusionCanvasElementPainter {
     final WiringPortData? portData = _ports?.firstWhereOrNull((WiringPortData data) => data.id == portId);
     if (portData != null) {
       final Rect rect = getTransformedRect(painter);
-      return portData.position + rect.topLeft;
+
+      final Offset paddingOffset = switch (portData.portAlignment) {
+        Alignment.centerLeft => Offset(-portRadius, 0),
+        Alignment.centerRight => Offset(portRadius, 0),
+        Alignment.topCenter => Offset(0, -portRadius),
+        Alignment.bottomCenter => Offset(0, portRadius),
+        _ => Offset.zero,
+      };
+      return portData.position + rect.topLeft + paddingOffset;
     }
     return null;
   }
@@ -153,11 +202,13 @@ class WiringPortData extends FusionCanvasItem {
   final PortData port;
   final Offset position;
   final String deviceId;
+  final Alignment portAlignment;
   final String? image;
   WiringPortData({
     required this.position,
     required this.port,
     required this.deviceId,
+    required this.portAlignment,
     this.image,
   }) : super(id: port.id);
 
@@ -166,8 +217,10 @@ class WiringPortData extends FusionCanvasItem {
     Offset? position,
     String? deviceId,
     String? image,
+    Alignment? portAlignment,
   }) {
     return WiringPortData(
+      portAlignment: portAlignment ?? this.portAlignment,
       port: port ?? this.port,
       position: position ?? this.position,
       deviceId: deviceId ?? this.deviceId,

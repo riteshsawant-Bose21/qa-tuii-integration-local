@@ -38,6 +38,7 @@ abstract class FusionBasePainter {
     required Rect rect,
     required FusionCanvasPainter painter,
     Paint? paint,
+    Color? color,
   }) {
     final ui.Image? image = imagePath.trim().isNotEmpty ? painter.getImage(imagePath) : null;
     if (image != null) {
@@ -48,7 +49,8 @@ abstract class FusionBasePainter {
         image.height.toDouble(),
       );
 
-      canvas.drawImageRect(image, src, rect, paint ?? Paint());
+      canvas.drawImageRect(image, src, rect, (paint ?? Paint())..colorFilter = color != null ? ColorFilter.mode(color, BlendMode.srcIn) : null);
+
       return true;
     }
     return false;
