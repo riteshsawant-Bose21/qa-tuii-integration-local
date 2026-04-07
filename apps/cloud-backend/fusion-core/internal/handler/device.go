@@ -60,7 +60,7 @@ func (h *DeviceHandler) handleDeviceError(ctx *gin.Context, err error, logger *z
 		response.NotFound(ctx, errMsg)
 	case errorutil.MsgUnauthorized:
 		response.Unauthorized(ctx, errMsg)
-	case errorutil.ErrMsgDeviceAlreadyExists, errorutil.ErrMsgDeviceAlreadyClaimed, errorutil.ErrMsgDeviceNotClaimed, errorutil.ErrMsgDeviceUniqueConstraint:
+	case errorutil.ErrMsgDeviceAlreadyExists, errorutil.ErrMsgDeviceAlreadyClaimed, errorutil.ErrMsgDeviceNotClaimed, errorutil.ErrMsgDeviceUniqueConstraint, errorutil.ErrMsgInvalidCSR:
 		response.BadRequest(ctx, errMsg)
 	default:
 		logger.Error("Device operation failed", zap.String("operation", operation), zap.Error(err))

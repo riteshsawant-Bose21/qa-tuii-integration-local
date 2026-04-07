@@ -22,6 +22,7 @@ const (
 // Validation Error Messages
 const (
 	ErrMsgCSRPemEmpty         = "csrPem cannot be empty"
+	ErrMsgInvalidCSR          = "invalid CSR"
 	ErrMsgThingNameEmpty      = "thingName cannot be empty"
 	ErrMsgCertificateArnEmpty = "certificateArn cannot be empty"
 	ErrMsgPolicyNameEmpty     = "policyName cannot be empty"

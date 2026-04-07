@@ -68,6 +68,11 @@ func (c IoTClient) CreateCertificateFromCSR(ctx context.Context, csrPem *string,
 
 	result, err := c.Client.CreateCertificateFromCsr(ctx, input)
 	if err != nil {
+		var invalidReq *types.InvalidRequestException
+		if errors.As(err, &invalidReq) {
+			logger.Error("CSR violates IoT constraints", zap.Error(err))
+			return nil, nil, nil, errors.New(errorutil.ErrMsgInvalidCSR)
+		}
 		logger.Error("failed to create certificate from CSR", zap.Error(err))
 		return nil, nil, nil, fmt.Errorf("failed to create certificate from CSR: %w", err)
 	}
