@@ -63,6 +63,27 @@ static void fusion_cn_rtp_note_rx_queue_drop(struct fusion_cn_rtp_manager *rtp_m
     read_unlock_irqrestore(&rtp_mgr->lock, flags);
 }
 
+static bool fusion_cn_rtp_stream_is_running(struct fusion_cn_rtp_manager *rtp_mgr, u64 stream_handle)
+{
+    struct fusion_cn_rtp_stream *stream;
+    unsigned long flags;
+    bool running = false;
+
+    if (!rtp_mgr || !stream_handle)
+        return false;
+
+    read_lock_irqsave(&rtp_mgr->lock, flags);
+    hlist_for_each_entry(stream, &rtp_mgr->streams[HASH_KEY(stream_handle)], hnode) {
+        if (stream->info.stream_handle == stream_handle) {
+            running = atomic_read(&stream->is_running);
+            break;
+        }
+    }
+    read_unlock_irqrestore(&rtp_mgr->lock, flags);
+
+    return running;
+}
+
 bool fusion_cn_rtp_lookup_packet_handle(struct fusion_cn_rtp_manager *rtp_mgr,
                                         const struct fusion_cn_rtp_packet *packet,
                                         u64 *stream_handle)
@@ -93,6 +114,12 @@ int fusion_cn_rtp_enqueue_packet(struct fusion_cn_rtp_manager *rtp_mgr, u64 stre
 
     if (!rtp_mgr || !stream_handle || !skb || packet_len < sizeof(struct fusion_cn_rtp_packet))
         return -EINVAL;
+
+    if (!rtp_mgr->cn_mgr || !atomic_read(&rtp_mgr->cn_mgr->state.is_started))
+        return -EAGAIN;
+
+    if (!fusion_cn_rtp_stream_is_running(rtp_mgr, stream_handle))
+        return -EAGAIN;
 
     spin_lock_irqsave(&rtp_mgr->rx_queue_lock, flags);
     if (!rtp_mgr->rx_queue || !rtp_mgr->rx_scratch || rtp_mgr->rx_queue_count >= FUSION_CN_RX_QUEUE_DEPTH) {
@@ -687,6 +714,46 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
     read_unlock_irqrestore(&rtp_mgr->lock, flags);
 }
 
+void fusion_cn_rtp_purge_rx_queue(struct fusion_cn_rtp_manager *rtp_mgr, u64 stream_handle)
+{
+    struct sk_buff_head drop_list;
+    unsigned long flags;
+    u32 old_count, kept = 0;
+    u32 i;
+
+    if (!rtp_mgr || !rtp_mgr->rx_queue)
+        return;
+
+    skb_queue_head_init(&drop_list);
+
+    spin_lock_irqsave(&rtp_mgr->rx_queue_lock, flags);
+    old_count = rtp_mgr->rx_queue_count;
+
+    for (i = 0; i < old_count; i++) {
+        u32 idx = (rtp_mgr->rx_queue_tail + i) % FUSION_CN_RX_QUEUE_DEPTH;
+        struct fusion_cn_rx_packet entry = rtp_mgr->rx_queue[idx];
+
+        if (entry.stream_handle == stream_handle) {
+            if (entry.skb)
+                __skb_queue_tail(&drop_list, entry.skb);
+            continue;
+        }
+
+        rtp_mgr->rx_queue[(rtp_mgr->rx_queue_tail + kept) % FUSION_CN_RX_QUEUE_DEPTH] = entry;
+        kept++;
+    }
+
+    rtp_mgr->rx_queue_head = (rtp_mgr->rx_queue_tail + kept) % FUSION_CN_RX_QUEUE_DEPTH;
+    rtp_mgr->rx_queue_count = kept;
+    spin_unlock_irqrestore(&rtp_mgr->rx_queue_lock, flags);
+
+    while (!skb_queue_empty(&drop_list)) {
+        struct sk_buff *skb = __skb_dequeue(&drop_list);
+
+        kfree_skb(skb);
+    }
+}
+
 u32 fusion_cn_rtp_drain_rx_queue(struct fusion_cn_rtp_manager *rtp_mgr, u32 budget)
 {
     unsigned long flags;
@@ -936,7 +1003,12 @@ int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, u64 
     }
 
     atomic_set(&stream->playback_armed, false);
-    atomic_set(&stream->is_running, running);
+    if (!running)
+        atomic_set(&stream->is_running, false);
+    if (!running && !stream->info.is_source)
+        fusion_cn_rtp_purge_rx_queue(rtp_mgr, handle);
+    if (running)
+        atomic_set(&stream->is_running, true);
 
     kref_put(&stream->ref, fusion_cn_rtp_stream_release);
 

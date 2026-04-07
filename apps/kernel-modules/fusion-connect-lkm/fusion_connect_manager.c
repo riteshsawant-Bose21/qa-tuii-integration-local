@@ -11,6 +11,7 @@
 #include <linux/cpumask.h>
 #include <linux/smp.h>
 #include <linux/math64.h>
+#include <linux/jiffies.h>
 #include <linux/netlink.h>
 #include <linux/if.h>
 #include <net/netlink.h>
@@ -23,6 +24,73 @@
 #define GPT_TICK_NS            100
 
 #define FUSION_CN_RT_PRIO        80
+
+static bool fusion_cn_profile_param;
+module_param(fusion_cn_profile_param, bool, 0644);
+MODULE_PARM_DESC(fusion_cn_profile_param, "Enable fusion-cn worker phase profiling");
+
+static uint fusion_cn_profile_log_ms_param = 1000;
+module_param(fusion_cn_profile_log_ms_param, uint, 0644);
+MODULE_PARM_DESC(fusion_cn_profile_log_ms_param, "fusion-cn profiling log period in milliseconds");
+
+struct fusion_cn_phase_profile {
+    u64 sum_ns;
+    u64 max_ns;
+    u32 count;
+};
+
+struct fusion_cn_worker_profile {
+    struct fusion_cn_phase_profile total;
+    struct fusion_cn_phase_profile rx_drain;
+    struct fusion_cn_phase_profile fc_phase;
+    struct fusion_cn_phase_profile other_phase;
+    struct fusion_cn_phase_profile metrics;
+    u64 rx_packets_sum;
+    u32 rx_packets_max;
+    unsigned long next_jiffies;
+};
+
+static struct fusion_cn_worker_profile fusion_cn_worker_prof;
+
+static inline void fusion_cn_prof_add(struct fusion_cn_phase_profile *p, u64 dt_ns)
+{
+    p->sum_ns += dt_ns;
+    if (dt_ns > p->max_ns)
+        p->max_ns = dt_ns;
+    p->count++;
+}
+
+static void fusion_cn_prof_maybe_log(void)
+{
+    struct fusion_cn_worker_profile *prof = &fusion_cn_worker_prof;
+    unsigned long period_j = msecs_to_jiffies(max_t(uint, 1, READ_ONCE(fusion_cn_profile_log_ms_param)));
+
+    if (!READ_ONCE(fusion_cn_profile_param))
+        return;
+
+    if (!prof->next_jiffies)
+        prof->next_jiffies = jiffies + period_j;
+
+    if (!time_after_eq(jiffies, prof->next_jiffies))
+        return;
+
+    printk(KERN_DEBUG "fusion_cn: profile total avg=%lluns max=%lluns n=%u rx avg=%lluns max=%lluns n=%u pkts_avg=%llu pkts_max=%u fc avg=%lluns max=%lluns n=%u other avg=%lluns max=%lluns n=%u metrics avg=%lluns max=%lluns n=%u\n",
+        prof->total.count ? div64_u64(prof->total.sum_ns, prof->total.count) : 0,
+        prof->total.max_ns, prof->total.count,
+        prof->rx_drain.count ? div64_u64(prof->rx_drain.sum_ns, prof->rx_drain.count) : 0,
+        prof->rx_drain.max_ns, prof->rx_drain.count,
+        prof->rx_drain.count ? div64_u64(prof->rx_packets_sum, prof->rx_drain.count) : 0,
+        prof->rx_packets_max,
+        prof->fc_phase.count ? div64_u64(prof->fc_phase.sum_ns, prof->fc_phase.count) : 0,
+        prof->fc_phase.max_ns, prof->fc_phase.count,
+        prof->other_phase.count ? div64_u64(prof->other_phase.sum_ns, prof->other_phase.count) : 0,
+        prof->other_phase.max_ns, prof->other_phase.count,
+        prof->metrics.count ? div64_u64(prof->metrics.sum_ns, prof->metrics.count) : 0,
+        prof->metrics.max_ns, prof->metrics.count);
+
+    memset(prof, 0, sizeof(*prof));
+    prof->next_jiffies = jiffies + period_j;
+}
 
 #ifndef abs64
 #define abs64(x) ((x) >= 0 ? (x) : -(x))
@@ -197,6 +265,9 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
     struct stream_node *node, *tmp;
     unsigned long flags;
     u64 tick_ns;
+    bool profiling = READ_ONCE(fusion_cn_profile_param);
+    u64 t0, dt_ns;
+    u32 drained;
 
     struct {
         struct fusion_cn_rtp_stream *rtp;
@@ -210,7 +281,15 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
 
     tick_ns = READ_ONCE(mgr->tick_ns);
 
-    fusion_cn_rtp_drain_rx_queue(&mgr->rtp, FUSION_CN_RX_DRAIN_BUDGET);
+    t0 = profiling ? ktime_get_ns() : 0;
+    drained = fusion_cn_rtp_drain_rx_queue(&mgr->rtp, FUSION_CN_RX_DRAIN_BUDGET);
+    if (profiling) {
+        dt_ns = ktime_get_ns() - t0;
+        fusion_cn_prof_add(&fusion_cn_worker_prof.rx_drain, dt_ns);
+        fusion_cn_worker_prof.rx_packets_sum += drained;
+        if (drained > fusion_cn_worker_prof.rx_packets_max)
+            fusion_cn_worker_prof.rx_packets_max = drained;
+    }
 
     /* -------- Phase 1: FusionConnect sinks (low latency priority) -------- */
     read_lock_irqsave(&mgr->rtp.lock, flags);
@@ -239,6 +318,9 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
     }
     read_unlock_irqrestore(&mgr->rtp.lock, flags);
 
+    if (profiling)
+        t0 = ktime_get_ns();
+
     /* execute */
     for (int i = 0; i < fn_sink_cnt; i++) {
         for (int k = 0; k < fn_sink[i].n; k++)
@@ -247,6 +329,9 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         kref_put(&fn_sink[i].rtp->ref,  fusion_cn_rtp_stream_release);
         kref_put(&fn_sink[i].alsa->ref, fusion_cn_alsa_substream_release);
     }
+
+    if (profiling)
+        fusion_cn_prof_add(&fusion_cn_worker_prof.fc_phase, ktime_get_ns() - t0);
 
     /* -------- Phase 2: FC sources + AES67 sinks + AES67 sources -------- */
     read_lock_irqsave(&mgr->rtp.lock, flags);
@@ -298,6 +383,9 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
 
     read_unlock_irqrestore(&mgr->rtp.lock, flags);
 
+    if (profiling)
+        t0 = ktime_get_ns();
+
     /* execute */
     for (int i = 0; i < other_cnt; i++) {
         struct stream_node *sn = other[i].rtp->stream_node;
@@ -313,12 +401,17 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         kref_put(&other[i].rtp->ref,  fusion_cn_rtp_stream_release);
         kref_put(&other[i].alsa->ref, fusion_cn_alsa_substream_release);
     }
+
+    if (profiling)
+        fusion_cn_prof_add(&fusion_cn_worker_prof.other_phase, ktime_get_ns() - t0);
 }
 
 static void do_metrics(struct fusion_cn_manager *mgr)
 {
     struct stream_node *node, *tmp;
     unsigned long flags;
+    bool profiling = READ_ONCE(fusion_cn_profile_param);
+    u64 t0;
     struct {
         struct fusion_cn_rtp_stream *rtp;
         struct fusion_cn_substream  *alsa;
@@ -328,6 +421,9 @@ static void do_metrics(struct fusion_cn_manager *mgr)
 
     if (!atomic_read(&mgr->state.is_started))
         return;
+
+    if (profiling)
+        t0 = ktime_get_ns();
 
     read_lock_irqsave(&mgr->rtp.lock, flags);
 
@@ -381,6 +477,9 @@ static void do_metrics(struct fusion_cn_manager *mgr)
             kref_put(&todo[i].rtp->ref, fusion_cn_rtp_stream_release);
         }
     }
+
+    if (profiling)
+        fusion_cn_prof_add(&fusion_cn_worker_prof.metrics, ktime_get_ns() - t0);
 }
 
 /* Manager Functions */
@@ -535,10 +634,18 @@ enum mgr_start_errno {
 static void audio_frame_process_work(struct kthread_work *work)
 {
     int n = atomic_xchg(&process_pending, 0);
-    while (n-- > 0) {
-        audio_frame_process(g_fusion_cn_mgr);
+    bool profiling = READ_ONCE(fusion_cn_profile_param);
 
+    while (n-- > 0) {
+        u64 t0 = profiling ? ktime_get_ns() : 0;
+
+        audio_frame_process(g_fusion_cn_mgr);
         do_metrics(g_fusion_cn_mgr);
+
+        if (profiling) {
+            fusion_cn_prof_add(&fusion_cn_worker_prof.total, ktime_get_ns() - t0);
+            fusion_cn_prof_maybe_log();
+        }
     }
 }
 
