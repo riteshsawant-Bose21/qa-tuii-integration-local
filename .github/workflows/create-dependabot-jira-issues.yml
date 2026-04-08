@@ -1,0 +1,24 @@
+name: Update JIRA with dependabot issues
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */8 * * *'
+jobs:
+  jira:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    steps:
+      - name: Dependabot JIRA Action
+        uses: sprout-tech/dependabot-jira-action@v1.2.1
+        with:
+          jiraIssueLabel: dependabot
+          jiraProjectKey: DEVOPS
+          jiraIssueType: Bug
+          githubRepo: BoseProfessional/fusion-monorepo
+          githubOwner: Amol-Kirtane-Boseprofessional
+        env:
+          JIRA_SUBDOMAIN: ${{ secrets.CONFLUENCE_BASE_URL }}
+          JIRA_USER_EMAIL: "amol.kirtane@boseprofessional.com"
+          JIRA_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
+          GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
