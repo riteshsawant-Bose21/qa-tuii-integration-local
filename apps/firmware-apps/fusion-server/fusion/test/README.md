@@ -94,6 +94,37 @@ Key knobs:
 - `FUSION_UDP_SEND_MIN` / `FUSION_UDP_SEND_MAX`: per-device send interval bounds.
 - `FUSION_UDP_RECONNECT_MIN` / `FUSION_UDP_RECONNECT_MAX`: reconnect delay bounds.
 
+## Run Snapshot + Scene Catalog Tests
+
+The integration tests in `snapshot_test.go` target a cluster VIP at `http://192.168.2.100:8080`.
+They validate both:
+- **Time Machine** behavior (`/time-machine/*`): create/activate/update/delete, epoch consistency, convergence
+- **Scene Catalog** behavior (`/snapshots/*`, `/scene-sets/*`, `/scenes/list`, `/scene-catalog-list`)
+
+From module root (`fusion/`):
+
+```bash
+go test -v --race ./test -run Snapshot
+```
+
+Run only the new Snapshot Definition + Scene Set foundation tests:
+
+```bash
+go test -v --race ./test -run 'SnapshotDef|SceneSet|ActivateScene|GetCurrentScene|ListScene|SceneCatalogList'
+```
+
+Run a single test while debugging:
+
+```bash
+go test -v --race ./test -run TestSceneCatalogList
+```
+
+### Requirements / Caveats
+
+- `snapshot_test.go` is currently hardcoded to `http://192.168.2.100` and is designed for the multipass/cluster path, not the `FUSION_TEST_LOCAL=1` loopback mode used by UDP tests.
+- Some snapshot tests expect multi-node behavior and can restart nodes during execution.
+- If you only want local-loopback validation, run the UDP suite from this README and skip `snapshot_test.go`.
+
 ## Notes
 
 - The UDP multipass-based tests in `fusion_test.go` are skipped when
