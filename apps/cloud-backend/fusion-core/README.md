@@ -19,11 +19,12 @@ A comprehensive cloud backend services for the Fusion Launcher ecosystem, enabli
 
 The Fusion Cloud Backend API is the core cloud services for the Bose Professional Fusion ecosystem, providing comprehensive management capabilities for the Fusion Launcher and connected devices. This service acts as the central hub for:
 
-- **Product Catalog Management**: Complete database of Bose Professional audio equipment with rich metadata and specifications
+- **Product Catalog Management**: Complete database of Bose Professional audio equipment with rich metadata, specifications, and pricing
 - **Project Orchestration**: End-to-end project lifecycle management for audio system installations and configurations
-- **IoT Device Management**: Connected device monitoring, configuration, and control (similar to Xyte's IoT platform)
+- **User Management**: User profiles, settings, and authorization with Auth0 integration
+- **Role-Based Access Control**: Organizational roles and permissions management
+- **IoT Device Management**: Connected device monitoring, configuration, and control with AWS IoT integration
 - **Launcher Integration**: Backend services powering the Fusion Launcher application for installers and system integrators
-- **Cloud Synchronization**: Real-time data sync between cloud services, local installations, and mobile applications
 
 ### Built With
 
@@ -40,31 +41,41 @@ The Fusion Cloud Backend API is the core cloud services for the Bose Professiona
 - **Multi-Category Support**: Speakers, Amplifiers, Digital Signal Processors, and IoT-enabled devices
 - **Rich Metadata**: Detailed technical specifications, images, documentation, and IoT capabilities
 - **Product Discovery**: Advanced search and filtering for Fusion Launcher integration
-- **Device Compatibility**: IoT device pairing and compatibility matrices
+- **Product Pricing**: Complete pricing information with currency support
+- **Data Synchronization**: Dedicated sync tool for bulk product data updates
 
 ### Project Orchestration  
 - **Full Lifecycle Management**: Create, configure, deploy, and monitor audio system projects
-- **Installation Support**: Project templates and configuration wizards for installers
-- **Asset Tracking**: Real-time tracking of deployed equipment and IoT devices
+- **User Assignment**: Assign and manage users on projects with role-based access
+- **Project Actions**: Star, archive, and lock/unlock projects
 - **Multi-Tenant Architecture**: Organization-based project isolation and management
+
+### User Management
+- **User Profiles**: Comprehensive user profile management with customizable settings
+- **User Settings**: Personalized settings and preferences per user
+- **Authentication Integration**: Auth0 integration for secure authentication
+
+### Role-Based Access Control
+- **Organizational Roles**: Create and manage roles within organizations
+- **Permission Management**: Fine-grained permission assignment to roles
+- **User Role Assignment**: Assign roles to users within organizations
 
 ### IoT Device Management
 - **Device Registration**: Automatic discovery and registration of connected audio devices
 - **Remote Configuration**: Over-the-air configuration updates and management
-- **Health Monitoring**: Real-time device status, diagnostics, and alert systems
-- **Firmware Management**: Centralized firmware distribution and update orchestration
+- **AWS IoT Integration**: Native AWS IoT Core integration for device management
+- **Device Reset**: Remote device reset capabilities
 
 ### Launcher Integration
 - **API Gateway**: RESTful APIs optimized for mobile and desktop Fusion Launcher apps
-- **Authentication**: Secure user and device authentication with role-based access
-- **Offline Sync**: Robust synchronization for field installations with limited connectivity
-- **Real-time Updates**: WebSocket support for live project and device status updates
+- **Authentication**: Secure user and device authentication with role-based access (Auth0)
+- **Middleware Stack**: Request logging, access control, and user context extraction
 
 ### Cloud Infrastructure
 - **Scalable Architecture**: Microservices-ready design for cloud deployment
 - **Interactive Documentation**: Swagger UI for API exploration and testing
-- **Monitoring & Logging**: Comprehensive observability with structured logging
-- **Security**: Enterprise-grade security with encryption and audit trails
+- **Monitoring & Logging**: Comprehensive observability with structured Zap logging
+- **Security**: Enterprise-grade security with Auth0 and AWS IoT integration
 
 ## Architecture
 
@@ -73,29 +84,63 @@ The Fusion Cloud Backend API is the core cloud services for the Bose Professiona
 fusion-core/
 ├── cmd/
 │   ├── api/
-│   │   └── main.go             # Application entry point
-│   └── scripts/
-│       └── product-sync.go     # Product synchronization utility
+│   │   ├── main.go             # Application entry point
+│   │   ├── .env                # Environment configuration
+│   │   └── .env-example        # Example environment file
+│   └── sync/
+│       ├── main.go             # Product sync tool entry point
+│       ├── README.md           # Sync tool documentation
+│       ├── .env                # Sync tool environment config
+│       └── .env-example        # Example environment file
 ├── docs/                       # Auto-generated Swagger docs
 │   ├── docs.go
 │   ├── swagger.json
 │   └── swagger.yaml
 ├── internal/
 │   ├── api/                    # API routing and middleware
+│   │   ├── response/
+│   │   │   ├── auth.go         # Auth response types
+│   │   │   └── response.go     # Common response utilities
 │   │   ├── types/
+│   │   │   ├── auth.go         # Auth request/response types
+│   │   │   ├── device.go       # Device domain models
+│   │   │   ├── environment.go  # Environment types
 │   │   │   ├── product.go      # Product domain models
-│   │   │   └── project.go      # Project domain models
-│   │   ├── config.go           # API configuration
+│   │   │   ├── project.go      # Project domain models
+│   │   │   ├── responses.go    # Response type definitions
+│   │   │   ├── role_management.go # Role management types
+│   │   │   └── user.go         # User domain models
 │   │   ├── routes.go           # Route definitions
 │   │   └── service.go          # API service layer
 │   ├── config/                 # Configuration management
+│   │   ├── api_config.go       # API-specific configuration
+│   │   ├── auth.go             # Authentication configuration
 │   │   ├── config.go           # Main configuration
 │   │   ├── postgres.go         # PostgreSQL configuration
-│   │   └── s3.go               # S3 configuration
+│   │   ├── processing.go       # Processing configuration
+│   │   ├── s3.go               # S3 configuration
+│   │   └── server.go           # Server configuration
+│   ├── constants/              # Application constants
+│   │   ├── codes.go            # Status/error codes
+│   │   └── endpoints.go        # API endpoint constants
 │   ├── environment/            # Environment handling
+│   │   ├── constants.go        # Environment constants
 │   │   ├── environment.go      # Environment utilities
 │   │   └── load_lookuper.go    # Configuration lookup
 │   ├── fusion/                 # Business logic and models
+│   │   ├── auth/               # Authentication service layer
+│   │   │   ├── auth.go         # Auth business logic
+│   │   │   ├── authzero/       # Auth0 integration
+│   │   │   │   ├── service.go  # Auth0 service
+│   │   │   │   └── validator.go # Token validation
+│   │   │   └── service.go      # Auth service interface
+│   │   ├── device/             # Device service layer
+│   │   │   ├── db/
+│   │   │   │   ├── service.go  # Device database service
+│   │   │   │   └── service_test.go # Device DB tests
+│   │   │   ├── device.go       # Device business logic
+│   │   │   ├── device_test.go  # Device logic tests
+│   │   │   └── service.go      # Device service interface
 │   │   ├── id/
 │   │   │   └── service.go      # ID generation service
 │   │   ├── model/              # Database models
@@ -103,69 +148,139 @@ fusion-core/
 │   │   │   ├── db.go           # Database connection
 │   │   │   ├── sqlboiler.toml  # SQLBoiler configuration
 │   │   │   └── models/         # Generated SQLBoiler models
-│   │   │       ├── *.go        # Auto-generated model files
-│   │   │       └── *_test.go   # Auto-generated test files
 │   │   ├── product/            # Product service layer
 │   │   │   ├── db/
-│   │   │   │   ├── model_product.go # Product database models
 │   │   │   │   └── service.go  # Product database service
+│   │   │   ├── validation/     # Product validation
+│   │   │   │   ├── field_definitions.go
+│   │   │   │   ├── field_validator.go
+│   │   │   │   └── product_schemas.go
 │   │   │   ├── product.go      # Product business logic
-│   │   │   └── service.go      # Product service interface
+│   │   │   ├── service.go      # Product service interface
+│   │   │   └── sync.go         # Product sync logic
 │   │   ├── project/            # Project service layer
 │   │   │   ├── db/
 │   │   │   │   ├── model_project.go     # Project database models
-│   │   │   │   ├── model_project_test.go # Project model tests
+│   │   │   │   ├── model_project_test.go
 │   │   │   │   ├── service.go           # Project database service
-│   │   │   │   └── service_test.go      # Project service tests
+│   │   │   │   └── service_test.go
 │   │   │   ├── project.go      # Project business logic
-│   │   │   ├── project_test.go # Project business logic tests
+│   │   │   ├── project_test.go
 │   │   │   └── service.go      # Project service interface
+│   │   ├── user/               # User service layer
+│   │   │   ├── db/
+│   │   │   │   ├── profile.go  # User profile DB operations
+│   │   │   │   ├── role_management_service.go
+│   │   │   │   ├── service.go  # User database service
+│   │   │   │   └── settings.go # User settings DB operations
+│   │   │   ├── profile.go      # User profile logic
+│   │   │   ├── service.go      # User service interface
+│   │   │   ├── settings.go     # User settings logic
+│   │   │   └── user.go         # User business logic
+│   │   ├── auth.go             # Auth domain models
+│   │   ├── device.go           # Device domain models
 │   │   ├── product.go          # Product domain models
-│   │   └── project.go          # Project domain models
+│   │   ├── project.go          # Project domain models
+│   │   └── user.go             # User domain models
 │   ├── handler/                # HTTP request handlers
+│   │   ├── auth.go             # Auth API handlers
+│   │   ├── device.go           # Device API handlers
+│   │   ├── device_test.go
 │   │   ├── product.go          # Product API handlers
+│   │   ├── product_test.go
 │   │   ├── project.go          # Project API handlers
-│   │   └── project_test.go     # Project handler tests
+│   │   ├── project_test.go
+│   │   ├── role_management.go  # Role management handlers
+│   │   ├── user.go             # User API handlers
+│   │   ├── user_profile_test.go
+│   │   ├── user_settings_test.go
+│   │   └── mock_user_service_test.go
 │   ├── log/                    # Logging configuration
+│   │   ├── config.go           # Log configuration
 │   │   └── log.go              # Logger setup and utilities
+│   ├── middleware/             # HTTP middleware
+│   │   ├── access_control.go   # Access control middleware
+│   │   ├── auth0.go            # Auth0 middleware
+│   │   ├── logging.go          # Request logging middleware
+│   │   ├── permissions.go      # Permissions middleware
+│   │   └── user_context.go     # User context extraction
+│   ├── server/                 # Server configurations
+│   │   ├── api/
+│   │   │   └── config.go       # API server config
+│   │   └── sync/
+│   │       └── config.go       # Sync server config
 │   ├── storage/                # Database and storage layers
-│   │   ├── cloudfs/            # Cloud filesystem (S3)
+│   │   ├── cloudfs/            # Cloud filesystem (S3/IoT)
 │   │   │   ├── cloudfs.go      # Cloud filesystem interface
+│   │   │   ├── iot.go          # AWS IoT integration
+│   │   │   ├── iot_test.go
 │   │   │   ├── s3.go           # S3 implementation
-│   │   │   └── s3_test.go      # S3 implementation tests
+│   │   │   └── s3_test.go
 │   │   └── sql/                # SQL database connections
 │   │       ├── postgres.go     # PostgreSQL implementation
 │   │       └── sql.go          # SQL interface
 │   ├── tests/                  # Integration tests
-│   │   └── project_integration_test.go # Project integration tests
-│   └── validation/             # Input validation
-│       ├── validator.go        # Validation logic
-│       └── validator_test.go   # Validation tests
+│   │   ├── device/
+│   │   │   └── device_test.go
+│   │   ├── product/
+│   │   │   └── product_test.go
+│   │   ├── project/
+│   │   │   └── project_test.go
+│   │   └── testutils/          # Test utilities
+│   │       ├── base_suite.go
+│   │       ├── data.go
+│   │       └── mocks.go
+│   └── utils/                  # Utility packages
+│       ├── auth/
+│       │   └── context.go      # Auth context utilities
+│       ├── errorutil/
+│       │   ├── errors.go       # Error utilities
+│       │   ├── project.go      # Project-specific errors
+│       │   ├── sync.go         # Sync-specific errors
+│       │   └── user.go         # User-specific errors
+│       └── validation/
+│           ├── project.go      # Project validation
+│           ├── validation.go   # General validation
+│           └── validator_test.go
 ├── migration/                  # Database migrations
 │   ├── fusion_cloud.sql        # Main database schema
+│   ├── products-schema.sql     # Product schema definitions
 │   ├── products.sql            # Product table schema
-│   └── test_data.sql           # Test data insertions
+│   ├── test_data.sql           # Test data insertions
+│   ├── user_profile.sql        # User profile schema
+│   ├── user_role_and_permission.sql # Role/permission schema
+│   ├── user_settings.sql       # User settings schema
+│   └── patch/                  # Migration patches
+├── sample-sync-data/           # Sample data for sync testing
 ├── scripts/
 │   └── lint.sh                 # Linting script
+├── .golangci.yml               # Golangci-lint configuration
+├── Dockerfile                  # Docker build configuration
+├── Makefile                    # Build automation
 ├── moon.yml                    # Moon build configuration
 ├── README.md                   # Project documentation
+├── version.txt                 # Version information
 ├── go.mod                      # Go module dependencies
 └── go.sum                      # Go module checksums
 ```
 
 ### Service Architecture
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   HTTP Client   │────│   Gin Router    │────│   Handlers      │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                                        │
-                       ┌─────────────────┐    ┌─────────────────┐
-                       │   Swagger UI    │    │   Services      │
-                       └─────────────────┘    └─────────────────┘
-                                                        │
-                       ┌─────────────────┐    ┌─────────────────┐
-                       │     Logger      │────│   Database      │
-                       └─────────────────┘    └─────────────────┘
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   HTTP Client   │────│   Gin Router    │────│   Middleware    │────│    Handlers     │
+└─────────────────┘    └─────────────────┘    └─────────────────┘    └─────────────────┘
+                                                                              │
+                       ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+                       │   Swagger UI    │    │     Auth0       │    │    Services     │
+                       └─────────────────┘    └─────────────────┘    └─────────────────┘
+                                                                              │
+                       ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+                       │     Logger      │    │    AWS IoT      │    │    Database     │
+                       └─────────────────┘    └─────────────────┘    └─────────────────┘
+                                                                              │
+                                              ┌─────────────────┐    ┌─────────────────┐
+                                              │    AWS S3       │    │   PostgreSQL    │
+                                              └─────────────────┘    └─────────────────┘
 ```
 
 ## Getting Started
@@ -283,15 +398,32 @@ Before you begin, ensure you have the following installed:
 
 1. **Create environment configuration file**
    ```bash
-   # Create .env file in cmd/api/ directory
+   # Copy the .env-example file in cmd/api/ directory
    cd cmd/api
+   cp .env-example .env
+   
+   # Edit .env and fill in required credentials:
+   # - POSTGRES_USER and POSTGRES_PASS for database
+   # - AUTH0_CLIENT_ID and AUTH0_CLIENT_SECRET for authentication
+   
+   # Alternatively, create manually:
    cat > .env << EOF
-   POSTGRES_HOST=localhost
+   POSTGRES_HOST=127.0.0.1
    POSTGRES_PORT=5432
    POSTGRES_USER=fusion_cloud
    POSTGRES_PASS=bose123
    POSTGRES_INSTANCE=fusion_cloud
+   POSTGRES_SSL_MODE=disable
    S3_PROJECT_BUCKET=bose.cloud-backend.test
+   S3_REGION=us-east-2
+   AWS_REGION=us-east-2
+   AUTH0_DOMAIN=id-dev.boseprofessional.com
+   API_HOST=0.0.0.0
+   API_PORT=8080
+   SWAGGER_HOST=0.0.0.0:8080
+   RELEASE_MODE=local
+   LOG_LEVEL=debug
+   LOG_DIR=/tmp/
    EOF
    ```
 
@@ -359,17 +491,51 @@ Once the server is running, access the interactive Swagger documentation:
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/v1/products` | Retrieve all products |
-| GET | `/api/v1/products/{id}` | Get product by ID |
+| GET | `/api/v1/products/:id` | Get product by ID |
+| GET | `/api/v1/products/:id/prices` | Get product prices |
 
 #### Projects API  
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/v1/projects` | Get all projects |
 | POST | `/api/v1/projects` | Create new project |
-| GET | `/api/v1/projects/{id}` | Get project by ID |
-| PATCH | `/api/v1/projects/{id}` | Update project |
-| DELETE | `/api/v1/projects/{id}` | Delete project |
-| POST | `/api/v1/projects/{id}/sync` | Sync project data |
+| PATCH | `/api/v1/projects/:projectId` | Update project |
+| DELETE | `/api/v1/projects/:projectId` | Delete project |
+| PUT | `/api/v1/projects/:projectId/users/:userEmail` | Assign user to project |
+| DELETE | `/api/v1/projects/:projectId/users/:userEmail` | Remove user from project |
+| POST | `/api/v1/projects/:projectId/star/:userId` | Star/unstar a project |
+| POST | `/api/v1/projects/:projectId/archive` | Archive project |
+| POST | `/api/v1/projects/:projectId/lock` | Lock/unlock project |
+
+#### Users API
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/users/authorization` | Get user authorization info |
+| POST | `/api/v1/users` | Create new user |
+| GET | `/api/v1/users/:email` | Get user by email |
+| PATCH | `/api/v1/users/:userID` | Update user |
+| GET | `/api/v1/users/profile` | Get user profile details |
+| POST | `/api/v1/users/profile` | Create user profile |
+| PUT | `/api/v1/users/profile/:profileID` | Update user profile |
+| GET | `/api/v1/users/settings` | Get user settings |
+| POST | `/api/v1/users/settings` | Create user settings |
+| PUT | `/api/v1/users/settings/:settingsID` | Update user settings |
+
+#### Organization API (Role Management)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/organization/role-management` | Get organization role management |
+| POST | `/api/v1/organization/roles` | Create role |
+| PUT | `/api/v1/organization/users/:userID/role` | Update user role |
+| PUT | `/api/v1/organization/roles/:roleID/permissions` | Update role permissions |
+| GET | `/api/v1/organization/users` | Get organization users |
+
+#### Devices API
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/devices` | Create/register a device |
+| PATCH | `/api/v1/devices/:device_id` | Update device |
+| DELETE | `/api/v1/devices/:device_id/reset` | Reset device |
 
 ### Example API Calls
 
@@ -403,19 +569,21 @@ curl -X POST "http://localhost:8080/api/v1/projects" \
   }'
 ```
 
-**Sync Project Data**
+**Assign User to Project**
 ```bash
-curl -X POST "http://localhost:8080/api/v1/projects/project-001/sync" \
+curl -X PUT "http://localhost:8080/api/v1/projects/project-001/users/engineer@bose.com" \
   -H "accept: application/json" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "meta_data": {
-      "version": "2.0",
-      "updated_by": "engineer@bose.com"
-    },
-    "zip_file_url": "https://storage.example.com/project-files/project-001.zip"
-  }'
+  -H "Content-Type: application/json"
 ```
+
+**Get User Authorization**
+```bash
+curl -X GET "http://localhost:8080/api/v1/users/authorization" \
+  -H "accept: application/json"
+```
+
+> **Note**: For product data synchronization, use the dedicated sync tool located in `cmd/sync/`. See the [sync tool README](cmd/sync/README.md) for details.
+
 ## Development
 
 ### Code Generation
@@ -508,14 +676,136 @@ git diff docs/
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GIN_MODE` | Gin framework mode | `debug` |
-| `DB_HOST` | Database host | `127.0.0.1` |
-| `DB_PORT` | Database port | `5432` |
-| `DB_USER` | Database user | `fusion_cloud` |
-| `DB_PASSWORD` | Database password | `bose123` |
-| `DB_NAME` | Database name | `fusion_cloud` |
-| `SERVER_HOST` | Server host | `localhost` |
-| `SERVER_PORT` | Server port | `8080` |
+| **Database** |
+| `POSTGRES_HOST` | PostgreSQL database host | `127.0.0.1` |
+| `POSTGRES_PORT` | PostgreSQL database port | `5432` |
+| `POSTGRES_USER` | Database username | - |
+| `POSTGRES_PASS` | Database password | - |
+| `POSTGRES_INSTANCE` | Database name | `fusion_cloud` |
+| `POSTGRES_SSL_MODE` | PostgreSQL SSL mode | `disable` |
+| **AWS/S3** |
+| `S3_PROJECT_BUCKET` | S3 bucket for projects | `bose.cloud-backend.test` |
+| `S3_PRODUCT_BUCKET` | S3 bucket for products | `bose.cloud-backend.test` |
+| `S3_PRICE_BUCKET` | S3 bucket for pricing | `bose.cloud-backend.test` |
+| `S3_REGION` | S3 region | `us-east-2` |
+| `AWS_REGION` | AWS region | `us-east-2` |
+| **Auth0** |
+| `AUTH0_DOMAIN` | Auth0 domain | `id-dev.boseprofessional.com` |
+| `AUTH0_ACCESS_TOKEN_ENDPOINT` | Auth0 token endpoint | - |
+| `AUTH0_CLIENT_ID` | Auth0 client ID | - |
+| `AUTH0_CLIENT_SECRET` | Auth0 client secret | - |
+| `AUTH0_RESOURCE_OWNER_PASSWORD_FLOW_ENABLED` | Enable password flow (QA only) | `true` |
+| `AUTH0_TEST_USER_DEFAULT_PASSWORD` | Default password for test users | - |
+| **Server** |
+| `API_HOST` | API server host | `0.0.0.0` |
+| `API_PORT` | API server port | `8080` |
+| `SWAGGER_HOST` | Swagger documentation host | `0.0.0.0:8080` |
+| `RELEASE_MODE` | Release mode (local/production) | `local` |
+| `LOG_LEVEL` | Logging level | `debug` |
+| `LOG_DIR` | Log file directory | `/tmp/` |
+| **Processing** |
+| `MAX_WORKERS` | Maximum concurrent workers | `5` |
+| `BATCH_SIZE` | Batch processing size | `50` |
+| `RETRY_ATTEMPTS` | Number of retry attempts | `3` |
+| `RETRY_DELAY` | Delay between retries (seconds) | `2` |
+| **Validation** |
+| `REQUIRE_VERSION` | Require version in data | `true` |
+| `DEFAULT_VERSION` | Default data version | `2.0` |
+| `SUPPORTED_VERSIONS` | Comma-separated supported versions | `1.0,1.1,2.0,1.0.0,1.0.1,2.0.1,3.0.0` |
+
+### Pre-PR Checklist (Using Makefile)
+
+Before submitting a Pull Request, run the following checks locally using the provided Makefile:
+
+#### Prerequisites
+```bash
+# Install golangci-lint (required for linting)
+# macOS
+brew install golangci-lint
+
+# Linux
+curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
+
+# Verify installation
+golangci-lint --version
+```
+
+#### Available Make Commands
+
+| Command | Description |
+|---------|-------------|
+| `make all` | Run lint, tests, and build (recommended before PR) |
+| `make lint` | Run golangci-lint static analysis |
+| `make test` | Run all unit tests |
+| `make test-integration` | Run integration tests |
+| `make coverage` | Run tests with coverage report |
+| `make build` | Build the application binary |
+| `make clean` | Remove build artifacts |
+
+#### Running the Full Pre-PR Check
+
+```bash
+# Navigate to the fusion-core directory
+cd apps/cloud-backend/fusion-core
+
+# Run all checks (lint + test + build) - RECOMMENDED before PR
+make all
+
+# Or run individual checks:
+
+# 1. Run linter first to check code quality
+make lint
+
+# 2. Run unit tests
+make test
+
+# 3. Run integration tests (requires database connection)
+make test-integration
+
+# 4. Run tests with coverage report
+make coverage
+
+# 5. Build the application
+make build
+```
+
+#### Expected Output
+
+**Successful lint:**
+```
+Running linting...
+# No output means no linting errors
+```
+
+**Successful tests:**
+```
+Running all tests...
+ok  	github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/handler	0.XXXs
+ok  	github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project	0.XXXs
+...
+```
+
+**Successful build:**
+```
+Building application...
+# Creates fusion-core binary in current directory
+```
+
+#### Troubleshooting
+
+**Linter errors:**
+- Fix all reported issues before submitting PR
+- Run `make lint` again to verify fixes
+- Configuration is in `.golangci.yml`
+
+**Test failures:**
+- Ensure database is running for integration tests
+- Check test output for specific failures
+- Run individual test files: `go test -v ./internal/handler/...`
+
+**Build failures:**
+- Run `go mod tidy` to resolve dependency issues
+- Check for syntax errors in recent changes
 
 ## Contributing
 
@@ -530,15 +820,19 @@ We welcome contributions to the Fusion Cloud Backend API! Please follow these gu
 2. **Make your changes**
 3. **Add tests for new functionality**
 4. **Update documentation**
-5. **Commit your changes**
+5. **Run pre-PR checks** (see [Pre-PR Checklist](#pre-pr-checklist-using-makefile))
+   ```bash
+   make all  # Runs lint, test, and build
+   ```
+6. **Commit your changes**
    ```bash
    git commit -m 'Add amazing feature'
    ```
-6. **Push to your branch**
+7. **Push to your branch**
    ```bash
    git push origin feature/amazing-feature
    ```
-7. **Open a Pull Request**
+8. **Open a Pull Request**
 
 ### Code Standards
 
