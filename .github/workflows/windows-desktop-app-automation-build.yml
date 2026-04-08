@@ -4,7 +4,7 @@ name: Fusion-App-Windows-Automation-Build
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 18 * * *
+    - cron: "0 18 * * *"
 
 permissions:
   actions: read
