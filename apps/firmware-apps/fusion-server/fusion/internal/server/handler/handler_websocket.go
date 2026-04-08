@@ -77,6 +77,8 @@ func (h *Handler) routeWebSocketMessageWithConn(request *api.WebSocketRequest, c
 		return h.handleUnsubscribeDevices(request, conn, server)
 	case api.WSMsgTypePing:
 		return h.handlePing(request)
+	case api.WSMsgTypeStartUpdate:
+		return h.handleStartUpdate(request)
 	default:
 		return createErrorResponse(&request.ID, api.WSCodeInvalidType, fmt.Sprintf("Unknown message type: %s", request.Type)), nil
 	}
@@ -213,6 +215,35 @@ func (h *Handler) handleUnsubscribeDevices(request *api.WebSocketRequest, conn *
 // handlePing handles ping requests
 func (h *Handler) handlePing(request *api.WebSocketRequest) (*api.WebSocketResponse, error) {
 	return createSuccessResponse(&request.ID, api.WSMsgTypePong, api.WSCodePong, "pong", nil), nil
+}
+
+// handleStartUpdate handles software update trigger requests
+func (h *Handler) handleStartUpdate(request *api.WebSocketRequest) (*api.WebSocketResponse, error) {
+	logger := logging.GetLogger()
+
+	logger.Info("Received software update start request - broadcasting to cluster")
+
+	// Create a cluster message to broadcast the software update trigger to all nodes
+	// This will call the delegate's handleSoftwareUpdate method on each node
+	msg := api.NewNotifyMessage(
+		api.NotifyOpSoftwareUpdate,
+		h.clusterTransport.LocalNode().Name,
+		func(m *api.NotifyMessage) {
+			// No additional data needed for software update trigger
+		},
+	)
+
+	// Broadcast to all nodes in the cluster (this calls delegate.handleSoftwareUpdate)
+	if err := h.hub.BroadcastToNodes(msg); err != nil {
+		logger.Error("Failed to broadcast software update to cluster: %v", err)
+		return createErrorResponse(&request.ID, api.WSCodeApplicationError, fmt.Sprintf("Failed to broadcast software update: %v", err)), nil
+	}
+
+	logger.Info("Successfully broadcasted software update trigger to cluster")
+	return createSuccessResponse(&request.ID, api.WSMsgTypeStartUpdate, api.WSCodeUpdateStarted, "Software update broadcasted to all cluster nodes", map[string]interface{}{
+		"action": "broadcast_cluster",
+		"nodes":  h.clusterTransport.MemberListMembers(),
+	}), nil
 }
 
 // Helper functions for creating responses in the new format

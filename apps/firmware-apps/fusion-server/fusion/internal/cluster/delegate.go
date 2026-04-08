@@ -9,6 +9,7 @@ import (
 	"fusion/internal/utils"
 	"math"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -148,6 +149,8 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		return
 	}
 
+	logger.Debug("[Delegate] Received gossip message: %s from %s", message.Operation, message.Node)
+
 	now := time.Now().UTC()
 
 	if !message.SentAt.IsZero() {
@@ -264,11 +267,19 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 	case api.NotifyOpDeviceUpdate:
 		d.handleDeviceUpdate(&message)
 
+	case api.NotifyOpSoftwareUpdate:
+		logger.Info("[Delegate] Processing NotifyOpSoftwareUpdate from node %s", message.Node)
+		d.handleSoftwareUpdate(&message)
+
 	case api.NotifyOpSoftwareUpdateAvailable:
 		d.handleSoftwareUpdateAvailable(&message)
 
 	case api.NotifyOpSoftwareUpdateSyncAck:
 		d.handleSoftwareUpdateSyncAck(&message)
+
+	case api.NotifyOpSoftwareUpdateProgress:
+		logger.Debug("[Delegate] Processing NotifyOpSoftwareUpdateProgress from node %s", message.Node)
+		d.handleSoftwareUpdateProgress(&message)
 
 	default:
 		logger.Error("Unknown message type: %q", message.Operation)
@@ -292,6 +303,27 @@ func (d *ClusterDelegate) handleDeviceUpdate(message *api.NotifyMessage) {
 		message.Node, message.DeviceInfo.Id)
 
 	d.hub.BroadcastToObservers(message)
+}
+
+// handleSoftwareUpdate processes software update trigger notifications
+func (d *ClusterDelegate) handleSoftwareUpdate(message *api.NotifyMessage) {
+	logger := logging.GetLogger()
+
+	logger.Info("[SoftwareUpdate] Received software update trigger from %s on node %s",
+		message.Node, d.appConfig.NodeName)
+
+	// Execute the systemctl command to start the swupdate service
+	cmd := exec.Command("systemctl", "start", "swupdate-ota-install.service")
+	err := cmd.Run()
+
+	if err != nil {
+		logger.Error("[SoftwareUpdate] Failed to start swupdate-ota-install.service on node %s: %v",
+			d.appConfig.NodeName, err)
+		return
+	}
+
+	logger.Info("[SoftwareUpdate] Successfully started swupdate-ota-install.service on node %s",
+		d.appConfig.NodeName)
 }
 
 // handleSoftwareUpdateAvailable processes bundle availability notifications from any node
@@ -482,6 +514,32 @@ func (d *ClusterDelegate) handleSoftwareUpdateSyncAck(message *api.NotifyMessage
 		d.handler.HandleSyncAck(message.Node, message.SoftwareUpdateAck)
 	} else {
 		logger.Warn("[SoftwareUpdateSyncAck] No sync handler configured - ignoring acknowledgment")
+	}
+}
+
+// handleSoftwareUpdateProgress processes software update progress messages
+func (d *ClusterDelegate) handleSoftwareUpdateProgress(message *api.NotifyMessage) {
+	logger := logging.GetLogger()
+
+	if message.SoftwareUpdateProgress == nil {
+		logger.Error("SoftwareUpdateProgress message with nil payload from %s", message.Node)
+		return
+	}
+
+	logger.Debug("[SoftwareUpdateProgress] Received progress from %s: %s %d%% (step %d/%d)",
+		message.Node,
+		message.SoftwareUpdateProgress.Status,
+		message.SoftwareUpdateProgress.CurPercent,
+		message.SoftwareUpdateProgress.CurStep,
+		message.SoftwareUpdateProgress.NSteps)
+
+	// Forward to Hub for aggregation and WebSocket broadcasting
+	if d.hub != nil {
+		if err := d.hub.BroadcastToNodes(message); err != nil {
+			logger.Error("Failed to forward progress message to Hub: %v", err)
+		}
+	} else {
+		logger.Warn("[SoftwareUpdateProgress] No Hub configured - ignoring progress message")
 	}
 }
 

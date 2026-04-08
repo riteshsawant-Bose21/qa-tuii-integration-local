@@ -34,6 +34,16 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
   final TextEditingController yController = TextEditingController();
   final TextEditingController zController = TextEditingController();
 
+  final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+
+  bool get _isSpeaker => widget.selectedHardware is Speaker;
+  Speaker? get _speaker => _isSpeaker ? widget.selectedHardware as Speaker : null;
+  // - For surface speakers properties only show pitch and yaw.
+  // - For ceiling/pendant speakers properties don't show any rotation properties (but keep the pitch as 90 when adding)
+  bool get _rollEnabled => false;
+  bool get _pitchEnabled => _speaker?.mountingType == MountingType.surface;
+  bool get _yawEnabled => _speaker?.mountingType == MountingType.surface;
+
   //dispose controllers
   @override
   void dispose() {
@@ -48,30 +58,175 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
     super.dispose();
   }
 
+  void onHardWareNameChanged() {
+    FocusScope.of(context).unfocus();
+    final String v = nameController.text;
+
+    // Validate that the name is not empty or just whitespace
+    final String trimmedName = v.trim();
+    if (trimmedName.isNotEmpty) {
+      final HardwareComponent updated = widget.selectedHardware.copyWith(name: trimmedName);
+      projectViewModel.updateHardware(hardware: updated);
+    } else {
+      FusionToast.error(context, message: 'Hardware name cannot be empty');
+    }
+  }
+
+  void onXPositionChanged() {
+    FocusScope.of(context).unfocus();
+    final String v = xController.text;
+
+    final double? xValue = double.tryParse(v.trim());
+    if (xValue != null) {
+      // Multiply by 100 when submitting
+      final HardwareComponent updated = widget.selectedHardware.copyWith(
+        pos: Offset(xValue * 100, widget.selectedHardware.pos?.dy ?? 0.0),
+      );
+      projectViewModel.updateHardware(hardware: updated);
+      if (_isSpeaker) {
+        widget.onSpeakerParametersChanged?.call();
+      }
+    } else {
+      // Reset to previous value if invalid
+      if (widget.selectedHardware.pos != null) {
+        xController.text = (widget.selectedHardware.pos!.dx / 100).toStringAsFixed(2);
+      }
+      // Show validation error
+      FusionToast.error(context, message: 'X position must be a valid decimal number');
+    }
+  }
+
+  void onYPositionChanged() {
+    FocusScope.of(context).unfocus();
+    final String v = yController.text;
+
+    final double? yValue = double.tryParse(v.trim());
+    if (yValue != null) {
+      // Multiply by 100 when submitting
+      final HardwareComponent updated = widget.selectedHardware.copyWith(
+        pos: Offset(
+          widget.selectedHardware.pos?.dx ?? 0.0,
+          yValue * 100,
+        ),
+      );
+      projectViewModel.updateHardware(hardware: updated);
+      if (_isSpeaker) {
+        widget.onSpeakerParametersChanged?.call();
+      }
+    } else {
+      // Reset to previous value if invalid
+      if (widget.selectedHardware.pos != null) {
+        yController.text = (widget.selectedHardware.pos!.dy / 100).toStringAsFixed(2);
+      }
+      // Show validation error
+      FusionToast.error(context, message: 'Y position must be a valid decimal number');
+    }
+  }
+
+  void onZPositionChanged() {
+    FocusScope.of(context).unfocus();
+    final String v = zController.text;
+
+    final double? zValue = double.tryParse(v.trim());
+
+    if (zValue != null) {
+      // Multiply by 100 when submitting
+      final HardwareComponent updated = widget.selectedHardware.copyWith(zAxis: zValue * 100);
+      projectViewModel.updateHardware(hardware: updated);
+      if (_isSpeaker) {
+        widget.onSpeakerParametersChanged?.call();
+      }
+    } else {
+      // Reset to previous value if invalid
+      if (widget.selectedHardware.zAxis != null) {
+        zController.text = (widget.selectedHardware.zAxis! / 100).toStringAsFixed(2);
+      }
+      // Show validation error
+      FusionToast.error(context, message: 'Z position must be a valid decimal number');
+    }
+  }
+
+  void onRollChanged() {
+    FocusScope.of(context).unfocus();
+    final String v = rollController.text;
+
+    final double? roll = double.tryParse(v.trim());
+    if (roll != null) {
+      final Speaker updated = _speaker!.copyWith(roll: roll);
+      projectViewModel.updateHardware(hardware: updated);
+      widget.onSpeakerParametersChanged?.call();
+    } else {
+      // Reset to previous value if invalid
+      rollController.text = _speaker?.roll.toString() ?? '0.0';
+      // Show validation error
+      // Trigger SPL update for speaker orientation changes
+      FusionToast.error(context, message: 'Roll must be a valid decimal number');
+    }
+  }
+
+  void onPitchChanged() {
+    FocusScope.of(context).unfocus();
+    final String v = pitchController.text;
+
+    final double? pitch = double.tryParse(v.trim());
+    if (pitch != null) {
+      final Speaker updated = _speaker!.copyWith(pitch: pitch);
+      projectViewModel.updateHardware(hardware: updated);
+      widget.onSpeakerParametersChanged?.call();
+    } else {
+      // Reset to previous value if invalid
+      pitchController.text = _isSpeaker ? _speaker!.pitch.toString() : '0.0';
+      FusionToast.error(context, message: 'Pitch must be a valid decimal number');
+    }
+  }
+
+  void onYawChanged() {
+    FocusScope.of(context).unfocus();
+    final String v = yawController.text;
+
+    final double? yaw = double.tryParse(v.trim());
+    if (yaw != null) {
+      final Speaker updated = _speaker!.copyWith(yaw: yaw);
+      projectViewModel.updateHardware(hardware: updated);
+      widget.onSpeakerParametersChanged?.call();
+    } else {
+      // Reset to previous value if invalid
+      yawController.text = _isSpeaker ? _speaker!.yaw.toString() : '0.0';
+      FusionToast.error(context, message: 'Yaw must be a valid decimal number');
+    }
+  }
+
+  void onGainChanged() {
+    FocusScope.of(context).unfocus();
+    final String v = gainController.text;
+
+    final double? gain = double.tryParse(v.trim());
+    if (gain != null) {
+      final Speaker updated = _speaker!.copyWith(gain: gain);
+      projectViewModel.updateHardware(hardware: updated);
+      widget.onSpeakerParametersChanged?.call();
+    } else {
+      // Reset to previous value if invalid
+      gainController.text = _isSpeaker ? _speaker!.gain.toString() : '0.0';
+      FusionToast.error(context, message: 'Gain must be a valid decimal number');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final TextStyle? textStyleGrey = Theme.of(
-      context,
-    ).textTheme.bodySmall?.copyWith(
+    final TextStyle? textStyleGrey = Theme.of(context).textTheme.bodySmall?.copyWith(
       fontSize: 10,
       color: Colors.grey,
       fontWeight: FontWeight.w500,
     );
-    final TextStyle? textStyleBlack = Theme.of(
-      context,
-    ).textTheme.bodySmall?.copyWith(
-      fontSize: 9,
-      color: Colors.black87,
-      fontWeight: FontWeight.w400,
-    );
+
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, Object? state) {
-        final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
         nameController.text = widget.selectedHardware.name;
-        gainController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).gain.toString() : '0.0';
-        pitchController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).pitch.toString() : '0.0';
-        yawController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).yaw.toString() : '0.0';
-        rollController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).roll.toString() : '0.0';
+        gainController.text = _speaker?.gain.toString() ?? '0.0';
+        pitchController.text = _speaker?.pitch.toString() ?? '0.0';
+        yawController.text = _speaker?.yaw.toString() ?? '0.0';
+        rollController.text = _speaker?.roll.toString() ?? '0.0';
 
         // Divide by 100 for display
 
@@ -98,12 +253,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                     SemanticHelper.container(
                       testId: SemanticHelper.createTestId(SemanticTypes.container, "hardware_image"),
                       child: FusionImage.asset(
-                        (widget.selectedHardware is Speaker)
-                            ? serviceLocator<ProjectViewModel>().getHardwareImage(
-                              productId: (widget.selectedHardware as Speaker).productId ?? 0,
-                              currentImagePath: widget.selectedHardware.assetImagePath,
-                            )
-                            : widget.selectedHardware.assetImagePath,
+                        widget.selectedHardware.assetImagePath,
                         width: 28,
                         height: 28,
                         fit: BoxFit.contain,
@@ -141,10 +291,8 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                       child: IconButton(
                         icon: const Icon(LucideIcons.trash200, size: 18, color: Colors.red),
                         onPressed: () {
-                          final bool isSpeaker = widget.selectedHardware is Speaker;
-                          viewModel.removeHardware(
-                            hardwareId: widget.selectedHardware.id,
-                          );
+                          final bool isSpeaker = _isSpeaker;
+                          projectViewModel.removeHardware(hardwareId: widget.selectedHardware.id);
                           if (isSpeaker) {
                             widget.onSpeakerDeleted!();
                           }
@@ -161,25 +309,8 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                   child: PropertyTextField(
                     controller: nameController,
                     hintText: 'Hardware Name',
-                    onTapOutside: (PointerDownEvent event) {
-                      FocusScope.of(context).unfocus();
-                      final String v = nameController.text;
-
-                      // Validate that the name is not empty or just whitespace
-                      final String trimmedName = v.trim();
-                      if (trimmedName.isNotEmpty) {
-                        final HardwareComponent updated = widget.selectedHardware.copyWith(name: trimmedName);
-                        viewModel.updateHardware(hardware: updated);
-                      } else {
-                        // Show a snackbar to inform user
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: FusionAppText(text: 'Hardware name cannot be empty'),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      }
-                    },
+                    onSubmitted: (String p0) => onHardWareNameChanged(),
+                    onTapOutside: (PointerDownEvent event) => onHardWareNameChanged(),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -211,39 +342,8 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                     maxLength: 24,
                                     hintText: 'X',
                                     keyboardType: TextInputType.number,
-                                    onTapOutside: (PointerDownEvent event) {
-                                      FocusScope.of(context).unfocus();
-                                      final String v = xController.text;
-
-                                      final double? xValue = double.tryParse(v.trim());
-                                      if (xValue != null) {
-                                        // Multiply by 100 when submitting
-                                        final HardwareComponent updated = widget.selectedHardware.copyWith(
-                                          pos: Offset(
-                                            xValue * 100,
-                                            widget.selectedHardware.pos?.dy ?? 0.0,
-                                          ),
-                                        );
-                                        viewModel.updateHardware(hardware: updated);
-                                        if (widget.selectedHardware is Speaker) {
-                                          widget.onSpeakerParametersChanged?.call();
-                                        }
-                                      } else {
-                                        // Reset to previous value if invalid
-                                        if (widget.selectedHardware.pos != null) {
-                                          xController.text = (widget.selectedHardware.pos!.dx / 100).toStringAsFixed(2);
-                                        }
-                                        // Show validation error
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: FusionAppText(
-                                              text: 'X position must be a valid decimal number',
-                                            ),
-                                            duration: Duration(seconds: 2),
-                                          ),
-                                        );
-                                      }
-                                    },
+                                    onTapOutside: (PointerDownEvent event) => onXPositionChanged(),
+                                    onSubmitted: (String p0) => onXPositionChanged(),
                                   ),
                                 ),
                               ),
@@ -264,39 +364,8 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                     maxLength: 24,
                                     hintText: 'Y',
                                     keyboardType: TextInputType.number,
-                                    onTapOutside: (PointerDownEvent event) {
-                                      FocusScope.of(context).unfocus();
-                                      final String v = yController.text;
-
-                                      final double? yValue = double.tryParse(v.trim());
-                                      if (yValue != null) {
-                                        // Multiply by 100 when submitting
-                                        final HardwareComponent updated = widget.selectedHardware.copyWith(
-                                          pos: Offset(
-                                            widget.selectedHardware.pos?.dx ?? 0.0,
-                                            yValue * 100,
-                                          ),
-                                        );
-                                        viewModel.updateHardware(hardware: updated);
-                                        if (widget.selectedHardware is Speaker) {
-                                          widget.onSpeakerParametersChanged?.call();
-                                        }
-                                      } else {
-                                        // Reset to previous value if invalid
-                                        if (widget.selectedHardware.pos != null) {
-                                          yController.text = (widget.selectedHardware.pos!.dy / 100).toStringAsFixed(2);
-                                        }
-                                        // Show validation error
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: FusionAppText(
-                                              text: 'Y position must be a valid decimal number',
-                                            ),
-                                            duration: Duration(seconds: 2),
-                                          ),
-                                        );
-                                      }
-                                    },
+                                    onSubmitted: (String p0) => onYPositionChanged(),
+                                    onTapOutside: (PointerDownEvent event) => onYPositionChanged(),
                                   ),
                                 ),
                               ),
@@ -317,35 +386,8 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                     maxLength: 24,
                                     hintText: 'Z',
                                     keyboardType: TextInputType.number,
-                                    onTapOutside: (PointerDownEvent event) {
-                                      FocusScope.of(context).unfocus();
-                                      final String v = zController.text;
-
-                                      final double? zValue = double.tryParse(v.trim());
-
-                                      if (zValue != null) {
-                                        // Multiply by 100 when submitting
-                                        final HardwareComponent updated = widget.selectedHardware.copyWith(zAxis: zValue * 100);
-                                        viewModel.updateHardware(hardware: updated);
-                                        if (widget.selectedHardware is Speaker) {
-                                          widget.onSpeakerParametersChanged?.call();
-                                        }
-                                      } else {
-                                        // Reset to previous value if invalid
-                                        if (widget.selectedHardware.zAxis != null) {
-                                          zController.text = (widget.selectedHardware.zAxis! / 100).toStringAsFixed(2);
-                                        }
-                                        // Show validation error
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: FusionAppText(
-                                              text: 'Z position must be a valid decimal number',
-                                            ),
-                                            duration: Duration(seconds: 2),
-                                          ),
-                                        );
-                                      }
-                                    },
+                                    onSubmitted: (String p0) => onZPositionChanged(),
+                                    onTapOutside: (PointerDownEvent event) => onZPositionChanged(),
                                   ),
                                 ),
                               ),
@@ -357,7 +399,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                   ],
                 ),
 
-                if (widget.selectedHardware is Speaker) ...<Widget>[
+                if (_isSpeaker) ...<Widget>[
                   const SizedBox(height: 16),
 
                   // Roll field
@@ -372,43 +414,26 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                       ),
                       const SizedBox(width: 8),
                       IntrinsicWidth(
-                        child: SemanticHelper.formControl(
-                          testId: SemanticHelper.createTestId(SemanticTypes.textInput, "roll"),
-                          child: PropertyTextField(
-                            controller: rollController,
-                            hintText: 'Roll',
-                            keyboardType: TextInputType.number,
-                            suffixText: "°",
-                            onTapOutside: (PointerDownEvent event) {
-                              FocusScope.of(context).unfocus();
-                              final String v = rollController.text;
-
-                              final double? roll = double.tryParse(v.trim());
-                              if (roll != null) {
-                                final Speaker updated = (widget.selectedHardware as Speaker).copyWith(roll: roll);
-                                viewModel.updateHardware(hardware: updated);
-                                widget.onSpeakerParametersChanged?.call();
-                              } else {
-                                // Reset to previous value if invalid
-                                rollController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).roll.toString() : '0.0';
-                                // Show validation error
-                                // Trigger SPL update for speaker orientation changes
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: FusionAppText(
-                                      text: 'Roll must be a valid decimal number',
-                                    ),
-                                    duration: Duration(seconds: 2),
-                                  ),
-                                );
-                              }
-                            },
+                        child: Opacity(
+                          opacity: _rollEnabled ? 1.0 : 0.6,
+                          child: IgnorePointer(
+                            ignoring: !_rollEnabled,
+                            child: SemanticHelper.formControl(
+                              testId: SemanticHelper.createTestId(SemanticTypes.textInput, "roll"),
+                              child: PropertyTextField(
+                                controller: rollController,
+                                hintText: 'Roll',
+                                keyboardType: TextInputType.number,
+                                suffixText: "°",
+                                onSubmitted: (String p0) => onRollChanged(),
+                                onTapOutside: (PointerDownEvent event) => onRollChanged(),
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 12),
 
                   // Pitch field
@@ -423,40 +448,26 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                       ),
                       const SizedBox(width: 8),
                       IntrinsicWidth(
-                        child: SemanticHelper.formControl(
-                          testId: SemanticHelper.createTestId(SemanticTypes.textInput, "pitch"),
-                          child: PropertyTextField(
-                            controller: pitchController,
-                            hintText: 'Pitch',
-                            suffixText: "°",
-                            keyboardType: TextInputType.number,
-                            onTapOutside: (PointerDownEvent event) {
-                              FocusScope.of(context).unfocus();
-                              final String v = pitchController.text;
-
-                              final double? pitch = double.tryParse(v.trim());
-                              if (pitch != null) {
-                                final Speaker updated = (widget.selectedHardware as Speaker).copyWith(pitch: pitch);
-                                viewModel.updateHardware(hardware: updated);
-                                widget.onSpeakerParametersChanged?.call();
-                              } else {
-                                // Reset to previous value if invalid
-                                pitchController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).pitch.toString() : '0.0';
-                                // Show validation error
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: FusionAppText(text: 'Pitch must be a valid decimal number'),
-                                    duration: Duration(seconds: 2),
-                                  ),
-                                );
-                              }
-                            },
+                        child: Opacity(
+                          opacity: _pitchEnabled ? 1.0 : 0.6,
+                          child: IgnorePointer(
+                            ignoring: !_pitchEnabled,
+                            child: SemanticHelper.formControl(
+                              testId: SemanticHelper.createTestId(SemanticTypes.textInput, "pitch"),
+                              child: PropertyTextField(
+                                controller: pitchController,
+                                hintText: 'Pitch',
+                                suffixText: "°",
+                                keyboardType: TextInputType.number,
+                                onTapOutside: (PointerDownEvent event) => onPitchChanged(),
+                                onSubmitted: (String p0) => onPitchChanged(),
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 12),
 
                   // Yaw field
@@ -471,42 +482,26 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                       ),
                       const SizedBox(width: 8),
                       IntrinsicWidth(
-                        child: SemanticHelper.formControl(
-                          testId: SemanticHelper.createTestId(SemanticTypes.textInput, "yaw"),
-                          child: PropertyTextField(
-                            controller: yawController,
-                            hintText: 'Yaw',
-                            suffixText: "°",
-                            keyboardType: TextInputType.number,
-                            onTapOutside: (PointerDownEvent event) {
-                              FocusScope.of(context).unfocus();
-                              final String v = yawController.text;
-
-                              final double? yaw = double.tryParse(v.trim());
-                              if (yaw != null) {
-                                final Speaker updated = (widget.selectedHardware as Speaker).copyWith(yaw: yaw);
-                                viewModel.updateHardware(hardware: updated);
-                                widget.onSpeakerParametersChanged?.call();
-                              } else {
-                                // Reset to previous value if invalid
-                                yawController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).yaw.toString() : '0.0';
-                                // Show validation error
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: FusionAppText(
-                                      text: 'Yaw must be a valid decimal number',
-                                    ),
-                                    duration: Duration(seconds: 2),
-                                  ),
-                                );
-                              }
-                            },
+                        child: Opacity(
+                          opacity: _yawEnabled ? 1.0 : 0.6,
+                          child: IgnorePointer(
+                            ignoring: !_yawEnabled,
+                            child: SemanticHelper.formControl(
+                              testId: SemanticHelper.createTestId(SemanticTypes.textInput, "yaw"),
+                              child: PropertyTextField(
+                                controller: yawController,
+                                hintText: 'Yaw',
+                                suffixText: "°",
+                                keyboardType: TextInputType.number,
+                                onTapOutside: (PointerDownEvent event) => onYawChanged(),
+                                onSubmitted: (String p0) => onYawChanged(),
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 12),
 
                   // Gain field
@@ -531,29 +526,8 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                   hintText: 'Gain',
                                   suffixText: "dB",
                                   keyboardType: TextInputType.number,
-                                  onTapOutside: (PointerDownEvent event) {
-                                    FocusScope.of(context).unfocus();
-                                    final String v = gainController.text;
-
-                                    final double? gain = double.tryParse(v.trim());
-                                    if (gain != null) {
-                                      final Speaker updated = (widget.selectedHardware as Speaker).copyWith(gain: gain);
-                                      viewModel.updateHardware(hardware: updated);
-                                      widget.onSpeakerParametersChanged?.call();
-                                    } else {
-                                      // Reset to previous value if invalid
-                                      gainController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).gain.toString() : '0.0';
-                                      // Show validation error
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: FusionAppText(
-                                            text: 'Gain must be a valid decimal number',
-                                          ),
-                                          duration: Duration(seconds: 2),
-                                        ),
-                                      );
-                                    }
-                                  },
+                                  onTapOutside: (PointerDownEvent event) => onGainChanged(),
+                                  onSubmitted: (String p0) => onGainChanged(),
                                 ),
                               ),
                             ),
@@ -568,7 +542,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                   // if (serviceLocator<ProjectViewModel>().getZoneForHardware(hardwareId: widget.selectedHardware.id) != null ||
                   //     serviceLocator<ProjectViewModel>().getSubZoneForHardware(hardwareId: widget.selectedHardware.id) != null)
                   //   _CircuitSelection(
-                  //     speaker: (widget.selectedHardware as Speaker),
+                  //     speaker:  _speaker ,
                   //   ),
                 ],
 
@@ -642,20 +616,20 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                     //           options:
                     //               widget.selectedHardware.lockListeningArea
                     //                   ? <String>[]
-                    //                   : viewModel.listeningAreas
+                    //                   : projectViewModel.listeningAreas
                     //                       .map(
                     //                         (ListeningArea listeningArea) => listeningArea.name,
                     //                       )
                     //                       .toList(),
                     //           onOptionSelected: (int selectedIndex) {
                     //             if (!widget.selectedHardware.lockListeningArea) {
-                    //               final ListeningArea? selectedArea = viewModel.listeningAreas.isNotEmpty ? viewModel.listeningAreas[selectedIndex] : null;
+                    //               final ListeningArea? selectedArea = projectViewModel.listeningAreas.isNotEmpty ? projectViewModel.listeningAreas[selectedIndex] : null;
                     //               if (selectedArea != null) {
                     //                 print("Selected Area: ${selectedArea.name}");
                     //                 final LocationModel updated = widget.selectedHardware.locationEntity.copyWith(
                     //                   listeningAreaId: selectedArea.id,
                     //                 );
-                    //                 viewModel.updateHardwareLocation(
+                    //                 projectViewModel.updateHardwareLocation(
                     //                   hardwareId: widget.selectedHardware.id,
                     //                   newLocation: updated,
                     //                 );
@@ -670,7 +644,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                     //       message: "Lock Listening Area",
                     //       child: GestureDetector(
                     //         onTap: () {
-                    //           viewModel.updateHardware(
+                    //           projectViewModel.updateHardware(
                     //             hardware: widget.selectedHardware.copyWith(
                     //               lockListeningArea: !widget.selectedHardware.lockListeningArea,
                     //             ),
@@ -733,110 +707,8 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
     );
   }
 
-  /// Builds a dropdown row displaying a property label and its selectable value.
-  Widget _buildHardwarePropertyRow({
-    required BuildContext context,
-    required String label,
-    required String value,
-    List<String>? options,
-    required Function(int selectedIndex) onOptionSelected,
-  }) {
-    return SemanticHelper.container(
-      testId: SemanticHelper.createTestId(SemanticTypes.container, "hardware_property_area"),
-      child: PopupMenuButton<String>(
-        onSelected: (String newValue) {
-          final int selectedIndex = options?.indexOf(newValue) ?? -1;
-          if (selectedIndex != -1) {
-            onOptionSelected(selectedIndex);
-          }
-        },
-        constraints: const BoxConstraints(maxHeight: 600, minWidth: 200),
-        padding: EdgeInsets.zero,
-        offset: const Offset(50, 8),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(6),
-          side: BorderSide(color: Theme.of(context).colorScheme.primaryBlack),
-        ),
-        color: Theme.of(context).colorScheme.primaryWhite,
-        elevation: 1,
-        itemBuilder: (BuildContext context) {
-          if (options == null || options.isEmpty) {
-            return <PopupMenuEntry<String>>[];
-          }
-
-          return options.map((String option) {
-            final int index = options.indexOf(option);
-
-            return PopupMenuItem<String>(
-              value: option,
-              child: SemanticHelper.formControl(
-                testId: SemanticHelper.createTestId(SemanticTypes.textInput, "hardware_property_area_option_index_$index"),
-                child: FusionAppText(
-                  text: option,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontSize: 11,
-                  ),
-                ),
-              ),
-            );
-          }).toList();
-        },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: <Widget>[
-              // Left: Label
-              FusionAppText(
-                text: label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 11,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.textPrimary.withOpacity(0.5),
-                ),
-              ),
-              // Right: Value + Arrow
-              SemanticHelper.formControl(
-                testId: SemanticHelper.createTestId(SemanticTypes.textInput, "hardware_property_area_dropdown"),
-                child: Container(
-                  alignment: Alignment.centerLeft,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: <Widget>[
-                      FusionAppText(
-                        text: value,
-                        textAlign: TextAlign.left,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontSize: 11,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      SemanticHelper.formControl(
-                        testId: SemanticHelper.createTestId(SemanticTypes.textInput, "hardware_property_area_dropdown_arrow"),
-                        child: Icon(
-                          Icons.keyboard_arrow_down,
-                          size: 16,
-                          color: Theme.of(context).colorScheme.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   /// Builds a text row displaying a property label and its value.
-  Widget _buildHardwarePropertyTextRow({
-    required BuildContext context,
-    required String label,
-    required String value,
-  }) {
+  Widget _buildHardwarePropertyTextRow({required BuildContext context, required String label, required String value}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
       child: Row(

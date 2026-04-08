@@ -1,12 +1,14 @@
 package pubsub
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/cluster/transport"
 	"fusion/internal/persistence"
+	"sync"
 )
 
 type Broadcaster interface {
@@ -20,12 +22,19 @@ type Hub struct {
 	stateManager *persistence.StateManager
 	persistence  *persistence.Persistence
 	transport    transport.ClusterInterface
+
+	// SWUpdate progress monitoring
+	swUpdateMutex    sync.RWMutex
+	swUpdateActive   bool
+	swUpdateCancel   context.CancelFunc
+	swUpdateProgress map[string]*api.SoftwareUpdateProgress // node_name -> latest progress
 }
 
 func NewHub(stateManager *persistence.StateManager, persistence *persistence.Persistence) *Hub {
 	return &Hub{
-		stateManager: stateManager,
-		persistence:  persistence,
+		stateManager:     stateManager,
+		persistence:      persistence,
+		swUpdateProgress: make(map[string]*api.SoftwareUpdateProgress),
 	}
 }
 
@@ -144,6 +153,27 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 			return fmt.Errorf("DeviceInfo required for operation")
 		}
 
+	case api.NotifyOpSoftwareUpdate:
+		logger.Info("[Hub] Broadcasting software update trigger")
+		// Start progress monitoring when software update begins
+		if h.transport != nil && h.transport.LocalNode() != nil && message.Node == h.transport.LocalNode().Name {
+			h.startSWUpdateProgressMonitoring()
+		}
+
+	case api.NotifyOpSoftwareUpdateProgress:
+		if message.SoftwareUpdateProgress == nil {
+			return fmt.Errorf("SoftwareUpdateProgress required for progress operation")
+		}
+		logger.Debug("[Hub] Processing software update progress from %s: %s %d%% (step %d/%d)",
+			message.SoftwareUpdateProgress.NodeName,
+			message.SoftwareUpdateProgress.Status,
+			message.SoftwareUpdateProgress.CurPercent,
+			message.SoftwareUpdateProgress.CurStep,
+			message.SoftwareUpdateProgress.NSteps)
+
+		// Store progress; aggregation is attached after gossip fanout (see below)
+		h.updateSWProgress(message.SoftwareUpdateProgress)
+
 	case api.NotifyOpSoftwareUpdateAvailable:
 		if message.SoftwareUpdate == nil {
 			return fmt.Errorf("SoftwareUpdate required for SoftwareUpdate available operation")
@@ -175,7 +205,15 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 		if err != nil {
 			return fmt.Errorf("failed to marshal update: %w", err)
 		}
-		h.broadcastToNodes(data)
+		// Include local node only for software updates
+		includeLocalNode := message.Operation == api.NotifyOpSoftwareUpdate
+		h.broadcastToNodes(data, includeLocalNode)
+	}
+
+	// Attach the aggregated progress map only for local WebSocket delivery.
+	// This is done after gossiping so the cluster payload stays lean (single-node only).
+	if message.Operation == api.NotifyOpSoftwareUpdateProgress {
+		message.SoftwareUpdateProgressAll = h.getAggregatedProgress()
 	}
 
 	h.BroadcastToObservers(message)
@@ -183,7 +221,7 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 	return nil
 }
 
-func (h *Hub) broadcastToNodes(message []byte) {
+func (h *Hub) broadcastToNodes(message []byte, includeLocalNode bool) {
 	logger := logging.GetLogger()
 
 	if h.transport == nil || h.transport.LocalNode() == nil {
@@ -194,12 +232,18 @@ func (h *Hub) broadcastToNodes(message []byte) {
 	localName := h.transport.LocalNode().Name
 	members := h.transport.MemberListMembers()
 
+	logger.Debug("[Hub] Broadcasting gossip to %d cluster members from %s", len(members), localName)
+
 	for _, node := range members {
-		if node.Name == localName {
+		// Skip local node unless explicitly requested to include it
+		if !includeLocalNode && node.Name == localName {
 			continue
 		}
+		logger.Debug("[Hub] Sending gossip message to node %s", node.Name)
 		if err := h.transport.SendReliable(node, message); err != nil {
 			logger.Error("Failed to send message to node %s: %v", node.Name, err)
+		} else {
+			logger.Debug("[Hub] Successfully sent gossip message to node %s", node.Name)
 		}
 	}
 }

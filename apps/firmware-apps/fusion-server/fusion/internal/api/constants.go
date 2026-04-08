@@ -1,5 +1,7 @@
 package api
 
+import "os"
+
 import "time"
 
 const (
@@ -15,6 +17,7 @@ const (
 	FusionVersion   = "_fusion_version"
 	FusionMessageID = "_fusion_msg_id"
 	FusionOperation = "_fusion_op"
+	FusionSentAtNS  = "_fusion_sent_at_ns"
 
 	HTTPTimeout       = 5 * time.Second
 	HTTPUploadTimeout = 30 * time.Second
@@ -33,6 +36,13 @@ const (
 
 	SnapshotIDKey = "snapshot_id"
 
+	VIPHighPriority        = "high"
+	VIPvrrpHighPriority    = 120
+	VIPDefaultPriority     = "default"
+	VIPvrrpDefaultPriority = 100
+	VIPLowPriority         = "low"
+	VIPvrrpLowPriority     = 90
+
 	// WS Request types (client -> server)
 	WSMsgTypeDevices            = "devices"
 	WSMsgTypeDeviceByID         = "device_by_id"
@@ -44,6 +54,8 @@ const (
 	WSMsgTypePing               = "ping"
 	WSMsgTypePong               = "pong"
 	WSMsgTypeError              = "error"
+	WSMsgTypeStartUpdate        = "start_update"
+	WSMsgTypeUpdateProgress     = "update_progress"
 
 	// WS event types (server -> client)
 	WSMsgTypeDeviceUpdate = "device_update"
@@ -74,6 +86,7 @@ const (
 	WSCodeConnected     = 3002 // Connection established
 	WSCodePong          = 3003 // Pong response
 	WSCodeDeviceUpdated = 3004 // Device updated (for push notifications)
+	WSCodeUpdateStarted = 3005 // Software update started successfully
 
 	// Application client error codes (4xxx) - Available for private use
 	WSCodeInvalidJSON      = 4000 // Invalid JSON in request
@@ -102,13 +115,61 @@ const (
 	UDPPort            = "7947"
 )
 
-const (
-	AudioFilesLocation      = "/var/lib/fusion/audio"
-	DefaultIdentityFilePath = "/var/lib/device-identity/"
+var (
+	AudioFilesLocation      = getenvDefault("FUSION_AUDIO_DIR", "/var/lib/fusion/audio")
+	DefaultIdentityFilePath = getenvDefault("FUSION_IDENTITY_DIR", "/var/lib/device-identity/")
 	DefaultCAFileName       = "AmazonRootCA1.pem"
 	DefaultCSRFileName      = "device.csr"
 	DefaultCertFileName     = "device.x509.cert"
 	DefaultKeyFileName      = "device.key"
 	SoftwareUpdateInfoPath  = "/etc/buildinfo"
 	SerialPath              = "/sys/firmware/devicetree/base/serial-number"
+)
+
+func getenvDefault(key string, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
+
+// RECOVERY_STATUS enum values from SWUpdate
+const (
+	SWUpdateStatusIdle       SWUpdateStatus = 0
+	SWUpdateStatusStart      SWUpdateStatus = 1
+	SWUpdateStatusRun        SWUpdateStatus = 2
+	SWUpdateStatusSuccess    SWUpdateStatus = 3
+	SWUpdateStatusFailure    SWUpdateStatus = 4
+	SWUpdateStatusDownload   SWUpdateStatus = 5
+	SWUpdateStatusDone       SWUpdateStatus = 6
+	SWUpdateStatusSubprocess SWUpdateStatus = 7
+	SWUpdateStatusProgress   SWUpdateStatus = 8
+)
+
+// SWUpdate progress socket constants
+const (
+	SWUpdateSocketPath       = "/tmp/swupdateprog"
+	SWUpdateConnectAckSize   = 8
+	SWUpdateMsgSizeV200      = 2408
+	SWUpdateMsgSizeV210      = 2416
+	SWUpdateExpectedAckMagic = "ACK"
+	SWUpdateProgressAPIV200  = uint32(0x00020000)
+	SWUpdateProgressAPIV210  = uint32(0x00020100)
+)
+
+// SWUpdate progress message byte offsets
+const (
+	SWUpdateOffAPIVersion   = 0
+	SWUpdateOffStatus       = 4
+	SWUpdateOffDwlPercent   = 8
+	SWUpdateOffDwlBytes     = 12
+	SWUpdateOffNSteps       = 20
+	SWUpdateOffCurStep      = 24
+	SWUpdateOffCurPercent   = 28
+	SWUpdateOffCurImage     = 32
+	SWUpdateOffHndName      = 288
+	SWUpdateOffSource       = 352
+	SWUpdateOffInfoLen      = 356
+	SWUpdateOffInfo         = 360
+	SWUpdateOffSerialNumber = 2408
 )

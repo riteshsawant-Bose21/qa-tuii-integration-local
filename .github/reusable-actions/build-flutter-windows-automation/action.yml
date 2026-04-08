@@ -97,12 +97,12 @@ runs:
         Write-Output "VERSION: $version"
 
         $buildPath = "./windows/Installer/NSIS/FusionLauncherAutomationBuildInstaller.exe"
-        $nexusUrl = "${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-Automation-Build-$version.exe"
+        $nexusUrl = "${{ inputs.nexus_url }}/Fusion-Frontend/Nightly/$branchName/$version/flutter-windows/Fusion-Launcher-Automation-Build-$version.exe"
         $username = "github-actions-uploader"
         $password = "${{ inputs.nexus_password }}"
         
         curl.exe -k --ssl-no-revoke -f -u "$username`:$password" -T $buildPath $nexusUrl
-        Write-Output "flutter-automation-build-windows: https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-Automation-Build-$version.exe"
+        Write-Output "flutter-automation-build-windows: https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Nightly/$branchName/$version/flutter-windows/Fusion-Launcher-Automation-Build-$version.exe"
 
         Write-Output "Cleaning up C:\Users\Administrator\Documents\fusion-monorepo"
         robocopy C:\temp\empty C:\Users\Administrator\Documents\fusion-monorepo /MIR /XD .moon | Out-Null

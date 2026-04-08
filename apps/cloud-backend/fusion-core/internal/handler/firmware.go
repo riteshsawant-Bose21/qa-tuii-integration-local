@@ -48,15 +48,15 @@ func (h *FirmwareUpdateHandler) NotifyBundleUpload(c *gin.Context) {
 		return
 	}
 
-	if err := validation.ValidateFirmwareVersionFormat(payload.MinPrevVersion); err != nil {
+	if err := validation.ValidateBundleVersionFormat(payload.MinPrevVersion); err != nil {
 		response.BadRequest(c, fmt.Sprintf("invalid min_required_prev_version: %s", err.Error()))
 		return
 	}
-	if err := validation.ValidateFirmwareVersionFormat(payload.MinDesktopAppVersion); err != nil {
+	if err := validation.ValidateBundleVersionFormat(payload.MinDesktopAppVersion); err != nil {
 		response.BadRequest(c, fmt.Sprintf("invalid min_desktop_app_version: %s", err.Error()))
 		return
 	}
-	if err := validation.ValidateFirmwareVersionFormat(payload.Version); err != nil {
+	if err := validation.ValidateBundleVersionFormat(payload.Version); err != nil {
 		response.BadRequest(c, fmt.Sprintf("invalid version: %s", err.Error()))
 		return
 	}
@@ -240,11 +240,11 @@ func (h *FirmwareUpdateHandler) CheckForUpdate(c *gin.Context) {
 	}
 
 	// Validate version formats
-	if err := validation.ValidateFirmwareVersionFormat(payload.CurrentFirmwareVersion); err != nil {
+	if err := validation.ValidateBundleVersionFormat(payload.CurrentFirmwareVersion); err != nil {
 		response.BadRequest(c, fmt.Sprintf("invalid current_firmware_version format: %s", err.Error()))
 		return
 	}
-	if err := validation.ValidateFirmwareVersionFormat(payload.CurrentDesktopAppVersion); err != nil {
+	if err := validation.ValidateBundleVersionFormat(payload.CurrentDesktopAppVersion); err != nil {
 		response.BadRequest(c, fmt.Sprintf("invalid current_desktop_app_version format: %s", err.Error()))
 		return
 	}

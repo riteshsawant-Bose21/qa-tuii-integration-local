@@ -30,23 +30,23 @@ class ProductCatalog {
   factory ProductCatalog.fromJson(Map<String, dynamic> json) {
     return ProductCatalog(
       version: json['version'] as String? ?? '',
-      speakers: (json['speakers'] as List<dynamic>?)?.map((e) => SpeakerProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
-      amplifiers: (json['amplifiers'] as List<dynamic>?)?.map((e) => AmplifierProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
-      controllers: (json['controllers'] as List<dynamic>?)?.map((e) => ControllerProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
-      dsps: (json['digital_signal_processors'] as List<dynamic>?)?.map((e) => DspProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      speakers: (json['speaker'] as List<dynamic>?)?.map((e) => SpeakerProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      amplifiers: (json['amplifier'] as List<dynamic>?)?.map((e) => AmplifierProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      controllers: (json['controller'] as List<dynamic>?)?.map((e) => ControllerProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      dsps: (json['dsp'] as List<dynamic>?)?.map((e) => DspProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      ioEndpoints: (json['io_endpoint'] as List<dynamic>?)?.map((e) => IoEndpointProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
       accessories: (json['additional_accessories'] as List<dynamic>?)?.map((e) => AccessoryProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
-      ioEndpoints: (json['i_o_endpoints'] as List<dynamic>?)?.map((e) => IoEndpointProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
     );
   }
 
   Map<String, dynamic> toJson() => {
     'version': version,
-    'speakers': speakers.map((e) => e.toJson()).toList(),
-    'amplifiers': amplifiers.map((e) => e.toJson()).toList(),
-    'controllers': controllers.map((e) => e.toJson()).toList(),
-    'digital_signal_processors': dsps.map((e) => e.toJson()).toList(),
+    'speaker': speakers.map((e) => e.toJson()).toList(),
+    'amplifier': amplifiers.map((e) => e.toJson()).toList(),
+    'controller': controllers.map((e) => e.toJson()).toList(),
+    'dsp': dsps.map((e) => e.toJson()).toList(),
+    'io_endpoint': ioEndpoints.map((e) => e.toJson()).toList(),
     'additional_accessories': accessories.map((e) => e.toJson()).toList(),
-    'i_o_endpoints': ioEndpoints.map((e) => e.toJson()).toList(),
   };
 
   /// Check if catalog has any products

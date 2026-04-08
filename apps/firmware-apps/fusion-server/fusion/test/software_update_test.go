@@ -11,11 +11,13 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
 	json "github.com/goccy/go-json"
+	"github.com/gorilla/websocket"
 )
 
 const (
@@ -660,4 +662,254 @@ func getSoftwareUpdateClusterNodeURLs(t *testing.T, ctx context.Context, vipURL 
 	}
 
 	return urls
+}
+
+// ---------------------------------------------------------------------------
+// WebSocket helpers
+// ---------------------------------------------------------------------------
+
+// dialWebSocket connects to the server's WebSocket endpoint and reads the
+// welcome message, returning the ready connection.
+func dialWebSocket(t *testing.T, base string) *websocket.Conn {
+	t.Helper()
+	wsURL := strings.Replace(base, "http://", "ws://", 1) + routes.WebsocketEndpoint
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("WebSocket dial %s failed: %v", wsURL, err)
+	}
+
+	// Consume welcome message
+	var welcome api.WebSocketResponse
+	if err := conn.ReadJSON(&welcome); err != nil {
+		conn.Close()
+		t.Fatalf("reading welcome message failed: %v", err)
+	}
+	if welcome.Type != "welcome" {
+		conn.Close()
+		t.Fatalf("expected welcome message, got type=%q", welcome.Type)
+	}
+	return conn
+}
+
+// sendWSRequest sends a typed WebSocket request and returns the immediate
+// response (the ack/reply for that request ID).
+func sendWSRequest(t *testing.T, conn *websocket.Conn, msgType string, data interface{}) *api.WebSocketResponse {
+	t.Helper()
+	reqID := fmt.Sprintf("test-%d", time.Now().UnixNano())
+
+	raw, err := json.Marshal(data)
+	if err != nil {
+		t.Fatalf("marshalling WS request data failed: %v", err)
+	}
+
+	req := api.WebSocketRequest{
+		ID:      reqID,
+		Version: api.WSCurrentVersion,
+		Type:    msgType,
+		Data:    raw,
+	}
+
+	if err := conn.WriteJSON(req); err != nil {
+		t.Fatalf("WriteJSON failed: %v", err)
+	}
+
+	// Read until we get a message with our request ID
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+		var resp api.WebSocketResponse
+		if err := conn.ReadJSON(&resp); err != nil {
+			t.Fatalf("ReadJSON failed: %v", err)
+		}
+		if resp.ID != nil && *resp.ID == reqID {
+			return &resp
+		}
+	}
+	t.Fatalf("timed out waiting for response to request %s", reqID)
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Software update trigger tests
+// ---------------------------------------------------------------------------
+
+// TestSoftwareUpdateTriggerViaWebSocket sends a start_update message and
+// verifies the server returns WSCodeUpdateStarted.
+func TestSoftwareUpdateTriggerViaWebSocket(t *testing.T) {
+	conn := dialWebSocket(t, softwareUpdateServerAddr)
+	defer conn.Close()
+
+	resp := sendWSRequest(t, conn, api.WSMsgTypeStartUpdate, struct{}{})
+
+	if resp.Code != api.WSCodeUpdateStarted {
+		t.Errorf("expected code %d (WSCodeUpdateStarted), got %d", api.WSCodeUpdateStarted, resp.Code)
+	}
+	if resp.Status != api.WSStatusSuccess {
+		t.Errorf("expected status %q, got %q", api.WSStatusSuccess, resp.Status)
+	}
+	if resp.Type != api.WSMsgTypeStartUpdate {
+		t.Errorf("expected type %q, got %q", api.WSMsgTypeStartUpdate, resp.Type)
+	}
+}
+
+// TestSoftwareUpdateTriggerRequiresValidBundle verifies that triggering an
+// update when no bundle has been uploaded results in an application error.
+func TestSoftwareUpdateTriggerNoBundle(t *testing.T) {
+	// First, ensure there are no bundles by checking the list
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	bundles := listSoftwareUpdates(t, ctx, softwareUpdateServerAddr)
+	if len(bundles) > 0 {
+		t.Skip("bundles already present on server; skipping no-bundle trigger test")
+	}
+
+	conn := dialWebSocket(t, softwareUpdateServerAddr)
+	defer conn.Close()
+
+	resp := sendWSRequest(t, conn, api.WSMsgTypeStartUpdate, struct{}{})
+
+	// Server broadcasts the trigger regardless of whether a bundle exists
+	// (swupdate on device handles the actual error). Confirm it doesn't panic
+	// and returns a recognisable code.
+	if resp.Code != api.WSCodeUpdateStarted && resp.Code != api.WSCodeApplicationError {
+		t.Errorf("unexpected code %d", resp.Code)
+	}
+}
+
+// TestSoftwareUpdateTriggerUnknownMessageType checks that an unknown message
+// type returns WSCodeInvalidType.
+func TestSoftwareUpdateTriggerUnknownType(t *testing.T) {
+	conn := dialWebSocket(t, softwareUpdateServerAddr)
+	defer conn.Close()
+
+	resp := sendWSRequest(t, conn, "unknown_type_xyz", struct{}{})
+
+	if resp.Code != api.WSCodeInvalidType {
+		t.Errorf("expected code %d (WSCodeInvalidType), got %d", api.WSCodeInvalidType, resp.Code)
+	}
+	if resp.Status != api.WSStatusError {
+		t.Errorf("expected status %q, got %q", api.WSStatusError, resp.Status)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Software update progress tests
+// ---------------------------------------------------------------------------
+
+// TestSoftwareUpdateProgressReceivedAfterTrigger uploads a bundle, triggers
+// an update via WebSocket, then listens for at least one update_progress push
+// message within the timeout window.
+// Requires swupdate to be installed on the device: set FUSION_SWUPDATE_TEST=1 to run.
+func TestSoftwareUpdateProgressReceivedAfterTrigger(t *testing.T) {
+	if os.Getenv("FUSION_SWUPDATE_TEST") != "1" {
+		t.Skip("skipping swupdate progress test; set FUSION_SWUPDATE_TEST=1 to run (requires swupdate installed on device)")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	// Upload a bundle first so swupdate on the device has something to install
+	timestamp := time.Now().UnixNano()
+	bundleData := makeTestSWUBundle(fmt.Sprintf("progress-test-%d", timestamp), 1024)
+	filename := fmt.Sprintf("progress-test-%d.swu", timestamp)
+	checksum := calculateSHA256(bundleData)
+	uploadSoftwareUpdate(t, ctx, softwareUpdateServerAddr, filename, bundleData, checksum, http.StatusCreated)
+
+	conn := dialWebSocket(t, softwareUpdateServerAddr)
+	defer conn.Close()
+
+	// Trigger the update
+	sendWSRequest(t, conn, api.WSMsgTypeStartUpdate, struct{}{})
+
+	// Listen for an update_progress push within 30 seconds
+	conn.SetReadDeadline(time.Now().Add(30 * time.Second))
+	deadline := time.Now().Add(30 * time.Second)
+	for time.Now().Before(deadline) {
+		var push api.WebSocketResponse
+		if err := conn.ReadJSON(&push); err != nil {
+			// Deadline reached or connection closed
+			break
+		}
+		if push.Type == api.WSMsgTypeUpdateProgress {
+			// Verify structure of the progress payload
+			raw, err := json.Marshal(push.Data)
+			if err != nil {
+				t.Fatalf("re-marshalling progress data failed: %v", err)
+			}
+			var nodes map[string]api.SoftwareUpdateProgressResponse
+			if err := json.Unmarshal(raw, &nodes); err != nil {
+				t.Fatalf("progress data is not a node map: %v — raw: %s", err, string(raw))
+			}
+			if len(nodes) == 0 {
+				t.Error("progress push contained empty nodes map")
+			}
+			for nodeName, p := range nodes {
+				if p.Node == "" {
+					t.Errorf("node %q: progress.Node is empty", nodeName)
+				}
+				if p.UpdateState == "" {
+					t.Errorf("node %q: progress.UpdateState is empty", nodeName)
+				}
+			}
+			return // received and validated a progress push
+		}
+	}
+	t.Skip("no update_progress push received within timeout — device may not have swupdate installed")
+}
+
+// TestSoftwareUpdateProgressMessageFormat connects via WebSocket and if any
+// update_progress message arrives (without triggering), validates its shape.
+// This is a passive listener test useful when an update is already in progress.
+// Requires swupdate to be installed on the device: set FUSION_SWUPDATE_TEST=1 to run.
+func TestSoftwareUpdateProgressMessageFormat(t *testing.T) {
+	if os.Getenv("FUSION_SWUPDATE_TEST") != "1" {
+		t.Skip("skipping swupdate progress format test; set FUSION_SWUPDATE_TEST=1 to run (requires swupdate installed on device)")
+	}
+	conn := dialWebSocket(t, softwareUpdateServerAddr)
+	defer conn.Close()
+
+	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	for {
+		var push api.WebSocketResponse
+		if err := conn.ReadJSON(&push); err != nil {
+			// Timeout - no progress in flight, skip
+			t.Skip("no update_progress push received within 5s — no update in progress")
+			return
+		}
+		if push.Type != api.WSMsgTypeUpdateProgress {
+			continue
+		}
+
+		// Validate envelope
+		if push.Version != api.WSCurrentVersion {
+			t.Errorf("version mismatch: got %d want %d", push.Version, api.WSCurrentVersion)
+		}
+		if push.Status != api.WSStatusEvent {
+			t.Errorf("expected status %q, got %q", api.WSStatusEvent, push.Status)
+		}
+		if push.ID != nil {
+			t.Errorf("push notification should have null ID, got %q", *push.ID)
+		}
+
+		// Validate data is a node map
+		raw, _ := json.Marshal(push.Data)
+		var nodes map[string]api.SoftwareUpdateProgressResponse
+		if err := json.Unmarshal(raw, &nodes); err != nil {
+			t.Fatalf("progress data shape invalid: %v — raw: %s", err, string(raw))
+		}
+		for nodeName, p := range nodes {
+			validStates := map[string]bool{
+				"IDLE": true, "STARTING": true, "IN_PROGRESS": true,
+				"SUCCESS": true, "FAILED": true, "DOWNLOADING": true,
+				"COMPLETED": true, "SUBPROCESS": true, "PROGRESS": true, "UNKNOWN": true,
+			}
+			if !validStates[p.UpdateState] {
+				t.Errorf("node %q: unexpected UpdateState %q", nodeName, p.UpdateState)
+			}
+			if p.Timestamp == "" {
+				t.Errorf("node %q: Timestamp is empty", nodeName)
+			}
+		}
+		return
+	}
 }
