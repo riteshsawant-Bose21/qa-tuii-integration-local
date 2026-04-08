@@ -51,10 +51,10 @@ func (s *Service) GetDeviceByID(ctx context.Context, deviceID string, logger *za
 	device, err := models.Devices(models.DeviceWhere.SerialNumber.EQ(deviceID)).One(ctx, s.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("GetDeviceByID: %s", errorutil.ErrMsgDeviceNotFound)	
+			return nil, fmt.Errorf("GetDeviceByID: %w", err)
 		}
 		logger.Error("Failed to get device by ID", zap.String("deviceID", deviceID), zap.Error(err))
-		return nil, fmt.Errorf("GetDeviceByID: failed to get device by ID %s: %w", deviceID, err)
+		return nil, fmt.Errorf("GetDeviceByID: %w", err)
 	}
 	return device, nil
 }
@@ -75,7 +75,7 @@ func (s *Service) insertOwnershipHistory(ctx context.Context, deviceUUID, accoun
 		return fmt.Errorf("insertOwnershipHistory: %s", errorutil.ErrMsgCertIDEmpty)
 	}
 	if certArn == "" {
-		return fmt.Errorf("insertOwnershipHistory: %s", 	errorutil.ErrMsgCertArnEmpty)
+		return fmt.Errorf("insertOwnershipHistory: %s", errorutil.ErrMsgCertArnEmpty)
 	}
 	history := models.DeviceOwnershipHistory{
 		DeviceID:       deviceUUID,
@@ -220,7 +220,7 @@ func (s *Service) Update(ctx context.Context, device models.Device, req *types.D
 	// Handle project change if requested
 	if req.ProjectID != "" && device.ProjectID.String != req.ProjectID {
 		if err := s.handleProjectChange(ctx, &device, req.ProjectID, tx, logger); err != nil {
-			return fmt.Errorf("Update: failed to handle project change for device %s: %w", device.SerialNumber, err)	
+			return fmt.Errorf("Update: failed to handle project change for device %s: %w", device.SerialNumber, err)
 		}
 	}
 
@@ -245,7 +245,7 @@ func (s *Service) handleProjectChange(ctx context.Context, device *models.Device
 
 	// Create new project history record
 	if err := s.insertProjectHistory(ctx, device.ID, newProjectID, tx, logger); err != nil {
-		return fmt.Errorf("handleProjectChange: failed to insert project history for device %s: %w", device.SerialNumber, err)	
+		return fmt.Errorf("handleProjectChange: failed to insert project history for device %s: %w", device.SerialNumber, err)
 	}
 
 	return nil
