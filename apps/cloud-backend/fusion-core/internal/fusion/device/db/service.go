@@ -45,7 +45,7 @@ func (s *Service) GetDeviceByID(ctx context.Context, deviceID string, logger *za
 
 	// Guard against empty deviceID to prevent unnecessary DB query
 	if deviceID == "" {
-		return nil, fmt.Errorf(errorutil.ErrMsgDeviceIDEmpty)
+		return nil, fmt.Errorf("GetDeviceByID: %w", errorutil.ErrMsgDeviceIDEmpty)
 	}
 
 	device, err := models.Devices(models.DeviceWhere.SerialNumber.EQ(deviceID)).One(ctx, s.db)
