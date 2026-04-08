@@ -84,7 +84,6 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
     await prefs.setString(
       _prefsKey,
       _firmwareUpdateViewModel.serializeLocalState(
-        inUseVersion: state.inUseVersion,
         availableVersion: state.availableVersion,
         downloadChecksum: state.downloadChecksum,
         downloadedFilePath: state.downloadedFilePath,
@@ -328,10 +327,51 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
         'Don\'t miss out grab the newest version.';
   }
 
+  Future<void> _showInstallSuccessDialog() async {
+    if (!mounted) {
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return const AlertDialog(
+          title: Text('Firmware Update'),
+          content: Text('Firmware update was successful.'),
+        );
+      },
+    );
+  }
+
+  Future<void> _showInstallSuccessDialogForTwoSeconds() async {
+    if (!mounted) {
+      return;
+    }
+
+    _showInstallSuccessDialog();
+    await Future<void>.delayed(const Duration(seconds: 2));
+
+    if (!mounted) {
+      return;
+    }
+
+    final NavigatorState navigator = Navigator.of(context, rootNavigator: false);
+    if (navigator.canPop()) {
+      navigator.pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<FirmwareUpdateViewModel, FirmwareUpdateViewModelState>(
+    return BlocConsumer<FirmwareUpdateViewModel, FirmwareUpdateViewModelState>(
       bloc: _firmwareUpdateViewModel,
+      listenWhen:
+          (FirmwareUpdateViewModelState previous, FirmwareUpdateViewModelState current) =>
+              previous.uiState == FirmwareUpdateUiState.installing && current.uiState == FirmwareUpdateUiState.installed,
+      listener: (BuildContext context, FirmwareUpdateViewModelState state) {
+        _showInstallSuccessDialogForTwoSeconds();
+      },
       builder: (BuildContext context, FirmwareUpdateViewModelState state) {
         if (state.uiState == FirmwareUpdateUiState.noUpdate) {
           return _buildNoUpdateView(context, state);

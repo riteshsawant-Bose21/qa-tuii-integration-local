@@ -237,7 +237,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
       final String validPath = restoredPath.isNotEmpty && !File(restoredPath).existsSync() ? '' : restoredPath;
 
       return FirmwareLocalState(
-        inUseVersion: normalizedSemver(json['in_use_version'] as String? ?? fallbackInUseVersion),
+        inUseVersion: fallbackInUseVersion,
         availableVersion: normalizedSemver(json['available_version'] as String? ?? ''),
         downloadChecksum: json['download_checksum'] as String? ?? '',
         downloadedFilePath: validPath,
@@ -253,14 +253,12 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
   }
 
   String serializeLocalState({
-    required String inUseVersion,
     required String availableVersion,
     required String downloadChecksum,
     required String downloadedFilePath,
   }) {
     return jsonEncode(
       <String, dynamic>{
-        'in_use_version': inUseVersion,
         'available_version': availableVersion,
         'download_checksum': downloadChecksum,
         'downloaded_file_path': downloadedFilePath,
@@ -387,7 +385,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     }
   }
 
-  Future<FirmwareUpdateCheckResult> checkForUpdates({required String currentFirmwareVersion, required String desktopVersion, String? channel}) async {
+  Future<FirmwareUpdateCheckResult> checkForUpdates({required String currentFirmwareVersion, required String desktopVersion, String? channel,}) async {
     final ResponseCallback<FirmwareUpdateCheckResult> response = await fusionDeviceService.checkForFirmwareUpdates(
       currentFirmwareVersion: currentFirmwareVersion,
       currentDesktopAppVersion: desktopVersion,
