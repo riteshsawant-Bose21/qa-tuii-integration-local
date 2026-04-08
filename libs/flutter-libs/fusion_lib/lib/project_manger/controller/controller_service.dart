@@ -194,7 +194,7 @@ extension ControllerService on ProjectService {
           .entries
           .map(
             (MapEntry<int, Source> e) => WallZoneSource(
-              index: e.key,
+              index: e.key + 1,
               sourceId: e.value.id,
               sourceName: e.value.name,
             ),
@@ -205,22 +205,33 @@ extension ControllerService on ProjectService {
       final WallZoneOno zoneOno = WallZoneOno.autoAssign();
 
       final List<SubZone> subZonesList = getSubZones(zoneId);
-      final List<WallSubZone> wallSubZones = subZonesList
-          .map(
-            (SubZone sz) => WallSubZone(
-              id: sz.id,
-              name: sz.name,
-              gain: WallGainConfig(gainID: 'gain${sz.id}'),
-              ono: WallSubZoneOno.autoAssign(),
-            ),
-          )
-          .toList();
+
+      final List<WallSubZone> wallSubZones = <WallSubZone>[];
+      for (final SubZone sz in subZonesList) {
+        final List<ProcessingBlockModel> szProcessingBlocks = getProcessingBlockFor(parentId: sz.id, includeUserBlocks: true);
+        final ProcessingBlockModel? szProcessingBlockModel = szProcessingBlocks.firstWhereOrNull(
+          (ProcessingBlockModel block) => block.algorithmId == "gain" && block.isforUser,
+        );
+        wallSubZones.add(
+          WallSubZone(
+            id: sz.id,
+            name: sz.name,
+            gain: WallGainConfig(gainID: szProcessingBlockModel?.id ?? ""),
+            ono: WallSubZoneOno.autoAssign(),
+          ),
+        );
+      }
+
+      final List<ProcessingBlockModel> processingBlocks = getProcessingBlockFor(parentId: zoneId, includeUserBlocks: true);
+      ProcessingBlockModel? processingBlockModel = processingBlocks.firstWhereOrNull(
+        (ProcessingBlockModel block) => block.algorithmId == "gain" && block.isforUser,
+      );
 
       wallZones.add(
         WallZone(
           id: zone.id,
           name: zone.name,
-          gain: WallGainConfig(gainID: 'gain${zone.id}'),
+          gain: WallGainConfig(gainID: processingBlockModel?.id ?? ""),
           ono: zoneOno,
           sources: wallSources,
           subZones: wallSubZones,

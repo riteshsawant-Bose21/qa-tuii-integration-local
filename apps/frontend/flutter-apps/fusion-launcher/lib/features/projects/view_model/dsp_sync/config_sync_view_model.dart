@@ -87,13 +87,22 @@ class ConfigSyncViewModel extends Cubit<ConfigSyncState> {
     emit(SyncingConfigWithDsp());
 
     final Map<String, dynamic> blocksData = serviceLocator<ProjectViewModel>().getAllProcessingBlocksData();
-    final ResponseCallback<bool> response = await fusionConfigSyncService.syncConfigToDsp(
-      config: <String, dynamic>{
-        "devices": droResponseData.result!.devices,
-        "settings": <String, Map<String, dynamic>>{
-          "audio": blocksData,
-        },
+    final WallControllerConfig? wallControllerConfig = serviceLocator<ProjectViewModel>().wallControllerConfig;
+
+    final Map<String, dynamic> config = <String, dynamic>{
+      "devices": droResponseData.result!.devices,
+      "settings": <String, Map<String, dynamic>>{
+        "audio": blocksData,
       },
+    };
+
+    //add wall controller config to settings if not null
+    if (wallControllerConfig != null) {
+      config.addAll(wallControllerConfig.toJson());
+    }
+
+    final ResponseCallback<bool> response = await fusionConfigSyncService.syncConfigToDsp(
+      config: config,
       vip: vip,
     );
     if (response.success) {

@@ -20,9 +20,8 @@ class VirtualControlSection extends StatelessWidget {
   const VirtualControlSection({super.key, this.controllerUrl, required this.state});
 
   String get _qrData => jsonEncode(<String, String>{
-    "vip": serviceLocator<ProjectViewModel>().virtualIP ?? "192.168.1.110",
-    // "controller_id": state.selectedControllerId ?? "No Controller ID",
-    "controller_id": "CTRL1762958340064766236",
+    "vip": serviceLocator<ProjectViewModel>().virtualIP ?? "",
+    "controller_id": state.selectedControllerId ?? "",
   });
 
   /// Builds a PDF with a native vector QR code (no screen capture required)
