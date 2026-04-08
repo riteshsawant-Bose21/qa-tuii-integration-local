@@ -822,7 +822,7 @@ func (s *Service) LockProject(ctx context.Context, projectID, userID string, log
 		if project.LockedByUserID.String == userID {
 			return nil // Already locked by the same user
 		}
-		return fmt.Errorf(errorutils.ErrMsgProjectLockedByUser + " " + project.LockedByUserID.String)
+		return fmt.Errorf("%s %s", errorutils.ErrMsgProjectLockedByUser, project.LockedByUserID.String)
 	}
 
 	// Lock the project
