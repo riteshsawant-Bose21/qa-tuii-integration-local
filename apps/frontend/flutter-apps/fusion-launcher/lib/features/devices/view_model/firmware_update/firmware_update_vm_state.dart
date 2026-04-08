@@ -13,6 +13,44 @@ enum FirmwareUpdateUiState {
   installed,
 }
 
+class FirmwareInstallDeviceProgress extends Equatable {
+  final String serialNumber;
+  final String node;
+  final String updateState;
+  final int currentStep;
+  final int totalSteps;
+  final String currentTask;
+  final int stepProgress;
+  final String timestamp;
+
+  const FirmwareInstallDeviceProgress({
+    required this.serialNumber,
+    required this.node,
+    required this.updateState,
+    required this.currentStep,
+    required this.totalSteps,
+    required this.currentTask,
+    required this.stepProgress,
+    required this.timestamp,
+  });
+
+  String get stepLabel => '$currentStep/$totalSteps';
+  bool get isCompleted => updateState.toUpperCase() == 'COMPLETED';
+  bool get isSuccess => updateState.toUpperCase() == 'SUCCESS';
+
+  @override
+  List<Object?> get props => <Object?>[
+    serialNumber,
+    node,
+    updateState,
+    currentStep,
+    totalSteps,
+    currentTask,
+    stepProgress,
+    timestamp,
+  ];
+}
+
 class FirmwareUpdateViewModelState extends Equatable {
   final FirmwareUpdateUiState uiState;
   final bool isProgressExpanded;
@@ -25,6 +63,10 @@ class FirmwareUpdateViewModelState extends Equatable {
   final String downloadedFilePath;
   final String errorText;
   final String desktopVersion;
+  final List<FirmwareInstallDeviceProgress> deviceInstallProgress;
+  final bool installTrackingCompleted;
+  final bool isUploadInProgress;
+  final bool isSocketTrackingInProgress;
 
   const FirmwareUpdateViewModelState({
     this.uiState = FirmwareUpdateUiState.checking,
@@ -38,6 +80,10 @@ class FirmwareUpdateViewModelState extends Equatable {
     this.downloadedFilePath = '',
     this.errorText = '',
     this.desktopVersion = '0.0.0',
+    this.deviceInstallProgress = const <FirmwareInstallDeviceProgress>[],
+    this.installTrackingCompleted = false,
+    this.isUploadInProgress = false,
+    this.isSocketTrackingInProgress = false,
   });
 
   FirmwareUpdateViewModelState copyWith({
@@ -52,6 +98,10 @@ class FirmwareUpdateViewModelState extends Equatable {
     String? downloadedFilePath,
     String? errorText,
     String? desktopVersion,
+    List<FirmwareInstallDeviceProgress>? deviceInstallProgress,
+    bool? installTrackingCompleted,
+    bool? isUploadInProgress,
+    bool? isSocketTrackingInProgress,
   }) {
     return FirmwareUpdateViewModelState(
       uiState: uiState ?? this.uiState,
@@ -65,6 +115,10 @@ class FirmwareUpdateViewModelState extends Equatable {
       downloadedFilePath: downloadedFilePath ?? this.downloadedFilePath,
       errorText: errorText ?? this.errorText,
       desktopVersion: desktopVersion ?? this.desktopVersion,
+      deviceInstallProgress: deviceInstallProgress ?? this.deviceInstallProgress,
+      installTrackingCompleted: installTrackingCompleted ?? this.installTrackingCompleted,
+      isUploadInProgress: isUploadInProgress ?? this.isUploadInProgress,
+      isSocketTrackingInProgress: isSocketTrackingInProgress ?? this.isSocketTrackingInProgress,
     );
   }
 
@@ -81,6 +135,10 @@ class FirmwareUpdateViewModelState extends Equatable {
     downloadedFilePath,
     errorText,
     desktopVersion,
+    deviceInstallProgress,
+    installTrackingCompleted,
+    isUploadInProgress,
+    isSocketTrackingInProgress,
   ];
 }
 
@@ -99,6 +157,7 @@ class FirmwareCheckDecision {
   final String availableVersion;
   final String bundleId;
   final String releaseNotes;
+  final bool clearDownloadedCache;
 
   const FirmwareCheckDecision({
     required this.state,
@@ -106,6 +165,7 @@ class FirmwareCheckDecision {
     this.availableVersion = '',
     this.bundleId = '',
     this.releaseNotes = '',
+    this.clearDownloadedCache = false,
   });
 }
 

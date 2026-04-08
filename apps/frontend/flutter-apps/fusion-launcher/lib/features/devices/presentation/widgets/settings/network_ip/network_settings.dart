@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/devices/presentation/widgets/settings/readonly_text_view.dart';
 import 'package:fusion_launcher/features/devices/presentation/widgets/settings/settings_item_row.dart';
 import 'package:fusion_lib/fusion_lib.dart';

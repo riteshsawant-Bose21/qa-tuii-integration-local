@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:bloc/bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
@@ -15,6 +17,7 @@ class FusionNetworkDeviceViewModel extends Cubit<FusionNetworkDeviceViewModelSta
     try {
       final ResponseCallback<List<FusionNetworkDevice>> response = await fusionDeviceService.getAvailableDevicesOnNetwork(ip: vip);
       if (response.success) {
+        log("FUSION DEVICES: ${response.data?.map((FusionNetworkDevice e) => e.toJson()).toList()}");
         emit(FusionNetworkDeviceViewModelLoaded(devices: response.data ?? <FusionNetworkDevice>[]));
       } else {
         emit(FusionNetworkDeviceViewModelError(message: response.message));
@@ -24,23 +27,22 @@ class FusionNetworkDeviceViewModel extends Cubit<FusionNetworkDeviceViewModelSta
     }
   }
 
-  // This method is returning the list of hardware components that are not registered in the cloud for a given project.
-  // It first fetches the status of all devices in the cloud for the specified project,
-  // then filters out the hardware components that are already registered based on their IDs.
-  Future<List<HardwareComponent>> getUnregisteredHardware({required List<HardwareComponent> hardwares, required String projectId}) async {
-    final ResponseCallback<List<CloudDeviceStatus>> response = await fusionDeviceService.getCloudDevicesStatus(projectId: projectId);
-    if (!response.success || response.data == null) return hardwares;
-    final Set<String> registeredIds = response.data!.where((CloudDeviceStatus s) => s.registered).map((CloudDeviceStatus s) => s.id).toSet();
-    return hardwares.where((HardwareComponent hw) => !registeredIds.contains(hw.id)).toList();
+  Future<List<FusionNetworkDevice>> getUnregisteredDevices({required String projectId}) async {
+    if (state is FusionNetworkDeviceViewModelLoaded) {
+      final List<FusionNetworkDevice> networkDevices = (state as FusionNetworkDeviceViewModelLoaded).devices;
+      return networkDevices.where((FusionNetworkDevice element) => !element.isDeviceCertificateValid).toList();
+    } else {
+      return <FusionNetworkDevice>[];
+    }
   }
 
-  Future<void> registerAndClaimHardwares({required List<HardwareComponent> hardwares, required String projectId}) async {
-    if (hardwares.isEmpty) return;
+  Future<void> registerAndClaimDevices({required List<FusionNetworkDevice> devices, required String projectId}) async {
+    if (devices.isEmpty) return;
 
     emit(FusionNetworkDeviceViewModelClaiming());
 
-    final ResponseCallback<List<DeviceBulkRegisterResult>> registerResponse = await fusionDeviceService.registerHardwareDevicesBulk(
-      hardwares: hardwares,
+    final ResponseCallback<List<DeviceBulkRegisterResult>> registerResponse = await fusionDeviceService.registerDevicesBulk(
+      devices: devices,
       projectId: projectId,
     );
 
@@ -52,25 +54,13 @@ class FusionNetworkDeviceViewModel extends Cubit<FusionNetworkDeviceViewModelSta
     final List<DeviceBulkRegisterResult> bulkResults = registerResponse.data ?? <DeviceBulkRegisterResult>[];
     final List<String> failedDevices = <String>[];
 
-    for (int i = 0; i < hardwares.length; i++) {
-      final HardwareComponent hw = hardwares[i];
+    for (int i = 0; i < devices.length; i++) {
+      final FusionNetworkDevice hw = devices[i];
       final DeviceBulkRegisterResult? bulk = i < bulkResults.length ? bulkResults[i] : null;
 
       if (bulk != null && !bulk.success) {
         failedDevices.add('${hw.name} (register failed: ${bulk.error.isEmpty ? 'unknown error' : bulk.error})');
         continue;
-      }
-
-      final String claimId = (bulk?.deviceId ?? '').isNotEmpty ? bulk!.deviceId : hw.id;
-
-      final ResponseCallback<bool> claimResp = await fusionDeviceService.claimDevice(
-        deviceId: claimId,
-        projectId: projectId,
-        csr: '', // TODO: pass actual CSR.
-      );
-
-      if (!claimResp.success) {
-        failedDevices.add('${hw.name} (claim failed: ${claimResp.message})');
       }
     }
 

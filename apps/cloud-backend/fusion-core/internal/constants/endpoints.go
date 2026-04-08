@@ -73,6 +73,23 @@ const (
 	// EndpointOrganizationUsers is the endpoint for organization user operations.
 	EndpointOrganizationUsers = "/users"
 
+	// EndpointDevices is the base endpoint for device operations.
+	EndpointDevices = "/devices"
+	// EndpointDeviceBulkCreate is the endpoint for bulk creating devices.
+	EndpointDeviceBulkCreate = "/bulk"
+	// EndpointDeviceByID is the endpoint for operations on a specific device.
+	EndpointDeviceByID = "/:device_id"
+	// EndpointDeviceReset is the endpoint for resetting a device.
+	EndpointDeviceReset = "/:device_id/reset"
+	// EndpointDeviceClaim is the endpoint for claiming an unclaimed device.
+	EndpointDeviceClaim = "/:device_id/claim"
+	// EndpointDeviceRotateCert is the endpoint for rotating a device certificate.
+	EndpointDeviceRotateCert = "/:device_id/rotate-cert"
+	// EndpointDeviceCommand is the endpoint for sending a command to a device.
+	EndpointDeviceCommand = "/commands"
+
+	// EndpointCommandStatus is the endpoint for getting the status of a command.
+	EndpointCommandStatus = "/commands/:command_id/status"
 	// Device Update endpoints
 	EndpointFirmware              = "/firmware"
 	EndpointFirmwareBundles       = EndpointFirmware + "/bundles"
