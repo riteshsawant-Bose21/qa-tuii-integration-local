@@ -385,7 +385,11 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     }
   }
 
-  Future<FirmwareUpdateCheckResult> checkForUpdates({required String currentFirmwareVersion, required String desktopVersion, String? channel,}) async {
+  Future<FirmwareUpdateCheckResult> checkForUpdates({
+    required String currentFirmwareVersion,
+    required String desktopVersion,
+    String? channel,
+  }) async {
     final ResponseCallback<FirmwareUpdateCheckResult> response = await fusionDeviceService.checkForFirmwareUpdates(
       currentFirmwareVersion: currentFirmwareVersion,
       currentDesktopAppVersion: desktopVersion,
