@@ -12,13 +12,14 @@ import (
 
 // AppConfig represents application configuration data
 type AppConfig struct {
-	NodeName string
-	BindAddr string
-	BindPort int
-	NetIface string
-	Local    bool
-	Profile  bool
-	Verbose  bool
+	NodeName       string
+	BindAddr       string
+	BindPort       int
+	NetIface       string
+	Local          bool
+	Profile        bool
+	UDPDiagnostics bool
+	Verbose        bool
 }
 
 func (a *AppConfig) SelfUrl() string {
@@ -102,6 +103,27 @@ type SoftwareUpdateSyncTracker struct {
 	ExpectedNodes map[string]bool `json:"expected_nodes"` // node_name -> acknowledged
 	CompletedCh   chan bool       `json:"-"`              // Channel to signal completion
 	TimeoutCh     chan bool       `json:"-"`              // Channel for timeout
+}
+
+// SWUpdateStatus represents the RECOVERY_STATUS enum values from SWUpdate.
+type SWUpdateStatus int32
+
+// SoftwareUpdateProgress represents real-time progress information from SWUpdate
+type SoftwareUpdateProgress struct {
+	NodeName     string         `json:"node_name"`
+	APIVersion   uint32         `json:"api_version"`
+	Status       SWUpdateStatus `json:"status"`                  // RECOVERY_STATUS enum
+	Source       int32          `json:"source"`                  // sourcetype enum
+	DwlPercent   uint32         `json:"dwl_percent"`             // Download percentage
+	DwlBytes     uint64         `json:"dwl_bytes"`               // Download bytes
+	NSteps       uint32         `json:"n_steps"`                 // Total number of steps
+	CurStep      uint32         `json:"cur_step"`                // Current step number
+	CurPercent   uint32         `json:"cur_percent"`             // Current step percentage
+	CurImage     string         `json:"cur_image"`               // Current image name
+	HndName      string         `json:"hnd_name"`                // Handler name
+	Info         string         `json:"info,omitempty"`          // Optional info message
+	SerialNumber string         `json:"serial_number,omitempty"` // API v2.1.0+ (string to preserve uint64 precision)
+	Timestamp    time.Time      `json:"timestamp"`               // When this progress was captured
 }
 
 // VersionUpdate represents version information to sync across nodes
@@ -329,6 +351,18 @@ type WebSocketStats struct {
 	Uptime         time.Duration    `json:"uptime"`                     // Server uptime
 	LastReset      time.Time        `json:"last_reset"`                 // Stats last reset
 	MessagesByType map[string]int64 `json:"messages_by_type,omitempty"` // Messages by type
+}
+
+// SoftwareUpdateProgressResponse is the JSON body for software update progress events.
+type SoftwareUpdateProgressResponse struct {
+	UpdateState  string `json:"update_state"`
+	Step         string `json:"step"`
+	CurrentTask  string `json:"current_task"`
+	Progress     string `json:"progress"`
+	Node         string `json:"node"`
+	Handler      string `json:"handler"`
+	Timestamp    string `json:"timestamp"`
+	SerialNumber string `json:"serial_number,omitempty"`
 }
 
 // SoftwareUpdateUploadResponse is the JSON body returned after a successful bundle upload.

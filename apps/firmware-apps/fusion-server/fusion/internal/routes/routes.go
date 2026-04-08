@@ -36,22 +36,30 @@ const (
 	ClusterMembersEndpoint                     = ClusterEndpoint + "/members"
 	ClusterNTPSkewEndpoint                     = ClusterEndpoint + "/ntp-skew"
 	ClusterStatusEndpoint                      = ClusterEndpoint + "/status"
+	ClusterUDPStatusEndpoint                   = ClusterEndpoint + "/udp/status"
 
-	ClusterRebootEndpoint      = ClusterEndpoint + "/reboot"
-	ClusterRebootLocalEndpoint = ClusterRebootEndpoint
+	ClusterRebootEndpoint              = ClusterEndpoint + "/reboot"
+	ClusterRebootLocalEndpoint         = ClusterRebootEndpoint
+	ClusterSoftwareUpdateEndpoint      = ClusterEndpoint + "/software-update"
+	ClusterSoftwareUpdateLocalEndpoint = ClusterSoftwareUpdateEndpoint
 
 	ControllersEndpoint       = "/controllers"
 	ControllersIDEndpoint     = ControllersEndpoint + "/{id}"
 	ControllersIDWinkEndpoint = ControllersEndpoint + "/wink" + "/{id}"
 
-	DeviceEndpoint          = "/device"
-	DeviceReloadEndpoint    = DeviceEndpoint + "/reload"
-	DeviceReloadVIPEndpoint = DeviceReloadEndpoint + "/vip"
-	DeviceIDEndpoint        = DeviceEndpoint + "/{id}"
+	DeviceEndpoint                = "/device"
+	DeviceDiscoveryEndpoint       = DeviceEndpoint + "/discovery"
+	DeviceDiscoveryMDNSEndpoint   = DeviceDiscoveryEndpoint + "/mdns" + "/{service}"
+	DeviceReloadEndpoint          = DeviceEndpoint + "/reload"
+	DeviceReloadVIPEndpoint       = DeviceReloadEndpoint + "/vip"
+	DeviceReloadVIPStatusEndpoint = DeviceReloadVIPEndpoint + "/status"
+	DeviceIDEndpoint              = DeviceEndpoint + "/{id}"
 
 	DevicesEndpoint                = "/devices"
 	DevicesIDEndpoint              = DevicesEndpoint + "/{id}"
 	DevicesVIPEndpoint             = DevicesEndpoint + "/vip"
+	DevicesVIPStatusEndpoint       = DevicesVIPEndpoint + "/status"
+	DevicesVIPOperationEndpoint    = DevicesVIPEndpoint + "/operations" + "/{id}"
 	DevicesSetVIPEndpoint          = DevicesVIPEndpoint + "/{vip}"
 	DevicesGetCSREndpoint          = DevicesIDEndpoint + "/csr"
 	DevicesGetCSRForDeviceEndpoint = DevicesEndpoint + "/csr"
