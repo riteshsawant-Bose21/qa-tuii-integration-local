@@ -31,6 +31,8 @@ import (
 	projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user"
 	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/source"
+	sourcedb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/source/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/gin-gonic/gin"
@@ -208,6 +210,12 @@ func (suite *BaseIntegrationSuite) setupServices() error {
 	productDBSvc := productdb.NewService(suite.DB, loggers.AppLogger)
 	require.NotNil(suite.T(), productDBSvc, "Failed to initialize product database service")
 
+	sourceDBSvc := sourcedb.NewService(suite.DB, loggers.AppLogger)
+	loggers.AppLogger.Info("Initialized Source DB Service.")
+
+	sourceSVC := source.NewService(sourceDBSvc, loggers.AppLogger)
+	loggers.AppLogger.Info("Initialized Source Service.")
+
 	validationCfg := &config.Validation{
 		SupportedVersions: []string{"v1"},
 		RequireVersion:    false,
@@ -236,7 +244,7 @@ func (suite *BaseIntegrationSuite) setupServices() error {
 	s3Client, err := cloudfs.NewS3Client(context.Background(), cloudCfg.AWSConfig)
 	require.NoError(suite.T(), err, "Failed to create S3 client for testing")
 
-	suite.ProductSVC = product.NewService(productDBSvc, "v1", validationCfg, processingCfg, s3Client, loggers.AppLogger)
+	suite.ProductSVC = product.NewService(productDBSvc, sourceSVC, "v1", validationCfg, processingCfg, s3Client, loggers.AppLogger)
 	require.NotNil(suite.T(), suite.ProductSVC, "Failed to initialize product service")
 
 	// Initialize Project services
