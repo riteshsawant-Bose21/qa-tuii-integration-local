@@ -45,7 +45,7 @@ func (s *Service) GetDeviceByID(ctx context.Context, deviceID string, logger *za
 
 	// Guard against empty deviceID to prevent unnecessary DB query
 	if deviceID == "" {
-		return nil, errors.New(errorutil.ErrMsgDeviceIDEmpty)
+		return nil, fmt.Errorf(errorutil.ErrMsgDeviceIDEmpty)
 	}
 
 	device, err := models.Devices(models.DeviceWhere.SerialNumber.EQ(deviceID)).One(ctx, s.db)
@@ -66,16 +66,16 @@ func (s *Service) GetDeviceByID(ctx context.Context, deviceID string, logger *za
 // insertOwnershipHistory creates a new device ownership history record.
 func (s *Service) insertOwnershipHistory(ctx context.Context, deviceUUID, accountID, certID, certArn string, tx model.DBTxExecutor, logger *zap.Logger) error {
 	if deviceUUID == "" {
-		return errors.New(errorutil.ErrMsgDeviceUUIDEmpty)
+		return fmt.Errorf(errorutil.ErrMsgDeviceUUIDEmpty)
 	}
 	if accountID == "" {
-		return errors.New(errorutil.ErrMsgAccountIDEmpty)
+		return fmt.Errorf(errorutil.ErrMsgAccountIDEmpty)
 	}
 	if certID == "" {
-		return errors.New(errorutil.ErrMsgCertIDEmpty)
+		return fmt.Errorf(errorutil.ErrMsgCertIDEmpty)
 	}
 	if certArn == "" {
-		return errors.New(errorutil.ErrMsgCertArnEmpty)
+		return fmt.Errorf(errorutil.ErrMsgCertArnEmpty)
 	}
 	history := models.DeviceOwnershipHistory{
 		DeviceID:       deviceUUID,
@@ -95,10 +95,10 @@ func (s *Service) insertOwnershipHistory(ctx context.Context, deviceUUID, accoun
 // insertProjectHistory creates a new device project history record.
 func (s *Service) insertProjectHistory(ctx context.Context, deviceUUID, projectID string, tx model.DBTxExecutor, logger *zap.Logger) error {
 	if deviceUUID == "" {
-		return errors.New(errorutil.ErrMsgDeviceUUIDEmpty)
+		return fmt.Errorf(errorutil.ErrMsgDeviceUUIDEmpty)
 	}
 	if projectID == "" {
-		return errors.New(errorutil.ErrMsgProjectIDEmpty)
+		return fmt.Errorf(errorutil.ErrMsgProjectIDEmpty)
 	}
 	history := models.DeviceProjectHistory{
 		DeviceID:       deviceUUID,
@@ -116,10 +116,10 @@ func (s *Service) insertProjectHistory(ctx context.Context, deviceUUID, projectI
 // decommissionCurrentProject marks the current project assignment as decommissioned.
 func (s *Service) decommissionCurrentProject(ctx context.Context, deviceUUID, projectID string, tx model.DBTxExecutor, logger *zap.Logger) error {
 	if deviceUUID == "" {
-		return errors.New(errorutil.ErrMsgDeviceUUIDEmpty)
+		return fmt.Errorf(errorutil.ErrMsgDeviceUUIDEmpty)
 	}
 	if projectID == "" {
-		return errors.New(errorutil.ErrMsgProjectIDEmpty)
+		return fmt.Errorf(errorutil.ErrMsgProjectIDEmpty)
 	}
 	history, err := models.DeviceProjectHistories(
 		models.DeviceProjectHistoryWhere.DeviceID.EQ(deviceUUID),
@@ -150,10 +150,10 @@ func (s *Service) decommissionCurrentProject(ctx context.Context, deviceUUID, pr
 func (s *Service) Insert(ctx context.Context, req *types.DeviceCreateRequest, accountID string, cert types.CertificateInfo, tx model.DBTxExecutor, logger *zap.Logger) error {
 
 	if req == nil {
-		return errors.New(errorutil.ErrMsgDeviceCreateReqNil)
+		return fmt.Errorf(errorutil.ErrMsgDeviceCreateReqNil)
 	}
 	if accountID == "" {
-		return errors.New(errorutil.ErrMsgAccountIDEmpty)
+		return fmt.Errorf(errorutil.ErrMsgAccountIDEmpty)
 	}
 
 	// Create device record
@@ -176,7 +176,7 @@ func (s *Service) Insert(ctx context.Context, req *types.DeviceCreateRequest, ac
 
 	if err := device.Insert(ctx, tx, boil.Infer()); err != nil {
 		if strings.Contains(err.Error(), "violates unique constraint") {
-			return errors.New(errorutil.ErrMsgDeviceUniqueConstraint)
+			return fmt.Errorf(errorutil.ErrMsgDeviceUniqueConstraint)
 		}
 		logger.Error("Failed to insert device", zap.String("deviceID", req.SerialNumber), zap.Error(err))
 		return fmt.Errorf("failed to insert device %s: %w", req.SerialNumber, err)
@@ -198,7 +198,7 @@ func (s *Service) Insert(ctx context.Context, req *types.DeviceCreateRequest, ac
 // Update modifies an existing device's mutable fields.
 func (s *Service) Update(ctx context.Context, device models.Device, req *types.DeviceUpdateRequest, tx model.DBTxExecutor, logger *zap.Logger) error {
 	if req == nil {
-		return errors.New(errorutil.ErrMsgDeviceUpdateReqNil)
+		return fmt.Errorf(errorutil.ErrMsgDeviceUpdateReqNil)
 	}
 	// Update mutable fields if provided
 	if req.DeviceName != "" {
@@ -298,15 +298,15 @@ func (s *Service) Reset(ctx context.Context, device models.Device, tx model.DBTx
 // ClaimDevice claims an existing unclaimed device for a new owner with the given project.
 func (s *Service) ClaimDevice(ctx context.Context, device models.Device, accountID string, cert types.CertificateInfo, req *types.DeviceClaimRequest, tx model.DBTxExecutor, logger *zap.Logger) error {
 	if accountID == "" {
-		return errors.New(errorutil.ErrMsgAccountIDEmpty)
+		return fmt.Errorf(errorutil.ErrMsgAccountIDEmpty)
 	}
 
 	if req == nil {
-		return errors.New(errorutil.ErrMsgDeviceRequestInvalid)
+		return fmt.Errorf(errorutil.ErrMsgDeviceRequestInvalid)
 	}
 
 	if req.ProjectID == "" {
-		return errors.New(errorutil.ErrMsgProjectIDEmpty)
+		return fmt.Errorf(errorutil.ErrMsgProjectIDEmpty)
 	}
 
 	// Update device with claim details
@@ -326,7 +326,7 @@ func (s *Service) ClaimDevice(ctx context.Context, device models.Device, account
 
 	if _, err := device.Update(ctx, tx, boil.Infer()); err != nil {
 		if strings.Contains(err.Error(), "violates unique constraint") {
-			return errors.New(errorutil.ErrMsgDeviceUniqueConstraint)
+			return fmt.Errorf(errorutil.ErrMsgDeviceUniqueConstraint)
 		}
 		logger.Error("Failed to claim device", zap.String("serialNumber", device.SerialNumber), zap.Error(err))
 		return fmt.Errorf("failed to claim device %s: %w", device.SerialNumber, err)
@@ -361,13 +361,13 @@ func (s *Service) UpdateCertificate(ctx context.Context, device models.Device, c
 // InsertCommand inserts a new command into the device command history and publishes it to the device cluster topic.
 func (s *Service) InsertCommand(ctx context.Context, projectID, commandID string, request *types.CommandRequest, logger *zap.Logger) error {
 	if projectID == "" {
-		return errors.New(errorutil.ErrMsgProjectIDEmpty)
+		return fmt.Errorf(errorutil.ErrMsgProjectIDEmpty)
 	}
 	if commandID == "" {
-		return errors.New(errorutil.ErrMsgCommandIDEmpty)
+		return fmt.Errorf(errorutil.ErrMsgCommandIDEmpty)
 	}
 	if request == nil {
-		return errors.New(errorutil.ErrMsgCommandReqNil)
+		return fmt.Errorf(errorutil.ErrMsgCommandReqNil)
 	}
 
 	if len(request.DeviceIDs) == 0 {
@@ -413,10 +413,10 @@ func (s *Service) InsertCommand(ctx context.Context, projectID, commandID string
 // UpdateCommandStatus updates the status of a command in the device command history.
 func (s *Service) UpdateCommandStatus(ctx context.Context, commandID string, status string, logger *zap.Logger) error {
 	if commandID == "" {
-		return errors.New(errorutil.ErrMsgCommandIDEmpty)
+		return fmt.Errorf(errorutil.ErrMsgCommandIDEmpty)
 	}
 	if status == "" {
-		return errors.New(errorutil.ErrMsgStatusEmpty)
+		return fmt.Errorf(errorutil.ErrMsgStatusEmpty)
 	}
 
 	commands, err := models.DeviceCommandHistories(models.DeviceCommandHistoryWhere.CommandID.EQ(commandID)).All(ctx, s.db)
@@ -439,7 +439,7 @@ func (s *Service) UpdateCommandStatus(ctx context.Context, commandID string, sta
 // GetCommandStatus retrieves the status of a command by its ID.
 func (s *Service) GetCommandStatus(ctx context.Context, commandID string, logger *zap.Logger) (*models.DeviceCommandHistorySlice, error) {
 	if commandID == "" {
-		return nil, errors.New(errorutil.ErrMsgCommandIDEmpty)
+		return nil, fmt.Errorf(errorutil.ErrMsgCommandIDEmpty)
 	}
 	commands, err := models.DeviceCommandHistories(models.DeviceCommandHistoryWhere.CommandID.EQ(commandID)).All(ctx, s.db)
 	if err != nil {
