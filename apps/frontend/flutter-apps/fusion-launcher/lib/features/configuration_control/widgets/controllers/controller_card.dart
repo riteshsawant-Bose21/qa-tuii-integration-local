@@ -10,6 +10,7 @@ class ControllerCard extends StatelessWidget {
   final bool isSelected;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
+  final VoidCallback? onEdit;
 
   const ControllerCard({
     super.key,
@@ -17,6 +18,7 @@ class ControllerCard extends StatelessWidget {
     this.isSelected = false,
     this.onTap,
     this.onDelete,
+    this.onEdit,
   });
 
   @override
@@ -77,6 +79,7 @@ class ControllerCard extends StatelessWidget {
               ),
             ),
             FusionKebabPopup(
+              onEdit: () => onEdit?.call(),
               onDelete: () => onDelete?.call(),
             ),
           ],

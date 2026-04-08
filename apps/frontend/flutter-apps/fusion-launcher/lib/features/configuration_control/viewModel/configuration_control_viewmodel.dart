@@ -231,7 +231,32 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
   void selectZone(String zoneId) {
     final ConfigControlLoaded? loaded = _loaded;
     if (loaded == null) return;
-    emit(loaded.copyWith(selectedZoneId: zoneId, activeSubZoneId: null));
+
+    // For LT controllers (radio behavior): clear all selections and select only this zone
+    if (!loaded.isProController) {
+      final Set<String> singleSelection = <String>{zoneId};
+
+      // Persist zone assignment to the controller
+      if (loaded.selectedControllerId != null) {
+        _projectViewModel.setAssignedZonesForController(
+          controllerId: loaded.selectedControllerId!,
+          zoneIds: singleSelection,
+          autoSave: true,
+        );
+      }
+
+      emit(
+        loaded.copyWith(
+          selectedZoneId: zoneId,
+          activeSubZoneId: null,
+          selectedZoneIds: singleSelection,
+          selectedSubZoneIds: <String>{},
+        ),
+      );
+    } else {
+      // For Pro controllers: just set the active zone (not selection)
+      emit(loaded.copyWith(selectedZoneId: zoneId, activeSubZoneId: null));
+    }
   }
 
   void toggleZoneSelection(String zoneId) {
@@ -239,6 +264,18 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
     if (loaded == null) return;
     final Set<String> updated = Set<String>.from(loaded.selectedZoneIds);
     updated.contains(zoneId) ? updated.remove(zoneId) : updated.add(zoneId);
+
+    // Persist zone assignments to the controller
+    if (loaded.selectedControllerId != null) {
+      final Set<String> allAssignedIds = Set<String>.from(updated);
+      allAssignedIds.addAll(loaded.selectedSubZoneIds);
+      _projectViewModel.setAssignedZonesForController(
+        controllerId: loaded.selectedControllerId!,
+        zoneIds: allAssignedIds,
+        autoSave: true,
+      );
+    }
+
     emit(loaded.copyWith(selectedZoneIds: updated));
   }
 
@@ -247,7 +284,32 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
   void selectSubZone(String subZoneId) {
     final ConfigControlLoaded? loaded = _loaded;
     if (loaded == null) return;
-    emit(loaded.copyWith(activeSubZoneId: subZoneId, selectedZoneId: null));
+
+    // For LT controllers (radio behavior): clear all selections and select only this subzone
+    if (!loaded.isProController) {
+      final Set<String> singleSelection = <String>{subZoneId};
+
+      // Persist zone assignment to the controller
+      if (loaded.selectedControllerId != null) {
+        _projectViewModel.setAssignedZonesForController(
+          controllerId: loaded.selectedControllerId!,
+          zoneIds: singleSelection,
+          autoSave: true,
+        );
+      }
+
+      emit(
+        loaded.copyWith(
+          activeSubZoneId: subZoneId,
+          selectedZoneId: null,
+          selectedZoneIds: <String>{},
+          selectedSubZoneIds: singleSelection,
+        ),
+      );
+    } else {
+      // For Pro controllers: just set the active subzone (not selection)
+      emit(loaded.copyWith(activeSubZoneId: subZoneId, selectedZoneId: null));
+    }
   }
 
   void toggleSubZoneSelection(String subZoneId) {
@@ -255,6 +317,18 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
     if (loaded == null) return;
     final Set<String> updated = Set<String>.from(loaded.selectedSubZoneIds);
     updated.contains(subZoneId) ? updated.remove(subZoneId) : updated.add(subZoneId);
+
+    // Persist zone assignments to the controller
+    if (loaded.selectedControllerId != null) {
+      final Set<String> allAssignedIds = Set<String>.from(loaded.selectedZoneIds);
+      allAssignedIds.addAll(updated);
+      _projectViewModel.setAssignedZonesForController(
+        controllerId: loaded.selectedControllerId!,
+        zoneIds: allAssignedIds,
+        autoSave: true,
+      );
+    }
+
     emit(loaded.copyWith(selectedSubZoneIds: updated));
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_control/widgets/controllers/add_controller/add_controller_dialog.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/controllers/controller_card.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
@@ -65,6 +66,12 @@ class ControllersList extends StatelessWidget {
             isSelected: isSelected,
             onTap: () => context.read<ConfigurationControlViewmodel>().selectController(controller.id),
             onDelete: () => context.read<ConfigurationControlViewmodel>().deleteController(controller.id),
+            onEdit:
+                () => AddControllerDialog.showForEdit(
+                  context,
+                  controller: controller,
+                  onControllerUpdated: (_) => context.read<ConfigurationControlViewmodel>().refresh(),
+                ),
           ),
         );
       },

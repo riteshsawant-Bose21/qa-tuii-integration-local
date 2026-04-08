@@ -88,6 +88,7 @@ class ZonesListPanel extends StatelessWidget {
             context.read<ConfigurationControlViewmodel>().toggleZoneSelection(zone.id);
           },
           onSelectZone: () {
+            print("fake");
             context.read<ConfigurationControlViewmodel>().selectZone(zone.id);
           },
           onToggleSubZoneSelection: (String subZoneId) {

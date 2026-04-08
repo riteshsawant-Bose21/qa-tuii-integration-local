@@ -6,19 +6,28 @@ import 'package:fusion_launcher/features/configuration_control/widgets/controlle
 import 'package:fusion_launcher/features/configuration_control/widgets/controllers/add_controller/add_controller_state.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_custom_textfield.dart';
+import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-/// Dialog for adding a new controller
+/// Dialog for adding or editing a controller.
+///
+/// Pass [initialController] to open in edit mode (pre-populated fields,
+/// "EDIT CONTROLLER" header, and "Update" button).
 class AddControllerDialog extends StatelessWidget {
-  /// Called with the new controller's ID when it is successfully created.
+  /// Called with the controller's ID when it is successfully created or updated.
   final void Function(String controllerId)? onControllerAdded;
+
+  /// When non-null the dialog opens in **edit** mode pre-populated with the
+  /// existing controller's values.
+  final FusionController? initialController;
 
   const AddControllerDialog({
     super.key,
     this.onControllerAdded,
+    this.initialController,
   });
 
-  /// Show the dialog using showGeneralDialog like MessagePlayerConfigDialog
+  /// Show the dialog in **add** mode.
   static Future<bool?> show(BuildContext context, {void Function(String controllerId)? onControllerAdded}) async {
     return await showGeneralDialog<bool>(
       context: context,
@@ -32,22 +41,52 @@ class AddControllerDialog extends StatelessWidget {
     );
   }
 
+  /// Show the dialog in **edit** mode pre-populated with [controller]'s data.
+  static Future<bool?> showForEdit(
+    BuildContext context, {
+    required FusionController controller,
+    void Function(String controllerId)? onControllerUpdated,
+  }) async {
+    return await showGeneralDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      barrierColor: Colors.black87,
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (BuildContext buildContext, _, __) {
+        return AddControllerDialog(
+          initialController: controller,
+          onControllerAdded: onControllerUpdated,
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider<AddControllerCubit>(
-      create:
-          (BuildContext context) => AddControllerCubit(
-            projectViewModel: serviceLocator<ProjectViewModel>(),
-          ),
-      child: _AddControllerDialogContent(onControllerAdded: onControllerAdded),
+      create: (BuildContext context) {
+        final AddControllerCubit cubit = AddControllerCubit(
+          projectViewModel: serviceLocator<ProjectViewModel>(),
+        );
+        if (initialController != null) {
+          cubit.initForEdit(initialController!);
+        }
+        return cubit;
+      },
+      child: _AddControllerDialogContent(
+        onControllerAdded: onControllerAdded,
+        initialController: initialController,
+      ),
     );
   }
 }
 
 class _AddControllerDialogContent extends StatefulWidget {
   final void Function(String controllerId)? onControllerAdded;
+  final FusionController? initialController;
 
-  const _AddControllerDialogContent({this.onControllerAdded});
+  const _AddControllerDialogContent({this.onControllerAdded, this.initialController});
 
   @override
   State<_AddControllerDialogContent> createState() => _AddControllerDialogContentState();
@@ -56,10 +95,14 @@ class _AddControllerDialogContent extends StatefulWidget {
 class _AddControllerDialogContentState extends State<_AddControllerDialogContent> {
   late TextEditingController _nameController;
 
+  bool get _isEditMode => widget.initialController != null;
+
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: 'Untitled Controller');
+    _nameController = TextEditingController(
+      text: widget.initialController?.name ?? 'Untitled Controller',
+    );
   }
 
   @override
@@ -192,7 +235,10 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
-          FusionAppText(text: 'ADD CONTROLLER', style: context.textTheme.l1Regular.withColor(context.colorScheme.textSecondary)),
+          FusionAppText(
+            text: _isEditMode ? 'EDIT CONTROLLER' : 'ADD CONTROLLER',
+            style: context.textTheme.l1Regular.withColor(context.colorScheme.textSecondary),
+          ),
 
           /// Close button
           Material(
@@ -1002,9 +1048,8 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
         mainAxisAlignment: MainAxisAlignment.end,
         children: <Widget>[
           NeumorphicButton(
-            semanticId: "add_controller_add_message_btn",
-            onTap: () => _onAddButtonPressed(context),
-
+            semanticId: _isEditMode ? 'edit_controller_update_btn' : 'add_controller_add_message_btn',
+            onTap: () => _isEditMode ? _onUpdateButtonPressed(context) : _onAddButtonPressed(context),
             height: 32,
             borderRadius: 8,
             width: 90,
@@ -1013,12 +1058,15 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 FusionIcon.icon(
-                  Icons.add,
+                  _isEditMode ? Icons.check : Icons.add,
                   size: 18,
                   color: context.colorScheme.iconWhite,
                 ),
                 const SizedBox(width: 8),
-                FusionAppText(text: state.isLoading ? 'Adding...' : 'Add', style: context.textTheme.l1Medium),
+                FusionAppText(
+                  text: state.isLoading ? (_isEditMode ? 'Updating...' : 'Adding...') : (_isEditMode ? 'Update' : 'Add'),
+                  style: context.textTheme.l1Medium,
+                ),
               ],
             ),
           ),
@@ -1031,6 +1079,14 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
     final String? newControllerId = await context.read<AddControllerCubit>().addController();
     if (newControllerId != null && context.mounted) {
       widget.onControllerAdded?.call(newControllerId);
+      Navigator.of(context).pop(true);
+    }
+  }
+
+  Future<void> _onUpdateButtonPressed(BuildContext context) async {
+    final String? controllerId = await context.read<AddControllerCubit>().updateController();
+    if (controllerId != null && context.mounted) {
+      widget.onControllerAdded?.call(controllerId);
       Navigator.of(context).pop(true);
     }
   }
