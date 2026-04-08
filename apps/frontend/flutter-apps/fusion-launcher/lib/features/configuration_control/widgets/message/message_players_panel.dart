@@ -220,6 +220,7 @@ class _PlayerMessageGroup extends StatelessWidget {
             return _MessageItem(
               message: msg,
               isChecked: isChecked,
+
               onToggle: () => onToggle(msg.id),
             );
           }),
@@ -270,10 +271,15 @@ class _MessageItem extends StatelessWidget {
 
 // ─── Shared checkbox widget ───────────────────────────────────────────────────
 
-class _FusionCheckbox extends StatelessWidget {
+class _FusionCheckbox extends StatefulWidget {
   final bool isChecked;
   const _FusionCheckbox({required this.isChecked});
 
+  @override
+  State<_FusionCheckbox> createState() => _FusionCheckboxState();
+}
+
+class _FusionCheckboxState extends State<_FusionCheckbox> {
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -282,12 +288,12 @@ class _FusionCheckbox extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(3),
         border: Border.all(
-          color: isChecked ? context.colorScheme.primaryColor : context.colorScheme.iconDefault,
+          color: widget.isChecked ? context.colorScheme.primaryColor : context.colorScheme.iconDefault,
           width: 1.5,
         ),
-        color: isChecked ? context.colorScheme.primaryColor : Colors.transparent,
+        color: widget.isChecked ? context.colorScheme.primaryColor : Colors.transparent,
       ),
-      child: isChecked ? const Icon(Icons.check, size: 11, color: Colors.white) : null,
+      child: widget.isChecked ? const Icon(Icons.check, size: 11, color: Colors.white) : null,
     );
   }
 }

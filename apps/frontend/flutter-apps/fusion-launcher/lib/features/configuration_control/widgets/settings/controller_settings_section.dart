@@ -38,6 +38,10 @@ class ControllerSettingsSection extends StatelessWidget {
                   _buildDivider(context),
                   const SizedBox(height: 16),
                   _buildSleepTimeRow(context, state, vm),
+                  const SizedBox(height: 16),
+                  _buildDivider(context),
+                  const SizedBox(height: 16),
+                  _buildWakeFunction(context, state, vm),
                 ],
               ),
             ),
@@ -162,6 +166,33 @@ class ControllerSettingsSection extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         _buildSleepDropdown(context, state, vm),
+      ],
+    );
+  }
+
+  Widget _buildWakeFunction(
+    BuildContext context,
+    ConfigControlLoaded state,
+    ConfigurationControlViewmodel vm,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        FusionAppText(
+          text: 'UPON WAKE FUNCTION',
+          style: Theme.of(context).textTheme.l1Regular.withColor(
+            context.colorScheme.textBody,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            FusionCheckbox(semanticId: 'wakeup_function_last_screen_checkbox', shape: BoxShape.circle, onChanged: () {}),
+            const SizedBox(width: 8),
+            FusionAppText(style: context.textTheme.l1Regular, text: 'Last screen visited'),
+            const SizedBox(),
+          ],
+        ),
       ],
     );
   }

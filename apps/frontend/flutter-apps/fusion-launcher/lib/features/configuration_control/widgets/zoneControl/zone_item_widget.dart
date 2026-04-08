@@ -231,50 +231,18 @@ class _ZoneItemWidgetState extends State<ZoneItemWidget> {
   ) {
     if (widget.isProController) {
       /// checkbox style selection for pro controllers
-      return GestureDetector(
-        onTap: () => widget.onToggleSubZoneSelection?.call(subZone.id),
-        child: Container(
-          width: 16,
-          height: 16,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(3),
-            border: Border.all(
-              color: isSelected ? context.colorScheme.iconWhite : context.colorScheme.iconDefault,
-              width: 2,
-            ),
-            color: isSelected ? context.colorScheme.iconWhite : Colors.transparent,
-          ),
-          child: isSelected ? Icon(Icons.check, size: 12, color: context.colorScheme.textPrimary) : null,
-        ),
+      return FusionCheckbox(
+        value: isSelected,
+        semanticId: 'zone_item_subzone_checkbox',
+        onChanged: () => widget.onToggleSubZoneSelection?.call(subZone.id),
       );
     } else {
       /// radio style selection for non-pro controllers
-      return GestureDetector(
-        onTap: () => widget.onSelectSubZone?.call(subZone.id),
-        child: Container(
-          width: 16,
-          height: 16,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: isActive ? context.colorScheme.iconWhite : context.colorScheme.iconDefault,
-              width: 2,
-            ),
-          ),
-          child:
-              isActive
-                  ? Center(
-                    child: Container(
-                      width: 9,
-                      height: 9,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: context.colorScheme.iconWhite,
-                      ),
-                    ),
-                  )
-                  : null,
-        ),
+      return FusionCheckbox(
+        value: isActive,
+        shape: BoxShape.circle,
+        semanticId: 'zone_item_subzone_checkbox',
+        onChanged: () => widget.onSelectSubZone?.call(subZone.id),
       );
     }
   }

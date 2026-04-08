@@ -94,7 +94,8 @@ class _PageRow extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
-            Icon(
+            FusionIcon.icon(
+              semanticId: 'message_page_icon',
               Icons.drag_indicator,
               size: 14,
               color: isActive ? context.colorScheme.primaryWhite : context.colorScheme.iconDefault,
@@ -111,9 +112,8 @@ class _PageRow extends StatelessWidget {
             Expanded(
               child: FusionAppText(
                 text: label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                style: Theme.of(context).textTheme.l1SemiBold.copyWith(
                   color: isActive ? context.colorScheme.primaryWhite : context.colorScheme.textPrimary,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
             ),
