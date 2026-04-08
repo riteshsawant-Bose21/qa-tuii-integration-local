@@ -1,10 +1,12 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/assets/asset_icons.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/projects/models/device_system_info.dart';
+import 'package:fusion_launcher/features/projects/view_model/meter_data/meter_data_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/router/routes.dart';
@@ -33,8 +35,15 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
   Timer? _timer;
 
   @override
+  void initState() {
+    super.initState();
+    serviceLocator<MeterDataViewModel>().registerObserver();
+  }
+
+  @override
   void dispose() {
     _timer?.cancel();
+    serviceLocator<MeterDataViewModel>().unregisterObserver();
     super.dispose();
   }
 
@@ -64,34 +73,43 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
     return "--";
   }
 
-  bool get isOnline {
-    //Mock logic - In real implementation, this would be based on actual device status
-    // return widget.index != 4;
-    return false;
-  }
-
-  String? get alertMsg {
-    //Mock logic - In real implementation, this would be based on actual device alerts
-    // if (widget.index % 5 == 0) {
-    //   return "Open Circuit Fault Channel: 3 , Zone: Reception, Circuit: DM5SE";
-    // } else if (widget.index % 3 == 0) {
-    //   return "High Temperature Warning";
-    // }
-    return null;
-  }
-
-  bool get isCritical {
-    //Mock logic - In real implementation, this would be based on actual alert severity
-    // return widget.index % 5 == 0;
-    return false;
+  /// Whether the device is online — determined by whether we have received
+  /// live system-monitor telemetry for this device.
+  bool _isDeviceOnline(MeterDataState meterState) {
+    final DeviceSystemInfo? info = meterState.systemInfoFor(widget.device.id);
+    return meterState.isConnected && info != null && info.hasData;
   }
 
   @override
   Widget build(BuildContext context) {
-    final int temp = Random().nextInt(100);
-    final double cpu = Random().nextDouble();
-    final double disk = Random().nextDouble();
+    return BlocBuilder<MeterDataViewModel, MeterDataState>(
+      bloc: serviceLocator<MeterDataViewModel>(),
+      builder: (BuildContext context, MeterDataState meterState) {
+        final bool isOnline = _isDeviceOnline(meterState);
+        final DeviceSystemInfo? sysInfo = meterState.systemInfoFor(widget.device.id);
 
+        final double temperature = sysInfo?.temperature ?? 0;
+        final double diskUsage = sysInfo?.emmc ?? 0;
+        final double cpuUsage = sysInfo?.ram ?? 0;
+
+        return _buildCard(
+          context,
+          isOnline: isOnline,
+          temperature: temperature.round(),
+          diskUsage: diskUsage,
+          cpuUsage: cpuUsage,
+        );
+      },
+    );
+  }
+
+  Widget _buildCard(
+    BuildContext context, {
+    required bool isOnline,
+    required int temperature,
+    required double diskUsage,
+    required double cpuUsage,
+  }) {
     return InkWell(
       onTap: () {
         if (!_isPlayingAnimation) {
@@ -110,12 +128,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
           color: context.colorScheme.elevation2,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color:
-                (alertMsg != null && !_isPlayingAnimation)
-                    ? isCritical
-                        ? context.colorScheme.errorStroke
-                        : context.colorScheme.warningStroke
-                    : context.colorScheme.elevation3,
+            color: context.colorScheme.elevation3,
           ),
         ),
         child: Column(
@@ -275,7 +288,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                                     ? Align(
                                       alignment: Alignment.centerLeft,
                                       child: CompactThermostatWidget(
-                                        temperature: temp,
+                                        temperature: temperature,
                                         maxTemperature: 100,
                                       ),
                                     )
@@ -289,12 +302,12 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                                     ? Row(
                                       children: <Widget>[
                                         GaugeWidget(
-                                          value: 100 * disk,
+                                          value: diskUsage,
                                           size: const Size(24, 24),
                                         ),
                                         const SizedBox(width: 6),
                                         FusionAppText(
-                                          text: "${(disk * 100).toInt()}%",
+                                          text: "${diskUsage.toInt()}%",
                                           style: context.textTheme.labelMedium,
                                         ),
                                       ],
@@ -309,12 +322,12 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                                     ? Row(
                                       children: <Widget>[
                                         DiskUsageWidget(
-                                          value: 100 * cpu,
+                                          value: cpuUsage,
                                           size: const Size(24, 24),
                                         ),
                                         const SizedBox(width: 6),
                                         FusionAppText(
-                                          text: "${(cpu * 100).toInt()}%",
+                                          text: "${cpuUsage.toInt()}%",
                                           style: context.textTheme.labelMedium,
                                         ),
                                       ],
@@ -378,42 +391,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                 ],
               ),
             ),
-            // Alert Banner code remains same...
-            if (alertMsg != null && !_isPlayingAnimation)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: isCritical ? context.colorScheme.errorFill : context.colorScheme.warningFill,
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(6),
-                    bottomRight: Radius.circular(6),
-                  ),
-                ),
-                child: Row(
-                  children: <Widget>[
-                    Icon(
-                      isCritical ? Icons.error_outline : Icons.warning_amber_rounded,
-                      color: isCritical ? context.colorScheme.errorText : context.colorScheme.warningText,
-                      size: 14,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: FusionAppText(
-                        text: alertMsg!,
-                        style: context.textTheme.labelSmall!.copyWith(
-                          color: isCritical ? context.colorScheme.errorText : context.colorScheme.warningText,
-                        ),
-                        textOverflow: TextOverflow.ellipsis,
-                        maxLine: 1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            // Alert Banner — will be integrated when alert system is implemented.
           ],
         ),
       ),

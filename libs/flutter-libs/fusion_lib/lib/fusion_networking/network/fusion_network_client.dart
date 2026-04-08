@@ -4,15 +4,8 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_logger/logger.dart';
 import 'package:fusion_lib/fusion_networking/network/rest_client/dio_client.dart';
-import 'package:fusion_lib/fusion_storage/fusion_secure_storage.dart';
-import 'package:fusion_lib/fusion_storage/fusion_secure_storage_impl.dart';
-import 'package:fusion_lib/models/response_callback.dart';
 
-import '../../fusion_utils/app_settings.dart';
-import '../../fusion_utils/shared_preference_handler.dart';
-import '../../fusion_utils/telemetry_data.dart';
 import '../../service/auth/fusion_auth_service.dart';
 import 'dartzmq_stub.dart' if (dart.library.io) 'package:dartzmq/dartzmq.dart';
 
@@ -91,11 +84,11 @@ class FusionNetworkClient {
 
       final Response<dynamic> response = await httpClient.dioInstance.get(url, options: options, queryParameters: urlParameters);
 
-      if (response.data != null) {
+      if (response.statusCode! >= 200 && response.statusCode! < 300) {
         if (isBinary) {
-          return ResponseCallback<T>(success: true, message: "Binary file fetched successfully", data: response.data as T);
+          return ResponseCallback<T>(success: true, message: "Binary file fetched successfully", data: response.data as T?);
         } else {
-          T data = fromJson != null ? fromJson(response.data) : response.data;
+          T? data = fromJson != null ? fromJson(response.data) : response.data;
           return ResponseCallback<T>.success(data);
         }
       } else {
@@ -131,7 +124,7 @@ class FusionNetworkClient {
 
       final Response<dynamic> response = await httpClient.dioInstance.put(url, options: options, data: data);
 
-      if (response.data != null) {
+      if (response.statusCode! >= 200 && response.statusCode! < 300) {
         T data = fromJson != null ? fromJson(response.data) : response.data;
         return ResponseCallback<T>.success(data);
       } else {
@@ -148,6 +141,7 @@ class FusionNetworkClient {
     dynamic data,
     String? additionalPath,
     String? baseUrlToOverride,
+    Map<String, dynamic>? urlParameters,
     bool isSecure = true,
     T Function(dynamic)? fromJson,
   }) async {
@@ -169,9 +163,14 @@ class FusionNetworkClient {
 
       // final dynamic body = data is FormData ? data : jsonEncode(data);
 
-      final Response<dynamic> response = await httpClient.dioInstance.post(url, data: data, options: options);
+      final Response<dynamic> response = await httpClient.dioInstance.post(
+        url,
+        data: data,
+        options: options,
+        queryParameters: urlParameters,
+      );
 
-      if (response.data != null) {
+      if (response.statusCode! >= 200 && response.statusCode! < 300) {
         T data = fromJson != null ? fromJson(response.data) : response.data;
         return ResponseCallback<T>.success(data);
       } else {
@@ -220,7 +219,7 @@ class FusionNetworkClient {
         data: data,
         queryParameters: urlParameters,
       );
-      if (response.data != null) {
+      if (response.statusCode! >= 200 && response.statusCode! < 300) {
         T data = fromJson != null ? fromJson(response.data) : response.data;
         return ResponseCallback<T>.success(data);
       } else {
@@ -265,7 +264,7 @@ class FusionNetworkClient {
 
       final Response<dynamic> response = await httpClient.dioInstance.delete(url, options: options, queryParameters: urlParameters);
 
-      if (response.data != null) {
+      if (response.statusCode! >= 200 && response.statusCode! < 300) {
         T? data = fromJson != null ? fromJson(response.data) : response.data;
         return ResponseCallback<T>.success(data);
       } else if (response.statusCode == 204 || response.statusCode == 200 || response.statusCode == 202) {
@@ -280,8 +279,49 @@ class FusionNetworkClient {
     }
   }
 
+  // Downloads a file from an external pre-signed URL (e.g. S3) directly to disk.
+  // Uses a clean Dio instance with no auth headers — pre-signed URLs are self-authenticating
+  // and adding an Authorization header causes the remote server to reject the request.
+  // Streams the response body directly to disk to avoid loading the entire file into RAM.
+  Future<ResponseCallback<T>> downloadFile<T>({
+    required String url,
+    required String savePath,
+    required CancelToken cancelToken,
+    required void Function(int received, int total) onProgress,
+  }) async {
+    final Dio cleanDio = Dio();
+    try {
+      await cleanDio.download(
+        url,
+        savePath,
+        cancelToken: cancelToken,
+        onReceiveProgress: onProgress,
+        options: Options(
+          // No Authorization header — the pre-signed URL carries its own credentials.
+          headers: <String, dynamic>{'Accept': '*/*'},
+        ),
+      );
+      return ResponseCallback<T>(success: true, message: 'File downloaded successfully');
+    } catch (ex) {
+      debugPrint('Exception in FusionNetworkClient.downloadFile() - $ex');
+      return ResponseCallback<T>(success: false, message: 'Exception in FusionNetworkClient.downloadFile() - $ex');
+    } finally {
+      cleanDio.close();
+    }
+  }
+
   Future<ResponseCallback<T>> connect<T>({required String vip}) async {
     try {
+      // Close any existing socket to prevent leaks on reconnect.
+      if (subscriberSocket != null) {
+        try {
+          subscriberSocket?.close();
+        } catch (_) {
+          // Best-effort cleanup — the old socket may already be dead.
+        }
+        subscriberSocket = null;
+      }
+
       await telemetryData.initializeTelemetryAddresses(this, vip);
       subscriberSocket = _context.createSocket(SocketType.sub);
       for (String url in TelemetryData.telemetryAddresses) {
@@ -313,9 +353,16 @@ class FusionNetworkClient {
   Stream<ResponseCallback<dynamic>> get responseMessages async* {
     if (subscriberSocket == null) {
       yield ResponseCallback<dynamic>(success: false, message: 'No server socket available');
+      return;
     }
 
-    await for (final ZFrame frame in subscriberSocket!.frames) {
+    final ZSocket socket = subscriberSocket!;
+
+    await for (final ZFrame frame in socket.frames) {
+      // If the socket was replaced by a reconnect while iterating, stop
+      // this generator so the old subscription can be garbage-collected.
+      if (subscriberSocket != socket) return;
+
       try {
         final String message = utf8.decode(frame.payload, allowMalformed: true);
         yield ResponseCallback<dynamic>(success: true, message: "New data received", data: jsonDecode(message));
@@ -403,8 +450,14 @@ enum FusionApiEndpoint {
   fusionDelete('/clear', FusionApiType.fusionServer),
 
   //Backend server endpoints
-  getProfile("/user/me/authorization", FusionApiType.backendServer),
+  getProfile("/users/authorization", FusionApiType.backendServer),
   projects("/projects", FusionApiType.backendServer),
+  products('/products', FusionApiType.backendServer),
+  devicesBulkCloud('/devices/bulk', FusionApiType.backendServer),
+  devicesCloud('/devices', FusionApiType.backendServer),
+  firmwareUpdateCheck('/firmware/updates/check', FusionApiType.backendServer),
+  firmwareBundleDownloadUrl('/firmware/bundles', FusionApiType.backendServer),
+  firmwareUpdateStatus('/firmware/updates/status', FusionApiType.backendServer),
 
   //fusion server setup apis
   fusionDevice('/devices', FusionApiType.fusionServer),
@@ -432,7 +485,7 @@ extension ApiEndpointTypeCheckExtension on String {
   }
 
   bool isBackendServerEndpoint() {
-    return contains(FusionApiEndpoint.getProfile.path) || contains(FusionApiEndpoint.projects.path);
+    return contains(FusionApiEndpoint.getProfile.path) || contains(FusionApiEndpoint.projects.path) || contains(FusionApiEndpoint.devicesCloud.path);
   }
 
   bool isTokenRequired() {
