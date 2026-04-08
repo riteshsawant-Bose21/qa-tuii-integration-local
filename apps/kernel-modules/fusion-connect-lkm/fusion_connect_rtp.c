@@ -673,9 +673,11 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
                 reorder = true;
             }
 
-            stream->next_action_times[write_slot] = sched_playout_ns;
-            if (stream->next_action_time < (stream->next_action_times[write_slot] + stream->packet_time))
-                stream->next_action_time = stream->next_action_times[write_slot] + stream->packet_time;
+            if (!late) {
+                stream->next_action_times[write_slot] = sched_playout_ns;
+                if (stream->next_action_time < (stream->next_action_times[write_slot] + stream->packet_time))
+                    stream->next_action_time = stream->next_action_times[write_slot] + stream->packet_time;
+            }
             stream->current_seq_num = seq_num;
 
             if (rtp_mgr->trace_debug) {
