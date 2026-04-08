@@ -36,6 +36,7 @@ const (
 	ClusterMembersEndpoint                     = ClusterEndpoint + "/members"
 	ClusterNTPSkewEndpoint                     = ClusterEndpoint + "/ntp-skew"
 	ClusterStatusEndpoint                      = ClusterEndpoint + "/status"
+	ClusterUDPStatusEndpoint                   = ClusterEndpoint + "/udp/status"
 
 	ClusterRebootEndpoint              = ClusterEndpoint + "/reboot"
 	ClusterRebootLocalEndpoint         = ClusterRebootEndpoint

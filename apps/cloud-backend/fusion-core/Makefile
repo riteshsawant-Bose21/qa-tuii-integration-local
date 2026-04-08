@@ -18,7 +18,7 @@ coverage:
 # Run integration tests
 test-integration:
 	@echo "Running integration tests..."
-	go test ./internal/tests -v -timeout=60s
+	go test ./internal/tests/... -v -timeout=60s
 
 # Run linting
 lint:

@@ -91,7 +91,7 @@ func NewApp(config *api.AppConfig) *App {
 	mdnsManager := initMDNSManager(config.NetIface)
 	bleServer := initBLEServer()
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
-	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub)
+	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub, config)
 	fusionServer := server.NewFusionServer(config.NodeName, connectionHandler, hub)
 
 	// Initialize VIPMonitor
@@ -210,6 +210,9 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.ClusterMembersEndpoint, app.Server.GetMembers)
 	app.registerPublicGET(routes.ClusterNTPSkewEndpoint, app.Cluster.GetNTPSkew)
 	app.registerPublicGET(routes.ClusterStatusEndpoint, app.Cluster.Metrics.GetClusterStatus)
+	if app.config.UDPDiagnostics {
+		app.registerPublicGET(routes.ClusterUDPStatusEndpoint, app.HandleUDPStatus)
+	}
 	app.registerPublicPOST(routes.ClusterRebootEndpoint, app.Cluster.RebootSystem)
 	app.registerPublicPOST(routes.ClusterSoftwareUpdateEndpoint, app.Cluster.SoftwareUpdateSystem)
 
@@ -313,6 +316,9 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivateGET(routes.ClusterLatencySyncAveragesLocalEndpoint, app.Cluster.GetSyncLatencyAveragesLocal)
 	app.registerPrivateGET(routes.ClusterLatencyNetworkFailuresLocalEndpoint, app.Cluster.GetNetworkFailuresLocal)
 	app.registerPrivateGET(routes.ClusterLatencyStatusLocalEndpoint, app.Cluster.GetLatencyStatusLocal)
+	if app.config.UDPDiagnostics {
+		app.registerPrivateGET(routes.ClusterUDPStatusEndpoint, app.HandleUDPStatus)
+	}
 	app.registerPrivatePOST(routes.ClusterRebootLocalEndpoint, app.Cluster.RebootSystemLocal)
 	app.registerPrivatePOST(routes.ClusterSoftwareUpdateLocalEndpoint, app.Cluster.SoftwareUpdateSystemLocal)
 
@@ -618,10 +624,10 @@ func initSAPServer(config *api.AppConfig, port string, handler *handler.Handler,
 }
 
 // initUDPServer initializes the UDP server.
-func initUDPServer(port string, handler *handler.Handler, hub *pubsub.Hub) *network.UDPServer {
+func initUDPServer(port string, handler *handler.Handler, hub *pubsub.Hub, config *api.AppConfig) *network.UDPServer {
 
 	udpPort := fmt.Sprintf(":%s", port)
-	udpServer, err := network.NewUDPServer(udpPort, handler)
+	udpServer, err := network.NewUDPServer(udpPort, handler, config.UDPDiagnostics)
 	if err != nil {
 		logger := logging.GetLogger()
 		logger.Fatal("Failed to create UDP server: %v", err)
