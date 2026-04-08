@@ -36,28 +36,28 @@ class MDNSSearchScreen extends StatelessWidget {
         const InfoText(
           text: 'Make sure you are connected to right network',
         ),
-        const SizedBox(height: 16),
-        Text(
-          '-or-',
-          style: TextStyle(
-            color: context.colorScheme.textBody,
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'Do you have other wireless devices to configure?',
-          style: TextStyle(
-            color: context.colorScheme.textBody,
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 16),
-        FusionSecondaryButton(
-          semanticId: 'mdns_configure_wireless_button',
-          text: 'Configure Wireless Devices',
-          onPressed: onConfigureWireless,
-        ),
+        // const SizedBox(height: 16),
+        // Text(
+        //   '-or-',
+        //   style: TextStyle(
+        //     color: context.colorScheme.textBody,
+        //     fontSize: 14,
+        //   ),
+        // ),
+        // const SizedBox(height: 16),
+        // Text(
+        //   'Do you have other wireless devices to configure?',
+        //   style: TextStyle(
+        //     color: context.colorScheme.textBody,
+        //     fontSize: 14,
+        //   ),
+        // ),
+        // const SizedBox(height: 16),
+        // FusionSecondaryButton(
+        //   semanticId: 'mdns_configure_wireless_button',
+        //   text: 'Configure Wireless Devices',
+        //   onPressed: onConfigureWireless,
+        // ),
         const SizedBox(height: 20),
       ],
     );

@@ -33,7 +33,6 @@ class ProjectManager {
     } catch (e) {
       return null;
     }
-    return null;
   }
 
   //Load projects from cloud

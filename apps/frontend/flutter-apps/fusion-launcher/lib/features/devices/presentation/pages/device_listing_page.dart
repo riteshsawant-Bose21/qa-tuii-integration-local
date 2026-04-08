@@ -1,13 +1,13 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/control_dashboard/presentation/widgets/alerts/alerts_dashboard.dart';
+import 'package:fusion_launcher/features/devices/presentation/widgets/live_device_widgets.dart';
+import 'package:fusion_launcher/features/projects/models/device_system_info.dart';
+import 'package:fusion_launcher/features/projects/view_model/meter_data/meter_data_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-// Assuming these exist in your project structure based on imports provided
 import '../../../../core/assets/asset_icons.dart';
 import '../../../control_dashboard/presentation/widgets/devices/disk_usage_widget.dart';
 import '../../../control_dashboard/presentation/widgets/devices/guage_widget.dart';
@@ -23,19 +23,24 @@ class DeviceListTab extends StatefulWidget {
 }
 
 class _DeviceListTabState extends State<DeviceListTab> {
-  // Access Real Devices from Service Locator
+  @override
+  void initState() {
+    super.initState();
+    serviceLocator<MeterDataViewModel>().registerObserver();
+  }
+
+  @override
+  void dispose() {
+    serviceLocator<MeterDataViewModel>().unregisterObserver();
+    super.dispose();
+  }
+
   List<HardwareComponent> get _fusionDevices {
-    // Combine DSPs, Amplifiers, and Controllers
     final List<HardwareComponent> dsp = serviceLocator<ProjectViewModel>().fusionDsps;
     final List<HardwareComponent> amplifiers = serviceLocator<ProjectViewModel>().amplifiers;
     final List<HardwareComponent> controllers = serviceLocator<ProjectViewModel>().fusionControllers;
     final List<HardwareComponent> endpoints = serviceLocator<ProjectViewModel>().fusionEndpoints;
-    return <HardwareComponent>[
-      ...dsp,
-      ...amplifiers,
-      ...controllers,
-      ...endpoints,
-    ];
+    return <HardwareComponent>[...dsp, ...amplifiers, ...controllers, ...endpoints];
   }
 
   String _getDeviceLocation(HardwareComponent device) {
@@ -43,36 +48,28 @@ class _DeviceListTabState extends State<DeviceListTab> {
       final Zone? zone = serviceLocator<ProjectViewModel>().getZonesForListeningArea(
         areaId: device.locationEntity.listeningAreaId!,
       );
-      if (zone != null) {
-        return zone.name;
-      }
+      if (zone != null) return zone.name;
       final SubZone? subZone = serviceLocator<ProjectViewModel>().getSubZoneForListeningArea(
         areaId: device.locationEntity.listeningAreaId!,
       );
       if (subZone != null) {
         final Zone? parentZone = serviceLocator<ProjectViewModel>().getZoneForSubZone(subZoneId: subZone.id);
-        if (parentZone != null) {
-          return "${parentZone.name} > ${subZone.name}";
-        }
+        if (parentZone != null) return "${parentZone.name} > ${subZone.name}";
         return subZone.name;
       }
     }
     final EquipLocation? location = serviceLocator<ProjectViewModel>().getEquipLocationForHardware(hardwareId: device.id);
-    if (location != null) {
-      return location.name;
-    }
+    if (location != null) return location.name;
     return "--";
   }
 
   @override
   Widget build(BuildContext context) {
-    // Fetch the list for this build
     final List<HardwareComponent> devices = _fusionDevices;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        // --- LEFT SIDE: DATA TABLE ---
         Expanded(
           flex: 3,
           child: Container(
@@ -85,10 +82,7 @@ class _DeviceListTabState extends State<DeviceListTab> {
             child: _buildDeviceTable(devices),
           ),
         ),
-
         const SizedBox(width: 4),
-
-        // --- RIGHT SIDE: ALERTS SIDEBAR ---
         const Expanded(
           flex: 1,
           child: AlertsDashboard(),
@@ -102,21 +96,14 @@ class _DeviceListTabState extends State<DeviceListTab> {
       columns: const <FusionTableColumn>[
         FusionTableColumn(key: 'status', header: 'STATUS', flex: 1),
         FusionTableColumn(key: 'deviceName', header: 'DEVICE NAME', flex: 2),
-        // FusionTableColumn(key: 'model', header: 'MODEL', flex: 2),
         FusionTableColumn(key: 'location', header: 'LOCATION', flex: 3),
         FusionTableColumn(key: 'ip', header: 'IP', flex: 2),
         FusionTableColumn(key: 'firmware', header: 'F.W.', flex: 1),
         FusionTableColumn(key: 'temp', header: 'TEMP', flex: 1),
         FusionTableColumn(key: 'disk', header: 'DISK USE', flex: 1),
         FusionTableColumn(key: 'cpu', header: 'CPU USE', flex: 1),
-        FusionTableColumn(
-          key: 'controls',
-          header: 'CONTROLS',
-          flex: 2,
-          sortable: false,
-        ),
+        FusionTableColumn(key: 'controls', header: 'CONTROLS', flex: 2, sortable: false),
       ],
-      // Map real devices to rows, passing index for dummy data generation
       rows:
           devices.asMap().entries.map((MapEntry<int, HardwareComponent> entry) {
             return _buildFusionRow(entry.value, entry.key);
@@ -125,167 +112,116 @@ class _DeviceListTabState extends State<DeviceListTab> {
   }
 
   FusionTableRow _buildFusionRow(HardwareComponent device, int index) {
-    // --- DUMMY DATA GENERATION ---
-    final Random r = Random(
-      index,
-    ); // Seed with index to keep values stable during rebuilds
-    final bool isOnline = index % 5 != 4; // Mock status logic
-    final int tempCelsius = 20 + r.nextInt(30); // 20-50
-    final double diskUsage = 0.2 + (r.nextDouble() * 0.7); // 0.2 - 0.9
-    final double cpuUsage = 0.1 + (r.nextDouble() * 0.8); // 0.1 - 0.9
-    final String dummyIp = "192.168.50.${100 + index}";
-    final String dummyFirmware = "v${1 + r.nextInt(3)}.${r.nextInt(9)}";
-
-    // --- REAL DATA MAPPING ---
     final String deviceName = device.name;
-    final String modelName = device.hardwareName;
     final String locationName = _getDeviceLocation(device);
+    final bool showTempDisk = device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp");
+    final bool showCpu = device is FusionDsp || (device is Amplifier && device.hardwareName.startsWith("PSM"));
 
     return FusionTableRow(
       key: device.id,
       cells: <String, FusionTableCell>{
         'status': FusionTableCell(
-          value: isOnline ? 1 : 0,
-          child: _buildStatusDot(isOnline),
+          value: 0,
+          child: LiveStatusDot(
+            deviceId: device.id,
+            size: 10,
+            onlineColor: const Color(0xFF4CAF50),
+            offlineColor: const Color(0xFF9E9E9E),
+          ),
         ),
         'deviceName': FusionTableCell(
           value: deviceName,
           child: _buildLinkText(device),
         ),
-        // 'model': FusionTableCell(
-        //   value: modelName,
-        //   child: FusionAppText(text: modelName, style: context.textTheme.labelMedium, maxLine: 1),
-        // ),
         'location': FusionTableCell(
           value: locationName,
-          child: FusionAppText(
-            text: locationName,
-            style: context.textTheme.labelMedium,
-            maxLine: 1,
-          ),
+          child: FusionAppText(text: locationName, style: context.textTheme.labelMedium, maxLine: 1),
         ),
         'ip': FusionTableCell(
-          value: dummyIp,
-          child: FusionAppText(
-            text: dummyIp,
-            style: context.textTheme.labelMedium,
-            maxLine: 1,
-          ),
+          value: '--',
+          child: FusionAppText(text: '--', style: context.textTheme.labelMedium, maxLine: 1),
         ),
         'firmware': FusionTableCell(
-          value: dummyFirmware,
-          child:
-              (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp"))
-                  ? FusionAppText(
-                    text: dummyFirmware,
-                    style: context.textTheme.labelMedium,
-                    maxLine: 1,
-                  )
-                  : Text(
-                    "-",
-                    style: TextStyle(color: context.colorScheme.primaryWhite),
-                  ),
+          value: '--',
+          child: Text("--", style: TextStyle(color: context.colorScheme.primaryWhite)),
         ),
         'temp': FusionTableCell(
-          value: tempCelsius,
+          value: 0,
           child:
-              (isOnline && (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp")))
-                  ? CompactThermostatWidget(
-                    temperature: tempCelsius,
-                    maxTemperature: 100,
+              showTempDisk
+                  ? LiveDeviceMetric(
+                    deviceId: device.id,
+                    builder: (DeviceSystemInfo? info, bool online) {
+                      if (!online) return buildDash(color: context.colorScheme.primaryWhite);
+                      return CompactThermostatWidget(temperature: info?.temperature.round() ?? 0, maxTemperature: 100);
+                    },
                   )
-                  : Text(
-                    "-",
-                    style: TextStyle(color: context.colorScheme.primaryWhite),
-                  ),
+                  : buildDash(color: context.colorScheme.primaryWhite),
         ),
         'disk': FusionTableCell(
-          value: diskUsage,
+          value: 0,
           child:
-              (isOnline && (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp")))
-                  ? Row(
-                    children: <Widget>[
-                      GaugeWidget(
-                        value: 100 * diskUsage,
-                        size: const Size(24, 24),
-                      ),
-                      const SizedBox(width: 6),
-                      FusionAppText(
-                        text: "${(diskUsage * 100).toInt()}%",
-                        style: context.textTheme.labelMedium,
-                      ),
-                    ],
+              showTempDisk
+                  ? LiveDeviceMetric(
+                    deviceId: device.id,
+                    builder: (DeviceSystemInfo? info, bool online) {
+                      if (!online) return buildDash(color: context.colorScheme.primaryWhite);
+                      final double disk = info?.emmc ?? 0;
+                      return Row(
+                        children: <Widget>[
+                          GaugeWidget(value: disk, size: const Size(24, 24)),
+                          const SizedBox(width: 6),
+                          FusionAppText(text: "${disk.toInt()}%", style: context.textTheme.labelMedium),
+                        ],
+                      );
+                    },
                   )
-                  : Text(
-                    "-",
-                    style: TextStyle(color: context.colorScheme.primaryWhite),
-                  ),
+                  : buildDash(color: context.colorScheme.primaryWhite),
         ),
         'cpu': FusionTableCell(
-          value: cpuUsage,
+          value: 0,
           child:
-              (isOnline && (device is FusionDsp || (device is Amplifier && device.hardwareName.startsWith("PSM"))))
-                  ? Row(
-                    children: <Widget>[
-                      DiskUsageWidget(
-                        value: 100 * cpuUsage,
-                        size: const Size(24, 24),
-                      ),
-                      const SizedBox(width: 6),
-                      FusionAppText(
-                        text: "${(cpuUsage * 100).toInt()}%",
-                        style: context.textTheme.labelMedium,
-                      ),
-                    ],
+              showCpu
+                  ? LiveDeviceMetric(
+                    deviceId: device.id,
+                    builder: (DeviceSystemInfo? info, bool online) {
+                      if (!online) return buildDash(color: context.colorScheme.primaryWhite);
+                      final double cpu = info?.ram ?? 0;
+                      return Row(
+                        children: <Widget>[
+                          DiskUsageWidget(value: cpu, size: const Size(24, 24)),
+                          const SizedBox(width: 6),
+                          FusionAppText(text: "${cpu.toInt()}%", style: context.textTheme.labelMedium),
+                        ],
+                      );
+                    },
                   )
-                  : Text(
-                    "-",
-                    style: TextStyle(color: context.colorScheme.primaryWhite),
-                  ),
+                  : buildDash(color: context.colorScheme.primaryWhite),
         ),
         'controls': FusionTableCell(
           value: '',
           child: Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: <Widget>[
-              if (device is! FusionDsp &&
-                  (device is! Amplifier ||
-                      !device.hardwareName.toLowerCase().startsWith(
-                        "pp",
-                      ))) ...<Widget>[
+              if (device is! FusionDsp && (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp"))) ...<Widget>[
                 FusionNeumorphicButton(
                   semanticId: 'standby_button',
                   width: 26,
                   height: 26,
                   borderRadius: 6,
-                  onTap: () {
-                    _showStandbyConfirmation(context, device);
-                  },
-                  child: FusionImage.asset(
-                    AssetIcons.standbyIcon,
-                    height: 12,
-                    width: 12,
-                    assetColor: context.colorScheme.iconWhite,
-                  ),
+                  onTap: () => _showStandbyConfirmation(context, device),
+                  child: FusionImage.asset(AssetIcons.standbyIcon, height: 12, width: 12, assetColor: context.colorScheme.iconWhite),
                 ),
                 const SizedBox(width: 10),
               ],
-
               if (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp"))
                 FusionNeumorphicButton(
                   semanticId: 'reboot_button',
                   width: 26,
                   height: 26,
                   borderRadius: 6,
-                  onTap: () {
-                    _showRebootConfirmation(context, device);
-                  },
-                  child: FusionImage.asset(
-                    AssetIcons.rebootIcon,
-                    height: 12,
-                    width: 12,
-                    assetColor: context.colorScheme.iconWhite,
-                  ),
+                  onTap: () => _showRebootConfirmation(context, device),
+                  child: FusionImage.asset(AssetIcons.rebootIcon, height: 12, width: 12, assetColor: context.colorScheme.iconWhite),
                 ),
             ],
           ),
@@ -294,28 +230,11 @@ class _DeviceListTabState extends State<DeviceListTab> {
     );
   }
 
-  // Helper Widgets
-
-  Widget _buildStatusDot(bool isOnline) {
-    return Container(
-      width: 10,
-      height: 10,
-      decoration: BoxDecoration(
-        color: isOnline ? const Color(0xFF4CAF50) : const Color(0xFF9E9E9E),
-        shape: BoxShape.circle,
-      ),
-    );
-  }
-
   Widget _buildLinkText(HardwareComponent device) {
     return InkWell(
       onTap: () {
         if (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp")) {
-          Navigator.pushNamed(
-            context,
-            Routes.deviceDetails,
-            arguments: device.id,
-          );
+          Navigator.pushNamed(context, Routes.deviceDetails, arguments: device.id);
         }
       },
       child: FusionAppText(
@@ -332,10 +251,7 @@ class _DeviceListTabState extends State<DeviceListTab> {
     );
   }
 
-  void _showStandbyConfirmation(
-    BuildContext context,
-    HardwareComponent device,
-  ) async {
+  void _showStandbyConfirmation(BuildContext context, HardwareComponent device) async {
     final bool? result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -344,24 +260,15 @@ class _DeviceListTabState extends State<DeviceListTab> {
             title: 'STANDBY',
             description: 'Do you want to set ${device.name} device to standby ?',
             loadingMessage: 'Device going standby',
-            onConfirm: () {
-              // TODO: Implement actual standby logic if needed before loading
-            },
+            onConfirm: () {},
           ),
     );
-
     if (result == true && context.mounted) {
-      FusionToast.success(
-        context,
-        message: "${device.name} set to standby successful.",
-      );
+      FusionToast.success(context, message: "${device.name} set to standby successful.");
     }
   }
 
-  _showRebootConfirmation(
-    BuildContext context,
-    HardwareComponent device,
-  ) async {
+  _showRebootConfirmation(BuildContext context, HardwareComponent device) async {
     final bool? result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -373,12 +280,8 @@ class _DeviceListTabState extends State<DeviceListTab> {
             onConfirm: () {},
           ),
     );
-
     if (result == true && context.mounted) {
-      FusionToast.success(
-        context,
-        message: "${device.name} reboot successful.",
-      );
+      FusionToast.success(context, message: "${device.name} reboot successful.");
     }
   }
 }

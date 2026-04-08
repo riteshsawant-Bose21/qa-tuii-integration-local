@@ -22,12 +22,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/authentication/viewmodel/session_view_model.dart';
 import '../features/configuration/presentation/viewmodel/project_view_model.dart';
-import '../features/home/domain/usecases/create_project_usecase.dart';
-import '../features/home/domain/usecases/delete_project_usecase.dart';
-import '../features/home/domain/usecases/fetch_file_usecase.dart';
-import '../features/home/domain/usecases/get_projects_data_usecase.dart';
-import '../features/home/domain/usecases/update_project_usecase.dart';
-import '../features/home/domain/usecases/upload_file_usecase.dart';
+import '../features/devices/view_model/firmware_update/firmware_update_vm.dart';
 import '../features/dynamic_config/data/datasources/panel_datasource.dart';
 import '../features/dynamic_config/data/datasources/panel_datasource_impl.dart';
 import '../features/dynamic_config/data/repositories/panel_repository_impl.dart';
@@ -39,6 +34,12 @@ import '../features/dynamic_config/domain/usecases/initialize_panel_usecase.dart
 import '../features/dynamic_config/domain/usecases/reset_fusion_data_usecase.dart';
 import '../features/dynamic_config/domain/usecases/send_widget_data_usecase.dart';
 import '../features/dynamic_config/presentation/bloc/panel_bloc.dart';
+import '../features/home/domain/usecases/create_project_usecase.dart';
+import '../features/home/domain/usecases/delete_project_usecase.dart';
+import '../features/home/domain/usecases/fetch_file_usecase.dart';
+import '../features/home/domain/usecases/get_projects_data_usecase.dart';
+import '../features/home/domain/usecases/update_project_usecase.dart';
+import '../features/home/domain/usecases/upload_file_usecase.dart';
 import '../features/product_query/presentation/viewModel/product_query_view_model_cubit.dart';
 import '../features/projects/view_model/block_data/block_data_viewmodel.dart';
 import '../features/projects/view_model/meter_data/meter_data_view_model.dart';
@@ -55,6 +56,9 @@ Future<void> setupServiceLocator() async {
 
   final SharedPreferences prefs = await SharedPreferences.getInstance();
   serviceLocator.registerSingleton<SharedPreferences>(prefs);
+
+  final AppCacheService appRootCacheService = await AppCacheService.root();
+  serviceLocator.registerSingleton<AppCacheService>(appRootCacheService);
 
   serviceLocator.registerSingleton<SharedPreferencesHandler>(SharedPreferencesHandler.getInstance(serviceLocator<SharedPreferences>()));
 
@@ -101,7 +105,7 @@ Future<void> setupServiceLocator() async {
   );
 
   serviceLocator.registerSingleton<MdnsService>(
-    MdnsService(serviceType: '_http._tcp'),
+    MdnsService(serviceType: '_fusion._tcp.local'),
   );
 
   final UserProfile initialUserProfile = UserProfile(
@@ -189,6 +193,10 @@ Future<void> setupServiceLocator() async {
     ),
   );
 
+  serviceLocator.registerLazySingleton<FirmwareUpdateViewModel>(
+    () => FirmwareUpdateViewModel(serviceLocator<FusionDeviceService>()),
+  );
+
   serviceLocator.registerSingleton<FusionConfigSyncService>(
     FusionConfigSyncService(
       networkClient: serviceLocator<FusionNetworkClient>(),
@@ -220,7 +228,13 @@ Future<void> setupServiceLocator() async {
     ),
   );
 
-  serviceLocator.registerLazySingleton<ProductQueryViewModel>(() => ProductQueryViewModel());
+  final AppCacheService productsCache = await appRootCacheService.scope('products');
+  serviceLocator.registerLazySingleton<ProductQueryViewModel>(
+    () => ProductQueryViewModel(
+      networkClient: serviceLocator<FusionNetworkClient>(),
+      cacheService: productsCache,
+    ),
+  );
 
   serviceLocator.registerLazySingleton<ProjectSyncService>(
     () => ProjectSyncService(
