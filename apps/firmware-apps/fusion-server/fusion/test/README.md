@@ -96,34 +96,50 @@ Key knobs:
 
 ## Run Snapshot + Scene Catalog Tests
 
-The integration tests in `snapshot_test.go` target a cluster VIP at `http://192.168.2.100:8080`.
+The integration tests are now split across:
+- `snapshot_test.go` for **Time Machine** tests
+- `scene_catalog_test.go` for **Scene Catalog** tests
+
 They validate both:
 - **Time Machine** behavior (`/time-machine/*`): create/activate/update/delete, epoch consistency, convergence
 - **Scene Catalog** behavior (`/snapshots/*`, `/scene-sets/*`, `/scenes/list`, `/scene-catalog-list`)
 
+By default, tests target `http://192.168.2.100:8080`. You can override with:
+- `FUSION_TEST_VIP` (e.g. `127.0.0.1:8080`)
+- `FUSION_TEST_ADMIN` (optional admin URL, default `http://192.168.2.100:9090`)
+
 From module root (`fusion/`):
 
 ```bash
-go test -v --race ./test -run Snapshot
+FUSION_TEST_VIP=127.0.0.1:8080 \
+go test -v --race ./test -run 'TimeMachine|SceneCatalog'
+```
+
+Run only Time Machine tests:
+
+```bash
+FUSION_TEST_VIP=127.0.0.1:8080 \
+go test -v --race ./test -run TimeMachine
 ```
 
 Run only the new Snapshot Definition + Scene Set foundation tests:
 
 ```bash
-go test -v --race ./test -run 'SnapshotDef|SceneSet|ActivateScene|GetCurrentScene|ListScene|SceneCatalogList'
+FUSION_TEST_VIP=127.0.0.1:8080 \
+go test -v --race ./test -run SceneCatalog
 ```
 
 Run a single test while debugging:
 
 ```bash
-go test -v --race ./test -run TestSceneCatalogList
+go test -v --race ./test -run TestSceneCatalogListAll
 ```
 
 ### Requirements / Caveats
 
-- `snapshot_test.go` is currently hardcoded to `http://192.168.2.100` and is designed for the multipass/cluster path, not the `FUSION_TEST_LOCAL=1` loopback mode used by UDP tests.
-- Some snapshot tests expect multi-node behavior and can restart nodes during execution.
-- If you only want local-loopback validation, run the UDP suite from this README and skip `snapshot_test.go`.
+- Most Snapshot/Scene Catalog tests run fine against a single local node when `FUSION_TEST_VIP=127.0.0.1:8080`.
+- Cluster-wide tests require 2+ nodes and are now auto-skipped when cluster membership is unavailable or single-node.
+- Restart-based tests need a restart script (`FUSION_RESTART_SCRIPT`) or `fusion/scripts/multipass/restart-fusion.sh`; otherwise they auto-skip.
 
 ## Notes
 
