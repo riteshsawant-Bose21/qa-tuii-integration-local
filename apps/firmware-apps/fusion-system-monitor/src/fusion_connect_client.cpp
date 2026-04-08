@@ -126,6 +126,7 @@ struct fusion_cn_metrics_snapshot
     uint32_t tx_iat_p50_ns;
     uint32_t tx_iat_p99_ns;
     uint32_t tx_sched_err_abs_p50_ns;
+    uint32_t tx_sched_err_abs_max_ns;
 } __attribute__((packed));
 
 struct fusion_cn_metrics_record {
@@ -1667,13 +1668,14 @@ void FusionConnectClient::process() {
                         "nmetrics TX stream={}: ts={} "
                         "pkts={} bytes={} "
                         "iat_min={}us p50={}us p99={}us "
-                        "sched_err_p50={}us ",
+                        "sched_err_p50={}us max={}us ",
                         r.stream_name, s.ts_snapshot_ns,
                         s.tx_packets_total, s.tx_bytes_total,
                         s.tx_iat_min_ns / 1000,
                         s.tx_iat_p50_ns / 1000,
                         s.tx_iat_p99_ns / 1000,
-                        s.tx_sched_err_abs_p50_ns / 1000
+                        s.tx_sched_err_abs_p50_ns / 1000,
+                        s.tx_sched_err_abs_max_ns / 1000
                     );
                 } else {
                     // RX

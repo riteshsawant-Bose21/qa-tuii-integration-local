@@ -84,6 +84,7 @@ struct fusion_cn_metrics_window
     u32 tx_iat_p50_ns;
     u32 tx_iat_p99_ns;
     u32 tx_sched_err_abs_p50_ns;
+    u32 tx_sched_err_abs_max_ns;
 };
 
 struct fusion_cn_metrics_snapshot
@@ -116,6 +117,7 @@ struct fusion_cn_metrics_snapshot
     u32 tx_iat_p50_ns;
     u32 tx_iat_p99_ns;
     u32 tx_sched_err_abs_p50_ns;
+    u32 tx_sched_err_abs_max_ns;
 } __attribute__((packed));
 
 struct fusion_cn_metrics_record {
@@ -230,6 +232,9 @@ static inline void fusion_cn_metrics_tx_stash(struct fusion_cn_stream_metrics *m
                 m->win.tx_sched_err_abs_p50_ns =
                     m->win.tx_sched_err_abs_p50_ns +
                     ((s32)err - (s32)m->win.tx_sched_err_abs_p50_ns) / 8;
+
+            if (err > m->win.tx_sched_err_abs_max_ns)
+                m->win.tx_sched_err_abs_max_ns = err;
         }
     }
 }

@@ -962,8 +962,8 @@ static void gpt_update_discipline_ready(struct fusion_gpt *g, long freq_error,
 
 	if (g->lock_streak >= needed) {
 		WRITE_ONCE(g->discipline_ready, true);
-		pr_info("fusion_gpt: discipline ready (|err| < %u ticks for %u PPS)\n",
-				thresh, needed);
+		pr_info("fusion_gpt: discipline ready (|err| < %u ticks for %u PPS) dac=%d gain=%u\n",
+				thresh, needed, g->dac_target, g->si_gain_current);
 	}
 }
 
