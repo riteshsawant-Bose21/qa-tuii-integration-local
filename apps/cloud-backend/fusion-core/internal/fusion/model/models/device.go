@@ -28,7 +28,7 @@ type Device struct {
 	SerialNumber    string      `boil:"serial_number" json:"serial_number" toml:"serial_number" yaml:"serial_number"`
 	ClientDeviceID  null.String `boil:"client_device_id" json:"client_device_id,omitempty" toml:"client_device_id" yaml:"client_device_id,omitempty"`
 	Name            null.String `boil:"name" json:"name,omitempty" toml:"name" yaml:"name,omitempty"`
-	ModelName       string      `boil:"model_name" json:"model_name" toml:"model_name" yaml:"model_name"`
+	Model           string      `boil:"model" json:"model" toml:"model" yaml:"model"`
 	MacAddress      null.String `boil:"mac_address" json:"mac_address,omitempty" toml:"mac_address" yaml:"mac_address,omitempty"`
 	IsPrimary       null.Bool   `boil:"is_primary" json:"is_primary,omitempty" toml:"is_primary" yaml:"is_primary,omitempty"`
 	CertificateID   null.String `boil:"certificate_id" json:"certificate_id,omitempty" toml:"certificate_id" yaml:"certificate_id,omitempty"`
@@ -51,7 +51,7 @@ var DeviceColumns = struct {
 	SerialNumber    string
 	ClientDeviceID  string
 	Name            string
-	ModelName       string
+	Model           string
 	MacAddress      string
 	IsPrimary       string
 	CertificateID   string
@@ -69,7 +69,7 @@ var DeviceColumns = struct {
 	SerialNumber:    "serial_number",
 	ClientDeviceID:  "client_device_id",
 	Name:            "name",
-	ModelName:       "model_name",
+	Model:           "model",
 	MacAddress:      "mac_address",
 	IsPrimary:       "is_primary",
 	CertificateID:   "certificate_id",
@@ -89,7 +89,7 @@ var DeviceTableColumns = struct {
 	SerialNumber    string
 	ClientDeviceID  string
 	Name            string
-	ModelName       string
+	Model           string
 	MacAddress      string
 	IsPrimary       string
 	CertificateID   string
@@ -107,7 +107,7 @@ var DeviceTableColumns = struct {
 	SerialNumber:    "device.serial_number",
 	ClientDeviceID:  "device.client_device_id",
 	Name:            "device.name",
-	ModelName:       "device.model_name",
+	Model:           "device.model",
 	MacAddress:      "device.mac_address",
 	IsPrimary:       "device.is_primary",
 	CertificateID:   "device.certificate_id",
@@ -153,7 +153,7 @@ var DeviceWhere = struct {
 	SerialNumber    whereHelperstring
 	ClientDeviceID  whereHelpernull_String
 	Name            whereHelpernull_String
-	ModelName       whereHelperstring
+	Model           whereHelperstring
 	MacAddress      whereHelpernull_String
 	IsPrimary       whereHelpernull_Bool
 	CertificateID   whereHelpernull_String
@@ -171,7 +171,7 @@ var DeviceWhere = struct {
 	SerialNumber:    whereHelperstring{field: "\"device\".\"serial_number\""},
 	ClientDeviceID:  whereHelpernull_String{field: "\"device\".\"client_device_id\""},
 	Name:            whereHelpernull_String{field: "\"device\".\"name\""},
-	ModelName:       whereHelperstring{field: "\"device\".\"model_name\""},
+	Model:           whereHelperstring{field: "\"device\".\"model\""},
 	MacAddress:      whereHelpernull_String{field: "\"device\".\"mac_address\""},
 	IsPrimary:       whereHelpernull_Bool{field: "\"device\".\"is_primary\""},
 	CertificateID:   whereHelpernull_String{field: "\"device\".\"certificate_id\""},
@@ -261,8 +261,8 @@ func (r *deviceR) GetDeviceCommandHistories() DeviceCommandHistorySlice {
 type deviceL struct{}
 
 var (
-	deviceAllColumns            = []string{"id", "serial_number", "client_device_id", "name", "model_name", "mac_address", "is_primary", "certificate_id", "certificate_arn", "claim_status", "claimed_by", "project_id", "firmware_version", "device_zone", "device_location", "created_at", "updated_at"}
-	deviceColumnsWithoutDefault = []string{"serial_number", "model_name", "firmware_version"}
+	deviceAllColumns            = []string{"id", "serial_number", "client_device_id", "name", "model", "mac_address", "is_primary", "certificate_id", "certificate_arn", "claim_status", "claimed_by", "project_id", "firmware_version", "device_zone", "device_location", "created_at", "updated_at"}
+	deviceColumnsWithoutDefault = []string{"serial_number", "model", "firmware_version"}
 	deviceColumnsWithDefault    = []string{"id", "client_device_id", "name", "mac_address", "is_primary", "certificate_id", "certificate_arn", "claim_status", "claimed_by", "project_id", "device_zone", "device_location", "created_at", "updated_at"}
 	devicePrimaryKeyColumns     = []string{"id"}
 	deviceGeneratedColumns      = []string{}

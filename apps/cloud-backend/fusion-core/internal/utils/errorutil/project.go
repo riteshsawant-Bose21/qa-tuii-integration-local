@@ -1,5 +1,40 @@
 package errorutil
 
+import "errors"
+
+// ErrProjectNotFound is the sentinel error for a missing project.
+var ErrProjectNotFound = errors.New(ErrMsgProjectNotFound)
+
+// ErrProjectAlreadyExists is the sentinel error for a duplicate project.
+var ErrProjectAlreadyExists = errors.New(ErrMsgProjectAlreadyExists)
+
+// ErrProjectArchived is the sentinel error for an archived project.
+var ErrProjectArchived = errors.New(ErrMsgProjectArchived)
+
+// ErrProjectNotArchived is the sentinel error for a non-archived project.
+var ErrProjectNotArchived = errors.New(ErrMsgProjectNotArchived)
+
+// ErrProjectAlreadyLocked is the sentinel error for a project that is already locked.
+var ErrProjectAlreadyLocked = errors.New(ErrMsgProjectAlreadyLocked)
+
+// ErrProjectNotLocked is the sentinel error for a project that is not locked.
+var ErrProjectNotLocked = errors.New(ErrMsgProjectNotLocked)
+
+// ErrProjectNotLockedByUser is the sentinel error when a project is not locked by the requesting user.
+var ErrProjectNotLockedByUser = errors.New(ErrMsgProjectNotLockedByUser)
+
+// ErrProjectLockedByOtherUser is the sentinel error when a project is locked by a different user.
+var ErrProjectLockedByOtherUser = errors.New(ErrMsgProjectLockedByUser)
+
+// ErrUserNotFound is the sentinel error for a missing user.
+var ErrUserNotFound = errors.New(ErrMsgUserNotFound)
+
+// ErrUserNotAssignedToProject is the sentinel error when a user is not assigned to a project.
+var ErrUserNotAssignedToProject = errors.New(ErrMsgUserNotAssignedToProject)
+
+// ErrUserAlreadyAssigned is the sentinel error when a user is already assigned to a project.
+var ErrUserAlreadyAssigned = errors.New(ErrMsgUserAlreadyAssigned)
+
 // API Error Message Constants
 // Single source of truth for all error messages returned by the project API
 const (
@@ -58,10 +93,16 @@ const (
 	ErrMsgFailedToGetProjectUser        = "failed to get project user"
 
 	// Validation errors
+	ErrMsgUserAuthEmpty          = "user authorization cannot be empty"
 	ErrMsgProjectCannotBeNil     = "project cannot be nil"
+	ErrMsgProjectUpdateReqNil    = "project update request cannot be nil"
+	ErrMsgProjectRowNil          = "project row cannot be nil"
+	ErrMsgTransactionNil         = "transaction cannot be nil"
 	ErrMsgIDCannotBeEmpty        = "id cannot be empty"
 	ErrMsgProjectIDCannotBeEmpty = "project id cannot be empty"
 	ErrMsgUserIDRequired         = "user_id is required"
+	ErrMsgUserEmailEmpty         = "user email cannot be empty"
+	ErrMsgQueryParamsNil         = "query params cannot be nil"
 
 	// SQL errors
 	ErrMsgSQLNoRows = "sql: no rows in result set"

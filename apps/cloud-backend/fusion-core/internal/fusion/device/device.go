@@ -27,19 +27,19 @@ func (s *Service) withTransaction(ctx context.Context, logger *zap.Logger, fn fu
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		logger.Error("Failed to begin transaction", zap.Error(err))
-		return fmt.Errorf("failed to begin transaction: %w", err)
+		return fmt.Errorf("withTransaction: failed to begin transaction: %w", err)
 	}
 
 	if err := fn(tx); err != nil {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
 			logger.Error("Failed to rollback transaction", zap.Error(rollbackErr))
 		}
-		return err
+		return fmt.Errorf("withTransaction: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
 		logger.Error("Failed to commit transaction", zap.Error(err))
-		return fmt.Errorf("failed to commit transaction: %w", err)
+		return fmt.Errorf("withTransaction: failed to commit transaction: %w", err)
 	}
 
 	return nil
@@ -47,19 +47,26 @@ func (s *Service) withTransaction(ctx context.Context, logger *zap.Logger, fn fu
 
 // validateProjectAccess validates that a project exists and the user has access to it.
 func (s *Service) validateProjectAccess(ctx context.Context, projectID, accountID string, logger *zap.Logger) (*models.Project, error) {
+	if projectID == "" {
+		return nil, fmt.Errorf(errorutil.ErrMsgProjectIDEmpty)
+	}
+	if accountID == "" {
+		return nil, fmt.Errorf(errorutil.ErrMsgAccountIDEmpty)
+	}
+
 	project, err := s.projectService.GetProjectByID(ctx, projectID, logger)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("validateProjectAccess: %w", err)
 	}
 	if project == nil {
 		logger.Error("Project not found", zap.String("projectID", projectID))
-		return nil, fmt.Errorf(errorutil.ErrMsgProjectNotFound)
+		return nil, fmt.Errorf("validateProjectAccess: %w", errorutil.ErrProjectNotFound)
 	}
 	if project.PrimaryOwnerAccountID != accountID {
 		logger.Error("User does not have access to the project",
 			zap.String("projectID", projectID),
 			zap.String("accountID", accountID))
-		return nil, fmt.Errorf(errorutil.MsgUnauthorized)
+		return nil, fmt.Errorf("validateProjectAccess: %w", errorutil.ErrUnauthorized)
 	}
 	return project, nil
 }
@@ -68,6 +75,14 @@ func (s *Service) validateProjectAccess(ctx context.Context, projectID, accountI
 // This is a best-effort cleanup - errors are logged but not returned.
 // If deleteThing is true, also deletes the thing from IoT (only for newly registered things).
 func (s *Service) cleanupIoTResources(ctx context.Context, deviceID, certID, certArn string, deleteThing bool, logger *zap.Logger) {
+	if deviceID == "" || certID == "" || certArn == "" {
+		logger.Warn("cleanupIoTResources called with empty parameters",
+			zap.String("deviceID", deviceID),
+			zap.String("certID", certID),
+			zap.String("certArn", certArn))
+		return
+	}
+
 	if err := s.iotService.SetCertificateInactive(ctx, certID, logger); err != nil {
 		logger.Warn("Failed to cleanup: set certificate inactive",
 			zap.String("certificateID", certID),
@@ -98,6 +113,14 @@ func (s *Service) cleanupIoTResources(ctx context.Context, deviceID, certID, cer
 // revokeOldCertificate revokes an existing certificate. Errors are logged as warnings
 // since the new certificate is already active and this is best-effort cleanup.
 func (s *Service) revokeOldCertificate(ctx context.Context, deviceID, certID, certArn string, logger *zap.Logger) {
+	if deviceID == "" || certID == "" || certArn == "" {
+		logger.Warn("revokeOldCertificate called with empty parameters",
+			zap.String("deviceID", deviceID),
+			zap.String("certID", certID),
+			zap.String("certArn", certArn))
+		return
+	}
+
 	if err := s.iotService.SetCertificateInactive(ctx, certID, logger); err != nil {
 		logger.Warn("Failed to set old certificate inactive (non-critical)",
 			zap.String("certificateID", certID),
@@ -121,6 +144,13 @@ func (s *Service) revokeOldCertificate(ctx context.Context, deviceID, certID, ce
 // Returns the certificate info, or cleans up and returns an error.
 // If deleteThingOnFailure is true, the thing will be deleted on cleanup.
 func (s *Service) setupDeviceCertificate(ctx context.Context, deviceID string, csr *string, deleteThingOnFailure bool, logger *zap.Logger) (*string, types.CertificateInfo, error) {
+	if deviceID == "" {
+		return nil, types.CertificateInfo{}, fmt.Errorf(errorutil.ErrMsgDeviceIDEmpty)
+	}
+	if csr == nil || *csr == "" {
+		return nil, types.CertificateInfo{}, fmt.Errorf(errorutil.ErrMsgCSRPemEmpty)
+	}
+
 	certPem, certID, certArn, err := s.iotService.CreateCertificateFromCSR(ctx, csr, logger)
 	if err != nil {
 		if deleteThingOnFailure {
@@ -130,7 +160,7 @@ func (s *Service) setupDeviceCertificate(ctx context.Context, deviceID string, c
 					zap.Error(cleanupErr))
 			}
 		}
-		return nil, types.CertificateInfo{}, err
+		return nil, types.CertificateInfo{}, fmt.Errorf("setupDeviceCertificate: %w", err)
 	}
 
 	cert := types.CertificateInfo{ID: *certID, Arn: *certArn}
@@ -149,7 +179,7 @@ func (s *Service) setupDeviceCertificate(ctx context.Context, deviceID string, c
 					zap.Error(err))
 			}
 		}
-		return nil, types.CertificateInfo{}, err
+		return nil, types.CertificateInfo{}, fmt.Errorf("setupDeviceCertificate: %w", err)
 	}
 
 	if err := s.iotService.AttachPolicyToCertificate(ctx, s.cfg.IoTDevicePolicy, *certArn, logger); err != nil {
@@ -177,26 +207,26 @@ func (s *Service) CreateDevice(ctx context.Context, request *types.DeviceCreateR
 	// Check if device already exists
 	device, err := s.dbService.GetDeviceByID(ctx, request.SerialNumber, logger)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return nil, err
+		return nil, fmt.Errorf("CreateDevice: %w", err)
 	}
 
 	// Check if device is already claimed
 	if device != nil && device.ClaimStatus == models.ClaimStatusEnumCLAIMED {
 		logger.Error("Device already claimed, reset to reclaim",
 			zap.String("deviceID", request.SerialNumber))
-		return nil, fmt.Errorf(errorutil.ErrMsgDeviceAlreadyExists)
+		return nil, fmt.Errorf("CreateDevice: %w", errorutil.ErrDeviceAlreadyExists)
 	}
 
 	// Validate project access
 	if _, err := s.validateProjectAccess(ctx, request.ProjectID, user.Account.ID, logger); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("CreateDevice: %w", err)
 	}
 
 	// Register new thing in IoT if device doesn't exist
 	deleteThingOnFailure := false
 	if device == nil {
 		if err := s.iotService.RegisterThing(ctx, request.SerialNumber, logger); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("CreateDevice: %w", err)
 		}
 		deleteThingOnFailure = true
 	}
@@ -204,7 +234,7 @@ func (s *Service) CreateDevice(ctx context.Context, request *types.DeviceCreateR
 	// Setup certificate (creates, attaches to thing, attaches policy)
 	certPem, cert, err := s.setupDeviceCertificate(ctx, request.SerialNumber, &request.CSR, deleteThingOnFailure, logger)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("CreateDevice: %w", err)
 	}
 
 	// Persist device in database
@@ -228,7 +258,7 @@ func (s *Service) CreateDevice(ctx context.Context, request *types.DeviceCreateR
 		logger.Warn("Database transaction failed, cleaning up IoT resources",
 			zap.String("deviceID", request.SerialNumber))
 		s.cleanupIoTResources(ctx, request.SerialNumber, cert.ID, cert.Arn, deleteThingOnFailure, logger)
-		return nil, err
+		return nil, fmt.Errorf("CreateDevice: %w", fmt.Errorf("CreateDevice: %w", err))
 	}
 
 	return &types.DeviceCreateResponse{Certificate: *certPem}, nil
@@ -238,10 +268,10 @@ func (s *Service) CreateDevice(ctx context.Context, request *types.DeviceCreateR
 // Each device is processed independently; partial failures are captured per-device.
 func (s *Service) BulkCreateDevices(ctx context.Context, request *types.BulkDeviceCreateRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (*types.BulkDeviceCreateResponse, error) {
 	if request == nil {
-		return nil, fmt.Errorf(errorutil.ErrMsgBulkDeviceCreateReqNil)
+		return nil, fmt.Errorf("BulkCreateDevices: %s", errorutil.ErrMsgBulkDeviceCreateReqNil)
 	}
 	if user.Account.ID == "" {
-		return nil, fmt.Errorf(errorutil.ErrMsgAccountIDEmpty)
+		return nil, fmt.Errorf("BulkCreateDevices: %s", errorutil.ErrMsgAccountIDEmpty)
 	}
 
 	results := make([]types.BulkDeviceCreateResult, 0, len(request.Devices))
@@ -275,22 +305,22 @@ func (s *Service) BulkCreateDevices(ctx context.Context, request *types.BulkDevi
 // UpdateDevice modifies mutable fields of an existing device.
 func (s *Service) UpdateDevice(ctx context.Context, deviceID string, request *types.DeviceUpdateRequest, user types.UserAuthorizationResponse, logger *zap.Logger) error {
 	if deviceID == "" {
-		return fmt.Errorf(errorutil.ErrMsgDeviceIDEmpty)
+		return fmt.Errorf("UpdateDevice: %s", errorutil.ErrMsgDeviceIDEmpty)
 	}
 	if request == nil {
-		return fmt.Errorf(errorutil.ErrMsgDeviceUpdateReqNil)
+		return fmt.Errorf("UpdateDevice: %s", errorutil.ErrMsgDeviceUpdateReqNil)
 	}
 	if user.Account.ID == "" {
-		return fmt.Errorf(errorutil.ErrMsgAccountIDEmpty)
+		return fmt.Errorf("UpdateDevice: %s", errorutil.ErrMsgAccountIDEmpty)
 	}
 
 	device, err := s.dbService.GetDeviceByID(ctx, deviceID, logger)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Error("Device not found", zap.String("deviceID", deviceID))
-			return fmt.Errorf(errorutil.ErrMsgDeviceNotFound)
+			return fmt.Errorf("UpdateDevice: %w", errorutil.ErrDeviceNotFound)
 		}
-		return err
+		return fmt.Errorf("UpdateDevice: %w", err)
 	}
 
 	// Verify ownership
@@ -298,13 +328,13 @@ func (s *Service) UpdateDevice(ctx context.Context, deviceID string, request *ty
 		logger.Error("Unauthorized update attempt",
 			zap.String("deviceID", deviceID),
 			zap.String("accountID", user.Account.ID))
-		return fmt.Errorf(errorutil.MsgUnauthorized)
+		return fmt.Errorf("UpdateDevice: %w", errorutil.ErrUnauthorized)
 	}
 
 	// Validate project change if requested
 	if request.ProjectID != "" && device.ProjectID.String != request.ProjectID {
 		if _, err := s.validateProjectAccess(ctx, request.ProjectID, user.Account.ID, logger); err != nil {
-			return err
+			return fmt.Errorf("UpdateDevice: %w", err)
 		}
 	}
 
@@ -316,19 +346,19 @@ func (s *Service) UpdateDevice(ctx context.Context, deviceID string, request *ty
 // ResetDevice releases a device from its owner and revokes IoT credentials.
 func (s *Service) ResetDevice(ctx context.Context, deviceID string, user types.UserAuthorizationResponse, logger *zap.Logger) error {
 	if deviceID == "" {
-		return fmt.Errorf(errorutil.ErrMsgDeviceIDEmpty)
+		return fmt.Errorf("ResetDevice: %s", errorutil.ErrMsgDeviceIDEmpty)
 	}
 	if user.Account.ID == "" {
-		return fmt.Errorf(errorutil.ErrMsgAccountIDEmpty)
+		return fmt.Errorf("ResetDevice: %s", errorutil.ErrMsgAccountIDEmpty)
 	}
 
 	device, err := s.dbService.GetDeviceByID(ctx, deviceID, logger)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Error("Device not found", zap.String("deviceID", deviceID))
-			return fmt.Errorf(errorutil.ErrMsgDeviceNotFound)
+			return fmt.Errorf("ResetDevice: %w", errorutil.ErrDeviceNotFound)
 		}
-		return err
+		return fmt.Errorf("ResetDevice: %w", err)
 	}
 
 	if device.ClaimStatus != models.ClaimStatusEnumCLAIMED {
@@ -342,18 +372,18 @@ func (s *Service) ResetDevice(ctx context.Context, deviceID string, user types.U
 		logger.Error("Unauthorized reset attempt",
 			zap.String("deviceID", deviceID),
 			zap.String("accountID", user.Account.ID))
-		return fmt.Errorf(errorutil.MsgUnauthorized)
+		return fmt.Errorf("ResetDevice: %w", errorutil.ErrUnauthorized)
 	}
 
 	// Revoke IoT credentials
 	if err := s.iotService.SetCertificateInactive(ctx, device.CertificateID.String, logger); err != nil {
-		return err
+		return fmt.Errorf("ResetDevice: %w", err)
 	}
 	if err := s.iotService.DetachCertificateFromThing(ctx, deviceID, device.CertificateArn.String, logger); err != nil {
-		return err
+		return fmt.Errorf("ResetDevice: %w", err)
 	}
 	if err := s.iotService.DetachPolicyFromCertificate(ctx, s.cfg.IoTDevicePolicy, device.CertificateArn.String, logger); err != nil {
-		return err
+		return fmt.Errorf("ResetDevice: %w", err)
 	}
 
 	return s.withTransaction(ctx, logger, func(tx model.DBTxExecutor) error {
@@ -364,38 +394,38 @@ func (s *Service) ResetDevice(ctx context.Context, deviceID string, user types.U
 // ClaimDevice claims an existing unclaimed device for a user and project.
 func (s *Service) ClaimDevice(ctx context.Context, deviceID string, request *types.DeviceClaimRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (*types.DeviceClaimResponse, error) {
 	if deviceID == "" {
-		return nil, fmt.Errorf(errorutil.ErrMsgDeviceIDEmpty)
+		return nil, fmt.Errorf("ClaimDevice: %s", errorutil.ErrMsgDeviceIDEmpty)
 	}
 	if request == nil {
-		return nil, fmt.Errorf(errorutil.ErrMsgDeviceClaimReqNil)
+		return nil, fmt.Errorf("ClaimDevice: %s", errorutil.ErrMsgDeviceClaimReqNil)
 	}
 	if user.Account.ID == "" {
-		return nil, fmt.Errorf(errorutil.ErrMsgAccountIDEmpty)
+		return nil, fmt.Errorf("ClaimDevice: %s", errorutil.ErrMsgAccountIDEmpty)
 	}
 
 	device, err := s.dbService.GetDeviceByID(ctx, deviceID, logger)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Error("Device not found", zap.String("deviceID", deviceID))
-			return nil, fmt.Errorf(errorutil.ErrMsgDeviceNotFound)
+			return nil, fmt.Errorf("ClaimDevice: %w", errorutil.ErrDeviceNotFound)
 		}
-		return nil, err
+		return nil, fmt.Errorf("ClaimDevice: %w", err)
 	}
 
 	if device.ClaimStatus == models.ClaimStatusEnumCLAIMED {
 		logger.Error("Device is already claimed",
 			zap.String("deviceID", deviceID))
-		return nil, fmt.Errorf(errorutil.ErrMsgDeviceAlreadyClaimed)
+		return nil, fmt.Errorf("ClaimDevice: %w", errorutil.ErrDeviceAlreadyClaimed)
 	}
 
 	if _, err := s.validateProjectAccess(ctx, request.ProjectID, user.Account.ID, logger); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ClaimDevice: %w", err)
 	}
 
 	// Setup certificate (thing already exists for unclaimed device)
 	certPem, cert, err := s.setupDeviceCertificate(ctx, deviceID, &request.CSR, false, logger)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ClaimDevice: %w", err)
 	}
 
 	err = s.withTransaction(ctx, logger, func(tx model.DBTxExecutor) error {
@@ -405,7 +435,7 @@ func (s *Service) ClaimDevice(ctx context.Context, deviceID string, request *typ
 		logger.Warn("Database transaction failed, cleaning up IoT resources",
 			zap.String("deviceID", deviceID))
 		s.cleanupIoTResources(ctx, deviceID, cert.ID, cert.Arn, false, logger)
-		return nil, err
+		return nil, fmt.Errorf("ClaimDevice: %w", err)
 	}
 
 	return &types.DeviceClaimResponse{Certificate: *certPem}, nil
@@ -414,35 +444,35 @@ func (s *Service) ClaimDevice(ctx context.Context, deviceID string, request *typ
 // RotateCertificate creates a new certificate for a device, attaches it, and marks the old one as inactive.
 func (s *Service) RotateCertificate(ctx context.Context, deviceID string, request *types.DeviceRotateCertRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (*types.DeviceRotateCertResponse, error) {
 	if deviceID == "" {
-		return nil, fmt.Errorf(errorutil.ErrMsgDeviceIDEmpty)
+		return nil, fmt.Errorf("RotateCertificate: %s", errorutil.ErrMsgDeviceIDEmpty)
 	}
 	if request == nil {
-		return nil, fmt.Errorf(errorutil.ErrMsgDeviceRotateCertReqNil)
+		return nil, fmt.Errorf("RotateCertificate: %s", errorutil.ErrMsgDeviceRotateCertReqNil)
 	}
 	if user.Account.ID == "" {
-		return nil, fmt.Errorf(errorutil.ErrMsgAccountIDEmpty)
+		return nil, fmt.Errorf("RotateCertificate: %s", errorutil.ErrMsgAccountIDEmpty)
 	}
 
 	device, err := s.dbService.GetDeviceByID(ctx, deviceID, logger)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Error("Device not found", zap.String("deviceID", deviceID))
-			return nil, fmt.Errorf(errorutil.ErrMsgDeviceNotFound)
+			return nil, fmt.Errorf("RotateCertificate: %w", errorutil.ErrDeviceNotFound)
 		}
-		return nil, err
+		return nil, fmt.Errorf("RotateCertificate: %w", err)
 	}
 
 	if device.ClaimStatus != models.ClaimStatusEnumCLAIMED {
 		logger.Error("Device is not claimed, cannot rotate certificate",
 			zap.String("deviceID", deviceID))
-		return nil, fmt.Errorf(errorutil.ErrMsgDeviceNotClaimed)
+		return nil, fmt.Errorf("RotateCertificate: %w", errorutil.ErrDeviceNotClaimed)
 	}
 
 	if device.ClaimedBy.String != user.Account.ID {
 		logger.Error("Unauthorized certificate rotation attempt",
 			zap.String("deviceID", deviceID),
 			zap.String("accountID", user.Account.ID))
-		return nil, fmt.Errorf(errorutil.MsgUnauthorized)
+		return nil, fmt.Errorf("RotateCertificate: %w", errorutil.ErrUnauthorized)
 	}
 
 	// Store old certificate info for cleanup after successful rotation
@@ -452,7 +482,7 @@ func (s *Service) RotateCertificate(ctx context.Context, deviceID string, reques
 	// Setup new certificate (device temporarily has both certs)
 	certPem, newCert, err := s.setupDeviceCertificate(ctx, deviceID, &request.CSR, false, logger)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("RotateCertificate: %w", err)
 	}
 
 	// Update device in database with new certificate BEFORE deactivating old cert.
@@ -464,7 +494,7 @@ func (s *Service) RotateCertificate(ctx context.Context, deviceID string, reques
 		logger.Warn("Database transaction failed, cleaning up new IoT resources",
 			zap.String("deviceID", deviceID))
 		s.cleanupIoTResources(ctx, deviceID, newCert.ID, newCert.Arn, false, logger)
-		return nil, err
+		return nil, fmt.Errorf("RotateCertificate: %w", err)
 	}
 
 	// DB succeeded - now safe to revoke old certificate
@@ -476,15 +506,15 @@ func (s *Service) RotateCertificate(ctx context.Context, deviceID string, reques
 // Command sends a command to a device via IoT topic publish.
 func (s *Service) Command(ctx context.Context, request *types.CommandRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (string, error) {
 	if request == nil {
-		return "", fmt.Errorf(errorutil.ErrMsgCommandReqNil)
+		return "", fmt.Errorf("Command: %s", errorutil.ErrMsgCommandReqNil)
 	}
 	if user.Account.ID == "" {
-		return "", fmt.Errorf(errorutil.ErrMsgAccountIDEmpty)
+		return "", fmt.Errorf("Command: %s", errorutil.ErrMsgAccountIDEmpty)
 	}
 
 	// Validate project access
 	if _, err := s.validateProjectAccess(ctx, request.ProjectID, user.Account.ID, logger); err != nil {
-		return "", err
+		return "", fmt.Errorf("Command: %w", err)
 	}
 	commandID := uuid.New().String()
 
@@ -492,13 +522,13 @@ func (s *Service) Command(ctx context.Context, request *types.CommandRequest, us
 
 		insertErr := s.dbService.InsertCommand(ctx, request.ProjectID, commandID, request, logger)
 		if insertErr != nil {
-			return fmt.Errorf("failed to insert command into database: %w", insertErr)
+			return fmt.Errorf("Command: failed to insert command into database: %w", insertErr)
 		}
 		return nil
 	})
 
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Command: %w", err)
 	}
 
 	deviceCommand := struct {
@@ -512,19 +542,19 @@ func (s *Service) Command(ctx context.Context, request *types.CommandRequest, us
 	requestBytes, err := json.Marshal(deviceCommand)
 	if err != nil {
 		logger.Error("Failed to marshal command request", zap.Error(err))
-		return "", fmt.Errorf("failed to marshal command request: %w", err)
+		return "", fmt.Errorf("Command: failed to marshal command request: %w", err)
 	}
 
 	topic := strings.ReplaceAll(s.cfg.IoTCommandTopic, "{projectID}", request.ProjectID)
 
 	err = s.iotService.Publish(ctx, topic, requestBytes, logger)
 	if err != nil {
-		return "", fmt.Errorf("failed to publish command: %w", err)
+		return "", fmt.Errorf("Command: failed to publish command: %w", err)
 	}
 
 	err = s.dbService.UpdateCommandStatus(ctx, commandID, models.CommandStatusEnumPUBLISHED, logger)
 	if err != nil {
-		return "", fmt.Errorf("failed to update command status: %w", err)
+		return "", fmt.Errorf("Command: failed to update command status: %w", err)
 	}
 
 	return commandID, nil
@@ -533,16 +563,16 @@ func (s *Service) Command(ctx context.Context, request *types.CommandRequest, us
 // GetCommandStatus retrieves the status of a command by its ID.
 func (s *Service) GetCommandStatus(ctx context.Context, commandID string, logger *zap.Logger) (*types.CommandStatusResponse, error) {
 	if commandID == "" {
-		return nil, fmt.Errorf(errorutil.ErrMsgCommandIDEmpty)
+		return nil, fmt.Errorf("GetCommandStatus: %s", errorutil.ErrMsgCommandIDEmpty)
 	}
 
 	commands, err := s.dbService.GetCommandStatus(ctx, commandID, logger)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetCommandStatus: %w", err)
 	}
 	if commands == nil || len(*commands) == 0 {
 		logger.Error("Command not found", zap.String("commandID", commandID))
-		return nil, fmt.Errorf(errorutil.ErrMsgCommandNotFound)
+		return nil, fmt.Errorf("GetCommandStatus: %w", errorutil.ErrCommandNotFound)
 	}
 
 	var results []types.CommandStatusResult

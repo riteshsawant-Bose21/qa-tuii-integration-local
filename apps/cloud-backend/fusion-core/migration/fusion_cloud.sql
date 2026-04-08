@@ -242,7 +242,7 @@ CREATE TABLE device (
     client_device_id VARCHAR(100), -- device identifier set by frontend
     name VARCHAR(255), -- User-friendly device name
 
-    model_name VARCHAR(100) NOT NULL, -- Model identifier
+    model VARCHAR(100) NOT NULL, -- Model identifier
     mac_address VARCHAR(20) UNIQUE, -- MAC address for network identification
 
     is_primary BOOLEAN DEFAULT FALSE, -- Flag to indicate if this is the primary device in a project

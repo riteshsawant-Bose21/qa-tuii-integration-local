@@ -250,7 +250,7 @@ func createUnclaimedDevice() *models.Device {
 		ID:             testDeviceUUID,
 		ClientDeviceID: null.NewString(testDeviceID, testDeviceID != ""),
 		SerialNumber:   testSerialNumber,
-		ModelName:      testModelName,
+		Model:          testModelName,
 		ClaimStatus:    "UNCLAIMED",
 		ClaimedBy:      null.NewString("", false),
 		ProjectID:      null.NewString("", false),
@@ -266,7 +266,7 @@ func createClaimedDevice() *models.Device {
 		ID:             testDeviceUUID,
 		ClientDeviceID: null.NewString(testDeviceID, testDeviceID != ""),
 		SerialNumber:   testSerialNumber,
-		ModelName:      testModelName,
+		Model:          testModelName,
 		ClaimStatus:    "CLAIMED",
 		ClaimedBy:      null.NewString(testAccountID, true),
 		ProjectID:      null.NewString(testProjectID, true),
@@ -1063,7 +1063,7 @@ func TestClaimDevice(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, resp)
-		assert.Equal(t, errorutil.ErrMsgDeviceNotFound, err.Error())
+		assert.ErrorIs(t, err, errorutil.ErrDeviceNotFound)
 		mockDB.AssertExpectations(t)
 	})
 
@@ -1090,7 +1090,7 @@ func TestClaimDevice(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, resp)
-		assert.Equal(t, errorutil.ErrMsgDeviceAlreadyClaimed, err.Error())
+		assert.ErrorIs(t, err, errorutil.ErrDeviceAlreadyClaimed)
 		mockDB.AssertExpectations(t)
 	})
 
@@ -1118,7 +1118,7 @@ func TestClaimDevice(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, resp)
-		assert.Equal(t, errorutil.ErrMsgProjectNotFound, err.Error())
+		assert.ErrorIs(t, err, errorutil.ErrProjectNotFound)
 		mockDB.AssertExpectations(t)
 		mockProject.AssertExpectations(t)
 	})
@@ -1156,7 +1156,7 @@ func TestClaimDevice(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, resp)
-		assert.Equal(t, errorutil.MsgUnauthorized, err.Error())
+		assert.ErrorIs(t, err, errorutil.ErrUnauthorized)
 		mockDB.AssertExpectations(t)
 		mockProject.AssertExpectations(t)
 	})
@@ -1271,7 +1271,7 @@ func TestRotateCertificate(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, resp)
-		assert.Equal(t, errorutil.ErrMsgDeviceNotFound, err.Error())
+		assert.ErrorIs(t, err, errorutil.ErrDeviceNotFound)
 		mockDB.AssertExpectations(t)
 	})
 
@@ -1297,7 +1297,7 @@ func TestRotateCertificate(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, resp)
-		assert.Equal(t, errorutil.ErrMsgDeviceNotClaimed, err.Error())
+		assert.ErrorIs(t, err, errorutil.ErrDeviceNotClaimed)
 		mockDB.AssertExpectations(t)
 	})
 
@@ -1317,7 +1317,7 @@ func TestRotateCertificate(t *testing.T) {
 			ID:             testDeviceUUID,
 			ClientDeviceID: null.NewString(testDeviceID, testDeviceID != ""),
 			SerialNumber:   testSerialNumber,
-			ModelName:      testModelName,
+			Model:          testModelName,
 			ClaimStatus:    "CLAIMED",
 			ClaimedBy:      null.NewString("different-account", true),
 			ProjectID:      null.NewString(testProjectID, true),
@@ -1337,7 +1337,7 @@ func TestRotateCertificate(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, resp)
-		assert.Equal(t, errorutil.MsgUnauthorized, err.Error())
+		assert.ErrorIs(t, err, errorutil.ErrUnauthorized)
 		mockDB.AssertExpectations(t)
 	})
 
