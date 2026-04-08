@@ -118,7 +118,7 @@ class PathSystemStorage {
       end,
       // stops: additionalStops,
       // otherPaths: allPolylines2.values.toList(growable: false),
-      // previousPath: _previousPolylines[connectionKey],
+      previousPath: _previousPolylines[connectionKey],
       axisLocks: axisLocks,
       // <AxisLock>[
       //   ...axisLocks,
@@ -126,9 +126,9 @@ class PathSystemStorage {
     );
     final List<Offset> intermediatePoints = _extractIntermediatePoints(pathPoints, start, end);
     final Duration duration = DateTime.now().difference(startTime);
-    print(
-      "Calculated path for connection ${connection.id} in ${duration.inMilliseconds}ms",
-    );
+    // print(
+    //   "Calculated path for connection ${connection.id} in ${duration.inMilliseconds}ms",
+    // );
     // print(
     //   "Constructed path for connection ${connection.id} with additional stops ${additionalStops.length}: start=$start, end=$end, intermediatePoints=$intermediatePoints",
     // );

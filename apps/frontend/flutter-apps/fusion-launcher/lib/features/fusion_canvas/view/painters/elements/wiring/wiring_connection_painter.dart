@@ -77,12 +77,17 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
       // print("Lenght of selected points: ${selectedElements.length}, lines: ${lines.length}, rawPoints: ${rawPoints.length}");
       if (selectedAxisLocksBySegmentIndex.isNotEmpty) {
         final List<AxisLock> previousAxisLocks = connection.axisLocks;
+        // print(
+        //   "Previous axis locks from connection: \n Previous : $previousAxisLocks.  \n selectedAxisLocksBySegmentIndex: $selectedAxisLocksBySegmentIndex \n rawPoints: $rawPoints",
+        // );
         axisLocks = _mergeAxisLocksByPathOrder(
           rawPoints: rawPoints,
           painter: painter,
           previousAxisLocks: previousAxisLocks,
           selectedAxisLocksBySegmentIndex: selectedAxisLocksBySegmentIndex,
         );
+        // print("Axis Locks Result  : $axisLocks");
+        // print("\n\n\n");
         path =
             pathStorage.getLivePath(
               connection,
@@ -310,69 +315,61 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
     required List<AxisLock> previousAxisLocks,
     required Map<int, AxisLock> selectedAxisLocksBySegmentIndex,
   }) {
-    final List<AxisLock> orderedPathLocks = <AxisLock>[];
-    for (int i = 0; i < rawPoints.length - 1; i++) {
-      final Offset start = transformOffsetForLayer(rawPoints[i].position, painter, id);
-      final Offset end = transformOffsetForLayer(rawPoints[i + 1].position, painter, id);
-      final bool isVertical = (start.dx - end.dx).abs() <= 0.001;
-      final bool isHorizontal = (start.dy - end.dy).abs() <= 0.001;
+    // Build orderedPathLocks and a mapping from rawPoints segment index → ordered index.
+    final List<AxisLock> merged = <AxisLock>[
+      ...previousAxisLocks,
+      ...selectedAxisLocksBySegmentIndex.values,
+    ];
+    final List<AxisLock> previous = <AxisLock>[...previousAxisLocks];
 
-      if (!isVertical && !isHorizontal) {
-        continue;
-      }
-
-      orderedPathLocks.add(isVertical ? AxisLock(x: start.dx) : AxisLock(y: start.dy));
-    }
-
-    final List<bool> consumedPrevious = List<bool>.filled(previousAxisLocks.length, false);
-    final List<AxisLock?> mergedBySegment = List<AxisLock?>.filled(orderedPathLocks.length, null);
-
-    for (int i = 0; i < orderedPathLocks.length; i++) {
-      final AxisLock pathLock = orderedPathLocks[i];
-      final int previousIndex = _findUnconsumedMatchingAxisLock(previousAxisLocks, consumedPrevious, pathLock);
-      if (previousIndex != -1) {
-        consumedPrevious[previousIndex] = true;
-        mergedBySegment[i] = previousAxisLocks[previousIndex];
+    final Map<int, AxisLock> previousPathOrderedByIndex = <int, AxisLock>{};
+    int currentRPIndex = 0;
+    for (AxisLock lock in previous) {
+      final int index = (rawPoints.sublist(currentRPIndex)).indexWhere(
+        (FusionCanvasPoint p) => (lock.x != null && (p.position.dx - lock.x!).abs() <= 0.001) || (lock.y != null && (p.position.dy - lock.y!).abs() <= 0.001),
+      );
+      if (index != -1) {
+        previousPathOrderedByIndex[index + currentRPIndex] = lock;
+        currentRPIndex += index + 1;
       }
     }
 
-    selectedAxisLocksBySegmentIndex.forEach((int segmentIndex, AxisLock selectedLock) {
-      if (segmentIndex >= 0 && segmentIndex < mergedBySegment.length) {
-        mergedBySegment[segmentIndex] = selectedLock;
-      }
-    });
+    //     print(
+    //       '''Ordered PreviousPathLocks by rawPoints index: ${previousPathOrderedByIndex.entries.map((MapEntry<int, AxisLock> e) => 'index ${e.key}: ${e.value}').join('\n ')}
+    // Selected locks by rawPoints segment index: ${selectedAxisLocksBySegmentIndex.entries.map((MapEntry<int, AxisLock> e) => 'segment index ${e.key}: ${e.value}').join('\n ')}
 
-    final List<AxisLock> merged = mergedBySegment.whereType<AxisLock>().toList(growable: false);
+    // RawPoints: ${rawPoints.map((FusionCanvasPoint p) => '(${p.position.dx}, ${p.position.dy})').join('\n ')}
+    //       ''',
+    //     );
 
-    if (merged.isEmpty && selectedAxisLocksBySegmentIndex.isNotEmpty) {
-      final List<int> sortedIndexes = selectedAxisLocksBySegmentIndex.keys.toList()..sort();
-      return sortedIndexes.map((int index) => selectedAxisLocksBySegmentIndex[index]!).toList(growable: false);
-    }
-
-    return merged;
-  }
-
-  int _findUnconsumedMatchingAxisLock(List<AxisLock> source, List<bool> consumed, AxisLock target) {
-    for (int i = 0; i < source.length; i++) {
-      if (consumed[i]) {
-        continue;
-      }
-      if (_axisLocksMatch(source[i], target)) {
-        return i;
-      }
-    }
-    return -1;
+    final Map<int, AxisLock> mergedByIndex = <int, AxisLock>{...previousPathOrderedByIndex, ...selectedAxisLocksBySegmentIndex};
+    final List<MapEntry<int, AxisLock>> sortedMergedByIndex =
+        mergedByIndex.entries.toList()..sort((MapEntry<int, AxisLock> a, MapEntry<int, AxisLock> b) => a.key.compareTo(b.key));
+    return _removeDuplicates(sortedMergedByIndex.map((MapEntry<int, AxisLock> e) => e.value).toList());
   }
 
   bool _axisLocksMatch(AxisLock a, AxisLock b) {
-    const double epsilon = 0.001;
+    const double epsilon = 10;
+    // print("Comparing axis locks: $a vs $b");
     if (a.x != null && b.x != null) {
-      return (a.x! - b.x!).abs() <= epsilon;
+      // print("Comparing x values: ${a.x} vs ${b.x}  : ${(a.x! - b.x!).abs().floor()} <= $epsilon   = ${(a.x! - b.x!).abs().floor() <= epsilon}");
+      return (a.x! - b.x!).abs().floor() <= epsilon;
     }
     if (a.y != null && b.y != null) {
-      return (a.y! - b.y!).abs() <= epsilon;
+      // print("Comparing y values: ${a.y} vs ${b.y}  : ${(a.y! - b.y!).abs().floor()} <= $epsilon   = ${(a.y! - b.y!).abs().floor() <= epsilon}");
+      return (a.y! - b.y!).abs().floor() <= epsilon;
     }
     return false;
+  }
+
+  List<AxisLock> _removeDuplicates(List<AxisLock> locks) {
+    final List<AxisLock> unique = <AxisLock>[];
+    for (final AxisLock lock in locks) {
+      if (!unique.any((AxisLock l) => _axisLocksMatch(l, lock))) {
+        unique.add(lock);
+      }
+    }
+    return unique;
   }
 }
 

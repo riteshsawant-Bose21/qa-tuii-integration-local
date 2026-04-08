@@ -70,4 +70,9 @@ class FusionCanvasPoint extends FusionCanvasElement {
       handleOut: handleOut != null ? handleOut! + other : null,
     );
   }
+
+  @override
+  String toString() {
+    return 'FCP(position: $position, id: $id)';
+  }
 }
