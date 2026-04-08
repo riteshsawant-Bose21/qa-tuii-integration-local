@@ -170,6 +170,8 @@ type VIPMonitor struct {
 
 	applyMu     sync.RWMutex
 	applyStatus VIPApplyStatus
+
+	selfHealOnce sync.Once // ensures self-heal from VRRP runs at most once
 }
 
 // NewVIPMonitor creates a new VIP monitor instance
@@ -258,18 +260,33 @@ func (m *VIPMonitor) Start() error {
 		if err != nil {
 			logger.Warn("No VIP configured in local mode: %v", err)
 			// In local mode, it's okay if VIP isn't configured yet
+			m.monitoringActive = true
 			return nil
 		}
 	} else {
 		var multiple bool
 		expectedVIPStr, multiple, err = vip.ReadFromKeepalivedConfig(m.configPath)
 		if err != nil {
-			logger.Error("Failed to get VIP from config: %v", err)
-			return err
+			logger.Warn("Failed to get VIP from config: %v — starting in unconfigured mode", err)
+			// Start monitoring with no VIP configured; VRRP listener is already
+			// running and will pick up real VIP advertisements from peers.
+			m.monitoringActive = true
+			logger.Debug("VIP monitoring started in unconfigured mode (VRRP listener active, no netlink watcher)")
+			return nil
 		}
 		if multiple {
 			logger.Warn("More than one VIP found in keepalived config")
 		}
+	}
+
+	// Detect placeholder or invalid VIP values (e.g. "VIP_NOT_SET/24")
+	if vip.IsPlaceholder(expectedVIPStr) {
+		logger.Warn("Placeholder VIP detected in config: %s — starting in unconfigured mode", expectedVIPStr)
+		// Don't set currentVIP; leave it empty so downstream (discovery, memberlist)
+		// knows no real VIP is configured. VRRP listener is already running.
+		m.monitoringActive = true
+		logger.Debug("VIP monitoring started in unconfigured mode (VRRP listener active, no netlink watcher)")
+		return nil
 	}
 
 	// Parse expected VIP - handle both CIDR format (192.168.2.100/24) and plain IP (192.168.2.100)
@@ -495,6 +512,19 @@ func (m *VIPMonitor) handleVRRPUpdate(vipAddr string, srcIP string) {
 		return
 	}
 
+	// Self-heal: this node has no configured VIP (placeholder or empty config)
+	// but received a VRRP advertisement with a real VIP from a peer. Attempt
+	// to fetch and apply the correct VIP config from that peer so the on-disk
+	// keepalived config converges cluster-wide.
+	if configuredVIP == "" && newVIP != "" {
+		m.stateMu.Unlock()
+		m.selfHealOnce.Do(func() {
+			logger.Info("VRRP self-heal: no configured VIP but received advertisement for %s from %s — attempting config sync", newVIP, srcIP)
+			go m.selfHealVIPFromPeer(srcIP)
+		})
+		return
+	}
+
 	// Ignore remote attempts to rewrite the configured VIP. Address changes are
 	// driven by config updates and watcher/local reconciliation, not VRRP.
 	if configuredVIP != "" && newVIP != configuredVIP {
@@ -707,12 +737,63 @@ func (m *VIPMonitor) applyConfiguredVIP() error {
 	logging.GetLogger().Debug("Configured VIP applied successfully: %s", configuredVIP)
 	return nil
 }
-
 func (m *VIPMonitor) updateVIP(vipValue string) error {
 	if err := m.writeVIPConfig(vipValue); err != nil {
 		return err
 	}
+
 	return m.applyConfiguredVIP()
+}
+
+// selfHealVIPFromPeer fetches the VIP config from a peer node and applies it
+// locally. This is triggered when this node has no configured VIP (placeholder
+// or empty) but discovers a real VIP via VRRP advertisements from a peer.
+// This ensures on-disk keepalived config converges cluster-wide even when a
+// node missed the original Set VIP fan-out (e.g. during bootstrap when
+// memberlist visibility was incomplete).
+func (m *VIPMonitor) selfHealVIPFromPeer(peerIP string) {
+	logger := logging.GetLogger()
+
+	// Fetch VIP config from the peer's admin endpoint
+	urlStr := fmt.Sprintf("%s%s", api.Protocol+net.JoinHostPort(peerIP, api.AdminPort), routes.DevicesVIPEndpoint)
+	resp, err := m.adminClient.Get(urlStr)
+	if err != nil {
+		logger.Error("VRRP self-heal: failed to fetch VIP config from peer %s: %v", peerIP, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		logger.Warn("VRRP self-heal: peer %s returned status %d for VIP config", peerIP, resp.StatusCode)
+		return
+	}
+
+	var peerVIPInfo struct {
+		VIP string `json:"vip"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&peerVIPInfo); err != nil {
+		logger.Error("VRRP self-heal: failed to decode VIP config from peer %s: %v", peerIP, err)
+		return
+	}
+
+	if peerVIPInfo.VIP == "" {
+		logger.Warn("VRRP self-heal: peer %s has no VIP configured", peerIP)
+		return
+	}
+
+	if err := vip.Validate(peerVIPInfo.VIP); err != nil {
+		logger.Warn("VRRP self-heal: peer %s returned invalid VIP %q: %v", peerIP, peerVIPInfo.VIP, err)
+		return
+	}
+
+	logger.Info("VRRP self-heal: applying VIP %s from peer %s", peerVIPInfo.VIP, peerIP)
+
+	if err := m.updateVIP(peerVIPInfo.VIP); err != nil {
+		logger.Error("VRRP self-heal: failed to apply VIP %s from peer %s: %v", peerVIPInfo.VIP, peerIP, err)
+		return
+	}
+
+	logger.Info("VRRP self-heal: successfully applied VIP %s from peer %s", peerVIPInfo.VIP, peerIP)
 }
 
 // reloadKeepalived reloads the keepalived service
@@ -1141,6 +1222,94 @@ func (m *VIPMonitor) runVIPOperation(operationID string, desiredVIP string) {
 
 	m.setVIPOperationPhase(operationID, VIPOperationPhaseConverging, fmt.Sprintf("waiting for local reconciliation to reflect %s", desiredVIP))
 	m.setVIPOperationPhase(operationID, VIPOperationPhaseComplete, fmt.Sprintf("desired VIP %s written and reload requested on all nodes", desiredVIP))
+
+	// Propagate config to any nodes that joined memberlist after the initial
+	// fan-out. This runs asynchronously so the operation status transitions to
+	// "complete" immediately — late-joiner results are appended to NodeResults
+	// as they finish.
+	go m.propagateToLateJoiners(operationID, desiredVIP, endpoint)
+}
+
+// propagateToLateJoiners periodically checks for new memberlist nodes that
+// weren't part of the original fan-out and pushes VIP config+reload to them.
+// This handles the bootstrap scenario where memberlist is still forming when
+// Set VIP is first called.
+func (m *VIPMonitor) propagateToLateJoiners(operationID string, desiredVIP string, endpoint string) {
+	logger := logging.GetLogger()
+
+	// Collect the set of hosts that have already been configured
+	op := m.getVIPOperation(operationID)
+	configuredHosts := make(map[string]bool)
+	if op != nil {
+		for host := range op.NodeResults {
+			configuredHosts[host] = true
+		}
+	}
+
+	// Poll for new nodes over a short window
+	deadline := time.Now().Add(15 * time.Second)
+	checkInterval := 3 * time.Second
+
+	for time.Now().Before(deadline) {
+		time.Sleep(checkInterval)
+
+		targets := m.adminTargets()
+		var newTargets []vipAdminTarget
+		for _, t := range targets {
+			if !configuredHosts[t.Host] {
+				newTargets = append(newTargets, t)
+			}
+		}
+
+		if len(newTargets) == 0 {
+			continue
+		}
+
+		logger.Info("VIP convergence: discovered %d late-joining node(s), propagating VIP %s", len(newTargets), desiredVIP)
+		for _, target := range newTargets {
+			configuredHosts[target.Host] = true
+			go func(t vipAdminTarget) {
+				startedAt := time.Now().UTC()
+				result := VIPNodeResult{
+					Node:      t.Node,
+					Host:      t.Host,
+					Phase:     string(VIPOperationPhaseConverging),
+					StartedAt: startedAt,
+				}
+
+				// Write config
+				urlStr := fmt.Sprintf("%s%s", api.Protocol+net.JoinHostPort(t.Host, api.AdminPort), endpoint)
+				resp, err := m.adminClient.Post(urlStr, "", nil)
+				if err != nil {
+					result.Error = err.Error()
+					completedAt := time.Now().UTC()
+					result.CompletedAt = &completedAt
+					m.setVIPOperationResult(operationID, result)
+					logger.Error("VIP convergence: failed to write config to late-joiner %s (%s): %v", t.Node, t.Host, err)
+					return
+				}
+				resp.Body.Close()
+
+				// Trigger reload
+				reloadURL := fmt.Sprintf("%s%s", api.Protocol+net.JoinHostPort(t.Host, api.AdminPort), routes.DeviceReloadVIPEndpoint)
+				resp, err = m.adminClient.Post(reloadURL, "", nil)
+				if err != nil {
+					result.Error = fmt.Sprintf("config written but reload failed: %v", err)
+				} else {
+					result.Success = resp.StatusCode == http.StatusAccepted
+					result.StatusCode = resp.StatusCode
+					resp.Body.Close()
+				}
+
+				completedAt := time.Now().UTC()
+				result.CompletedAt = &completedAt
+				m.setVIPOperationResult(operationID, result)
+				if result.Success {
+					logger.Info("VIP convergence: successfully propagated VIP %s to late-joiner %s (%s)", desiredVIP, t.Node, t.Host)
+				}
+			}(target)
+		}
+	}
 }
 
 func (m *VIPMonitor) notifyLocalAddressChange(oldVIP, newVIP string) {

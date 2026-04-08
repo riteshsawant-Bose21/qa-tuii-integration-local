@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -20,6 +22,7 @@ const (
 	defaultScriptsDir        = "../../../scripts/multipass"
 	defaultClearConfigScript = "clear-config.sh"
 	defaultRestartScript     = "restart-fusion.sh"
+	defaultResetVIPScript    = "reset-vip.sh"
 )
 
 // MultipassInstance represents an instance entry from `multipass list --format json`.
@@ -49,6 +52,43 @@ func RestartCluster(ctx context.Context, env Env, expected int) error {
 	}
 	// Allow convergence under the parent ctx
 	return WaitForClusterSizeFromVIP(ctx, env, expected)
+}
+
+// ResetVIPInCluster resets keepalived VIP to placeholder for Multipass instances.
+func ResetVIPInCluster(ctx context.Context) error {
+	rctx, cancel := context.WithTimeout(ctx, 4*time.Minute)
+	defer cancel()
+
+	return runScriptWithInput(rctx, resolveScriptPath(defaultResetVIPScript), "y\n")
+}
+
+// FindReachableNodeURL returns a direct node URL (non-VIP) suitable for initial VIP API calls.
+func FindReachableNodeURL(ctx context.Context, env Env) (string, error) {
+	ipToInstance, err := GetMultipassInstances(ctx)
+	if err != nil {
+		return "", fmt.Errorf("get multipass instances: %w", err)
+	}
+
+	ips := make([]string, 0, len(ipToInstance))
+	for ip := range ipToInstance {
+		ips = append(ips, ip)
+	}
+	sort.Strings(ips)
+
+	var errs []string
+	for _, ip := range ips {
+		base := fmt.Sprintf("http://%s:%s", ip, env.Port)
+		if _, err := GetDevices(ctx, base); err == nil {
+			return base, nil
+		} else {
+			errs = append(errs, fmt.Sprintf("%s (%v)", base, err))
+		}
+	}
+
+	if len(errs) == 0 {
+		return "", fmt.Errorf("no multipass instance IPs found")
+	}
+	return "", fmt.Errorf("no reachable node URL found; attempts: %s", strings.Join(errs, "; "))
 }
 
 // StopInstancesParallel stops instances concurrently up to maxParallel.
@@ -199,7 +239,10 @@ func GetMultipassInstances(ctx context.Context) (map[string]string, error) {
 }
 
 func runScript(ctx context.Context, script string) error {
+	return runScriptWithInput(ctx, script, "")
+}
 
+func runScriptWithInput(ctx context.Context, script, stdin string, args ...string) error {
 	// Ensure absolute path and existence
 	abs, err := filepath.Abs(script)
 	if err != nil {
@@ -208,7 +251,15 @@ func runScript(ctx context.Context, script string) error {
 	if _, statErr := os.Stat(abs); statErr != nil {
 		return fmt.Errorf("script not found: %s (%v)", abs, statErr)
 	}
-	cmd := exec.CommandContext(ctx, "/bin/bash", abs)
+
+	cmdArgs := make([]string, 0, len(args)+1)
+	cmdArgs = append(cmdArgs, abs)
+	cmdArgs = append(cmdArgs, args...)
+	cmd := exec.CommandContext(ctx, "/bin/bash", cmdArgs...)
+	if stdin != "" {
+		cmd.Stdin = strings.NewReader(stdin)
+	}
+
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("script failed: %s: %v; output: %s", abs, err, string(out))
