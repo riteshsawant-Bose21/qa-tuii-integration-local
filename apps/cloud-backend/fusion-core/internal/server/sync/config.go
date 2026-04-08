@@ -11,7 +11,7 @@ type SyncConfig struct {
 	Postgres   *config.Postgres
 	Server     *config.Server
 	Validation *config.Validation
-	S3         *config.S3Config
+	Cloud      *config.CloudConfig
 	Processing *config.Processing
 }
 
@@ -20,7 +20,7 @@ type SyncConfigService interface {
 	Postgres() (*config.Postgres, error)
 	Server() (*config.Server, error)
 	Validation() (*config.Validation, error)
-	S3() (*config.S3Config, error)
+	Cloud() (*config.CloudConfig, error)
 	Processing() (*config.Processing, error)
 }
 
@@ -48,12 +48,12 @@ func NewSyncConfig(svc SyncConfigService) (*SyncConfig, error) {
 	}
 	cfg.Validation = validationConfig
 
-	// Load S3 configuration
-	s3Config, err := svc.S3()
+	// Load Cloud configuration
+	cloudConfig, err := svc.Cloud()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load S3 config: %w", err)
+		return nil, fmt.Errorf("failed to load cloud config: %w", err)
 	}
-	cfg.S3 = s3Config
+	cfg.Cloud = cloudConfig
 
 	// Load Processing configuration
 	processingConfig, err := svc.Processing()

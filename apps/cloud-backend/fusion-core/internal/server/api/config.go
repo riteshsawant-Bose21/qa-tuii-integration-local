@@ -11,7 +11,7 @@ import (
 type APIconfig struct {
 	Server   *config.APIConfig
 	Postgres *config.Postgres
-	S3       *config.S3Config
+	Cloud    *config.CloudConfig
 	AuthZero *config.AuthZero
 }
 
@@ -32,11 +32,11 @@ func NewAPIConfig(svc ConfigService) (*APIconfig, error) {
 	}
 	cfg.Postgres = pgConfig
 
-	s3Config, err := svc.S3()
+	cloudConfig, err := svc.Cloud()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load s3 config: %w", err)
+		return nil, fmt.Errorf("failed to load cloud config: %w", err)
 	}
-	cfg.S3 = s3Config
+	cfg.Cloud = cloudConfig
 
 	authZeroConfig, err := svc.AuthZero()
 	if err != nil {
@@ -50,6 +50,6 @@ func NewAPIConfig(svc ConfigService) (*APIconfig, error) {
 type ConfigService interface {
 	APIConfig() (*config.APIConfig, error)
 	Postgres() (*config.Postgres, error)
-	S3() (*config.S3Config, error)
+	Cloud() (*config.CloudConfig, error)
 	AuthZero() (*config.AuthZero, error)
 }
