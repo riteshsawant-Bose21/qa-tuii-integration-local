@@ -30,6 +30,8 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
   FusionPath? fusionPath;
   List<FusionCanvasPoint>? pathPoints;
   List<AxisLock>? axisLocks;
+  String? _axisLockCacheKey;
+  List<AxisLock>? _cachedMergedAxisLocks;
   // Cached paint object — color/style/strokeWidth are constant for this painter.
   late final Paint _connectionPaint =
       Paint()
@@ -60,6 +62,7 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
     // print("Path for connection ${connection.id}: $path");
     List<FusionCanvasPoint> rawPoints = _buildPathPoints(path);
     if (isSelected) {
+      final DateTime startTime = DateTime.now();
       _connectionPaint.color = Colors.blue;
       final FusionToolState toolState = painter.toolState;
       final Set<String> selectedElements = toolState is SelectToolState ? toolState.selectedElementIds : <String>{};
@@ -84,26 +87,42 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
           continue;
         }
 
-        final FusionCanvasPathSegment line = FusionCanvasPathSegment(start: rawPoints[i], end: rawPoints[i + 1]);
-        if (!selectedElements.contains(line.id)) {
+        final FusionCanvasPoint startPoint = rawPoints[i];
+        final FusionCanvasPoint endPoint = rawPoints[i + 1];
+        final String segmentId = '${startPoint.id}_${endPoint.id}';
+        if (!selectedElements.contains(segmentId)) {
           continue;
         }
 
-        final Offset start = transformOffsetForLayer(rawPoints[i].position, painter, id);
-        selectedAxisLocksBySegmentIndex[i] = line.isVerticalLine ? AxisLock(x: start.dx) : AxisLock(y: start.dy);
+        final bool isVerticalSegment = (startPoint.position.dx - endPoint.position.dx).abs() <= 0.001;
+        final Offset transformedStart = transformOffsetForLayer(startPoint.position, painter, id);
+        selectedAxisLocksBySegmentIndex[i] = isVerticalSegment ? AxisLock(x: transformedStart.dx) : AxisLock(y: transformedStart.dy);
       }
       // print("Lenght of selected points: ${selectedElements.length}, lines: ${lines.length}, rawPoints: ${rawPoints.length}");
       if (selectedAxisLocksBySegmentIndex.isNotEmpty) {
+        final String axisLockCacheKey = _buildAxisLockCacheKey(
+          rawPoints: rawPoints,
+          previousAxisLocks: previousAxisLocks,
+          selectedAxisLocksBySegmentIndex: selectedAxisLocksBySegmentIndex,
+        );
         // print(
         //   "Previous axis locks from connection: \n Previous : $previousAxisLocks.  \n selectedAxisLocksBySegmentIndex: $selectedAxisLocksBySegmentIndex \n rawPoints: $rawPoints",
         // );
-        axisLocks = _mergeAxisLocksByPathOrder(
-          rawPoints: rawPoints,
-          previousPathOrderedByIndex: previousPathOrderedByIndex,
-          selectedAxisLocksBySegmentIndex: selectedAxisLocksBySegmentIndex,
-        );
+        if (_axisLockCacheKey == axisLockCacheKey && _cachedMergedAxisLocks != null) {
+          axisLocks = _cachedMergedAxisLocks;
+        } else {
+          axisLocks = _mergeAxisLocksByPathOrder(
+            rawPoints: rawPoints,
+            previousPathOrderedByIndex: previousPathOrderedByIndex,
+            selectedAxisLocksBySegmentIndex: selectedAxisLocksBySegmentIndex,
+          );
+          _axisLockCacheKey = axisLockCacheKey;
+          _cachedMergedAxisLocks = axisLocks;
+        }
         // print("Axis Locks Result  : $axisLocks");
         // print("\n\n\n");
+        print("Time taken Till Path Calculation: ${DateTime.now().difference(startTime).inMilliseconds} ms");
+
         path =
             pathStorage.getLivePath(
               connection,
@@ -113,6 +132,7 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
             path;
         rawPoints = _buildPathPoints(path);
       }
+      print("Time taken for axis lock processing: ${DateTime.now().difference(startTime).inMilliseconds} ms");
     } else {
       _connectionPaint.color = ConnectionColorUtil.getColorForConnectionType(connection.type);
     }
@@ -340,6 +360,53 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
     }
 
     return _removeDuplicates(mergedInPathOrder);
+  }
+
+  String _buildAxisLockCacheKey({
+    required List<FusionCanvasPoint> rawPoints,
+    required List<AxisLock> previousAxisLocks,
+    required Map<int, AxisLock> selectedAxisLocksBySegmentIndex,
+  }) {
+    final StringBuffer buffer =
+        StringBuffer(connection.id)
+          ..write('|p:')
+          ..write(rawPoints.length)
+          ..write('|prev:')
+          ..write(previousAxisLocks.length)
+          ..write('|sel:')
+          ..write(selectedAxisLocksBySegmentIndex.length);
+
+    for (final FusionCanvasPoint point in rawPoints) {
+      buffer
+        ..write('|pt:')
+        ..write(point.id)
+        ..write('@')
+        ..write(point.position.dx.toStringAsFixed(3))
+        ..write(',')
+        ..write(point.position.dy.toStringAsFixed(3));
+    }
+
+    for (final AxisLock lock in previousAxisLocks) {
+      buffer
+        ..write('|pr:')
+        ..write(lock.x?.toStringAsFixed(3) ?? '_')
+        ..write(',')
+        ..write(lock.y?.toStringAsFixed(3) ?? '_');
+    }
+
+    final List<MapEntry<int, AxisLock>> selectedEntries =
+        selectedAxisLocksBySegmentIndex.entries.toList()..sort((MapEntry<int, AxisLock> a, MapEntry<int, AxisLock> b) => a.key.compareTo(b.key));
+    for (final MapEntry<int, AxisLock> entry in selectedEntries) {
+      buffer
+        ..write('|sl:')
+        ..write(entry.key)
+        ..write('=')
+        ..write(entry.value.x?.toStringAsFixed(3) ?? '_')
+        ..write(',')
+        ..write(entry.value.y?.toStringAsFixed(3) ?? '_');
+    }
+
+    return buffer.toString();
   }
 
   bool _axisLocksMatch(AxisLock a, AxisLock b) {

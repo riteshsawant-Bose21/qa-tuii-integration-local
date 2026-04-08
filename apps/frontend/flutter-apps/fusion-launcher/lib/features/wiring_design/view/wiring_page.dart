@@ -85,14 +85,19 @@ class _WiringPageState extends State<WiringPage> {
                   if (dest == null) {
                     return;
                   }
-                  projectViewModel.addWiringConnection(
-                    connection: ConnectionUseCase().createConnection(
-                      fromDeviceId: source.deviceId,
-                      fromPort: source.port,
-                      toDeviceId: dest.deviceId,
-                      toPort: dest.port,
-                    ),
-                  );
+
+                  final ConnectionUseCase connectionUseCase = ConnectionUseCase();
+
+                  if (connectionUseCase.isCompatible(source.port.type, dest.port.type)) {
+                    projectViewModel.addWiringConnection(
+                      connection: connectionUseCase.createConnection(
+                        fromDeviceId: source.deviceId,
+                        fromPort: source.port,
+                        toDeviceId: dest.deviceId,
+                        toPort: dest.port,
+                      ),
+                    );
+                  }
                 },
               ),
             ),

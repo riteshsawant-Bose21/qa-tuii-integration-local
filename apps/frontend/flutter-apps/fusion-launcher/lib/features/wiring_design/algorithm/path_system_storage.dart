@@ -13,6 +13,7 @@ class PathSystemStorage {
   final Map<String, List<Offset>> _previousPolylines = <String, List<Offset>>{};
   final Map<String, _ConnectionPathMeta> _pathMeta = <String, _ConnectionPathMeta>{};
   final Map<String, List<AxisLock>> _pathAxisLocks = <String, List<AxisLock>>{};
+  final Map<String, List<AxisLock>> _livePathAxisLocks = <String, List<AxisLock>>{};
   Duration? _obstacleCacheFrameTime;
   int? _obstacleCachePainterIdentity;
   List<Rect> _obstacleCache = <Rect>[];
@@ -23,6 +24,7 @@ class PathSystemStorage {
     _previousPolylines.removeWhere((String key, _) => !keysToKeep.contains(key));
     _pathMeta.removeWhere((String key, _) => !keysToKeep.contains(key));
     _pathAxisLocks.removeWhere((String key, _) => !keysToKeep.contains(key));
+    _livePathAxisLocks.removeWhere((String key, _) => !keysToKeep.contains(key));
     _invalidateFrameCaches();
   }
 
@@ -57,13 +59,20 @@ class PathSystemStorage {
   }
 
   FusionPath? getLivePath(WiringConnectionModel connection, FusionCanvasPainter painter, List<AxisLock> additionalStops) {
-    // return getPath(connection, painter, additionalStops);
     final _ConnectionEndpoints? endpoints = _resolveConnectionEndpoints(connection, painter);
     if (endpoints == null) {
       return null;
     }
 
     final String key = _keyOf(connection);
+    final FusionPath? cachedLivePath = _livePaths[key];
+    if (cachedLivePath != null) {
+      final List<AxisLock> cachedLiveLocks = _livePathAxisLocks[key] ?? const <AxisLock>[];
+      if (cachedLivePath.start == endpoints.start && cachedLivePath.end == endpoints.end && _axisLocksEqual(cachedLiveLocks, additionalStops)) {
+        return cachedLivePath;
+      }
+    }
+
     final FusionPath? livePath = _constructPath(
       connection,
       painter,
@@ -75,22 +84,8 @@ class PathSystemStorage {
     if (livePath == null) {
       return null;
     }
-    _storeLivePath(key, connection, livePath);
+    _storeLivePath(key, connection, livePath, additionalStops);
     return livePath;
-    // _storePath(key, connection, livePath);
-    // return _paths[key];
-
-    // final FusionPath? cached = _paths[key];
-    // if (cached != null && cached.start == livePath.start && cached.end == livePath.end) {
-    //   final double cachedScore = _pathScore(_polylineForPath(cached));
-    //   final double liveScore = _pathScore(_polylineForPath(livePath));
-    //   if (liveScore + _liveSwitchEpsilon >= cachedScore) {
-    //     return cached;
-    //   }
-    // }
-
-    // _storePath(key, connection, livePath);
-    // return livePath;
   }
 
   FusionPath? _constructPath(
@@ -102,10 +97,6 @@ class PathSystemStorage {
     required List<AxisLock> axisLocks,
     // List<Offset> additionalStops = const <Offset>[],
   }) {
-    // if (points.isNotEmpty) {
-    //   return FusionPath(start: start, end: end, points: points);
-    // }
-    final DateTime startTime = DateTime.now();
     final List<Rect> obstacles = _obstaclesForPainter(painter);
     // final List<PathSegment> segments = segmentsOfAllPathExcept(connection.id);
     // final Map<String, List<Offset>> allPolylines2 = allPolylines();
@@ -125,7 +116,6 @@ class PathSystemStorage {
       // ],
     );
     final List<Offset> intermediatePoints = _extractIntermediatePoints(pathPoints, start, end);
-    final Duration duration = DateTime.now().difference(startTime);
     // print(
     //   "Calculated path for connection ${connection.id} in ${duration.inMilliseconds}ms",
     // );
@@ -157,6 +147,7 @@ class PathSystemStorage {
       _pathMeta.remove(key);
       _livePaths.remove(key);
       _pathAxisLocks.remove(key);
+      _livePathAxisLocks.remove(key);
     }
 
     _invalidateFrameCaches();
@@ -173,11 +164,13 @@ class PathSystemStorage {
       targetDeviceId: connection.targetDeviceId,
     );
     _livePaths.remove(key);
+    _livePathAxisLocks.remove(key);
   }
 
-  void _storeLivePath(String key, WiringConnectionModel connection, FusionPath path) {
+  void _storeLivePath(String key, WiringConnectionModel connection, FusionPath path, List<AxisLock> axisLocks) {
     _livePaths[key] = path;
     _previousPolylines[key] = _polylineForPath(path);
+    _livePathAxisLocks[key] = List<AxisLock>.unmodifiable(axisLocks);
     // _pathMeta is already set by _storePath — no need to update here
   }
 
