@@ -55,9 +55,3 @@ func (p *Service) Postgres() (*Postgres, error) {
 		SSLMode:  sslMode,
 	}, nil
 }
-
-// DO WE NEED DEFAULTS?
-// const (
-// 	defaultPostgresHost string = "127.0.0.1"
-// 	defaultPostgresPort string = "5432"
-// )

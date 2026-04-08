@@ -22,7 +22,7 @@ enum PortType {
   usb('Usb'),
   usbIn('Usb'),
   usbOut('Usb'),
-  // serial('Serial'),
+  // serial('Serial')v,
   // ble('Ble'),
   // wifi('Wifi'),
   // hdmi('Hdmi'),
@@ -33,12 +33,11 @@ enum PortType {
   hdmiIn('Hdmi'),
   hdmiOut('Hdmi'),
 
-  audioJackInput('RCA/Jack'),
-  audioJackOutput('RCA/Jack'),
+  audioJackInput('3.5mm Jack'),
+  audioJackOutput('3.5mm Jack'),
 
   rcaInput('RCA'),
   rcaOutput('RCA'),
-
 
   amplifierInput('Input'),
   amplifierOutput('Output'),
@@ -68,6 +67,56 @@ enum PortType {
   const PortType(this.description);
 
   final String description;
+}
+
+extension PortTypeExtension on PortType {
+  String get droOutputType {
+    switch (this) {
+      case PortType.analogInput:
+        return "io_in_analog";
+      case PortType.aes67Input:
+        return "io_in_aes67";
+      case PortType.aes67Output:
+        return "io_out_aes67";
+      case PortType.usbIn:
+        return "io_in_usb";
+      case PortType.usbOut:
+        return "io_out_usb";
+      case PortType.bleIn:
+        return "io_in_bluetooth";
+      case PortType.wifiIn:
+        return PortType.wifiOut.name;
+      case PortType.hdmiIn:
+        return "io_in_hdmi";
+      case PortType.rcaInput:
+        return "io_in_analog";
+      case PortType.audioJackInput:
+        return "io_in_playback";
+
+      case PortType.amplifierInput:
+        return PortType.amplifierOutput.name;
+      case PortType.dspAnalogInput:
+        return "io_in_analog";
+      case PortType.dspAnalogOutput:
+        return "io_out_analog";
+      case PortType.controllerInput:
+        return PortType.controllerOutput.name;
+      case PortType.speakerInput:
+        return PortType.speakerOutput.name;
+      case PortType.digitalInput:
+        return PortType.digitalOutput.name;
+      case PortType.circuitInput:
+        return ''; // No direct output type
+      case PortType.gpioInput:
+        return PortType.gpioOutput.name;
+      case PortType.fusionConnectInput:
+        return PortType.fusionConnectOutput.name;
+      case PortType.xlrInput:
+        return "io_out_analog";
+      default:
+        return ''; // For output types or types without a defined output
+    }
+  }
 }
 
 //DSP input port supported device port types

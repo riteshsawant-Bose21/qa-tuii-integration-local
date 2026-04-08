@@ -66,7 +66,6 @@ abstract class HardwareComponent {
            List<PortData>.generate(
              portData?.inputPorts ?? 0,
              (index) {
-               print("Port Data: ${portData?.inputPortType}");
                return PortData(
                  id: FusionUtils.shortStringUUID(),
                  name: '${index + 1}',
@@ -74,7 +73,6 @@ abstract class HardwareComponent {
                  portNumber: index + 1,
                  description: "${(portData?.inputPortType ?? PortType.analogInput).description} ${index + 1}",
                  position: portData?.portPosition ?? PortPosition.topLeft,
-
                );
              },
            ),
@@ -83,13 +81,12 @@ abstract class HardwareComponent {
            List<PortData>.generate(
              portData?.outputPorts ?? 0,
              (index) => PortData(
-               id: _uuid.v4(),
+               id: FusionUtils.shortStringUUID(),
                name: '${index + 1}',
                description: "${(portData?.outputPortType ?? PortType.analogOutput).description} ${index + 1}",
                type: portData?.outputPortType ?? PortType.analogOutput,
                portNumber: index + 1,
                position: portData?.portPosition ?? PortPosition.topRight,
-
              ),
            );
   @override

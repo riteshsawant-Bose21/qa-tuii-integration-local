@@ -15,6 +15,7 @@ const (
 	FusionVersion   = "_fusion_version"
 	FusionMessageID = "_fusion_msg_id"
 	FusionOperation = "_fusion_op"
+	FusionSentAtNS  = "_fusion_sent_at_ns"
 
 	HTTPTimeout       = 5 * time.Second
 	HTTPUploadTimeout = 30 * time.Second
