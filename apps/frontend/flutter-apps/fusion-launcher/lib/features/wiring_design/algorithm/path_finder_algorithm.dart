@@ -143,7 +143,7 @@ class OrthogonalRouter {
   }) {
     final Offset actualStart = _snapOutside(start);
     final Offset actualEnd = _snapOutside(end);
-    print("Calculating path from $actualStart to $actualEnd with axis locks: $axisLocks");
+    // print("Calculating path from $actualStart to $actualEnd with axis locks: $axisLocks");
     return <Offset>[
       start,
       ...OrthogonalPathService().findPath(

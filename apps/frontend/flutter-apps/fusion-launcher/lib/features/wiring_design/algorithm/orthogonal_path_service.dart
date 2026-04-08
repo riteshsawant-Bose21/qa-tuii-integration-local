@@ -7,6 +7,41 @@ import 'package:fusion_lib/fusion_lib.dart';
 class OrthogonalPathService {
   static const double _epsilon = 1e-6;
   static const double _obstaclePadding = 1.0;
+  static const double _coordMergeTolerance = 0.01;
+
+  Offset _snapOutside(Offset p, List<Rect> obstacles) {
+    final int padding = 10;
+    const double tieTolerance = 0.1;
+    for (int i = 0; i < obstacles.length; i++) {
+      if (_isBlockedPoint(p, obstacles, <_Segment>[])) {
+        final double left = obstacles[i].left;
+        final double right = obstacles[i].right;
+        final double top = obstacles[i].top;
+        final double bottom = obstacles[i].bottom;
+        final List<Offset> candidates = <Offset>[
+          Offset(left - padding, p.dy),
+          Offset(right + padding, p.dy),
+          Offset(p.dx, top - padding),
+          Offset(p.dx, bottom + padding),
+        ];
+
+        Offset best = candidates.first;
+        double bestDistance = _manhattan(p, best);
+        for (int i = 1; i < candidates.length; i++) {
+          final Offset candidate = candidates[i];
+          final double distance = _manhattan(p, candidate);
+          if (distance + tieTolerance < bestDistance) {
+            best = candidate;
+            bestDistance = distance;
+          }
+        }
+        return best;
+      }
+    }
+    return p;
+  }
+
+  double _manhattan(Offset a, Offset b) => (a.dx - b.dx).abs() + (a.dy - b.dy).abs();
 
   List<Offset> findPath({
     required Offset start,
@@ -16,11 +51,16 @@ class OrthogonalPathService {
     required List<List<Offset>> otherPaths,
     List<Offset>? previousPath,
   }) {
-    if (_arePointsEqual(start, end)) {
-      return <Offset>[start, end];
+    final Offset adjustedStart = _snapOutside(start, obstacles);
+    final Offset adjustedEnd = _snapOutside(end, obstacles);
+
+    if (_arePointsEqual(adjustedStart, adjustedEnd)) {
+      return <Offset>[adjustedStart, adjustedEnd];
     }
 
-    final List<AxisLock> validLocks = axisLocks.where(_isValidAxisLock).toList(growable: false);
+    final List<AxisLock> validLocks = _compressAxisLocks(
+      axisLocks.where(_isValidAxisLock).toList(growable: false),
+    );
     final List<_Segment> blockedPathSegments = _buildSegments(otherPaths);
     final List<_Segment> previousSegments = _buildSegments(<List<Offset>>[
       if (previousPath != null) previousPath,
@@ -29,10 +69,10 @@ class OrthogonalPathService {
     final Set<double> xSet = <double>{};
     final Set<double> ySet = <double>{};
 
-    _addCoord(xSet, start.dx);
-    _addCoord(ySet, start.dy);
-    _addCoord(xSet, end.dx);
-    _addCoord(ySet, end.dy);
+    _addCoord(xSet, adjustedStart.dx);
+    _addCoord(ySet, adjustedStart.dy);
+    _addCoord(xSet, adjustedEnd.dx);
+    _addCoord(ySet, adjustedEnd.dy);
 
     for (final AxisLock lock in validLocks) {
       if (lock.x != null) {
@@ -68,8 +108,8 @@ class OrthogonalPathService {
       _addCoord(ySet, previous.b.dy);
     }
 
-    final List<double> xs = xSet.toList()..sort();
-    final List<double> ys = ySet.toList()..sort();
+    final List<double> xs = _compactSortedCoords(xSet.toList()..sort());
+    final List<double> ys = _compactSortedCoords(ySet.toList()..sort());
 
     final List<Offset> nodes = <Offset>[];
     final Map<String, int> nodeIndex = <String, int>{};
@@ -92,18 +132,20 @@ class OrthogonalPathService {
       }
     }
 
-    addNode(start, force: true);
-    addNode(end, force: true);
+    addNode(adjustedStart, force: true);
+    addNode(adjustedEnd, force: true);
 
-    final int? startIndex = nodeIndex[_pointKey(start)];
-    final int? endIndex = nodeIndex[_pointKey(end)];
+    final int? startIndex = nodeIndex[_pointKey(adjustedStart)];
+    final int? endIndex = nodeIndex[_pointKey(adjustedEnd)];
     if (startIndex == null || endIndex == null) {
-      return <Offset>[start, end];
+      return <Offset>[adjustedStart, adjustedEnd];
     }
 
-    final Map<int, List<_Edge>> adjacency = <int, List<_Edge>>{
-      for (int i = 0; i < nodes.length; i++) i: <_Edge>[],
-    };
+    final List<List<_Edge>> adjacency = List<List<_Edge>>.generate(
+      nodes.length,
+      (_) => <_Edge>[],
+      growable: false,
+    );
 
     final Map<double, List<int>> byX = <double, List<int>>{};
     final Map<double, List<int>> byY = <double, List<int>>{};
@@ -124,8 +166,8 @@ class OrthogonalPathService {
         return;
       }
       final double distance = (p1.dx - p2.dx).abs() + (p1.dy - p2.dy).abs();
-      adjacency[a]!.add(_Edge(to: b, length: distance, segment: segment));
-      adjacency[b]!.add(_Edge(to: a, length: distance, segment: segment));
+      adjacency[a].add(_Edge(to: b, length: distance, segment: segment));
+      adjacency[b].add(_Edge(to: a, length: distance, segment: segment));
     }
 
     for (final List<int> indices in byX.values) {
@@ -143,21 +185,32 @@ class OrthogonalPathService {
     }
 
     final int requiredLockProgress = validLocks.length;
+    const int directionCount = 3;
+    final int progressSpan = (requiredLockProgress + 1) * directionCount;
+
+    int encodeState(int node, int progress, int direction) {
+      return (node * progressSpan) + (progress * directionCount) + direction;
+    }
+
+    int decodeNode(int state) {
+      return state ~/ progressSpan;
+    }
+
     final PriorityQueue<_QueueEntry> queue = PriorityQueue<_QueueEntry>(_compareQueueEntry);
-    final Map<String, _Cost> bestCost = <String, _Cost>{};
-    final Map<String, String> previousState = <String, String>{};
+    final Map<int, _Cost> bestCost = <int, _Cost>{};
+    final Map<int, int> previousState = <int, int>{};
 
     const int noDirection = 0;
-    final String startState = _stateKey(startIndex, 0, noDirection);
+    final int startState = encodeState(startIndex, 0, noDirection);
     const _Cost startCost = _Cost(length: 0.0, turns: 0, stability: 0.0);
     bestCost[startState] = startCost;
     queue.add(_QueueEntry(node: startIndex, lockProgress: 0, direction: noDirection, cost: startCost));
 
-    String? winningState;
+    int? winningState;
 
     while (queue.isNotEmpty) {
       final _QueueEntry current = queue.removeFirst();
-      final String currentState = _stateKey(current.node, current.lockProgress, current.direction);
+      final int currentState = encodeState(current.node, current.lockProgress, current.direction);
       final _Cost? known = bestCost[currentState];
       if (known == null || _compareCost(current.cost, known) > 0) {
         continue;
@@ -168,7 +221,7 @@ class OrthogonalPathService {
         break;
       }
 
-      for (final _Edge edge in adjacency[current.node] ?? const <_Edge>[]) {
+      for (final _Edge edge in adjacency[current.node]) {
         final int nextDirection = edge.segment.isHorizontal ? 1 : 2;
         final int turnCost = (current.direction == noDirection || current.direction == nextDirection) ? 0 : 1;
         final int nextProgress = _advanceLockProgress(edge.segment, current.lockProgress, validLocks);
@@ -177,7 +230,7 @@ class OrthogonalPathService {
           turns: current.cost.turns + turnCost,
           stability: current.cost.stability + _stabilityPenaltyForSegment(edge.segment, previousSegments),
         );
-        final String nextState = _stateKey(edge.to, nextProgress, nextDirection);
+        final int nextState = encodeState(edge.to, nextProgress, nextDirection);
         final _Cost? oldCost = bestCost[nextState];
         if (oldCost == null || _compareCost(nextCost, oldCost) < 0) {
           bestCost[nextState] = nextCost;
@@ -188,15 +241,14 @@ class OrthogonalPathService {
     }
 
     if (winningState == null) {
-      return <Offset>[start, end];
+      return <Offset>[adjustedStart, adjustedEnd];
     }
 
     final List<Offset> reconstructed = <Offset>[];
-    String state = winningState;
+    int state = winningState;
     while (true) {
-      final _StateParts parts = _parseState(state);
-      reconstructed.add(nodes[parts.node]);
-      final String? previous = previousState[state];
+      reconstructed.add(nodes[decodeNode(state)]);
+      final int? previous = previousState[state];
       if (previous == null) {
         break;
       }
@@ -210,6 +262,47 @@ class OrthogonalPathService {
     final bool hasX = lock.x != null;
     final bool hasY = lock.y != null;
     return hasX != hasY;
+  }
+
+  static List<AxisLock> _compressAxisLocks(List<AxisLock> locks) {
+    if (locks.isEmpty) {
+      return locks;
+    }
+
+    final List<AxisLock> compressed = <AxisLock>[];
+    for (final AxisLock lock in locks) {
+      if (compressed.isEmpty) {
+        compressed.add(lock);
+        continue;
+      }
+
+      final AxisLock previous = compressed.last;
+      final bool sameVertical = previous.x != null && lock.x != null && (previous.x! - lock.x!).abs() <= _coordMergeTolerance;
+      final bool sameHorizontal = previous.y != null && lock.y != null && (previous.y! - lock.y!).abs() <= _coordMergeTolerance;
+
+      if (sameVertical || sameHorizontal) {
+        continue;
+      }
+      compressed.add(lock);
+    }
+
+    return compressed;
+  }
+
+  static List<double> _compactSortedCoords(List<double> sortedCoords) {
+    if (sortedCoords.length <= 1) {
+      return sortedCoords;
+    }
+
+    final List<double> compacted = <double>[sortedCoords.first];
+    for (int i = 1; i < sortedCoords.length; i++) {
+      final double value = sortedCoords[i];
+      if ((value - compacted.last).abs() <= _coordMergeTolerance) {
+        continue;
+      }
+      compacted.add(value);
+    }
+    return compacted;
   }
 
   static bool _isOrthogonal(Offset a, Offset b) {
@@ -476,13 +569,6 @@ class OrthogonalPathService {
     return simplified;
   }
 
-  static String _stateKey(int node, int progress, int direction) => '$node|$progress|$direction';
-
-  static _StateParts _parseState(String state) {
-    final List<String> parts = state.split('|');
-    return _StateParts(node: int.parse(parts[0]), progress: int.parse(parts[1]), direction: int.parse(parts[2]));
-  }
-
   static String _pointKey(Offset p) => '${_normalizeCoord(p.dx)},${_normalizeCoord(p.dy)}';
 
   static bool _arePointsEqual(Offset a, Offset b) {
@@ -533,12 +619,4 @@ class _QueueEntry {
   final _Cost cost;
 
   const _QueueEntry({required this.node, required this.lockProgress, required this.direction, required this.cost});
-}
-
-class _StateParts {
-  final int node;
-  final int progress;
-  final int direction;
-
-  const _StateParts({required this.node, required this.progress, required this.direction});
 }

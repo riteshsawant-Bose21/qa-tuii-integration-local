@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/fusion_canvas_element_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/wiring/port_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart' show FusionBasePainter;
@@ -12,38 +13,31 @@ class PathSystemStorage {
   final Map<String, List<Offset>> _previousPolylines = <String, List<Offset>>{};
   final Map<String, _ConnectionPathMeta> _pathMeta = <String, _ConnectionPathMeta>{};
   final Map<String, List<AxisLock>> _pathAxisLocks = <String, List<AxisLock>>{};
+  Duration? _obstacleCacheFrameTime;
+  int? _obstacleCachePainterIdentity;
+  List<Rect> _obstacleCache = <Rect>[];
+
   void removeKeysExcept(Set<String> keysToKeep) {
     _paths.removeWhere((String key, _) => !keysToKeep.contains(key));
     _livePaths.removeWhere((String key, _) => !keysToKeep.contains(key));
     _previousPolylines.removeWhere((String key, _) => !keysToKeep.contains(key));
     _pathMeta.removeWhere((String key, _) => !keysToKeep.contains(key));
     _pathAxisLocks.removeWhere((String key, _) => !keysToKeep.contains(key));
+    _invalidateFrameCaches();
   }
 
   FusionPath? getPath(WiringConnectionModel connection, FusionCanvasPainter painter, [List<AxisLock>? additionalStops]) {
-    final String key = _keyOf(connection);
-    if (_paths.containsKey(key)) {
-      final FusionPath? path = _paths[key];
-      if (path != null) {
-        final FusionBasePainter? sourceLayer = painter.getLayerById(connection.deviceId);
-        final FusionBasePainter? destLayer = painter.getLayerById(connection.targetDeviceId);
-        Offset? start = sourceLayer is PortPainter ? sourceLayer.getPortPosition(connection.portId, painter) : null;
-        Offset? end = destLayer is PortPainter ? destLayer.getPortPosition(connection.targetPortId, painter) : null;
-        if (start == null || end == null) {
-          for (final FusionBasePainter element in painter.layers) {
-            if (element is PortPainter) {
-              start ??= element.getPortPosition(connection.portId, painter);
-              end ??= element.getPortPosition(connection.targetPortId, painter);
-            }
-          }
-        }
+    final _ConnectionEndpoints? endpoints = _resolveConnectionEndpoints(connection, painter);
+    if (endpoints == null) {
+      return null;
+    }
 
-        if (start != null && end != null) {
-          final List<AxisLock> cachedLocks = _pathAxisLocks[key] ?? const <AxisLock>[];
-          if (path.start == start && path.end == end && _axisLocksEqual(cachedLocks, connection.axisLocks)) {
-            return path;
-          }
-        }
+    final String key = _keyOf(connection);
+    final FusionPath? path = _paths[key];
+    if (path != null) {
+      final List<AxisLock> cachedLocks = _pathAxisLocks[key] ?? const <AxisLock>[];
+      if (path.start == endpoints.start && path.end == endpoints.end && _axisLocksEqual(cachedLocks, connection.axisLocks)) {
+        return path;
       }
     }
 
@@ -51,6 +45,8 @@ class PathSystemStorage {
       connection,
       painter,
       connectionKey: key,
+      start: endpoints.start,
+      end: endpoints.end,
       axisLocks: connection.axisLocks,
     );
     if (constructPath == null) {
@@ -62,11 +58,18 @@ class PathSystemStorage {
 
   FusionPath? getLivePath(WiringConnectionModel connection, FusionCanvasPainter painter, List<AxisLock> additionalStops) {
     // return getPath(connection, painter, additionalStops);
+    final _ConnectionEndpoints? endpoints = _resolveConnectionEndpoints(connection, painter);
+    if (endpoints == null) {
+      return null;
+    }
+
     final String key = _keyOf(connection);
     final FusionPath? livePath = _constructPath(
       connection,
       painter,
       connectionKey: key,
+      start: endpoints.start,
+      end: endpoints.end,
       axisLocks: additionalStops,
     );
     if (livePath == null) {
@@ -94,30 +97,16 @@ class PathSystemStorage {
     WiringConnectionModel connection,
     FusionCanvasPainter painter, {
     required String connectionKey,
+    required Offset start,
+    required Offset end,
     required List<AxisLock> axisLocks,
     // List<Offset> additionalStops = const <Offset>[],
   }) {
-    final FusionBasePainter? sourceLayer = painter.getLayerById(connection.deviceId);
-    final FusionBasePainter? destLayer = painter.getLayerById(connection.targetDeviceId);
-    Offset? start = sourceLayer is PortPainter ? sourceLayer.getPortPosition(connection.portId, painter) : null;
-    Offset? end = destLayer is PortPainter ? destLayer.getPortPosition(connection.targetPortId, painter) : null;
-    if (start == null || end == null) {
-      for (final FusionBasePainter element in painter.layers) {
-        if (element is PortPainter) {
-          start ??= element.getPortPosition(connection.portId, painter);
-          end ??= element.getPortPosition(connection.targetPortId, painter);
-        }
-      }
-    }
-
-    if (start == null || end == null) {
-      return null;
-    }
     // if (points.isNotEmpty) {
     //   return FusionPath(start: start, end: end, points: points);
     // }
-    final List<Rect> obstacles =
-        painter.layers.whereType<FusionCanvasElementPainter>().map((FusionCanvasElementPainter p) => p.getBounds(painter).inflate(40)).toList();
+    final DateTime startTime = DateTime.now();
+    final List<Rect> obstacles = _obstaclesForPainter(painter);
     // final List<PathSegment> segments = segmentsOfAllPathExcept(connection.id);
     // final Map<String, List<Offset>> allPolylines2 = allPolylines();
     // allPolylines2.remove(connectionKey);
@@ -129,12 +118,17 @@ class PathSystemStorage {
       end,
       // stops: additionalStops,
       // otherPaths: allPolylines2.values.toList(growable: false),
-      previousPath: _previousPolylines[connectionKey],
-      axisLocks: <AxisLock>[
-        ...axisLocks,
-      ],
+      // previousPath: _previousPolylines[connectionKey],
+      axisLocks: axisLocks,
+      // <AxisLock>[
+      //   ...axisLocks,
+      // ],
     );
     final List<Offset> intermediatePoints = _extractIntermediatePoints(pathPoints, start, end);
+    final Duration duration = DateTime.now().difference(startTime);
+    print(
+      "Calculated path for connection ${connection.id} in ${duration.inMilliseconds}ms",
+    );
     // print(
     //   "Constructed path for connection ${connection.id} with additional stops ${additionalStops.length}: start=$start, end=$end, intermediatePoints=$intermediatePoints",
     // );
@@ -164,6 +158,8 @@ class PathSystemStorage {
       _livePaths.remove(key);
       _pathAxisLocks.remove(key);
     }
+
+    _invalidateFrameCaches();
   }
 
   String _keyOf(WiringConnectionModel connection) => connection.id;
@@ -212,11 +208,59 @@ class PathSystemStorage {
   }
 
   bool _axisLocksEqual(List<AxisLock> a, List<AxisLock> b) {
+    if (identical(a, b)) return true;
     if (a.length != b.length) return false;
     for (int i = 0; i < a.length; i++) {
       if (a[i].x != b[i].x || a[i].y != b[i].y) return false;
     }
     return true;
+  }
+
+  _ConnectionEndpoints? _resolveConnectionEndpoints(WiringConnectionModel connection, FusionCanvasPainter painter) {
+    final FusionBasePainter? sourceLayer = painter.getLayerById(connection.deviceId);
+    final FusionBasePainter? destLayer = painter.getLayerById(connection.targetDeviceId);
+
+    Offset? start = sourceLayer is PortPainter ? sourceLayer.getPortPosition(connection.portId, painter) : null;
+    Offset? end = destLayer is PortPainter ? destLayer.getPortPosition(connection.targetPortId, painter) : null;
+
+    if (start != null && end != null) {
+      return _ConnectionEndpoints(start: start, end: end);
+    }
+
+    for (final FusionBasePainter element in painter.layers) {
+      if (element is! PortPainter) {
+        continue;
+      }
+      start ??= element.getPortPosition(connection.portId, painter);
+      end ??= element.getPortPosition(connection.targetPortId, painter);
+      if (start != null && end != null) {
+        return _ConnectionEndpoints(start: start, end: end);
+      }
+    }
+
+    return null;
+  }
+
+  List<Rect> _obstaclesForPainter(FusionCanvasPainter painter) {
+    final Duration frameTime = SchedulerBinding.instance.currentFrameTimeStamp;
+    final int painterIdentity = identityHashCode(painter);
+    if (_obstacleCacheFrameTime == frameTime && _obstacleCachePainterIdentity == painterIdentity) {
+      return _obstacleCache;
+    }
+
+    _obstacleCacheFrameTime = frameTime;
+    _obstacleCachePainterIdentity = painterIdentity;
+    _obstacleCache = painter.layers
+        .whereType<FusionCanvasElementPainter>()
+        .map((FusionCanvasElementPainter elementPainter) => elementPainter.getBounds(painter).inflate(40))
+        .toList(growable: false);
+    return _obstacleCache;
+  }
+
+  void _invalidateFrameCaches() {
+    _obstacleCacheFrameTime = null;
+    _obstacleCachePainterIdentity = null;
+    _obstacleCache = <Rect>[];
   }
 
   List<PathSegment> segmentsOfAllPathExcept(String connectionId) {
@@ -256,6 +300,13 @@ class _ConnectionPathMeta {
 
   final String deviceId;
   final String targetDeviceId;
+}
+
+class _ConnectionEndpoints {
+  const _ConnectionEndpoints({required this.start, required this.end});
+
+  final Offset start;
+  final Offset end;
 }
 
 class FusionPath {
