@@ -45,6 +45,8 @@ struct fusion_cn_worker_profile {
     struct fusion_cn_phase_profile other_phase;
     u64 rx_packets_sum;
     u32 rx_packets_max;
+    u64 sink_interrupts_sum;
+    u32 sink_interrupts_max;
     u64 rx_q_depth_sum;
     u32 rx_q_depth_max;
     u32 rx_q_depth_last;
@@ -76,13 +78,15 @@ static void fusion_cn_prof_maybe_log(void)
     if (!time_after_eq(jiffies, prof->next_jiffies))
         return;
 
-    printk(KERN_DEBUG "fusion_cn: profile total avg=%lluns max=%lluns n=%u rx avg=%lluns max=%lluns n=%u pkts_avg=%llu pkts_max=%u q_avg=%llu q_max=%u q_last=%u budget_hits=%u fc avg=%lluns max=%lluns n=%u other avg=%lluns max=%lluns n=%u\n",
+    printk(KERN_DEBUG "fusion_cn: profile total avg=%lluns max=%lluns n=%u rx avg=%lluns max=%lluns n=%u pkts_avg=%llu pkts_max=%u sinkn_avg=%llu sinkn_max=%u q_avg=%llu q_max=%u q_last=%u budget_hits=%u fc avg=%lluns max=%lluns n=%u other avg=%lluns max=%lluns n=%u\n",
         prof->total.count ? div64_u64(prof->total.sum_ns, prof->total.count) : 0,
         prof->total.max_ns, prof->total.count,
         prof->rx_drain.count ? div64_u64(prof->rx_drain.sum_ns, prof->rx_drain.count) : 0,
         prof->rx_drain.max_ns, prof->rx_drain.count,
         prof->rx_drain.count ? div64_u64(prof->rx_packets_sum, prof->rx_drain.count) : 0,
         prof->rx_packets_max,
+        prof->fc_phase.count ? div64_u64(prof->sink_interrupts_sum, prof->fc_phase.count) : 0,
+        prof->sink_interrupts_max,
         prof->rx_drain.count ? div64_u64(prof->rx_q_depth_sum, prof->rx_drain.count) : 0,
         prof->rx_q_depth_max,
         prof->rx_q_depth_last,
@@ -274,6 +278,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
     u64 t0, dt_ns;
     u32 drained;
     u32 rx_q_depth = 0;
+    u32 sink_interrupts = 0;
 
     struct {
         struct fusion_cn_rtp_stream *rtp;
@@ -325,6 +330,8 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         /* compute due interrupts with stream->lock, still under mgr->rtp.lock */
         {
             int n = rtp_compute_sink_interrupts(mgr, r, a, tick_ns);
+            if (n > 0)
+                sink_interrupts += n;
             if (n > 0 && fn_sink_cnt < 32) {
                 if (!kref_get_unless_zero(&r->ref))
                     continue;
@@ -350,8 +357,12 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         kref_put(&fn_sink[i].alsa->ref, fusion_cn_alsa_substream_release);
     }
 
-    if (profiling)
+    if (profiling) {
         fusion_cn_prof_add(&fusion_cn_worker_prof.fc_phase, ktime_get_ns() - t0);
+        fusion_cn_worker_prof.sink_interrupts_sum += sink_interrupts;
+        if (sink_interrupts > fusion_cn_worker_prof.sink_interrupts_max)
+            fusion_cn_worker_prof.sink_interrupts_max = sink_interrupts;
+    }
 
     /* -------- Phase 2: FC sources + AES67 sinks + AES67 sources -------- */
     read_lock_irqsave(&mgr->rtp.lock, flags);
@@ -379,6 +390,8 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         if (!atomic_read(&r->is_running) || r->info.is_source || r->info.is_fusion_connect) continue;
 
         int n = rtp_compute_sink_interrupts(mgr, r, a, tick_ns);
+        if (n > 0)
+            sink_interrupts += n;
         if (n > 0 && other_cnt < 40) {
             if (!kref_get_unless_zero(&r->ref)) continue;
             if (!kref_get_unless_zero(&a->ref)) { kref_put(&r->ref, fusion_cn_rtp_stream_release); continue; }

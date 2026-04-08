@@ -106,6 +106,10 @@ static uint error_thresh_param = 20;
 module_param(error_thresh_param, uint, 0644);
 MODULE_PARM_DESC(error_thresh_param, "Raise discipline_ready after 5 PPS samples with abs_error < this threshold");
 
+static bool pi_fallback_only_param;
+module_param(pi_fallback_only_param, bool, 0644);
+MODULE_PARM_DESC(pi_fallback_only_param, "Skip GPT calibration/jump logic and use PI fallback control only");
+
 struct fusion_gpt_cal_config {
 	s32 k1_q16;
 	s32 k2_q16;
@@ -543,6 +547,8 @@ static void gpt_restore_control_baseline_locked(struct fusion_gpt *g)
 	g->si_gain_target = g->si_gain_current;
 }
 
+static inline bool cal_enabled_runtime(void);
+
 static void gpt_reset_control_state_locked(struct fusion_gpt *g,
 					   bool preserve_calibration)
 {
@@ -555,7 +561,7 @@ static void gpt_reset_control_state_locked(struct fusion_gpt *g,
 	WRITE_ONCE(g->discipline_ready, false);
 	g->lock_streak = 0;
 	g->pps_diag_next_jiffies = jiffies + HZ;
-	g->cal_state = CAL_ENABLE ? CAL_IDLE : CAL_DONE;
+	g->cal_state = cal_enabled_runtime() ? CAL_IDLE : CAL_DONE;
 	g->cal_probe_idx = 0;
 	g->cal_settle_left = 0;
 	g->cal_measure_left = 0;
@@ -926,6 +932,11 @@ static inline bool cal_active(const struct fusion_gpt *g)
 		g->cal_state != CAL_FAIL;
 }
 
+static inline bool cal_enabled_runtime(void)
+{
+	return CAL_ENABLE && !READ_ONCE(pi_fallback_only_param);
+}
+
 static void gpt_update_discipline_ready(struct fusion_gpt *g, long freq_error,
 					bool cal_is_active)
 {
@@ -1217,7 +1228,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 			g->sq_err_sum += (s64)freq_error * (s64)freq_error;
 			g->err_count++;
 
-			if (CAL_ENABLE && g->cal_state == CAL_IDLE &&
+			if (cal_enabled_runtime() && g->cal_state == CAL_IDLE &&
 			    g->dac_client && g->si5351b_client) {
 				g->error_integrator = 0;
 				g->si_gain_pending = false;
@@ -1243,7 +1254,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 					cal_start_live_calibration_locked(g);
 					schedule_work(&g->dac_work);
 				}
-			} else if (CAL_ENABLE && g->cal_state == CAL_IDLE &&
+			} else if (cal_enabled_runtime() && g->cal_state == CAL_IDLE &&
 				   (!g->dac_client || !g->si5351b_client)) {
 				g->cal_state = CAL_DONE;
 				pr_warn("fusion_gpt: cal skipped (missing DAC or Si5351 client)\n");
