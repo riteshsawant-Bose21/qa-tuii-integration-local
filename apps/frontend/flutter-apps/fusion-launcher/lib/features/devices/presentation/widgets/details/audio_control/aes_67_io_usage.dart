@@ -10,9 +10,9 @@ class Aes67IOUsageSection extends StatelessWidget {
     return const Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
-        AesUsageRow(label: "IN", activeCount: 2),
+        AesUsageRow(label: "IN", activeCount: 0),
         SizedBox(height: 10),
-        AesUsageRow(label: "OUT", activeCount: 5),
+        AesUsageRow(label: "OUT", activeCount: 0),
       ],
     );
   }

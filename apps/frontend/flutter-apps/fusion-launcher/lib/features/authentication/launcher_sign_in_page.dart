@@ -38,9 +38,7 @@ class _LauncherSignInPageView extends StatelessWidget {
           }
 
           if (state is AuthError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
-            );
+            FusionToast.error(context, message: state.message);
           } else if (state is Authenticated) {
             if (!context.mounted) return;
             showSuccessPopup(
@@ -75,10 +73,7 @@ class _LauncherSignInPageView extends StatelessWidget {
                             'Welcome to\nFusion',
                             style: context.textTheme.displayLarge?.copyWith(
                               fontWeight: FontWeight.bold,
-                              fontSize:
-                                  headlineFontSize > 120
-                                      ? 120
-                                      : headlineFontSize,
+                              fontSize: headlineFontSize > 120 ? 120 : headlineFontSize,
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -86,10 +81,7 @@ class _LauncherSignInPageView extends StatelessWidget {
                             'Sign into your Fusion account on the right and\nget started creating dynamic audio experiences',
                             style: context.textTheme.bodyLarge?.copyWith(
                               color: FusionDarkColorPallette.medium50,
-                              fontSize:
-                                  subHeadingFontSize > 16
-                                      ? 16
-                                      : subHeadingFontSize,
+                              fontSize: subHeadingFontSize > 16 ? 16 : subHeadingFontSize,
                             ),
                           ),
                         ],
@@ -102,9 +94,7 @@ class _LauncherSignInPageView extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: <Widget>[
                           NeumorphicDarkButton(
-                            onTap:
-                                () =>
-                                    _handleAuthAction(context, isAuthenticated),
+                            onTap: () => _handleAuthAction(context, isAuthenticated),
                             height: 60,
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
@@ -115,15 +105,11 @@ class _LauncherSignInPageView extends StatelessWidget {
                                 children: <Widget>[
                                   Expanded(
                                     child: FusionAppText(
-                                      text:
-                                          isAuthenticated
-                                              ? 'Log out'
-                                              : 'Log in',
-                                      style: context.textTheme.labelLarge
-                                          ?.copyWith(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                                      text: isAuthenticated ? 'Log out' : 'Log in',
+                                      style: context.textTheme.labelLarge?.copyWith(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
                                   Container(
@@ -135,9 +121,7 @@ class _LauncherSignInPageView extends StatelessWidget {
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Icon(
-                                      isAuthenticated
-                                          ? LucideIcons.logOut
-                                          : LucideIcons.arrowRight,
+                                      isAuthenticated ? LucideIcons.logOut : LucideIcons.arrowRight,
                                       color: Colors.white,
                                       size: 12,
                                     ),
@@ -153,14 +137,10 @@ class _LauncherSignInPageView extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.only(right: 10.0),
                             child: SemanticHelper.button(
-                              testId: SemanticHelper.createTestId(
-                                SemanticTypes.button,
-                                "skip_login_button",
-                              ),
+                              testId: SemanticHelper.createTestId(SemanticTypes.button, "skip_login_button"),
                               child: TextButton(
                                 onPressed: () {
-                                  serviceLocator<SessionViewModel>()
-                                      .skipLogin();
+                                  serviceLocator<SessionViewModel>().skipLogin();
                                   Navigator.pushNamedAndRemoveUntil(
                                     context,
                                     Routes.launcherHomePage,
@@ -286,12 +266,8 @@ class NeumorphicDarkTextField extends StatelessWidget {
                 focusedBorder: InputBorder.none,
                 hintText: hintText,
                 hoverColor: Colors.transparent,
-                contentPadding:
-                    contentPadding ??
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                hintStyle:
-                    hintStyle ??
-                    context.textTheme.labelLarge?.copyWith(color: Colors.grey),
+                contentPadding: contentPadding ?? const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                hintStyle: hintStyle ?? context.textTheme.labelLarge?.copyWith(color: Colors.grey),
               ),
             ),
           ),

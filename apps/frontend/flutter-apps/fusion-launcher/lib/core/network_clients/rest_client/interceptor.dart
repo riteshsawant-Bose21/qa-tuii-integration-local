@@ -1,3 +1,5 @@
+import 'dart:developer' show log;
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
@@ -10,9 +12,7 @@ class AppInterceptors extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
-    if (kDebugMode) {
-      debugPrint("---API REQUEST CREATED---");
-    }
+    if (kDebugMode) log("---API [${options.method}] REQUEST CREATED---");
 
     // final String? token = serviceLocator<FusionConfig>().accessToken;
     // if (token != null) {
@@ -24,7 +24,7 @@ class AppInterceptors extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
-    print(" Dio Error Code is ${err.response?.statusCode} ");
+    log(" Dio Error Code is ${err.response?.statusCode} for ${err.requestOptions.method} ${err.requestOptions.path} ");
     // if (err.response?.statusCode == 401 && err.requestOptions.path.isBackendServerEndpoint() && err.requestOptions.path.isTokenRequired()) {
     //   // Handle 401 error - token expired
     //   await _handleTokenExpiry(err, handler);
@@ -52,9 +52,7 @@ class AppInterceptors extends Interceptor {
 
   @override
   void onResponse(Response<dynamic> response, ResponseInterceptorHandler handler) async {
-    if (kDebugMode) {
-      debugPrint("--RESPONSE RECEIVED FROM API---");
-    }
+    if (kDebugMode) log("--RESPONSE RECEIVED FROM API (${response.statusCode}) ${response.requestOptions.path}");
 
     if (response.statusCode == 401 && response.requestOptions.path.isBackendServerEndpoint() && response.requestOptions.path.isTokenRequired()) {
       // Handle 401 error - session expired

@@ -74,7 +74,7 @@ class ProjectSyncService {
     try {
       if (projectData.lastUploadedAt == null && !projectData.isCloudInstance) {
         Map<String, dynamic> data = {
-          'projectId': projectData.id,
+          'project_id': projectData.id,
           'name': projectData.name,
           'application': projectData.application ?? 'General',
           'environment_type': projectData.environmentType ?? 'indoor',
