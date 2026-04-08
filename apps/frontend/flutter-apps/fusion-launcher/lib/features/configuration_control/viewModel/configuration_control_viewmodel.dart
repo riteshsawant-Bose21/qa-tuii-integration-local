@@ -42,7 +42,8 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
   // ─── Data loading ──────────────────────────────────────────────────────────
 
   /// Loads (or reloads) data from the project view model.
-  void _loadData({String? preserveControllerId}) {
+  /// Optimized with lazy loading - only loads data needed for the current tab and controller type.
+  void _loadData({String? preserveControllerId, ConfigControlTab? forTab}) {
     if (_loaded == null) emit(const ConfigControlLoading());
 
     /// Detect whether we are switching to a different controller.
@@ -57,93 +58,219 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
         return;
       }
 
+      // Keep the previously selected controller
+      final FusionController selected = _resolveController(controllers, preserveControllerId);
+      final bool isPro = _isProController(selected);
+
+      // Determine which tab's data to load
+      final ConfigControlTab targetTab = forTab ?? _loaded?.currentTab ?? ConfigControlTab.zoneControl;
+
+      // ── Always load: Core data needed for all tabs ────────────────────────
       final List<Zone> zones = _projectViewModel.zones;
       final Map<String, List<SubZone>> subZonesInZones = _buildSubZonesMap(zones);
 
-      // Load scene sets and snapshots
-      final List<SceneSetModel> sceneSets = _projectViewModel.getAllSceneSets();
-      final Map<String, List<SnapshotsModel>> snapshotsInSceneSets = _buildSnapshotsInSceneSetsMap(sceneSets);
-      final List<SnapshotsModel> allSnapshots = _projectViewModel.getAllSnapshots();
-      final Map<String, List<SnapshotsModel>> snapshotsPerPage = _computeSnapshotsPerPage(snapshotsInSceneSets);
-      final Set<String> usedSnapshotIds = _computeUsedSnapshotIds(snapshotsPerPage);
+      // Load zone selection from relationship
+      final Set<String> assignedZoneIds = _projectViewModel.getAssignedZoneIds(selected.id);
+      final Set<String> allSubZoneIds = _projectViewModel.subZones.map((SubZone s) => s.id).toSet();
+      final Set<String> selectedZoneIds = <String>{};
+      final Set<String> selectedSubZoneIds = <String>{};
+      for (final String id in assignedZoneIds) {
+        (allSubZoneIds.contains(id) ? selectedSubZoneIds : selectedZoneIds).add(id);
+      }
 
-      // Load message players
-      final List<Source> messagePlayers =
-          _projectViewModel.sources
-              .where(
-                (Source s) =>
-                    s.type == SourceType.paging &&
-                    (s.pagingSourceType == PagingSourceType.messagePlayer || s.pagingSourceType == PagingSourceType.messagePlayerWithZoneSelect),
-              )
-              .toList();
-      final Map<String, List<MessageModel>> messagesPerPlayer = <String, List<MessageModel>>{
-        for (final Source s in messagePlayers) s.id: _projectViewModel.getMessagesForSource(s.id),
-      };
+      // Restore persisted display config (needed for settings tab, lightweight to load)
+      final ControllerDisplayConfig displayCfg = _projectViewModel.getControllerDisplayConfig(selected.id);
 
-      // Load schedules
-      final List<ScheduleConfig> allSchedules = _projectViewModel.getAllSchedules();
+      // ── Conditionally load: Tab-specific data ──────────────────────────────
 
-      // Keep the previously selected controller
-      final FusionController selected = _resolveController(controllers, preserveControllerId);
-      final _ZoneSelection sel = _buildZoneSelection(selected);
+      // Determine what data to load based on controller type and tab
+      final bool shouldLoadSnapshots =
+          isPro && (targetTab == ConfigControlTab.snapshotsScenes || (!isControllerSwitch && _loaded != null && _loaded!.sceneSets.isNotEmpty));
+      final bool shouldLoadMessages =
+          isPro && (targetTab == ConfigControlTab.message || (!isControllerSwitch && _loaded != null && _loaded!.messagePlayers.isNotEmpty));
+      final bool shouldLoadSchedules =
+          isPro && (targetTab == ConfigControlTab.schedule || (!isControllerSwitch && _loaded != null && _loaded!.allSchedules.isNotEmpty));
 
-      // Restore persisted schedule config for selected controller
-      final ControllerSchedulePageConfig schedCfg = _loadPersistedScheduleConfig(selected);
-      // Selected schedule IDs come from the controllerSchedules relationship
-      final Set<String> persistedScheduleIds = _projectViewModel.getSelectedScheduleIds(selected.id);
+      // ── Load Snapshot/Scene data ─────────────────────────────────────────
+      List<SceneSetModel> sceneSets;
+      Map<String, List<SnapshotsModel>> snapshotsInSceneSets;
+      List<SnapshotsModel> allSnapshots;
+      Map<String, List<SnapshotsModel>> snapshotsPerPage;
+      Set<String> usedSnapshotIds;
+      Set<String> selectedSceneSetIds;
+      String? selectedSceneSetId;
+      List<SnapshotPageModel> snapshotPages;
 
-      // Restore persisted display config (screen mode/saver/sleep) for selected controller
-      final ControllerDisplayConfig displayCfg = _loadPersistedDisplayConfig(selected);
+      if (shouldLoadSnapshots) {
+        sceneSets = _projectViewModel.getAllSceneSets();
+        snapshotsInSceneSets = <String, List<SnapshotsModel>>{
+          for (final SceneSetModel s in sceneSets) s.id: _projectViewModel.getSnapshotInSceneSet(sceneSetId: s.id),
+        };
+        allSnapshots = _projectViewModel.getAllSnapshots();
+        snapshotsPerPage = _computeSnapshotsPerPage(snapshotsInSceneSets);
+        usedSnapshotIds = _computeUsedSnapshotIds(snapshotsPerPage);
 
-      // ── Restore persisted pages data for the selected controller ──────────
-      final _PersistedPages persisted = _loadPersistedPages(selected, sceneSets);
-      final _PersistedMessagePages persistedMsg = _loadPersistedMessagePages(selected);
+        // Load persisted pages from relationship
+        final List<ControllerPageModel> controllerPages = _projectViewModel.getControllerPages(selected.id);
+        final Set<String> validSceneSetIds = sceneSets.map((SceneSetModel s) => s.id).toSet();
+        selectedSceneSetIds = <String>{};
+        snapshotPages = <SnapshotPageModel>[];
+
+        for (final ControllerPageModel page in controllerPages) {
+          if (page.type == ControllerPageType.sceneSet && validSceneSetIds.contains(page.id)) {
+            selectedSceneSetIds.add(page.id);
+          } else if (page.type == ControllerPageType.snapshotPage) {
+            final List<String> snapshotIds = _projectViewModel.getSnapshotIdsForPage(page.id).toList();
+            snapshotPages.add(SnapshotPageModel(id: page.id, name: page.name, snapshotIds: snapshotIds));
+          }
+        }
+
+        selectedSceneSetId =
+            isControllerSwitch
+                ? (sceneSets.isNotEmpty ? sceneSets.first.id : null)
+                : (_loaded?.selectedSceneSetId ?? (sceneSets.isNotEmpty ? sceneSets.first.id : null));
+      } else if (_loaded != null && _loaded!.sceneSets.isNotEmpty) {
+        // Preserve previously loaded data
+        sceneSets = _loaded!.sceneSets;
+        snapshotsInSceneSets = _loaded!.snapshotsInSceneSets;
+        allSnapshots = _loaded!.allSnapshots;
+        snapshotsPerPage = _loaded!.snapshotsPerPage;
+        usedSnapshotIds = _loaded!.usedSnapshotIds;
+        selectedSceneSetIds = _loaded!.selectedSceneSetIds;
+        selectedSceneSetId = _loaded!.selectedSceneSetId;
+        snapshotPages = _loaded!.snapshotPages;
+      } else {
+        // Empty defaults
+        sceneSets = const <SceneSetModel>[];
+        snapshotsInSceneSets = const <String, List<SnapshotsModel>>{};
+        allSnapshots = const <SnapshotsModel>[];
+        snapshotsPerPage = const <String, List<SnapshotsModel>>{};
+        usedSnapshotIds = const <String>{};
+        selectedSceneSetIds = const <String>{};
+        selectedSceneSetId = null;
+        snapshotPages = const <SnapshotPageModel>[];
+      }
+
+      // ── Load Message data ────────────────────────────────────────────────
+      List<Source> messagePlayers;
+      Map<String, List<MessageModel>> messagesPerPlayer;
+      Set<String> selectedMessagePlayerIds;
+      String? selectedMessagePageId;
+      Map<String, Set<String>> selectedMessageIdsPerPlayer;
+
+      if (shouldLoadMessages) {
+        messagePlayers =
+            _projectViewModel.sources
+                .where(
+                  (Source s) =>
+                      s.type == SourceType.paging &&
+                      (s.pagingSourceType == PagingSourceType.messagePlayer || s.pagingSourceType == PagingSourceType.messagePlayerWithZoneSelect),
+                )
+                .toList();
+        messagesPerPlayer = <String, List<MessageModel>>{
+          for (final Source s in messagePlayers) s.id: _projectViewModel.getMessagesForSource(s.id),
+        };
+
+        // Load persisted message selections from relationship
+        final List<ControllerPageModel> controllerPages = _projectViewModel.getControllerPages(selected.id);
+        selectedMessagePlayerIds = <String>{};
+        selectedMessageIdsPerPlayer = <String, Set<String>>{};
+
+        for (final ControllerPageModel page in controllerPages.where((ControllerPageModel p) => p.type == ControllerPageType.message)) {
+          selectedMessagePlayerIds.add(page.id);
+          selectedMessageIdsPerPlayer[page.id] = _projectViewModel.getMessageIdsForPage(page.id);
+        }
+
+        // Prefer in-memory when syncing IF it has data
+        final bool useInMemorySelections = !isControllerSwitch && _loaded != null && _loaded!.selectedMessageIdsPerPlayer.isNotEmpty;
+        if (useInMemorySelections) {
+          selectedMessagePlayerIds = _loaded!.selectedMessagePlayerIds;
+          selectedMessageIdsPerPlayer = _loaded!.selectedMessageIdsPerPlayer;
+          selectedMessagePageId = _loaded!.selectedMessagePageId;
+        } else {
+          selectedMessagePageId =
+              selectedMessagePlayerIds.isNotEmpty
+                  ? (isControllerSwitch ? selectedMessagePlayerIds.last : (_loaded?.selectedMessagePageId ?? selectedMessagePlayerIds.last))
+                  : null;
+        }
+      } else if (_loaded != null && _loaded!.messagePlayers.isNotEmpty) {
+        // Preserve previously loaded data
+        messagePlayers = _loaded!.messagePlayers;
+        messagesPerPlayer = _loaded!.messagesPerPlayer;
+        selectedMessagePlayerIds = _loaded!.selectedMessagePlayerIds;
+        selectedMessagePageId = _loaded!.selectedMessagePageId;
+        selectedMessageIdsPerPlayer = _loaded!.selectedMessageIdsPerPlayer;
+      } else {
+        // Empty defaults
+        messagePlayers = const <Source>[];
+        messagesPerPlayer = const <String, List<MessageModel>>{};
+        selectedMessagePlayerIds = const <String>{};
+        selectedMessagePageId = null;
+        selectedMessageIdsPerPlayer = const <String, Set<String>>{};
+      }
+
+      // ── Load Schedule data ───────────────────────────────────────────────
+      List<ScheduleConfig> allSchedules;
+      bool showUpcoming;
+      ScheduleDisplayMode scheduleDisplayMode;
+      Set<String> selectedScheduleIds;
+
+      if (shouldLoadSchedules) {
+        allSchedules = _projectViewModel.getAllSchedules();
+        final ControllerSchedulePageConfig schedCfg = _projectViewModel.getControllerScheduleConfig(selected.id);
+        showUpcoming = schedCfg.showUpcoming;
+        scheduleDisplayMode = ScheduleDisplayModeX.fromKey(schedCfg.displayMode);
+        selectedScheduleIds = _projectViewModel.getSelectedScheduleIds(selected.id);
+      } else if (_loaded != null && _loaded!.allSchedules.isNotEmpty) {
+        // Preserve previously loaded data
+        allSchedules = _loaded!.allSchedules;
+        showUpcoming = _loaded!.showUpcoming;
+        scheduleDisplayMode = _loaded!.scheduleDisplayMode;
+        selectedScheduleIds = _loaded!.selectedScheduleIds;
+      } else {
+        // Empty defaults
+        allSchedules = const <ScheduleConfig>[];
+        showUpcoming = false;
+        scheduleDisplayMode = ScheduleDisplayMode.all;
+        selectedScheduleIds = const <String>{};
+      }
 
       emit(
         ConfigControlLoaded(
           controllers: controllers,
           zones: zones,
           subZonesInZones: subZonesInZones,
+          // Snapshot/Scene data
           sceneSets: sceneSets,
           snapshotsInSceneSets: snapshotsInSceneSets,
           allSnapshots: allSnapshots,
           snapshotsPerPage: snapshotsPerPage,
           usedSnapshotIds: usedSnapshotIds,
-          selectedControllerId: selected.id,
-          selectedZoneIds: sel.zoneIds,
-          selectedZoneId: sel.zoneId,
-          selectedSubZoneIds: sel.subZoneIds,
-          activeSubZoneId: sel.activeSubZoneId,
-          currentTab: _resolveTab(_loaded?.currentTab ?? ConfigControlTab.zoneControl, selected),
-          searchQuery: _loaded?.searchQuery ?? '',
-          // Restore persisted scene-set checkbox selections
-          selectedSceneSetIds: persisted.selectedSceneSetIds,
-          // When switching controllers reset transient selections; otherwise preserve.
-          selectedSceneSetId:
-              isControllerSwitch
-                  ? (sceneSets.isNotEmpty ? sceneSets.first.id : null)
-                  : (_loaded?.selectedSceneSetId ?? (sceneSets.isNotEmpty ? sceneSets.first.id : null)),
+          selectedSceneSetIds: selectedSceneSetIds,
+          selectedSceneSetId: selectedSceneSetId,
           activeSnapshotId: isControllerSwitch ? null : _loaded?.activeSnapshotId,
-          // Restore persisted snapshot pages
-          snapshotPages: persisted.snapshotPages,
+          snapshotPages: snapshotPages,
           selectedSnapshotPageId: isControllerSwitch ? null : _loaded?.selectedSnapshotPageId,
-          // Message player state (restore persisted selections)
+          // Controller/Zone selection
+          selectedControllerId: selected.id,
+          selectedZoneIds: selectedZoneIds,
+          selectedZoneId: selectedZoneIds.isNotEmpty ? selectedZoneIds.first : null,
+          selectedSubZoneIds: selectedSubZoneIds,
+          activeSubZoneId: selectedSubZoneIds.isNotEmpty ? selectedSubZoneIds.first : null,
+          currentTab: _resolveTab(targetTab, selected),
+          searchQuery: _loaded?.searchQuery ?? '',
+          // Message player state
           messagePlayers: messagePlayers,
           messagesPerPlayer: messagesPerPlayer,
-          selectedMessagePlayerIds: persistedMsg.selectedMessagePlayerIds,
-          selectedMessagePageId:
-              persistedMsg.selectedMessagePlayerIds.isNotEmpty
-                  ? (isControllerSwitch
-                      ? persistedMsg.selectedMessagePlayerIds.last
-                      : (_loaded?.selectedMessagePageId ?? persistedMsg.selectedMessagePlayerIds.last))
-                  : null,
-          selectedMessageIdsPerPlayer: persistedMsg.selectedMessageIdsPerPlayer,
-          // Schedule state (restore persisted config)
+          selectedMessagePlayerIds: selectedMessagePlayerIds,
+          selectedMessagePageId: selectedMessagePageId,
+          selectedMessageIdsPerPlayer: selectedMessageIdsPerPlayer,
+          // Schedule state
           allSchedules: allSchedules,
-          showUpcoming: schedCfg.showUpcoming,
-          scheduleDisplayMode: ScheduleDisplayModeX.fromKey(schedCfg.displayMode),
-          selectedScheduleIds: persistedScheduleIds,
-          // Display config (restore per-controller settings)
+          showUpcoming: showUpcoming,
+          scheduleDisplayMode: scheduleDisplayMode,
+          selectedScheduleIds: selectedScheduleIds,
+          // Display config
           screenMode: ScreenModeX.fromKey(displayCfg.screenMode),
           screenSaver: ScreenSaverOptionLabel.fromKey(displayCfg.screenSaver),
           sleepTime: displayCfg.sleepTime,
@@ -171,8 +298,7 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
 
       final SubZone? sub = _projectViewModel.getSubZoneForListeningArea(areaId: areaId);
       if (sub != null) {
-        final Zone? parent = _projectViewModel.getZoneForSubZone(subZoneId: sub.id);
-        return /*parent != null ? '${parent.name} > ${sub.name}' :*/ sub.name;
+        return sub.name;
       }
     }
     return _projectViewModel.getEquipLocationForHardware(hardwareId: controller.id)?.name ?? '--';
@@ -336,10 +462,37 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
 
   // ─── Tab / search ──────────────────────────────────────────────────────────
 
+  /// Change tab and lazy-load data if needed.
   void changeTab(ConfigControlTab tab) {
     final ConfigControlLoaded? loaded = _loaded;
     if (loaded == null) return;
-    emit(loaded.copyWith(currentTab: tab));
+
+    // Check if we need to load data for this tab
+    final bool isPro = loaded.isProController;
+    bool needsDataLoad = false;
+
+    // Check if tab-specific data needs to be loaded
+    // We need to load if:
+    // 1. Controller is Pro
+    // 2. Tab requires specific data
+    // 3. Data hasn't been loaded yet (empty list AND not the current/previous tab)
+    if (isPro) {
+      if (tab == ConfigControlTab.snapshotsScenes && loaded.sceneSets.isEmpty) {
+        needsDataLoad = true;
+      } else if (tab == ConfigControlTab.message && loaded.messagePlayers.isEmpty) {
+        needsDataLoad = true;
+      } else if (tab == ConfigControlTab.schedule && loaded.allSchedules.isEmpty) {
+        needsDataLoad = true;
+      }
+    }
+
+    if (needsDataLoad) {
+      // Load data for the new tab
+      _loadData(preserveControllerId: loaded.selectedControllerId, forTab: tab);
+    } else {
+      // Just update the tab without reloading
+      emit(loaded.copyWith(currentTab: tab));
+    }
   }
 
   void updateSearchQuery(String query) {
@@ -528,10 +681,6 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
 
   // ─── Persistence helpers (schedule config) ────────────────────────────────
 
-  ControllerSchedulePageConfig _loadPersistedScheduleConfig(FusionController controller) {
-    return _projectViewModel.getControllerScheduleConfig(controller.id);
-  }
-
   void _persistScheduleConfig(ConfigControlLoaded state) {
     if (state.selectedControllerId == null) return;
     _projectViewModel.setControllerScheduleConfig(
@@ -549,10 +698,6 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
   }
 
   // ─── Persistence helpers (display config) ─────────────────────────────────
-
-  ControllerDisplayConfig _loadPersistedDisplayConfig(FusionController controller) {
-    return _projectViewModel.getControllerDisplayConfig(controller.id);
-  }
 
   void _persistDisplayConfig(ConfigControlLoaded state) {
     if (state.selectedControllerId == null) return;
@@ -709,12 +854,6 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
     return usedIds;
   }
 
-  Map<String, List<SnapshotsModel>> _buildSnapshotsInSceneSetsMap(List<SceneSetModel> sceneSets) {
-    return <String, List<SnapshotsModel>>{
-      for (final SceneSetModel s in sceneSets) s.id: _projectViewModel.getSnapshotInSceneSet(sceneSetId: s.id),
-    };
-  }
-
   // ─── Query helpers (called by child widgets) ───────────────────────────────
 
   List<Zone> getZonesForController(String controllerId) => _loaded?.zones ?? <Zone>[];
@@ -753,27 +892,6 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
     return available.contains(tab) ? tab : ConfigControlTab.zoneControl;
   }
 
-  _ZoneSelection _buildZoneSelection(FusionController controller) {
-    // All zone assignments are stored exclusively in the controllerAssignedZones relationship.
-    final Set<String> assigned = _projectViewModel.getAssignedZoneIds(controller.id);
-
-    final Set<String> allSubZoneIds = _projectViewModel.subZones.map((SubZone s) => s.id).toSet();
-
-    final Set<String> zoneIds = <String>{};
-    final Set<String> subZoneIds = <String>{};
-
-    for (final String id in assigned) {
-      (allSubZoneIds.contains(id) ? subZoneIds : zoneIds).add(id);
-    }
-
-    return _ZoneSelection(
-      zoneIds: zoneIds,
-      zoneId: zoneIds.isNotEmpty ? zoneIds.first : null,
-      subZoneIds: subZoneIds,
-      activeSubZoneId: subZoneIds.isNotEmpty ? subZoneIds.first : null,
-    );
-  }
-
   Map<String, List<SubZone>> _buildSubZonesMap(List<Zone> zones) {
     return <String, List<SubZone>>{
       for (final Zone zone in zones) zone.id: _projectViewModel.getSubZonesForZone(parentZoneId: zone.id),
@@ -781,34 +899,6 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
   }
 
   // ─── Persistence helpers (controllerPages) ────────────────────────────────
-
-  /// Loads scene-set and snapshot pages from the [ControllerPageRepository].
-  /// Snapshot IDs for each page come from the [controllerPageSnapshots] relationship.
-  _PersistedPages _loadPersistedPages(
-    FusionController controller,
-    List<SceneSetModel> sceneSets,
-  ) {
-    final List<ControllerPageModel> allPages = _projectViewModel.getControllerPages(controller.id);
-    final Set<String> validSceneSetIds = sceneSets.map((SceneSetModel s) => s.id).toSet();
-
-    final Set<String> selectedSceneSetIds = <String>{};
-    final List<SnapshotPageModel> snapshotPages = <SnapshotPageModel>[];
-
-    for (final ControllerPageModel page in allPages) {
-      if (page.type == ControllerPageType.sceneSet) {
-        if (validSceneSetIds.contains(page.id)) {
-          selectedSceneSetIds.add(page.id);
-        }
-      } else if (page.type == ControllerPageType.snapshotPage) {
-        // Fetch snapshot IDs from the relationship — NOT stored on the model
-        final List<String> snapshotIds = _projectViewModel.getSnapshotIdsForPage(page.id).toList();
-        snapshotPages.add(SnapshotPageModel(id: page.id, name: page.name, snapshotIds: snapshotIds));
-      }
-      // message pages are handled by _loadPersistedMessagePages
-    }
-
-    return _PersistedPages(selectedSceneSetIds: selectedSceneSetIds, snapshotPages: snapshotPages);
-  }
 
   /// Persists scene-set and snapshot pages.
   /// Preserves existing message pages so they are not overwritten.
@@ -848,25 +938,6 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
 
   // ─── Persistence helpers (message pages) ──────────────────────────────────
 
-  /// Loads message-player pages from the [ControllerPageRepository].
-  /// Selected message IDs come from the [controllerPageMessages] relationship.
-  _PersistedMessagePages _loadPersistedMessagePages(FusionController controller) {
-    final List<ControllerPageModel> allPages = _projectViewModel.getControllerPages(controller.id);
-
-    final Set<String> selectedPlayerIds = <String>{};
-    final Map<String, Set<String>> selectedMessageIdsPerPlayer = <String, Set<String>>{};
-
-    for (final ControllerPageModel page in allPages.where((ControllerPageModel p) => p.type == ControllerPageType.message)) {
-      selectedPlayerIds.add(page.id); // page.id == sourceId for message pages
-      selectedMessageIdsPerPlayer[page.id] = _projectViewModel.getMessageIdsForPage(page.id);
-    }
-
-    return _PersistedMessagePages(
-      selectedMessagePlayerIds: selectedPlayerIds,
-      selectedMessageIdsPerPlayer: selectedMessageIdsPerPlayer,
-    );
-  }
-
   /// Persists message-player pages.
   /// Preserves existing scene-set and snapshot pages so they are not overwritten.
   /// Selected message IDs are stored in the [controllerPageMessages] relationship.
@@ -896,40 +967,4 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
       );
     }
   }
-}
-
-// ─── Private value objects ─────────────────────────────────────────────────────
-
-class _PersistedPages {
-  final Set<String> selectedSceneSetIds;
-  final List<SnapshotPageModel> snapshotPages;
-
-  const _PersistedPages({
-    required this.selectedSceneSetIds,
-    required this.snapshotPages,
-  });
-}
-
-class _PersistedMessagePages {
-  final Set<String> selectedMessagePlayerIds;
-  final Map<String, Set<String>> selectedMessageIdsPerPlayer;
-
-  const _PersistedMessagePages({
-    required this.selectedMessagePlayerIds,
-    required this.selectedMessageIdsPerPlayer,
-  });
-}
-
-class _ZoneSelection {
-  final Set<String> zoneIds;
-  final String? zoneId;
-  final Set<String> subZoneIds;
-  final String? activeSubZoneId;
-
-  const _ZoneSelection({
-    required this.zoneIds,
-    required this.zoneId,
-    required this.subZoneIds,
-    required this.activeSubZoneId,
-  });
 }
