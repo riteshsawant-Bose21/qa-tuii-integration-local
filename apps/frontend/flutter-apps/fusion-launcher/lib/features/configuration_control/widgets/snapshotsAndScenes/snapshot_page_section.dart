@@ -113,43 +113,11 @@ class _SnapshotPageItem extends StatelessWidget {
             child: FusionAppText(text: page.name, style: Theme.of(context).textTheme.l1Regular),
           ),
           FusionKebabPopup(
+            semanticId: 'snapshot_page_item',
             onDelete: onDelete,
           ),
         ],
       ),
-    );
-  }
-}
-
-class _PageContextMenu extends StatelessWidget {
-  final SnapshotPageModel page;
-  final VoidCallback onDelete;
-
-  const _PageContextMenu({required this.page, required this.onDelete});
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
-      icon: Icon(Icons.more_vert, size: 16, color: context.colorScheme.iconDefault),
-      color: context.colorScheme.elevation2,
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(minWidth: 140),
-      itemBuilder:
-          (_) => <PopupMenuEntry<String>>[
-            PopupMenuItem<String>(
-              value: 'delete',
-              child: Row(
-                children: <Widget>[
-                  Icon(Icons.delete_outline, size: 16, color: context.colorScheme.errorText),
-                  const SizedBox(width: 8),
-                  Text('Delete', style: TextStyle(color: context.colorScheme.errorText, fontSize: 13)),
-                ],
-              ),
-            ),
-          ],
-      onSelected: (String value) {
-        if (value == 'delete') onDelete();
-      },
     );
   }
 }

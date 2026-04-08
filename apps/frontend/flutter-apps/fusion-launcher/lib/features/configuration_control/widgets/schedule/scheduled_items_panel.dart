@@ -99,7 +99,7 @@ class _CheckboxRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
           children: <Widget>[
-            _FusionCheckbox(isChecked: isChecked),
+            FusionCheckbox(semanticId: 'schedule_item_show_upcoming_checkbox', value: isChecked, onChanged: onTap),
             const SizedBox(width: 10),
             FusionAppText(
               text: label,
@@ -133,7 +133,12 @@ class _RadioRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           children: <Widget>[
-            _RadioIndicator(isSelected: isSelected),
+            FusionCheckbox(
+              semanticId: 'schedule_item_show_checkbox',
+              value: isSelected,
+              onChanged: onTap,
+              shape: BoxShape.circle,
+            ),
             const SizedBox(width: 10),
             FusionAppText(
               text: label,

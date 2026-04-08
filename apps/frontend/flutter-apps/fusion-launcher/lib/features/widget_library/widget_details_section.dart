@@ -3713,6 +3713,7 @@ const FusionSvgIcon(
         _buildWithCopy(
           context: context,
           preview: FusionKebabPopup(
+            semanticId: 'example1',
             onEdit: () => print('edit'),
             onDuplicate: () => print('duplicate'),
             onDelete: () => print('delete'),
@@ -3730,6 +3731,7 @@ const FusionSvgIcon(
         _buildWithCopy(
           context: context,
           preview: FusionKebabPopup(
+            semanticId: 'example2',
             onEdit: () => print('edit'),
             onDuplicate: () => print('duplicate'),
           ),

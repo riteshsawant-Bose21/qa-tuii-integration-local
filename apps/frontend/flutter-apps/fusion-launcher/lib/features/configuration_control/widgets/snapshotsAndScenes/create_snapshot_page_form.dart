@@ -123,7 +123,7 @@ class _CreateSnapshotPageDialogState extends State<_CreateSnapshotPageDialog> {
             label: 'Name',
             borderRadius: 8,
             variant: FusionFieldVariant.neumorphic,
-            semanticId: '',
+            semanticId: 'create_snapshot_page_name_field',
             controller: _nameController,
             height: 24,
           ),
@@ -160,7 +160,7 @@ class _CreateSnapshotPageDialogState extends State<_CreateSnapshotPageDialog> {
               height: 32,
               text: 'Create',
               textstyle: context.textTheme.l1Regular,
-              semanticId: '',
+              semanticId: 'create_snapshot_page_create_button',
               borderRadius: 8,
               style: FusionAppButtonStyle.neumorphic,
               onPressed: _onCreate,
@@ -169,24 +169,6 @@ class _CreateSnapshotPageDialogState extends State<_CreateSnapshotPageDialog> {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ─── Name text field ──────────────────────────────────────────────────────────
-
-class _NameField extends StatelessWidget {
-  final TextEditingController controller;
-
-  const _NameField({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return FusionCustomTextField(
-      variant: FusionFieldVariant.neumorphic,
-      semanticId: '',
-      controller: controller,
-      height: 30,
     );
   }
 }
@@ -209,8 +191,9 @@ class _SnapshotCheckboxList extends StatelessWidget {
     if (snapshots.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Text(
-          'No available snapshots',
+        child: FusionAppText(
+          semanticId: 'create_snapshot_page_no_snapshots',
+          text: 'No available snapshots',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: context.colorScheme.textSecondary,
           ),
@@ -263,7 +246,7 @@ class _SnapshotCheckboxItem extends StatelessWidget {
         child: Row(
           children: <Widget>[
             FusionCheckbox(
-              semanticId: '',
+              semanticId: 'create_snapshot_page_snapshot_item_checkbox',
               width: 16,
               height: 16,
               onChanged: onToggle,
@@ -280,60 +263,6 @@ class _SnapshotCheckboxItem extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Checkbox icon ─────────────────────────────────────────────────────────────
-
-class _CheckboxIcon extends StatelessWidget {
-  final bool isChecked;
-  const _CheckboxIcon({required this.isChecked});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 120),
-      width: 18,
-      height: 18,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(4),
-        color: isChecked ? context.colorScheme.primaryColor : Colors.transparent,
-        border: Border.all(
-          color: isChecked ? context.colorScheme.primaryColor : context.colorScheme.iconDefault,
-          width: 1.5,
-        ),
-      ),
-      child: isChecked ? Icon(Icons.check, size: 12, color: context.colorScheme.primaryWhite) : null,
-    );
-  }
-}
-
-// ─── Create button ─────────────────────────────────────────────────────────────
-
-class _CreateButton extends StatelessWidget {
-  final VoidCallback onPressed;
-  const _CreateButton({required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-        decoration: BoxDecoration(
-          color: context.colorScheme.elevation3,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: context.colorScheme.strokeLight, width: 1),
-        ),
-        child: Text(
-          'Create',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: context.colorScheme.textPrimary,
-            fontWeight: FontWeight.w500,
-          ),
         ),
       ),
     );

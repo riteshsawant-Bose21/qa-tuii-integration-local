@@ -121,6 +121,7 @@ class _ZoneItemWidgetState extends State<ZoneItemWidget> {
                 );
               },
               child: FusionIcon.svg(
+                semanticId: 'zone_item_setting_icon',
                 "assets/svg/Settings.svg",
                 size: 16,
                 color: context.colorScheme.iconWhite,
@@ -143,7 +144,7 @@ class _ZoneItemWidgetState extends State<ZoneItemWidget> {
       );
     } else {
       return FusionCheckbox(
-        semanticId: '',
+        semanticId: 'zone_control_item_checkbox',
         value: widget.isSelected,
         shape: BoxShape.circle,
         onChanged: () {

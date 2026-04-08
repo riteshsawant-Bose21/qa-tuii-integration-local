@@ -10,15 +10,15 @@ class FusionKebabPopup extends StatefulWidget {
     this.onDelete,
     this.iconSize = 18,
     this.popupOffset = const Offset(0, 4),
-    this.semanticsId,
+    required this.semanticId,
   });
 
   final VoidCallback? onEdit;
+  final String semanticId;
   final VoidCallback? onDuplicate;
   final VoidCallback? onDelete;
   final double iconSize;
   final Offset popupOffset;
-  final String? semanticsId;
 
   @override
   State<FusionKebabPopup> createState() => _FusionKebabPopupState();
@@ -164,30 +164,33 @@ class _FusionKebabPopupState extends State<FusionKebabPopup> {
   Widget build(BuildContext context) {
     if (_menuItems.isEmpty) return const SizedBox.shrink();
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: GestureDetector(
-        onTapDown: (_) => _showPopup(),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: _isMenuOpen
-                ? context.colorScheme.elevation3
-                : _isHovered
-                ? context.colorScheme.elevation2
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Icon(
-            LucideIcons.ellipsisVertical,
-            size: widget.iconSize,
-            color: _isMenuOpen
-                ? context.colorScheme.textPrimary
-                : _isHovered
-                ? context.colorScheme.textPrimary
-                : context.colorScheme.textSecondary,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, 'fusion_kebab_popup_${widget.semanticId}'),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: GestureDetector(
+          onTapDown: (_) => _showPopup(),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: _isMenuOpen
+                  ? context.colorScheme.elevation3
+                  : _isHovered
+                  ? context.colorScheme.elevation2
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(
+              LucideIcons.ellipsisVertical,
+              size: widget.iconSize,
+              color: _isMenuOpen
+                  ? context.colorScheme.textPrimary
+                  : _isHovered
+                  ? context.colorScheme.textPrimary
+                  : context.colorScheme.textSecondary,
+            ),
           ),
         ),
       ),

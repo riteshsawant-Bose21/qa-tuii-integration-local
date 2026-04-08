@@ -73,7 +73,7 @@ class _SceneSetItem extends StatelessWidget {
         children: <Widget>[
           Padding(
             padding: const EdgeInsets.only(right: 10),
-            child: FusionCheckbox(semanticId: '', value: isChecked, onChanged: onToggle),
+            child: FusionCheckbox(semanticId: 'scene_section_item_checkbox', value: isChecked, onChanged: onToggle),
           ),
           Expanded(
             child: FusionAppText(
@@ -86,28 +86,6 @@ class _SceneSetItem extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _FusionCheckbox extends StatelessWidget {
-  final bool isChecked;
-  const _FusionCheckbox({required this.isChecked});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 16,
-      height: 16,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(3),
-        border: Border.all(
-          color: isChecked ? context.colorScheme.primaryColor : context.colorScheme.iconDefault,
-          width: 1.5,
-        ),
-        color: isChecked ? context.colorScheme.primaryColor : Colors.transparent,
-      ),
-      child: isChecked ? Icon(Icons.check, size: 11, color: context.colorScheme.primaryWhite) : null,
     );
   }
 }
