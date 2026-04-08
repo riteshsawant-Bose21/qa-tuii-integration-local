@@ -27,6 +27,7 @@ function show_help() {
     echo "  --udp               Run only UDP tests"     
     echo "  --udp-chaos         Run UDP chaos mesh test (multi-node virtual devices + fault injection)"
     echo "  --vip-api           Run VIP REST API tests"
+    echo "  --vip-bootstrap     Run VIP bootstrap tests (resets VIP on all nodes)"
     echo "  --vip-convergence   Run VIP/mDNS convergence tests"
     echo "  --websocket         Run only websocket tests"
     exit 1
@@ -58,7 +59,8 @@ while [[ $# -gt 0 ]]; do
         --tasks)            test_type="tasks"; shift ;;
         --udp)              test_type="udp"; shift ;;
         --udp-chaos)        test_type="udp-chaos"; shift ;;
-        --vip-api)          test_type="vip-api"; shift ;;
+        --vip-api)          test_type="vip-api"; shift ;;       
+        --vip-bootstrap)    test_type="vip-bootstrap"; shift ;;        
         --vip-convergence)  test_type="vip-convergence"; shift ;;
         --websocket)        test_type="websocket"; shift ;;
         --integration)      test_type="integration"; shift ;;
@@ -127,6 +129,7 @@ function test_file_for_type() {
         udp)          echo "udp_test.go" ;;
         udp-chaos)    echo "udp_chaos_test.go" ;;
         vip-api)      echo "vip_endpoints_test.go" ;;
+        vip-bootstrap)   echo "bootstrap_vip_test.go" ;;
         vip-convergence) echo "setup_vip_test.go" ;;
         websocket)    echo "websocket_test.go" ;;
         integration)  echo "integration tests" ;;
@@ -227,6 +230,7 @@ case "$test_type" in
     tasks)        run_package_tests "$(regex_for_test_file ./tasks_test.go)" ;;
     udp)          run_package_tests "$(regex_for_test_file ./udp_test.go)" ;;
     vip-api)      run_package_tests "$(regex_for_test_file ./vip_endpoints_test.go)" ;;
+    vip-bootstrap)   run_package_tests "$(regex_for_test_file ./bootstrap_vip_test.go)" ;;
     vip-convergence) run_package_tests "$(regex_for_test_file ./setup_vip_test.go)" ;;
     udp-chaos)
         export FUSION_UDP_CHAOS_TEST=1

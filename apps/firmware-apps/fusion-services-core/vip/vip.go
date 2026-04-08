@@ -15,6 +15,22 @@ const DefaultConfFile = "keepalived.conf"
 
 var ErrLocalConfigEmpty = errors.New("local config is empty")
 
+// IsPlaceholder returns true if the VIP string is a known placeholder value
+// (e.g. "VIP_NOT_SET/24") or cannot be parsed as a valid IP/CIDR.
+// An empty string is not a placeholder — it indicates no VIP is configured.
+func IsPlaceholder(v string) bool {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return false
+	}
+	// Check for the well-known placeholder prefix
+	if strings.HasPrefix(strings.ToUpper(v), "VIP_NOT_SET") {
+		return true
+	}
+	// Anything that fails validation is effectively a placeholder
+	return Validate(v) != nil
+}
+
 // Canonicalize normalizes a VIP string to a plain IPv4 address or returns "".
 // "192.168.2.100/24" becomes "192.168.2.100".
 func Canonicalize(s string) string {
