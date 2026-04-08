@@ -5,6 +5,7 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../projects/view_model/block_data/block_data_viewmodel.dart';
 import '../zone_function_settings/select_settings/select_settings.dart';
 import 'source_mix.dart';
 import 'widgets/priority_selection_widget.dart';
@@ -281,6 +282,11 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                                         projectViewModel.selectSourceForFunction(
                                                                           functionId: zoneFunction!.id,
                                                                           sourceId: source.id,
+                                                                        );
+                                                                        serviceLocator<BlockDataViewmodel>().updateBlockParameter(
+                                                                          blockId: widget.zoneID,
+                                                                          parameter: 'input',
+                                                                          value: index + 1,
                                                                         );
                                                                       },
                                                                       child: SemanticHelper.toggle(
