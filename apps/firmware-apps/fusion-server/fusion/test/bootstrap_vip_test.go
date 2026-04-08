@@ -138,7 +138,7 @@ func verifyAllNodesHaveVIPConfig(t *testing.T, expectedVIP string) {
 
 	for _, node := range clusterConfig.nodes {
 		output, err := runMultipassCommandOnInstance(t, node.name,
-			fmt.Sprintf("grep -E '%s' /etc/keepalived/keepalived.conf", expectedVIP))
+			fmt.Sprintf("grep -F '%s' /etc/keepalived/keepalived.conf", expectedVIP))
 		if err != nil {
 			t.Errorf("Node %s: keepalived.conf does not contain VIP %s: %v\noutput: %s",
 				node.name, expectedVIP, err, output)
