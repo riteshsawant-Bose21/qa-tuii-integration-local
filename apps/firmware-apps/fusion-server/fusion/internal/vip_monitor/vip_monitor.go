@@ -29,6 +29,20 @@ const (
 	serverPrefix = "fusion"
 )
 
+type masterPriorityMode string
+
+const (
+	masterPriorityModeLow     masterPriorityMode = api.VIPLowPriority
+	masterPriorityModeDefault masterPriorityMode = api.VIPDefaultPriority
+	masterPriorityModeHigh    masterPriorityMode = api.VIPHighPriority
+)
+
+var masterPriorityModeToValue = map[masterPriorityMode]int{
+	masterPriorityModeLow:     api.VIPvrrpLowPriority,
+	masterPriorityModeDefault: api.VIPvrrpDefaultPriority,
+	masterPriorityModeHigh:    api.VIPvrrpHighPriority,
+}
+
 type VIPOperationPhase string
 
 const (
@@ -189,6 +203,34 @@ func NewVIPMonitor(netIface string, isLocal bool, cluster transport.ClusterInter
 	}
 }
 
+func parseMasterPriorityMode(modeValue string) (int, error) {
+	normalized := strings.TrimSpace(strings.ToLower(modeValue))
+	mode := masterPriorityMode(normalized)
+	priority, ok := masterPriorityModeToValue[mode]
+	if !ok {
+		return 0, fmt.Errorf("invalid mode value %q; expected %s|%s|%s", modeValue, api.VIPLowPriority, api.VIPDefaultPriority, api.VIPHighPriority)
+	}
+
+	return priority, nil
+}
+
+func (m *VIPMonitor) setMasterPriority(priority int, modeValue string) error {
+	if m.isLocal {
+		logging.GetLogger().Debug("Skipping keepalived priority update in local mode (mode=%q priority=%d)", modeValue, priority)
+		return nil
+	}
+
+	if err := vip.WritePriorityToKeepalivedConfig(m.configPath, priority); err != nil {
+		return fmt.Errorf("failed to update keepalived priority: %w", err)
+	}
+
+	if err := m.reloadKeepalived(); err != nil {
+		return fmt.Errorf("failed to reload keepalived after priority update: %w", err)
+	}
+
+	return nil
+}
+
 // SetCallback sets the callback function for VIP state changes
 func (m *VIPMonitor) SetCallback(callback func(VIPEvent)) {
 	m.stateMu.Lock()
@@ -208,6 +250,13 @@ func (m *VIPMonitor) GetVIPHolder() string {
 	m.stateMu.RLock()
 	defer m.stateMu.RUnlock()
 	return m.currentHolder
+}
+
+func (m *VIPMonitor) GetKeepalivedPriority() (int, error) {
+	if m.isLocal {
+		return 0, fmt.Errorf("keepalived priority not available in local mode")
+	}
+	return vip.ReadPriorityFromKeepalivedConfig(m.configPath)
 }
 
 // IsLocalVIPHolder returns true if this node currently owns the VIP
@@ -1554,6 +1603,112 @@ func (m *VIPMonitor) HandleReloadVIP(w http.ResponseWriter, r *http.Request) {
 			logging.GetLogger().Error("Failed to reload VIP: %v", err)
 		}
 	}()
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// HandleSetMasterPriorityLocal handles POST /devices/{id}/vip/master-priority/{mode} on admin port.
+func (m *VIPMonitor) HandleSetMasterPriorityLocal(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+	defer r.Body.Close()
+
+	deviceID, err := utils.ExtractId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	localID := m.clusterInterface.GetDeviceInfoLocal().Id
+	if localID == "" || localID != deviceID {
+		http.Error(w, fmt.Sprintf("device %s not found on this node", deviceID), http.StatusNotFound)
+		return
+	}
+
+	modeValue, err := utils.ExtractValue(r, "mode")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	priority, err := parseMasterPriorityMode(modeValue)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := m.setMasterPriority(priority, modeValue); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// HandleSetMasterPriority handles POST /devices/{id}/vip/master-priority/{mode}.
+func (m *VIPMonitor) HandleSetMasterPriority(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+	defer r.Body.Close()
+
+	deviceID, err := utils.ExtractId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	modeValue, err := utils.ExtractValue(r, "mode")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	priority, err := parseMasterPriorityMode(modeValue)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	endpoint := routes.DevicesIDVIPMasterPriorityEndpoint
+	endpoint = strings.Replace(endpoint, "{mode}", url.PathEscape(modeValue), 1)
+
+	localFn := func(payload []byte) error {
+		return m.setMasterPriority(priority, modeValue)
+	}
+
+	httpClient := &http.Client{
+		Timeout: api.HTTPTimeout,
+	}
+
+	remoteFn := func(payload []byte, targetURL string) error {
+		req, err := http.NewRequest(http.MethodPost, targetURL, nil)
+		if err != nil {
+			return fmt.Errorf("failed to create POST request: %w", err)
+		}
+
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			return fmt.Errorf("master priority POST failed: %w", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusNoContent {
+			return fmt.Errorf("master priority POST failed with status %d", resp.StatusCode)
+		}
+
+		return nil
+	}
+
+	if err := m.clusterInterface.DoGenericToTargetDevice(deviceID, endpoint, nil, localFn, remoteFn); err != nil {
+		status := http.StatusBadGateway
+		if strings.Contains(strings.ToLower(err.Error()), "not found") {
+			status = http.StatusNotFound
+		}
+		http.Error(w, err.Error(), status)
+		return
+	}
 
 	w.WriteHeader(http.StatusNoContent)
 }
