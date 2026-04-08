@@ -1,9 +1,12 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../projects/viewmodel/building_page_viewmodel.dart';
 import '../viewmodel/add_speaker_view_model.dart';
@@ -70,12 +73,44 @@ class SpeakerSelectionPopupState extends State<SpeakerSelectionPopup> {
           color: context.colorScheme.elevation1,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
           children: <Widget>[
-            const Expanded(child: SpeakerListeningAreaProperties()),
-            const SizedBox(width: 8),
-            Expanded(child: ProductQuerySpeakerList(searchController: searchController)),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: FusionAppText(
+                    text: "Select Speaker",
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: context.colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                SemanticHelper.button(
+                  testId: SemanticHelper.createTestId(SemanticTypes.button, "close_dropdown_button"),
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: const Padding(
+                        padding: EdgeInsets.all(2.0),
+                        child: Icon(LucideIcons.x200, size: 16),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Expanded(child: SpeakerListeningAreaProperties()),
+                  const SizedBox(width: 8),
+                  Expanded(child: ProductQuerySpeakerList(searchController: searchController)),
+                ],
+              ),
+            ),
           ],
         ),
       ),

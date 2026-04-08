@@ -12,13 +12,14 @@ import (
 
 // AppConfig represents application configuration data
 type AppConfig struct {
-	NodeName string
-	BindAddr string
-	BindPort int
-	NetIface string
-	Local    bool
-	Profile  bool
-	Verbose  bool
+	NodeName       string
+	BindAddr       string
+	BindPort       int
+	NetIface       string
+	Local          bool
+	Profile        bool
+	UDPDiagnostics bool
+	Verbose        bool
 }
 
 func (a *AppConfig) SelfUrl() string {

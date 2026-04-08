@@ -64,7 +64,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       final int? productId = sp.productId;
       if (productId == null) continue;
 
-      final SpeakerProduct? product = pq.speakers.where((SpeakerProduct s) => s.id == productId).firstOrNull;
+      final SpeakerProduct? product = pq.speakers.where((SpeakerProduct s) => s.productId == productId).firstOrNull;
       if (la.lowFrequency == LowFrequency.withSubwoofer) {
         if (product?.isSubwoofer == true) {
           subwooferProductId ??= productId;
@@ -148,7 +148,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       //   full-range → withSubwoofer: they become mid-high speakers
       //   withSubwoofer → full-range: mid-high speakers become full-range speakers
       for (final Speaker sp in existing) {
-        final SpeakerProduct? product = sp.productId != null ? pq.speakers.where((SpeakerProduct s) => s.id == sp.productId).firstOrNull : null;
+        final SpeakerProduct? product = sp.productId != null ? pq.speakers.where((SpeakerProduct s) => s.productId == sp.productId).firstOrNull : null;
         if (product != null && product.isSubwoofer) {
           pvm.removeHardware(hardwareId: sp.id);
         }
@@ -289,9 +289,9 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
 
     final LowFrequency? lf = selectedListeningArea?.lowFrequency;
     if (lf == LowFrequency.withSubwoofer && state.selectedTab == 1) {
-      emit(state.copyWith(suggestedSubwooferProductId: product.id));
+      emit(state.copyWith(suggestedSubwooferProductId: product.productId));
     } else {
-      emit(state.copyWith(suggestedProductId: product.id));
+      emit(state.copyWith(suggestedProductId: product.productId));
     }
   }
 
@@ -483,7 +483,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       final List<Speaker> midHigh = <Speaker>[];
       final List<Speaker> subwoofer = <Speaker>[];
       for (final Speaker sp in allPlaced) {
-        final SpeakerProduct? product = sp.productId != null ? pq.speakers.where((SpeakerProduct s) => s.id == sp.productId).firstOrNull : null;
+        final SpeakerProduct? product = sp.productId != null ? pq.speakers.where((SpeakerProduct s) => s.productId == sp.productId).firstOrNull : null;
         if (product != null && product.isSubwoofer) {
           subwoofer.add(sp);
         } else {
@@ -575,7 +575,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     final String query = state.searchQuery.trim().toLowerCase();
     if (query.isNotEmpty) {
       filtered = filtered.where((SpeakerProduct p) {
-        final String hay = '${p.modelName} ${p.description} ${p.shortDescription ?? ''}'.toLowerCase();
+        final String hay = '${p.modelName} ${p.description}'.toLowerCase();
         return hay.contains(query);
       });
     }
@@ -678,12 +678,12 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
         case SpeakerSortOption.nameDesc:
           return b.modelName.toLowerCase().compareTo(a.modelName.toLowerCase());
         case SpeakerSortOption.priceLowToHigh:
-          final double ap = pq.getPrice(a.id);
-          final double bp = pq.getPrice(b.id);
+          final double ap = pq.getPrice(a.productId);
+          final double bp = pq.getPrice(b.productId);
           return ap.compareTo(bp);
         case SpeakerSortOption.priceHighToLow:
-          final double ap = pq.getPrice(a.id);
-          final double bp = pq.getPrice(b.id);
+          final double ap = pq.getPrice(a.productId);
+          final double bp = pq.getPrice(b.productId);
           return bp.compareTo(ap);
         case SpeakerSortOption.maxSplHighToLow:
           final double am = maxSplValue(a.maxSpl);
@@ -751,7 +751,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       final ProductQueryViewModel pq = serviceLocator<ProductQueryViewModel>();
 
       bool isSpeakerSubwoofer(Speaker sp) {
-        final SpeakerProduct? p = sp.productId != null ? pq.speakers.where((SpeakerProduct s) => s.id == sp.productId).firstOrNull : null;
+        final SpeakerProduct? p = sp.productId != null ? pq.speakers.where((SpeakerProduct s) => s.productId == sp.productId).firstOrNull : null;
         return p != null && p.isSubwoofer;
       }
 
