@@ -185,13 +185,23 @@ class ControllerSettingsSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        Row(
-          children: [
-            FusionCheckbox(semanticId: 'wakeup_function_last_screen_checkbox', shape: BoxShape.circle, onChanged: () {}),
-            const SizedBox(width: 8),
-            FusionAppText(style: context.textTheme.l1Regular, text: 'Last screen visited'),
-            const SizedBox(),
-          ],
+        Wrap(
+          spacing: 32,
+          runSpacing: 8,
+          children:
+              ScreenSaverOption.values
+                  .map(
+                    (ScreenSaverOption option) => _buildRadioOption<ScreenSaverOption>(
+                      context: context,
+                      label: option.label,
+                      value: option,
+                      groupValue: state.screenSaver,
+                      onChanged: (ScreenSaverOption? v) {
+                        if (v != null) vm.setScreenSaver(v);
+                      },
+                    ),
+                  )
+                  .toList(),
         ),
       ],
     );
@@ -239,29 +249,11 @@ class ControllerSettingsSection extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Container(
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isSelected ? activeColor : context.colorScheme.elevation4,
-                width: 2,
-              ),
-            ),
-            child:
-                isSelected
-                    ? Center(
-                      child: Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: activeColor,
-                        ),
-                      ),
-                    )
-                    : null,
+          FusionCheckbox(
+            semanticId: '',
+            onChanged: () => onChanged(value),
+            value: isSelected,
+            shape: BoxShape.circle,
           ),
           const SizedBox(width: 6),
           FusionAppText(

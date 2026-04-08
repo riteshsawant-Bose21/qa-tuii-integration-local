@@ -857,8 +857,8 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
     final Map<String, Set<String>> selectedMessageIdsPerPlayer = <String, Set<String>>{};
 
     for (final ControllerPageModel page in allPages.where((ControllerPageModel p) => p.type == ControllerPageType.message)) {
-      selectedPlayerIds.add(page.id); // page.id == sourceId for message pages
-      selectedMessageIdsPerPlayer[page.id] = _projectViewModel.getMessageIdsForPage(page.id);
+      selectedPlayerIds.add(page.id); // Defensive copy — don't hold a mutable reference from the project layer
+      selectedMessageIdsPerPlayer[page.id] = Set<String>.from(_projectViewModel.getMessageIdsForPage(page.id));
     }
 
     return _PersistedMessagePages(
