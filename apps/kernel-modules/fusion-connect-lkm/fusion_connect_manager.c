@@ -251,7 +251,7 @@ static inline int rtp_compute_source_interrupts(struct fusion_cn_rtp_stream *s, 
 
     spin_lock(&s->lock);
     if (s->next_action_time == 0)
-        s->next_action_time = tick_ns;
+        s->next_action_time = tick_ns + s->packet_time;
         
     action_time = s->next_action_time;
 
