@@ -48,10 +48,10 @@ func (s *Service) withTransaction(ctx context.Context, logger *zap.Logger, fn fu
 // validateProjectAccess validates that a project exists and the user has access to it.
 func (s *Service) validateProjectAccess(ctx context.Context, projectID, accountID string, logger *zap.Logger) (*models.Project, error) {
 	if projectID == "" {
-		return nil, fmt.Errorf(errorutil.ErrMsgProjectIDEmpty)
+		return nil, fmt.Errorf("validateProjectAccess: %w", errorutil.ErrMsgProjectIDEmpty)
 	}
 	if accountID == "" {
-		return nil, fmt.Errorf(errorutil.ErrMsgAccountIDEmpty)
+		return nil, fmt.Errorf("validateProjectAccess: %w", errorutil.ErrMsgAccountIDEmpty)
 	}
 
 	project, err := s.projectService.GetProjectByID(ctx, projectID, logger)
@@ -145,10 +145,10 @@ func (s *Service) revokeOldCertificate(ctx context.Context, deviceID, certID, ce
 // If deleteThingOnFailure is true, the thing will be deleted on cleanup.
 func (s *Service) setupDeviceCertificate(ctx context.Context, deviceID string, csr *string, deleteThingOnFailure bool, logger *zap.Logger) (*string, types.CertificateInfo, error) {
 	if deviceID == "" {
-		return nil, types.CertificateInfo{}, fmt.Errorf(errorutil.ErrMsgDeviceIDEmpty)
+		return nil, types.CertificateInfo{}, fmt.Errorf("setupDeviceCertificate: %w", errorutil.ErrMsgDeviceIDEmpty)
 	}
 	if csr == nil || *csr == "" {
-		return nil, types.CertificateInfo{}, fmt.Errorf(errorutil.ErrMsgCSRPemEmpty)
+		return nil, types.CertificateInfo{}, fmt.Errorf("setupDeviceCertificate: %w", errorutil.ErrMsgCSRPemEmpty)
 	}
 
 	certPem, certID, certArn, err := s.iotService.CreateCertificateFromCSR(ctx, csr, logger)
@@ -198,10 +198,10 @@ func (s *Service) setupDeviceCertificate(ctx context.Context, deviceID string, c
 // CreateDevice registers a new device or claims an existing unclaimed device.
 func (s *Service) CreateDevice(ctx context.Context, request *types.DeviceCreateRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (*types.DeviceCreateResponse, error) {
 	if request == nil {
-		return nil, fmt.Errorf(errorutil.ErrMsgDeviceCreateReqNil)
+		return nil, fmt.Errorf("CreateDevice: %w", errorutil.ErrMsgDeviceCreateReqNil)
 	}
 	if user.Account.ID == "" {
-		return nil, fmt.Errorf(errorutil.ErrMsgAccountIDEmpty)
+		return nil, fmt.Errorf("CreateDevice: %w", errorutil.ErrMsgAccountIDEmpty)
 	}
 
 	// Check if device already exists
