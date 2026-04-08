@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:bloc/bloc.dart';
@@ -14,6 +16,8 @@ part 'firmware_update_vm_state.dart';
 
 class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
   final FusionDeviceService fusionDeviceService;
+  StreamSubscription<ResponseCallback<FirmwareUpdateProgressEvent>>? _firmwareInstallSocketSubscription;
+  bool _socketTrackingCancelledByUser = false;
 
   FirmwareUpdateViewModel(this.fusionDeviceService) : super(const FirmwareUpdateViewModelState());
 
@@ -48,6 +52,20 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
   void setInstallFailed(String errorText) => emit(state.copyWith(uiState: FirmwareUpdateUiState.installFailed, errorText: errorText));
   void toggleProgressExpanded() => emit(state.copyWith(isProgressExpanded: !state.isProgressExpanded));
 
+  void setInUseVersion(String version) => emit(state.copyWith(inUseVersion: version));
+
+  Future<String> fetchDeviceVersion({required String vip}) async {
+    final ResponseCallback<List<FusionNetworkDevice>> response = await fusionDeviceService.getAvailableDevicesOnNetwork(ip: vip);
+    if (response.success && response.data != null && response.data!.isNotEmpty) {
+      final FusionNetworkDevice? primaryDevice = response.data!.cast<FusionNetworkDevice?>().firstWhere(
+        (FusionNetworkDevice? d) => d?.isPrimary == true,
+        orElse: () => null,
+      );
+      return primaryDevice?.softwareUpdateVersion ?? '';
+    }
+    return '';
+  }
+
   void hydrateLocalState(FirmwareLocalState restored) {
     emit(
       state.copyWith(
@@ -67,6 +85,8 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
         bundleId: decision.bundleId,
         releaseNotes: decision.releaseNotes,
         errorText: decision.errorText,
+        downloadedFilePath: decision.clearDownloadedCache ? '' : state.downloadedFilePath,
+        downloadChecksum: decision.clearDownloadedCache ? '' : state.downloadChecksum,
       ),
     );
   }
@@ -99,6 +119,19 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
         progress: 0,
         errorText: '',
         isProgressExpanded: false,
+        deviceInstallProgress: const <FirmwareInstallDeviceProgress>[],
+        installTrackingCompleted: false,
+        isUploadInProgress: true,
+        isSocketTrackingInProgress: false,
+      ),
+    );
+  }
+
+  void markInstallUploadCompleted() {
+    emit(
+      state.copyWith(
+        isUploadInProgress: false,
+        isSocketTrackingInProgress: true,
       ),
     );
   }
@@ -111,6 +144,20 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
         downloadedFilePath: '',
         downloadChecksum: '',
         progress: 1,
+        installTrackingCompleted: true,
+        isUploadInProgress: false,
+        isSocketTrackingInProgress: false,
+      ),
+    );
+  }
+
+  void setInstallCancelled({String message = 'Install cancelled by user.'}) {
+    emit(
+      state.copyWith(
+        uiState: FirmwareUpdateUiState.downloaded,
+        errorText: message,
+        isUploadInProgress: false,
+        isSocketTrackingInProgress: false,
       ),
     );
   }
@@ -144,9 +191,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
 
   String normalizedSemver(String version) {
     final String trimmed = version.trim();
-    if (trimmed.isEmpty) {
-      return '0.0.0';
-    }
+    if (trimmed.isEmpty) return '0.0.0';
     final String withoutPrefix = trimmed.startsWith('v') || trimmed.startsWith('V') ? trimmed.substring(1) : trimmed;
     return withoutPrefix.isEmpty ? '0.0.0' : withoutPrefix;
   }
@@ -159,9 +204,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
 
     final RegExpMatch? preReleaseMatch = RegExp(r'^\d+\.\d+\.\d+\-([0-9A-Za-z]+)').firstMatch(inUseVersion);
     final String? fromVersion = preReleaseMatch?.group(1)?.trim();
-    if (fromVersion != null && fromVersion.isNotEmpty) {
-      return fromVersion;
-    }
+    if (fromVersion != null && fromVersion.isNotEmpty) return fromVersion;
 
     return null;
   }
@@ -234,22 +277,21 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     return updatesDir;
   }
 
-  String buildBundleTargetFilePath({required String directoryPath, required String availableVersion}) {
-    final String safeVersion = availableVersion.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
-    return p.join(directoryPath, 'bundle_$safeVersion.swu');
-  }
-
   Future<FirmwareCheckDecision> checkForUpdatesDecision({
     required String inUseVersion,
     required String desktopVersion,
     required String downloadedFilePath,
+    required String localAvailableVersion,
   }) async {
     final String normalizedInUseVersion = normalizedSemver(inUseVersion);
+    final String normalizedLocalAvailableVersion = normalizedSemver(localAvailableVersion);
     final FirmwareUpdateCheckResult result = await checkForUpdates(
       currentFirmwareVersion: normalizedInUseVersion,
       desktopVersion: desktopVersion,
       channel: deriveChannel(inUseVersion: normalizedInUseVersion),
     );
+
+    final bool hasCachedBundlePath = downloadedFilePath.trim().isNotEmpty;
 
     if (result.appUpdateRequired) {
       return FirmwareCheckDecision(
@@ -262,7 +304,12 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     final String bundleId = (result.bundleId ?? '').trim();
 
     if (!result.updateAvailable || nextVersion == '0.0.0') {
-      return const FirmwareCheckDecision(state: FirmwareCheckDecisionState.noUpdate);
+      if (hasCachedBundlePath) await _deleteCachedBundleIfExists(downloadedFilePath);
+
+      return FirmwareCheckDecision(
+        state: FirmwareCheckDecisionState.noUpdate,
+        clearDownloadedCache: hasCachedBundlePath,
+      );
     }
 
     if (bundleId.isEmpty) {
@@ -273,15 +320,42 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     }
 
     if (normalizedInUseVersion == nextVersion) {
+      if (hasCachedBundlePath) {
+        await _deleteCachedBundleIfExists(downloadedFilePath);
+      }
       return FirmwareCheckDecision(
         state: FirmwareCheckDecisionState.installed,
         availableVersion: nextVersion,
         bundleId: bundleId,
         releaseNotes: result.releaseNotes ?? '',
+        clearDownloadedCache: hasCachedBundlePath,
       );
     }
 
-    if (downloadedFilePath.isNotEmpty && File(downloadedFilePath).existsSync()) {
+    if (hasCachedBundlePath) {
+      final bool cachedBundleExists = await File(downloadedFilePath).exists();
+      if (!cachedBundleExists) {
+        return FirmwareCheckDecision(
+          state: FirmwareCheckDecisionState.updateAvailable,
+          availableVersion: nextVersion,
+          bundleId: bundleId,
+          releaseNotes: result.releaseNotes ?? '',
+          clearDownloadedCache: true,
+        );
+      }
+
+      final bool isCachedBundleMatchingCurrentCloudVersion = normalizedLocalAvailableVersion == nextVersion;
+      if (!isCachedBundleMatchingCurrentCloudVersion) {
+        await _deleteCachedBundleIfExists(downloadedFilePath);
+        return FirmwareCheckDecision(
+          state: FirmwareCheckDecisionState.updateAvailable,
+          availableVersion: nextVersion,
+          bundleId: bundleId,
+          releaseNotes: result.releaseNotes ?? '',
+          clearDownloadedCache: true,
+        );
+      }
+
       return FirmwareCheckDecision(
         state: FirmwareCheckDecisionState.downloaded,
         availableVersion: nextVersion,
@@ -296,6 +370,21 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
       bundleId: bundleId,
       releaseNotes: result.releaseNotes ?? '',
     );
+  }
+
+  Future<void> _deleteCachedBundleIfExists(String downloadedFilePath) async {
+    if (downloadedFilePath.trim().isEmpty) {
+      return;
+    }
+
+    try {
+      final File cachedBundleFile = File(downloadedFilePath);
+      if (await cachedBundleFile.exists()) {
+        await cachedBundleFile.delete();
+      }
+    } catch (_) {
+      // Non-fatal: check flow continues and state is still cleared.
+    }
   }
 
   Future<FirmwareUpdateCheckResult> checkForUpdates({required String currentFirmwareVersion, required String desktopVersion, String? channel}) async {
@@ -369,8 +458,151 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
       onProgress: onProgress,
     );
 
-    if (!response.success) {
-      throw Exception(response.message);
+    log("uploadToFusionServer :: ${response.success} == ${response.message}");
+
+    if (!response.success) throw Exception(response.message);
+  }
+
+  Future<void> trackFirmwareInstallProgress({required String vip}) async {
+    _socketTrackingCancelledByUser = false;
+    await stopFirmwareInstallProgressTracking();
+
+    final ResponseCallback<void> connectResponse = await fusionDeviceService.connectFirmwareUpdateWebSocket(vip: vip);
+    if (!connectResponse.success) {
+      throw Exception(connectResponse.message);
     }
+
+    final ResponseCallback<void> startResponse = await fusionDeviceService.sendStartFirmwareUpdateEvent();
+
+    log("WEB SOCKET CONNECTION ::: ${startResponse.success}");
+    if (!startResponse.success) {
+      await fusionDeviceService.disconnectFirmwareUpdateWebSocket();
+      throw Exception(startResponse.message);
+    }
+
+    final Completer<void> completer = Completer<void>();
+
+    _firmwareInstallSocketSubscription = fusionDeviceService.firmwareUpdateProgressEvents().listen(
+      (ResponseCallback<FirmwareUpdateProgressEvent> response) {
+        if (!response.success || response.data == null) return;
+
+        final FirmwareUpdateProgressEvent event = response.data!;
+        if (event.devicesBySerial.isEmpty) return;
+
+        final Map<String, FirmwareInstallDeviceProgress> mergedBySerial = <String, FirmwareInstallDeviceProgress>{
+          for (final FirmwareInstallDeviceProgress item in state.deviceInstallProgress) item.serialNumber: item,
+        };
+
+        for (final MapEntry<String, FirmwareUpdateDeviceProgress> entry in event.devicesBySerial.entries) {
+          final FirmwareUpdateDeviceProgress device = entry.value;
+          final String serial = device.serialNumber.trim().isNotEmpty ? device.serialNumber.trim() : entry.key;
+          final ({int current, int total}) step = _parseStep(device.step);
+
+          mergedBySerial[serial] = FirmwareInstallDeviceProgress(
+            serialNumber: serial,
+            node: device.node,
+            updateState: device.updateState,
+            currentStep: step.current,
+            totalSteps: step.total,
+            currentTask: device.currentTask,
+            stepProgress: device.progress.clamp(0, 100),
+            timestamp: device.timestamp,
+          );
+        }
+
+        final List<FirmwareInstallDeviceProgress> mergedProgress =
+            mergedBySerial.values.toList()..sort(
+              (FirmwareInstallDeviceProgress a, FirmwareInstallDeviceProgress b) => a.serialNumber.compareTo(
+                b.serialNumber,
+              ),
+            );
+
+        final bool completed = mergedProgress.isNotEmpty && mergedProgress.every((FirmwareInstallDeviceProgress item) => item.isCompleted);
+
+        emit(
+          state.copyWith(
+            deviceInstallProgress: mergedProgress,
+            progress: completed ? 1 : _computeOverallInstallProgress(mergedProgress),
+            installTrackingCompleted: completed,
+          ),
+        );
+
+        if (completed && !completer.isCompleted) completer.complete();
+      },
+      onError: (Object error) {
+        if (!completer.isCompleted) {
+          completer.completeError(Exception('Firmware install websocket error: $error'));
+        }
+      },
+      onDone: () {
+        if (_socketTrackingCancelledByUser) {
+          if (!completer.isCompleted) {
+            completer.completeError(Exception('socket-progress-cancelled-by-user'));
+          }
+          return;
+        }
+
+        if (!completer.isCompleted && !state.installTrackingCompleted) {
+          completer.completeError(Exception('Firmware install websocket closed before completion.'));
+        }
+      },
+    );
+
+    try {
+      await completer.future;
+    } finally {
+      await stopFirmwareInstallProgressTracking();
+    }
+  }
+
+  Future<void> stopFirmwareInstallProgressTracking() async {
+    await _firmwareInstallSocketSubscription?.cancel();
+    _firmwareInstallSocketSubscription = null;
+    await fusionDeviceService.disconnectFirmwareUpdateWebSocket();
+  }
+
+  Future<void> cancelSocketProgressTrackingByUser() async {
+    _socketTrackingCancelledByUser = true;
+    await stopFirmwareInstallProgressTracking();
+    emit(
+      state.copyWith(
+        isSocketTrackingInProgress: false,
+        isUploadInProgress: false,
+      ),
+    );
+  }
+
+  ({int current, int total}) _parseStep(String rawStep) {
+    final List<String> parts = rawStep.split('/');
+    if (parts.length != 2) return (current: 0, total: 0);
+    final int current = int.tryParse(parts.first.trim()) ?? 0;
+    final int total = int.tryParse(parts.last.trim()) ?? 0;
+    return (current: current, total: total);
+  }
+
+  double _computeOverallInstallProgress(List<FirmwareInstallDeviceProgress> devices) {
+    if (devices.isEmpty) return 0;
+
+    double total = 0;
+    for (final FirmwareInstallDeviceProgress device in devices) {
+      final int safeCurrent = device.currentStep.clamp(0, 1000);
+      final int safeTotal = device.totalSteps.clamp(0, 1000);
+      final double stepPart = device.stepProgress.clamp(0, 100) / 100;
+
+      if (safeTotal > 0) {
+        final double completedSteps = safeCurrent > 0 ? (safeCurrent - 1).toDouble() : 0;
+        total += ((completedSteps + stepPart) / safeTotal).clamp(0, 1);
+      } else {
+        total += device.isCompleted ? 1 : stepPart;
+      }
+    }
+
+    return (total / devices.length).clamp(0, 1);
+  }
+
+  @override
+  Future<void> close() async {
+    await stopFirmwareInstallProgressTracking();
+    return super.close();
   }
 }
