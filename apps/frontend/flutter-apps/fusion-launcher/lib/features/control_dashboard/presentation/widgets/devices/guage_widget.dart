@@ -11,7 +11,6 @@ class GaugeWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print("Rendering GaugeWidget with value: $value and size: $size");
     Color activeColor;
     if (value < 35) {
       activeColor = const Color(0xFF2D7D46);

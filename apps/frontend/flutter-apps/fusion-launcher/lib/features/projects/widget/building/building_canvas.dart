@@ -21,10 +21,11 @@ import 'package:pdfrx/pdfrx.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../fusion_canvas/state/fusion_canvas_input_state.dart';
 import '../../../fusion_canvas/view/fusion_canvas.dart';
-import '../../../fusion_canvas/view/painters/elements/derived/floor_plan_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/hardware_component_painter.dart';
+import '../../../fusion_canvas/view/painters/elements/derived/hardware_painter/floor_plan_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/listening_area_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/spl_painter.dart';
+import '../../../fusion_canvas/view/painters/elements/fusion_dotted_bg_painter.dart';
 import '../../presentation/project_work_area.dart';
 import '../../viewmodel/building_page_viewmodel.dart';
 
@@ -184,7 +185,11 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 buildingPageViewModel.state.selectedListeningAreaId!,
                                               if (buildingPageViewModel.state.selectedSpeakerId != null) buildingPageViewModel.state.selectedSpeakerId!,
                                             },
+
                                             elements: <FusionBasePainter>[
+                                              FusionDottedBgPainter(
+                                                color: Colors.grey.shade300,
+                                              ),
                                               if (buildingPageViewModel.isSplMode)
                                                 SplPainter(
                                                   listeningAreas: listeningAreaPainters,
@@ -207,7 +212,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 ),
                                             ],
                                             toolbarEvents: FusionCanvasEvents(
-                                              onLayerSelected: (FusionBasePainter? value) {
+                                              onLayerSelected: (List<FusionBasePainter>? values) {
+                                                final FusionBasePainter? value = values != null && values.isNotEmpty ? values.first : null;
                                                 if (value is ListeningAreaPainter) {
                                                   serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.listeningArea.id);
                                                   serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
@@ -261,25 +267,23 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                   calculateSpl(context);
                                                 }
                                               },
-                                              onRemovePoints: (FusionBasePainter painter, List<FusionCanvasPoint> points) {
+                                              onRemovePoints: (FusionBasePainter painter, List<String> points) {
                                                 if (painter is ListeningAreaPainter) {
                                                   final ListeningArea area = painter.listeningArea;
                                                   final List<FusionCanvasPoint> updatedPoints =
-                                                      area.vertices
-                                                          .where((FusionCanvasPoint v) => points.every((FusionCanvasPoint p) => p.id != v.id))
-                                                          .toList();
+                                                      area.vertices.where((FusionCanvasPoint v) => points.every((String p) => p != v.id)).toList();
                                                   serviceLocator<ProjectViewModel>().updateListeningArea(
                                                     area: area.copyWith(vertices: updatedPoints),
                                                   );
                                                 }
                                                 calculateSpl(context);
                                               },
-                                              onMovePoints: (FusionBasePainter painter, List<FusionCanvasPoint> points, Offset delta) {
+                                              onMovePoints: (FusionBasePainter painter, List<String> points, Offset delta) {
                                                 if (painter is ListeningAreaPainter) {
                                                   final ListeningArea area = painter.listeningArea;
                                                   final List<FusionCanvasPoint> updatedPoints =
                                                       area.vertices.map((FusionCanvasPoint v) {
-                                                        if (points.any((FusionCanvasPoint p) => p.id == v.id)) {
+                                                        if (points.any((String p) => p == v.id)) {
                                                           return v.copyWith(position: v.position + delta);
                                                         } else {
                                                           return v;
