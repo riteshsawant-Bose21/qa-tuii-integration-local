@@ -137,13 +137,36 @@ func requireClusterNodes(t *testing.T, min int) {
 
 func resolveRestartScriptPath() string {
 	if fromEnv := strings.TrimSpace(os.Getenv("FUSION_RESTART_SCRIPT")); fromEnv != "" {
+		if filepath.IsAbs(fromEnv) {
+			return fromEnv
+		}
+
+		if wd, err := os.Getwd(); err == nil {
+			candidates := []string{
+				filepath.Clean(fromEnv),
+				filepath.Clean(filepath.Join(wd, fromEnv)),
+				filepath.Clean(filepath.Join(wd, "..", fromEnv)),
+				filepath.Clean(filepath.Join(wd, "..", "..", fromEnv)),
+			}
+			for _, candidate := range candidates {
+				if _, statErr := os.Stat(candidate); statErr == nil {
+					return candidate
+				}
+			}
+		}
+
 		return fromEnv
 	}
 
 	if wd, err := os.Getwd(); err == nil {
-		candidate := filepath.Clean(filepath.Join(wd, "..", "scripts", "multipass", "restart-fusion.sh"))
-		if _, statErr := os.Stat(candidate); statErr == nil {
-			return candidate
+		candidates := []string{
+			filepath.Clean(filepath.Join(wd, "..", "scripts", "multipass", "restart-fusion.sh")),
+			filepath.Clean(filepath.Join(wd, "..", "..", "scripts", "multipass", "restart-fusion.sh")),
+		}
+		for _, candidate := range candidates {
+			if _, statErr := os.Stat(candidate); statErr == nil {
+				return candidate
+			}
 		}
 	}
 
@@ -259,6 +282,8 @@ func TestTimeMachineActivateNonExistent(t *testing.T) {
 }
 
 func TestTimeMachinePropagation(t *testing.T) {
+	// Cluster-only: snapshot gossip propagation can only be verified when multiple nodes exist.
+	// Skipped automatically on local single-node runs. See test/README.md for cluster setup.
 	requireClusterNodes(t, 2)
 
 	snapshotName := fmt.Sprintf("test_snapshot_propagation_%d", time.Now().UnixNano())
@@ -427,6 +452,10 @@ func snapshotRemovedOnAllNodes(t *testing.T, name string) bool {
 //
 
 func TestTimeMachineActivationBumpsEpoch(t *testing.T) {
+	// Cluster-only: epoch convergence is driven by gossip metadata; /metadata does not reflect
+	// the bumped epoch synchronously in local single-node mode. Requires 2+ nodes.
+	// Skipped automatically on local single-node runs. See test/README.md for cluster setup.
+	requireClusterNodes(t, 2)
 
 	initial := getAnyClusterEpoch(t)
 
@@ -455,6 +484,10 @@ func TestTimeMachineActivationBumpsEpoch(t *testing.T) {
 }
 
 func TestTimeMachineRejectOldEpochUpdatesAfterActivation(t *testing.T) {
+	// Cluster-only: stale-epoch rejection is meaningful only once a bumped epoch has propagated
+	// across multiple nodes; the boundary is not observable in local single-node mode.
+	// Skipped automatically on local single-node runs. See test/README.md for cluster setup.
+	requireClusterNodes(t, 2)
 	initialEpoch := getAnyClusterEpoch(t)
 
 	// Create + activate snapshot
@@ -502,6 +535,10 @@ func TestTimeMachineRejectOldEpochUpdatesAfterActivation(t *testing.T) {
 }
 
 func TestTimeMachineNewEpochUpdatesApply(t *testing.T) {
+	// Cluster-only: verifying that writes accepted under the new epoch propagate to all nodes
+	// requires multiple live nodes. Skipped automatically on local single-node runs.
+	// See test/README.md for cluster setup.
+	requireClusterNodes(t, 2)
 
 	// Create + activate snapshot
 	snapshotName := fmt.Sprintf("epoch_updates_apply_%d", time.Now().UnixNano())
@@ -915,6 +952,9 @@ func logPerNodeSnapshotStatus(t *testing.T, snapshotName string) {
 }
 
 func TestTimeMachineActiveSnapshotPropagatesClusterWide(t *testing.T) {
+	// Cluster-only: confirms the active snapshot name is consistent across all nodes after
+	// activation. No propagation to validate against in single-node mode.
+	// Skipped automatically on local single-node runs. See test/README.md for cluster setup.
 	requireClusterNodes(t, 2)
 
 	snapshotName := fmt.Sprintf("active_snap_%d", time.Now().UnixNano())
@@ -987,6 +1027,9 @@ func getClusterActiveSnapshots(t *testing.T) []string {
 }
 
 func TestTimeMachineActiveSnapshotSurvivesRestart(t *testing.T) {
+	// Cluster-only: also requires FUSION_RESTART_SCRIPT or the default multipass restart script.
+	// Verifies that the active snapshot name persists across a full cluster restart.
+	// Skipped automatically on local single-node runs. See test/README.md for cluster setup.
 	requireClusterNodes(t, 2)
 
 	snapshotName := fmt.Sprintf("persist_snap_%d", time.Now().UnixNano())
@@ -1022,6 +1065,9 @@ func TestTimeMachineActiveSnapshotSurvivesRestart(t *testing.T) {
 }
 
 func TestTimeMachineDataSurvivesRestart(t *testing.T) {
+	// Cluster-only: also requires FUSION_RESTART_SCRIPT or the default multipass restart script.
+	// Verifies that state captured in a snapshot is fully restored after a cluster restart.
+	// Skipped automatically on local single-node runs. See test/README.md for cluster setup.
 	requireClusterNodes(t, 2)
 
 	initialEpoch := getAnyClusterEpoch(t)
@@ -1129,6 +1175,9 @@ func TestTimeMachineDataSurvivesRestart(t *testing.T) {
 }
 
 func TestTimeMachineActivationOutOfOrderMessages(t *testing.T) {
+	// Cluster-only: out-of-order gossip delivery (ConfigUpdate arriving before SnapActivate) is
+	// only reproducible with multiple nodes exchanging memberlist messages.
+	// Skipped automatically on local single-node runs. See test/README.md for cluster setup.
 	requireClusterNodes(t, 2)
 
 	snapshotName := fmt.Sprintf("ooom_%d", time.Now().UnixNano())
@@ -1162,6 +1211,9 @@ func TestTimeMachineActivationOutOfOrderMessages(t *testing.T) {
 }
 
 func TestTimeMachineDeleteActiveSnapshotResetsActiveSnapshot(t *testing.T) {
+	// Cluster-only: validates that deleting the active snapshot resets it to the default
+	// consistently across all nodes. No cross-node assertion is possible in single-node mode.
+	// Skipped automatically on local single-node runs. See test/README.md for cluster setup.
 	requireClusterNodes(t, 2)
 
 	snapshotName := fmt.Sprintf("delete_active_%d", time.Now().UnixNano())

@@ -143,6 +143,8 @@ FUSION_TEST_NODES=127.0.0.1:8080 \
 go test -v --race ./test -run TimeMachine
 ```
 
+*Footnote:* The three Time Machine epoch-convergence tests (`TestTimeMachineActivationBumpsEpoch`, `TestTimeMachineRejectOldEpochUpdatesAfterActivation`, `TestTimeMachineNewEpochUpdatesApply`) are cluster-only and auto-skip in local single-node runs.
+
 **Only Run Scene Catalog Tests**
 
 ```bash
@@ -212,9 +214,9 @@ From module root (`fusion/`), run cluster-wide Time Machine tests:
 
 ```bash
 FUSION_TEST_VIP=192.168.2.100:8080 \
-FUSION_TEST_NODES=192.168.2.87:8080,192.168.2.88:8080,192.168.2.89:8080 \
+FUSION_TEST_NODES=192.168.2.93:8080,192.168.2.94:8080,192.168.2.95:8080 \
 FUSION_RESTART_SCRIPT=../scripts/multipass/restart-fusion.sh \
-go test -v --race ./test -run TimeMachine
+go test -count=1 -v --race ./test -run TimeMachine
 ```
 
 ### Test Everything Including Cluster Tests
@@ -226,8 +228,10 @@ FUSION_TEST_VIP=192.168.2.100:8080 \
 FUSION_TEST_NODES=192.168.2.2:8080,192.168.2.3:8080,192.168.2.4:8080 \
 FUSION_RESTART_SCRIPT=../scripts/multipass/restart-fusion.sh \
 FUSION_UDP_ADDR=192.168.2.100:7947 \
-go test -v --race ./test
+go test -count=1 -v --race ./test
 ```
+
+(The `-count=1` is for when you change the environment variables - my multipass will increment the IPs every time I run it. Without this flag, you'll get cached test results).
 
 That is the full-coverage path (UDP + Time Machine + Scene Catalog + cluster/restart cases).
 
