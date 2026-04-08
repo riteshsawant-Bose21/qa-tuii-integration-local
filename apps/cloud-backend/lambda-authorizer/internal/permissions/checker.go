@@ -178,6 +178,25 @@ func (s *SQLPermissionChecker) setupPermissions() {
 	s.registerPermission(constants.MethodGet, "/api/v1/users/settings", constants.UserSettingsRead, constants.PermissionRead, "View user settings")
 	s.registerPermission(constants.MethodPost, "/api/v1/users/settings", constants.UserSettingsCreate, constants.PermissionWrite, "Create user settings")
 	s.registerPermission(constants.MethodPut, "/api/v1/users/settings/:id", constants.UserSettingsUpdate, constants.PermissionWrite, "Update user settings")
+
+	basePath := fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointDevices)
+
+	// Device CREATE endpoint - require write permission
+	s.registerPermission(constants.MethodPost, basePath, constants.DeviceCreate, constants.PermissionWrite, "Create new device")
+	// Device BULK CREATE endpoint - require write permission
+	s.registerPermission(constants.MethodPost, fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceBulkCreate), constants.DeviceCreate, constants.PermissionWrite, "Bulk create devices")
+	// Device UPDATE endpoint - require write permission
+	s.registerPermission(constants.MethodPatch, fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceByID), constants.DeviceUpdate, constants.PermissionWrite, "Update device")
+	// Device RESET endpoint - require write permission
+	s.registerPermission(constants.MethodDelete, fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceReset), constants.DeviceDelete, constants.PermissionWrite, "Reset device")
+	// Device CLAIM endpoint - require write permission
+	s.registerPermission(constants.MethodPost, fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceClaim), constants.DeviceClaim, constants.PermissionWrite, "Claim device")
+	// Device ROTATE-CERT endpoint - require write permission
+	s.registerPermission(constants.MethodPost, fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceRotateCert), constants.DeviceRotateCert, constants.PermissionWrite, "Rotate device certificate")
+
+	s.registerPermission(constants.MethodPost, fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceCommand), constants.DeviceCommand, constants.PermissionWrite, "Send command to device")
+	s.registerPermission(constants.MethodGet, fmt.Sprintf("%s%s", basePath, constants.EndpointCommandStatus), constants.DeviceCommandStatus, constants.PermissionRead, "Get command status")
+
 }
 
 // registerPermission registers a permission requirement for an endpoint

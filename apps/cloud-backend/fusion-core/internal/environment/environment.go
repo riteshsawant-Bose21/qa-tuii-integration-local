@@ -36,17 +36,3 @@ func (e *Environment) ReqString(key string) (string, error) {
 	}
 	return val, nil
 }
-
-//Enable if needed in future
-// func (e *Environment) Int(key string) (*int, error) {
-// 	val, ok := e.loadLookuper.Lookup(key)
-// 	if !ok {
-// 		return nil, nil
-// 	}
-
-// 	intVal, err := strconv.Atoi(val)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to convert key %s with value %s to int: %v", key, val, err)
-// 	}
-// 	return &intVal, nil
-// }

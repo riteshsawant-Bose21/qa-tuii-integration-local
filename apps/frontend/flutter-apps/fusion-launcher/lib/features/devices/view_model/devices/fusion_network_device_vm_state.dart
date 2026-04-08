@@ -18,3 +18,7 @@ final class FusionNetworkDeviceViewModelError extends FusionNetworkDeviceViewMod
 
   FusionNetworkDeviceViewModelError({required this.message});
 }
+
+final class FusionNetworkDeviceViewModelClaiming extends FusionNetworkDeviceViewModelState {}
+
+final class FusionNetworkDeviceViewModelClaimSuccess extends FusionNetworkDeviceViewModelState {}

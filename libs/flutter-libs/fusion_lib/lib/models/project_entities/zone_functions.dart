@@ -177,13 +177,15 @@ class ZoneFunctions {
         return "priority_source_selector";
 
       case ZoneFunctionsType.sourceMix:
+        return "standard_mixer";
       case ZoneFunctionsType.sourceMixWithPriority:
-        return "source_selector";
+        return "priority_source_mixer";
 
       // return "standard_mixer";
       case ZoneFunctionsType.sourceMatrix:
+        return "matrix_mixer";
       case ZoneFunctionsType.sourceMatrixWithPriority:
-        return "source_selector";
+        return "priority_source_matrix";
 
       // return "matrix_mixer";
     }

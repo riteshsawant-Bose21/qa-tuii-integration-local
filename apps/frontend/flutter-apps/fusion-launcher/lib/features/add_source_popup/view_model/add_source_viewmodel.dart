@@ -48,7 +48,9 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
   void setSelectedListeningArea(ListeningArea listeningArea) => emit(state.copyWith(selectedListeningArea: listeningArea));
 
   void setSelectedConnectionType(SourceConnectionType type) => emit(state.copyWith(selectedConnectionType: type));
+
   void setSignalType(SignalType signalType) => emit(state.copyWith(selectedSignalType: signalType));
+
   void setSelectedSourceName(String sourceName) => emit(state.copyWith(selectedSourceName: sourceName));
 
   List<SignalType> get signalTypes {

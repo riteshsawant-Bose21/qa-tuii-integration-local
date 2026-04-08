@@ -85,9 +85,14 @@ class ConfigSyncViewModel extends Cubit<ConfigSyncState> {
     required DroResponseData droResponseData,
   }) async {
     emit(SyncingConfigWithDsp());
+
+    final Map<String, dynamic> blocksData = serviceLocator<ProjectViewModel>().getAllProcessingBlocksData();
     final ResponseCallback<bool> response = await fusionConfigSyncService.syncConfigToDsp(
       config: <String, dynamic>{
         "devices": droResponseData.result!.devices,
+        "settings": <String, Map<String, dynamic>>{
+          "audio": blocksData,
+        },
       },
       vip: vip,
     );

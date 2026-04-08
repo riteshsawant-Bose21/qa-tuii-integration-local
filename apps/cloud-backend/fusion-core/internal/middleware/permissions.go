@@ -15,6 +15,15 @@ const (
 	ProjectDelete = "project.delete"
 	ProjectSync   = "project.sync"
 
+	// Device permissions
+	DeviceCreate        = "device.create"
+	DeviceUpdate        = "device.update"
+	DeviceDelete        = "device.delete"
+	DeviceClaim         = "device.claim"
+	DeviceRotateCert    = "device.rotate_cert"
+	DeviceCommand       = "device.command"
+	DeviceCommandStatus = "device.command_status"
+
 	// User management permissions
 	UserRead   = "user.read"
 	UserCreate = "user.create"
@@ -101,6 +110,27 @@ func SetupUserSettingsPermissions(acc *AccessControlConfig) {
 	acc.RegisterPermission("PUT", fmt.Sprintf("%s%s", basePath, constants.EndpointUserSettingsByID), UserSettingsUpdate, PermissionWrite, "Update user settings")
 }
 
+// SetupDevicePermissions configures access control permissions for device management endpoints
+func SetupDevicePermissions(acc *AccessControlConfig) {
+	basePath := fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointDevices)
+
+	// Device CREATE endpoint - require write permission
+	acc.RegisterPermission("POST", basePath, DeviceCreate, PermissionWrite, "Create new device")
+	// Device BULK CREATE endpoint - require write permission
+	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceBulkCreate), DeviceCreate, PermissionWrite, "Bulk create devices")
+	// Device UPDATE endpoint - require write permission
+	acc.RegisterPermission("PATCH", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceByID), DeviceUpdate, PermissionWrite, "Update device")
+	// Device RESET endpoint - require write permission
+	acc.RegisterPermission("DELETE", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceReset), DeviceDelete, PermissionWrite, "Reset device")
+	// Device CLAIM endpoint - require write permission
+	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceClaim), DeviceClaim, PermissionWrite, "Claim device")
+	// Device ROTATE-CERT endpoint - require write permission
+	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceRotateCert), DeviceRotateCert, PermissionWrite, "Rotate device certificate")
+
+	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceCommand), DeviceCommand, PermissionWrite, "Send command to device")
+	acc.RegisterPermission("GET", fmt.Sprintf("%s%s", basePath, constants.EndpointCommandStatus), DeviceCommandStatus, PermissionRead, "Get command status")
+}
+
 // SetupFirmwarePermissions configures access control permissions for firmware update endpoints
 func SetupFirmwarePermissions(acc *AccessControlConfig) {
 	acc.RegisterPermission("GET", fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointFirmwareBundles), FirmwareBundleRead, PermissionRead, "View firmware bundles")
@@ -134,6 +164,7 @@ func SetupCommonPermissions(acc *AccessControlConfig) {
 	SetupProjectPermissions(acc)
 	SetupUserProfilePermissions(acc)
 	SetupUserSettingsPermissions(acc)
+	SetupDevicePermissions(acc)
 	SetupOrganizationPermissions(acc)
 	SetupFirmwarePermissions(acc)
 

@@ -41,6 +41,7 @@ func parseFlags() *api.AppConfig {
 	verbose := flag.Bool("verbose", false, "Enable verbose logging")
 	profile := flag.Bool("profile", false, "Enable profile dump")
 	flag.Parse()
+	configUDPDiagnostics := false
 
 	// Read environment overrides
 	if envVal := os.Getenv("FUSION_NET_IFACE"); envVal != "" {
@@ -60,6 +61,13 @@ func parseFlags() *api.AppConfig {
 			*profile = false
 		}
 	}
+	if envVal := os.Getenv("FUSION_UDP_DIAGNOSTICS"); envVal != "" {
+		if envVal == "1" || strings.EqualFold(envVal, "true") {
+			configUDPDiagnostics = true
+		} else if envVal == "0" || strings.EqualFold(envVal, "false") {
+			configUDPDiagnostics = false
+		}
+	}
 
 	if *versionFlag {
 		// This must be a log.Printf. The server logger is not running yet.
@@ -68,13 +76,14 @@ func parseFlags() *api.AppConfig {
 	}
 
 	return &api.AppConfig{
-		NodeName: createUniqueNodeName(baseName),
-		BindAddr: *bindAddr,
-		BindPort: *bindPort,
-		NetIface: *netIface,
-		Local:    *local,
-		Verbose:  *verbose,
-		Profile:  *profile,
+		NodeName:       createUniqueNodeName(baseName),
+		BindAddr:       *bindAddr,
+		BindPort:       *bindPort,
+		NetIface:       *netIface,
+		Local:          *local,
+		Verbose:        *verbose,
+		Profile:        *profile,
+		UDPDiagnostics: configUDPDiagnostics,
 	}
 }
 
