@@ -302,6 +302,12 @@ class ConfigControlLoaded extends ConfigurationControlState {
   /// Screen sleep time in seconds for the controller settings tab (per-controller).
   final int sleepTime;
 
+  /// Wake function option for the controller settings tab (per-controller).
+  final WakeFunctionOption wakeFunction;
+
+  /// Selected zone for wake function (if wakeFunction == zone).
+  final String? wakeZoneId;
+
   // ignore: prefer_const_constructors_in_immutables
   ConfigControlLoaded({
     required this.controllers,
@@ -336,6 +342,8 @@ class ConfigControlLoaded extends ConfigurationControlState {
     this.screenMode = ScreenMode.dark,
     this.screenSaver = ScreenSaverOption.qrCode,
     this.sleepTime = 30,
+    this.wakeFunction = WakeFunctionOption.lastScreen,
+    this.wakeZoneId,
   });
 
   // ── Computed / cached properties ───────────────────────────────────────────
@@ -401,6 +409,8 @@ class ConfigControlLoaded extends ConfigurationControlState {
     ScreenMode? screenMode,
     ScreenSaverOption? screenSaver,
     int? sleepTime,
+    WakeFunctionOption? wakeFunction,
+    String? wakeZoneId,
   }) {
     return ConfigControlLoaded(
       controllers: controllers ?? this.controllers,
@@ -435,6 +445,8 @@ class ConfigControlLoaded extends ConfigurationControlState {
       screenMode: screenMode ?? this.screenMode,
       screenSaver: screenSaver ?? this.screenSaver,
       sleepTime: sleepTime ?? this.sleepTime,
+      wakeFunction: wakeFunction ?? this.wakeFunction,
+      wakeZoneId: wakeZoneId ?? this.wakeZoneId,
     );
   }
 
@@ -472,6 +484,8 @@ class ConfigControlLoaded extends ConfigurationControlState {
     screenMode,
     screenSaver,
     sleepTime,
+    wakeFunction,
+    wakeZoneId,
   ];
 }
 
@@ -483,4 +497,20 @@ class ConfigControlError extends ConfigurationControlState {
 
   @override
   List<Object?> get props => <Object?>[message];
+}
+
+// Wake function options for the controller settings tab.
+enum WakeFunctionOption { lastScreen, homeScreen, zone }
+
+extension WakeFunctionOptionLabel on WakeFunctionOption {
+  String get label {
+    switch (this) {
+      case WakeFunctionOption.lastScreen:
+        return 'Last screen visited';
+      case WakeFunctionOption.homeScreen:
+        return 'Home screen';
+      case WakeFunctionOption.zone:
+        return 'zone';
+    }
+  }
 }

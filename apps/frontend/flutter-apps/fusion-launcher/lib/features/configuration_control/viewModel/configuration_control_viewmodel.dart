@@ -896,6 +896,18 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
       );
     }
   }
+
+  void setWakeFunction(WakeFunctionOption option) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    emit(loaded.copyWith(wakeFunction: option, wakeZoneId: option == WakeFunctionOption.zone ? loaded.wakeZoneId : null));
+  }
+
+  void setWakeZone(String? zoneId) {
+    final ConfigControlLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    emit(loaded.copyWith(wakeFunction: WakeFunctionOption.zone, wakeZoneId: zoneId));
+  }
 }
 
 // ─── Private value objects ─────────────────────────────────────────────────────
