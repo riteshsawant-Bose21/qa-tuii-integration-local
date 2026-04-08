@@ -3,6 +3,8 @@ name: Fusion-App-Mac-Automation-Build
 # Only run on commits, not when tags added
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "0 18 * * *"
 
 permissions:
   actions: read

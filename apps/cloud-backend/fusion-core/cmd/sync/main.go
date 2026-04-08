@@ -16,12 +16,12 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	"go.uber.org/zap"
 
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/storage/cloudfs"
+	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/storage/sql"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
 	serverSync "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/server/sync"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
-	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 )
 
 var (
@@ -55,9 +55,9 @@ func init() {
 		logger.Fatal("Failed to load sync config", zap.Error(err))
 	}
 
-	productBucket = syncCfg.S3.ProductBucket
-	priceBucket = syncCfg.S3.PriceBucket
-	s3Region := syncCfg.S3.Region
+	productBucket = syncCfg.Cloud.ProductS3Bucket
+	priceBucket = syncCfg.Cloud.PriceS3Bucket
+	s3Region := syncCfg.Cloud.Region
 
 	if productBucket == "" || priceBucket == "" {
 		logger.Fatal("S3_PRODUCT_BUCKET and S3_PRICE_BUCKET environment variables must be set")
@@ -92,7 +92,7 @@ func init() {
 	}
 
 	// Initialize S3 client
-	s3Handler, err := cloudfs.NewS3Client(context.Background(), syncCfg.S3.Region)
+	s3Handler, err := cloudfs.NewS3Client(context.Background(), syncCfg.Cloud.AWSConfig)
 	if err != nil {
 		logger.Fatal("Failed to initialize S3 client", zap.Error(err))
 	}
