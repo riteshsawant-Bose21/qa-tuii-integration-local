@@ -3,7 +3,6 @@ package project
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -58,11 +57,11 @@ func (s *Service) validateProject(ctx context.Context, projectID string, opts Va
 	}
 
 	if opts.CheckDeleted && projectRow.IsDeleted {
-		return nil, errors.New(errorutils.ErrMsgProjectNotFound)
+		return nil, fmt.Errorf(errorutils.ErrMsgProjectNotFound)
 	}
 
 	if opts.CheckArchived && projectRow.IsArchived {
-		return nil, errors.New(errorutils.ErrMsgProjectArchived)
+		return nil, fmt.Errorf(errorutils.ErrMsgProjectArchived)
 	}
 
 	if opts.CheckUserAssigned {
@@ -93,7 +92,7 @@ func (s *Service) validateUserAssignment(ctx context.Context, projectID, userID 
 		return fmt.Errorf(errorWithDetailsFormat, errorutils.ErrMsgFailedUserAssignmentCheck, err)
 	}
 	if !isAssigned {
-		return errors.New(errorutils.ErrMsgUserNotAssignedToProject)
+		return fmt.Errorf(errorutils.ErrMsgUserNotAssignedToProject)
 	}
 	return nil
 }
@@ -115,7 +114,7 @@ func (s *Service) validateProjectNotLockedByOtherUser(ctx context.Context, proje
 func (s *Service) validatePrimaryOwner(projectRow *models.Project, accountID string) error {
 
 	if projectRow.PrimaryOwnerAccountID != accountID {
-		return errors.New(errorutils.ErrMsgForbidden)
+		return fmt.Errorf(errorutils.ErrMsgForbidden)
 	}
 	return nil
 }
@@ -126,7 +125,7 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 	projectRow, err := s.dbService.GetProjectByID(ctx, project.ID, logger)
 
 	if err == nil && projectRow != nil {
-		return nil, errors.New(errorutils.ErrMsgProjectAlreadyExists)
+		return nil, fmt.Errorf(errorutils.ErrMsgProjectAlreadyExists)
 	}
 
 	db := s.dbService.GetDB(ctx)
@@ -154,7 +153,7 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 	}
 
 	if err := tx.Commit(); err != nil {
-		return nil, errors.New(errorutils.ErrMsgFailedToInsertProject)
+		return nil, fmt.Errorf(errorutils.ErrMsgFailedToInsertProject)
 	}
 
 	response := &types.ProjectCreateResponse{

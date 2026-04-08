@@ -53,13 +53,13 @@ func (s *Service) validateProjectAccess(ctx context.Context, projectID, accountI
 	}
 	if project == nil {
 		logger.Error("Project not found", zap.String("projectID", projectID))
-		return nil, errors.New(errorutil.ErrMsgProjectNotFound)
+		return nil, fmt.Errorf(errorutil.ErrMsgProjectNotFound)
 	}
 	if project.PrimaryOwnerAccountID != accountID {
 		logger.Error("User does not have access to the project",
 			zap.String("projectID", projectID),
 			zap.String("accountID", accountID))
-		return nil, errors.New(errorutil.MsgUnauthorized)
+		return nil, fmt.Errorf(errorutil.MsgUnauthorized)
 	}
 	return project, nil
 }
@@ -177,7 +177,7 @@ func (s *Service) CreateDevice(ctx context.Context, request *types.DeviceCreateR
 	if device != nil && device.ClaimStatus == models.ClaimStatusEnumCLAIMED {
 		logger.Error("Device already claimed, reset to reclaim",
 			zap.String("deviceID", request.SerialNumber))
-		return nil, errors.New(errorutil.ErrMsgDeviceAlreadyExists)
+		return nil, fmt.Errorf(errorutil.ErrMsgDeviceAlreadyExists)
 	}
 
 	// Validate project access
@@ -264,7 +264,7 @@ func (s *Service) UpdateDevice(ctx context.Context, deviceID string, request *ty
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Error("Device not found", zap.String("deviceID", deviceID))
-			return errors.New(errorutil.ErrMsgDeviceNotFound)
+			return fmt.Errorf(errorutil.ErrMsgDeviceNotFound)
 		}
 		return err
 	}
@@ -274,7 +274,7 @@ func (s *Service) UpdateDevice(ctx context.Context, deviceID string, request *ty
 		logger.Error("Unauthorized update attempt",
 			zap.String("deviceID", deviceID),
 			zap.String("accountID", user.Account.ID))
-		return errors.New(errorutil.MsgUnauthorized)
+		return fmt.Errorf(errorutil.MsgUnauthorized)
 	}
 
 	// Validate project change if requested
@@ -295,7 +295,7 @@ func (s *Service) ResetDevice(ctx context.Context, deviceID string, user types.U
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Error("Device not found", zap.String("deviceID", deviceID))
-			return errors.New(errorutil.ErrMsgDeviceNotFound)
+			return fmt.Errorf(errorutil.ErrMsgDeviceNotFound)
 		}
 		return err
 	}
@@ -311,7 +311,7 @@ func (s *Service) ResetDevice(ctx context.Context, deviceID string, user types.U
 		logger.Error("Unauthorized reset attempt",
 			zap.String("deviceID", deviceID),
 			zap.String("accountID", user.Account.ID))
-		return errors.New(errorutil.MsgUnauthorized)
+		return fmt.Errorf(errorutil.MsgUnauthorized)
 	}
 
 	// Revoke IoT credentials
@@ -336,7 +336,7 @@ func (s *Service) ClaimDevice(ctx context.Context, deviceID string, request *typ
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Error("Device not found", zap.String("deviceID", deviceID))
-			return nil, errors.New(errorutil.ErrMsgDeviceNotFound)
+			return nil, fmt.Errorf(errorutil.ErrMsgDeviceNotFound)
 		}
 		return nil, err
 	}
@@ -344,7 +344,7 @@ func (s *Service) ClaimDevice(ctx context.Context, deviceID string, request *typ
 	if device.ClaimStatus == models.ClaimStatusEnumCLAIMED {
 		logger.Error("Device is already claimed",
 			zap.String("deviceID", deviceID))
-		return nil, errors.New(errorutil.ErrMsgDeviceAlreadyClaimed)
+		return nil, fmt.Errorf(errorutil.ErrMsgDeviceAlreadyClaimed)
 	}
 
 	if _, err := s.validateProjectAccess(ctx, request.ProjectID, user.Account.ID, logger); err != nil {
@@ -376,7 +376,7 @@ func (s *Service) RotateCertificate(ctx context.Context, deviceID string, reques
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Error("Device not found", zap.String("deviceID", deviceID))
-			return nil, errors.New(errorutil.ErrMsgDeviceNotFound)
+			return nil, fmt.Errorf(errorutil.ErrMsgDeviceNotFound)
 		}
 		return nil, err
 	}
@@ -384,14 +384,14 @@ func (s *Service) RotateCertificate(ctx context.Context, deviceID string, reques
 	if device.ClaimStatus != models.ClaimStatusEnumCLAIMED {
 		logger.Error("Device is not claimed, cannot rotate certificate",
 			zap.String("deviceID", deviceID))
-		return nil, errors.New(errorutil.ErrMsgDeviceNotClaimed)
+		return nil, fmt.Errorf(errorutil.ErrMsgDeviceNotClaimed)
 	}
 
 	if device.ClaimedBy.String != user.Account.ID {
 		logger.Error("Unauthorized certificate rotation attempt",
 			zap.String("deviceID", deviceID),
 			zap.String("accountID", user.Account.ID))
-		return nil, errors.New(errorutil.MsgUnauthorized)
+		return nil, fmt.Errorf(errorutil.MsgUnauthorized)
 	}
 
 	// Store old certificate info for cleanup after successful rotation
@@ -480,7 +480,7 @@ func (s *Service) GetCommandStatus(ctx context.Context, commandID string, logger
 	}
 	if commands == nil || len(*commands) == 0 {
 		logger.Error("Command not found", zap.String("commandID", commandID))
-		return nil, errors.New(errorutil.ErrMsgCommandNotFound)
+		return nil, fmt.Errorf(errorutil.ErrMsgCommandNotFound)
 	}
 
 	var results []types.CommandStatusResult
