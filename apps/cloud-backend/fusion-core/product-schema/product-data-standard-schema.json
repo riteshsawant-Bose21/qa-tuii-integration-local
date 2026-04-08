@@ -172,33 +172,38 @@
           "$ref": "#/$defs/measurement"
         },
         "frequency_range": {
-          "type": "object",
+          "type": "array",
           "title": "Frequency Range",
-          "description": "Frequency Range",
-          "properties": {
-            "unit": {
-              "type": "string",
-              "const": "Hz"
+          "description": "Frequency ranges at different dB reference levels",
+          "items": {
+            "type": "object",
+            "title": "Frequency Range Entry",
+            "properties": {
+              "reference_db": {
+                "type": "number",
+                "enum": [-10, -3]
+              },
+              "unit": {
+                "type": "string",
+                "const": "Hz"
+              },
+              "low": {
+                "type": "number",
+                "minimum": 0
+              },
+              "high": {
+                "type": "number",
+                "minimum": 0
+              }
             },
-            "reference_db": {
-              "type": "number",
-              "const": -10
-            },
-            "low": {
-              "type": "number",
-              "minimum": 0
-            },
-            "high": {
-              "type": "number",
-              "minimum": 0
-            }
-          },
-          "required": [
-            "unit",
-            "low",
-            "high"
-          ],
-          "additionalProperties": false
+            "required": [
+              "reference_db",
+              "unit",
+              "low",
+              "high"
+            ],
+            "additionalProperties": false
+          }
         },
         "frequency_response": {
           "type": "array",
