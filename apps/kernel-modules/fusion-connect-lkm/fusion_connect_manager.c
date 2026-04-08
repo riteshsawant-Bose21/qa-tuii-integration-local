@@ -205,20 +205,12 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
         //         we have no measure for "stale" packets--just play out packets timestamped in the past
         while (count < s->buf_size_in_packets) {
             u32 slot = s->playback_slot;
-            u64 action_time = s->next_action_times[slot];
+            bool playing_silence = (s->next_action_times[slot] == 0);
+            u64 action_time = playing_silence ? s->next_action_time : s->next_action_times[slot];
             s64 delta;
 
-            // initilize next_action_time as backup time keeper, if not already
-            if (s->next_action_time == 0) {
-                // shouldn't happens
-                if (action_time == 0)
-                    break;
-                s->next_action_time = action_time;
-            }
-
             // use the appropriate action time for delta
-            delta = action_time ? (s64)tick_ns - (s64)action_time :
-                                  (s64)tick_ns - (s64)s->next_action_time;
+            delta = (s64)tick_ns - (s64)action_time;
 
             // Play packets that are up to EARLY_SLACK_NS after tick
             if (delta < 0 && (u64)-(delta) > EARLY_SLACK_NS) {
@@ -226,7 +218,7 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
             }
 
             // if we have no packet, play silence based on next_action_time
-            if (action_time == 0) {
+            if (playing_silence) {
                 if (!a)
                     break;
 
@@ -235,13 +227,14 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
                 s->next_action_time += s->packet_time;
             }
 
-            if (g_fusion_cn_mgr->trace_debug) printk(KERN_DEBUG "fusion_cn: compute_sink: stream %s playback_idx=%u count=%u now=%llu\n", s->info.stream_name, s->playback_slot, count, tick_ns);
+            if (g_fusion_cn_mgr->trace_debug) printk(KERN_DEBUG
+                "fusion_cn: compute_sink: stream %s playback_idx=%u count=%u now=%llu playing_silence=%u action_time=%llu next_action_time=%llu\n",
+                s->info.stream_name, s->playback_slot, count, tick_ns,
+                playing_silence, action_time, s->next_action_time);
 
             s->next_action_times[slot] = 0;
             if (++s->playback_slot >= s->buf_size_in_packets)
                 s->playback_slot = 0;
-            if (action_time != 0)
-                s->next_action_time += s->packet_time;
             count++;
         }
     }
