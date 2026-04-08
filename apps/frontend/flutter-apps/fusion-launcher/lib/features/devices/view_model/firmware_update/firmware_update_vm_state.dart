@@ -70,7 +70,7 @@ class FirmwareUpdateViewModelState extends Equatable {
 
   const FirmwareUpdateViewModelState({
     this.uiState = FirmwareUpdateUiState.checking,
-    this.isProgressExpanded = false,
+    this.isProgressExpanded = true,
     this.progress = 0,
     this.inUseVersion = '0.0.0',
     this.availableVersion = '',
