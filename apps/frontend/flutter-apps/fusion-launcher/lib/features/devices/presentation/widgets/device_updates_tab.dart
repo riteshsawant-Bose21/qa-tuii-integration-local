@@ -25,16 +25,6 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
   CancelToken? _downloadCancelToken;
   CancelToken? _installCancelToken;
 
-  List<HardwareComponent> get _fusionDevices {
-    final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
-    return <HardwareComponent>[
-      ...vm.fusionDsps,
-      ...vm.amplifiers,
-      ...vm.fusionControllers,
-      ...vm.fusionEndpoints,
-    ];
-  }
-
   @override
   void initState() {
     super.initState();
@@ -45,13 +35,28 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
   void dispose() {
     _downloadCancelToken?.cancel();
     _installCancelToken?.cancel();
+    _firmwareUpdateViewModel.stopFirmwareInstallProgressTracking();
     super.dispose();
   }
 
   Future<void> _initialize() async {
     await _loadDesktopVersion();
+    await _loadInUseVersionFromDevice();
     await _restoreState();
     await _checkForUpdates();
+  }
+
+  Future<void> _loadInUseVersionFromDevice() async {
+    final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
+    if (vip == null || vip.isEmpty) return;
+    try {
+      final String deviceVersion = await _firmwareUpdateViewModel.fetchDeviceVersion(vip: vip);
+      if (deviceVersion.isNotEmpty) {
+        _firmwareUpdateViewModel.setInUseVersion(deviceVersion);
+      }
+    } catch (_) {
+      // Non-fatal: fall back to persisted or default version.
+    }
   }
 
   Future<void> _loadDesktopVersion() async {
@@ -91,9 +96,7 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
     // Don't re-check while a download or install is actively in progress.
     // Re-initialization (tab reopen) must not overwrite an active operation.
     final FirmwareUpdateUiState current = _firmwareUpdateViewModel.state.uiState;
-    if (current == FirmwareUpdateUiState.downloading || current == FirmwareUpdateUiState.installing) {
-      return;
-    }
+    if (current == FirmwareUpdateUiState.downloading || current == FirmwareUpdateUiState.installing) return;
 
     _firmwareUpdateViewModel.setChecking();
 
@@ -103,17 +106,15 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
         inUseVersion: state.inUseVersion,
         desktopVersion: state.desktopVersion,
         downloadedFilePath: state.downloadedFilePath,
+        localAvailableVersion: state.availableVersion,
       );
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       _firmwareUpdateViewModel.applyCheckDecision(decision);
+      await _persistState();
     } catch (e) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       _firmwareUpdateViewModel.setDownloadFailed('Failed to check updates: $e');
     }
   }
@@ -137,10 +138,13 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
       }
 
       final Directory dir = await _firmwareUpdateViewModel.updatesDirectory();
-      final String targetFilePath = _firmwareUpdateViewModel.buildBundleTargetFilePath(
-        directoryPath: dir.path,
-        availableVersion: _firmwareUpdateViewModel.state.availableVersion,
-      );
+      final Uri downloadUri = Uri.parse(downloadInfo.downloadUrl);
+      final String originalFileName = downloadUri.pathSegments.isNotEmpty ? Uri.decodeComponent(downloadUri.pathSegments.last) : '';
+      final String fallbackFileName = 'firmware_${_firmwareUpdateViewModel.state.availableVersion}.bundle';
+      final String targetFilePath =
+          originalFileName.trim().isEmpty
+              ? File('${dir.path}${Platform.pathSeparator}$fallbackFileName').path
+              : File('${dir.path}${Platform.pathSeparator}$originalFileName').path;
 
       await _firmwareUpdateViewModel.downloadBundle(
         downloadUrl: downloadInfo.downloadUrl,
@@ -213,6 +217,14 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
         },
       );
 
+      if (!mounted) return;
+
+      _firmwareUpdateViewModel.markInstallUploadCompleted();
+
+      await Future<void>.delayed(const Duration(seconds: 3));
+
+      await _firmwareUpdateViewModel.trackFirmwareInstallProgress(vip: vip);
+
       if (!mounted) {
         return;
       }
@@ -231,19 +243,51 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
 
       await _persistState();
 
-      final String projectId = serviceLocator<ProjectViewModel>().projectId;
-      await _firmwareUpdateViewModel.logInstallStatus(
-        projectId: projectId,
-        bundleVersion: _firmwareUpdateViewModel.state.availableVersion,
-        previousVersion: previousVersion,
-        launcherVersion: _firmwareUpdateViewModel.state.desktopVersion,
-        status: 'INSTALL_SUCCESS',
-      );
-    } catch (_) {
+      try {
+        final String projectId = serviceLocator<ProjectViewModel>().projectId;
+        await _firmwareUpdateViewModel.logInstallStatus(
+          projectId: projectId,
+          bundleVersion: _firmwareUpdateViewModel.state.availableVersion,
+          previousVersion: previousVersion,
+          launcherVersion: _firmwareUpdateViewModel.state.desktopVersion,
+          status: 'INSTALL_SUCCESS',
+        );
+      } catch (e) {
+        //
+      }
+    } on DioException catch (e) {
       if (!mounted) {
         return;
       }
-      _firmwareUpdateViewModel.setInstallFailed('Install failed. Please retry.');
+      if (CancelToken.isCancel(e)) {
+        _firmwareUpdateViewModel.setInstallCancelled(message: 'Upload cancelled by user.');
+        return;
+      }
+      _firmwareUpdateViewModel.setInstallFailed('Install failed. Please retry. $e');
+
+      try {
+        final String projectId = serviceLocator<ProjectViewModel>().projectId;
+        await _firmwareUpdateViewModel.logInstallStatus(
+          projectId: projectId,
+          bundleVersion: _firmwareUpdateViewModel.state.availableVersion,
+          previousVersion: previousVersion,
+          launcherVersion: _firmwareUpdateViewModel.state.desktopVersion,
+          status: 'INSTALL_FAIL',
+        );
+      } catch (_) {
+        // Keep install failure visible even if logging fails.
+      }
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      if (e.toString().contains('cancelled by user')) {
+        _firmwareUpdateViewModel.setInstallCancelled(message: 'Socket progress tracking cancelled by user.');
+        return;
+      }
+
+      _firmwareUpdateViewModel.setInstallFailed('Install failed. Please retry. $e');
 
       try {
         final String projectId = serviceLocator<ProjectViewModel>().projectId;
@@ -408,8 +452,6 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             _buildProgressCircle(state),
-            const SizedBox(width: 14),
-            _buildButton(context, 'Cancel', _cancelDownload, width: 170),
           ],
         );
       case FirmwareUpdateUiState.downloaded:
@@ -435,24 +477,29 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
           ],
         );
       case FirmwareUpdateUiState.installing:
-        content = InkWell(
-          onTap: _firmwareUpdateViewModel.toggleProgressExpanded,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              _buildProgressCircle(state),
-              const SizedBox(width: 14),
-              FusionAppText(
-                text: 'View Device Progress',
-                style: context.textTheme.b2Medium,
+        content = Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: <Widget>[
+            InkWell(
+              onTap: _firmwareUpdateViewModel.toggleProgressExpanded,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  _buildProgressCircle(state),
+                  const SizedBox(width: 14),
+                  FusionAppText(
+                    text: 'View Device Progress',
+                    style: context.textTheme.b2Medium,
+                  ),
+                  const SizedBox(width: 10),
+                  Icon(
+                    state.isProgressExpanded ? Icons.keyboard_arrow_up : Icons.chevron_right,
+                    color: const Color(0xFFB9B9B9),
+                  ),
+                ],
               ),
-              const SizedBox(width: 10),
-              Icon(
-                state.isProgressExpanded ? Icons.keyboard_arrow_up : Icons.chevron_right,
-                color: const Color(0xFFB9B9B9),
-              ),
-            ],
-          ),
+            ),
+          ],
         );
       case FirmwareUpdateUiState.installFailed:
         content = Column(
@@ -466,7 +513,10 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
               ],
             ),
             const SizedBox(height: 14),
-            _buildErrorLabel(state.errorText.isEmpty ? 'Device Timeout' : state.errorText),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 300),
+              child: _buildErrorLabel(state.errorText.isEmpty ? 'Device Timeout' : state.errorText),
+            ),
           ],
         );
       case FirmwareUpdateUiState.installed:
@@ -590,6 +640,7 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
         const SizedBox(width: 8),
         FusionAppText(
           text: text,
+          maxLine: 3,
           style: context.textTheme.l1Medium.copyWith(
             color: const Color(0xFFE43333),
           ),
@@ -625,7 +676,7 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
   }
 
   Widget _buildDeviceProgressTable(BuildContext context, FirmwareUpdateViewModelState state) {
-    final List<HardwareComponent> devices = _fusionDevices;
+    final List<FirmwareInstallDeviceProgress> devices = state.deviceInstallProgress;
 
     return Container(
       decoration: BoxDecoration(
@@ -638,47 +689,42 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: <Widget>[
-                Expanded(flex: 1, child: _TableHeaderText('STATUS')),
-                Expanded(flex: 3, child: _TableHeaderText('DEVICE NAME')),
-                Expanded(flex: 3, child: _TableHeaderText('MODEL')),
-                Expanded(flex: 3, child: _TableHeaderText('LOCATION')),
-                Expanded(flex: 2, child: _TableHeaderText('IP ADDRESS')),
-                Expanded(flex: 2, child: _TableHeaderText('FIRMWARE VERSION')),
+                Expanded(flex: 2, child: _TableHeaderText('STATUS')),
+                Expanded(flex: 3, child: _TableHeaderText('SERIAL NUMBER')),
+                Expanded(flex: 3, child: _TableHeaderText('NODE')),
+                Expanded(flex: 2, child: _TableHeaderText('STEP')),
+                Expanded(flex: 3, child: _TableHeaderText('TASK')),
                 Expanded(flex: 4, child: _TableHeaderText('INSTALLATION PROGRESS')),
               ],
             ),
           ),
-          for (int i = 0; i < devices.length; i++) _buildDeviceRow(devices[i], i, state),
+          if (devices.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: _TableValueText('Waiting for device update events...'),
+              ),
+            ),
+          for (final FirmwareInstallDeviceProgress device in devices) _buildDeviceRow(device),
         ],
       ),
     );
   }
 
-  Widget _buildDeviceRow(HardwareComponent device, int index, FirmwareUpdateViewModelState state) {
-    final double shifted = (state.progress * 1.2) - (index * 0.02);
-    final double rowProgress = shifted.clamp(0, 0.99);
+  Widget _buildDeviceRow(FirmwareInstallDeviceProgress device) {
+    final String normalizedState = device.updateState.toUpperCase();
+    final bool completed = normalizedState == 'COMPLETED';
+    final bool success = normalizedState == 'SUCCESS';
+    final Color stateColor = completed || success ? const Color(0xFF5CC59A) : const Color(0xFFE0A645);
+    final int safeCurrentStep = device.currentStep.clamp(0, 1000);
+    final int safeTotalSteps = device.totalSteps.clamp(0, 1000);
+    final double currentStepProgress = device.stepProgress.clamp(0, 100) / 100;
+    final double computedOverallProgress =
+        safeTotalSteps > 0 ? (((safeCurrentStep > 0 ? safeCurrentStep - 1 : 0) + currentStepProgress) / safeTotalSteps).clamp(0, 1) : currentStepProgress;
 
-    final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
-    String location = '--';
-
-    if (device.locationEntity.listeningAreaId != null) {
-      final Zone? zone = vm.getZonesForListeningArea(areaId: device.locationEntity.listeningAreaId!);
-      if (zone != null) {
-        location = zone.name;
-      } else {
-        final SubZone? subZone = vm.getSubZoneForListeningArea(areaId: device.locationEntity.listeningAreaId!);
-        if (subZone != null) {
-          location = subZone.name;
-        }
-      }
-    }
-
-    if (location == '--') {
-      final EquipLocation? equip = vm.getEquipLocationForHardware(hardwareId: device.id);
-      if (equip != null) {
-        location = equip.name;
-      }
-    }
+    final double rowProgress = completed || success ? 1 : computedOverallProgress;
+    final String progressLabel = '${(rowProgress * 100).round().clamp(0, 100)}%';
 
     return Container(
       height: 46,
@@ -688,28 +734,41 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
       ),
       child: Row(
         children: <Widget>[
-          const Expanded(
-            flex: 1,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Icon(Icons.square_rounded, color: Color(0xFF5CC59A), size: 10),
+          Expanded(
+            flex: 2,
+            child: Row(
+              children: <Widget>[
+                Icon(Icons.square_rounded, color: stateColor, size: 10),
+                const SizedBox(width: 8),
+                Expanded(child: _TableValueText(normalizedState, color: stateColor)),
+              ],
             ),
           ),
-          Expanded(flex: 3, child: _TableValueText(device.name, color: const Color(0xFF2FA16B), underline: true)),
-          Expanded(flex: 3, child: _TableValueText(device.hardwareName)),
-          Expanded(flex: 3, child: _TableValueText(location)),
-          Expanded(flex: 2, child: _TableValueText('192.168.0.${index + 1}')),
-          Expanded(flex: 2, child: _TableValueText('v${state.inUseVersion}')),
+          Expanded(flex: 3, child: _TableValueText(device.serialNumber, color: const Color(0xFF2FA16B), underline: true)),
+          Expanded(flex: 3, child: _TableValueText(device.node.isEmpty ? '--' : device.node)),
+          Expanded(flex: 2, child: _TableValueText(device.stepLabel)),
+          Expanded(flex: 3, child: _TableValueText(device.currentTask.isEmpty ? '--' : device.currentTask)),
           Expanded(
             flex: 4,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: LinearProgressIndicator(
-                value: rowProgress,
-                minHeight: 4,
-                backgroundColor: const Color(0xFF363636),
-                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF1B9A66)),
-              ),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: LinearProgressIndicator(
+                      value: rowProgress,
+                      minHeight: 4,
+                      backgroundColor: const Color(0xFF363636),
+                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF1B9A66)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 40,
+                  child: _TableValueText(progressLabel),
+                ),
+              ],
             ),
           ),
         ],
