@@ -36,8 +36,8 @@ class PathSystemStorage {
 
     final String key = _keyOf(connection);
     final FusionPath? path = _paths[key];
+    final List<AxisLock> cachedLocks = _pathAxisLocks[key] ?? const <AxisLock>[];
     if (path != null) {
-      final List<AxisLock> cachedLocks = _pathAxisLocks[key] ?? const <AxisLock>[];
       if (path.start == endpoints.start && path.end == endpoints.end && _axisLocksEqual(cachedLocks, connection.axisLocks)) {
         return path;
       }
@@ -50,6 +50,7 @@ class PathSystemStorage {
       start: endpoints.start,
       end: endpoints.end,
       axisLocks: connection.axisLocks,
+      previousAxisLocks: cachedLocks,
     );
     if (constructPath == null) {
       return null;
@@ -58,7 +59,7 @@ class PathSystemStorage {
     return _paths[key];
   }
 
-  FusionPath? getLivePath(WiringConnectionModel connection, FusionCanvasPainter painter, List<AxisLock> additionalStops) {
+  FusionPath? getLivePath(WiringConnectionModel connection, FusionCanvasPainter painter, List<AxisLock> additionalStops, FusionPath? previousPath) {
     final _ConnectionEndpoints? endpoints = _resolveConnectionEndpoints(connection, painter);
     if (endpoints == null) {
       return null;
@@ -66,8 +67,8 @@ class PathSystemStorage {
 
     final String key = _keyOf(connection);
     final FusionPath? cachedLivePath = _livePaths[key];
+    final List<AxisLock> cachedLiveLocks = _livePathAxisLocks[key] ?? const <AxisLock>[];
     if (cachedLivePath != null) {
-      final List<AxisLock> cachedLiveLocks = _livePathAxisLocks[key] ?? const <AxisLock>[];
       if (cachedLivePath.start == endpoints.start && cachedLivePath.end == endpoints.end && _axisLocksEqual(cachedLiveLocks, additionalStops)) {
         return cachedLivePath;
       }
@@ -80,6 +81,7 @@ class PathSystemStorage {
       start: endpoints.start,
       end: endpoints.end,
       axisLocks: additionalStops,
+      previousAxisLocks: cachedLiveLocks,
     );
     if (livePath == null) {
       return null;
@@ -95,25 +97,18 @@ class PathSystemStorage {
     required Offset start,
     required Offset end,
     required List<AxisLock> axisLocks,
+    required List<AxisLock> previousAxisLocks,
     // List<Offset> additionalStops = const <Offset>[],
   }) {
     final List<Rect> obstacles = _obstaclesForPainter(painter);
-    // final List<PathSegment> segments = segmentsOfAllPathExcept(connection.id);
-    // final Map<String, List<Offset>> allPolylines2 = allPolylines();
-    // allPolylines2.remove(connectionKey);
-    final List<Offset> pathPoints = OrthogonalRouter(<Rect>[
-      ...obstacles,
-      // ...segments.map((PathSegment e) => Rect.fromCircle(center: e.start, radius: 10)),
-    ]).findPath(
-      start,
-      end,
-      // stops: additionalStops,
-      // otherPaths: allPolylines2.values.toList(growable: false),
-      previousPath: _previousPolylines[connectionKey],
+    final List<Offset>? previousPath = _previousPolylines[connectionKey];
+    final List<Offset> pathPoints = _buildReconstructedPath(
+      obstacles: obstacles,
+      start: start,
+      end: end,
       axisLocks: axisLocks,
-      // <AxisLock>[
-      //   ...axisLocks,
-      // ],
+      previousAxisLocks: previousAxisLocks,
+      previousPath: previousPath,
     );
     final List<Offset> intermediatePoints = _extractIntermediatePoints(pathPoints, start, end);
     // print(
@@ -207,6 +202,145 @@ class PathSystemStorage {
       if (a[i].x != b[i].x || a[i].y != b[i].y) return false;
     }
     return true;
+  }
+
+  static const double _lockTolerance = 0.01;
+
+  List<Offset> _buildReconstructedPath({
+    required List<Rect> obstacles,
+    required Offset start,
+    required Offset end,
+    required List<AxisLock> axisLocks,
+    required List<AxisLock> previousAxisLocks,
+    required List<Offset>? previousPath,
+  }) {
+    final OrthogonalRouter router = OrthogonalRouter(<Rect>[...obstacles]);
+    if (previousPath == null || previousPath.length < 2) {
+      return router.findPath(
+        start,
+        end,
+        previousPath: previousPath,
+        axisLocks: axisLocks,
+      );
+    }
+
+    final Offset previousStart = previousPath.first;
+    final Offset previousEnd = previousPath.last;
+    final bool startChanged = !_offsetNear(previousStart, start);
+    final bool endChanged = !_offsetNear(previousEnd, end);
+
+    if (startChanged && endChanged) {
+      return router.findPath(
+        start,
+        end,
+        previousPath: previousPath,
+        axisLocks: axisLocks,
+      );
+    }
+
+    final List<AxisLock> locks = _validAxisLocks(previousAxisLocks.isNotEmpty ? previousAxisLocks : axisLocks);
+    if (locks.length < 2) {
+      return router.findPath(
+        start,
+        end,
+        previousPath: previousPath,
+        axisLocks: axisLocks,
+      );
+    }
+
+    final AxisLock secondLock = locks[1];
+    final int? secondLockIndex = _findLockPointIndex(previousPath, secondLock);
+    if (secondLockIndex == null) {
+      return router.findPath(
+        start,
+        end,
+        previousPath: previousPath,
+        axisLocks: axisLocks,
+      );
+    }
+
+    final Offset anchorPoint = previousPath[secondLockIndex];
+
+    if (startChanged && !endChanged) {
+      final List<Offset> rebuiltPrefix = router.findPath(
+        start,
+        anchorPoint,
+        previousPath: previousPath.sublist(0, secondLockIndex + 1),
+        axisLocks: locks.take(2).toList(growable: false),
+      );
+      return _mergePathParts(rebuiltPrefix, previousPath.sublist(secondLockIndex));
+    }
+
+    if (!startChanged && endChanged) {
+      final List<Offset> rebuiltSuffix = router.findPath(
+        anchorPoint,
+        end,
+        previousPath: previousPath.sublist(secondLockIndex),
+        axisLocks: locks.skip(2).toList(growable: false),
+      );
+      return _mergePathParts(previousPath.sublist(0, secondLockIndex + 1), rebuiltSuffix);
+    }
+
+    return router.findPath(
+      start,
+      end,
+      previousPath: previousPath,
+      axisLocks: axisLocks,
+    );
+  }
+
+  List<AxisLock> _validAxisLocks(List<AxisLock> locks) {
+    return locks.where((AxisLock lock) => lock.x != null || lock.y != null).toList(growable: false);
+  }
+
+  int? _findLockPointIndex(List<Offset> path, AxisLock lock) {
+    if (path.length < 2) {
+      return null;
+    }
+
+    bool matchesLock(Offset point) {
+      final bool matchesX = lock.x != null && (point.dx - lock.x!).abs() <= _lockTolerance;
+      final bool matchesY = lock.y != null && (point.dy - lock.y!).abs() <= _lockTolerance;
+      return matchesX || matchesY;
+    }
+
+    for (int i = 1; i < path.length - 1; i++) {
+      if (matchesLock(path[i])) {
+        return i;
+      }
+    }
+
+    for (int i = 1; i < path.length; i++) {
+      final Offset a = path[i - 1];
+      final Offset b = path[i];
+      final bool vertical = (a.dx - b.dx).abs() <= _lockTolerance;
+      final bool horizontal = (a.dy - b.dy).abs() <= _lockTolerance;
+      if (lock.x != null && vertical && (a.dx - lock.x!).abs() <= _lockTolerance) {
+        return i;
+      }
+      if (lock.y != null && horizontal && (a.dy - lock.y!).abs() <= _lockTolerance) {
+        return i;
+      }
+    }
+
+    return null;
+  }
+
+  List<Offset> _mergePathParts(List<Offset> first, List<Offset> second) {
+    if (first.isEmpty) {
+      return second;
+    }
+    if (second.isEmpty) {
+      return first;
+    }
+    if (_offsetNear(first.last, second.first)) {
+      return <Offset>[...first, ...second.skip(1)];
+    }
+    return <Offset>[...first, ...second];
+  }
+
+  bool _offsetNear(Offset a, Offset b) {
+    return (a.dx - b.dx).abs() <= _lockTolerance && (a.dy - b.dy).abs() <= _lockTolerance;
   }
 
   _ConnectionEndpoints? _resolveConnectionEndpoints(WiringConnectionModel connection, FusionCanvasPainter painter) {

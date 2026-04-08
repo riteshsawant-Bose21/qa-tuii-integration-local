@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/select_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
@@ -57,9 +58,11 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
   @override
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter) {
     final bool isSelected = painter.isSelected(id);
+    final DateTime startAt = DateTime.now();
     FusionPath? path = pathStorage.getPath(connection, painter);
     if (path == null) return;
     // print("Path for connection ${connection.id}: $path");
+
     List<FusionCanvasPoint> rawPoints = _buildPathPoints(path);
     if (isSelected) {
       final DateTime startTime = DateTime.now();
@@ -128,6 +131,7 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
               connection,
               painter,
               axisLocks ?? <AxisLock>[],
+              path,
             ) ??
             path;
         rawPoints = _buildPathPoints(path);
@@ -197,6 +201,8 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
     }
 
     canvas.restore();
+    if (kDebugMode) drawText(canvas: canvas, text: "${DateTime.now().difference(startAt).inMilliseconds} ms", position: positions.first);
+
     paintedPath = drawingPath;
   }
 
