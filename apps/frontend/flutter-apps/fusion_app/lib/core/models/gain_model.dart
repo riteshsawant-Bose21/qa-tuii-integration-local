@@ -22,7 +22,7 @@ class GainConfig {
   }
 }
 class GainValue {
-  final int gain;
+  final double gain;
   final bool mute;
 
   GainValue({

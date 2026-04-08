@@ -1,30 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_app/core/models/scheme_model.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/app_bar/app_bar.dart';
 import 'package:fusion_app/features/zones/models/zone_source_model.dart';
 import 'package:fusion_app/features/zones/view_model/controlpal_zone_view_model.dart';
 import 'package:fusion_app/features/zones/widgets/bottomsheet_select_source.dart';
 import 'package:fusion_app/features/zones/widgets/source_item.dart';
 import 'package:fusion_app/features/zones/widgets/volume_meter_painter.dart';
-import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_lib.dart' hide Source;
 import 'package:flutter_bloc/flutter_bloc.dart';
 class ZoneVolumeControl extends StatefulWidget {
-  // final List<ZoneModel> zones;
-  // final int zoneIndex;
-  // final String sourceId;
-  // final VoidCallback? onNext;
-  // final VoidCallback? onPrevious;
-  // final ValueChanged<int>? onVolumeChanged;
- // final ValueChanged<int>? onSourceChanged;
 
    const ZoneVolumeControl({
     super.key,
-    // required this.zones,
-    // required this.zoneIndex,
-    // required this.sourceId,
-    // this.onNext,
-    // this.onPrevious,
-    // this.onVolumeChanged,
-   // this.onSourceChanged,
   });
 
   @override
@@ -57,8 +44,9 @@ class _ZoneVolumeControlState extends State<ZoneVolumeControl> {
           builder: (context, state) {
             if(state is ZoneSelected) {
               ZoneModel selectedZone = state.zone;
-              ZoneSourceModel selectedSource = selectedZone.sources[state.currentSourceIndex];
-
+              Source selectedSource = selectedZone.sources[state.currentSourceIndex];
+              ZoneSourceModel selectSubZone = selectedZone.subZones[state.currentSubzoneIndex];
+              double volume = selectSubZone.volume;
               return Scaffold(
                 backgroundColor: context.colorScheme.primaryBlack,
                 appBar: CommonAppBar(title: selectedZone.name),
@@ -76,7 +64,7 @@ class _ZoneVolumeControlState extends State<ZoneVolumeControl> {
                           },
                           builder: (context, selectSourceState) {
                             if(selectSourceState is SourceSelected){
-                              selectedSource = selectSourceState.zoneSourceModel;
+                              selectedSource = selectSourceState.source;
                             }
                           return GestureDetector(
                             onTap: () {
@@ -88,11 +76,11 @@ class _ZoneVolumeControlState extends State<ZoneVolumeControl> {
                                       BottomSheetSelectSource(
                                         source: ValueNotifier(selectedSource),
                                           sources: selectedZone.sources,
-                                          onSelected: (ZoneSourceModel source) {
+                                          onSelected: (Source source) {
                                             context
                                                 .read<
                                                 ControlPalZonesViewModel>()
-                                                .selectSource(source);
+                                                .selectSource(source,selectSubZone.id,selectedZone.id);
 
                                           },
                                         )
@@ -109,7 +97,7 @@ class _ZoneVolumeControlState extends State<ZoneVolumeControl> {
                               return current is GainUpdated || current is SourceSelected;
                             },
                             builder: (context, gainState) {
-                              double volume = selectedSource.volume;
+
                               if(gainState is GainUpdated){
                                 volume = gainState.zoneSourceModel.volume;
                               }
@@ -182,16 +170,13 @@ class _ZoneVolumeControlState extends State<ZoneVolumeControl> {
                                                             horizontal: 2),
                                                         child: VerticalAudioSlider(
                                                           key: key,
-                                                          initialValue: selectedSource.volume.toDouble(),
+                                                          initialValue: volume,
                                                           onChanged: (volume) {
-
-
-
 
                                                             context
                                                                 .read<
                                                                 ControlPalZonesViewModel>()
-                                                                .updateVolume(state.zoneIndex,selectedSource,volume);
+                                                                .updateVolume(state.zoneIndex,selectSubZone,volume);
 
                                                           },
                                                         ),

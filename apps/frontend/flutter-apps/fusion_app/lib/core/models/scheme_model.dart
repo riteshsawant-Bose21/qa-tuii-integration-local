@@ -428,9 +428,9 @@ class TaskConnections {
 class WallControllerConfig {
   List<Controllers>? controllers;
   List<Zones> zones = const [];
-  List<Zones> subzones = const [];
 
-  WallControllerConfig({this.controllers, this.zones = const [],this.subzones = const []});
+
+  WallControllerConfig({this.controllers, this.zones = const []});
 
   WallControllerConfig.fromJson(Map<String, dynamic> json) {
     if (json['controllers'] != null) {
@@ -445,12 +445,7 @@ class WallControllerConfig {
         zones!.add(Zones.fromJson(v));
       });
     }
-    if (json['subzones'] != null) {
-      subzones = <Zones>[];
-      json['subzones'].forEach((v) {
-        subzones!.add(Zones.fromJson(v));
-      });
-    }
+
   }
 
   Map<String, dynamic> toJson() {
@@ -492,9 +487,10 @@ class Zones {
   String? id;
   String? name;
   Ono? ono;
-  List<Sources>? sources;
+  List<Zones> subZones = const [];
+  List<Source>? sources;
 
-  Zones({this.gain, this.id, this.name, this.ono, this.sources});
+  Zones({this.gain, this.id, this.name, this.ono, this.sources,this.subZones = const []});
 
   Zones.fromJson(Map<String, dynamic> json) {
     gain = json['gain'] != null ? Gain.fromJson(json['gain']) : null;
@@ -502,9 +498,15 @@ class Zones {
     name = json['name'];
     ono = json['ono'] != null ? Ono.fromJson(json['ono']) : null;
     if (json['sources'] != null) {
-      sources = <Sources>[];
+      sources = <Source>[];
       json['sources'].forEach((v) {
-        sources!.add(Sources.fromJson(v));
+        sources!.add(Source.fromJson(v));
+      });
+    }
+    if (json['subZones'] != null) {
+      subZones = <Zones>[];
+      json['subZones'].forEach((v) {
+        subZones!.add(Zones.fromJson(v));
       });
     }
   }
@@ -584,14 +586,14 @@ class Ono {
   }
 }
 
-class Sources {
+class Source {
   int? index;
   String? sourceId;
   String? sourceName;
 
-  Sources({this.index, this.sourceId,this.sourceName});
+  Source({this.index, this.sourceId,this.sourceName});
 
-  Sources.fromJson(Map<String, dynamic> json) {
+  Source.fromJson(Map<String, dynamic> json) {
     index = json['index'];
     sourceId = json['sourceId'];
     sourceName = json['sourceName'];

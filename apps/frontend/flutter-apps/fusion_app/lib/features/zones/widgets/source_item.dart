@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_app/core/models/scheme_model.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/checkbox_field.dart';
 import 'package:fusion_app/features/zones/models/zone_source_model.dart';
-import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_lib.dart' hide Source;
 class SourceCard extends StatelessWidget {
-  final ZoneSourceModel source;
+  final Source source;
   final bool showCheckbox;
   final bool selected;
   const SourceCard({super.key,required this.source,this.showCheckbox = false,this.selected=false});
@@ -26,7 +27,7 @@ class SourceCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(6),
               border: Border.all(color: context.colorScheme.elevation2),
             ),
-            child: Icon(source.icon,
+            child: Icon(Icons.multitrack_audio,
                 color: context.colorScheme.iconDefault),
           ),
 
@@ -34,7 +35,7 @@ class SourceCard extends StatelessWidget {
 
           Expanded(
             child: Text(
-              source.name,
+              source!.sourceName!,
               style: Theme.of(context)
                   .textTheme
                   .l1Bold

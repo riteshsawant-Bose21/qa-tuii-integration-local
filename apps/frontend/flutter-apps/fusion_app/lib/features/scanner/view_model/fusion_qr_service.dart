@@ -15,9 +15,10 @@ class FusionQRService {
   Future<ResponseCallback<SchemaModel>> getSchema() async {
 
     ResponseCallback<SchemaModel> response  = await networkClient.get(
-        api: FusionApiEndpoint.fusionGetValue,
+        api: FusionApiEndpoint.fusionValue,
+      isSecure: false,
         baseUrlToOverride: "192.168.1.110:8080",
-        fromJson: (Map<String, dynamic> json) => SchemaModel.fromJson(json),
+        fromJson: (dynamic json) => SchemaModel.fromJson(json),
     );
     return response;
   }

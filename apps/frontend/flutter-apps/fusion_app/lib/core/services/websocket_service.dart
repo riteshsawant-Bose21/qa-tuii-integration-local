@@ -150,13 +150,30 @@ class FusionWebSocketService {
     final dbGain = AudioUtils.volumeToDbGain(uiVolume / 100.0);
     final timestamp = DateTime.now().toUtc().millisecondsSinceEpoch;
     final patch = {
-      "id": id,
+      "id": gainID,
       "version": 1,
       "type": "patch_config",
       "data": {
         "settings": {
           "audio": {
             gainID: {"gain": dbGain,"mute": false,"timestamp":timestamp}
+          }
+        }
+      }
+    };
+    _send(patch);
+  }
+
+  void sendSourcePatch(String id,String zoneID, int index) {
+
+    final patch = {
+      "id": zoneID,
+      "version": 1,
+      "type": "patch_config",
+      "data": {
+        "settings": {
+          "audio": {
+            id: {"input": index}
           }
         }
       }
@@ -200,6 +217,7 @@ class FusionWebSocketService {
   void _send(Map<String, dynamic> data) {
     if (_isConnected && _channel != null) {
       print('Send Message: WebSocket Message Sent');
+      print(data);
       _channel!.sink.add(jsonEncode(data));
     } else {
       print('Send Message: WebSocket not connected');

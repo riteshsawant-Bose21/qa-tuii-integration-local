@@ -41,6 +41,10 @@ Future<void> setupServiceLocator() async {
     () => FusionSecureStorageImpl(serviceLocator<FlutterSecureStorage>()),
   );
 
+  serviceLocator.registerLazySingleton<WebSocketService>(
+        () => WebSocketService(),
+  );
+
   serviceLocator.registerSingleton<DioClient>(
     DioClient(dioInstance: Dio(), interceptors: <Interceptor>[
       //AppInterceptors()
@@ -81,6 +85,7 @@ Future<void> setupServiceLocator() async {
       fusionAuthService: serviceLocator<FusionAuthService>(),
       secureStorageService: serviceLocator<FusionSecureStorage>(),
       apiBaseUrl: AppConfig.awsApiBaseUrl,
+      webSocketService: serviceLocator<WebSocketService>()
     ),
   );
   //

@@ -4,6 +4,7 @@ import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_app/core/models/scheme_model.dart';
 import 'package:fusion_app/core/services/websocket_service.dart';
+import 'package:fusion_app/core/utils/audio_utils.dart';
 import 'package:fusion_app/core/utils/qr_data_parser.dart';
 import 'package:fusion_app/features/scanner/view_model/fusion_qr_service.dart';
 import 'package:fusion_app/features/zones/models/zone_source_model.dart';
@@ -96,41 +97,82 @@ class QrScannerViewModel extends Cubit<QrScannerState> {
           final List<String> zoneIds = [];
 
           SchemaModel schemaModel = model.data!;
-         // SchemaModel schemaModel = SchemaModel.fromJson(schemeData);
-          print("schemaModel");
-          print(schemaModel.wallControllerConfig==null);
-          print(schemaModel.wallControllerConfig!.toJson());
+
+
           Controllers? controller = schemaModel.wallControllerConfig!
               .controllers?.firstWhere((ctrl) => ctrl.id == details.configId);
-          print("controller");
-          print(controller!.toJson());
+
           if (controller != null) {
             zoneIds.addAll(controller.zoneIds ?? []);
           }
-          print("zoneIds");
-          print(zoneIds);
-          List<ZoneModel> zones = [];
+
           for (Zones item in schemaModel.wallControllerConfig?.zones ?? []) {
+            ZoneModel? zone;
             for (var id in zoneIds) {
               if (id == item.id) {
-                zones.add(ZoneModel(id: id, name: item.name!,
-                    gainID:item.gain!.gainID ?? "",
-                    sources:
-                    item.sources!.map((src) =>
-                        ZoneSourceModel(
-                            id: src.sourceId!,
-                            name: src.sourceName!,
-                            icon: Icons.yard_outlined,
-                            volume: double.parse(
-                                item.gain?.defaultGainValue ?? "0")
-                        )).toList()
-                ));
+                 zone = ZoneModel(
+                    id: id,
+                    name: item.name!,
+                    subZones: [],
+                    sources: item.sources ?? [],
+                );
               }
             }
+
+          if(item.subZones.isNotEmpty) {
+            print("Subzones found, adding sources directly to parent zone : ${item.subZones.length}");
+
+            for(var subZone in item.subZones) {
+              zone!.subZones.add(ZoneSourceModel(
+                  id: subZone.id!,
+                  name: subZone.name!,
+                  gainID: subZone.gain?.gainID ?? "",
+                  icon: Icons.yard_outlined,
+                  volume: AudioUtils.toUiVolume(0)
+              ));
+            }
+            _zones.add(zone!);
+          }else{
+            zone!.subZones.add(ZoneSourceModel(
+                id: item.id!,
+                name: item.name!,
+                gainID: item.gain?.gainID ?? "",
+                icon: Icons.yard_outlined,
+                volume: AudioUtils.toUiVolume(0)
+            ));
+            _zones.add(zone!);
           }
-          _zones.addAll(zones);
+
+
+            // for (var id in zoneIds) {
+            //   if (id == item.id) {
+            //     zones.add(
+            //         ZoneModel(id: id,
+            //             name: item.name!,
+            //             sources:
+            //             item.sources!.map((src) =>
+            //                 ZoneSourceModel(
+            //                     id: src.sourceId!,
+            //                     name: src.sourceName!,
+            //                     gainID: item.gain!.gainID ?? "",
+            //                     icon: Icons.yard_outlined,
+            //                     volume: AudioUtils.toUiVolume(0)
+            //                 )).toList()
+            //         ));
+            //   }
+            // }
+            //
+            // for (Zones item in item.subZones) {
+            //
+            // }
+
+
+
+
+          print("Zones added: ${_zones.length}");
 
           emit(QrConnected(schemaModel));
+        }
         }else{
 
           emit(QrInitial());
@@ -149,71 +191,71 @@ class QrScannerViewModel extends Cubit<QrScannerState> {
     // }
   }
 
-  Future<void> local(raw) async {
-    final uri = Uri.tryParse(raw);
-    print("Parsed URI: $uri");
-
-    if (uri != null && uri.queryParameters.isNotEmpty) {
-      Map<String,dynamic> details = {
-        "vip": uri.queryParameters['vip'],
-        "controller_id": uri.queryParameters['controller_id'],
-      };
-
-    print("Attempting connection with VIP: ${details['vip']}, Controller ID: ${details['controller_id']}");
-
-    emit(QrConnecting());
-   // ResponseCallback<SchemaModel> model = await _qrService.getSchema();
-
-    if(true) {
-      FusionLogger.log(
-        tag: LogTag.debug,
-        message: 'Schema retrieved:',
-      );
-      final List<String> zoneIds = [];
-
-      // SchemaModel schemaModel = model.data!;
-      SchemaModel schemaModel = SchemaModel.fromJson(schemeData);
-      print("schemaModel");
-      print(schemaModel.wallControllerConfig==null);
-      print(schemaModel.wallControllerConfig!.toJson());
-      Controllers? controller = schemaModel.wallControllerConfig!
-          .controllers?.firstWhere((ctrl) => ctrl.id == details['controller_id']);
-      print("controller");
-      print(controller!.toJson());
-      if (controller != null) {
-        zoneIds.addAll(controller.zoneIds ?? []);
-      }
-      print("zoneIds");
-      print(zoneIds);
-      List<ZoneModel> zones = [];
-      for (Zones item in schemaModel.wallControllerConfig?.zones ?? []) {
-        for (var id in zoneIds) {
-          if (id == item.id) {
-            zones.add(ZoneModel(id: id, name: item.name!,
-                gainID:item.gain!.gainID ?? "",
-                sources:
-                item.sources!.map((src) =>
-                    ZoneSourceModel(
-                        id: src.sourceId!,
-                        name: src.sourceName!,
-                        icon: Icons.yard_outlined,
-                        volume: double.parse(
-                            item.gain?.defaultGainValue ?? "0")
-                    )).toList()
-            ));
-          }
-        }
-      }
-      _zones.addAll(zones);
-
-      emit(QrConnected(schemaModel));
-    }else{
-
-      emit(QrInitial());
-    }
-    }
-
-  }
+  // Future<void> local(raw) async {
+  //   final uri = Uri.tryParse(raw);
+  //   print("Parsed URI: $uri");
+  //
+  //   if (uri != null && uri.queryParameters.isNotEmpty) {
+  //     Map<String,dynamic> details = {
+  //       "vip": uri.queryParameters['vip'],
+  //       "controller_id": uri.queryParameters['controller_id'],
+  //     };
+  //
+  //   print("Attempting connection with VIP: ${details['vip']}, Controller ID: ${details['controller_id']}");
+  //
+  //   emit(QrConnecting());
+  //  // ResponseCallback<SchemaModel> model = await _qrService.getSchema();
+  //
+  //   if(true) {
+  //     FusionLogger.log(
+  //       tag: LogTag.debug,
+  //       message: 'Schema retrieved:',
+  //     );
+  //     final List<String> zoneIds = [];
+  //
+  //     // SchemaModel schemaModel = model.data!;
+  //     SchemaModel schemaModel = SchemaModel.fromJson(schemeData);
+  //     print("schemaModel");
+  //     print(schemaModel.wallControllerConfig==null);
+  //     print(schemaModel.wallControllerConfig!.toJson());
+  //     Controllers? controller = schemaModel.wallControllerConfig!
+  //         .controllers?.firstWhere((ctrl) => ctrl.id == details['controller_id']);
+  //     print("controller");
+  //     print(controller!.toJson());
+  //     if (controller != null) {
+  //       zoneIds.addAll(controller.zoneIds ?? []);
+  //     }
+  //     print("zoneIds");
+  //     print(zoneIds);
+  //     List<ZoneModel> zones = [];
+  //     for (Zones item in schemaModel.wallControllerConfig?.zones ?? []) {
+  //       for (var id in zoneIds) {
+  //         if (id == item.id) {
+  //           zones.add(ZoneModel(id: id, name: item.name!,
+  //               gainID:item.gain!.gainID ?? "",
+  //               sources:
+  //               item.sources!.map((src) =>
+  //                   ZoneSourceModel(
+  //                       id: src.sourceId!,
+  //                       name: src.sourceName!,
+  //                       icon: Icons.yard_outlined,
+  //                       volume: double.parse(
+  //                           item.gain?.defaultGainValue ?? "0")
+  //                   )).toList()
+  //           ));
+  //         }
+  //       }
+  //     }
+  //     _zones.addAll(zones);
+  //
+  //     emit(QrConnected(schemaModel));
+  //   }else{
+  //
+  //     emit(QrInitial());
+  //   }
+  //   }
+  //
+  // }
 
   /// Reset state
   void reset() {

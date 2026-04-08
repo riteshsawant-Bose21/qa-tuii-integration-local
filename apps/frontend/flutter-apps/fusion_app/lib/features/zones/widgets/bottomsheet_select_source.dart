@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_app/core/models/scheme_model.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/button/button.dart';
 import 'package:fusion_app/features/zones/models/zone_source_model.dart';
 import 'package:fusion_app/features/zones/widgets/source_item.dart';
-import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_lib.dart' hide Source;
 
 class BottomSheetSelectSource extends StatelessWidget {
-  final ValueNotifier<ZoneSourceModel> source;
+  final ValueNotifier<Source> source;
   final Function? onSelected;
-  final List<ZoneSourceModel> sources;
+  final List<Source> sources;
   const BottomSheetSelectSource({super.key,this.sources=const[], required this.source,this.onSelected});
 
   @override
@@ -58,7 +59,7 @@ class BottomSheetSelectSource extends StatelessWidget {
                     itemBuilder: (ctx,i){
 
 
-                      return ValueListenableBuilder<ZoneSourceModel>(
+                      return ValueListenableBuilder<Source>(
                           valueListenable: source,
                           builder: (context, mode, _) {
                           return GestureDetector(
@@ -67,7 +68,7 @@ class BottomSheetSelectSource extends StatelessWidget {
                               },
                               child: SourceCard(
                                 source: sources[i],
-                                selected: source.value.id == sources[i].id,
+                                selected: source.value.sourceId == sources[i].sourceId,
                                 showCheckbox: true,));
                         }
                       );

@@ -41,17 +41,17 @@ final class GainUpdated extends ControlPalZonesState {
 }
 
 final class SourceSelected extends ControlPalZonesState {
-  final ZoneSourceModel zoneSourceModel;
+  final Source source;
 
   SourceSelected({
-    required this.zoneSourceModel,
+    required this.source,
   });
 
   SourceSelected copyWith({
-    ZoneSourceModel? zoneSourceModel,
+    Source? source,
   }) {
     return SourceSelected(
-        zoneSourceModel: zoneSourceModel ?? this.zoneSourceModel
+        source: source ?? this.source
     );
   }
 }
@@ -60,21 +60,25 @@ final class ZoneSelected extends ControlPalZonesState {
   final ZoneModel zone;
   final int currentSourceIndex;
   final int zoneIndex;
+  final int currentSubzoneIndex;
 
   ZoneSelected({
     required this.zone,
     required this.zoneIndex,
     required this.currentSourceIndex,
+    required this.currentSubzoneIndex,
   });
 
   ZoneSelected copyWith({
     ZoneModel? zone,
     int? zoneIndex,
+    int? currentSubzoneIndex,
     int? currentSourceIndex,
   }) {
     return ZoneSelected(
       zone: zone ?? this.zone,
       zoneIndex: zoneIndex ?? this.zoneIndex,
+      currentSubzoneIndex: currentSubzoneIndex ?? this.currentSubzoneIndex,
       currentSourceIndex: currentSourceIndex ?? this.currentSourceIndex,
     );
   }

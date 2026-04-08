@@ -5,7 +5,7 @@ import 'package:fusion_app/core/services/websocket_service.dart';
 import 'package:fusion_app/core/utils/audio_utils.dart';
 import 'package:fusion_app/features/zones/models/zone_source_model.dart';
 import 'package:fusion_app/features/zones/view_model/fusion_zone_service.dart';
-import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_lib.dart' hide Source;
 import '../../../core/models/scheme_model.dart';
 
 part 'controlpal_zone_view_model_state.dart';
@@ -22,6 +22,9 @@ class ControlPalZonesViewModel extends Cubit<ControlPalZonesState> {
   }) : _service = service,
         super(ZonesInitial());
 
+  final _throttler = Throttler(milliseconds: 100);
+  ZonesLoaded get _state => state as ZonesLoaded;
+
   void loadZones(List<ZoneModel> zones) {
     _zones.clear();
     _zones.addAll(zones);
@@ -30,25 +33,28 @@ class ControlPalZonesViewModel extends Cubit<ControlPalZonesState> {
     ));
   }
 
-  void selectZone(ZoneModel zone,int zoneIndex,{int sourceIndex=0}) {
+  void selectZone(ZoneModel zone,int zoneIndex,{int currentSubzoneIndex=0,int sourceIndex=0}) {
     emit(ZoneSelected(
       zone: zone,
       zoneIndex: zoneIndex,
+      currentSubzoneIndex: currentSubzoneIndex,
       currentSourceIndex: sourceIndex,
     ));
   }
-  void selectSource(ZoneSourceModel zoneSourceModel) {
+
+  void selectSource(Source source,String zoneID,String subzoneID) {
+    FusionWebSocketService().sendSourcePatch(subzoneID,zoneID, source.index??0);
     emit(SourceSelected(
-      zoneSourceModel: zoneSourceModel,
+      source: source,
     ));
   }
-  final _throttler = Throttler(milliseconds: 100);
-  ZonesLoaded get _state => state as ZonesLoaded;
+
+
 
   // 🔥 Volume change
   void updateVolume(int zoneIndex, ZoneSourceModel sourceModel, double volume) {
 
-    int indexWhere = _zones[zoneIndex].sources.indexWhere((s) => s.id == sourceModel.id);
+    int indexWhere = _zones[zoneIndex].subZones.indexWhere((s) => s.id == sourceModel.id);
 
     if(indexWhere == -1) return;
 
@@ -56,7 +62,6 @@ class ControlPalZonesViewModel extends Cubit<ControlPalZonesState> {
       return;
     }
 
-    print(volume);
     ZoneSourceModel zoneSourceModel = sourceModel.copyWith(
       volume: volume,
       muted: volume == 0,
@@ -64,26 +69,13 @@ class ControlPalZonesViewModel extends Cubit<ControlPalZonesState> {
 
 
     bassVolume = volume;
-    _zones[zoneIndex].sources[indexWhere] = zoneSourceModel;
+    _zones[zoneIndex].subZones[indexWhere] = zoneSourceModel;
 
-    var gainID =_zones[zoneIndex].gainID;
-    // Map<String,dynamic> data = {
-    //   "id": zoneSourceModel.id,
-    //   "version": 1,
-    //   "type": "patch_config",
-    //   "settings": {
-    //     "audio": {
-    //       gainID: {
-    //         "gain": bassVolume,
-    //         "mute": bassVolume == 0
-    //       }
-    //     }
-    //   }
-    // };
+    var gainID =_zones[zoneIndex].subZones[indexWhere].gainID;
+
     _throttler.run(() {
       //throttle with trailing
       FusionWebSocketService().sendGainPatch(zoneSourceModel.id, gainID, bassVolume!.toDouble());
-      //_service.updateGain(data);
     });
 
    emit(GainUpdated(zoneSourceModel: zoneSourceModel));
@@ -94,19 +86,19 @@ class ControlPalZonesViewModel extends Cubit<ControlPalZonesState> {
   Future<ZoneSourceModel> getGain(int zoneIndex,int sourceIndex, ZoneSourceModel sourceModel) async{
 
 
-    var gainID =_zones[zoneIndex].gainID;
+    var gainID = sourceModel.gainID;
 
     Map<String,dynamic> pathParams = {
-      "key": "settings.audio."+gainID
+      "key": "settings.audio.$gainID"
     };
     ResponseCallback<GainConfig> model = await  _service.getGain(pathParams);
-    double volume = model.data?.value.gain.toDouble() ?? 0;
+    double volume = AudioUtils.toUiVolume( model.data?.value.gain ?? 0);
 
     ZoneSourceModel zoneSourceModel = sourceModel.copyWith(
       volume: volume,
       muted: volume == 0,
     );
-    _zones[zoneIndex].sources[sourceIndex] = zoneSourceModel;
+    _zones[zoneIndex].subZones[sourceIndex] = zoneSourceModel;
     return zoneSourceModel;
     // emit(GainUpdated(zoneSourceModel: zoneSourceModel));
     //
