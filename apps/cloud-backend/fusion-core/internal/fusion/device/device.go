@@ -167,6 +167,13 @@ func (s *Service) setupDeviceCertificate(ctx context.Context, deviceID string, c
 
 // CreateDevice registers a new device or claims an existing unclaimed device.
 func (s *Service) CreateDevice(ctx context.Context, request *types.DeviceCreateRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (*types.DeviceCreateResponse, error) {
+	if request == nil {
+		return nil, fmt.Errorf(errorutil.ErrMsgDeviceCreateReqNil)
+	}
+	if user.Account.ID == "" {
+		return nil, fmt.Errorf(errorutil.ErrMsgAccountIDEmpty)
+	}
+
 	// Check if device already exists
 	device, err := s.dbService.GetDeviceByID(ctx, request.SerialNumber, logger)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
@@ -230,6 +237,13 @@ func (s *Service) CreateDevice(ctx context.Context, request *types.DeviceCreateR
 // BulkCreateDevices creates multiple devices in a single request.
 // Each device is processed independently; partial failures are captured per-device.
 func (s *Service) BulkCreateDevices(ctx context.Context, request *types.BulkDeviceCreateRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (*types.BulkDeviceCreateResponse, error) {
+	if request == nil {
+		return nil, fmt.Errorf(errorutil.ErrMsgBulkDeviceCreateReqNil)
+	}
+	if user.Account.ID == "" {
+		return nil, fmt.Errorf(errorutil.ErrMsgAccountIDEmpty)
+	}
+
 	results := make([]types.BulkDeviceCreateResult, 0, len(request.Devices))
 
 	for i := range request.Devices {
@@ -260,6 +274,16 @@ func (s *Service) BulkCreateDevices(ctx context.Context, request *types.BulkDevi
 
 // UpdateDevice modifies mutable fields of an existing device.
 func (s *Service) UpdateDevice(ctx context.Context, deviceID string, request *types.DeviceUpdateRequest, user types.UserAuthorizationResponse, logger *zap.Logger) error {
+	if deviceID == "" {
+		return fmt.Errorf(errorutil.ErrMsgDeviceIDEmpty)
+	}
+	if request == nil {
+		return fmt.Errorf(errorutil.ErrMsgDeviceUpdateReqNil)
+	}
+	if user.Account.ID == "" {
+		return fmt.Errorf(errorutil.ErrMsgAccountIDEmpty)
+	}
+
 	device, err := s.dbService.GetDeviceByID(ctx, deviceID, logger)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -291,6 +315,13 @@ func (s *Service) UpdateDevice(ctx context.Context, deviceID string, request *ty
 
 // ResetDevice releases a device from its owner and revokes IoT credentials.
 func (s *Service) ResetDevice(ctx context.Context, deviceID string, user types.UserAuthorizationResponse, logger *zap.Logger) error {
+	if deviceID == "" {
+		return fmt.Errorf(errorutil.ErrMsgDeviceIDEmpty)
+	}
+	if user.Account.ID == "" {
+		return fmt.Errorf(errorutil.ErrMsgAccountIDEmpty)
+	}
+
 	device, err := s.dbService.GetDeviceByID(ctx, deviceID, logger)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -332,6 +363,16 @@ func (s *Service) ResetDevice(ctx context.Context, deviceID string, user types.U
 
 // ClaimDevice claims an existing unclaimed device for a user and project.
 func (s *Service) ClaimDevice(ctx context.Context, deviceID string, request *types.DeviceClaimRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (*types.DeviceClaimResponse, error) {
+	if deviceID == "" {
+		return nil, fmt.Errorf(errorutil.ErrMsgDeviceIDEmpty)
+	}
+	if request == nil {
+		return nil, fmt.Errorf(errorutil.ErrMsgDeviceClaimReqNil)
+	}
+	if user.Account.ID == "" {
+		return nil, fmt.Errorf(errorutil.ErrMsgAccountIDEmpty)
+	}
+
 	device, err := s.dbService.GetDeviceByID(ctx, deviceID, logger)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -372,6 +413,16 @@ func (s *Service) ClaimDevice(ctx context.Context, deviceID string, request *typ
 
 // RotateCertificate creates a new certificate for a device, attaches it, and marks the old one as inactive.
 func (s *Service) RotateCertificate(ctx context.Context, deviceID string, request *types.DeviceRotateCertRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (*types.DeviceRotateCertResponse, error) {
+	if deviceID == "" {
+		return nil, fmt.Errorf(errorutil.ErrMsgDeviceIDEmpty)
+	}
+	if request == nil {
+		return nil, fmt.Errorf(errorutil.ErrMsgDeviceRotateCertReqNil)
+	}
+	if user.Account.ID == "" {
+		return nil, fmt.Errorf(errorutil.ErrMsgAccountIDEmpty)
+	}
+
 	device, err := s.dbService.GetDeviceByID(ctx, deviceID, logger)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -424,6 +475,13 @@ func (s *Service) RotateCertificate(ctx context.Context, deviceID string, reques
 
 // Command sends a command to a device via IoT topic publish.
 func (s *Service) Command(ctx context.Context, request *types.CommandRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (string, error) {
+	if request == nil {
+		return "", fmt.Errorf(errorutil.ErrMsgCommandReqNil)
+	}
+	if user.Account.ID == "" {
+		return "", fmt.Errorf(errorutil.ErrMsgAccountIDEmpty)
+	}
+
 	// Validate project access
 	if _, err := s.validateProjectAccess(ctx, request.ProjectID, user.Account.ID, logger); err != nil {
 		return "", err
@@ -474,6 +532,10 @@ func (s *Service) Command(ctx context.Context, request *types.CommandRequest, us
 
 // GetCommandStatus retrieves the status of a command by its ID.
 func (s *Service) GetCommandStatus(ctx context.Context, commandID string, logger *zap.Logger) (*types.CommandStatusResponse, error) {
+	if commandID == "" {
+		return nil, fmt.Errorf(errorutil.ErrMsgCommandIDEmpty)
+	}
+
 	commands, err := s.dbService.GetCommandStatus(ctx, commandID, logger)
 	if err != nil {
 		return nil, err
