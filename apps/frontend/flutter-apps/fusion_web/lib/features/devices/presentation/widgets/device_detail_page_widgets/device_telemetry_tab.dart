@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class DeviceTelemetryTab extends StatelessWidget {
@@ -8,9 +9,9 @@ class DeviceTelemetryTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-
         /// REAL-TIME TELEMETRY
         _card(
+          context,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -20,13 +21,20 @@ class DeviceTelemetryTab extends StatelessWidget {
 
               Row(
                 children: [
-                  Expanded(child: _metricCard("Temperature", "42°C", "Normal")),
+                  Expanded(child: _metricCard("Temperature", "42°C", "Normal", context)),
                   const SizedBox(width: 16),
-                  Expanded(child: _metricCard("CPU Usage", "32%", "Avg: 45%")),
+                  Expanded(child: _metricCard("CPU Usage", "32%", "Avg: 45%", context,)),
                   const SizedBox(width: 16),
-                  Expanded(child: _metricCard("Memory", "45%", "512MB / 1GB")),
+                  Expanded(child: _metricCard("Memory", "45%", "512MB / 1GB", context,)),
                   const SizedBox(width: 16),
-                  Expanded(child: _metricCard("Signal Strength", "-42 dBm", "Excellent")),
+                  Expanded(
+                    child: _metricCard(
+                      "Signal Strength",
+                      "-42 dBm",
+                      "Excellent",
+                      context,
+                    ),
+                  ),
                 ],
               ),
 
@@ -48,6 +56,7 @@ class DeviceTelemetryTab extends StatelessWidget {
 
         /// HISTORICAL TELEMETRY
         _card(
+          context,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -57,11 +66,17 @@ class DeviceTelemetryTab extends StatelessWidget {
 
               Row(
                 children: [
-                  Expanded(child: _historyCard("Temperature", "38°C", "56°C", "45°C")),
+                  Expanded(
+                    child: _historyCard("Temperature", "38°C", "56°C", "45°C", context),
+                  ),
                   const SizedBox(width: 16),
-                  Expanded(child: _historyCard("CPU Usage", "15%", "68%", "42%")),
+                  Expanded(
+                    child: _historyCard("CPU Usage", "15%", "68%", "42%", context),
+                  ),
                   const SizedBox(width: 16),
-                  Expanded(child: _historyCard("Memory Usage", "32%", "72%", "52%")),
+                  Expanded(
+                    child: _historyCard("Memory Usage", "32%", "72%", "52%", context),
+                  ),
                 ],
               ),
 
@@ -79,22 +94,23 @@ class DeviceTelemetryTab extends StatelessWidget {
                     Text(
                       "All metrics within normal operating range",
                       style: GoogleFonts.montserrat(fontSize: 14),
-                    )
+                    ),
                   ],
                 ),
-              )
+              ),
             ],
           ),
-        )
+        ),
       ],
     );
   }
 
-  Widget _card({required Widget child}) {
+  Widget _card(BuildContext context, {required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
+        color: context.colorScheme.elevation2,
       ),
       child: child,
     );
@@ -103,19 +119,22 @@ class DeviceTelemetryTab extends StatelessWidget {
   Widget _title(String text) {
     return Text(
       text,
-      style: GoogleFonts.montserrat(
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
-      ),
+      style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w600),
     );
   }
 
-  Widget _metricCard(String title, String value, String subtitle) {
+  Widget _metricCard(
+    String title,
+    String value,
+    String subtitle,
+    BuildContext context,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E5E5)),
+        // border: Border.all(color: const Color(0xFFE5E5E5)),
+        color: context.colorScheme.elevation3,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,12 +173,13 @@ class DeviceTelemetryTab extends StatelessWidget {
     );
   }
 
-  Widget _historyCard(String title, String min, String max, String avg) {
+  Widget _historyCard(String title, String min, String max, String avg, BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E5E5)),
+        // border: Border.all(color: const Color(0xFFE5E5E5)),
+        color: context.colorScheme.elevation3,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_web/features/common-widgets/page_header.dart';
+import 'package:fusion_web/features/projects/presentation/widgets/projects_page_widgets/projects_page_content.dart';
 //Routes
 import 'package:go_router/go_router.dart';
 //base viewmodel
@@ -14,8 +15,6 @@ import 'package:fusion_web/core/services/service_locator.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
 //Ui widgets
 import 'package:fusion_web/features/projects/presentation/widgets/projects_page_widgets/project_filters.dart';
-import 'package:fusion_web/features/projects/presentation/widgets/projects_page_widgets/project_grid_view.dart';
-import 'package:fusion_web/features/projects/presentation/widgets/projects_page_widgets/project_list_view.dart';
 
 class ProjectsPage extends StatefulWidget {
   const ProjectsPage({super.key});
@@ -66,10 +65,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
                         color: context.colorScheme.elevation2,
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
-                          BoxShadow(
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
+                          BoxShadow(blurRadius: 10, offset: const Offset(0, 4)),
                         ],
                       ),
                       child: Column(
@@ -79,7 +75,12 @@ class _ProjectsPageState extends State<ProjectsPage> {
                           const SizedBox(height: 12),
                           const ProjectsFilters(),
                           const SizedBox(height: 24),
-                          Expanded(child: _buildContent(context, state)),
+                          Expanded(
+                            child: ProjectsPageContent(
+                              state: state,
+                              onProjectTap: _navigateToDetail,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -90,42 +91,6 @@ class _ProjectsPageState extends State<ProjectsPage> {
           ),
         ),
       ),
-    );
-  }
-
-  // ======================================================
-  // CONTENT
-  // ======================================================
-
-  Widget _buildContent(
-    BuildContext context,
-    BaseState<List<ProjectModel>> state,
-  ) {
-    final viewModel = context.watch<ProjectsViewModel>();
-
-    if (state is LoadingState) {
-      return  Center(child: CircularProgressIndicator(
-                    color: context.colorScheme.white,
-                ));
-    }
-
-    if (state is ErrorState<List<ProjectModel>>) {
-      return Center(child: FusionAppText(text: state.message));
-    }
-
-    final projects = (state as LoadedState<List<ProjectModel>>).data;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Text('Showing ${projects.length} projects'),
-        // const SizedBox(height: 16),
-        Expanded(
-          child: viewModel.isGridView
-              ? ProjectsGridView(projects: projects, onTap: _navigateToDetail)
-              : ProjectsListView(projects: projects, onTap: _navigateToDetail),
-        ),
-      ],
     );
   }
 }

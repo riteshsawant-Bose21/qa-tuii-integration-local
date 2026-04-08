@@ -36,24 +36,37 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             /// BACK BUTTON
             TextButton.icon(
               onPressed: () {
+                // context.pushReplacement(AppConstants.devicesRoute);
                 context.pop();
               },
-              icon: const Icon(Icons.arrow_back, size: 18, color: Colors.black),
+              icon: Icon(
+                Icons.arrow_back,
+                size: 18,
+                color: context.colorScheme.elevation6,
+              ),
               label: FusionAppText(
                 text: "Back to Devices",
-                style: GoogleFonts.montserrat(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black,
-                ),
+                // style: GoogleFonts.montserrat(
+                //   fontSize: 14,
+                //   fontWeight: FontWeight.w500,
+                //   color: Colors.black,
+                // ),
               ),
               style: ButtonStyle(
                 backgroundColor: WidgetStateProperty.resolveWith((states) {
                   if (states.contains(WidgetState.hovered)) {
-                    return Colors.grey[200];
+                    return context.colorScheme.elevation2; // hover background
                   }
                   return Colors.transparent;
                 }),
+                padding: WidgetStateProperty.all(
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                ),
+                shape: WidgetStateProperty.all(
+                  RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
               ),
             ),
 
@@ -158,43 +171,39 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
 
   /// TABS CONTAINER
   Widget _tabs() {
-    return Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation2,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _tabButton("Overview", DeviceDetailTab.overview),
-          _tabButton("Incidents", DeviceDetailTab.incidents),
-          _tabButton("Activity", DeviceDetailTab.activity),
-          _tabButton("Telemetry", DeviceDetailTab.telemetry),
-        ],
-      ),
+    return Row(
+      children: [
+        _tabButton("Overview", DeviceDetailTab.overview),
+        const SizedBox(width: 8),
+        _tabButton("Incidents", DeviceDetailTab.incidents),
+        const SizedBox(width: 8),
+        _tabButton("Activity", DeviceDetailTab.activity),
+        const SizedBox(width: 8),
+        _tabButton("Telemetry", DeviceDetailTab.telemetry),
+      ],
     );
   }
 
   Widget _tabButton(String text, DeviceDetailTab tab) {
     final selected = _selectedTab == tab;
 
-    return GestureDetector(
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
       onTap: () => setState(() => _selectedTab = tab),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          // color: selected ? Colors.white : Colors.transparent,
+          color: selected ? context.colorScheme.elevation2 : Colors.transparent,
+
           borderRadius: BorderRadius.circular(20),
+
+          border: Border.all(
+            color: selected
+                ? context.colorScheme.elevation4
+                : context.colorScheme.elevation3,
+          ),
         ),
-        child: FusionAppText(
-          text: text,
-          // style: GoogleFonts.montserrat(
-          //   fontSize: 13,
-          //   fontWeight: FontWeight.w600,
-          // ),
-        ),
+        child: FusionAppText(text: text),
       ),
     );
   }
@@ -220,8 +229,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
           ),
           const SizedBox(height: 8),
           FusionAppText(
-            text:
-            value,
+            text: value,
             // style: GoogleFonts.montserrat(
             //   fontSize: 20,
             //   fontWeight: FontWeight.w700,
@@ -229,8 +237,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
           ),
           const SizedBox(height: 4),
           FusionAppText(
-            text:
-            subtitle,
+            text: subtitle,
             // style: GoogleFonts.montserrat(
             //   fontSize: 12,
             //   color: Colors.grey[500],
