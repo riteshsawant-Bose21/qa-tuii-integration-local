@@ -1,8 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
+import 'package:fusion_launcher/features/commission/view_models/mdns/mdns_search_state.dart';
+import 'package:fusion_launcher/features/commission/view_models/mdns/mdns_search_viewmodel.dart';
+import 'package:fusion_launcher/features/commission/view_models/vip_config/vip_config_view_model.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/devices/presentation/widgets/device_mapping_dialog.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -18,7 +22,10 @@ import 'network_config_state.dart';
 import 'vip_configuration_screen.dart';
 import 'vip_success_screen.dart';
 
-/// Main configure network dialog that manages all states and flows
+/// Main configure network dialog that manages all states and flows.
+///
+/// Creates a scoped [MdnsScanViewModel] via [BlocProvider] so every child
+/// widget can access the same cubit without manual wiring.
 class ConfigureNetworkDialog extends StatefulWidget {
   final bool bluetoothOnly;
 
@@ -30,7 +37,7 @@ class ConfigureNetworkDialog extends StatefulWidget {
   @override
   State<ConfigureNetworkDialog> createState() => _ConfigureNetworkDialogState();
 
-  /// Static method to show the dialog
+  /// Static method to show the dialog.
   static Future<void> show(BuildContext context, {bool bluetoothOnly = false}) {
     return showDialog(
       context: context,
@@ -46,21 +53,83 @@ class ConfigureNetworkDialog extends StatefulWidget {
 class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
   NetworkConfigState _state = NetworkConfigState.initial;
   List<BluetoothDevice> _bluetoothDevices = <BluetoothDevice>[];
-  List<MdnsDevice> _mdnsDevices = <MdnsDevice>[];
   WiFiCredentials? _wifiCredentials;
-  Timer? mockTimer;
+  Timer? _bluetoothMockTimer;
 
   @override
   void initState() {
+    super.initState();
     if (widget.bluetoothOnly) {
       _state = NetworkConfigState.bluetoothSearching;
       _startBluetoothSearch();
     }
-    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _bluetoothMockTimer?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    return MultiBlocProvider(
+      providers: <BlocProvider<dynamic>>[
+        BlocProvider<MdnsScanViewModel>(
+          create: (_) => MdnsScanViewModel(serviceLocator<MdnsService>()),
+        ),
+        BlocProvider<VipConfigViewModel>(
+          create: (_) => VipConfigViewModel(),
+        ),
+      ],
+      child: Builder(
+        builder: (BuildContext context) {
+          return MultiBlocListener(
+            listeners: <BlocListener<dynamic, dynamic>>[
+              BlocListener<MdnsScanViewModel, DeviceScanState>(
+                listener: _onMdnsScanStateChanged,
+              ),
+              BlocListener<VipConfigViewModel, VipConfigViewModelState>(
+                listener: _onVipConfigStateChanged,
+              ),
+            ],
+            child: _buildDialog(context),
+          );
+        },
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // MDNS BlocListener callback
+  // ---------------------------------------------------------------------------
+
+  void _onMdnsScanStateChanged(BuildContext context, DeviceScanState scanState) {
+    switch (scanState) {
+      case DeviceScanSearching():
+        if (_state != NetworkConfigState.mdnsSearching) {
+          setState(() => _state = NetworkConfigState.mdnsSearching);
+        }
+      case DeviceScanFound():
+        // Redirect to VIP config as soon as the first device arrives.
+        // Stay on that screen for subsequent device emissions.
+        if (_state != NetworkConfigState.vipConfiguration) {
+          setState(() => _state = NetworkConfigState.vipConfiguration);
+        }
+      case DeviceScanTimeout():
+        setState(() => _state = NetworkConfigState.mdnsRetry);
+      case DeviceScanError():
+        setState(() => _state = NetworkConfigState.mdnsRetry);
+      case DeviceScanInitial():
+        break;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dialog chrome
+  // ---------------------------------------------------------------------------
+
+  Widget _buildDialog(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(40),
@@ -79,12 +148,8 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
         ),
         child: Column(
           children: <Widget>[
-            // Header
             _buildHeader(context),
-            // Content
-            Expanded(
-              child: _buildContent(context),
-            ),
+            Expanded(child: _buildContent(context)),
           ],
         ),
       ),
@@ -115,13 +180,11 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
             ),
           ),
           InkWell(
+            onTap: _showCloseDialog,
             child: Icon(
               Icons.close,
               color: Theme.of(context).colorScheme.iconDefault,
             ),
-            onTap: () {
-              _showCloseDialog();
-            },
           ),
         ],
       ),
@@ -130,28 +193,25 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
 
   void _showCloseDialog() {
     if (widget.bluetoothOnly || serviceLocator<ProjectViewModel>().virtualIP != null) {
-      Navigator.of(context).pop(); // Close the network configuration dialog
+      Navigator.of(context).pop();
       return;
     }
-    //show confirmation dialog before closing
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogCtx) {
         return AlertDialog(
           title: const Text('Confirm'),
           content: const Text('If you close this you will be switched back to Design Mode!'),
           actions: <Widget>[
             TextButton(
               child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the confirmation dialog
-              },
+              onPressed: () => Navigator.of(dialogCtx).pop(),
             ),
             TextButton(
               child: const Text('Close'),
               onPressed: () {
-                Navigator.of(context).pop(); // Close the confirmation dialog
-                Navigator.of(context).pop(); // Close the network configuration dialog
+                Navigator.of(dialogCtx).pop();
+                Navigator.of(context).pop();
                 serviceLocator<ProjectViewModel>().toggleControlMode();
               },
             ),
@@ -161,22 +221,26 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Content (state machine)
+  // ---------------------------------------------------------------------------
+
   Widget _buildContent(BuildContext context) {
     switch (_state) {
       case NetworkConfigState.initial:
         return InitialScreen(
-          onConfigureNetwork: () => _startMDNSSearch(),
+          onConfigureNetwork: () => _startMDNSSearch(context),
         );
 
       case NetworkConfigState.mdnsSearching:
         return MDNSSearchScreen(
-          onConfigureWireless: () => _startBluetoothSearch(),
+          onConfigureWireless: _startBluetoothSearch,
         );
 
       case NetworkConfigState.mdnsRetry:
         return MDNSRetryScreen(
-          onRetry: () => _startMDNSSearch(),
-          onConfigureWireless: () => _startBluetoothSearch(),
+          onRetry: () => _startMDNSSearch(context),
+          onConfigureWireless: _startBluetoothSearch,
         );
 
       case NetworkConfigState.bluetoothSearching:
@@ -184,40 +248,35 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
           onGoBack: () {
             if (widget.bluetoothOnly) {
               Navigator.of(context).pop();
-              return;
             } else {
-              _goBackToMDNS();
+              _goBackToMDNS(context);
             }
           },
         );
 
       case NetworkConfigState.bluetoothRetry:
         return BluetoothRetryScreen(
-          onRetry: () => _startBluetoothSearch(),
+          onRetry: _startBluetoothSearch,
         );
 
       case NetworkConfigState.bluetoothDevicesFound:
         return BluetoothDevicesScreen(
           devices: _bluetoothDevices,
           onSendCredentials: (WiFiCredentials credentials, List<BluetoothDevice> selectedDevices) {
-            _sendWiFiCredentials(credentials, selectedDevices);
+            _sendWiFiCredentials(credentials, selectedDevices, context);
           },
-          onRetry: () => _startBluetoothSearch(),
+          onRetry: _startBluetoothSearch,
           onGoBack: () {
             if (widget.bluetoothOnly) {
               Navigator.of(context).pop();
-              return;
             } else {
-              _goBackToMDNS();
+              _goBackToMDNS(context);
             }
           },
         );
 
       case NetworkConfigState.vipConfiguration:
-        return VIPConfigurationScreen(
-          devices: _mdnsDevices,
-          onVerify: (String vipAddress) => _verifyVIP(vipAddress),
-        );
+        return const VIPConfigurationScreen();
 
       case NetworkConfigState.success:
         return VipSuccessScreen(
@@ -229,65 +288,39 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
     }
   }
 
-  // State transition methods
-  void _startMDNSSearch() {
-    mockTimer?.cancel();
-    setState(() {
-      _state = NetworkConfigState.mdnsSearching;
-    });
+  // ---------------------------------------------------------------------------
+  // MDNS scan actions
+  // ---------------------------------------------------------------------------
 
-    mockTimer = Timer(const Duration(seconds: 2), () {
-      if (mounted) {
-        if (true) {
-          setState(() {
-            _mdnsDevices = <MdnsDevice>[
-              MdnsDevice(
-                name: 'Fusion Mini FM6Y',
-                ip: '192.168.1.10', // Mock IP
-                port: 8080,
-              ),
-              MdnsDevice(
-                name: 'Fusion Mini FM8Y',
-                ip: '192.168.1.11',
-                port: 8080,
-              ),
-            ];
-            _state = NetworkConfigState.vipConfiguration;
-          });
-        }
-        // else {
-        //   setState(() {
-        //     _state = NetworkConfigState.mdnsRetry;
-        //   });
-        // }
-      }
-    });
+  void _startMDNSSearch(BuildContext context) {
+    context.read<MdnsScanViewModel>().startScan();
   }
 
-  void _startBluetoothSearch() {
-    mockTimer?.cancel();
-    setState(() {
-      _state = NetworkConfigState.bluetoothSearching;
-    });
+  void _goBackToMDNS(BuildContext context) {
+    context.read<MdnsScanViewModel>().stopScan();
+    setState(() => _state = NetworkConfigState.mdnsSearching);
+    context.read<MdnsScanViewModel>().startScan();
+  }
 
-    mockTimer = Timer(const Duration(seconds: 2), () {
+  // ---------------------------------------------------------------------------
+  // Bluetooth (unchanged — still mock/placeholder)
+  // ---------------------------------------------------------------------------
+
+  void _startBluetoothSearch() {
+    _bluetoothMockTimer?.cancel();
+    setState(() => _state = NetworkConfigState.bluetoothSearching);
+
+    _bluetoothMockTimer = Timer(const Duration(seconds: 2), () {
       if (mounted) {
-        if (true) {
-          setState(() {
-            _bluetoothDevices = <BluetoothDevice>[
-              BluetoothDevice(id: '1', name: 'Fusion Mini FM6'),
-              BluetoothDevice(id: '2', name: 'Fusion Mini FM6'),
-              BluetoothDevice(id: '3', name: 'Power Smart 8300'),
-              BluetoothDevice(id: '4', name: 'Power Smart 8300'),
-            ];
-            _state = NetworkConfigState.bluetoothDevicesFound;
-          });
-        }
-        // else {
-        //   setState(() {
-        //     _state = NetworkConfigState.bluetoothRetry;
-        //   });
-        // }
+        setState(() {
+          _bluetoothDevices = <BluetoothDevice>[
+            BluetoothDevice(id: '1', name: 'Fusion Mini FM6'),
+            BluetoothDevice(id: '2', name: 'Fusion Mini FM6'),
+            BluetoothDevice(id: '3', name: 'Power Smart 8300'),
+            BluetoothDevice(id: '4', name: 'Power Smart 8300'),
+          ];
+          _state = NetworkConfigState.bluetoothDevicesFound;
+        });
       }
     });
   }
@@ -295,19 +328,17 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
   void _sendWiFiCredentials(
     WiFiCredentials credentials,
     List<BluetoothDevice> selectedDevices,
+    BuildContext context,
   ) async {
     _wifiCredentials = credentials;
 
     FusionUiUtils.showLoader(context);
 
-    // Simulate sending credentials to devices one by one
     for (final BluetoothDevice device in selectedDevices) {
       await Future<void>.delayed(const Duration(milliseconds: 500));
-      // Mock sending to device
       debugPrint('Sending credentials to ${device.name}');
     }
 
-    // After wireless configuration, go back to MDNS search
     if (mounted) {
       FusionUiUtils.hideLoader(context);
       showSuccessPopup(
@@ -315,9 +346,8 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
         () async {
           if (widget.bluetoothOnly) {
             Navigator.of(context).pop();
-            return;
           } else {
-            _startMDNSSearch();
+            _startMDNSSearch(context);
           }
         },
         durationInMils: 2500,
@@ -325,30 +355,34 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
     }
   }
 
-  void _verifyVIP(String vipAddress) async {
-    FusionUiUtils.showLoader(context);
-    // Simulate VIP verification
-    await Future<void>.delayed(const Duration(seconds: 1));
-    if (mounted) {
-      serviceLocator<ProjectViewModel>().setVirtualIP(ip: vipAddress);
-      FusionUiUtils.hideLoader(context);
-      showSuccessPopup(
-        context,
-        () async {
-          // Mock: VIP configuration successful
-          setState(() {
-            _state = NetworkConfigState.success;
-          });
-        },
-        durationInMils: 2500,
-      );
-    }
-  }
+  // ---------------------------------------------------------------------------
+  // VIP config BlocListener callback
+  // ---------------------------------------------------------------------------
 
-  void _goBackToMDNS() {
-    mockTimer?.cancel();
-    setState(() {
-      _state = NetworkConfigState.mdnsSearching;
-    });
+  void _onVipConfigStateChanged(BuildContext context, VipConfigViewModelState vipState) {
+    switch (vipState) {
+      case VipConfigVerifying():
+        FusionUiUtils.showLoader(context);
+      case VipConfigSuccess(:final String vip):
+        FusionUiUtils.hideLoader(context);
+        serviceLocator<ProjectViewModel>().setVirtualIP(ip: vip);
+        showSuccessPopup(
+          context,
+          () async {
+            if (mounted) {
+              Navigator.of(context).pop();
+              DeviceMappingDialog.show(context);
+            }
+          },
+          durationInMils: 2500,
+        );
+      case VipConfigError(:final String message):
+        FusionUiUtils.hideLoader(context);
+        FusionToast.error(context, message: message);
+        // Reset so the user can try again from the same screen.
+        context.read<VipConfigViewModel>().reset();
+      case VipConfigInitial():
+        break;
+    }
   }
 }

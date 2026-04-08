@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/processing_block/viewmodel/processing_chain_cubit.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -128,20 +130,22 @@ class BlockHeader extends StatelessWidget {
             // mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               if (actions != null) actions!,
-              const SizedBox(width: 20),
-              InkWell(
-                onTap: () {
-                  context.read<ProcessingChainCubit>().deleteSelectedProcessingBlock();
-                },
-                child: Tooltip(
-                  message: "Delete processing block",
-                  child: Icon(
-                    LucideIcons.trash200,
-                    size: 16,
-                    color: context.colorScheme.iconDefault,
+              if (!serviceLocator<ProjectViewModel>().isInControlMode) ...<Widget>[
+                const SizedBox(width: 20),
+                InkWell(
+                  onTap: () {
+                    context.read<ProcessingChainCubit>().deleteSelectedProcessingBlock();
+                  },
+                  child: Tooltip(
+                    message: "Delete processing block",
+                    child: Icon(
+                      LucideIcons.trash200,
+                      size: 16,
+                      color: context.colorScheme.iconDefault,
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
           ),
         ],

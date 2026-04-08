@@ -74,16 +74,17 @@ extension EventsService on ProjectService {
         removeAllActionsFromEvent(eventId: eventId);
 
       case EventTriggerType.gpi:
-        //check if old is not gpi then only update it to avoid losing gpi item
+        // If already GPI, no change needed.
         if (event.triggerType == EventTriggerType.gpi) {
-          // No change needed
           break;
         }
-        final updatedEvent = event.copyWith(
+        // When switching to GPI trigger, we clear the action because GPI doesn't have a default action (unlike Schedule which defaults to TimedEvent).
+        final updatedEventGpi = event.updateTriggerType(
           triggerType: newTrigger,
+          action: null, // GPI has no auto-selected action (unlike Schedule → TimedEvent)
         );
-        events.add(eventId, updatedEvent);
-        //remove all actions linked to event as action type is changed
+        events.add(eventId, updatedEventGpi);
+        // Remove stale scene actions tied to the previous action type.
         removeAllActionsFromEvent(eventId: eventId);
     }
   }
@@ -116,8 +117,17 @@ extension EventsService on ProjectService {
     //link event Trigger item mapping
     relationships.link(RelationshipType.eventsItemMapping, eventId, eventTriggerItem.itemId);
 
-    final updatedEvent = event.copyWith(item: eventTriggerItem);
+    // Use updateItem() instead of copyWith() so that action, condition, states
+    // and selectedState are cleared when the item changes.  This prevents the
+    // old action/condition from being silently carried over to the new item
+    // (which made the action dropdown appear pre-filled on subsequent selections).
+    final updatedEvent = event.updateItem(eventTriggerItem);
     events.add(eventId, updatedEvent);
+
+    // Remove any stale scene actions that were linked under the previous
+    // action type — same cleanup performed by updateEventAction /
+    // updateEventConditionType when their selections change.
+    removeAllActionsFromEvent(eventId: eventId);
   }
 
   List<EventActionType> getEventActions({required String eventId}) {

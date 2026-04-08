@@ -71,6 +71,503 @@
                 }
             }
         },
+        "/devices": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new device in the system",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Create a new device",
+                "parameters": [
+                    {
+                        "description": "Device details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created device",
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceCreateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload or device already exists",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/bulk": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create multiple devices in a single request. Each device is processed independently; partial failures are reported per-device.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Bulk create devices",
+                "parameters": [
+                    {
+                        "description": "List of devices to create",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.BulkDeviceCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "207": {
+                        "description": "Multi-status - results for each device",
+                        "schema": {
+                            "$ref": "#/definitions/types.BulkDeviceCreateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/commands": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Send a command to the device cluster",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Send command to device cluster",
+                "parameters": [
+                    {
+                        "description": "Command details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.CommandRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully sent command",
+                        "schema": {
+                            "$ref": "#/definitions/types.CommandResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/commands/{command_id}/status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the status of a command by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Get command status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Command ID",
+                        "name": "command_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved command status",
+                        "schema": {
+                            "$ref": "#/definitions/types.CommandStatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid command ID",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Command not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/{device_id}": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update device details (non-static fields only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Update a device",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Serial number of the device",
+                        "name": "device_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Device update details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully updated device"
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized to update this device",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Device or project not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/{device_id}/claim": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Claim an unclaimed device for a user and project",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Claim a device",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Serial number of the device",
+                        "name": "device_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Claim details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceClaimRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully claimed device",
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceClaimResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload or device already claimed",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Device or project not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/{device_id}/reset": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Reset a device to factory settings",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Reset a device",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Serial number of the device",
+                        "name": "device_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully reset device"
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized to reset this device",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Device not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/{device_id}/rotate-cert": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a new certificate, attaches it to the device, and marks the old certificate as inactive",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Rotate device certificate",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Serial number of the device",
+                        "name": "device_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Certificate rotation details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceRotateCertRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully rotated certificate",
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceRotateCertResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Device not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/firmware/bundles": {
             "get": {
                 "security": [
@@ -730,6 +1227,526 @@
                     },
                     "403": {
                         "description": "Forbidden - Insufficient permissions to update user roles",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/organizations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get comprehensive overview of all organizations with statistics, filtering, and pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "organizations"
+                ],
+                "summary": "Get all organizations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query for organization name",
+                        "name": "query",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "enum": [
+                                "distributor",
+                                "reseller",
+                                "end_user"
+                            ],
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Filter by organization types",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Filter by regions",
+                        "name": "region",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved organizations",
+                        "schema": {
+                            "$ref": "#/definitions/types.OrganizationsOverviewResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions to view organizations",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new organization with specified type, region, and details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "organizations"
+                ],
+                "summary": "Create new organization",
+                "parameters": [
+                    {
+                        "description": "Organization creation details",
+                        "name": "organization",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.CreateOrganizationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created organization",
+                        "schema": {
+                            "$ref": "#/definitions/types.Organization"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid JSON payload or validation errors",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions to create organizations",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/organizations/{organizationId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get comprehensive details about a specific organization including users, projects, and statistics",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "organizations"
+                ],
+                "summary": "Get organization details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "organizationId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved organization details",
+                        "schema": {
+                            "$ref": "#/definitions/types.OrganizationDetailsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid organization ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions to view organization details",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found - Organization not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing organization's details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "organizations"
+                ],
+                "summary": "Update organization",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "organizationId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Organization update details",
+                        "name": "organization",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.UpdateOrganizationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated organization",
+                        "schema": {
+                            "$ref": "#/definitions/types.Organization"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid organization ID or JSON payload",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions to update organizations",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found - Organization not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete an existing organization (soft delete recommended)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "organizations"
+                ],
+                "summary": "Delete organization",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "organizationId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully deleted organization",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid organization ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions to delete organizations",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found - Organization not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/organizations/{organizationId}/invite-users": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Invite multiple users to join an organization with specified roles",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "organizations"
+                ],
+                "summary": "Invite users to organization",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "organizationId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "User invitations",
+                        "name": "invitations",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.InviteUsersToOrganizationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully processed invitations",
+                        "schema": {
+                            "$ref": "#/definitions/types.InviteUsersToOrganizationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid organization ID or JSON payload",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions to invite users",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found - Organization not found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2080,6 +3097,52 @@
                 }
             }
         },
+        "types.BulkDeviceCreateRequest": {
+            "type": "object",
+            "required": [
+                "devices"
+            ],
+            "properties": {
+                "devices": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/types.DeviceCreateRequest"
+                    }
+                }
+            }
+        },
+        "types.BulkDeviceCreateResponse": {
+            "type": "object",
+            "properties": {
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.BulkDeviceCreateResult"
+                    }
+                }
+            }
+        },
+        "types.BulkDeviceCreateResult": {
+            "type": "object",
+            "properties": {
+                "certificate": {
+                    "type": "string"
+                },
+                "device_id": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "types.BundleDetails": {
             "type": "object",
             "properties": {
@@ -2137,6 +3200,126 @@
                 }
             }
         },
+        "types.CommandRequest": {
+            "type": "object",
+            "required": [
+                "command",
+                "project_id"
+            ],
+            "properties": {
+                "command": {
+                    "enum": [
+                        "REBOOT"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.CommandType"
+                        }
+                    ],
+                    "example": "REBOOT"
+                },
+                "device_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "project_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.CommandResponse": {
+            "type": "object",
+            "properties": {
+                "command_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.CommandStatusResponse": {
+            "type": "object",
+            "properties": {
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.CommandStatusResult"
+                    }
+                }
+            }
+        },
+        "types.CommandStatusResult": {
+            "type": "object",
+            "properties": {
+                "command_id": {
+                    "type": "string"
+                },
+                "command_name": {
+                    "type": "string"
+                },
+                "device_id": {
+                    "type": "string"
+                },
+                "issued_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.CommandType": {
+            "type": "string",
+            "enum": [
+                "REBOOT"
+            ],
+            "x-enum-varnames": [
+                "CommandRestart"
+            ]
+        },
+        "types.CreateOrganizationRequest": {
+            "type": "object",
+            "required": [
+                "name",
+                "region",
+                "type"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "Leading audio distribution company"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 3,
+                    "example": "ProAudio Distribution NA"
+                },
+                "region": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 3,
+                    "example": "North America"
+                },
+                "type": {
+                    "enum": [
+                        "distributor",
+                        "reseller",
+                        "end_user"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.OrganizationType"
+                        }
+                    ],
+                    "example": "distributor"
+                }
+            }
+        },
         "types.CreateRoleRequest": {
             "type": "object",
             "required": [
@@ -2182,6 +3365,132 @@
                 "full_name": {
                     "type": "string",
                     "example": "Jane Smith"
+                }
+            }
+        },
+        "types.DeviceClaimRequest": {
+            "type": "object",
+            "required": [
+                "csr",
+                "project_id"
+            ],
+            "properties": {
+                "csr": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.DeviceClaimResponse": {
+            "type": "object",
+            "properties": {
+                "certificate": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.DeviceCreateRequest": {
+            "type": "object",
+            "required": [
+                "client_device_id",
+                "csr",
+                "device_location",
+                "device_name",
+                "device_zone",
+                "firmware_version",
+                "mac_address",
+                "model_name",
+                "project_id",
+                "serial_number"
+            ],
+            "properties": {
+                "client_device_id": {
+                    "type": "string"
+                },
+                "csr": {
+                    "type": "string"
+                },
+                "device_location": {
+                    "type": "string"
+                },
+                "device_name": {
+                    "type": "string"
+                },
+                "device_zone": {
+                    "type": "string"
+                },
+                "firmware_version": {
+                    "type": "string"
+                },
+                "is_primary": {
+                    "type": "boolean"
+                },
+                "mac_address": {
+                    "type": "string"
+                },
+                "model_name": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "serial_number": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.DeviceCreateResponse": {
+            "type": "object",
+            "properties": {
+                "certificate": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.DeviceRotateCertRequest": {
+            "type": "object",
+            "required": [
+                "csr"
+            ],
+            "properties": {
+                "csr": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.DeviceRotateCertResponse": {
+            "type": "object",
+            "properties": {
+                "certificate": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.DeviceUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "client_device_id": {
+                    "type": "string"
+                },
+                "device_location": {
+                    "type": "string"
+                },
+                "device_name": {
+                    "type": "string"
+                },
+                "device_zone": {
+                    "type": "string"
+                },
+                "firmware_version": {
+                    "type": "string"
+                },
+                "is_primary": {
+                    "type": "boolean"
+                },
+                "project_id": {
+                    "type": "string"
                 }
             }
         },
@@ -2331,6 +3640,85 @@
                 }
             }
         },
+        "types.InviteUserResult": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "john.doe@example.com"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "User invited successfully"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "user_id": {
+                    "type": "string",
+                    "example": "usr_123456789"
+                }
+            }
+        },
+        "types.InviteUserToOrganizationRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "role"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "john.doe@example.com"
+                },
+                "role": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 3,
+                    "example": "Partner Admin"
+                }
+            }
+        },
+        "types.InviteUsersToOrganizationRequest": {
+            "type": "object",
+            "required": [
+                "users"
+            ],
+            "properties": {
+                "users": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/types.InviteUserToOrganizationRequest"
+                    }
+                }
+            }
+        },
+        "types.InviteUsersToOrganizationResponse": {
+            "type": "object",
+            "properties": {
+                "organization_id": {
+                    "type": "string",
+                    "example": "org_123456789"
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.InviteUserResult"
+                    }
+                },
+                "total_failed": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "total_invited": {
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
         "types.LogBundleUpdateStatusPayload": {
             "type": "object",
             "required": [
@@ -2400,7 +3788,176 @@
                 },
                 "version": {
                     "type": "string",
-                    "example": "1.2.3"
+                    "example": "1.2.3-dev.4+build123"
+                }
+            }
+        },
+        "types.Organization": {
+            "type": "object",
+            "properties": {
+                "completed_projects": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2023-01-15T10:30:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Leading audio distribution company"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "org_123456789"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "ProAudio Distribution NA"
+                },
+                "ongoing_projects": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "region": {
+                    "type": "string",
+                    "example": "North America"
+                },
+                "type": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.OrganizationType"
+                        }
+                    ],
+                    "example": "distributor"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2023-06-20T14:45:00Z"
+                },
+                "user_count": {
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
+        "types.OrganizationDetailsResponse": {
+            "type": "object",
+            "properties": {
+                "organization": {
+                    "$ref": "#/definitions/types.Organization"
+                },
+                "projects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.OrganizationProject"
+                    }
+                },
+                "statistics": {
+                    "$ref": "#/definitions/types.OrganizationStats"
+                },
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.OrganizationUser"
+                    }
+                }
+            }
+        },
+        "types.OrganizationProject": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "proj_123456789"
+                },
+                "last_updated": {
+                    "type": "string",
+                    "example": "2026-02-05T00:00:00Z"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Government Building Retrofit"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "opportunity"
+                }
+            }
+        },
+        "types.OrganizationStatistics": {
+            "type": "object",
+            "properties": {
+                "total_distributors": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "total_end_users": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "total_resellers": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "types.OrganizationStats": {
+            "type": "object",
+            "properties": {
+                "completed_projects": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "ongoing_projects": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "total_users": {
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
+        "types.OrganizationType": {
+            "type": "string",
+            "enum": [
+                "distributor",
+                "reseller",
+                "end_user"
+            ],
+            "x-enum-varnames": [
+                "OrganizationTypeDistributor",
+                "OrganizationTypeReseller",
+                "OrganizationTypeEndUser"
+            ]
+        },
+        "types.OrganizationUser": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "mike.chen@proaudio.com"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "usr_123456789"
+                },
+                "joined_at": {
+                    "type": "string",
+                    "example": "2024-04-01T00:00:00Z"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Mike Chen"
+                },
+                "role": {
+                    "type": "string",
+                    "example": "Partner Admin"
                 }
             }
         },
@@ -2415,6 +3972,32 @@
                     "items": {
                         "$ref": "#/definitions/types.UserWithRole"
                     }
+                }
+            }
+        },
+        "types.OrganizationsOverviewResponse": {
+            "type": "object",
+            "properties": {
+                "organizations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.Organization"
+                    }
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "statistics": {
+                    "$ref": "#/definitions/types.OrganizationStatistics"
+                },
+                "total_count": {
+                    "type": "integer",
+                    "example": 6
+                },
+                "total_pages": {
+                    "type": "integer",
+                    "example": 1
                 }
             }
         },
@@ -2954,6 +4537,41 @@
                 "id": {
                     "type": "string",
                     "example": "53437319-7a5b-4462-bc7c-9e7f9a057a1a"
+                }
+            }
+        },
+        "types.UpdateOrganizationRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "Leading audio distribution company"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 3,
+                    "example": "ProAudio Distribution NA"
+                },
+                "region": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 3,
+                    "example": "North America"
+                },
+                "type": {
+                    "enum": [
+                        "distributor",
+                        "reseller",
+                        "end_user"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.OrganizationType"
+                        }
+                    ],
+                    "example": "distributor"
                 }
             }
         },

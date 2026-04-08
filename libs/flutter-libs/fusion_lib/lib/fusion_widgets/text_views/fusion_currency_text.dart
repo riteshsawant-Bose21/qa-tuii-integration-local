@@ -20,7 +20,7 @@ enum CurrencyType {
     }
   }
 
-  static CurrencyType? fromJson(String value) {
+  static CurrencyType? fromJson(String? value) {
     try {
       return CurrencyType.values.firstWhere((CurrencyType element) => element.name == value);
     } catch (e) {

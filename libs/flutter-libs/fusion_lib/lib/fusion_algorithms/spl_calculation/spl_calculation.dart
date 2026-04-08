@@ -6,6 +6,7 @@
 
 import 'dart:developer' as developer;
 
+import '../../product_data/models/models.dart';
 import '../shared/math_utils.dart';
 import 'spl_helpers.dart';
 import 'spl_types.dart';
@@ -19,7 +20,7 @@ import 'spl_types.dart';
 /// for each mounting type.
 ///
 /// Throws [ArgumentError] if input validation fails.
-SplMultiMountResult calculateSpl(SplInput input) {
+SplMultiMountResult calculateSpl(SplInput input, {List<SpeakerProduct>? speakers}) {
   // Validate target SPL range
   if (input.targetSplRange.length != 2) {
     final error = 'target_spl_range must be an array of two values: [min, max]';
@@ -72,7 +73,14 @@ SplMultiMountResult calculateSpl(SplInput input) {
       );
 
       // Get speaker recommendations
-      final recommendations = recommendNearestSpeakers(mountType, input.environment, splReqMin, splReqMid, splReqMax);
+      final recommendations = recommendNearestSpeakers(
+        mountType,
+        input.environment,
+        splReqMin,
+        splReqMid,
+        splReqMax,
+        speakers: speakers,
+      );
 
       developer.log(
         'Nearest models for $mountType - '

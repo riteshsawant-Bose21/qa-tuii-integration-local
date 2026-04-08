@@ -1310,18 +1310,18 @@ void AlsaOut::process()
     }
     else if (depth < min_depth)
     {
-        int fill_amount = target_depth - depth;
+        int_fast32_t fill_amount = target_depth - depth;
 
         while (fill_amount > 0)
         {
 
-            memset(asrc_out_buf.get(), 0,
-                   max_write_samples * channels * sizeof(float));
+            memset(asrc_in_buf.get(), 0,
+                   get_frame_size() * channels * sizeof(float));
 
-            device->write(asrc_out_buf.get(),
-                          std::min(fill_amount, max_write_samples));
+            device->write(asrc_in_buf.get(),
+                          std::min(fill_amount, get_frame_size()));
 
-            fill_amount -= max_write_samples;
+            fill_amount -= get_frame_size();
         }
 
         if (use_asrc)

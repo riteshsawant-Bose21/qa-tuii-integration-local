@@ -2,7 +2,61 @@ import 'dart:convert';
 
 import 'package:fusion_lib/fusion_lib.dart';
 
-enum ConnectionType { signal, data, power, wireless }
+enum ConnectionType {
+  analog("io_in_analog"),
+  aes67("io_in_aes67"),
+  aes67Out("io_out_aes67"),
+  ethernet("io_in_aes67"),
+  usb("io_in_usb"),
+  wifi("io_in_wifi"),
+  bluetooth("io_in_bluetooth"),
+  hdmi("io_in_hdmi"),
+  audioJack("io_in_analog"),
+  rca("io_in_analog"),
+  amplifier("io_out_analog"),
+  dspAnalog("io_in_analog"),
+  endpoint("io_in_analog"),
+  xlr("io_in_analog"),
+  circuit("io_out_analog"),
+  gpio("io_in_gpio"),
+  speaker("io_out_analog"),
+  dsp("io_in_analog");
+
+  const ConnectionType(this.type);
+
+  final String type;
+}
+
+extension ConnectionTypeExtension on ConnectionType {
+  bool get inDspInputSection {
+    switch (this) {
+      case ConnectionType.analog:
+      case ConnectionType.usb:
+      case ConnectionType.wifi:
+      case ConnectionType.bluetooth:
+      case ConnectionType.hdmi:
+      case ConnectionType.audioJack:
+      case ConnectionType.rca:
+      case ConnectionType.dspAnalog:
+      case ConnectionType.endpoint:
+      case ConnectionType.xlr:
+      case ConnectionType.dsp:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  bool get inDspOutputSection {
+    switch (this) {
+      case ConnectionType.amplifier:
+        return true;
+
+      default:
+        return false;
+    }
+  }
+}
 
 /// Represents a wiring connection between two devices and their ports.
 class WiringConnectionModel {
@@ -45,7 +99,7 @@ class WiringConnectionModel {
       portId: json['portId'] ?? '',
       targetDeviceId: json['targetDeviceId'] ?? '',
       targetPortId: json['targetPortId'] ?? '',
-      type: ConnectionType.values.firstWhere((e) => e.name == json['type'], orElse: () => ConnectionType.signal),
+      type: ConnectionType.values.firstWhere((e) => e.name == json['type'], orElse: () => ConnectionType.dsp),
     );
   }
 

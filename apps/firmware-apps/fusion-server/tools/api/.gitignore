@@ -1,1 +1,4 @@
-Fusion Server
+# Ignore everything under environments but track the local and multipass environment
+Fusion Server/environments/*
+!Fusion Server/environments/local.yml
+!Fusion Server/environments/multipass.yml

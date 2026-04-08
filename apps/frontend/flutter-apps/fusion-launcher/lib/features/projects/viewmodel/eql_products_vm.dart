@@ -9,7 +9,7 @@ import 'package:fusion_lib/product_data/models/dsp_product.dart';
 import 'package:fusion_lib/product_data/models/io_endpoint_product.dart';
 import 'package:fusion_lib/product_data/models/product_port_data.dart';
 
-import '../widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
+import '../../speaker_selection_popup/viewmodel/product_query_view_model.dart';
 
 class EqlProductsVm extends Cubit<EQLProductsState> {
   final ProjectViewModel projectViewModel;
@@ -35,16 +35,16 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
         EQLProduct(
           name: element.modelName,
           modelFamily: element.modelFamily ?? '',
-          assetPath: datasource.getImagePath(element.assets.assets[key]?.firstOrNull ?? ''),
-          description: element.description,
+          assetPath: datasource.getProductImage(element.productId),
+          description: element.modelFamily,
           data: element,
-          searchingFields: '${element.modelName} ${element.description}',
+          searchingFields: '${element.modelName} ${element.modelFamily}',
           deviceType: EQLDeviceType.amplifier,
           portData: element.numberOfInputsAndOutputs ?? ProductPortData(),
           price: datasource.getPrice(element.productId),
           specifications: <String, String>{
-            "Power ": element.power?.at.map((AmplifierMeasurementValue e) => "${e.value} ${e.unit}").join(", ") ?? "",
-            "No.Of Loudspeaker Input": element.numberOfLoudspeakerInputs.toString(),
+            // "Power ": element.power?.at.map((AmplifierMeasurementValue e) => "${e.value} ${e.unit}").join(", ") ?? "",
+            // "No.Of Loudspeaker Input": element.numberOfLoudspeakerInputs.toString(),
             "Analog input": element.numberOfInputsAndOutputs?.analog?.inputs.toString() ?? "0",
             "Analog output": element.numberOfInputsAndOutputs?.analog?.outputs.toString() ?? "0",
             "FusionConnect input": element.numberOfInputsAndOutputs?.fusionConnect?.maxInputs.toString() ?? "0",
@@ -59,13 +59,13 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
         EQLProduct(
           name: element.modelName,
           modelFamily: element.modelFamily ?? '',
-          assetPath: datasource.getImagePath(element.assets.assets[key]?.firstOrNull ?? ''),
+          assetPath: datasource.getProductImage(element.productId),
           data: element,
           //TODO: Check Endpoint Port Data
-          portData: element.numberOfInputsAndOutputs,
-          searchingFields: '${element.modelName} ${element.description}',
+          portData: element.numberOfInputsAndOutputs ?? ProductPortData(),
+          searchingFields: '${element.modelName} ${element.modelFamily}',
           deviceType: EQLDeviceType.endpoint,
-          description: element.shortDescription ?? element.description,
+          description: element.modelFamily,
           price: datasource.getPrice(element.productId),
           specifications: <String, String>{
             // "Input Type": element.inputs?.type ?? "-",
@@ -84,18 +84,18 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
         EQLProduct(
           portData: element.numberOfInputsAndOutputs ?? ProductPortData(),
           name: element.modelName,
-          assetPath: datasource.getImagePath(element.assets.assets[key]?.firstOrNull ?? ''),
+          assetPath: datasource.getProductImage(element.productId),
           modelFamily: element.modelFamily,
           data: element,
-          searchingFields: '${element.modelName} ${element.description}',
+          searchingFields: '${element.modelName} ${element.modelFamily}',
           deviceType: EQLDeviceType.processor,
           price: datasource.getPrice(element.productId),
-          description: element.shortDescription ?? element.description,
+          description: element.modelFamily,
           specifications: <String, String>{
-            "Max Analog Control": element.maxNumberOfAnalogControl.toString() ?? "0",
-            "Max Digital Control": element.maxNumberOfDigitalControl.toString() ?? "0",
-            "GPIO Logic Ports":
-                element.gpioLogicPorts != null ? "${element.gpioLogicPorts!.inputs} in / ${element.gpioLogicPorts!.outputs} out" : "0 in / 0 out",
+            // "Max Analog Control": element.maxNumberOfAnalogControl.toString() ?? "0",
+            // "Max Digital Control": element.maxNumberOfDigitalControl.toString() ?? "0",
+            // "GPIO Logic Ports":
+            //     element.gpioLogicPorts != null ? "${element.gpioLogicPorts!.inputs} in / ${element.gpioLogicPorts!.outputs} out" : "0 in / 0 out",
             "Analog Inputs": element.numberOfInputsAndOutputs?.analog?.inputs.toString() ?? "0",
             "Analog Outputs": element.numberOfInputsAndOutputs?.analog?.outputs.toString() ?? "0",
             "FusionConnect Inputs": element.numberOfInputsAndOutputs?.fusionConnect?.maxInputs.toString() ?? "0",

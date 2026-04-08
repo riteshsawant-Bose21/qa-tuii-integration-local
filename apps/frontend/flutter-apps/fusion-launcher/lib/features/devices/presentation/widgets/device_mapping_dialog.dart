@@ -1,12 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/devices/presentation/widgets/dro/dro_config_screen.dart';
 import 'package:fusion_launcher/features/devices/presentation/widgets/settings/device_global_settings_tab.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/models/project_entities/controller.dart';
 
 import 'device_mapping_screen.dart';
-import 'device_models.dart';
+import 'device_updates_tab.dart';
+
+enum DeviceMappingDialogTab {
+  mapping("Mapping"),
+  settings("Settings"),
+  droConfig("Dro config"),
+  updates("Updates");
+
+  final String displayName;
+  const DeviceMappingDialogTab(this.displayName);
+}
 
 class DeviceMappingDialog extends StatefulWidget {
   const DeviceMappingDialog({super.key});
@@ -25,8 +35,7 @@ class DeviceMappingDialog extends StatefulWidget {
 }
 
 class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
-  int _selectedTabIndex = 0;
-  List<NetworkHardware> _networkHardware = <NetworkHardware>[];
+  DeviceMappingDialogTab _selectedTab = DeviceMappingDialogTab.mapping;
 
   List<HardwareComponent> get _fusionDevices {
     // Combine DSPs, Amplifiers, and Controllers
@@ -35,68 +44,6 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
     final List<HardwareComponent> controllers = serviceLocator<ProjectViewModel>().fusionControllers;
     final List<HardwareComponent> endpoints = serviceLocator<ProjectViewModel>().fusionEndpoints;
     return <HardwareComponent>[...dsp, ...amplifiers, ...controllers, ...endpoints];
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeMockData();
-  }
-
-  void _initializeMockData() {
-    // Mock project devices
-
-    // Mock network hardware
-    for (HardwareComponent device in _fusionDevices) {
-      _networkHardware.add(
-        NetworkHardware(
-          id: 'hw-${device.id}',
-          modelName: device.hardwareName,
-          deviceName:
-              device is FusionDsp
-                  ? 'Fusion ${device.hardwareName}'
-                  : device is Amplifier
-                  ? device.hardwareName
-                  : device is FusionController
-                  ? device.hardwareName
-                  : '${device.hardwareName} Endpoint',
-          ipAddress: '192.168.50.${_networkHardware.length + 30}',
-          firmware: 'v1.1.0',
-          type:
-              device is FusionDsp
-                  ? NetworkHardwareType.dsp
-                  : device is Amplifier
-                  ? NetworkHardwareType.amplifier
-                  : device is FusionController
-                  ? NetworkHardwareType.controller
-                  : NetworkHardwareType.endpoint,
-        ),
-      );
-    }
-  }
-
-  void _handleAssignHardware(HardwareComponent device, NetworkHardware? hardware) {
-    setState(() {
-      // 1. Unassign: Find any hardware currently assigned to THIS device and clear it.
-      // We iterate through the list to ensure we catch the specific hardware instance
-      // that is currently holding this device's ID.
-      for (final NetworkHardware hw in _networkHardware) {
-        if (hw.assignedToDeviceId == device.id) {
-          hw.assignedToDeviceId = null;
-        }
-      }
-
-      // 2. Assign: If a new hardware is selected, link it to this device.
-      if (hardware != null) {
-        // We look up the hardware in the main list to ensure we are modifying the
-        // source of truth (in case 'hardware' passed in is a copy).
-        final NetworkHardware targetHw = _networkHardware.firstWhere((NetworkHardware hw) => hw.id == hardware.id);
-
-        // Setting this automatically overwrites any previous device ID,
-        // handling the case where we "steal" hardware from another device.
-        targetHw.assignedToDeviceId = device.id;
-      }
-    });
   }
 
   @override
@@ -114,16 +61,22 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
         ),
         child: Column(
           children: <Widget>[
-            _buildHeader(),
+            _buildHeader(context),
             Expanded(
-              child:
-                  _selectedTabIndex == 0
-                      ? DeviceMappingScreen(
-                        devices: _fusionDevices,
-                        networkHardware: _networkHardware,
-                        onAssignHardware: _handleAssignHardware,
-                      )
-                      : const DeviceGlobalSettingsTab(),
+              child: Builder(
+                builder: (BuildContext context) {
+                  switch (_selectedTab) {
+                    case DeviceMappingDialogTab.mapping:
+                      return DeviceMappingScreen(devices: _fusionDevices);
+                    case DeviceMappingDialogTab.settings:
+                      return const DeviceGlobalSettingsTab();
+                    case DeviceMappingDialogTab.droConfig:
+                      return const DroConfigScreen();
+                    case DeviceMappingDialogTab.updates:
+                      return const DeviceUpdatesTab();
+                  }
+                },
+              ),
             ),
           ],
         ),
@@ -131,7 +84,7 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.only(left: 16, right: 16, top: 12),
       decoration: BoxDecoration(
@@ -171,9 +124,13 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
           // Tabs
           Row(
             children: <Widget>[
-              _buildTab('Mapping', 0),
+              _buildTab(context, DeviceMappingDialogTab.mapping),
               const SizedBox(width: 32),
-              _buildTab('Settings', 1),
+              _buildTab(context, DeviceMappingDialogTab.settings),
+              const SizedBox(width: 32),
+              _buildTab(context, DeviceMappingDialogTab.droConfig),
+              const SizedBox(width: 32),
+              _buildTab(context, DeviceMappingDialogTab.updates),
             ],
           ),
         ],
@@ -181,15 +138,11 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
     );
   }
 
-  Widget _buildTab(String label, int index) {
-    final bool isSelected = _selectedTabIndex == index;
+  Widget _buildTab(BuildContext context, DeviceMappingDialogTab tab) {
+    final bool isSelected = _selectedTab == tab;
 
     return InkWell(
-      onTap: () {
-        setState(() {
-          _selectedTabIndex = index;
-        });
-      },
+      onTap: () => setState(() => _selectedTab = tab),
       child: Container(
         padding: const EdgeInsets.only(top: 14, bottom: 4),
         decoration: BoxDecoration(
@@ -201,7 +154,7 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
           ),
         ),
         child: FusionAppText(
-          text: label,
+          text: tab.displayName,
           style: TextStyle(
             color: isSelected ? context.colorScheme.textPrimary : context.colorScheme.iconDefault,
             fontSize: 14,

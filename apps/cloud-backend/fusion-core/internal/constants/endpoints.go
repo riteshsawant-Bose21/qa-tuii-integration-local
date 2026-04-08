@@ -53,6 +53,13 @@ const (
 	// EndpointAuthTokens is the endpoint for automation token operations.
 	EndpointAuthTokens = "/automation/tokens" //nolint:gosec // G101: False positive - this is just an endpoint path, not credentials
 
+	// EndpointOrganizations is the base endpoint for organizations management.
+	EndpointOrganizations = "/organizations"
+	// EndpointOrganizationByID is the endpoint for operations on specific organizations.
+	EndpointOrganizationByID = "/:organizationId"
+	// EndpointOrganizationInviteUsers is the endpoint for inviting users to an organization.
+	EndpointOrganizationInviteUsers = "/:organizationId/invite-users"
+
 	// EndpointOrganization is the base endpoint for organization operations.
 	EndpointOrganization = "/organization"
 	// EndpointRoleManagement is the endpoint for role management operations.
@@ -66,6 +73,23 @@ const (
 	// EndpointOrganizationUsers is the endpoint for organization user operations.
 	EndpointOrganizationUsers = "/users"
 
+	// EndpointDevices is the base endpoint for device operations.
+	EndpointDevices = "/devices"
+	// EndpointDeviceBulkCreate is the endpoint for bulk creating devices.
+	EndpointDeviceBulkCreate = "/bulk"
+	// EndpointDeviceByID is the endpoint for operations on a specific device.
+	EndpointDeviceByID = "/:device_id"
+	// EndpointDeviceReset is the endpoint for resetting a device.
+	EndpointDeviceReset = "/:device_id/reset"
+	// EndpointDeviceClaim is the endpoint for claiming an unclaimed device.
+	EndpointDeviceClaim = "/:device_id/claim"
+	// EndpointDeviceRotateCert is the endpoint for rotating a device certificate.
+	EndpointDeviceRotateCert = "/:device_id/rotate-cert"
+	// EndpointDeviceCommand is the endpoint for sending a command to a device.
+	EndpointDeviceCommand = "/commands"
+
+	// EndpointCommandStatus is the endpoint for getting the status of a command.
+	EndpointCommandStatus = "/commands/:command_id/status"
 	// Device Update endpoints
 	EndpointFirmware              = "/firmware"
 	EndpointFirmwareBundles       = EndpointFirmware + "/bundles"

@@ -113,10 +113,13 @@ func (c *Cluster) getDeviceInfoLocal() api.DeviceInfo {
 		Address:                  c.appConfig.BindAddr,
 		ModelName:                utils.GetModelName(),
 		SerialNumber:             utils.GetSerialNumber(),
-		FirmwareVersion:          utils.GetFirmwareVersion(),
+		SoftwareUpdateVersion:    utils.GetSoftwareUpdateVersion(),
 		MacAddress:               utils.GetMacAddress(),
 		IsPrimaryNode:            c.isLocalNodePrimary(),
 		IsDeviceCertificateValid: utils.IsCertificateValid(),
+		FusionMonorepoBranch:     utils.GetBranchName(),
+		FusionMonorepoCommitHash: utils.GetCommitHash(),
+		JenkinsBuildNumber:       utils.GetJenkinsBuildNumber(),
 	}
 
 	return deviceInfo
