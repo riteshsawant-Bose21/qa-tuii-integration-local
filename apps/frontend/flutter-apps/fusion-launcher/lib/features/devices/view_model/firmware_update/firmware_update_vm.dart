@@ -237,7 +237,8 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
       final String validPath = restoredPath.isNotEmpty && !File(restoredPath).existsSync() ? '' : restoredPath;
 
       return FirmwareLocalState(
-        inUseVersion: fallbackInUseVersion,
+        // TODO: REMOVE THIS inUseVersion
+        inUseVersion: normalizedSemver(json['in_use_version'] as String? ?? fallbackInUseVersion),
         availableVersion: normalizedSemver(json['available_version'] as String? ?? ''),
         downloadChecksum: json['download_checksum'] as String? ?? '',
         downloadedFilePath: validPath,
@@ -253,12 +254,16 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
   }
 
   String serializeLocalState({
+    // TODO: REMOVE THIS inUseVersion
+    required String inUseVersion,
     required String availableVersion,
     required String downloadChecksum,
     required String downloadedFilePath,
   }) {
     return jsonEncode(
       <String, dynamic>{
+        // TODO: REMOVE THIS inUseVersion
+        'in_use_version': inUseVersion,
         'available_version': availableVersion,
         'download_checksum': downloadChecksum,
         'downloaded_file_path': downloadedFilePath,
