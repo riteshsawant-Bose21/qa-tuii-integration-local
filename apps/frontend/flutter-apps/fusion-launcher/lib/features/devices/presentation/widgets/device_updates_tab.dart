@@ -84,6 +84,7 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
     await prefs.setString(
       _prefsKey,
       _firmwareUpdateViewModel.serializeLocalState(
+        // TODO: REMOVE THIS inUseVersion
         inUseVersion: state.inUseVersion,
         availableVersion: state.availableVersion,
         downloadChecksum: state.downloadChecksum,
@@ -328,10 +329,51 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
         'Don\'t miss out grab the newest version.';
   }
 
+  Future<void> _showInstallSuccessDialog() async {
+    if (!mounted) {
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return const AlertDialog(
+          title: Text('Firmware Update'),
+          content: Text('Firmware update was successful.'),
+        );
+      },
+    );
+  }
+
+  Future<void> _showInstallSuccessDialogForTwoSeconds() async {
+    if (!mounted) {
+      return;
+    }
+
+    _showInstallSuccessDialog();
+    await Future<void>.delayed(const Duration(seconds: 2));
+
+    if (!mounted) {
+      return;
+    }
+
+    final NavigatorState navigator = Navigator.of(context, rootNavigator: false);
+    if (navigator.canPop()) {
+      navigator.pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<FirmwareUpdateViewModel, FirmwareUpdateViewModelState>(
+    return BlocConsumer<FirmwareUpdateViewModel, FirmwareUpdateViewModelState>(
       bloc: _firmwareUpdateViewModel,
+      listenWhen:
+          (FirmwareUpdateViewModelState previous, FirmwareUpdateViewModelState current) =>
+              previous.uiState == FirmwareUpdateUiState.installing && current.uiState == FirmwareUpdateUiState.installed,
+      listener: (BuildContext context, FirmwareUpdateViewModelState state) {
+        _showInstallSuccessDialogForTwoSeconds();
+      },
       builder: (BuildContext context, FirmwareUpdateViewModelState state) {
         if (state.uiState == FirmwareUpdateUiState.noUpdate) {
           return _buildNoUpdateView(context, state);
@@ -717,14 +759,8 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
     final bool completed = normalizedState == 'COMPLETED';
     final bool success = normalizedState == 'SUCCESS';
     final Color stateColor = completed || success ? const Color(0xFF5CC59A) : const Color(0xFFE0A645);
-    final int safeCurrentStep = device.currentStep.clamp(0, 1000);
-    final int safeTotalSteps = device.totalSteps.clamp(0, 1000);
-    final double currentStepProgress = device.stepProgress.clamp(0, 100) / 100;
-    final double computedOverallProgress =
-        safeTotalSteps > 0 ? (((safeCurrentStep > 0 ? safeCurrentStep - 1 : 0) + currentStepProgress) / safeTotalSteps).clamp(0, 1) : currentStepProgress;
-
-    final double rowProgress = completed || success ? 1 : computedOverallProgress;
-    final String progressLabel = '${(rowProgress * 100).round().clamp(0, 100)}%';
+    final double rowProgress = completed || success ? 1 : (device.stepProgress / 100).clamp(0, 1);
+    final String progressLabel = completed || success ? '100%' : '${device.stepProgress.clamp(0, 100)}%';
 
     return Container(
       height: 46,
