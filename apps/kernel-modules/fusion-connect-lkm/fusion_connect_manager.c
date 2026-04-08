@@ -196,6 +196,8 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
 
     spin_lock(&s->lock);
     if (atomic_read(&s->playback_armed)) {
+        u32 start_slot = s->playback_slot;
+
         // we may want to catch up and playback a bunch of frames, up to buf_size_in_packets worth
         // Two looping cases: 1) packet_time < 1/3ms; 2) packet batching edge cases 
         // Policy: if next_action_times[playback_slot] is 0, we want to playback silence. 
@@ -227,16 +229,16 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
                 s->next_action_time += s->packet_time;
             }
 
-            if (g_fusion_cn_mgr->trace_debug) printk(KERN_DEBUG
-                "fusion_cn: compute_sink: stream %s playback_idx=%u count=%u now=%llu playing_silence=%u action_time=%llu next_action_time=%llu\n",
-                s->info.stream_name, s->playback_slot, count, tick_ns,
-                playing_silence, action_time, s->next_action_time);
-
             s->next_action_times[slot] = 0;
             if (++s->playback_slot >= s->buf_size_in_packets)
                 s->playback_slot = 0;
             count++;
         }
+
+        if (g_fusion_cn_mgr->trace_debug && count > 1)
+            printk(KERN_DEBUG
+                "fusion_cn: compute_sink burst: stream %s start_idx=%u count=%u now=%llu next_action_time=%llu\n",
+                s->info.stream_name, start_slot, count, tick_ns, s->next_action_time);
     }
     spin_unlock(&s->lock);
     return count;
@@ -671,6 +673,7 @@ static void audio_frame_process_work(struct kthread_work *work)
     while (n-- > 0) {
         u64 t0 = profiling ? ktime_get_ns() : 0;
 
+        fusion_cn_refresh_runtime_params(g_fusion_cn_mgr);
         audio_frame_process(g_fusion_cn_mgr);
 
         if (profiling) {

@@ -106,9 +106,9 @@ static uint error_thresh_param = 20;
 module_param(error_thresh_param, uint, 0644);
 MODULE_PARM_DESC(error_thresh_param, "Raise discipline_ready after 5 PPS samples with abs_error < this threshold");
 
-static bool pi_fallback_only_param;
-module_param(pi_fallback_only_param, bool, 0644);
-MODULE_PARM_DESC(pi_fallback_only_param, "Skip GPT calibration/jump logic and use PI fallback control only");
+static bool pi_only_param;
+module_param(pi_only_param, bool, 0644);
+MODULE_PARM_DESC(pi_only_param, "Skip GPT calibration/jump logic and use PI fallback control only");
 
 struct fusion_gpt_cal_config {
 	s32 k1_q16;
@@ -934,7 +934,7 @@ static inline bool cal_active(const struct fusion_gpt *g)
 
 static inline bool cal_enabled_runtime(void)
 {
-	return CAL_ENABLE && !READ_ONCE(pi_fallback_only_param);
+	return CAL_ENABLE && !READ_ONCE(pi_only_param);
 }
 
 static void gpt_update_discipline_ready(struct fusion_gpt *g, long freq_error,

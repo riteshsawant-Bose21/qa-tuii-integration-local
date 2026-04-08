@@ -20,15 +20,33 @@ MODULE_PARM_DESC(trace_debug, "Enable high-volume Fusion Connect trace logging")
 
 static struct fusion_cn_manager fusion_cn_mgr;
 
+void fusion_cn_refresh_runtime_params(struct fusion_cn_manager *mgr)
+{
+    bool debug_now;
+    bool trace_now;
+
+    if (!mgr)
+        return;
+
+    debug_now = READ_ONCE(debug);
+    trace_now = READ_ONCE(trace_debug);
+
+    strscpy(mgr->netfilter.iface_name, eth_iface, IFNAMSIZ);
+    mgr->debug = debug_now;
+    mgr->trace_debug = trace_now;
+    mgr->rtp.debug = debug_now;
+    mgr->rtp.trace_debug = trace_now;
+    if (mgr->alsa.alsa_chip) {
+        mgr->alsa.alsa_chip->debug = debug_now;
+        mgr->alsa.alsa_chip->trace_debug = trace_now;
+    }
+}
+
 static int __init fusion_cn_init(void)
 {
     int ret;
 
-    strscpy(fusion_cn_mgr.netfilter.iface_name, eth_iface, IFNAMSIZ);
-    fusion_cn_mgr.debug = debug;
-    fusion_cn_mgr.trace_debug = trace_debug;
-    fusion_cn_mgr.rtp.debug = debug;
-    fusion_cn_mgr.rtp.trace_debug = trace_debug;
+    fusion_cn_refresh_runtime_params(&fusion_cn_mgr);
 
     ret = fusion_cn_mgr_init(&fusion_cn_mgr);
     if (ret)
