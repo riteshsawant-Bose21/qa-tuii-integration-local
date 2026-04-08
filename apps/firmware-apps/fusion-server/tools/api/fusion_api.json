@@ -2510,6 +2510,281 @@
           }
         }
       ]
+    },
+    {
+      "type": "folder",
+      "name": "Scene Catalog",
+      "filename": "Scene Catalog",
+      "seq": 16,
+      "examples": [],
+      "root": {
+        "meta": {
+          "name": "Scene Catalog",
+          "seq": 16
+        }
+      },
+      "items": [
+        {
+          "type": "http",
+          "name": "Upsert Definitions",
+          "filename": "Upsert Definitions.bru",
+          "seq": 1,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/value",
+            "method": "PATCH",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"snapshots\": [\n    {\n      \"id\": \"snapshot-test-01\",\n      \"name\": \"Snapshot Test\",\n      \"data\": {\n        \"feature_probe\": {\n          \"mode\": \"snapshot\",\n          \"level\": 10\n        }\n      }\n    }\n  ],\n  \"scene_sets\": [\n    {\n      \"set_id\": \"scene-set-test-01\",\n      \"name\": \"Dayparts\",\n      \"default_scene\": \"scene-morning-01\",\n      \"scenes\": [\n        {\n          \"id\": \"scene-morning-01\",\n          \"name\": \"Morning\",\n          \"data\": {\n            \"feature_probe\": {\n              \"mode\": \"morning\",\n              \"level\": 1\n            }\n          }\n        },\n        {\n          \"id\": \"scene-evening-01\",\n          \"name\": \"Evening\",\n          \"data\": {\n            \"feature_probe\": {\n              \"mode\": \"evening\",\n              \"level\": 9\n            }\n          }\n        }\n      ]\n    }\n  ]\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "Create or overwrite snapshot definitions and scene-set definitions in the state store. Re-sending the same id/set_id overwrites (clobbers) the previous entry.",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "List Snapshots",
+          "filename": "List Snapshots.bru",
+          "seq": 2,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/snapshots/list",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "Returns all snapshot definitions stored in the state.",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "List Scenes",
+          "filename": "List Scenes.bru",
+          "seq": 3,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/scenes/list",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "Returns all individual scenes across all scene sets.",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "List Scene Sets",
+          "filename": "List Scene Sets.bru",
+          "seq": 4,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/scene-sets/list",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "Returns all scene sets with their full scene lists.",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "List Scene Catalog",
+          "filename": "List Scene Catalog.bru",
+          "seq": 5,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/scene-catalog-list",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "Returns a combined view of all snapshots and scene sets - the full scene catalog.",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Activate Snapshot",
+          "filename": "Activate Snapshot.bru",
+          "seq": 6,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/snapshots/activate",
+            "method": "POST",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"id\": \"snapshot-test-01\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "Patches the active state with the data block from the named snapshot definition. Does not bump the epoch.",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Activate Scene",
+          "filename": "Activate Scene.bru",
+          "seq": 7,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/scene-sets/activate",
+            "method": "POST",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"set_id\": \"scene-set-test-01\",\n  \"scene_id\": \"scene-evening-01\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "Patches the active state with the named scene data block and records it as the current scene for that set.",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get Current Scene",
+          "filename": "Get Current Scene.bru",
+          "seq": 8,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/scene-sets/current-scene",
+            "method": "POST",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"set_id\": \"scene-set-test-01\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "Returns the currently active scene ID for the given scene set.",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        }
+      ]
     }
   ],
   "activeEnvironmentUid": "NuA59EZe9jyRMKDaNQCaJ",
@@ -2599,7 +2874,7 @@
         "mode": "none"
       }
     },
-    "docs": "# Fusion Server API Documentation\n\n## Overview\n\n- **Dev Base URL:** `http://192.168.64.100:8080`\n- **Local Base URL:** `http://localhost:8080`\n- **Auth:** None required\n\n---\n\n## 🌱 Root\n\n### `GET /`\nReturns basic server info. Used to check server status.\n\n---\n\n## 👥 Members\n\n### `GET /members`\nRetrieves the list of active cluster members.\n\n---\n\n## 📦 Binaries\n\n### `POST /rollbackVersion?index=-1`\nRollback the server binary to a previous version.\n\n**Query Parameters:**\n- `index`: integer (e.g. `-1` for latest rollback)\n\n---\n\n### `POST /updateVersion`\nUploads a new server binary.\n\n**Multipart Form Data:**\n- `binary` (file): Required\n- `checksum` (text): SHA256 checksum of the file\n\n---\n\n### `POST /uploadAudio`\nUploads an audio file.\n\n**Multipart Form Data:**\n- `binary` (file): Required audio file\n\n---\n\n## ⏱️ Timers\n\n### `GET /tasks`\nList all scheduled tasks.\n\n---\n\n### `POST /tasks`\nAdd a new scheduled task.\n\n**JSON Body:**\n```json\n{\n  \"id\": \"task_id\",\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"Task description\"\n}\n",
+    "docs": "# Fusion Server API Documentation\n\n## Overview\n\n- **Dev Base URL:** `http://192.168.64.100:8080`\n- **Local Base URL:** `http://localhost:8080`\n- **Auth:** None required\n\n---\n\n## \ud83c\udf31 Root\n\n### `GET /`\nReturns basic server info. Used to check server status.\n\n---\n\n## \ud83d\udc65 Members\n\n### `GET /members`\nRetrieves the list of active cluster members.\n\n---\n\n## \ud83d\udce6 Binaries\n\n### `POST /rollbackVersion?index=-1`\nRollback the server binary to a previous version.\n\n**Query Parameters:**\n- `index`: integer (e.g. `-1` for latest rollback)\n\n---\n\n### `POST /updateVersion`\nUploads a new server binary.\n\n**Multipart Form Data:**\n- `binary` (file): Required\n- `checksum` (text): SHA256 checksum of the file\n\n---\n\n### `POST /uploadAudio`\nUploads an audio file.\n\n**Multipart Form Data:**\n- `binary` (file): Required audio file\n\n---\n\n## \u23f1\ufe0f Timers\n\n### `GET /tasks`\nList all scheduled tasks.\n\n---\n\n### `POST /tasks`\nAdd a new scheduled task.\n\n**JSON Body:**\n```json\n{\n  \"id\": \"task_id\",\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"Task description\"\n}\n",
     "meta": {
       "name": "Fusion Server"
     }
