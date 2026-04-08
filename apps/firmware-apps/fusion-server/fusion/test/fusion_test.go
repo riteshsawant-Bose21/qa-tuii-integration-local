@@ -63,6 +63,11 @@ const (
 
 var (
 	clusterConfig *ClusterConfig
+	nodesFlag     = flag.String("nodes", "", "Comma-separated list of node addresses (e.g., 192.168.64.229:8080,192.168.64.230:8080)")
+	vipFlag       = flag.String("vip", "", "VIP address (e.g., 192.168.2.100:8080)")
+	baseNameFlag  = flag.String("base-name", "fusion", "Base name for multipass instances")
+	portFlag      = flag.String("port", "8080", "Port for node services")
+	autoFlag      = flag.Bool("auto", false, "Automatically discover nodes using multipass")
 )
 
 func isLocalTestMode() bool {
@@ -1623,14 +1628,6 @@ func discoverMultipassNodes(baseName string) ([]MultipassNode, error) {
 
 // getClusterConfig retrieves cluster configuration from environment, flags, or multipass
 func getClusterConfig() (*ClusterConfig, error) {
-	var (
-		nodesFlag    = flag.String("nodes", "", "Comma-separated list of node addresses (e.g., 192.168.64.229:8080,192.168.64.230:8080)")
-		vipFlag      = flag.String("vip", "", "VIP address (e.g., 192.168.2.100:8080)")
-		baseNameFlag = flag.String("base-name", "fusion", "Base name for multipass instances")
-		portFlag     = flag.String("port", "8080", "Port for node services")
-		autoFlag     = flag.Bool("auto", false, "Automatically discover nodes using multipass")
-	)
-
 	if !flag.Parsed() {
 		flag.Parse()
 	}

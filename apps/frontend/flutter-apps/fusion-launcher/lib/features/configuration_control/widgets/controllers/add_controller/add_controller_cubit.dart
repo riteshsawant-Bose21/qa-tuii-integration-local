@@ -5,11 +5,11 @@ import 'package:fusion_lib/models/project_entities/controller.dart';
 
 import 'add_controller_state.dart';
 
-/// Cubit for managing Add Controller dialog state
+/// Cubit for managing Add / Edit Controller dialog state
 class AddControllerCubit extends Cubit<AddControllerState> {
   final ProjectViewModel projectViewModel;
 
-  AddControllerCubit({required this.projectViewModel}) : super(const AddControllerState());
+  AddControllerCubit({required this.projectViewModel}) : super(const AddControllerAddState());
 
   /// Update controller name
   void updateName(String name) {
@@ -96,6 +96,7 @@ class AddControllerCubit extends Cubit<AddControllerState> {
   /// Toggle assign control
   void toggleAssignControl(bool value) {
     Set<String> controlZones = <String>{};
+    final String? editControllerId = state.editControllerId;
 
     // If enabling assign control and we have a selected zone (for zone location),
     // auto-select "This Zone" (the selected zone/subzone)
@@ -112,6 +113,15 @@ class AddControllerCubit extends Cubit<AddControllerState> {
         selectedControlZoneIds: controlZones,
       ),
     );
+
+    // In edit mode: immediately persist using batch update
+    if (editControllerId != null) {
+      projectViewModel.setAssignedZonesForController(
+        controllerId: editControllerId,
+        zoneIds: controlZones,
+        autoSave: true,
+      );
+    }
   }
 
   /// Get "This Zone" ID - the currently selected zone/subzone for location
@@ -128,6 +138,7 @@ class AddControllerCubit extends Cubit<AddControllerState> {
   /// Toggle a zone in control zone selection
   void toggleControlZone(String zoneId) {
     final Set<String> currentSelection = Set<String>.from(state.selectedControlZoneIds);
+    final String? editControllerId = state.editControllerId;
 
     if (state.controllerType?.supportsMultipleZones == true) {
       /// Pro controllers: checkbox behavior - toggle the zone
@@ -144,11 +155,30 @@ class AddControllerCubit extends Cubit<AddControllerState> {
     }
 
     emit(state.copyWith(selectedControlZoneIds: currentSelection));
+
+    // In edit mode: immediately persist using batch update
+    if (editControllerId != null) {
+      projectViewModel.setAssignedZonesForController(
+        controllerId: editControllerId,
+        zoneIds: currentSelection,
+        autoSave: true,
+      );
+    }
   }
 
   /// Set control zones (used for batch updates like "Save" in zone selection popup)
   void setControlZones(Set<String> zoneIds) {
+    final String? editControllerId = state.editControllerId;
     emit(state.copyWith(selectedControlZoneIds: zoneIds));
+
+    // In edit mode: immediately persist using batch update
+    if (editControllerId != null) {
+      projectViewModel.setAssignedZonesForController(
+        controllerId: editControllerId,
+        zoneIds: zoneIds,
+        autoSave: true,
+      );
+    }
   }
 
   /// Check if a zone is selected for control
@@ -184,15 +214,13 @@ class AddControllerCubit extends Cubit<AddControllerState> {
       // Add controller to project
       projectViewModel.addHardware(hardware: controller);
 
-      // Persist all zone assignments selected in "Assign Control"
+      // Persist all zone assignments selected in "Assign Control" using batch update
       if (state.assignControl && state.selectedControlZoneIds.isNotEmpty) {
-        for (final String zoneId in state.selectedControlZoneIds) {
-          projectViewModel.assignZoneToController(
-            controllerId: controller.id,
-            zoneId: zoneId,
-            autoSave: false,
-          );
-        }
+        projectViewModel.setAssignedZonesForController(
+          controllerId: controller.id,
+          zoneIds: state.selectedControlZoneIds,
+          autoSave: false,
+        );
       }
 
       // If location is equipment location, associate controller
@@ -283,8 +311,158 @@ class AddControllerCubit extends Cubit<AddControllerState> {
     }
   }
 
-  /// Reset the form to initial state
+  /// Reset the form to initial add-mode state
   void reset() {
-    emit(const AddControllerState());
+    emit(const AddControllerAddState());
+  }
+
+  /// Pre-populate the form state from an existing [FusionController] for editing.
+  void initForEdit(FusionController controller) {
+    // Map sku back to ControllerType
+    ControllerType? controllerType;
+    for (final ControllerType t in ControllerType.values) {
+      if (t.displayName == controller.sku) {
+        controllerType = t;
+        break;
+      }
+    }
+
+    // Determine location type and IDs
+    LocationType? locationType;
+    String? selectedZoneId;
+    String? selectedSubZoneId;
+    String? selectedEquipmentLocationId;
+
+    if (controller.locationEntity.listeningAreaId != null) {
+      locationType = LocationType.zone;
+      final String areaId = controller.locationEntity.listeningAreaId!;
+
+      final Zone? zone = projectViewModel.getZonesForListeningArea(areaId: areaId);
+      if (zone != null) {
+        selectedZoneId = zone.id;
+      } else {
+        final SubZone? subZone = projectViewModel.getSubZoneForListeningArea(areaId: areaId);
+        if (subZone != null) {
+          selectedSubZoneId = subZone.id;
+          final Zone? parentZone = projectViewModel.getZoneForSubZone(subZoneId: subZone.id);
+          if (parentZone != null) selectedZoneId = parentZone.id;
+        }
+      }
+    } else {
+      final EquipLocation? equipLocation = projectViewModel.getEquipLocationForHardware(hardwareId: controller.id);
+      if (equipLocation != null) {
+        locationType = LocationType.equipmentLocation;
+        selectedEquipmentLocationId = equipLocation.id;
+      }
+    }
+
+    // Determine assigned control zones
+    final Set<String> assignedZoneIds = projectViewModel.getAssignedZoneIds(controller.id);
+    final bool assignControl = assignedZoneIds.isNotEmpty;
+
+    emit(
+      AddControllerEditState(
+        editControllerId: controller.id,
+        name: controller.name,
+        controllerType: controllerType,
+        locationType: locationType,
+        selectedZoneId: selectedZoneId,
+        selectedSubZoneId: selectedSubZoneId,
+        selectedEquipmentLocationId: selectedEquipmentLocationId,
+        assignControl: assignControl,
+        selectedControlZoneIds: assignedZoneIds,
+      ),
+    );
+  }
+
+  /// Update the existing controller in the project.
+  /// Returns the controller's ID on success, or `null` on failure.
+  Future<String?> updateController() async {
+    if (!state.isValid) {
+      emit(state.copyWith(errorMessage: 'Please fill in all required fields'));
+      return null;
+    }
+
+    final String? controllerId = state.editControllerId;
+    if (controllerId == null) return null;
+
+    emit(state.copyWith(isLoading: true, clearErrorMessage: true));
+
+    try {
+      final FusionController? existing = projectViewModel.getControllerById(controllerId);
+      if (existing == null) {
+        emit(state.copyWith(isLoading: false, errorMessage: 'Controller not found'));
+        return null;
+      }
+
+      final String assetImagePath = _getAssetImagePath();
+      final double price = _getPrice();
+
+      // Resolve new locationEntity
+      LocationModel locationEntity = LocationModel();
+      if (state.locationType == LocationType.zone) {
+        String? listeningAreaId;
+        if (state.selectedSubZoneId != null) {
+          final List<ListeningArea> subZoneAreas = projectViewModel.getListeningAreasInSubZone(subZoneId: state.selectedSubZoneId!);
+          if (subZoneAreas.isNotEmpty) listeningAreaId = subZoneAreas.first.id;
+        } else if (state.selectedZoneId != null) {
+          final List<ListeningArea> zoneAreas = projectViewModel.getListeningAreasForZone(zoneId: state.selectedZoneId!);
+          if (zoneAreas.isNotEmpty) listeningAreaId = zoneAreas.first.id;
+        }
+        if (listeningAreaId != null) {
+          locationEntity = LocationModel(listeningAreaId: listeningAreaId);
+        }
+      }
+
+      final FusionController updated = existing.copyWith(
+        name: state.name.trim().isEmpty ? 'Untitled Controller' : state.name.trim(),
+        assetImagePath: assetImagePath,
+        locationEntity: locationEntity,
+        price: price,
+        sku: state.controllerType?.displayName ?? 'Controller',
+      );
+
+      projectViewModel.updateHardware(hardware: updated);
+
+      // Update assigned control zones using batch update (single operation)
+      if (state.assignControl && state.selectedControlZoneIds.isNotEmpty) {
+        projectViewModel.setAssignedZonesForController(
+          controllerId: controllerId,
+          zoneIds: state.selectedControlZoneIds,
+          autoSave: false,
+        );
+      } else {
+        // Clear all zone assignments if assign control is disabled
+        projectViewModel.setAssignedZonesForController(
+          controllerId: controllerId,
+          zoneIds: <String>{},
+          autoSave: false,
+        );
+      }
+
+      // Update equipment location association
+      if (state.locationType == LocationType.equipmentLocation && state.selectedEquipmentLocationId != null) {
+        projectViewModel.addHardwareToEquipLocation(
+          hardwareId: controllerId,
+          equipLocationId: state.selectedEquipmentLocationId!,
+        );
+      } else {
+        // If location is now zone-based, remove from any equipment location
+        final EquipLocation? currentEquipLoc = projectViewModel.getEquipLocationForHardware(hardwareId: controllerId);
+        if (currentEquipLoc != null) {
+          projectViewModel.removeHardwareFromEquipLocation(
+            hardwareId: controllerId,
+            equipLocationId: currentEquipLoc.id,
+            autoSave: false,
+          );
+        }
+      }
+
+      emit(state.copyWith(isLoading: false));
+      return controllerId;
+    } catch (e) {
+      emit(state.copyWith(isLoading: false, errorMessage: 'Failed to update controller: $e'));
+      return null;
+    }
   }
 }

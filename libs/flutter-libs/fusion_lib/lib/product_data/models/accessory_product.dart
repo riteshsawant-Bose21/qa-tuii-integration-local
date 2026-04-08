@@ -5,7 +5,7 @@ import 'product_asset.dart';
 /// Represents an accessory product from the product catalog API.
 /// Field names follow the README specification.
 class AccessoryProduct {
-  final int productId;
+  final int id;
   final ProductAsset assets;
   final String modelName;
   final String modelFamily;
@@ -17,7 +17,7 @@ class AccessoryProduct {
   final bool isFusionCompatible;
 
   const AccessoryProduct({
-    required this.productId,
+    required this.id,
     required this.assets,
     required this.modelName,
     required this.modelFamily,
@@ -34,7 +34,7 @@ class AccessoryProduct {
     //['specifications'] as Map<String, dynamic>? ?? {};
 
     return AccessoryProduct(
-      productId: (json['productid'] as num?)?.toInt() ?? 0,
+      id: (json['id'] as num?)?.toInt() ?? 0,
       assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?, productType: 'accessory'),
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
@@ -48,7 +48,7 @@ class AccessoryProduct {
   }
 
   Map<String, dynamic> toJson() => {
-    'productid': productId,
+    'id': id,
     'assets': assets.toAssetList(),
     'model_name': modelName,
     'model_family': modelFamily,
@@ -63,5 +63,5 @@ class AccessoryProduct {
   };
 
   @override
-  String toString() => 'AccessoryProduct(productId: $productId, modelName: $modelName)';
+  String toString() => 'AccessoryProduct(id: $id, modelName: $modelName)';
 }

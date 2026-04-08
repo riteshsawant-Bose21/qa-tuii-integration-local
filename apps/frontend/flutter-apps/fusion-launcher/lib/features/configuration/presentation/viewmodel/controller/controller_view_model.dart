@@ -18,7 +18,7 @@ extension ControllerViewModel on ProjectViewModel {
 
   Set<String> getAssignedZoneIds(String controllerId) {
     try {
-      return projectManager.getAssignedZoneIds(controllerId);
+      return Set<String>.from(projectManager.getAssignedZoneIds(controllerId));
     } catch (_) {
       return <String>{};
     }
@@ -63,6 +63,23 @@ extension ControllerViewModel on ProjectViewModel {
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to unassign zone: $e');
       throwError('Failed to unassign zone from controller: $e');
+    }
+  }
+
+  /// Batch update all assigned zones for a controller - replaces all existing assignments
+  void setAssignedZonesForController({
+    required String controllerId,
+    required Set<String> zoneIds,
+    bool autoSave = true,
+  }) {
+    try {
+      if (autoSave) recordSnapshot();
+      projectManager.setAssignedZonesForController(controllerId: controllerId, zoneIds: zoneIds);
+      if (autoSave) saveProject();
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to set assigned zones: $e');
+      throwError('Failed to set assigned zones for controller: $e');
     }
   }
 

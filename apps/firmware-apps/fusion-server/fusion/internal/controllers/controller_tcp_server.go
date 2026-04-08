@@ -44,7 +44,7 @@ func (s *WallControllerTCPServer) Start() error {
 
 	if s.running {
 		logger := logging.GetLogger()
-		logger.Info("Wall Controller TCP server already running on %s", s.addr)
+		logger.Debug("Wall Controller TCP server already running on %s", s.addr)
 		return nil
 	}
 
@@ -59,7 +59,7 @@ func (s *WallControllerTCPServer) Start() error {
 	s.running = true
 
 	logger := logging.GetLogger()
-	logger.Info("Wall Controller TCP server listening on %s", s.addr)
+	logger.Debug("Wall Controller TCP server listening on %s", s.addr)
 
 	go s.acceptConnections()
 

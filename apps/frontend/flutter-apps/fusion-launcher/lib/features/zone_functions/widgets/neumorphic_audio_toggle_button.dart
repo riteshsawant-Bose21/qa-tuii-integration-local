@@ -44,6 +44,7 @@ class NeumorphicAudioToggleButton extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   FusionAppText(
+                    semanticId: "audio_toggle",
                     text: !isActive ? "Mute" : "Unmute",
                     style: context.textTheme.bodyMedium,
                   ),

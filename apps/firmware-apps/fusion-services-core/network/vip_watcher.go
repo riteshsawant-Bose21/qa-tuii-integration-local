@@ -3,12 +3,15 @@ package network
 import (
 	"fmt"
 	"net"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/vishvananda/netlink"
 )
 
 const updateChannels = 16
+const stopWaitTimeout = 2 * time.Second
 
 type VIPWatcher struct {
 	logger      Logger
@@ -19,7 +22,25 @@ type VIPWatcher struct {
 	mu      sync.Mutex
 	done    chan struct{}
 	running bool
+	runID   uint64
 	wg      sync.WaitGroup
+}
+
+func (w *VIPWatcher) isStopping() bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return !w.running || w.done == nil
+}
+
+func shouldSuppressNetlinkError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	msg := err.Error()
+	return strings.Contains(msg, "use of closed file") ||
+		strings.Contains(msg, "resource temporarily unavailable") ||
+		strings.Contains(msg, "Wrong sender portid")
 }
 
 func NewVIPWatcher(logger Logger, iface string) *VIPWatcher {
@@ -41,8 +62,8 @@ func (w *VIPWatcher) Start(expectedVIP net.IPNet, onUpdate func(gained bool)) er
 	w.expectedVIP = expectedVIP
 	w.onUpdate = onUpdate
 	w.done = make(chan struct{})
-
-	w.logger.Debug("[VIP watcher] Starting VIP watcher on interface: %s for VIP: %s", w.iface, expectedVIP.String())
+	w.runID++
+	runID := w.runID
 
 	link, err := netlink.LinkByName(w.iface)
 	if err != nil {
@@ -50,9 +71,8 @@ func (w *VIPWatcher) Start(expectedVIP net.IPNet, onUpdate func(gained bool)) er
 		return err
 	}
 	linkIndex := link.Attrs().Index
-	w.logger.Debug("[VIP watcher] Interface resolved: %s index=%d", w.iface, linkIndex)
 	w.wg.Add(1)
-	go w.watch(linkIndex)
+	go w.watch(linkIndex, w.done, runID)
 	w.running = true
 
 	return nil
@@ -60,15 +80,25 @@ func (w *VIPWatcher) Start(expectedVIP net.IPNet, onUpdate func(gained bool)) er
 
 func (w *VIPWatcher) Stop() {
 	w.mu.Lock()
-	if w.running && w.done != nil {
-		close(w.done)
+	done := w.done
+	if w.running && done != nil {
+		close(done)
 		w.running = false
+		w.done = nil
 	}
 	w.mu.Unlock()
 
-	// Wait for watch goroutine to exit
-	w.wg.Wait()
-	w.logger.Debug("[VIP watcher] Stopped")
+	waitDone := make(chan struct{})
+	go func() {
+		w.wg.Wait()
+		close(waitDone)
+	}()
+
+	select {
+	case <-waitDone:
+	case <-time.After(stopWaitTimeout):
+		w.logger.Error("[VIP watcher] Stop timed out after %s; continuing without blocking", stopWaitTimeout)
+	}
 }
 
 func (w *VIPWatcher) stopLocked() {
@@ -79,19 +109,19 @@ func (w *VIPWatcher) stopLocked() {
 	}
 }
 
-func (w *VIPWatcher) watch(linkIndex int) {
+func (w *VIPWatcher) watch(linkIndex int, done <-chan struct{}, runID uint64) {
 	defer w.wg.Done()
 
 	updates := make(chan netlink.AddrUpdate, updateChannels)
 
-	defer func() {
-		w.logger.Debug("[VIP watcher] watcher goroutine exited")
-	}()
-
 	if err := netlink.AddrSubscribeWithOptions(
-		updates, w.done,
+		updates, done,
 		netlink.AddrSubscribeOptions{
 			ErrorCallback: func(e error) {
+				if shouldSuppressNetlinkError(e) {
+					w.logger.Debug("[VIP watcher] suppressing transient netlink error: %v", e)
+					return
+				}
 				w.logger.Error("[VIP watcher] netlink error: %v", e)
 			},
 			ListExisting: true,
@@ -105,11 +135,11 @@ func (w *VIPWatcher) watch(linkIndex int) {
 
 	for {
 		select {
-		case <-w.done:
+		case <-done:
 			return
 		case update, ok := <-updates:
 			if !ok {
-				w.logger.Error("[VIP watcher] netlink updates channel closed")
+				w.logger.Debug("[VIP watcher] netlink updates channel closed")
 				return
 			}
 
@@ -129,7 +159,13 @@ func (w *VIPWatcher) watch(linkIndex int) {
 			w.mu.Lock()
 			expectedVIP := w.expectedVIP
 			onUpdate := w.onUpdate
+			isCurrentRun := w.runID == runID
 			w.mu.Unlock()
+
+			if !isCurrentRun {
+				w.logger.Debug("[VIP watcher] ignoring stale update from previous run: runID=%d", runID)
+				continue
+			}
 
 			expectedIP := expectedVIP.IP
 			if expectedIP == nil {
@@ -145,11 +181,11 @@ func (w *VIPWatcher) watch(linkIndex int) {
 			}
 
 			if update.NewAddr {
-				w.logger.Info("[VIP watcher] VIP gained: %s", ip)
-				onUpdate(true)
+				w.logger.Debug("[VIP watcher] VIP gained: %s", ip)
+				go onUpdate(true)
 			} else {
-				w.logger.Info("[VIP watcher] VIP lost: %s", ip)
-				onUpdate(false)
+				w.logger.Debug("[VIP watcher] VIP lost: %s", ip)
+				go onUpdate(false)
 			}
 		}
 	}

@@ -1,0 +1,24 @@
+info:
+  name: Set Device Certificate
+  type: http
+  seq: 6
+
+http:
+  method: post
+  url: "{{api_url}}/devices/:id/certificate"
+  params:
+    id : ""
+  headers:
+    - name: Content-Type
+      value: text/plain
+  body:
+    type: text
+    data: |-
+      <PASTE_DEVICE_CERTIFICATE_PEM_HERE>
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

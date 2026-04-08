@@ -30,6 +30,9 @@ extension ControllerManager on ProjectManager {
   void unassignZoneFromController({required String controllerId, required String zoneId}) =>
       _service.unassignZoneFromController(controllerId: controllerId, zoneId: zoneId);
 
+  void setAssignedZonesForController({required String controllerId, required Set<String> zoneIds}) =>
+      _service.setAssignedZonesForController(controllerId: controllerId, zoneIds: zoneIds);
+
   // ─── Pages ────────────────────────────────────────────────────────────────
 
   List<ControllerPageModel> getControllerPages(String controllerId) => _service.getControllerPages(controllerId);
