@@ -63,9 +63,27 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
       _connectionPaint.color = Colors.blue;
       final FusionToolState toolState = painter.toolState;
       final Set<String> selectedElements = toolState is SelectToolState ? toolState.selectedElementIds : <String>{};
+      final List<AxisLock> previousAxisLocks = connection.axisLocks;
 
       final Map<int, AxisLock> selectedAxisLocksBySegmentIndex = <int, AxisLock>{};
-      for (int i = 0; i < rawPoints.length - 1; i++) {
+      final Map<int, AxisLock> previousPathOrderedByIndex = <int, AxisLock>{};
+      int previousLockCursor = 0;
+      for (int i = 0; i < rawPoints.length; i++) {
+        if (previousLockCursor < previousAxisLocks.length) {
+          final AxisLock previousLock = previousAxisLocks[previousLockCursor];
+          final FusionCanvasPoint point = rawPoints[i];
+          final bool matchesX = previousLock.x != null && (point.position.dx - previousLock.x!).abs() <= 0.001;
+          final bool matchesY = previousLock.y != null && (point.position.dy - previousLock.y!).abs() <= 0.001;
+          if (matchesX || matchesY) {
+            previousPathOrderedByIndex[i] = previousLock;
+            previousLockCursor++;
+          }
+        }
+
+        if (i >= rawPoints.length - 1) {
+          continue;
+        }
+
         final FusionCanvasPathSegment line = FusionCanvasPathSegment(start: rawPoints[i], end: rawPoints[i + 1]);
         if (!selectedElements.contains(line.id)) {
           continue;
@@ -76,14 +94,12 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
       }
       // print("Lenght of selected points: ${selectedElements.length}, lines: ${lines.length}, rawPoints: ${rawPoints.length}");
       if (selectedAxisLocksBySegmentIndex.isNotEmpty) {
-        final List<AxisLock> previousAxisLocks = connection.axisLocks;
         // print(
         //   "Previous axis locks from connection: \n Previous : $previousAxisLocks.  \n selectedAxisLocksBySegmentIndex: $selectedAxisLocksBySegmentIndex \n rawPoints: $rawPoints",
         // );
         axisLocks = _mergeAxisLocksByPathOrder(
           rawPoints: rawPoints,
-          painter: painter,
-          previousAxisLocks: previousAxisLocks,
+          previousPathOrderedByIndex: previousPathOrderedByIndex,
           selectedAxisLocksBySegmentIndex: selectedAxisLocksBySegmentIndex,
         );
         // print("Axis Locks Result  : $axisLocks");
@@ -311,41 +327,19 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
 
   List<AxisLock> _mergeAxisLocksByPathOrder({
     required List<FusionCanvasPoint> rawPoints,
-    required FusionCanvasPainter painter,
-    required List<AxisLock> previousAxisLocks,
+    required Map<int, AxisLock> previousPathOrderedByIndex,
     required Map<int, AxisLock> selectedAxisLocksBySegmentIndex,
   }) {
-    // Build orderedPathLocks and a mapping from rawPoints segment index → ordered index.
-    final List<AxisLock> merged = <AxisLock>[
-      ...previousAxisLocks,
-      ...selectedAxisLocksBySegmentIndex.values,
-    ];
-    final List<AxisLock> previous = <AxisLock>[...previousAxisLocks];
-
-    final Map<int, AxisLock> previousPathOrderedByIndex = <int, AxisLock>{};
-    int currentRPIndex = 0;
-    for (AxisLock lock in previous) {
-      final int index = (rawPoints.sublist(currentRPIndex)).indexWhere(
-        (FusionCanvasPoint p) => (lock.x != null && (p.position.dx - lock.x!).abs() <= 0.001) || (lock.y != null && (p.position.dy - lock.y!).abs() <= 0.001),
-      );
-      if (index != -1) {
-        previousPathOrderedByIndex[index + currentRPIndex] = lock;
-        currentRPIndex += index + 1;
+    // Keep path order while letting selected locks override previous locks at the same index.
+    final List<AxisLock> mergedInPathOrder = <AxisLock>[];
+    for (int i = 0; i < rawPoints.length; i++) {
+      final AxisLock? lock = selectedAxisLocksBySegmentIndex[i] ?? previousPathOrderedByIndex[i];
+      if (lock != null) {
+        mergedInPathOrder.add(lock);
       }
     }
 
-    //     print(
-    //       '''Ordered PreviousPathLocks by rawPoints index: ${previousPathOrderedByIndex.entries.map((MapEntry<int, AxisLock> e) => 'index ${e.key}: ${e.value}').join('\n ')}
-    // Selected locks by rawPoints segment index: ${selectedAxisLocksBySegmentIndex.entries.map((MapEntry<int, AxisLock> e) => 'segment index ${e.key}: ${e.value}').join('\n ')}
-
-    // RawPoints: ${rawPoints.map((FusionCanvasPoint p) => '(${p.position.dx}, ${p.position.dy})').join('\n ')}
-    //       ''',
-    //     );
-
-    final Map<int, AxisLock> mergedByIndex = <int, AxisLock>{...previousPathOrderedByIndex, ...selectedAxisLocksBySegmentIndex};
-    final List<MapEntry<int, AxisLock>> sortedMergedByIndex =
-        mergedByIndex.entries.toList()..sort((MapEntry<int, AxisLock> a, MapEntry<int, AxisLock> b) => a.key.compareTo(b.key));
-    return _removeDuplicates(sortedMergedByIndex.map((MapEntry<int, AxisLock> e) => e.value).toList());
+    return _removeDuplicates(mergedInPathOrder);
   }
 
   bool _axisLocksMatch(AxisLock a, AxisLock b) {
