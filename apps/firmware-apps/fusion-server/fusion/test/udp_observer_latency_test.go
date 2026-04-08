@@ -93,14 +93,10 @@ func TestFusionUDP_ObserverLatencyDiagnostic(t *testing.T) {
 	}()
 
 	seedState := map[string]any{
-		"settings": map[string]any{
-			"observer_latency": map[string]any{
-				"seq": 0,
-			},
-			"observer_payload_pad": buildBacklogPad(96, 192),
-		},
+		"value": 0,
 	}
-	postJSON(t, fmt.Sprintf("%s%s", httpBase, routes.ValueEndpoint), seedState)
+	mustPatchJSON(t, &http.Client{Timeout: 3 * time.Second}, settingsAudioParamURL(httpBase, "observer_latency", "seq"), seedState)
+	mustPatchJSON(t, &http.Client{Timeout: 3 * time.Second}, settingsAudioParamURL(httpBase, "observer_payload_pad", "payload"), map[string]any{"value": buildBacklogPad(96, 192)})
 
 	buf := make([]byte, 65535)
 	for _, node := range nodes {
@@ -118,7 +114,7 @@ func TestFusionUDP_ObserverLatencyDiagnostic(t *testing.T) {
 	warmupSeq := 1
 	if err := patchJSON(
 		&http.Client{Timeout: 3 * time.Second},
-		fmt.Sprintf("%s%s?key=settings.observer_latency.seq", httpBase, routes.ValueEndpoint),
+		settingsAudioParamURL(httpBase, "observer_latency", "seq"),
 		map[string]any{"value": warmupSeq},
 	); err != nil {
 		t.Fatalf("warmup patch failed: %v", err)
@@ -149,7 +145,7 @@ func TestFusionUDP_ObserverLatencyDiagnostic(t *testing.T) {
 		for i := 1; i <= iterations; i++ {
 			if err := patchJSON(
 				client,
-				fmt.Sprintf("%s%s?key=settings.observer_latency.seq", httpBase, routes.ValueEndpoint),
+				settingsAudioParamURL(httpBase, "observer_latency", "seq"),
 				map[string]any{"value": i},
 			); err != nil {
 				patchDone <- fmt.Errorf("patch iteration %d: %w", i, err)
@@ -190,7 +186,7 @@ func TestFusionUDP_ObserverLatencyDiagnostic(t *testing.T) {
 				}
 			}
 
-			seq, ok := nestedInt(msg, "settings", "observer_latency", "seq")
+			seq, ok := nestedInt(msg, "settings", "audio", "observer_latency", "seq")
 			if !ok || seq < node.latestSeq {
 				continue
 			}
@@ -341,20 +337,16 @@ func buildBacklogPad(keys, valueLen int) map[string]any {
 	return pad
 }
 
-func postJSON(t *testing.T, url string, payload any) {
+func settingsAudioParamURL(baseURL, blockID, param string) string {
+	path := strings.ReplaceAll(routes.SettingsAudioParamEndpoint, "{blockId}", blockID)
+	path = strings.ReplaceAll(path, "{param}", param)
+	return baseURL + path
+}
+
+func mustPatchJSON(t *testing.T, client *http.Client, url string, payload any) {
 	t.Helper()
-	data, err := json.Marshal(payload)
-	if err != nil {
-		t.Fatalf("marshal POST payload: %v", err)
-	}
-	resp, err := http.Post(url, api.JsonMIMEType, bytes.NewBuffer(data))
-	if err != nil {
-		t.Fatalf("POST %s: %v", url, err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("POST %s status=%d body=%s", url, resp.StatusCode, string(body))
+	if err := patchJSON(client, url, payload); err != nil {
+		t.Fatalf("PATCH %s: %v", url, err)
 	}
 }
 

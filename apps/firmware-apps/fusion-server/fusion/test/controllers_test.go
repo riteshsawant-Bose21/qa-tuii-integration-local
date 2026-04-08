@@ -237,7 +237,7 @@ func (m *MockTCPController) HandleMessages() error {
 			identifyResponsePayload := api.ControllerIdentifyResponse{
 				ID:              m.ID,
 				DeviceType:      m.DeviceType,
-				FirmwareVersion: m.FirmwareVersion,
+				SoftwareVersion: m.FirmwareVersion,
 			}
 
 			payloadBytes, err := json.Marshal(identifyResponsePayload)
