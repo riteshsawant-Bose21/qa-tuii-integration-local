@@ -106,27 +106,61 @@ They validate both:
 
 By default, tests target `http://192.168.2.100:8080`. You can override with:
 - `FUSION_TEST_VIP` (e.g. `127.0.0.1:8080`)
+- `FUSION_TEST_NODES` (e.g. `127.0.0.1:8080`)
 - `FUSION_TEST_ADMIN` (optional admin URL, default `http://192.168.2.100:9090`)
 
-From module root (`fusion/`):
+### Prerequisites (non-UDP tests)
+
+If you are only testing Time Machine / Scene Catalog (not UDP), do this first:
+
+1) Build a fresh local binary (recommended every test run)
+
+From `fusion-server/` root:
 
 ```bash
-FUSION_TEST_VIP=127.0.0.1:8080 \
-go test -v --race ./test -run 'TimeMachine|SceneCatalog'
+make build-darwin-arm64
 ```
 
-Run only Time Machine tests:
+2) Start local server
+
+```bash
+./build/fusion-server_darwin_arm64 --local
+```
+
+3) Confirm HTTP is up
+
+```bash
+curl -s http://127.0.0.1:8080/metadata | head
+```
+
+4) Run tests from module root (`fusion/`) with both env vars set
+
+**Only Run Time-Machine Tests**
 
 ```bash
 FUSION_TEST_VIP=127.0.0.1:8080 \
+FUSION_TEST_NODES=127.0.0.1:8080 \
 go test -v --race ./test -run TimeMachine
 ```
 
-Run only the new Snapshot Definition + Scene Set foundation tests:
+**Only Run Scene Catalog Tests**
 
 ```bash
 FUSION_TEST_VIP=127.0.0.1:8080 \
+FUSION_TEST_NODES=127.0.0.1:8080 \
 go test -v --race ./test -run SceneCatalog
+```
+
+### Test All Three (Without Cluster)
+
+This includes UDP + Time Machine + Scene Catalog tests in `./test`:
+
+```bash
+FUSION_TEST_LOCAL=1 \
+FUSION_TEST_VIP=127.0.0.1:8080 \
+FUSION_TEST_NODES=127.0.0.1:8080 \
+FUSION_UDP_ADDR=127.0.0.1:7947 \
+go test -v --race ./test
 ```
 
 Run a single test while debugging:
@@ -137,9 +171,65 @@ go test -v --race ./test -run TestSceneCatalogListAll
 
 ### Requirements / Caveats
 
-- Most Snapshot/Scene Catalog tests run fine against a single local node when `FUSION_TEST_VIP=127.0.0.1:8080`.
+- Most Snapshot/Scene Catalog tests run fine against a single local node when `FUSION_TEST_VIP=127.0.0.1:8080` and `FUSION_TEST_NODES=127.0.0.1:8080` are both set.
 - Cluster-wide tests require 2+ nodes and are now auto-skipped when cluster membership is unavailable or single-node.
 - Restart-based tests need a restart script (`FUSION_RESTART_SCRIPT`) or `fusion/scripts/multipass/restart-fusion.sh`; otherwise they auto-skip.
+
+### Cluster-wide tests: when do they run vs skip?
+
+Cluster-wide Time Machine tests run only when all of the following are true:
+
+1) `FUSION_TEST_VIP` points to a live cluster VIP/API
+2) `GET <VIP>/cluster/members` succeeds
+3) The members response contains at least **2 nodes**
+
+If any of those fail, cluster-only tests are skipped by design.
+
+Current scope note:
+- `TimeMachine` includes dedicated cluster/restart assertions.
+- `SceneCatalog` currently validates API and state behavior through the VIP path, but does **not yet** include dedicated cross-node replication assertions (for example, verifying persisted definitions/current-scene on each individual node).
+
+Restart-based tests run only when a restart script is available:
+- `FUSION_RESTART_SCRIPT=/abs/path/to/restart-fusion.sh`, or
+- default path exists: `fusion/scripts/multipass/restart-fusion.sh`
+
+### How to set up and run cluster-wide tests
+
+From repo root (`fusion-server/`), bring up a 3-node cluster:
+
+```bash
+./build-fusion-server
+./scripts/multipass/launch --instances 3
+```
+
+Verify VIP and membership:
+
+```bash
+curl -s http://192.168.2.100:8080/cluster/members | jq
+```
+
+From module root (`fusion/`), run cluster-wide Time Machine tests:
+
+```bash
+FUSION_TEST_VIP=192.168.2.100:8080 \
+FUSION_TEST_NODES=192.168.2.87:8080,192.168.2.88:8080,192.168.2.89:8080 \
+FUSION_RESTART_SCRIPT=../scripts/multipass/restart-fusion.sh \
+go test -v --race ./test -run TimeMachine
+```
+
+### Test Everything Including Cluster Tests
+
+With a running 2+ node cluster and restart script available, run:
+
+```bash
+FUSION_TEST_VIP=192.168.2.100:8080 \
+FUSION_TEST_NODES=192.168.2.2:8080,192.168.2.3:8080,192.168.2.4:8080 \
+FUSION_RESTART_SCRIPT=../scripts/multipass/restart-fusion.sh \
+FUSION_UDP_ADDR=192.168.2.100:7947 \
+go test -v --race ./test
+```
+
+That is the full-coverage path (UDP + Time Machine + Scene Catalog + cluster/restart cases).
 
 ## Notes
 

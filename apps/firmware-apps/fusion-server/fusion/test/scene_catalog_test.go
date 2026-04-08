@@ -171,7 +171,7 @@ func TestSceneCatalogActivateSnapshotDefNotFound(t *testing.T) {
 
 func TestSceneCatalogActivateSnapshotDefPatchesState(t *testing.T) {
 	id := fmt.Sprintf("snap-def-activate-%d", time.Now().UnixNano())
-	stateKey := id + "_gain_db"
+	stateKey := fmt.Sprintf("snap_def_activate_%d_gain_db", time.Now().UnixNano())
 	stateVal := -9.0
 
 	def := api.SnapshotDefinition{ID: id, Name: "Activation test", Data: map[string]any{stateKey: stateVal}}
@@ -198,7 +198,7 @@ func TestSceneCatalogActivateSnapshotDefPatchesState(t *testing.T) {
 
 func TestSceneCatalogSnapshotDefClobberOnDuplicateID(t *testing.T) {
 	id := fmt.Sprintf("snap-def-clobber-%d", time.Now().UnixNano())
-	stateKey := id + "_val"
+	stateKey := fmt.Sprintf("snap_def_clobber_%d_val", time.Now().UnixNano())
 
 	upsertSnapshotDefs(t, []api.SnapshotDefinition{{ID: id, Name: "First", Data: map[string]any{stateKey: 1.0}}})
 	upsertSnapshotDefs(t, []api.SnapshotDefinition{{ID: id, Name: "Second", Data: map[string]any{stateKey: 2.0}}})
@@ -317,7 +317,7 @@ func TestSceneCatalogActivateSceneNotMember(t *testing.T) {
 func TestSceneCatalogActivateScenePatchesState(t *testing.T) {
 	setID := fmt.Sprintf("set-activate-%d", time.Now().UnixNano())
 	sceneID := setID + "-scene-b"
-	stateKey := setID + "_level"
+	stateKey := fmt.Sprintf("set_activate_%d_level", time.Now().UnixNano())
 	stateVal := -12.0
 
 	set := api.SceneSet{
