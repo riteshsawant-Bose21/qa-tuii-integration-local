@@ -21,6 +21,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -33,12 +34,23 @@ const (
 	bleCharacterUUID       = "AD10"
 	bleServiceUUID         = "B053"
 	clusterLeaveTime       = 5 * time.Second
-	fusionDataPath         = "/var/lib/fusion"
 	fusionDatabaseName     = "fusion.db"
-	fusionDatabasePath     = fusionDataPath + "/" + fusionDatabaseName
 	networkMonitorInterval = 5 * time.Second
 	startupWaitDelay       = 100
 )
+
+var (
+	fusionDataPath     = getEnvOrDefault("FUSION_DATA_DIR", "/var/lib/fusion")
+	fusionDatabasePath = filepath.Join(fusionDataPath, fusionDatabaseName)
+	fusionLogDir       = getEnvOrDefault("FUSION_LOG_DIR", "/var/log/fusion")
+)
+
+func getEnvOrDefault(key string, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
 
 var SAPGroups = []string{"224.2.127.254", "239.255.255.255"}
 
@@ -646,7 +658,7 @@ func initLogging(config *api.AppConfig) *logging.Logger {
 
 	logging.InitLogger(logging.LogConfig{
 		NodeName:    config.NodeName,
-		LogDir:      "/var/log/fusion",
+		LogDir:      fusionLogDir,
 		MaxFileSize: 100,
 		MaxFiles:    5,
 		LogLevel:    logLevel,
