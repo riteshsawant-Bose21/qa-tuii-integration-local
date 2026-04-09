@@ -94,19 +94,11 @@ class _PageRow extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
-            FusionIcon.icon(
-              semanticId: 'message_page_icon',
-              Icons.drag_indicator,
-              size: 14,
-              color: isActive ? context.colorScheme.primaryWhite : context.colorScheme.iconDefault,
-            ),
-            const SizedBox(width: 2),
-            Text(
-              ':',
-              style: TextStyle(
-                fontSize: 11,
-                color: isActive ? context.colorScheme.primaryWhite : context.colorScheme.textSecondary,
-              ),
+            FusionIcon.svg(
+              semanticId: 'message_page_row_icon',
+              "assets/svg/Four_Dots.svg",
+              size: 11,
+              color: context.colorScheme.iconWhite,
             ),
             const SizedBox(width: 6),
             Expanded(
