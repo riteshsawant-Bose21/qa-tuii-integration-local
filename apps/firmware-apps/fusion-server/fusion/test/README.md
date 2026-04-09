@@ -107,7 +107,7 @@ They validate both:
 By default, tests target `http://192.168.2.100:8080`. You can override with:
 - `FUSION_TEST_VIP` (e.g. `127.0.0.1:8080`)
 - `FUSION_TEST_NODES` (e.g. `127.0.0.1:8080`)
-- `FUSION_TEST_ADMIN` (optional admin URL, default `http://192.168.2.100:9090`)
+- `FUSION_TEST_ADMIN` (optional; defaults to the `FUSION_TEST_VIP` host on port `9090`, so you only need to set this if your admin port is on a different host)
 
 ### Prerequisites (non-UDP tests)
 
@@ -214,7 +214,7 @@ From module root (`fusion/`), run cluster-wide Time Machine tests:
 
 ```bash
 FUSION_TEST_VIP=192.168.2.100:8080 \
-FUSION_TEST_NODES=192.168.2.93:8080,192.168.2.94:8080,192.168.2.95:8080 \
+FUSION_TEST_NODES=192.168.2.104:8080,192.168.2.105:8080,192.168.2.106:8080 \
 FUSION_RESTART_SCRIPT=../scripts/multipass/restart-fusion.sh \
 go test -count=1 -v --race ./test -run TimeMachine
 ```

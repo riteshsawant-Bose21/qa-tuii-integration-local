@@ -65,7 +65,15 @@ func init() {
 
 	admin := os.Getenv("FUSION_TEST_ADMIN")
 	if admin == "" {
-		admin = defaultSnapshotTestAdmin
+		// Derive admin URL from VIP host on port 9090 rather than using a
+		// hardcoded multipass default. This makes local darwin runs work without
+		// having to set FUSION_TEST_ADMIN explicitly.
+		if parsed, err := url.Parse(snapServerAddr); err == nil {
+			host := parsed.Hostname()
+			admin = parsed.Scheme + "://" + net.JoinHostPort(host, "9090")
+		} else {
+			admin = defaultSnapshotTestAdmin
+		}
 	}
 	snapAdminServerAddr = normalizeTestBaseURL(admin, "9090")
 
