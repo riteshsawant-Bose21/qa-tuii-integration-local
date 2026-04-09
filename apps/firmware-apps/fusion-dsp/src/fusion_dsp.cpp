@@ -425,13 +425,15 @@ int main(int argc, char *argv[])
         {
             SPDLOG_INFO("server ip {}", vm["serverip"].as<std::string>());
             client = new UDPValueMonitor(vm["serverip"].as<std::string>(),
-                                         7947);
+                                         7947,
+                                         false);
 
             client->watchDeviceID(handle_device_id);
             client->watchPattern("devices[*]", handle_devices);
             client->watchPattern("settings.audio.*.*[*][*]", handle_parameter);
             client->watchPattern("settings.audio.*.*[*]", handle_parameter);
             client->watchPattern("settings.audio.*.*", handle_parameter);
+            client->start();
         }
 
         // if we boot up on empty config, no need to start up telemetry

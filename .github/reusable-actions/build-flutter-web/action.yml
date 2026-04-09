@@ -41,9 +41,10 @@ runs:
 
     - name: Flutter Web App build
       shell: bash
-      working-directory: apps/frontend/flutter-apps/fusion-launcher
+      working-directory: apps/frontend/flutter-apps/fusion_web
       run: |
         echo "$HOME/.proto/shims" >> $GITHUB_PATH
+        cp ~/flutter-env/.env ./.env
         flutter pub get
         moon run flutter-apps:build-web
         cd build/web

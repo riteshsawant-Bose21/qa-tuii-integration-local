@@ -13,16 +13,23 @@ class MeterDataState {
   /// for quick access to block and its value
   final Map<String, MeterBlock>? meterValues;
 
-  // Ensure it's in your constructor and copyWith...
+  /// Per-device system monitor info (temp, CPU/RAM, disk/eMMC).
+  /// Keyed by the `device_id` from the meter packet (e.g., "FUSIONDSP419486553").
+  final Map<String, DeviceSystemInfo> deviceSystemInfo;
 
   const MeterDataState({
     this.packets = const <String, MeterPacket>{},
     this.isConnected = false,
     this.inactiveReason = MeterInactiveReason.notStarted,
     this.meterValues,
+    this.deviceSystemInfo = const <String, DeviceSystemInfo>{},
   });
 
   bool get hasData => packets.isNotEmpty;
+
+  /// Convenience: look up system info for a given device ID.
+  /// Returns `null` if no telemetry has been received for this device yet.
+  DeviceSystemInfo? systemInfoFor(String deviceId) => deviceSystemInfo[deviceId];
 
   MeterDataState copyWith({
     Map<String, MeterPacket>? packets,
@@ -30,12 +37,14 @@ class MeterDataState {
     MeterInactiveReason? inactiveReason,
     bool clearInactiveReason = false,
     Map<String, MeterBlock>? meterValues,
+    Map<String, DeviceSystemInfo>? deviceSystemInfo,
   }) {
     return MeterDataState(
       packets: packets ?? this.packets,
       isConnected: isConnected ?? this.isConnected,
       inactiveReason: clearInactiveReason ? null : (inactiveReason ?? this.inactiveReason),
       meterValues: meterValues ?? this.meterValues,
+      deviceSystemInfo: deviceSystemInfo ?? this.deviceSystemInfo,
     );
   }
 }

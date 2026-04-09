@@ -209,6 +209,7 @@ class _FusionSwitchState extends State<FusionSwitch> with SingleTickerProviderSt
                   FusionContainer(
                     width: trackWidth,
                     borderRadius: radius,
+                    isChecked: widget.value,
                     // height: trackHeight,
                     // decoration: BoxDecoration(
                     color: _trackColorAnimation.value,

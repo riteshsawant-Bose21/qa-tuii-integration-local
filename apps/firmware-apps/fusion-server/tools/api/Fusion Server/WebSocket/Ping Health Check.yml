@@ -1,0 +1,36 @@
+info:
+  name: Ping Health Check
+  type: websocket
+  seq: 1
+
+websocket:
+  url: ws://{{api_url}}/ws
+  message:
+    type: json
+    data: |
+      {
+        "id": "ping-001",
+        "version": 1,
+        "type": "ping"
+      }
+  auth: inherit
+
+settings:
+  timeout: 0
+  keepAliveInterval: 0
+
+docs: |
+  Health check - responds with pong.
+
+  **Response (3003 Pong):**
+  ```json
+  {
+    "id": "ping-001",
+    "version": 1,
+    "type": "pong",
+    "code": 3003,
+    "status": "success",
+    "message": "Pong",
+    "timestamp": "2026-03-24T10:00:00Z"
+  }
+  ```

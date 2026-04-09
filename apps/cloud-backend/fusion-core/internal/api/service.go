@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
-	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
 	"go.uber.org/zap"
@@ -18,16 +17,17 @@ import (
 
 // API is a service for the main API.
 type API struct {
-	engine                *gin.Engine
-	server                *http.Server
-	product               fusion.Product
-	project               fusion.Project
-	user                  fusion.User
-	auth                  fusion.Auth
-	firmware              fusion.Firmware
-	roleManagementService *userdb.RoleManagementService
-	authMiddleware        middleware.AuthMiddleware
-	appLog                *zap.Logger
+	engine         *gin.Engine
+	server         *http.Server
+	product        fusion.Product
+	project        fusion.Project
+	user           fusion.User
+	auth           fusion.Auth
+	firmware       fusion.Firmware
+	organization   fusion.Organization
+	authMiddleware middleware.AuthMiddleware
+	appLog         *zap.Logger
+	device         fusion.Device
 }
 
 // Config holds the API server configuration settings.
@@ -42,9 +42,11 @@ func New(cfg *Config,
 	productSvc fusion.Product,
 	project fusion.Project,
 	userSvc fusion.User,
+	organizationSvc fusion.Organization,
 	authSvc fusion.Auth,
 	firmwareSvc fusion.Firmware,
 	authMiddleware middleware.AuthMiddleware,
+	deviceSvc fusion.Device,
 	loggers *log.Loggers,
 ) (*API, error) {
 
@@ -73,6 +75,10 @@ func New(cfg *Config,
 		return nil, errors.New("missing user service")
 	}
 
+	if organizationSvc == nil {
+		return nil, errors.New("missing organization service")
+	}
+
 	if authSvc == nil {
 		return nil, errors.New("missing auth service")
 	}
@@ -85,15 +91,21 @@ func New(cfg *Config,
 		return nil, errors.New("missing auth middleware")
 	}
 
+	if deviceSvc == nil {
+		return nil, errors.New("missing device service")
+	}
+
 	api := &API{
 		engine:         engine,
 		product:        productSvc,
 		project:        project,
 		user:           userSvc,
+		organization:   organizationSvc,
 		auth:           authSvc,
 		firmware:       firmwareSvc,
 		authMiddleware: authMiddleware,
 		appLog:         loggers.AppLogger,
+		device:         deviceSvc,
 	}
 
 	api.registerRoutes()
@@ -163,7 +175,7 @@ func (s *API) AppLogger() *zap.Logger {
 func corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Methods", "GET, PATCH, POST, PUT, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 
 		if c.Request.Method == "OPTIONS" {

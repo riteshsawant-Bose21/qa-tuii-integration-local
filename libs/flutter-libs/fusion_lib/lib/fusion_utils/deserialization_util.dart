@@ -80,6 +80,12 @@ class DeserializationUtil {
       return null;
     },
   );
+
+  static Deserializer<T> classDeserializer<T>(T Function(Map<String, dynamic> map) fromMap) {
+    return Deserializer<T>(
+      fromMap: (Map<dynamic, dynamic> map) => fromMap(map.cast<String, dynamic>()),
+    );
+  }
 }
 
 class Deserializer<T> {

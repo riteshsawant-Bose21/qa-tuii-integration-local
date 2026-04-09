@@ -1,0 +1,29 @@
+info:
+  name: Update Device Info
+  type: websocket
+  seq: 3
+
+websocket:
+  url: ws://{{api_url}}/ws
+  message:
+    type: json
+    data: |
+      {
+        "id": "update-001",
+        "version": 1,
+        "type": "update_device_info",
+        "data": {
+          "device_id": "fusion_dha3vl5kxmdn_1md6_instance",
+          "name": "Updated Device Name",
+          "location": "Building B - Room 101",
+          "is_claimed": true
+        }
+      }
+  auth: inherit
+
+settings:
+  timeout: 0
+  keepAliveInterval: 0
+
+docs: |
+  Update device information using DevicePatch structure. All fields except device_id are optional (partial update).

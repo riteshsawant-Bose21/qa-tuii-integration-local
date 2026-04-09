@@ -79,9 +79,13 @@ func (s *Service) InsertBundle(ctx context.Context, payload apiTypes.NotifyBundl
 	}
 
 	// Set prerelease fields if present
-	if parsedVersion.PrereleaseFlag != "" {
-		bundleRecord.Prerelease = null.StringFrom(parsedVersion.PrereleaseFlag)
-		bundleRecord.PrereleaseNum = null.IntFrom(parsedVersion.PrereleaseVer)
+	if parsedVersion.Prerelease != "" {
+		if parsedVersion.PrereleaseTag != "" {
+			bundleRecord.PrereleaseTag = null.StringFrom(parsedVersion.PrereleaseTag)
+		}
+		if parsedVersion.PrereleaseNum >= 0 {
+			bundleRecord.PrereleaseNum = null.IntFrom(parsedVersion.PrereleaseNum)
+		}
 	}
 
 	if payload.ReleaseNotes != "" {
@@ -149,14 +153,14 @@ func (s *Service) GetLatestBundleCompatibleWithFirmware(ctx context.Context, cur
 			models.BundleWhere.MinPrevVersion.EQ("0.0.0"),
 			qm.Or2(models.BundleWhere.MinPrevVersionArray.LTE(parsedFirmware)),
 		),
-		qm.OrderBy("version_array DESC"),
+		qm.OrderBy("version_array DESC, prerelease_num DESC NULLS LAST"),
 	}
 
-	// Filter by channel: empty string means stable (prerelease IS NULL)
+	// Filter by channel: empty string means stable (prerelease_tag IS NULL)
 	if channel == "" {
-		queryMods = append(queryMods, qm.Where("prerelease IS NULL"))
+		queryMods = append(queryMods, qm.Where("prerelease_tag IS NULL"))
 	} else {
-		queryMods = append(queryMods, qm.Where("prerelease = ?", channel))
+		queryMods = append(queryMods, qm.Where("prerelease_tag = ?", channel))
 	}
 
 	bundle, err := models.Bundles(queryMods...).One(ctx, s.db)
@@ -193,14 +197,14 @@ func (s *Service) GetLatestCompatibleBundle(ctx context.Context, currentFirmware
 			models.BundleWhere.MinDesktopAppVersion.EQ("0.0.0"),
 			qm.Or2(models.BundleWhere.MinDesktopAppVersionArray.LTE(parsedCurrentDesktopAppVersion)),
 		),
-		qm.OrderBy("version_array DESC"),
+		qm.OrderBy("version_array DESC, prerelease_num DESC NULLS LAST"),
 	}
 
-	// Filter by channel: empty string means stable (prerelease IS NULL)
+	// Filter by channel: empty string means stable (prerelease_tag IS NULL)
 	if channel == "" {
-		queryMods = append(queryMods, qm.Where("prerelease IS NULL"))
+		queryMods = append(queryMods, qm.Where("prerelease_tag IS NULL"))
 	} else {
-		queryMods = append(queryMods, qm.Where("prerelease = ?", channel))
+		queryMods = append(queryMods, qm.Where("prerelease_tag = ?", channel))
 	}
 
 	bundle, err := models.Bundles(queryMods...).One(ctx, s.db)

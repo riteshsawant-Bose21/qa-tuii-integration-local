@@ -1,0 +1,450 @@
+/*  By downloading or using this file, the user agrees to be bound by the terms of the license
+ *  agreement located in the LICENSE file in the root of this project
+ *  as an original contracting party.
+ */
+
+/*
+ *  Description         : OcaLite Ocp1Socket implementation.
+ *
+ */
+
+// ---- Include system wide include files ----
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+#include <assert.h>
+#include <HostInterfaceLite/OCA/OCF/OcfLiteHostInterface.h>
+#include <HostInterfaceLite/OCA/OCP.1/Network/IOcp1LiteSocket.h>
+#include <StandardLib/StandardLib.h>
+#ifdef _WIN32
+#include <Ws2tcpip.h>
+#else
+#include <netdb.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <errno.h>
+#include <string.h>
+
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
+#else
+#include <lwip/tcp.h>
+#include <lwip/inet.h>
+#include <string.h>
+#include <socket.h>
+#include <netdb.h>
+#endif
+
+#endif
+
+// ---- FileInfo Macro ----
+
+// ---- Include local include files ----
+
+// ---- Helper types and constants ----
+#ifndef SOCKET_ERROR
+#define SOCKET_ERROR -1
+#endif
+#ifndef INVALID_SOCKET
+#define INVALID_SOCKET -1
+#endif
+// ---- Helper functions ----
+
+// ---- Local data ----
+
+#ifdef ERRNO
+int err;
+#endif
+// ---- Class Implementation ----
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+INT32 OcfLiteHostInterfaceSelect(INT32 highest, OcfLiteSelectableSet &readset, OcfLiteSelectableSet &writeset, OcfLiteSelectableSet &exceptset, INT32 timeout)
+{
+    struct timeval timeValue = {0};
+
+    if (timeout > 0)
+    {
+        timeValue.tv_sec = timeout / 1000;
+        timeValue.tv_usec = timeout % 1000;
+    }
+
+    return select(highest + 1, &readset, &writeset, &exceptset, &timeValue);
+}
+
+INT32 Ocp1LiteHostInterfaceRetrieveSocket(::SocketNetworkProtocolType networkProtocolType, ::SocketTransportProtocolType transportProtocolType)
+{
+    assert(networkProtocolType == IPV4);
+
+    int socketType = (transportProtocolType == PROTOCOL_UDP) ? SOCK_DGRAM : SOCK_STREAM;
+    int socketFd = socket(AF_INET, socketType, transportProtocolType);
+    if (SOCKET_ERROR != socketFd)
+    {
+        int optionOn(1);
+
+        // Set SO_REUSEADDR option
+        int result(::setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, (char *)&optionOn, sizeof(optionOn)));
+        if (0 != result)
+        {
+            OCA_LOG_ERROR_PARAMS("setsockopt SO_REUSEADDR failed, errorcode=%d",
+                                 errno);
+        }
+
+        // Set TCP_NODELAY option for TCP sockets
+        if ((0 == result) &&
+            (PROTOCOL_TCP == transportProtocolType))
+        {
+            result = ::setsockopt(socketFd, IPPROTO_TCP, TCP_NODELAY, (char *)&optionOn, sizeof(optionOn));
+            if (0 != result)
+            {
+                OCA_LOG_ERROR_PARAMS("setsockopt TCP_NODELAY failed, errorcode=%d",
+                                     errno);
+            }
+        }
+
+#ifndef OCA_LITE_CONTROLLER // Not used for controller
+
+        // Set the TTL for UDP sockets
+        if ((0 == result) &&
+            (PROTOCOL_UDP == transportProtocolType))
+        {
+            UINT32 ttl(32);
+            result = ::setsockopt(static_cast<int>(socketFd), IPPROTO_IP, IP_MULTICAST_TTL,
+                                  reinterpret_cast<const char *>(&ttl), sizeof(ttl));
+
+            if (0 != result)
+            {
+                OCA_LOG_ERROR_PARAMS("setsockopt IP_MULTICAST_TTL failed, errorcode=%d",
+                                     errno);
+            }
+        }
+#endif
+    }
+    return socketFd;
+}
+
+bool Ocp1LiteSocketOpen(INT32 socket)
+{
+    return true;
+}
+
+bool Ocp1LiteSocketBind(INT32 socket, UINT16 port)
+{
+    assert(socket != SOCKET_ERROR);
+
+    struct sockaddr_in sin;
+    sin.sin_family = AF_INET;
+    sin.sin_port = htons(port);
+    sin.sin_addr.s_addr = INADDR_ANY;
+
+    OCA_LOG_INFO_PARAMS("Binding socket %d to port %d...", socket, port);
+
+    int result = ::bind(socket, (struct sockaddr *)&sin, sizeof(sin));
+    if (result != 0)
+    {
+        OCA_LOG_ERROR_PARAMS("Socket bind failed on port %d, errorcode=%d", port, errno);
+        return false;
+    }
+
+    OCA_LOG_INFO_PARAMS("✓ Socket successfully bound to port %d", port);
+    return true;
+}
+
+bool Ocp1LiteSocketListen(INT32 socket, UINT8 backlog)
+{
+    assert(socket != SOCKET_ERROR);
+
+    OCA_LOG_INFO_PARAMS("Starting to listen on socket %d with backlog %d", socket, backlog);
+
+    int result = listen(socket, static_cast<int>(backlog));
+    if (result == 0)
+    {
+        OCA_LOG_INFO_PARAMS("✓ Socket %d is now listening for connections", socket);
+        return true;
+    }
+    else
+    {
+        OCA_LOG_ERROR_PARAMS("Listen failed on socket %d, errorcode=%d", socket, errno);
+        return false;
+    }
+}
+
+bool Ocp1LiteSocketAccept(INT32 socket, INT32 &newsocket)
+{
+    int result;
+    int optionOn(1);
+    char clientIP[INET_ADDRSTRLEN];
+    UINT16 clientPort = 0;
+
+    OCA_LOG_INFO("Waiting for client connection on socket...");
+
+#ifdef _WIN32
+    SOCKADDR_INET newSocketAddress;
+
+    PSOCKADDR pNewSocketAddress(PSOCKADDR(&newSocketAddress.Ipv4));
+    INT32 newSocketAddressLength(sizeof(newSocketAddress.Ipv4));
+
+    // It's important to clear the complete address structure including
+    // alignment bytes, before setting each data member. The Socket API
+    // uses one basic addressing structure with different overlays,
+    // dependending on the address family.
+    ::memset(&newSocketAddress, 0, sizeof(newSocketAddress));
+
+    newsocket = static_cast<INT32>(static_cast<SOCKET>(::accept(static_cast<int>(socket), pNewSocketAddress, &newSocketAddressLength)));
+
+    if (INVALID_SOCKET == newsocket)
+    {
+        INT32 error(errno);
+        if ((WSAEINTR != error) && (WSAENOTSOCK != error))
+        {
+            OCA_LOG_ERROR_PARAMS("Socket error on accept, errorcode=%d", errno);
+            return false;
+        }
+    }
+    else
+    {
+        // Log successful connection with client details
+        inet_ntop(AF_INET, &(newSocketAddress.Ipv4.sin_addr), clientIP, INET_ADDRSTRLEN);
+        clientPort = ntohs(newSocketAddress.Ipv4.sin_port);
+        OCA_LOG_INFO_PARAMS("✓ CLIENT CONNECTED: %s:%d on socket %d", clientIP, clientPort, newsocket);
+    }
+#else
+    struct sockaddr_in socketAddr;
+    int socketAddrLength = sizeof(socketAddr);
+    memset(&socketAddr, 0, sizeof(socketAddr));
+    newsocket = ::accept(socket, (struct sockaddr *)&socketAddr, (socklen_t *)&socketAddrLength);
+
+    if (INVALID_SOCKET == newsocket)
+    {
+        INT32 error(errno);
+        if ((EINTR != error) && (ENOTSOCK != error))
+        {
+            OCA_LOG_ERROR_PARAMS("Socket error on accept, errorcode=%d", errno);
+            return false;
+        }
+    }
+    else
+    {
+        // Log successful connection with client details
+        inet_ntop(AF_INET, &(socketAddr.sin_addr), clientIP, INET_ADDRSTRLEN);
+        clientPort = ntohs(socketAddr.sin_port);
+        OCA_LOG_INFO_PARAMS("✓ CLIENT CONNECTED: %s:%d on socket %d", clientIP, clientPort, newsocket);
+    }
+#endif
+
+    result = ::setsockopt(newsocket, SOL_SOCKET, SO_REUSEADDR, (char *)&optionOn, sizeof(optionOn));
+    if (0 != result)
+    {
+        OCA_LOG_ERROR_PARAMS("setsockopt SO_REUSEADDR failed, errorcode=%d",
+                             errno);
+    }
+
+    // Set TCP_NODELAY option for TCP sockets
+    if (0 == result)
+    {
+        result = ::setsockopt(newsocket, IPPROTO_TCP, TCP_NODELAY, (char *)&optionOn, sizeof(optionOn));
+        if (0 != result)
+        {
+            OCA_LOG_ERROR_PARAMS("setsockopt TCP_NODELAY failed, errorcode=%d",
+                                 errno);
+        }
+    }
+
+    return (newsocket != INVALID_SOCKET);
+}
+
+bool Ocp1LiteSocketReject(INT32 socket)
+{
+    assert(socket != SOCKET_ERROR);
+
+    struct sockaddr_in sin;
+    socklen_t sinLen(sizeof(struct sockaddr_in));
+    INT32 newSocket = accept(socket, (struct sockaddr *)&sin, &sinLen);
+
+    if ((newSocket > SOCKET_ERROR) && (sinLen == sizeof(struct sockaddr_in)))
+    {
+#ifdef _WIN32
+        return (closesocket(newSocket) == 0);
+#else
+        return (close(newSocket) == 0);
+#endif
+    }
+
+    return false;
+}
+
+INT32 Ocp1LiteSocketSend(INT32 socket, const void *buffer, INT32 length)
+{
+    assert(socket != SOCKET_ERROR);
+    return send(socket, reinterpret_cast<const char *>(buffer), length, 0);
+}
+
+INT32 Ocp1LiteSocketSendTo(INT32 socket, const void *buffer, INT32 length, const std::string &hostOrIp, UINT16 port)
+{
+    assert(socket != SOCKET_ERROR);
+    struct sockaddr_in sockAddr;
+
+    int socketAddressSize = sizeof(sockAddr);
+
+    struct addrinfo hints;
+    struct addrinfo *pAddressList = NULL;
+    INT32 error;
+
+    memset(&sockAddr, 0, sizeof(sockAddr));
+    sockAddr.sin_family = AF_INET;
+    sockAddr.sin_port = htons(port);
+
+    memset(&hints, 0, sizeof(hints));
+
+    hints.ai_family = AF_INET;
+
+    /* Get Address Info */
+    error = getaddrinfo(hostOrIp.c_str(), NULL, &hints, &pAddressList);
+    if (-1 != error)
+    {
+        struct sockaddr_in *resolvedAddress = (struct sockaddr_in *)pAddressList->ai_addr;
+        sockAddr.sin_addr = resolvedAddress->sin_addr;
+
+        error = sendto(socket, (char *)buffer, (int)length, 0, (struct sockaddr *)&sockAddr, socketAddressSize);
+    }
+
+    if (NULL != pAddressList)
+    {
+        freeaddrinfo(pAddressList);
+    }
+    return 0;
+}
+
+INT32 Ocp1LiteSocketReceive(INT32 socket, void *buffer, INT32 length)
+{
+    assert(socket != SOCKET_ERROR);
+
+    return recv(socket, static_cast<char *>(buffer), length, 0);
+}
+
+bool Ocp1LiteSocketShutdown(INT32 socket)
+{
+    assert(socket != SOCKET_ERROR);
+#ifdef _WIN32
+    return (shutdown(socket, SD_SEND) == 0);
+#else
+    return (shutdown(socket, SHUT_WR) == 0);
+
+#endif
+}
+
+bool Ocp1LiteSocketClose(INT32 socket)
+{
+    assert(socket != SOCKET_ERROR);
+
+    OCA_LOG_INFO_PARAMS("✗ Closing socket %d", socket);
+
+#ifdef _WIN32
+    bool result = (closesocket(socket) == 0);
+#else
+    bool result = (close(socket) == 0);
+#endif
+
+    if (result)
+    {
+        OCA_LOG_INFO_PARAMS("✓ Socket %d closed successfully", socket);
+    }
+    else
+    {
+        OCA_LOG_ERROR_PARAMS("Failed to close socket %d, errorcode=%d", socket, errno);
+    }
+
+    return result;
+}
+
+#ifdef OCA_LITE_CONTROLLER
+bool Ocp1LiteSocketConnect(const char *hostOrIp, UINT16 port, INT32 &newSocket)
+{
+    OCA_LOG_TRACE_PARAMS("Ocp1LiteSocketConnect called for %s:%d", hostOrIp, port);
+
+    // Create a new socket for the connection
+    newSocket = Ocp1LiteHostInterfaceRetrieveSocket(IPV4, PROTOCOL_TCP);
+    if (INVALID_SOCKET == newSocket)
+    {
+        OCA_LOG_ERROR("Failed to create socket for connection");
+        return false;
+    }
+
+    OCA_LOG_TRACE_PARAMS("Created socket %d", newSocket);
+
+    // Open the socket
+    if (!Ocp1LiteSocketOpen(newSocket))
+    {
+        OCA_LOG_ERROR("Failed to open socket for connection");
+        return false;
+    }
+
+    OCA_LOG_TRACE("Socket opened successfully");
+
+    // Set up the server address structure
+    struct sockaddr_in serverAddr;
+    memset(&serverAddr, 0, sizeof(serverAddr));
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(port);
+
+    // Resolve hostname to IP address
+    struct hostent *hostEntry = gethostbyname(hostOrIp);
+    if (hostEntry == nullptr)
+    {
+        // Try to treat it as an IP address directly
+        if (inet_aton(hostOrIp, &serverAddr.sin_addr) == 0)
+        {
+            OCA_LOG_ERROR_PARAMS("Failed to resolve hostname: %s", hostOrIp);
+            Ocp1LiteSocketClose(newSocket);
+            newSocket = INVALID_SOCKET;
+            return false;
+        }
+    }
+    else
+    {
+        // Use the first IP address from the host entry
+        memcpy(&serverAddr.sin_addr, hostEntry->h_addr_list[0], hostEntry->h_length);
+    }
+
+    // Attempt to connect to the server
+    OCA_LOG_TRACE_PARAMS("About to call connect() to %s:%d on socket %d...", hostOrIp, port, newSocket);
+    OCA_LOG_INFO_PARAMS("Connecting to %s:%d on socket %d...", hostOrIp, port, newSocket);
+
+    if (connect(newSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) < 0)
+    {
+        OCA_LOG_ERROR_PARAMS("Failed to connect to %s:%d, errno=%d (%s)",
+                             hostOrIp, port, errno, strerror(errno));
+        Ocp1LiteSocketClose(newSocket);
+        newSocket = INVALID_SOCKET;
+        return false;
+    }
+
+    OCA_LOG_TRACE("connect() succeeded!");
+
+    // Set socket to non-blocking mode
+    int flags = fcntl(newSocket, F_GETFL, 0);
+    if (flags >= 0)
+    {
+        fcntl(newSocket, F_SETFL, flags | O_NONBLOCK);
+    }
+
+    // Disable Nagle's algorithm for better latency
+    int flag = 1;
+    setsockopt(newSocket, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int));
+
+    OCA_LOG_INFO_PARAMS("✓ Successfully connected to %s:%d on socket %d", hostOrIp, port, newSocket);
+    return true;
+
+}
+#endif // OCA_LITE_CONTROLLER
+#ifdef __cplusplus
+}
+#endif
