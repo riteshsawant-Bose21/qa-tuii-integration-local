@@ -145,7 +145,7 @@ bool IsValidIPv4Address(const std::string &ipAddress);
 bool SendJsonPacket(const Json::Value &packet);
 
 namespace {
-constexpr int PROTOCOL_ACK_TIMEOUT_MS      = 100;
+constexpr int PROTOCOL_ACK_TIMEOUT_MS      = 1000;
 constexpr int SERIAL_RETRY_INTERVAL_MS     = 10000;
 constexpr int NACK_MAX_RETRIES             = 3;
 constexpr int NACK_RETRY_DELAY_MS          = 50;
@@ -778,7 +778,9 @@ bool PerformInitializationCycle(Json::Value &deviceSnapshot,
             return false;
         }
     }
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
+    std::size_t zoneIndex = 0;
     for (const auto &zoneConfig : zoneSnapshot)
     {
         Json::Value packet(Json::objectValue);
@@ -794,8 +796,9 @@ bool PerformInitializationCycle(Json::Value &deviceSnapshot,
             sources.append(source.sourceName);
         }
 
+        payload["Index"]   = zoneIndex++;
         payload["Name"]    = zoneConfig.zoneName;
-        payload["gain"]    = gain;
+        payload["Gain"]    = gain;
         payload["sources"] = sources;
         packet["action"]   = "zone";
         packet["payload"]  = payload;
@@ -805,6 +808,7 @@ bool PerformInitializationCycle(Json::Value &deviceSnapshot,
             spdlog::warn("[Protocol] Failed to send zone packet for '{}'", zoneConfig.zoneName);
             return false;
         }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
         if (checkForZoneEndNack())
         {
