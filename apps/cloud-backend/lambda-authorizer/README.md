@@ -1,6 +1,6 @@
 # Lambda Authorizer for API Gateway
 
-AWS Lambda REQUEST authorizer for validating JWT tokens from Auth0 and checking user permissions against PostgreSQL database.
+AWS Lambda REQUEST authorizer for validating JWT tokens from Auth0 and checking user permissions against PostgreSQL database. The lambda image gets deployed to ECR repo: auth-image.
 
 ## Architecture
 

@@ -39,6 +39,7 @@ class _EventValueWidgetState extends State<EventValueWidget> {
 
         return SemanticHelper.button(
           testId: SemanticHelper.createTestId(SemanticTypes.button, "event_state_${widget.stateType}"),
+          label: isMute ? "unmute" : "mute",
           child: GestureDetector(
             onTap: () {
               final String newValue = isMute ? "unmute" : "mute";
@@ -94,8 +95,9 @@ class _EventValueWidgetState extends State<EventValueWidget> {
         return Row(
           children: <Widget>[
             Flexible(
-              child: SemanticHelper.button(
-                testId: SemanticHelper.createTestId(SemanticTypes.button, "event_value_slider"),
+              child: SemanticHelper.slider(
+                testId: SemanticHelper.createTestId(SemanticTypes.slider, "event_value_slider"),
+                value: currentValue,
                 child: SliderTheme(
                   data: SliderTheme.of(context).copyWith(
                     thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),

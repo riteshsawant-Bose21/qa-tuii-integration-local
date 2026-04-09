@@ -66,9 +66,12 @@ extension CircuitViewmodel on ProjectViewModel {
         "delay",
       ]) {
         addProcessingBlockToParent(
-          processingBlock: ProcessingBlockModel.circuitBlocks.firstWhere(
-            (ProcessingBlockModel element) => element.algorithmId == algo,
-          ),
+          processingBlock:
+              ProcessingBlockModel.circuitBlocks
+                  .firstWhere(
+                    (ProcessingBlockModel element) => element.algorithmId == algo,
+                  )
+                  .clone(),
           parentId: circuit.id,
           autoSave: false,
         );

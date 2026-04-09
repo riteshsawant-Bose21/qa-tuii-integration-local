@@ -74,7 +74,7 @@ class ProjectSyncService {
     try {
       if (projectData.lastUploadedAt == null && !projectData.isCloudInstance) {
         Map<String, dynamic> data = {
-          'projectId': projectData.id,
+          'project_id': projectData.id,
           'name': projectData.name,
           'application': projectData.application ?? 'General',
           'environment_type': projectData.environmentType ?? 'indoor',
@@ -88,7 +88,7 @@ class ProjectSyncService {
         ResponseCallback<ProjectUploadUrls> response = await networkClient.post(
           api: FusionApiEndpoint.projects,
           data: data,
-          fromJson: (Map<String, dynamic> json) => ProjectUploadUrls.fromJson(json),
+          fromJson: (dynamic json) => ProjectUploadUrls.fromJson(json),
         );
         return response;
       } else {
@@ -122,7 +122,7 @@ class ProjectSyncService {
         api: FusionApiEndpoint.projects,
         additionalPath: projectId,
         data: data,
-        fromJson: (Map<String, dynamic> json) => ProjectUploadUrls.fromJson(json),
+        fromJson: (dynamic json) => ProjectUploadUrls.fromJson(json),
       );
       return response;
     } catch (e) {
@@ -170,7 +170,7 @@ class ProjectSyncService {
     try {
       final ResponseCallback<ProjectListResponse> response = await networkClient.get(
         api: FusionApiEndpoint.projects,
-        fromJson: (Map<String, dynamic> json) => ProjectListResponse.fromJson(json),
+        fromJson: (dynamic json) => ProjectListResponse.fromJson(json),
       );
 
       if (response.success) {

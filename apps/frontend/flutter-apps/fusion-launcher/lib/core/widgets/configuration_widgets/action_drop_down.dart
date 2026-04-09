@@ -23,6 +23,13 @@ class FusionDropdown<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<T>(
+      // Force recreation when the selected value changes so the FormField's
+      // internal state is always in sync with the external value prop.
+      // Without this, DropdownButtonFormField (uncontrolled FormField) keeps a
+      // stale _value from a previous build and the Flutter assertion:
+      //   "There should be exactly one item with DropdownButtonFormField's value"
+      // fires when items are regenerated with new instances.
+      key: ObjectKey(value),
       isExpanded: true,
       initialValue: value,
       hint: FusionAppText(

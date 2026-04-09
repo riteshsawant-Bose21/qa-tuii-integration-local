@@ -1,0 +1,14 @@
+info:
+  name: Clear History
+  type: http
+  seq: 5
+
+http:
+  method: DELETE
+  url: "{{api_url}}/tasks/history"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

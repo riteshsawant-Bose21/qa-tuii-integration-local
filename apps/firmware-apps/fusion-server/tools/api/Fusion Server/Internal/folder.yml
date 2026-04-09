@@ -1,0 +1,10 @@
+info:
+  name: Internal
+  type: folder
+  seq: 8
+
+request: {}
+
+docs:
+  content: These endpoints are used by fusion-server for internal tasks. They should not be used by external clients.
+  type: text/markdown

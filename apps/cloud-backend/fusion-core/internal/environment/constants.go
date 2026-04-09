@@ -26,13 +26,20 @@ var (
 	}
 
 	S3 = types.EnvironmentS3Variables{
-		PriceBucket:   "S3_PRICE_BUCKET",
-		ProjectBucket: "S3_PROJECT_BUCKET",
-		ProductBucket: "S3_PRODUCT_BUCKET",
+		PriceBucket:          "S3_PRICE_BUCKET",
+		ProjectBucket:        "S3_PROJECT_BUCKET",
+		ProductBucket:        "S3_PRODUCT_BUCKET",
+		FirmwareBundleBucket: "S3_FIRMWARE_BUNDLE_BUCKET",
 	}
 
 	AWS = types.EnvironmentAWSVariables{
 		Region: "AWS_REGION",
+	}
+
+	IOT = types.EnvironmentIoTVariables{
+		Endpoint: "IOT_ENDPOINT",
+		CommandTopic: "IOT_COMMAND_TOPIC",
+		DevicePolicy: "IOT_DEVICE_POLICY",
 	}
 
 	Auth0 = types.EnvironmentAuth0Variables{

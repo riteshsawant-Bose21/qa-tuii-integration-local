@@ -3,11 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_events/viewModel/actions_viewmodel/config_event_actions_state.dart';
 import 'package:fusion_launcher/features/configuration_events/viewModel/actions_viewmodel/config_event_actions_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_events/widgets/events/event_value_widget.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/events/configation_events_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../../core/constants/assets_constants.dart';
 import '../../../../core/widgets/configuration_widgets/action_drop_down.dart' show FusionDropdown;
+import '../../viewModel/events_viewmodel/config_events_state.dart';
 import '../../viewModel/events_viewmodel/config_events_viewmodel.dart';
 
 class EventActionRowData extends StatelessWidget {
@@ -24,18 +26,25 @@ class EventActionRowData extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ConfigEventActionsViewmodel, ConfigEventActionsState>(
-      builder: (BuildContext context, ConfigEventActionsState state) {
-        // Get the latest action data from state
-        final SceneActionModel? currentAction = state.getActionById(action.id);
-        if (currentAction == null) {
-          return const SizedBox.shrink();
-        }
+    // Outer BlocBuilder listens to ConfigEventsViewmodel so that toggling
+    // above / below (which emits a new ConfigEventsState) triggers a rebuild
+    // of the entire row — including the value widget's stateType.
+    return BlocBuilder<ConfigEventsViewmodel, ConfigEventsState>(
+      builder: (BuildContext context, ConfigEventsState eventsState) {
+        return BlocBuilder<ConfigEventActionsViewmodel, ConfigEventActionsState>(
+          builder: (BuildContext context, ConfigEventActionsState actionsState) {
+            // Get the latest action data from state
+            final SceneActionModel? currentAction = actionsState.getActionById(action.id);
+            if (currentAction == null) {
+              return const SizedBox.shrink();
+            }
 
-        return _EventActionRowContent(
-          action: currentAction,
-          index: index,
-          eventId: eventId,
+            return _EventActionRowContent(
+              action: currentAction,
+              index: index,
+              eventId: eventId,
+            );
+          },
         );
       },
     );
@@ -59,13 +68,19 @@ class _EventActionRowContent extends StatelessWidget {
     final ConfigEventsViewmodel configEventsViewmodel = context.read<ConfigEventsViewmodel>();
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
 
+    FusionEvent event;
+    try {
+      event = configEventsViewmodel.getEventById(eventId);
+    } catch (_) {
+      return const SizedBox.shrink();
+    }
+
     final List<SceneItemDropdown> itemList = _getItemList(cubit);
     final List<SceneParam> paramList = _getParamList(cubit);
     final bool isItemEnabled = action.actionType == null || itemList.isNotEmpty;
-    final FusionEvent event = configEventsViewmodel.getEventById(eventId);
 
     return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_row_data_$index"),
+      testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.eventactionrowdata}$index"),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         decoration: BoxDecoration(
@@ -80,7 +95,7 @@ class _EventActionRowContent extends StatelessWidget {
             _buildItemDropdown(context, cubit, itemList, isItemEnabled),
             _buildParamDropdown(context, cubit, paramList),
             (event.condition is! ValueChangeCondition)
-                ? _buildValueWidget(context, cubit, configEventsViewmodel)
+                ? _buildValueWidget(context, cubit, event)
                 : const Expanded(
                   child: Center(
                     child: FusionAppText(text: "--"),
@@ -124,7 +139,12 @@ class _EventActionRowContent extends StatelessWidget {
         width: context.screenWidth * 0.01,
         child: Opacity(
           opacity: 0.4,
-          child: Icon(Icons.drag_indicator, size: 16, color: context.colorScheme.iconWhite),
+          child: FusionIcon.icon(
+            semanticId: '${FusionTestKeys.instance.eventsactiondragicon}_$index',
+            Icons.drag_indicator,
+            size: 16,
+            color: context.colorScheme.iconWhite,
+          ),
         ),
       ),
     );
@@ -133,7 +153,7 @@ class _EventActionRowContent extends StatelessWidget {
   Widget _buildActionTypeDropdown(BuildContext context, ConfigEventActionsViewmodel cubit) {
     return Expanded(
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_type_$index"),
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.eventsactiontype}_$index"),
         child: FusionDropdown<SceneActionType>(
           value: action.actionType,
           hint: "Select Action Type",
@@ -169,7 +189,7 @@ class _EventActionRowContent extends StatelessWidget {
 
     return Expanded(
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_item_$index"),
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.eventsactionitem}_$index"),
         child: FusionDropdown<SceneItemDropdown>(
           value: selected,
           items: itemList,
@@ -203,7 +223,7 @@ class _EventActionRowContent extends StatelessWidget {
 
     return Expanded(
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_param_$index"),
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.eventsactionparm}_$index"),
         child: FusionDropdown<SceneParam>(
           hint: "Select Parameter",
           value: selected,
@@ -219,26 +239,32 @@ class _EventActionRowContent extends StatelessWidget {
     );
   }
 
-  Widget _buildValueWidget(BuildContext context, ConfigEventActionsViewmodel cubit, ConfigEventsViewmodel configEventsViewmodel) {
+  Widget _buildValueWidget(BuildContext context, ConfigEventActionsViewmodel cubit, FusionEvent event) {
     if (action.param == null) return const Expanded(child: SizedBox.shrink());
-    final FusionEvent event = configEventsViewmodel.getEventById(eventId);
+    // event is already fetched and guarded in build() — no second getEventById call.
     final EventStateTypes stateType = event.selectedState?.stateType ?? EventStateTypes.off;
 
     return Expanded(
-      child: EventValueWidget(
-        key: ValueKey<String>(action.id),
-        actionId: action.id,
-        stateType: stateType,
-        value:
-            action.value ??
-            SceneValue(
-              value: null,
-              label: action.param!.label,
-              valueType: action.param!.valueType,
-            ),
-        onChanged: (SceneValue value) {
-          cubit.updateActionValue(actionId: action.id, value: value);
-        },
+      child: SemanticHelper.container(
+        testId: SemanticHelper.createTestId(SemanticTypes.container, "${FusionTestKeys.instance.eventsactionvalue}_$index"),
+        child: EventValueWidget(
+          // Include stateType in the key so the StatefulWidget (and its internal
+          // TextFormField / slider state) is fully recreated when switching
+          // between above / below.
+          key: ValueKey<String>('${action.id}_${stateType.name}'),
+          actionId: action.id,
+          stateType: stateType,
+          value:
+              action.value ??
+              SceneValue(
+                value: null,
+                label: action.param!.label,
+                valueType: action.param!.valueType,
+              ),
+          onChanged: (SceneValue value) {
+            cubit.updateActionValue(actionId: action.id, value: value);
+          },
+        ),
       ),
     );
   }
@@ -249,38 +275,34 @@ class _EventActionRowContent extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
-          SemanticHelper.button(
-            testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_event_action_$index"),
-            child: GestureDetector(
-              onTap: () {
-                cubit.deleteAction(actionId: action.id);
-                FusionToast.success(context, message: "Action deleted successfully");
-              },
-              child: FusionImage.asset(
-                Assets.deleteIcon,
-                width: 20,
-                height: 20,
-                assetColor: context.colorScheme.iconWhite,
-                fit: BoxFit.contain,
-              ),
+          GestureDetector(
+            onTap: () {
+              cubit.deleteAction(actionId: action.id);
+              FusionToast.success(context, message: "Action deleted successfully");
+            },
+            child: FusionImage.asset(
+              semanticId: "${FusionTestKeys.instance.eventsactiondelete}_$index",
+              Assets.deleteIcon,
+              width: 20,
+              height: 20,
+              assetColor: context.colorScheme.iconWhite,
+              fit: BoxFit.contain,
             ),
           ),
           const SizedBox(width: 6),
-          SemanticHelper.button(
-            testId: SemanticHelper.createTestId(SemanticTypes.button, "duplicate_event_action_$index"),
-            child: GestureDetector(
-              onTap: () {
-                cubit.duplicateAction(actionId: action.id);
-                FusionToast.success(context, message: "Action duplicated successfully");
-              },
-              child: FusionImage.asset(
-                Assets.duplicateIcon,
-                width: 20,
-                height: 20,
-                assetColor: context.colorScheme.iconWhite,
+          GestureDetector(
+            onTap: () {
+              cubit.duplicateAction(actionId: action.id);
+              FusionToast.success(context, message: "Action duplicated successfully");
+            },
+            child: FusionImage.asset(
+              semanticId: "${FusionTestKeys.instance.eventsactionduplicate}_$index",
+              Assets.duplicateIcon,
+              width: 20,
+              height: 20,
+              assetColor: context.colorScheme.iconWhite,
 
-                fit: BoxFit.contain,
-              ),
+              fit: BoxFit.contain,
             ),
           ),
         ],

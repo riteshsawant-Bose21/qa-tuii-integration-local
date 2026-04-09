@@ -4,29 +4,24 @@
     },
     "periodic_tasks": [
         {
-            "name": "fw_monitor",
+            "name": "system_info",
             "property_settings": [
                 { "name": "period_ms", "value": 2000 }
             ],
             "blocks": [
                 {
-                    "name": "cpu_usage",
-                    "module": "cpu_usage",
+                    "name": "system_info",
+                    "module": "system_info",
                     "telemetry": [
                         { "name": "cpu" },
-                        { "name": "high_cpu_usage" }
-                    ]
-                },
-                {
-                    "name": "space_usage",
-                    "module": "space_usage",
-                    "telemetry": [
+                        { "name": "high_cpu_usage" },
                         { "name": "ram" },
                         { "name": "high_ram_usage" },
                         { "name": "emmc" },
                         { "name": "high_emmc_usage" },
                         { "name": "usb_storage" },
-                        { "name": "usb_connected" }
+                        { "name": "usb_connected" },
+                        { "name": "temperature" }
                     ]
                 }
             ]
@@ -46,42 +41,6 @@
                     ],
                     "parameters": [
                         { "name": "audio_streams_update" }
-                    ]
-                }
-            ]
-        },
-        {
-            "name": "amp_control",
-            "property_settings": [
-                { "name": "period_ms", "value": 100 }
-            ],
-            "blocks": [
-                {
-                    "name": "amp_control",
-                    "module": "bdif_client",
-                    "property_settings": [
-                        { "name": "uart_device", "value": "/dev/ttymxc2" },
-                        { "name": "num_amps", "value": 4 },
-                        { "name": "reset_pin", "value": "/sys/devices/virtual/bosepro/c1-evk/gpio_amp_rstn" },
-                        { "name": "mute_pin", "value": "/sys/devices/virtual/bosepro/c1-evk/gpio_amp_mute" },
-                        { "name": "boot_pin", "value": "gpiod:gpiochip5:5" }
-                    ]
-                }
-            ]
-        },
-        {
-            "name": "ui_control",
-            "property_settings": [
-                { "name": "period_ms", "value": 100 }
-            ],
-            "blocks": [
-                {
-                    "name": "ui_control",
-                    "module": "bdif_client",
-                    "property_settings": [
-                        { "name": "uart_device", "value": "/dev/ttymxc0" },
-                        { "name": "reset_pin", "value": "gpiod:gpiochip5:4" },
-                        { "name": "boot_pin", "value": "gpiod:gpiochip5:3" }
                     ]
                 }
             ]

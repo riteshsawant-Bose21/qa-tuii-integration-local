@@ -4,8 +4,8 @@ import 'package:fusion_launcher/features/zone_functions/widgets/neumorphic_gain_
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../add_source_popup/view_model/add_source_viewmodel.dart';
 import '../../../viewmodel/algorithm_data_viewmodel.dart';
+import '../../widgets/pb_out_meter.dart';
 import '../widgets/pb_block_layout.dart';
 
 part '_agc_controller.dart';
@@ -17,22 +17,16 @@ class AgcBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AlgorithmDataViewmodel watch =
-        context.watch<AlgorithmDataViewmodel>();
+    final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
+    final String targetBlockId = watch.processingBlock.id;
 
     return ProxyProvider<AlgorithmDataViewmodel, AgcController>(
       key: ValueKey<String>(watch.processingBlock.id),
       create: (BuildContext context) => AgcController(watch),
-      update:
-          (
-            BuildContext context,
-            AlgorithmDataViewmodel valueHandler,
-            AgcController? previous,
-          ) => AgcController(valueHandler),
+      update: (BuildContext context, AlgorithmDataViewmodel valueHandler, AgcController? previous) => AgcController(valueHandler),
       child: Builder(
         builder: (BuildContext context) {
-          final ProcessingBlockModel pb =
-              context.watch<AlgorithmDataViewmodel>().processingBlock;
+          final ProcessingBlockModel pb = context.watch<AlgorithmDataViewmodel>().processingBlock;
           final AgcController controller = context.watch<AgcController>();
           return PBBlockLayout(
             pb: context.watch<AlgorithmDataViewmodel>().processingBlock,
@@ -52,13 +46,7 @@ class AgcBlock extends StatelessWidget {
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: context.colorScheme.strokeLight,
-                              ),
-                            ),
-                          ),
+                          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: context.colorScheme.strokeLight))),
                           child: Center(
                             child: FusionAppText(
                               text: "THRESHOLD",
@@ -73,36 +61,24 @@ class AgcBlock extends StatelessWidget {
                             padding: const EdgeInsets.all(16),
                             child: VerticalSlider(
                               semanticId: 'agc_threshold_slider',
-                              value:
-                                  context
-                                      .watch<AgcController>()
-                                      .currentThreshold,
+                              value: context.watch<AgcController>().currentThreshold,
                               max: 12,
                               min: -60,
-                              onChanged:
-                                  context.read<AgcController>().updateThreshold,
+                              onChanged: context.read<AgcController>().updateThreshold,
                             ),
                           ),
                         ),
 
                         Container(
                           padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              top: BorderSide(
-                                color: context.colorScheme.strokeLight,
-                              ),
-                            ),
-                          ),
+                          decoration: BoxDecoration(border: Border(top: BorderSide(color: context.colorScheme.strokeLight))),
                           child: NeumorphicGainTextField(
                             semanticId: 'agc_threshold_text_field',
-                            controllerValue:
-                                context.watch<AgcController>().currentThreshold,
+                            controllerValue: context.watch<AgcController>().currentThreshold,
                             maxGain: 12,
                             minGain: -60,
                             showDbSuffix: false,
-                            onSubmitted:
-                                context.read<AgcController>().updateThreshold,
+                            onSubmitted: context.read<AgcController>().updateThreshold,
                           ),
                         ),
                         FusionAppText(
@@ -153,10 +129,7 @@ class AgcBlock extends StatelessWidget {
                             padding: const EdgeInsets.all(16.0),
                             child: SimpleVerticalMeter(
                               semanticId: 'agc_reduction_meter',
-                              value:
-                                  context
-                                      .watch<AgcController>()
-                                      .currentReduction,
+                              value: context.watch<AgcController>().currentReduction,
                               min: -60,
                               max: 12,
                             ),
@@ -179,8 +152,7 @@ class AgcBlock extends StatelessWidget {
                             maxGain: 12,
                             minGain: -60,
                             showDbSuffix: false,
-                            onSubmitted:
-                                context.read<AgcController>().updateReduction,
+                            onSubmitted: context.read<AgcController>().updateReduction,
                           ),
                         ),
                         FusionAppText(
@@ -226,14 +198,12 @@ class AgcBlock extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const Flexible(
+                        Flexible(
                           child: Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: VerticalMeter(
+                            padding: const EdgeInsets.all(16.0),
+                            child: PbOutMeter(
                               semanticId: 'agc_output_meter',
-                              min: -60,
-                              max: 0,
-                              value: -10,
+                              blockId: targetBlockId,
                             ),
                           ),
                         ),

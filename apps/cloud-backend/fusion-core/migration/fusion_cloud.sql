@@ -85,8 +85,6 @@ CREATE TABLE project (
     updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL
 );
 
-
-
 -- Create sequence for project_user table
 CREATE SEQUENCE project_user_id_seq;
 
@@ -97,7 +95,8 @@ CREATE TABLE project_user (
     user_id UUID NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
     is_starred BOOLEAN DEFAULT false NOT NULL,
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL,
-    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL
+    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL,
+    CONSTRAINT UC_ProjectIDUserID UNIQUE (project_id, user_id)
 );
 
 -- Create ENUM type for product types
@@ -226,4 +225,129 @@ CREATE TABLE user_settings (
     theme VARCHAR(20) DEFAULT 'system',
     created_at timestamp NOT NULL DEFAULT NOW(),
     updated_at timestamp
+);
+
+--- Device Management Tables ---
+-- ENUM for claim status
+CREATE TYPE claim_status_enum AS ENUM (
+    'UNCLAIMED',
+    'CLAIMED'
+);
+
+
+CREATE TABLE device (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- Globally unique device identity
+    serial_number VARCHAR(100) UNIQUE NOT NULL, -- Manufacturer serial number
+
+    client_device_id VARCHAR(100), -- device identifier set by frontend
+    name VARCHAR(255), -- User-friendly device name
+
+    model VARCHAR(100) NOT NULL, -- Model identifier
+    mac_address VARCHAR(20) UNIQUE, -- MAC address for network identification
+
+    is_primary BOOLEAN DEFAULT FALSE, -- Flag to indicate if this is the primary device in a project
+
+    certificate_id VARCHAR(255) UNIQUE, -- The certificate ID associated with the device for AWS IoT authentication
+    certificate_arn VARCHAR(500) UNIQUE, -- The ARN of the certificate in AWS IoT
+    claim_status claim_status_enum NOT NULL DEFAULT 'UNCLAIMED', -- UNCLAIMED / CLAIMED
+
+    claimed_by UUID REFERENCES account(id), -- Org id
+
+    project_id UUID REFERENCES project(id), -- Associated project
+
+    firmware_version VARCHAR(50) NOT NULL, -- Current firmware version
+
+    device_zone VARCHAR(100), -- e.g., "zone1", "zone2", etc.
+    device_location VARCHAR(255), -- e.g., "Rack A"
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, -- Audit / lifecycle tracking
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL -- Audit / lifecycle tracking
+);
+
+CREATE TABLE device_ownership_history (
+    id SERIAL PRIMARY KEY,
+    device_id UUID NOT NULL REFERENCES device(id) ON DELETE CASCADE,
+    account_id UUID REFERENCES account(id) NOT NULL,
+    certificate_id VARCHAR(255) UNIQUE NOT NULL,
+    certificate_arn VARCHAR(500) UNIQUE NOT NULL,
+    claimed_at TIMESTAMP NOT NULL,
+    released_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE device_project_history (
+    id SERIAL PRIMARY KEY,
+    device_id UUID NOT NULL REFERENCES device(id) ON DELETE CASCADE,
+    project_id UUID REFERENCES project(id) NOT NULL,
+    commissioned_at TIMESTAMP NOT NULL,
+    decommissioned_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TYPE command_status_enum AS ENUM (
+    'UNPUBLISHED',
+    'PUBLISHED',
+    'RECEIVED',
+    'SUCCESS',
+    'FAILURE'
+);
+
+CREATE TABLE device_command_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    command_id VARCHAR(255) NOT NULL,
+    project_id UUID REFERENCES project(id) NOT NULL,
+    device_id UUID REFERENCES device(id),
+    command_name VARCHAR(255) NOT NULL,
+    status command_status_enum NOT NULL DEFAULT 'UNPUBLISHED',
+    issued_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
+    CONSTRAINT unique_command_per_device UNIQUE (command_id, project_id, device_id)
+);
+
+-- firmware update related tables
+CREATE TYPE bundle_approval_status_enum AS ENUM (
+    'PENDING',
+    'APPROVED',
+    'REVOKED'
+);
+CREATE TABLE bundle (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    version TEXT NOT NULL UNIQUE,
+    version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(split_part(version, '+', 1), '-', 1), '.' )::INT[] ) stored,
+    prerelease_tag TEXT,      -- Channel tag for filtering: "alpha", "beta", "dev", NULL for stable
+    prerelease_num INT,       -- Numeric part for ordering within channel: 1, 2, 5... NULL if absent
+    release_notes TEXT,
+    min_prev_version TEXT NOT NULL,
+    min_prev_version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(split_part(min_prev_version, '+', 1), '-', 1), '.' )::INT[] ) STORED,
+    min_desktop_app_version TEXT NOT NULL,
+    min_desktop_app_version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(split_part(min_desktop_app_version, '+', 1), '-', 1), '.' )::INT[] ) STORED,
+    manifest_data JSONB,
+    checksum VARCHAR(64) NOT NULL,
+    s3_path TEXT NOT NULL,
+    approval_status bundle_approval_status_enum NOT NULL DEFAULT 'PENDING',
+    approval_status_changed_by UUID references app_user(id),
+    approval_status_changed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+
+CREATE TYPE bundle_update_status_enum AS ENUM (
+    'INSTALL_SUCCESS',
+    'INSTALL_FAIL'
+);
+CREATE TABLE bundle_update_status (
+    id UUID PRIMARY KEY,         
+    update_id UUID NOT null UNIQUE,
+    project_id UUID NOT NULL references project(id),
+    bundle_version TEXT NOT NULL,      
+    previous_version TEXT,
+    status bundle_update_status_enum NOT NULL,             
+    launcher_version TEXT,    
+    installed_at TIMESTAMPTZ NOT null,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

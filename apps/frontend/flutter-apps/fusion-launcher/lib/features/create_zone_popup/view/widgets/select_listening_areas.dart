@@ -196,11 +196,12 @@ Widget _buildListeningAreaSelectionSection(
                                                               setPopupState,
                                                             )
                                                             : null,
-                                                    child: SemanticHelper.button(
+                                                    child: SemanticHelper.toggle(
                                                       testId: SemanticHelper.createTestId(
-                                                        SemanticTypes.button,
+                                                        SemanticTypes.toggle,
                                                         "select_listening_areas_checkbox_$index",
                                                       ),
+                                                      value: isListeningAreaSelected,
                                                       child: Icon(
                                                         (isAvailable
                                                                 ? isListeningAreaSelected

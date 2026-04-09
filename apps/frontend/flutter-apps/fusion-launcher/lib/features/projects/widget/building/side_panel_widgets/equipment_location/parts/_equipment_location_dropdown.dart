@@ -12,7 +12,7 @@ class _EquipmentLocationDropdown extends StatelessWidget {
         return BlocBuilder<EquipmentLocationSelectionViewmodel, String?>(
           builder: (BuildContext context, String? selected) {
             return FusionContainer(
-              child: BuildingPageDronDown<EquipLocation>(
+              child: BuildingPageDropDown<EquipLocation>(
                 value:
                     selected != null
                         ? equipmentLocations.firstWhere((EquipLocation element) => element.id == selected)

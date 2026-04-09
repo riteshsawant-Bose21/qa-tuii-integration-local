@@ -179,7 +179,7 @@ extension SourceSetService on ProjectService {
     if (firstSource == null) return false;
 
     final referenceType = firstSource.type;
-    final referenceBlocks = getProcessingBlockFor(firstSourceId);
+    final referenceBlocks = getProcessingBlockFor(parentId: firstSourceId);
 
     // Check remaining sources against reference using iterator
     while (iterator.moveNext()) {
@@ -189,7 +189,7 @@ extension SourceSetService on ProjectService {
       // Early return on type mismatch or null source
       if (source == null || source.type != referenceType) return false;
 
-      final blocks = getProcessingBlockFor(sourceId);
+      final blocks = getProcessingBlockFor(parentId: sourceId);
 
       // Fast length check first
       if (blocks.length != referenceBlocks.length) return false;
@@ -210,11 +210,11 @@ extension SourceSetService on ProjectService {
 
     List<Source> sourcesInSet = getSourcesInSourceSet(sourceSetId);
     if (sourcesInSet.length >= 2) {
-      final processingBlocks = getProcessingBlockFor(sourcesInSet.first.id);
+      final processingBlocks = getProcessingBlockFor(parentId: sourcesInSet.first.id);
       for (var source in sourcesInSet) {
         if (source.id == sourcesInSet.first.id) continue;
         //copy processing block properties form first source
-        final sourceBlocks = getProcessingBlockFor(sourcesInSet.first.id);
+        final sourceBlocks = getProcessingBlockFor(parentId: sourcesInSet.first.id);
         for (var i = 0; i < sourceBlocks.length; i++) {
           final updatedBlock = sourceBlocks[i].copyProperties(model: processingBlocks[i]);
           updateProcessingBlock(updatedBlock);

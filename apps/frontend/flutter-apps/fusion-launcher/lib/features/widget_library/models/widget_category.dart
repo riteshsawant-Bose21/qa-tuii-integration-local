@@ -1,4 +1,4 @@
-enum WidgetCategory { buttons, textFields, popup, container, images, others }
+enum WidgetCategory { text, buttons, textFields, popup, container, images, others }
 
 extension WidgetCategoryExtension on WidgetCategory {
   String get displayName {
@@ -15,6 +15,8 @@ extension WidgetCategoryExtension on WidgetCategory {
         return 'others';
       case WidgetCategory.textFields:
         return 'Text Fields';
+      case WidgetCategory.text:
+        return 'Text';
     }
   }
 }

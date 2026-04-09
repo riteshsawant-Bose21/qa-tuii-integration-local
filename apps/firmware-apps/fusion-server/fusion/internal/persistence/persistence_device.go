@@ -2,16 +2,17 @@ package persistence
 
 import (
 	"fmt"
-	"strconv"
+	"fusion/internal/api"
 
 	json "github.com/goccy/go-json"
+	"strconv"
 
 	"go.etcd.io/bbolt"
 )
 
 // GetDeviceInfo retrieves and unmarshals the device info from the database.
-func (p *Persistence) GetDeviceInfo() (*DeviceInfo, error) {
-	var info DeviceInfo
+func (p *Persistence) GetStoredDeviceInfo() (*api.DevicePatch, error) {
+	var info api.DevicePatch
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketDevice))
 		if bucket == nil {
@@ -31,7 +32,7 @@ func (p *Persistence) GetDeviceInfo() (*DeviceInfo, error) {
 }
 
 // SetDeviceInfo sets the device info in the database.
-func (p *Persistence) SetDeviceInfo(info *DeviceInfo) error {
+func (p *Persistence) SetDeviceInfo(info *api.DevicePatch) error {
 	data, err := json.Marshal(info)
 	if err != nil {
 		return fmt.Errorf("failed to marshal device info: %w", err)

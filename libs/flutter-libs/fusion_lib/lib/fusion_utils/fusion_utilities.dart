@@ -34,7 +34,7 @@ class FusionUtils {
 
   //short String UUID
   static String shortStringUUID() {
-    final int timestamp = DateTime.now().millisecondsSinceEpoch;
+    final int timestamp = DateTime.now().millisecond;
     final int random = Random().nextInt(999999);
     return '$timestamp$random';
   }

@@ -11,18 +11,11 @@ import (
 
 // HandleUDPMessage handles and decodes UDP messages
 func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
-	type statusResponse struct {
-		Status string `json:"status"`
+	type udpResponse struct {
+		FusionOp api.NotifyOp `json:"_fusion_op"`
+		Status   string       `json:"status"`
+		Payload  any          `json:"payload,omitempty"`
 	}
-	type statusWithMessageResponse struct {
-		Status  string `json:"status"`
-		Message string `json:"message"`
-	}
-	type getStateResponse struct {
-		Status string         `json:"status"`
-		Data   map[string]any `json:"data"`
-	}
-
 	var msg struct {
 		Action  api.NotifyOp    `json:"action"`
 		Payload json.RawMessage `json:"payload,omitempty"`
@@ -38,15 +31,16 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 	switch msg.Action {
 	case api.NotifyOpNoop:
 		// For profiling: no state change, no broadcast, no gossip.
-		return statusResponse{Status: "ok"}, nil
+		return udpResponse{FusionOp: msg.Action, Status: "ok"}, nil
 
 	case api.NotifyOpValueGet:
 		state := h.StateManager.GetStateMap()
 		state[api.FusionVersion] = h.StateManager.GetVersion().Counter
 		state[api.FusionEpoch] = h.StateManager.GetVersion().Epoch
-		return getStateResponse{
-			Status: "success",
-			Data:   state,
+		return udpResponse{
+			FusionOp: msg.Action,
+			Status:   "success",
+			Payload:  state,
 		}, nil
 
 	case api.NotifyOpValueSet:
@@ -60,9 +54,18 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 			logger.Error("HandleUDPMessage handleConfigUpdate error: %v", err)
 			return nil, fmt.Errorf("failed to handle update: %w", err)
 		}
-		return statusWithMessageResponse{
-			Status:  "success",
-			Message: "Update applied successfully",
+		return udpResponse{
+			FusionOp: msg.Action,
+			Status:   "success",
+		}, nil
+
+	case api.NotifyOpGetLocalDeviceInformation:
+		info := h.HandleGetDeviceInfo()
+
+		return udpResponse{
+			FusionOp: msg.Action,
+			Status:   "success",
+			Payload:  info,
 		}, nil
 
 	default:

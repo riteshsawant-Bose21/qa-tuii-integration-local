@@ -146,6 +146,7 @@ class FusionDialog extends StatelessWidget {
                     Flexible(
                       child: SingleChildScrollView(
                         child: FusionAppText(
+                          semanticId: 'description',
                           text: description!,
                           textAlign: TextAlign.center,
                           style:
@@ -166,7 +167,7 @@ class FusionDialog extends StatelessWidget {
                         SizedBox(
                           width: 90,
                           child: FusionAppButton(
-                            semanticId: 'dialog_box',
+                            semanticId: 'secondary',
                             text: secondaryButtonLabel!,
                             style: FusionAppButtonStyle.secondary,
                             onPressed: () {
@@ -179,7 +180,7 @@ class FusionDialog extends StatelessWidget {
                       SizedBox(
                         width: primaryButtonWidth,
                         child: FusionAppButton(
-                          semanticId: 'dialog_box',
+                          semanticId: 'primary',
                           text: primaryButtonLabel,
                           style: FusionAppButtonStyle.primary,
                           enabled: true,

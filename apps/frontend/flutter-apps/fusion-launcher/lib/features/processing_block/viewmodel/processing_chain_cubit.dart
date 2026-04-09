@@ -28,9 +28,7 @@ class ProcessingChainCubit extends Cubit<ProcessingChainState> {
   }
 
   void addProcessingBlock(ProcessingBlockModel block) {
-    final ProcessingBlockModel newBlock = block.copyWith(
-      id: block.algorithmId.toUpperCase() + FusionUtils.shortStringUUID(),
-    );
+    final ProcessingBlockModel newBlock = block.clone();
     if (param.type == ProcessingChainDeviceType.source) {
       viewModel.addProcessingBlockToSource(
         processingBlock: newBlock,

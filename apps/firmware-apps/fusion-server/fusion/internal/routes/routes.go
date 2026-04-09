@@ -36,25 +36,44 @@ const (
 	ClusterMembersEndpoint                     = ClusterEndpoint + "/members"
 	ClusterNTPSkewEndpoint                     = ClusterEndpoint + "/ntp-skew"
 	ClusterStatusEndpoint                      = ClusterEndpoint + "/status"
+	ClusterUDPStatusEndpoint                   = ClusterEndpoint + "/udp/status"
 
-	ClusterRebootEndpoint      = ClusterEndpoint + "/reboot"
-	ClusterRebootLocalEndpoint = ClusterRebootEndpoint
+	ClusterRebootEndpoint              = ClusterEndpoint + "/reboot"
+	ClusterRebootLocalEndpoint         = ClusterRebootEndpoint
+	ClusterSoftwareUpdateEndpoint      = ClusterEndpoint + "/software-update"
+	ClusterSoftwareUpdateLocalEndpoint = ClusterSoftwareUpdateEndpoint
 
 	ControllersEndpoint       = "/controllers"
 	ControllersIDEndpoint     = ControllersEndpoint + "/{id}"
 	ControllersIDWinkEndpoint = ControllersEndpoint + "/wink" + "/{id}"
 
-	DeviceEndpoint          = "/device"
-	DeviceReloadEndpoint    = DeviceEndpoint + "/reload"
-	DeviceReloadVIPEndpoint = DeviceReloadEndpoint + "/vip"
-	DeviceIDEndpoint        = DeviceEndpoint + "/{id}"
+	DeviceEndpoint                = "/device"
+	DeviceDiscoveryEndpoint       = DeviceEndpoint + "/discovery"
+	DeviceDiscoveryMDNSEndpoint   = DeviceDiscoveryEndpoint + "/mdns" + "/{service}"
+	DeviceReloadEndpoint          = DeviceEndpoint + "/reload"
+	DeviceReloadVIPEndpoint       = DeviceReloadEndpoint + "/vip"
+	DeviceReloadVIPStatusEndpoint = DeviceReloadVIPEndpoint + "/status"
+	DeviceIDEndpoint              = DeviceEndpoint + "/{id}"
 
-	DevicesEndpoint       = "/devices"
-	DevicesIDEndpoint     = DevicesEndpoint + "/{id}"
-	DevicesVIPEndpoint    = DevicesEndpoint + "/vip"
-	DevicesSetVIPEndpoint = DevicesVIPEndpoint + "/{vip}"
+	DevicesEndpoint                    = "/devices"
+	DevicesIDEndpoint                  = DevicesEndpoint + "/{id}"
+	DevicesVIPEndpoint                 = DevicesEndpoint + "/vip"
+	DevicesVIPStatusEndpoint       = DevicesVIPEndpoint + "/status"
+	DevicesVIPOperationEndpoint    = DevicesVIPEndpoint + "/operations" + "/{id}"
+	DevicesSetVIPEndpoint              = DevicesVIPEndpoint + "/{vip}"
+	DevicesIDVIPMasterPriorityEndpoint = DevicesIDEndpoint + "/vip/master-priority/{mode}"
+	DevicesGetCSREndpoint              = DevicesIDEndpoint + "/csr"
+	DevicesGetCSRForDeviceEndpoint     = DevicesEndpoint + "/csr"
+	DevicesIDCertificateEndpoint       = DevicesIDEndpoint + "/certificate"
+	DevicesCertificateEndpoint         = DevicesEndpoint + "/certificate"
+	DevicesIDResetEndpoint             = DevicesIDEndpoint + "/reset"
+	DevicesResetEndpoint               = DevicesEndpoint + "/reset"
+	EndpointsEndpoint                  = "/endpoints"
 
-	EndpointsEndpoint = "/endpoints"
+	SoftwareUpdateEndpoint         = "/softwareUpdate"
+	SoftwareUpdateUploadEndpoint   = SoftwareUpdateEndpoint + "/upload"
+	SoftwareUpdateDownloadEndpoint = SoftwareUpdateEndpoint + "/download/{filename}"
+	SoftwareUpdateListEndpoint     = SoftwareUpdateEndpoint + "/list"
 
 	HealthEndpoint = "/health"
 
@@ -137,6 +156,10 @@ func RegisterPrivatePOST(router *mux.Router, pattern string, handler http.Handle
 
 func RegisterPublicEndpoint(router *mux.Router, method string, pattern string, handler http.HandlerFunc) {
 	RegisterEndpoint(router, method, pattern, handler, true)
+}
+
+func RegisterPrivateDELETE(router *mux.Router, pattern string, handler http.HandlerFunc) {
+	RegisterPrivateEndpoint(router, "DELETE", pattern, handler)
 }
 
 func RegisterPublicDELETE(router *mux.Router, pattern string, handler http.HandlerFunc) {

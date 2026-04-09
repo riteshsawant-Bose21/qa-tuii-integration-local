@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/assets/asset_svg.dart';
-import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/schematic_properties.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/service_locator.dart';
@@ -72,8 +71,8 @@ class _CreateNewLocationWidgetState extends State<CreateNewLocationWidget> {
                     ),
                     RotatedBox(
                       quarterTurns: _isExpanded ? 0 : 2,
-                      child: FusionSvgIcon(
-                        icon: AssetSvg.expandUp,
+                      child: FusionIcon.svg(
+                        AssetSvg.expandUp,
                         size: FusionSizes.iconSize12,
                         color: context.colorScheme.primaryWhite,
                       ),

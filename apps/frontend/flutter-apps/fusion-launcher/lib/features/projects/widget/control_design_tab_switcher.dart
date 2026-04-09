@@ -43,13 +43,13 @@ class ControlDesignTabSwitcherState extends State<ControlDesignTabSwitcher> {
           padding: const EdgeInsets.only(top: 6, bottom: 6),
 
           height: 48,
-          decoration: BoxDecoration(
-            color: context.colorScheme.elevation1,
-            border: Border(
-              top: BorderSide(width: 1, color: context.colorScheme.elevation2),
-              bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
-            ),
-          ),
+          // decoration: const BoxDecoration(
+          //   // color: context.colorScheme.elevation1,
+          //   // border: Border(
+          //   //   top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+          //   //   bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
+          //   // ),
+          // ),
           child: Container(
             width: tabWidth,
             alignment: Alignment.center,

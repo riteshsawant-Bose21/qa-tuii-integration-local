@@ -1,0 +1,21 @@
+info:
+  name: Remove Controller
+  type: http
+  seq: 4
+
+http:
+  method: DELETE
+  url: "{{api_url}}/controllers/:id"
+  params:
+    - name: id
+      value: "1234"
+      type: path
+  body:
+    type: json
+    data: ""
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

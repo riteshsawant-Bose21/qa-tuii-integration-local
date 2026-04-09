@@ -30,26 +30,6 @@ class CanvasControlWrapper extends StatelessWidget {
         controller.onScaleEnd(details);
       },
       child: Listener(
-        // onPointerPanZoomStart: (PointerPanZoomStartEvent event) {
-        //   controller.onScaleStart(
-        //     ScaleStartDetails(
-        //       focalPoint: event.localPosition,
-        //     ),
-        //   );
-        // },
-        // onPointerPanZoomEnd: (PointerPanZoomEndEvent event) {
-        //   controller.onScaleEnd(
-        //     ScaleEndDetails(
-        //       velocity: Velocity.zero,
-        //     ),
-        //   );
-        // },
-        // onPointerPanZoomUpdate: (PointerPanZoomUpdateEvent event) {
-        //   controller.onScaleUpdate(
-        //     event.scale,
-        //     event.localPosition,
-        //   );
-        // },
         onPointerSignal: (PointerSignalEvent event) {
           if (event is PointerScrollEvent) {
             controller.onScaleUpdate(
@@ -100,52 +80,7 @@ class CanvasControlWrapper extends StatelessWidget {
         },
 
         child: ClipRect(
-          child: GestureDetector(
-            // onTapUp: (TapUpDetails details) {
-            //   final CanvasElement? value = circuitPainter.isHit(
-            //     circuitPainter.correctPosition(details.localPosition),
-            //   );
-            //   controller.selectElement(value);
-            //   // onTap(circuitPainter.correctPosition(details.localPosition));
-            // },
-
-            // onPanStart: (DragStartDetails details) {
-            //   final Offset correctedPos = circuitPainter.correctPosition(
-            //     details.localPosition,
-            //   );
-            //   final dynamic value = circuitPainter.isHit(correctedPos);
-
-            //   controller.onMoveStart(value, correctedPos);
-            // },
-            // onPanUpdate: (DragUpdateDetails details) {
-            //   controller.onMoveUpdate(
-            //     details.delta / controller.canvasState.scale,
-            //   );
-            // },
-            // onPanEnd: (DragEndDetails details) {
-            // final Offset correctedPos = circuitPainter.correctPosition(
-            //   details.localPosition,
-            // );
-            // final dynamic value = circuitPainter.isHit(correctedPos);
-            // controller.onMoveEnd(value, correctedPos);
-            // },
-            // onTertiaryTapDown: (TapDownDetails details) {
-            //   final Offset correctedPos = circuitPainter.correctPosition(
-            //     details.localPosition,
-            //   );
-            //   controller.onMoveStart(null, correctedPos);
-            // },
-            // onTertiaryLongPressMoveUpdate: (LongPressMoveUpdateDetails details) {
-            //   controller.onMoveUpdate(details.localOffsetFromOrigin);
-            // },
-            // onTertiaryLongPressEnd: (LongPressEndDetails details) {
-            //   final Offset correctedPos = circuitPainter.correctPosition(
-            //     details.localPosition,
-            //   );
-            //   controller.onMoveEnd(null, correctedPos);
-            // },
-            child: child,
-          ),
+          child: child,
         ),
       ),
     );

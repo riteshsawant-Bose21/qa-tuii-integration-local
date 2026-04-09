@@ -1,0 +1,24 @@
+info:
+  name: Set Device Info
+  type: http
+  seq: 1
+
+http:
+  method: PATCH
+  url: "{{api_url}}/devices/:id"
+  params:
+    - name: id
+      value: ""
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "id":"fusion1_new_id"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

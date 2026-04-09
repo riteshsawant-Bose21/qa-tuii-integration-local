@@ -160,6 +160,14 @@ class EventsRepository extends Repository<FusionEvent> {
 
 class MediaFileRepository extends Repository<MediaFileModel> {}
 
+class MessageRepository extends Repository<MessageModel> {
+  MessageRepository copyWith(Map<String, MessageModel> items) {
+    final newRepo = MessageRepository();
+    newRepo._items.addAll(items);
+    return newRepo;
+  }
+}
+
 class ZoneFunctionRepository extends Repository<ZoneFunctions> {
   // Get ZoneFunction by function id
   ZoneFunctions? getByFunctionId({required String functionId}) {

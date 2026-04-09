@@ -17,6 +17,7 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/server"
 	"fusion/internal/server/handler"
+	"fusion/internal/utils"
 )
 
 const (
@@ -48,6 +49,17 @@ type UDPServer struct {
 	pending              map[string]*pendingBroadcast
 	lastBroadcastEpoch   atomic.Uint64
 	lastBroadcastVersion atomic.Uint64
+	lastBroadcastSentAt  atomic.Int64
+	enqueuedPackets      atomic.Uint64
+	droppedPackets       atomic.Uint64
+	handledPackets       atomic.Uint64
+	ackPackets           atomic.Uint64
+	responsesSent        atomic.Uint64
+	broadcastMessages    atomic.Uint64
+	broadcastDatagrams   atomic.Uint64
+	maxQueueDepth        atomic.Uint64
+	maintenanceEnabled   atomic.Bool
+	diagnosticsEnabled   bool
 
 	stopCh chan struct{}
 }
@@ -64,7 +76,27 @@ type pendingBroadcast struct {
 	lastSent time.Time
 }
 
-func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
+type UDPDebugStats struct {
+	QueueDepth           int    `json:"queue_depth"`
+	QueueCapacity        int    `json:"queue_capacity"`
+	MaxQueueDepth        uint64 `json:"max_queue_depth"`
+	RegisteredClients    int    `json:"registered_clients"`
+	PendingBroadcasts    int    `json:"pending_broadcasts"`
+	OldestPendingAgeMs   int64  `json:"oldest_pending_age_ms"`
+	EnqueuedPackets      uint64 `json:"enqueued_packets"`
+	DroppedPackets       uint64 `json:"dropped_packets"`
+	HandledPackets       uint64 `json:"handled_packets"`
+	AckPackets           uint64 `json:"ack_packets"`
+	ResponsesSent        uint64 `json:"responses_sent"`
+	BroadcastMessages    uint64 `json:"broadcast_messages"`
+	BroadcastDatagrams   uint64 `json:"broadcast_datagrams"`
+	LastBroadcastEpoch   uint64 `json:"last_broadcast_epoch"`
+	LastBroadcastVersion uint64 `json:"last_broadcast_version"`
+	LastBroadcastSentAt  int64  `json:"last_broadcast_sent_at_ns"`
+	MaintenanceEnabled   bool   `json:"maintenance_enabled"`
+}
+
+func NewUDPServer(addr string, handler *handler.Handler, diagnosticsEnabled bool) (*UDPServer, error) {
 	conn, err := ResolveListenUDP(addr)
 	if err != nil {
 		return nil, err
@@ -75,12 +107,13 @@ func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
 	queueSize := queueWorkers * queueElementSize
 
 	srv := &UDPServer{
-		handler:    handler,
-		queue:      make(chan packet, queueSize),
-		numWorkers: queueWorkers,
-		clients:    sync.Map{},
-		pending:    make(map[string]*pendingBroadcast),
-		stopCh:     make(chan struct{}),
+		handler:            handler,
+		queue:              make(chan packet, queueSize),
+		numWorkers:         queueWorkers,
+		clients:            sync.Map{},
+		pending:            make(map[string]*pendingBroadcast),
+		stopCh:             make(chan struct{}),
+		diagnosticsEnabled: diagnosticsEnabled,
 	}
 
 	srv.Listener = NewListener(
@@ -96,10 +129,8 @@ func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
 	}
 
 	srv.Start()
-	// go srv.maintenanceLoop()
-	logging.GetLogger().Warn(
-		"UDP client maintenance loop disabled. Enabled it in PR-295",
-	)
+	srv.maintenanceEnabled.Store(true)
+	go srv.maintenanceLoop()
 	return srv, nil
 }
 
@@ -112,7 +143,14 @@ func (s *UDPServer) enqueuePacket(data []byte, addr *net.UDPAddr) {
 
 	select {
 	case s.queue <- packet{buf, addr}:
+		if s.diagnosticsEnabled {
+			s.enqueuedPackets.Add(1)
+			s.observeQueueDepth()
+		}
 	default:
+		if s.diagnosticsEnabled {
+			s.droppedPackets.Add(1)
+		}
 		if rand.Intn(1000) == 0 {
 			logging.GetLogger().Warn("UDP queue full. Dropping packet from %s", addr)
 		}
@@ -128,6 +166,9 @@ func (s *UDPServer) workerLoop() {
 }
 
 func (s *UDPServer) handlePacket(data []byte, addr *net.UDPAddr) {
+	if s.diagnosticsEnabled {
+		s.handledPackets.Add(1)
+	}
 	now := time.Now().UnixNano()
 	if val, ok := s.clients.Load(addr.String()); ok {
 		if state, ok := val.(*clientState); ok && state != nil {
@@ -141,6 +182,9 @@ func (s *UDPServer) handlePacket(data []byte, addr *net.UDPAddr) {
 
 	var msg api.NotifyMessage
 	if err := json.Unmarshal(data, &msg); err == nil && msg.Operation == api.NotifyOpAck {
+		if s.diagnosticsEnabled {
+			s.ackPackets.Add(1)
+		}
 		s.handleAck(msg.ID, addr)
 		return
 	}
@@ -165,16 +209,38 @@ func (s *UDPServer) sendResponse(addr *net.UDPAddr, v any) {
 	if _, err := s.conn.WriteToUDP(b, addr); err != nil {
 		logging.GetLogger().Error("write error to %s: %v", addr, err)
 		s.clients.Delete(addr.String())
+		return
+	}
+	if s.diagnosticsEnabled {
+		s.responsesSent.Add(1)
 	}
 }
 
 func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
+	logger := logging.GetLogger()
 
 	if !msg.IsPublic() {
+		logger.Warn("message not public")
 		return nil
 	}
 
-	logger := logging.GetLogger()
+	if msg.Operation == api.NotifyOpDeviceUpdate {
+		if msg.ID == "" {
+			msg.ID = ulid.Make().String()
+		}
+		data, err := utils.ToMap(msg.DeviceInfo)
+		if err != nil {
+			return fmt.Errorf("udp broadcast: failed to convert DeviceInfo to map: %w", err)
+		}
+		payload, err := s.buildJSONPayload(data, api.Version{}, msg.ID, msg.Operation)
+
+		if err != nil {
+			return err
+		}
+
+		s.broadcast(payload, msg.ID)
+		return nil
+	}
 
 	if msg.Operation == api.NotifyOpTimeMachineActivate {
 		if msg.ID == "" {
@@ -256,6 +322,9 @@ func (s *UDPServer) buildJSONPayload(data map[string]any, version api.Version, m
 	maps.Copy(payload, data)
 	payload[api.FusionVersion] = version.Counter
 	payload[api.FusionEpoch] = version.Epoch
+	if s.diagnosticsEnabled {
+		payload[api.FusionSentAtNS] = time.Now().UnixNano()
+	}
 	if msgID != "" {
 		payload[api.FusionMessageID] = msgID
 	}
@@ -275,6 +344,10 @@ func (s *UDPServer) broadcast(payload []byte, msgID string) {
 	if msgID == "" {
 		msgID = ulid.Make().String()
 	}
+	if s.diagnosticsEnabled {
+		s.broadcastMessages.Add(1)
+		s.lastBroadcastSentAt.Store(time.Now().UnixNano())
+	}
 
 	awaiting := make(map[string]*net.UDPAddr)
 
@@ -291,6 +364,9 @@ func (s *UDPServer) broadcast(payload []byte, msgID string) {
 		}
 
 		awaiting[k.(string)] = state.addr
+		if s.diagnosticsEnabled {
+			s.broadcastDatagrams.Add(1)
+		}
 		return true
 	})
 
@@ -421,4 +497,59 @@ func (s *UDPServer) removeClientFromPending(addrStr string) {
 		}
 	}
 	s.pendingMu.Unlock()
+}
+
+func (s *UDPServer) observeQueueDepth() {
+	current := uint64(len(s.queue))
+	for {
+		existing := s.maxQueueDepth.Load()
+		if current <= existing {
+			return
+		}
+		if s.maxQueueDepth.CompareAndSwap(existing, current) {
+			return
+		}
+	}
+}
+
+func (s *UDPServer) Stats() UDPDebugStats {
+	stats := UDPDebugStats{
+		QueueDepth:           len(s.queue),
+		QueueCapacity:        cap(s.queue),
+		MaxQueueDepth:        s.maxQueueDepth.Load(),
+		EnqueuedPackets:      s.enqueuedPackets.Load(),
+		DroppedPackets:       s.droppedPackets.Load(),
+		HandledPackets:       s.handledPackets.Load(),
+		AckPackets:           s.ackPackets.Load(),
+		ResponsesSent:        s.responsesSent.Load(),
+		BroadcastMessages:    s.broadcastMessages.Load(),
+		BroadcastDatagrams:   s.broadcastDatagrams.Load(),
+		LastBroadcastEpoch:   s.lastBroadcastEpoch.Load(),
+		LastBroadcastVersion: s.lastBroadcastVersion.Load(),
+		LastBroadcastSentAt:  s.lastBroadcastSentAt.Load(),
+		MaintenanceEnabled:   s.maintenanceEnabled.Load(),
+	}
+
+	s.clients.Range(func(_, _ any) bool {
+		stats.RegisteredClients++
+		return true
+	})
+
+	now := time.Now()
+	s.pendingMu.Lock()
+	stats.PendingBroadcasts = len(s.pending)
+	if len(s.pending) > 0 {
+		var oldest time.Time
+		for _, pb := range s.pending {
+			if oldest.IsZero() || pb.lastSent.Before(oldest) {
+				oldest = pb.lastSent
+			}
+		}
+		if !oldest.IsZero() {
+			stats.OldestPendingAgeMs = now.Sub(oldest).Milliseconds()
+		}
+	}
+	s.pendingMu.Unlock()
+
+	return stats
 }

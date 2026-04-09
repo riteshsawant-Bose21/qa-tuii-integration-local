@@ -14,4 +14,11 @@ class AssetSvg {
   static const String sort = '$_path/sort.svg';
   static const String volume = '$_path/volume.svg';
   static const String wiringViewIcon = '$_path/wiring_view_icon.svg';
+  static const String minOverlap = '$_path/min_overlap.svg';
+  static const String edgeToEdge = '$_path/edge_to_edge.svg';
+  static const String customise = '$_path/customise.svg';
+  static const String centreToCentre = '$_path/centre_to_centre.svg';
+  static const String autoplaceSquare = '$_path/autoplace_square.svg';
+  static const String autoplaceHexagonal = '$_path/autoplace_hexagonal.svg';
+  static const String sadFace = '$_path/sad_face.svg';
 }

@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
 
 const String kFusionProjectDirName = '/FusionProject';
 const String kFusionMediaDirectory = '/MediaFiles';
@@ -139,10 +138,6 @@ class LocalProjectManager {
       // Encode to zip
       final zipData = ZipEncoder().encode(archive);
 
-      if (zipData == null) {
-        throw Exception("Failed to encode zip file");
-      }
-
       // Write to file
       await zipFile.writeAsBytes(zipData);
 
@@ -206,7 +201,7 @@ class LocalProjectManager {
         "lastUploadedAt": null,
         "isCloudInstance": false,
         "is_deleted": false,
-        "metadata": projectDetails.metadata,
+        "metadata": projectDetails.metadata.toJson(),
         "floors": [
           {
             "id": "FLOOR${FusionUtils.shortStringUUID()}",

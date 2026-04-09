@@ -476,6 +476,7 @@ int fusion_cn_mgr_init(struct fusion_cn_manager *mgr)
 
 err_nl:
 err_timer:
+    fusion_gpt_unregister_client();
     fusion_cn_nf_destroy(&mgr->netfilter);
 err_nf:
     fusion_cn_rtp_destroy(&mgr->rtp);

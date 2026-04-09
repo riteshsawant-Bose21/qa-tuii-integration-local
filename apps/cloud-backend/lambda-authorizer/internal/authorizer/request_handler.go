@@ -16,11 +16,11 @@ func HandleRequestAuthorizer(ctx context.Context, event map[string]interface{}) 
 	// Generate a new request ID for this request
 	requestID := uuid.New().String()
 
-	// Extract source IP from request context (API Gateway v2 HTTP API format)
+	// Extract source IP from request context (REST API Gateway v1 format)
 	sourceIP := ""
 	if requestContext, ok := event["requestContext"].(map[string]interface{}); ok {
-		if http, ok := requestContext["http"].(map[string]interface{}); ok {
-			sourceIP, _ = http["sourceIp"].(string)
+		if identity, ok := requestContext["identity"].(map[string]interface{}); ok {
+			sourceIP, _ = identity["sourceIp"].(string)
 		}
 	}
 
@@ -28,8 +28,20 @@ func HandleRequestAuthorizer(ctx context.Context, event map[string]interface{}) 
 
 	log.Info("Processing authorization request")
 
+	// Check if initialization failed (e.g., DB connection error)
+	if initErr != nil {
+		log.Error("Lambda initialization failed", initErr)
+		return denyResponse("anonymous", "Service unavailable"), nil
+	}
+
 	// Extract token from headers (case-insensitive)
-	headers, _ := event["headers"].(map[string]interface{})
+	headers, ok := event["headers"].(map[string]interface{})
+
+	if !ok || len(headers) == 0 {
+		log.LogAuthAttempt("anonymous", "", "", false, "No headers provided")
+		return denyResponse("anonymous", "No headers provided"), nil
+	}
+
 	token := ""
 	for k, v := range headers {
 		if strings.ToLower(k) == "authorization" {
@@ -62,18 +74,17 @@ func HandleRequestAuthorizer(ctx context.Context, event map[string]interface{}) 
 		"email": email,
 	})
 
-	// Extract HTTP method and path from event
-	method := ""
-	if rc, ok := event["requestContext"].(map[string]interface{}); ok {
-		if http, ok := rc["http"].(map[string]interface{}); ok {
-			method, _ = http["method"].(string)
-		}
+	// Extract HTTP method and path from event (REST API Gateway v1 format)
+	method, ok := event["httpMethod"].(string)
+	if !ok {
+		log.LogAuthAttempt(email, "", "", false, "Missing HTTP method")
+		return denyResponse(email, "Missing HTTP method"), nil
 	}
 
-	path, _ := event["rawPath"].(string)
-	if method == "" || path == "" {
-		log.LogAuthAttempt(email, method, path, false, "Missing method or path")
-		return denyResponse(email, "Missing method or path"), nil
+	path, ok := event["path"].(string)
+	if !ok {
+		log.LogAuthAttempt(email, method, "", false, "Missing path")
+		return denyResponse(email, "Missing path"), nil
 	}
 
 	// Check permissions with timing

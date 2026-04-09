@@ -5,7 +5,7 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/config_snapshots_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/widgets/snapshots/snapshots_and_scenes_panel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-
+import 'package:fusion_lib/constants/semantics/features/configuration/snapshots/SnapshotsKeys.dart';
 import '../viewModel/actions_viewmodel/config_snapshot_actions_viewmodel.dart';
 import '../viewModel/scenes_viewmodel/config_scene_sets_viewmodel.dart';
 import '../viewModel/snapshot_viewmodel/config_snapshots_state.dart';
@@ -62,27 +62,30 @@ class _ConfigurationSnapshotsBodyState extends State<_ConfigurationSnapshotsBody
       },
       child: Scaffold(
         backgroundColor: context.colorScheme.primaryBlack,
-        body: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            final bool isWideScreen = constraints.maxWidth > 600;
+        body: SemanticHelper.container(
+          testId: SemanticHelper.createTestId(SemanticTypes.section, FusionTestKeys.instance.snpcontainer),
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final bool isWideScreen = constraints.maxWidth > 600;
 
-            if (isWideScreen) {
-              return Row(
-                children: <Widget>[
-                  SizedBox(width: constraints.maxWidth * 0.3, child: const SnapshotsAndScenesPanel()),
-                  const SizedBox(width: 4),
-                  const Expanded(child: ActionList()),
-                ],
-              );
-            } else {
-              return const Column(
-                children: <Widget>[
-                  Expanded(flex: 1, child: SnapshotsAndScenesPanel()),
-                  Expanded(flex: 2, child: ActionList()),
-                ],
-              );
-            }
-          },
+              if (isWideScreen) {
+                return Row(
+                  children: <Widget>[
+                    SizedBox(width: constraints.maxWidth * 0.3, child: const SnapshotsAndScenesPanel()),
+                    const SizedBox(width: 4),
+                    const Expanded(child: ActionList()),
+                  ],
+                );
+              } else {
+                return const Column(
+                  children: <Widget>[
+                    Expanded(flex: 1, child: SnapshotsAndScenesPanel()),
+                    Expanded(flex: 2, child: ActionList()),
+                  ],
+                );
+              }
+            },
+          ),
         ),
       ),
     );

@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_algorithms/surface_speakers_autolayout/surface_speakers_autolayout.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 class CeilingPendantSpeakerLayoutWidget extends StatefulWidget {

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/component_db.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/helpers/connection_methods_extension.dart';
 import 'package:fusion_launcher/features/wiring_design/model/model.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../controller/circuit_controller.dart';
 import '../widgets/port_widget.dart';
@@ -113,6 +112,7 @@ class _PortConnectionOverlayState extends State<PortConnectionOverlay> {
         ),
         for (final CircuitComponent component in possibleConnections.keys) ...<Widget>[
           FusionExpansionPanel(
+            semanticsId: "port_${widget.port.data.label}_to_${component.data.label}_connections",
             titleBuilder:
                 (BuildContext context, bool isExpanded) => Row(
                   children: <Widget>[
@@ -213,10 +213,12 @@ class FusionExpansionPanel extends StatefulWidget {
     required this.content,
     required this.titleBuilder,
     this.initiallyExpanded = true,
+    required this.semanticsId,
   });
   final Widget Function(BuildContext context, bool isExpanded) titleBuilder;
   final Widget content;
   final bool initiallyExpanded;
+  final String semanticsId;
   @override
   State<FusionExpansionPanel> createState() => _FusionExpansionPanelState();
 }
@@ -237,18 +239,22 @@ class _FusionExpansionPanelState extends State<FusionExpansionPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeInOut,
-      alignment: Alignment.topCenter,
-      child: Column(
-        children: <Widget>[
-          InkWell(
-            onTap: toggleExpanded,
-            child: widget.titleBuilder(context, isExpanded),
-          ),
-          if (isExpanded) widget.content,
-        ],
+    return SemanticHelper.container(
+      testId: widget.semanticsId,
+      value: isExpanded.toString(),
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        alignment: Alignment.topCenter,
+        child: Column(
+          children: <Widget>[
+            InkWell(
+              onTap: toggleExpanded,
+              child: widget.titleBuilder(context, isExpanded),
+            ),
+            if (isExpanded) SemanticHelper.container(testId: "${widget.semanticsId}_content", child: widget.content),
+          ],
+        ),
       ),
     );
   }

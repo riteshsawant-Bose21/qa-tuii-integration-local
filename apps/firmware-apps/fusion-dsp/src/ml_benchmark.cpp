@@ -37,7 +37,6 @@ public:
 private:
 	// --- properties and terminals ---
 	int_fast32_t channels;
-	int_fast32_t frame_size;
 
 	bosepro::DspSignalMemory<const float*[]> in;
 	bosepro::DspSignalMemory<float *[]> out;
@@ -102,7 +101,6 @@ ML_Benchmark::ML_Benchmark(const bosepro::BlockConfiguration &configuration)
 	: bosepro::Algorithm(configuration)
 {
 	get_property("channels", channels);
-	get_property("frame_size", frame_size);
 
 	assign_terminal("in", in);
 	assign_terminal("out", out);

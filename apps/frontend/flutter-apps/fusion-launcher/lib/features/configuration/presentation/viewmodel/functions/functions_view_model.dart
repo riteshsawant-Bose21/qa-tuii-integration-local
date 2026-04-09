@@ -8,6 +8,7 @@ extension FucntionsViewModel on ProjectViewModel {
         recordSnapshot();
       }
       projectManager.addFunctionToZone(function: function, zoneId: zoneId);
+
       if (autoSave) {
         saveProject();
       }

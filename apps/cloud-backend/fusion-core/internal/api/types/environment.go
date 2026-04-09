@@ -23,14 +23,22 @@ type EnvironmentDBVariables struct {
 
 // EnvironmentS3Variables holds configuration variables for S3 storage.
 type EnvironmentS3Variables struct {
-	PriceBucket   string
-	ProjectBucket string
-	ProductBucket string
+	PriceBucket          string
+	ProjectBucket        string
+	ProductBucket        string
+	FirmwareBundleBucket string
 }
 
 // EnvironmentAWSVariables holds configuration variables for AWS services.
 type EnvironmentAWSVariables struct {
 	Region string
+}
+
+// EnvironmentIoTVariables holds configuration variables for IoT services.
+type EnvironmentIoTVariables struct {
+	Endpoint     string
+	CommandTopic string
+	DevicePolicy string
 }
 
 // EnvironmentAuth0Variables holds configuration variables for Auth0 integration.

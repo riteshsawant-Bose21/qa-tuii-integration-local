@@ -121,12 +121,77 @@ The WebSocket API uses a **Pull-then-Push** pattern where requesting device data
    }
    ```
 
-5. **`unsubscribe_devices`** - Unsubscribe from device updates
+5. **`config`** - Get current configuration and auto-subscribe to `config_update`
+    ```json
+    {
+       "id": "req-config",
+       "version": 1,
+       "type": "config"
+    }
+    ```
+
+6. **`patch_config`** - Apply partial configuration patch (same semantics as HTTP PATCH)
+    ```json
+    {
+       "id": "req-patch-config",
+       "version": 1,
+       "type": "patch_config",
+       "data": {
+          "zones": {
+             "zone_a": {
+                "volume": 75
+             }
+          }
+       }
+    }
+    ```
+7. **`unsubscribe_config`** - Unsubscribe from configuration update events
+    ```json
+    {
+       "id": "req-unsub-config",
+       "version": 1,
+       "type": "unsubscribe_config"
+    }
+    ```
+
+8. **`unsubscribe_devices`** - Unsubscribe from device updates
    ```json
    {
      "id": "req-unsub",
      "version": 1,
      "type": "unsubscribe_devices"
+   }
+   ```
+
+6. **`start_update`** - Trigger coordinated software update across cluster
+   ```json
+   {
+     "id": "sw-update-001", 
+     "version": 1,
+     "type": "start_update"
+   }
+   ```
+   
+   **Execution Flow**: 
+   - Broadcasts cluster message to all nodes via gossip protocol
+   - Each node's delegate receives the message and executes `systemctl start swupdate-ota-install.service`
+   - Uses reliable cluster messaging for coordination across all cluster members
+   - After the update starts, the server pushes real-time `update_progress` events to all WebSocket clients (see [Software Update Progress Push Format](#software-update-progress-push-format))
+   
+   **Response**:
+   ```json
+   {
+     "id": "sw-update-001",
+     "version": 1,
+     "type": "start_update", 
+     "code": 3005,
+     "status": "success",
+     "message": "Software update broadcasted to all cluster nodes",
+     "data": {
+       "action": "broadcast_cluster",
+       "nodes": [...]
+     },
+     "timestamp": "2026-04-01T10:15:30Z"
    }
    ```
 
@@ -142,7 +207,9 @@ The device APIs implement a **Pull-then-Push** pattern for real-time updates:
 
 ### Subscription Management:
 - **Auto-Subscribe**: Requesting `devices` or `device_by_id` automatically subscribes the client
+- **Auto-Subscribe (Config)**: Requesting `config` automatically subscribes the client
 - **Manual Unsubscribe**: Send `unsubscribe_devices` message to stop receiving updates
+- **Config Unsubscribe**: Send `unsubscribe_config` to stop receiving config updates
 - **Connection Cleanup**: Subscriptions are automatically removed when connection closes
 
 ## Status Codes
@@ -157,7 +224,8 @@ The device APIs implement a **Pull-then-Push** pattern for real-time updates:
 - `3001` - **Updated**: Resource updated successfully
 - `3002` - **Connected**: Connection established (welcome message)
 - `3003` - **Pong**: Response to ping request
-- `3004` - **Device Updated**: Device updated (push notifications)
+- `3004` - **Event Push**: Push notifications — device updates (`device_update`) and software update progress (`update_progress`)
+- `3005` - **Update Started**: Software update triggered successfully
 
 ### Application Client Error Codes (4xxx)
 - `4000` - **Invalid JSON**: Malformed JSON message
@@ -295,6 +363,74 @@ When devices are updated anywhere in the cluster, all subscribed WebSocket clien
 }
 ```
 
+### Software Update Progress Push Format
+
+When a software update is running, the server pushes real-time progress from **all cluster nodes** in a single message. Clients do not need to subscribe — progress is broadcast to all connected WebSocket clients automatically.
+
+```json
+{
+  "id": null,
+  "version": 1,
+  "type": "update_progress",
+  "code": 3004,
+  "status": "event",
+  "message": "System notification: software_update_progress",
+  "data": {
+    "node-1": {
+      "update_state": "IN_PROGRESS",
+      "step": "2/4",
+      "current_task": "rootfs.ext4",
+      "progress": "65",
+      "node": "node-1",
+      "handler": "raw",
+      "timestamp": "2026-04-01T10:16:05Z",
+      "serial_number": "0123456789abcdef"
+    },
+    "node-2": {
+      "update_state": "SUCCESS",
+      "step": "4/4",
+      "current_task": "rootfs.ext4",
+      "progress": "100",
+      "node": "node-2",
+      "handler": "raw",
+      "timestamp": "2026-04-01T10:16:42Z",
+      "serial_number": "fedcba9876543210"
+    }
+  },
+  "timestamp": "2026-04-01T10:16:45Z"
+}
+```
+
+**Data field**: A `map[string]object` keyed by **node name**. Each value is a `SoftwareUpdateProgressResponse` with the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `update_state` | string | Current update state (see enum below) |
+| `step` | string | Current step as `"current/total"` (e.g. `"2/4"`) |
+| `current_task` | string | Active swupdate image/task name |
+| `progress` | string | Percent complete for the current step (`"0"`–`"100"`) |
+| `node` | string | Node name this progress belongs to |
+| `handler` | string | swupdate handler name (e.g. `"raw"`, `"shellscript"`) |
+| `timestamp` | string | RFC3339 timestamp of the progress event |
+| `serial_number` | string | Serial number of the node |
+
+**`update_state` enum values**:
+
+| Value | Meaning | Terminal |
+|-------|---------|----------|
+| `IDLE` | No update in progress | — |
+| `STARTING` | Update service starting | — |
+| `IN_PROGRESS` | Update actively running | — |
+| `SUCCESS` | Update completed successfully | — |
+| `FAILED` | Update encountered an error | ✅ stops monitoring |
+| `DOWNLOADING` | Downloading update bundle | — |
+| `COMPLETED` | Update fully done — **last observed state in normal flow** | ✅ stops monitoring |
+| `SUBPROCESS` | Running a subprocess step | — |
+| `PROGRESS` | General progress tick | — |
+| `UNKNOWN` | Unrecognised status code | — |
+
+> **Monitoring lifecycle**: progress monitoring starts automatically on `start_update`. In normal operation the full sequence ends with `SUCCESS` followed by `COMPLETED` — monitoring stops on `COMPLETED`. On error, monitoring stops on `FAILED`. Clients should wait for `COMPLETED` (or `FAILED`) as the definitive final state.
+
 ## Configuration
 
 The WebSocket server uses basic configuration:
@@ -336,6 +472,14 @@ FUSION_TEST_LOCAL=1 go test -v ./test/websocket_test.go -timeout 60s
 - `TestWebsocketDeviceByID` - Specific device retrieval test
 - `TestWebsocketPing` - Health check test
 - `TestWebsocketInvalidRequest` - Error handling test
+- `TestSoftwareUpdateTriggerViaWebSocket` - Software update trigger via WebSocket (expects code `3005`)
+- `TestSoftwareUpdateTriggerUnknownType` - Invalid type error handling (expects code `4002`)
+- `TestSoftwareUpdateProgressReceivedAfterTrigger` - Progress push after trigger (requires `FUSION_SWUPDATE_TEST=1`)
+- `TestSoftwareUpdateProgressMessageFormat` - Progress message format validation (requires `FUSION_SWUPDATE_TEST=1`)
+
+> **Note**: Tests that require the swupdate Unix socket (`/tmp/swupdateprog`) are guarded behind the
+> `FUSION_SWUPDATE_TEST=1` environment variable. In Multipass or CI environments without swupdate,
+> these tests are automatically skipped unless the variable is set.
 
 ## Best Practices
 
@@ -445,7 +589,8 @@ FUSION_TEST_LOCAL=1 go test -v ./test/websocket_test.go -timeout 60s
 | 3001 | Success | Resource updated successfully |
 | 3002 | Success | Connection established |
 | 3003 | Success | Pong response to ping |
-| 3004 | Event | Device updated (push notification) |
+| 3004 | Event | Push notification (device update or software update progress) |
+| 3005 | Success | Software update triggered successfully |
 | **Application Error Codes** | | |
 | 4000 | Client Error | Invalid JSON message |
 | 4001 | Client Error | Missing required field |
@@ -464,9 +609,20 @@ FUSION_TEST_LOCAL=1 go test -v ./test/websocket_test.go -timeout 60s
 |------|-------------|----------------|--------------|
 | `devices` | List all cluster devices | ✅ Yes | None |
 | `device_by_id` | Get specific device | ✅ Yes | `device_id` |
+| `config` | Get current configuration | ✅ Yes | None |
+| `patch_config` | Patch configuration state | ❌ No | Partial config object |
 | `update_device_info` | Update device info | ❌ No* | `device_id` + patch fields |
+| `unsubscribe_config` | Stop config updates | ❌ No | None |
 | `ping` | Health check | ❌ No | None |
 | `unsubscribe_devices` | Stop device updates | ❌ No | None |
+| `start_update` | Trigger software update | ❌ No | None |
+
+*Server-initiated push types (cannot be requested by client)*
+
+| Type | Description | Code | Condition |
+|------|-------------|------|-----------|
+| `device_update` | Device changed | 3004 | Any subscribed device changes |
+| `update_progress` | Software update progress | 3004 | Software update running on any cluster node |
 
 *Update operations trigger push notifications to all subscribed clients
 
@@ -477,8 +633,14 @@ FUSION_TEST_LOCAL=1 go test -v ./test/websocket_test.go -timeout 60s
 | `welcome` | Connection established | 3002 | Welcome message with server info |
 | `devices` | Response to devices request | 3000 | All cluster devices |
 | `device_by_id` | Response to device lookup | 3000 | Single device info |
+| `config` | Response to config request | 3000 | Current full configuration |
+| `patch_config` | Response to patch request | 3000/3001 | No-op or patch applied |
 | `update_device_info` | Response to update request | 3001 | Update confirmation |
 | `device_update` | Push notification | 3004 | Real-time device change |
+| `config_update` | Push notification | 3001 | Real-time configuration change |
+| `unsubscribe_config` | Response to unsubscribe | 3000 | Config unsubscribe confirmation |
 | `unsubscribe_devices` | Response to unsubscribe | 3000 | Unsubscribe confirmation |
+| `start_update` | Response to update trigger | 3005 | Software update coordination |
+| `update_progress` | Push notification | 3004 | Real-time per-node software update progress |
 | `pong` | Response to ping | 3003 | Health check response |
 | `error` | Request processing error | 4xxx | Error details |

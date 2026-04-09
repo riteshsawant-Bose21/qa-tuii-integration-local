@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/constants/fusion_constants.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/events/configation_events_keys.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_svg_icon.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
@@ -96,58 +99,59 @@ class _EventHeaderWidgetState extends State<EventHeaderWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 44,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 6,
-      ),
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation1,
-        border: Border(
-          bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.events_trigger_header),
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 6,
         ),
-      ),
-      child: Row(
-        children: <Widget>[
-          const Icon(Icons.layers, size: 16),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: MediaQuery.of(context).size.width * 0.25,
-            child:
-                _isEditing
-                    ? SemanticHelper.button(
-                      testId: SemanticHelper.createTestId(SemanticTypes.button, "event_header_edit_field"),
-                      child: TextField(
-                        controller: _textController,
-                        focusNode: _focusNode,
-                        style: context.textTheme.bodyMedium?.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          filled: false,
-                          focusedBorder: InputBorder.none,
-                          errorBorder: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
-                          isDense: true,
+        decoration: BoxDecoration(
+          color: context.colorScheme.elevation1,
+          border: Border(
+            bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
+          ),
+        ),
+        child: Row(
+          children: <Widget>[
+            FusionIcon.icon(semanticId: FusionTestKeys.instance.events_trigger_header_icon, Icons.layers, size: 16),
+            const SizedBox(width: 10),
+            SizedBox(
+              width: MediaQuery.of(context).size.width * 0.25,
+              child:
+                  _isEditing
+                      ? SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.instance.eventstriggerheadereditfield),
+                        child: TextField(
+                          controller: _textController,
+                          focusNode: _focusNode,
+                          style: context.textTheme.bodyMedium?.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            filled: false,
+                            focusedBorder: InputBorder.none,
+                            errorBorder: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                            isDense: true,
+                          ),
+                          onSubmitted: (_) => _stopEditing(),
+                          onTapOutside: (_) => _stopEditing(),
                         ),
-                        onSubmitted: (_) => _stopEditing(),
-                        onTapOutside: (_) => _stopEditing(),
-                      ),
-                    )
-                    : SemanticHelper.button(
-                      testId: SemanticHelper.createTestId(SemanticTypes.button, "event_start_editing"),
-                      child: GestureDetector(
+                      )
+                      : GestureDetector(
                         onTap: _startEditing,
                         child: FusionAppText(
+                          semanticId: FusionTestKeys.instance.eventstriggerheaderlabel,
                           text: widget.eventName.isNotEmpty ? widget.eventName[0].toUpperCase() + widget.eventName.substring(1) : widget.eventName,
                           style: context.textTheme.bodyMedium?.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
                           maxLine: 1,
                         ),
                       ),
-                    ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -25,6 +25,10 @@ enum RelationshipType {
   actionValueMapping,
   actionParamMapping,
   eventsItemMapping,
+  messageZones,
+  playerMessages,
+  sourceMessages,
+  messageMediaMapping,
 }
 
 class RelationshipManager {

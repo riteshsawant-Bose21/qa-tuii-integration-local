@@ -6,13 +6,14 @@ class SectionHeader extends StatelessWidget {
   final String? assetPath;
   final Widget? trailing;
   final bool isRounded;
+  final String semanticLabel;
 
-  const SectionHeader({required this.title, this.trailing, super.key, this.assetPath, this.isRounded = true});
+  const SectionHeader({required this.semanticLabel, required this.title, this.trailing, super.key, this.assetPath, this.isRounded = true});
 
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.container(
-      testId: SemanticHelper.createTestId(SemanticTypes.container, 'section_header_$title'),
+      testId: SemanticHelper.createTestId(SemanticTypes.container, 'section_header_$semanticLabel'),
       child: Container(
         height: 44,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

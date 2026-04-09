@@ -1,0 +1,54 @@
+import 'package:fusion_lib/constants/fusion_constants.dart';
+
+extension ConfigurationSources on FusionTestKeys {
+  String get processingsec => "processing_panel";
+  String get inputspan => "inputs_panel";
+  String get sourcesec => "sources_section";
+  String get sourcehead => "sources_header";
+  String get sourcesethead => "sources_set_header";
+  String get sourcesearch => "sources_search";
+  String get sourcedata => "sources_data";
+  String get sourcedataitems => "sources_data_item";
+  String get sourceempty => "sources_empty";
+  String get sourcedescription => "sources_description";
+  String get sourcelistitemimage => "sources_list_item_image";
+  String get sourcelistitemname => "sources_list_item_name";
+  String get sourceitemprocessing => "sources_list_item_processing";
+
+  String get sourcesetsec => "source_set_section";
+  String get sourcesetheadicon => "sources_set_header_icon";
+  String get sourcesetheader => "source_set_header";
+  String get sourcesetsdescription => 'source_sets_description';
+  String get sourcesetdata => "source_set_data_item";
+  String get sourcesetdataitmheader => "source_set_data_item_header";
+  String get sourcesetdataitmheaderexpandcollapse => "source_set_data_item_header_expand_collapse";
+  String get sourcesetdataitmheadername => "source_set_data_item_header_name";
+  String get sourcesetdataitmheaderlink => "source_set_data_item_header_link";
+  String get sourcesetdataitmheaderprocessingblock => "source_set_item_header_processing_block_button";
+  String get sourcesetdataitmheadereditsource => "source_set_item_header_edit_source_button";
+  String get sourcesetdataitmheaderdeletesource => "source_set_item_header_delete_button";
+  String get createsourcesemenu => "create_source_set_menu";
+  String get sourcesedata => "source_set_list";
+  String get createsourcese => "source_set_list";
+  String get emtysourcesethead => "empty_source_set_head";
+  String get emtysourcesetdesc1 => "empty_source_set_description1";
+  String get emtysourcesetdesc2 => "empty_source_set_description2";
+  String get srccreation => "source_set_creation_widget";
+  String get srccreationhead => "source_set_creation_widget_header";
+  String get srcnamelabel => "source_set_creation_widget_name_label";
+  String get srcselectionlabel => "source_set_creation_selection_label";
+  String get srccreationdropdown => "source_set_creation_widget_dropdown";
+  String get srccreationdropdownitemheader => "source_set_creation_widget_dropdown_item_header";
+  String get srccreationdropdownheaderitemicon => "source_set_creation_widget_dropdown_item_header_icon";
+  String get srccreationdropdownitem => "source_select_sources_dropdown_item";
+  String get emtysrccreationdropdownitemtxt => "empty_source_select_sources_dropdown_item_text";
+  String get srccreationdropdownchkbox => "select_sources_dropdown_checkbox";
+  String get srccreationdropdownitemname => "select_sources_dropdown_name";
+  String get srcdropdown => "source_set_creation_dropdown";
+  String get srcdropdowntxt => "source_set_creation_dropdown_text";
+  String get srcdropdownicon => "source_set_creation_dropdown_icon";
+  String get srccreationheadcancel => "source_set_creation_widget_cancel_button";
+  String get srccreationheadcreate => "source_set_creation_widget_create_button";
+  String get srcsetlist => "source_set_list";
+  String get srcsetlistitem => "source_set_list_item";
+}

@@ -64,124 +64,133 @@ class EquipmentLocationSection extends StatelessWidget {
               ),
             ),
 
-            // for (final EquipLocation location in equipmentLocations)
-            ...List<Widget>.generate(equipmentLocations.length, (int index) {
-              final EquipLocation location = equipmentLocations[index];
+            Flexible(
+              child: SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                child: Column(
+                  children: <Widget>[
+                    // for (final EquipLocation location in equipmentLocations)
+                    ...List<Widget>.generate(equipmentLocations.length, (int index) {
+                      final EquipLocation location = equipmentLocations[index];
 
-              return SemanticHelper.container(
-                testId: SemanticHelper.createTestId(SemanticTypes.container, "equipment_location_section_item_$index"),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4),
-                  child: _ExpansionTile(
-                    index: index,
-                    title: location.name,
-                    isExpanded: true,
-                    location: location,
+                      return SemanticHelper.container(
+                        testId: SemanticHelper.createTestId(SemanticTypes.container, "equipment_location_section_item_$index"),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4),
+                          child: _ExpansionTile(
+                            index: index,
+                            title: location.name,
+                            isExpanded: true,
+                            location: location,
 
-                    trailing: SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: PopupMenuButton<String>(
-                        padding: EdgeInsets.zero,
-                        iconSize: 12,
-                        position: PopupMenuPosition.under,
+                            trailing: SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: PopupMenuButton<String>(
+                                padding: EdgeInsets.zero,
+                                iconSize: 12,
+                                position: PopupMenuPosition.under,
 
-                        icon: const Icon(
-                          Icons.more_vert,
-                          size: 12,
-                          color: Colors.grey,
-                        ),
-                        onSelected: (String value) {
-                          if (value == 'delete') {
-                            BlocProvider.of<ProjectViewModel>(context).removeEquipLocation(
-                              equipLocationId: location.id,
-                            );
-                          }
-                        },
-                        itemBuilder: (BuildContext context) {
-                          return <PopupMenuItem<String>>[
-                            PopupMenuItem<String>(
-                              value: 'delete',
-                              child: SemanticHelper.button(
-                                testId: SemanticHelper.createTestId(SemanticTypes.button, "equipment_location_section_item_remove_button_$index"),
-                                child: FusionAppText(
-                                  text: 'Delete',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    fontSize: 11,
-                                  ),
+                                icon: const Icon(
+                                  Icons.more_vert,
+                                  size: 12,
+                                  color: Colors.grey,
                                 ),
-                              ),
-                            ),
-                          ];
-                        },
-                      ),
-                    ),
-                    child: Builder(
-                      builder: (BuildContext context) {
-                        final List<HardwareComponent> hardwares = BlocProvider.of<ProjectViewModel>(
-                          context,
-                        ).getHardwareForEquipLocation(equipLocationId: location.id);
-                        final String? selected = BlocProvider.of<ProjectViewModel>(context).currentSelectedHardwareId;
-                        hardwares.sort((HardwareComponent a, HardwareComponent b) {
-                          final int posA = a.equipmentLocationPosition ?? 9999;
-                          final int posB = b.equipmentLocationPosition ?? 9999;
-                          return posA.compareTo(posB);
-                        });
-                        return Column(
-                          children: <Widget>[
-                            for (final HardwareComponent hardware in hardwares)
-                              InkWell(
-                                onTap: () {
-                                  serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(hardware.id);
-                                  serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+                                onSelected: (String value) {
+                                  if (value == 'delete') {
+                                    BlocProvider.of<ProjectViewModel>(context).removeEquipLocation(
+                                      equipLocationId: location.id,
+                                    );
+                                  }
                                 },
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: selected == hardware.id ? context.colorScheme.elevation4 : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  padding: const EdgeInsets.only(left: 16.0, top: 4, bottom: 4, right: 6),
-                                  child: Row(
-                                    children: <Widget>[
-                                      Icon(
-                                        LucideIcons.box,
-                                        size: 12,
-                                        color: context.colorScheme.onSurface,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
+                                itemBuilder: (BuildContext context) {
+                                  return <PopupMenuItem<String>>[
+                                    PopupMenuItem<String>(
+                                      value: 'delete',
+                                      child: SemanticHelper.button(
+                                        testId: SemanticHelper.createTestId(SemanticTypes.button, "equipment_location_section_item_remove_button_$index"),
                                         child: FusionAppText(
-                                          text: hardware.name,
-                                          maxLine: 1,
+                                          text: 'Delete',
                                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                             fontSize: 11,
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
-                                      // InkWell(
-                                      //   onTap: () {
-                                      //     BlocProvider.of<ProjectViewModel>(context).removeHardware(
-                                      //       hardwareId: hardware.id,
-                                      //     );
-                                      //   },
-                                      //   child: SemanticHelper.button(
-                                      //     testId: SemanticHelper.createTestId(SemanticTypes.button, "equipment_location_section_item_remove_button_$index"),
-                                      //     child: Icon(LucideIcons.trash200, size: 12, color: Colors.red[600]),
-                                      //   ),
-                                      // ),
-                                    ],
-                                  ),
-                                ),
+                                    ),
+                                  ];
+                                },
                               ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
+                            ),
+                            child: Builder(
+                              builder: (BuildContext context) {
+                                final List<HardwareComponent> hardwares = BlocProvider.of<ProjectViewModel>(
+                                  context,
+                                ).getHardwareForEquipLocation(equipLocationId: location.id);
+                                final String? selected = BlocProvider.of<ProjectViewModel>(context).currentSelectedHardwareId;
+                                hardwares.sort((HardwareComponent a, HardwareComponent b) {
+                                  final int posA = a.equipmentLocationPosition ?? 9999;
+                                  final int posB = b.equipmentLocationPosition ?? 9999;
+                                  return posA.compareTo(posB);
+                                });
+                                return Column(
+                                  children: <Widget>[
+                                    for (final HardwareComponent hardware in hardwares)
+                                      InkWell(
+                                        onTap: () {
+                                          serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(hardware.id);
+                                          serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+                                        },
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: selected == hardware.id ? context.colorScheme.elevation4 : Colors.transparent,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          padding: const EdgeInsets.only(left: 16.0, top: 4, bottom: 4, right: 6),
+                                          child: Row(
+                                            children: <Widget>[
+                                              Icon(
+                                                LucideIcons.box,
+                                                size: 12,
+                                                color: context.colorScheme.onSurface,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: FusionAppText(
+                                                  text: hardware.name,
+                                                  maxLine: 1,
+                                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                    fontSize: 11,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              // InkWell(
+                                              //   onTap: () {
+                                              //     BlocProvider.of<ProjectViewModel>(context).removeHardware(
+                                              //       hardwareId: hardware.id,
+                                              //     );
+                                              //   },
+                                              //   child: SemanticHelper.button(
+                                              //     testId: SemanticHelper.createTestId(SemanticTypes.button, "equipment_location_section_item_remove_button_$index"),
+                                              //     child: Icon(LucideIcons.trash200, size: 12, color: Colors.red[600]),
+                                              //   ),
+                                              // ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
                 ),
-              );
-            }),
+              ),
+            ),
           ],
         );
       },

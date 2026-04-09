@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/add_source_popup/view_model/add_source_viewmodel.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_blocks/widgets/pb_section.dart';
+import 'package:fusion_launcher/features/processing_block/view/widgets/pb_out_meter.dart';
 import 'package:fusion_launcher/features/processing_block/view/widgets/widgets.dart';
 import 'package:fusion_launcher/features/processing_block/viewmodel/algorithm_data_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -10,6 +10,7 @@ import '../widgets/pb_block_layout.dart';
 import '../widgets/pb_content_section.dart';
 
 part '_compressor_controller.dart';
+
 part '_compressor_graph.dart';
 
 class CompressorBlock extends StatelessWidget {
@@ -17,27 +18,20 @@ class CompressorBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AlgorithmDataViewmodel watch =
-        context.watch<AlgorithmDataViewmodel>();
+    final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
+    final String targetBlockId = watch.processingBlock.id;
     return ProxyProvider<AlgorithmDataViewmodel, CompressorController>(
       key: ValueKey<String>(watch.processingBlock.id),
       create: (BuildContext context) {
         return CompressorController(watch);
       },
-      update:
-          (
-            BuildContext context,
-            AlgorithmDataViewmodel valueHandler,
-            CompressorController? previous,
-          ) => CompressorController(valueHandler),
+      update: (BuildContext context, AlgorithmDataViewmodel valueHandler, CompressorController? previous) => CompressorController(valueHandler),
       child: Builder(
         builder: (BuildContext context) {
-          final CompressorController controller =
-              context.watch<CompressorController>();
+          final CompressorController controller = context.watch<CompressorController>();
           return PBBlockLayout(
             pb: context.watch<AlgorithmDataViewmodel>().processingBlock,
-            onBypassChanged:
-                context.read<CompressorController>().bypassGlobally,
+            onBypassChanged: context.read<CompressorController>().bypassGlobally,
             bypassed: controller.isGloballyBypassed,
             body: Row(
               spacing: 3,
@@ -242,7 +236,7 @@ class CompressorBlock extends StatelessWidget {
                 ),
 
                 /// Output Meter Section
-                const PBSection(
+                PBSection(
                   semanticId: 'compressor_output',
                   type: PBSectionType.right,
                   child: SizedBox(
@@ -251,12 +245,10 @@ class CompressorBlock extends StatelessWidget {
                       semanticId: 'compressor_output',
                       title: "OUTPUT",
                       child: Padding(
-                        padding: EdgeInsets.all(12.0),
-                        child: VerticalMeter(
+                        padding: const EdgeInsets.all(12.0),
+                        child: PbOutMeter(
                           semanticId: 'compressor_output',
-                          value: -60,
-                          min: -60,
-                          max: 0,
+                          blockId: targetBlockId,
                         ),
                       ),
                     ),
@@ -281,12 +273,14 @@ class _GateTextField extends StatelessWidget {
     required this.title,
     this.semanticId,
   });
+
   final String? semanticId;
   final num value;
   final num? min;
   final num? max;
   final ValueChanged<num> onChanged;
   final String title;
+
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.container(

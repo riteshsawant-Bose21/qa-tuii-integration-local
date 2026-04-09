@@ -1,0 +1,21 @@
+info:
+  name: Set VIP
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{node_url}}/devices/vip/:vip"
+  params:
+    - name: vip
+      value: 10.1.123.100
+      type: path
+  body:
+    type: json
+    data: ""
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

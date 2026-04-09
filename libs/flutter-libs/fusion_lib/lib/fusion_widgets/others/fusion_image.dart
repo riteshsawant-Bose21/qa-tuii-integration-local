@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -86,6 +87,7 @@ class FusionImage extends StatelessWidget {
   final Color? assetColor;
 
   final String? semanticId;
+  final String? semanticLabel;
 
   /// Creates a [FusionImage] that loads from a network URL.
   const FusionImage.network(
@@ -99,6 +101,7 @@ class FusionImage extends StatelessWidget {
     this.borderRadius,
     this.assetColor,
     this.semanticId,
+    this.semanticLabel,
   }) : file = null,
        asset = null,
        isCircle = false;
@@ -115,6 +118,7 @@ class FusionImage extends StatelessWidget {
     this.placeholder,
     this.errorBuilder,
     this.assetColor,
+    this.semanticLabel,
   }) : imageUrl = null,
        asset = null,
        isCircle = false;
@@ -131,6 +135,7 @@ class FusionImage extends StatelessWidget {
     this.placeholder,
     this.errorBuilder,
     this.assetColor,
+    this.semanticLabel,
   }) : file = null,
        imageUrl = null,
        isCircle = false;
@@ -150,6 +155,7 @@ class FusionImage extends StatelessWidget {
     double? size,
     this.fit = BoxFit.cover,
     this.assetColor,
+    this.semanticLabel,
   }) : width = size,
        height = size,
        borderRadius = null,
@@ -168,20 +174,18 @@ class FusionImage extends StatelessWidget {
         loadingBuilder: (context, child, progress) {
           if (progress == null) return child;
           return placeholder ??
-              SemanticHelper.container(
+              SemanticHelper.image(
                 testId: SemanticHelper.createTestId(
-                  SemanticTypes.container,
-                  "fusion_image${semanticId}",
+                  SemanticTypes.icon,
+                  "fusion_image_$semanticId",
                 ),
+                label: semanticLabel,
                 child: SizedBox(
                   width: 24,
                   height: 24,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    value: progress.expectedTotalBytes != null
-                        ? progress.cumulativeBytesLoaded /
-                              (progress.expectedTotalBytes ?? 1)
-                        : null,
+                    value: progress.expectedTotalBytes != null ? progress.cumulativeBytesLoaded / (progress.expectedTotalBytes ?? 1) : null,
                   ),
                 ),
               );
@@ -195,32 +199,46 @@ class FusionImage extends StatelessWidget {
       );
     } else if (file != null) {
       /// File image
-      image = Image.file(
-        file!,
-        width: width,
-        height: height,
-        fit: fit,
-        errorBuilder: (context, error, stackTrace) {
-          if (errorBuilder != null) {
-            return errorBuilder!(context, error, stackTrace);
-          }
-          return Icon(Icons.broken_image, size: height, color: Colors.grey);
-        },
+      image = SemanticHelper.image(
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.icon,
+          "fusion_image_$semanticId",
+        ),
+        label: semanticLabel,
+        child: Image.file(
+          file!,
+          width: width,
+          height: height,
+          fit: fit,
+          errorBuilder: (context, error, stackTrace) {
+            if (errorBuilder != null) {
+              return errorBuilder!(context, error, stackTrace);
+            }
+            return Icon(Icons.broken_image, size: height, color: Colors.grey);
+          },
+        ),
       );
     } else if (asset != null) {
       /// Asset image
-      image = Image.asset(
-        asset!,
-        width: width,
-        height: height,
-        fit: fit,
-        color: assetColor,
-        errorBuilder: (context, error, stackTrace) {
-          if (errorBuilder != null) {
-            return errorBuilder!(context, error, stackTrace);
-          }
-          return Icon(Icons.broken_image, size: height, color: Colors.grey);
-        },
+      image = SemanticHelper.image(
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.icon,
+          "fusion_image_$semanticId",
+        ),
+        label: semanticLabel,
+        child: Image.asset(
+          asset!,
+          width: width,
+          height: height,
+          fit: fit,
+          color: assetColor,
+          errorBuilder: (context, error, stackTrace) {
+            if (errorBuilder != null) {
+              return errorBuilder!(context, error, stackTrace);
+            }
+            return Icon(Icons.broken_image, size: height, color: Colors.grey);
+          },
+        ),
       );
     } else {
       // Nothing provided

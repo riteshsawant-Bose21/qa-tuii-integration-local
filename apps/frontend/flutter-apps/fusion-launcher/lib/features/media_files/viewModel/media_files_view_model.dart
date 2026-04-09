@@ -1,32 +1,37 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/media_files/state/media_files_state.dart';
-import 'dart:io';
-
 import 'package:fusion_lib/models/project_entities/media_files/media_file_model.dart';
 
 class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
   final AudioPlayer _audioPlayer = AudioPlayer();
+  StreamSubscription<PlayerState>? _playerStateSubscription;
+  StreamSubscription<Duration>? _positionSubscription;
 
   MediaFilesViewModel() : super(ConfigurationMediaFilesState()) {
     _initializeAudioPlayer();
   }
 
   void _initializeAudioPlayer() {
-    _audioPlayer.onPlayerStateChanged.listen((PlayerState state) {
-      if (state == PlayerState.playing) {
-        emit(this.state.copyWith(isPlaying: true));
-      } else if (state == PlayerState.paused || state == PlayerState.stopped) {
-        emit(this.state.copyWith(isPlaying: false));
-      } else if (state == PlayerState.completed) {
+    _playerStateSubscription = _audioPlayer.onPlayerStateChanged.listen((PlayerState playerState) {
+      if (isClosed) return;
+      if (playerState == PlayerState.playing) {
+        emit(state.copyWith(isPlaying: true));
+      } else if (playerState == PlayerState.paused || playerState == PlayerState.stopped) {
+        emit(state.copyWith(isPlaying: false));
+      } else if (playerState == PlayerState.completed) {
         _onAudioCompleted();
       }
     });
 
-    _audioPlayer.onPositionChanged.listen((Duration position) {
+    _positionSubscription = _audioPlayer.onPositionChanged.listen((Duration position) {
+      if (isClosed) return;
       emit(state.copyWith(currentPosition: position));
     });
   }
@@ -46,8 +51,7 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
   MediaFileModel? getSelectedFile() {
     if (state.selectedMediaFileId == null) return null;
 
-    final MediaFileModel? selectedFile = serviceLocator<ProjectViewModel>()
-        .getMediaFileModelById(state.selectedMediaFileId!);
+    final MediaFileModel? selectedFile = serviceLocator<ProjectViewModel>().getMediaFileModelById(state.selectedMediaFileId!);
 
     return selectedFile;
   }
@@ -73,8 +77,7 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
             emit(
               state.copyWith(
                 isLoading: false,
-                errorMessage:
-                    'File size exceeds 20MB limit. Please select a smaller file.',
+                errorMessage: 'File size exceeds 20MB limit. Please select a smaller file.',
               ),
             );
             return;
@@ -90,8 +93,7 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
       emit(
         state.copyWith(
           isLoading: false,
-          errorMessage:
-              'An error occurred while uploading the file. Please try again.',
+          errorMessage: 'An error occurred while uploading the file. Please try again.',
         ),
       );
     }
@@ -103,13 +105,16 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
 
   Future<void> selectFile(MediaFileModel mediaFileModel) async {
     try {
-      await _audioPlayer.stop();
+      // Only stop if currently playing or paused — calling stop() on an already
+      // stopped/completed player causes duplicate platform channel responses.
+      if (_audioPlayer.state == PlayerState.playing || _audioPlayer.state == PlayerState.paused) {
+        await _audioPlayer.stop();
+      }
     } catch (e) {
       // Handle error if needed
     }
     try {
-      final File file = await serviceLocator<ProjectViewModel>()
-          .getMediaFileFromProject(mediaId: mediaFileModel.id);
+      final File file = await serviceLocator<ProjectViewModel>().getMediaFileFromProject(mediaId: mediaFileModel.id);
       await _audioPlayer.setSourceDeviceFile(file.path);
     } catch (e) {
       // Handle error if needed
@@ -125,8 +130,7 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
   }
 
   Future<void> deleteMediaFile(String mediaId) async {
-    final MediaFileModel? mediaFile = serviceLocator<ProjectViewModel>()
-        .getMediaFileModelById(mediaId);
+    final MediaFileModel? mediaFile = serviceLocator<ProjectViewModel>().getMediaFileModelById(mediaId);
     if (mediaFile == null) return;
 
     // Check if we're deleting the currently selected file
@@ -200,8 +204,10 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
   }
 
   @override
-  Future<void> close() {
-    _audioPlayer.dispose();
+  Future<void> close() async {
+    await _playerStateSubscription?.cancel();
+    await _positionSubscription?.cancel();
+    await _audioPlayer.dispose();
     return super.close();
   }
 }

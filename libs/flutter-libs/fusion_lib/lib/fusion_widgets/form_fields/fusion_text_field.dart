@@ -130,9 +130,7 @@ class FusionTextField extends StatelessWidget {
       enabledBorder: border ?? InputBorder.none,
       focusedBorder: border ?? InputBorder.none,
       isDense: true,
-      contentPadding:
-          contentPadding ??
-          const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      contentPadding: contentPadding ?? const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
     );
 
     return SemanticHelper.formControl(

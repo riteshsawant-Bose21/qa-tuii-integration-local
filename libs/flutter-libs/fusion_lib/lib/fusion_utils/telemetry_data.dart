@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/response_callback.dart';
 
 import '../fusion_networking/network/fusion_network_client.dart';
@@ -29,22 +30,22 @@ class TelemetryData {
 
   static List<String> telemetryAddresses = <String>[];
 
-  Future<void> initializeTelemetryAddresses(FusionNetworkClient fusionNetworkClient) async {
+  Future<void> initializeTelemetryAddresses(FusionNetworkClient fusionNetworkClient, String vip) async {
     try {
-      final ResponseCallback<dynamic> responseCallback = await fusionNetworkClient.get(api: FusionApiEndpoint.fusionDevice);
+      final ResponseCallback<List<FusionNetworkDevice>> networkDevicesResponse = await FusionDeviceService(networkClient: fusionNetworkClient)
+          .getAvailableDevicesOnNetwork(
+            ip: vip,
+          );
+      if (networkDevicesResponse.success && networkDevicesResponse.data != null) {
+        final List<FusionNetworkDevice> fusionDevices = networkDevicesResponse.data ?? <FusionNetworkDevice>[];
 
-      if (responseCallback.success && responseCallback.data != null) {
-        final List<FusionDsp> fusionDevices = (responseCallback.data as List<dynamic>)
-            .map((dynamic e) => FusionDsp.fromJson(e as Map<String, dynamic>))
-            .toList();
-
-        final List<String> addresses = fusionDevices.map((FusionDsp device) => "ws://${device.localIp}:5678").toList();
+        final List<String> addresses = fusionDevices.map((FusionNetworkDevice device) => "ws://${device.address}:5678").toList();
 
         telemetryAddresses = addresses;
 
         debugPrint("Telemetry addresses initialized: ${TelemetryData.telemetryAddresses}");
       } else {
-        throw Exception(responseCallback.message);
+        throw Exception(networkDevicesResponse.message);
       }
     } catch (exception) {
       debugPrint("Error initializing telemetry addresses: $exception");

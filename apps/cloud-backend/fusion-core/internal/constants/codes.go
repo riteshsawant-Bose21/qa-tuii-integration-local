@@ -32,3 +32,8 @@ const (
 	StatusInternalServerError = "Internal Server Error"
 	StatusAccessDenied        = "Access Denied"
 )
+
+const (
+	SuperAdminRoleName = "Super Admin"
+	AdminRoleName      = "Admin"
+)

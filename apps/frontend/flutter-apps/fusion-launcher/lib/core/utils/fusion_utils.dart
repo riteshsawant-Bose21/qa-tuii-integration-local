@@ -127,80 +127,81 @@ class FusionUiUtils {
       }
     }
 
-    showDialog(
-      context: context,
-      routeSettings: const RouteSettings(name: "ApiErrorDialog"),
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        bool showDetails = false;
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setState) {
-            final List<Widget> contentChildren = <Widget>[
-              _buildErrorSection(context, 'Request URL', '$method $url'),
-            ];
+    if (routeObserver.getRouteNames().last != "ApiErrorDialog") {
+      showDialog(
+        context: context,
+        routeSettings: const RouteSettings(name: "ApiErrorDialog"),
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          bool showDetails = false;
+          return StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              final List<Widget> contentChildren = <Widget>[
+                _buildErrorSection(context, 'Request URL', '$method $url'),
+              ];
 
-            if (showDetails) {
-              contentChildren.addAll(<Widget>[
-                const SizedBox(height: 16),
-                _buildErrorSection(context, 'Request Headers', const JsonEncoder.withIndent('  ').convert(headers)),
-                const SizedBox(height: 16),
-                _buildErrorSection(context, 'Request Payload', formattedRequestData),
-                const SizedBox(height: 16),
-                _buildErrorSection(context, 'Response Data', formattedResponseData),
-              ]);
-              if (errorMessage != null) {
+              if (showDetails) {
                 contentChildren.addAll(<Widget>[
                   const SizedBox(height: 16),
-                  _buildErrorSection(context, 'Error Message', errorMessage),
-                ]);
-              }
-            } else {
-              if (errorMessage != null) {
-                contentChildren.addAll(<Widget>[
+                  _buildErrorSection(context, 'Request Headers', const JsonEncoder.withIndent('  ').convert(headers)),
                   const SizedBox(height: 16),
-                  _buildErrorSection(context, 'Error Message', errorMessage),
+                  _buildErrorSection(context, 'Request Payload', formattedRequestData),
+                  const SizedBox(height: 16),
+                  _buildErrorSection(context, 'Response Data', formattedResponseData),
                 ]);
+                if (errorMessage != null) {
+                  contentChildren.addAll(<Widget>[
+                    const SizedBox(height: 16),
+                    _buildErrorSection(context, 'Error Message', errorMessage),
+                  ]);
+                }
+              } else {
+                if (errorMessage != null) {
+                  contentChildren.addAll(<Widget>[
+                    const SizedBox(height: 16),
+                    _buildErrorSection(context, 'Error Message', errorMessage),
+                  ]);
+                }
               }
-            }
 
-            return AlertDialog(
-              title: FusionAppText(
-                text: '⚠️ API Error ${statusCode != null ? '($statusCode)' : ''}',
-                style: const TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              content: SizedBox(
-                width: min(700, MediaQuery.of(context).size.width * 0.9),
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: contentChildren,
+              return AlertDialog(
+                title: FusionAppText(
+                  text: '⚠️ API Error ${statusCode != null ? '($statusCode)' : ''}',
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const FusionAppText(text: 'Close', style: TextStyle(color: Colors.blueAccent)),
-                ),
-                TextButton(
-                  onPressed: () => setState(() => showDetails = !showDetails),
-                  child: FusionAppText(
-                    text: showDetails ? 'Hide Details' : 'Show Details',
-                    style: const TextStyle(color: Colors.blueAccent),
+                content: SizedBox(
+                  width: min(700, MediaQuery.of(context).size.width * 0.9),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: contentChildren,
+                    ),
                   ),
                 ),
-                if (showDetails) ...<Widget>[
+                actions: <Widget>[
                   TextButton(
-                    onPressed: () => _copyRequestData(context, requestData),
-                    child: const FusionAppText(text: 'Copy Request', style: TextStyle(color: Colors.blueAccent)),
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const FusionAppText(text: 'Close', style: TextStyle(color: Colors.blueAccent)),
                   ),
                   TextButton(
-                    onPressed: () {
-                      final String errorDetails = '''
+                    onPressed: () => setState(() => showDetails = !showDetails),
+                    child: FusionAppText(
+                      text: showDetails ? 'Hide Details' : 'Show Details',
+                      style: const TextStyle(color: Colors.blueAccent),
+                    ),
+                  ),
+                  if (showDetails) ...<Widget>[
+                    TextButton(
+                      onPressed: () => _copyRequestData(context, requestData),
+                      child: const FusionAppText(text: 'Copy Request', style: TextStyle(color: Colors.blueAccent)),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        final String errorDetails = '''
 API Error Details:
 Request URL: $method $url
 Request Headers: ${const JsonEncoder.withIndent('  ').convert(headers)}
@@ -209,17 +210,18 @@ Response Data: $formattedResponseData
 Error Message: ${errorMessage ?? 'None'}
 Status Code: ${statusCode ?? 'None'}
 ''';
-                      _copyToClipboard(context, errorDetails);
-                    },
-                    child: const FusionAppText(text: 'Copy All', style: TextStyle(color: Colors.blueAccent)),
-                  ),
+                        _copyToClipboard(context, errorDetails);
+                      },
+                      child: const FusionAppText(text: 'Copy All', style: TextStyle(color: Colors.blueAccent)),
+                    ),
+                  ],
                 ],
-              ],
-            );
-          },
-        );
-      },
-    );
+              );
+            },
+          );
+        },
+      );
+    }
   }
 
   static void _copyRequestData(BuildContext context, dynamic requestData) {

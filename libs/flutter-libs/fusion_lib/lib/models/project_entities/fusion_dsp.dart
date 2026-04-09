@@ -33,7 +33,7 @@ class FusionDsp extends HardwareComponent {
     super.assetImagePath = 'assets/images/fusion_device.png',
     super.portData,
     super.communicationPorts,
-    super.inputPortsData,
+    List<PortData>? inputPortsData,
     super.outputPortsData,
     super.equipmentLocationPosition,
     required super.locationEntity,
@@ -42,6 +42,22 @@ class FusionDsp extends HardwareComponent {
   }) : super(
          hardwareName: hardwareName ?? name,
          id: id ?? "FUSIONDSP${FusionUtils.shortStringUUID()}",
+         inputPortsData:
+             inputPortsData ??
+             List<PortData>.generate(
+               portData?.inputPorts ?? 0,
+               (index) {
+                 return PortData(
+                   id: FusionUtils.shortStringUUID(),
+                   name: '${index + 3}',
+                   type: portData?.inputPortType ?? PortType.analogInput,
+                   portNumber: index + 3,
+                   description: "${(portData?.inputPortType ?? PortType.analogInput).description} ${index + 3}",
+                   position: portData?.portPosition ?? PortPosition.topLeft,
+
+                 );
+               },
+             ),
        );
 
   @override

@@ -184,12 +184,12 @@ class _FusionSwitchState extends State<FusionSwitch> with SingleTickerProviderSt
 
     final radius = min(thumbHeight, thumbWidth) * widget.radiusFactor;
 
-    return SemanticHelper.button(
+    return SemanticHelper.toggle(
       testId: SemanticHelper.createTestId(
-        SemanticTypes.button,
+        SemanticTypes.toggle,
         "fusion_switch_${widget.semanticId ?? ""}",
       ),
-      isSelected: widget.value,
+      value: widget.value,
       child: GestureDetector(
         onTap: _onTap,
         onPanStart: _onPanStart,
@@ -209,6 +209,7 @@ class _FusionSwitchState extends State<FusionSwitch> with SingleTickerProviderSt
                   FusionContainer(
                     width: trackWidth,
                     borderRadius: radius,
+                    isChecked: widget.value,
                     // height: trackHeight,
                     // decoration: BoxDecoration(
                     color: _trackColorAnimation.value,

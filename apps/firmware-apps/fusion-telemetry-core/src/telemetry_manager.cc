@@ -51,8 +51,7 @@ int bosepro::telemetryManager::process_rx_packet(std::string& packet)
     std::string req_name;
     uint64_t pkt_id;
     int ret_val = 0;
-    char argmt_val[REQ_RESP_ARG_SIZE];  // Used to pass args between req
-                                        // and resp handlers
+    bosepro::HandlerContext handler_ctx;  // Shared req/rsp typed context.
 
     std::stringstream pkt_strm(packet);
     bosepro::Telemetry_configuration packet_navi(pkt_strm);
@@ -67,7 +66,7 @@ int bosepro::telemetryManager::process_rx_packet(std::string& packet)
         {
             ret_val = message_handler[msg_name].first(*this,
                     packet_navi.get_parameters(),
-                    pkt_id, req_name, static_cast<void *>(argmt_val));
+                    pkt_id, req_name, handler_ctx);
 
             // Call response handler if registered
             if (message_handler[msg_name].second != NULL)
@@ -78,7 +77,7 @@ int bosepro::telemetryManager::process_rx_packet(std::string& packet)
                   message_handler[msg_name].second(*this, req_name,
                                                    pkt_id, (ret_val == 0),
                                                    message,
-                                                   static_cast<void *>(argmt_val));
+                                                   handler_ctx);
 
                 if (ret_val == 0)
                 {
@@ -157,8 +156,9 @@ void bosepro::telemetryManager::send_update_request()
         {
             std::ostringstream update_req;
             uint64_t pkt_id;
+            bosepro::HandlerContext handler_ctx;
 
-            process_update_meters_req("LO", pkt_id, update_req, NULL);
+            process_update_meters_req("LO", pkt_id, update_req, handler_ctx);
 
             if (bosepro::telemetryManager::send_data(pubs.first, update_req) > 0)
             {
@@ -179,8 +179,9 @@ void bosepro::telemetryManager::send_update_request()
         {
             std::ostringstream update_req;
             uint64_t pkt_id;
+            bosepro::HandlerContext handler_ctx;
 
-            process_update_meters_req("MED", pkt_id, update_req, NULL);
+            process_update_meters_req("MED", pkt_id, update_req, handler_ctx);
 
             if (bosepro::telemetryManager::send_data(pubs.first, update_req) > 0)
             {
@@ -198,8 +199,9 @@ void bosepro::telemetryManager::send_update_request()
         {
             std::ostringstream update_req;
             uint64_t pkt_id;
+            bosepro::HandlerContext handler_ctx;
 
-            process_update_meters_req("HI", pkt_id, update_req, NULL);
+            process_update_meters_req("HI", pkt_id, update_req, handler_ctx);
 
             if (bosepro::telemetryManager::send_data(pubs.first, update_req) > 0)
             {

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_logger/logger.dart';
 import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
@@ -25,7 +26,7 @@ class PanelDataSourceImpl implements PanelDataSource {
   Future<PanelEntity> fetchPanelData(PanelEntity panelEntity) async {
     try {
       final ResponseCallback<dynamic> response = await fusionNetworkClient.get(
-        api: FusionApiEndpoint.fusionGetValue,
+        api: FusionApiEndpoint.fusionValue,
       );
 
       if (response.success) {
@@ -70,7 +71,7 @@ class PanelDataSourceImpl implements PanelDataSource {
     String blockName,
   ) async {
     final ResponseCallback<dynamic> response = await fusionNetworkClient.get(
-      api: FusionApiEndpoint.fusionGetValue,
+      api: FusionApiEndpoint.fusionValue,
     );
 
     if (response.success) {
@@ -198,7 +199,7 @@ class PanelDataSourceImpl implements PanelDataSource {
     final Map<String, dynamic> messageToSend = _getUpdateRequestJSONForWidget(audioWidget, newValue);
 
     final ResponseCallback<dynamic> responseCallback = await fusionNetworkClient.patch(
-      api: FusionApiEndpoint.fusionUpdateValue,
+      api: FusionApiEndpoint.fusionValue,
       data: messageToSend,
       urlParameters: urlParams,
     );
@@ -368,7 +369,8 @@ class PanelDataSourceImpl implements PanelDataSource {
 
   @override
   Future<void> connectMeteringStream() {
-    return fusionNetworkClient.connect();
+    final String vip = serviceLocator<ProjectViewModel>().virtualIP ?? '';
+    return fusionNetworkClient.connect(vip: vip);
   }
 
   @override

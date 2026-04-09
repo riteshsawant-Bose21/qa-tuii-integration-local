@@ -83,3 +83,7 @@ export 'events/events_service.dart';
 //media files
 export 'media_files/media_file_manager.dart';
 export 'media_files/media_file_service.dart';
+
+//message player
+export 'message_player/message_player_manager.dart';
+export 'message_player/message_player_service.dart';

@@ -1,0 +1,18 @@
+info:
+  name: Enable
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{api_url}}/tasks/:id/enable"
+  params:
+    - name: id
+      value: usb0
+      type: path
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

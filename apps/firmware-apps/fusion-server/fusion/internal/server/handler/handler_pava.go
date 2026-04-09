@@ -4,8 +4,8 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
 	"io"
@@ -283,7 +283,7 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 
 		msg := api.NewNotifyMessage(
 			api.NotifyOpAudioSync,
-			h.memberlist.LocalNode().Name,
+			h.clusterTransport.LocalNode().Name,
 			api.WithAudioSync(update),
 		)
 
@@ -435,7 +435,7 @@ func (h *Handler) HandleAudioRemove(w http.ResponseWriter, r *http.Request) {
 
 		msg := api.NewNotifyMessage(
 			api.NotifyOpAudioRemove,
-			h.memberlist.LocalNode().Name,
+			h.clusterTransport.LocalNode().Name,
 			api.WithAudioRemove(update),
 		)
 

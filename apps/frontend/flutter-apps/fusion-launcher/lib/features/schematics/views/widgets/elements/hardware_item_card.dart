@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/message_player_config/view/message_player_config_dialog.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../../../../core/constants/assets_constants.dart';
 import '../../../../../core/service_locator.dart';
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
 
@@ -14,6 +16,7 @@ class HardwareItemCard extends StatefulWidget {
   final String? zoneName;
   final Color? zoneColor;
   final bool isSelected;
+  final PagingSourceType? pagingSourceType;
   final VoidCallback? onTap;
   final Function(String)? onDelete;
   final Function(String)? onRename;
@@ -36,6 +39,7 @@ class HardwareItemCard extends StatefulWidget {
     this.zoneColor,
     this.highlightQuery,
     this.equipmentLocation,
+    this.pagingSourceType,
   });
 
   @override
@@ -285,6 +289,29 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                           ),
                         ),
                     ],
+                  ),
+                ),
+
+                /// configuration icon for sources
+                /// only show if it's a paging source,
+                /// as other source types don't have configurations in the current implementation
+                Visibility(
+                  visible: widget.pagingSourceType != null,
+                  child: InkWell(
+                    onTap: () {
+                      MessagePlayerConfigDialog.show(
+                        context,
+                        sourceId: widget.itemId ?? "",
+                      );
+                    },
+                    child: FusionImage.asset(
+                      Assets.configurationFilledIcon,
+                      width: 20,
+                      height: 20,
+                      assetColor: context.colorScheme.primaryWhite,
+
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
 

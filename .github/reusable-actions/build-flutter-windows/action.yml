@@ -91,91 +91,94 @@ runs:
         curl.exe -k --ssl-no-revoke -f -u "$username`:$password" -T $buildPath $nexusUrl
         Write-Output "flutter-windows: https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-$version.exe"
 
-    - name: Clone project
-      if: >-
-        ${{
-          (
-            github.event_name == 'push' &&
-            (
-              github.ref_name == 'develop' ||
-              startsWith(github.ref_name, 'release/')
-            )
-          )
-          ||
-          (
-            github.event_name == 'pull_request' &&
-            (
-              github.event.pull_request.base.ref == 'develop' ||
-              startsWith(github.event.pull_request.base.ref, 'release/')
-            )
-          )
-        }}
-      uses: actions/checkout@v4
-      with:
-        path: C:\Users\Administrator\actions-runner\_work\fusion-monorepo\fusion-monorepo\fusion-automation-build
-        sparse-checkout: |
-          apps/frontend/flutter-apps/fusion-launcher
-          libs/
-        fetch-depth: 0 
+    # - name: Clone project
+    #   if: >-
+    #     ${{
+    #       (
+    #         github.event_name == 'push' &&
+    #         (
+    #           github.ref_name == 'develop' ||
+    #           startsWith(github.ref_name, 'release/')
+    #         )
+    #       )
+    #       ||
+    #       (
+    #         github.event_name == 'pull_request' &&
+    #         (
+    #           github.event.pull_request.base.ref == 'develop' ||
+    #           startsWith(github.event.pull_request.base.ref, 'release/')
+    #         )
+    #       )
+    #     }}
+    #   uses: actions/checkout@v4
+    #   with:
+    #     path: C:\Users\Administrator\actions-runner\_work\fusion-monorepo\fusion-monorepo\fusion-automation-build
+    #     sparse-checkout: |
+    #       apps/frontend/flutter-apps/fusion-launcher
+    #       libs/
+    #     fetch-depth: 0 
 
-    - name: Flutter Windows Automation build
-      if: >-
-        ${{
-          (
-            github.event_name == 'push' &&
-            (
-              github.ref_name == 'develop' ||
-              startsWith(github.ref_name, 'release/')
-            )
-          )
-          ||
-          (
-            github.event_name == 'pull_request' &&
-            (
-              github.event.pull_request.base.ref == 'develop' ||
-              startsWith(github.event.pull_request.base.ref, 'release/')
-            )
-          )
-        }}
-      shell: powershell
-      working-directory: apps/frontend/flutter-apps/fusion-launcher
-      run: |
-        robocopy C:\Users\Administrator\actions-runner\_work\fusion-monorepo\fusion-monorepo\fusion-automation-build C:\Users\Administrator\Documents\fusion-monorepo /E /NFL /NDL /NJH /NJS /NC /NS | Out-Null
-        cd C:\Users\Administrator\Documents\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher
+    # - name: Flutter Windows Automation build
+    #   if: >-
+    #     ${{
+    #       (
+    #         github.event_name == 'push' &&
+    #         (
+    #           github.ref_name == 'develop' ||
+    #           startsWith(github.ref_name, 'release/')
+    #         )
+    #       )
+    #       ||
+    #       (
+    #         github.event_name == 'pull_request' &&
+    #         (
+    #           github.event.pull_request.base.ref == 'develop' ||
+    #           startsWith(github.event.pull_request.base.ref, 'release/')
+    #         )
+    #       )
+    #     }}
+    #   shell: powershell
+    #   working-directory: apps/frontend/flutter-apps/fusion-launcher
+    #   run: |
+    #     robocopy C:\Users\Administrator\actions-runner\_work\fusion-monorepo\fusion-monorepo\fusion-automation-build C:\Users\Administrator\Documents\fusion-monorepo /E /NFL /NDL /NJH /NJS /NC /NS | Out-Null
+    #     cd C:\Users\Administrator\Documents\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher
 
-        $sourceEnv = "C:\Users\Administrator\Documents\env"
-        $destEnv = ".\.env"
+    #     $sourceEnv = "C:\Users\Administrator\Documents\env"
+    #     $destEnv = ".\.env"
 
-        if (Test-Path $sourceEnv) {
-            Copy-Item $sourceEnv $destEnv -Force
-            Write-Output ".env file copied to project root."
-        } else {
-            Write-Output "ERROR: .env not found!"
-            exit 1
-        }
+    #     if (Test-Path $sourceEnv) {
+    #         Copy-Item $sourceEnv $destEnv -Force
+    #         Write-Output ".env file copied to project root."
+    #     } else {
+    #         Write-Output "ERROR: .env not found!"
+    #         exit 1
+    #     }
 
-        flutter pub get --suppress-analytics *> $null
-        moon run flutter-apps:win-automation-build
-        E:\'Program Files (x86)'\NSIS\makensis.exe C:\Users\Administrator\Documents\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher\windows\Installer\NSIS\fusion_launcher_automation_build.nsi
+    #     flutter pub get --suppress-analytics *> $null
+    #     moon run flutter-apps:win-automation-build
+    #     E:\'Program Files (x86)'\NSIS\makensis.exe C:\Users\Administrator\Documents\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher\windows\Installer\NSIS\fusion_launcher_automation_build.nsi
 
-        echo "SM_API_KEY=${{ inputs.SM_API_KEY }}" >> $env:GITHUB_ENV
-        echo "SM_CLIENT_CERT_PASSWORD=${{ inputs.SM_CLIENT_CERT_PASSWORD }}" >> $env:GITHUB_ENV
-        echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools\smctl.exe" >> $env:GITHUB_PATH
+    #     echo "SM_API_KEY=${{ inputs.SM_API_KEY }}" >> $env:GITHUB_ENV
+    #     echo "SM_CLIENT_CERT_PASSWORD=${{ inputs.SM_CLIENT_CERT_PASSWORD }}" >> $env:GITHUB_ENV
+    #     echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools\smctl.exe" >> $env:GITHUB_PATH
 
-        $thumbprint = "${{ inputs.cert_thumbprint }}"
-        smctl.exe sign --fingerprint $thumbprint --input C:\Users\Administrator\Documents\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher\windows\Installer\NSIS\FusionLauncherAutomationBuildInstaller.exe --config-file "C:\Program Files\DigiCert\DigiCert/ One/ Signing/ Manager/ Tools\pkcs11properties.cfg" --description "Fusion Launcher" --timestamp http://timestamp.digicert.com?alg=sha256
+    #     $thumbprint = "${{ inputs.cert_thumbprint }}"
+    #     smctl.exe sign --fingerprint $thumbprint --input C:\Users\Administrator\Documents\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher\windows\Installer\NSIS\FusionLauncherAutomationBuildInstaller.exe --config-file "C:\Program Files\DigiCert\DigiCert/ One/ Signing/ Manager/ Tools\pkcs11properties.cfg" --description "Fusion Launcher" --timestamp http://timestamp.digicert.com?alg=sha256
         
-        $runNumber = $env:GITHUB_RUN_NUMBER
-        $branchName = if ($env:GITHUB_HEAD_REF) { $env:GITHUB_HEAD_REF } else { $env:GITHUB_REF_NAME }
-        $version = "${{ steps.get_version.outputs.version }}-$runNumber+$(git rev-parse --short=8 HEAD)"
-        Write-Output "VERSION: $version"
+    #     $runNumber = $env:GITHUB_RUN_NUMBER
+    #     $branchName = if ($env:GITHUB_HEAD_REF) { $env:GITHUB_HEAD_REF } else { $env:GITHUB_REF_NAME }
+    #     $version = "${{ steps.get_version.outputs.version }}-$runNumber+$(git rev-parse --short=8 HEAD)"
+    #     Write-Output "VERSION: $version"
 
-        $buildPath = "./windows/Installer/NSIS/FusionLauncherAutomationBuildInstaller.exe"
-        $nexusUrl = "${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-Automation-Build-$version.exe"
-        $username = "github-actions-uploader"
-        $password = "${{ inputs.nexus_password }}"
+    #     $buildPath = "./windows/Installer/NSIS/FusionLauncherAutomationBuildInstaller.exe"
+    #     $nexusUrl = "${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-Automation-Build-$version.exe"
+    #     $username = "github-actions-uploader"
+    #     $password = "${{ inputs.nexus_password }}"
         
-        curl.exe -k --ssl-no-revoke -f -u "$username`:$password" -T $buildPath $nexusUrl
-        Write-Output "flutter-windows: https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-$version.exe"
-        Write-Output "flutter-automation-build-windows: https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-Automation-Build-$version.exe"
+    #     curl.exe -k --ssl-no-revoke -f -u "$username`:$password" -T $buildPath $nexusUrl
+    #     Write-Output "flutter-windows: https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-$version.exe"
+    #     Write-Output "flutter-automation-build-windows: https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-Automation-Build-$version.exe"
+
+    #     Write-Output "Cleaning up C:\Users\Administrator\Documents\fusion-monorepo"
+    #     robocopy C:\temp\empty C:\Users\Administrator\Documents\fusion-monorepo /MIR /XD .moon
         

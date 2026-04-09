@@ -22,19 +22,40 @@ class SemanticHelper {
       container: true,
       enabled: isEnabled,
       label: label,
-      selected: isSelected,
       child: child,
       checked: isSelected,
     );
   }
 
   // Container sections with boundary control
+
+  static Widget slider({
+    required String testId,
+    String? label,
+    num? value,
+    num? minValue,
+    num? maxValue,
+    required Widget child,
+  }) {
+    return Semantics(
+      identifier: testId,
+      container: true,
+      slider: true,
+      label: label,
+      value: value?.toString(),
+      increasedValue: maxValue?.toString(),
+      decreasedValue: minValue?.toString(),
+      child: child,
+    );
+  }
+
   static Widget container({
     required String testId,
     required Widget child,
     bool explicitChildNodes = false,
     String? label,
     String? value,
+    bool? isChecked,
   }) {
     return Semantics(
       value: value,
@@ -43,6 +64,7 @@ class SemanticHelper {
       explicitChildNodes: explicitChildNodes,
       label: label,
       child: child,
+      checked: isChecked,
     );
   }
 
@@ -53,6 +75,7 @@ class SemanticHelper {
     String? label,
   }) {
     return Semantics(
+      container: true,
       identifier: testId,
       image: true,
       explicitChildNodes: explicitChildNodes,
@@ -134,6 +157,7 @@ class SemanticHelper {
     String? hint,
   }) {
     return Semantics(
+      container: true,
       identifier: testId,
       textField: true,
       label: label,
@@ -201,6 +225,7 @@ class SemanticHelper {
     bool? blur,
   }) {
     return Semantics(
+      container: true,
       button: true,
       identifier: testId,
       enabled: enabled,
@@ -225,4 +250,5 @@ class SemanticHelper {
       focusable: blur,
     );
   }
+
 }

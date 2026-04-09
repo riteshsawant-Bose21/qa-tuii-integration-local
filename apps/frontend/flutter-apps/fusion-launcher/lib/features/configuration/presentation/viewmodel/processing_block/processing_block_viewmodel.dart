@@ -131,9 +131,9 @@ extension ProcessingBlockViewmodel on ProjectViewModel {
     }
   }
 
-  List<ProcessingBlockModel> getProcessingBlockFor({required String parentId}) {
+  List<ProcessingBlockModel> getProcessingBlockFor({required String parentId, bool includeUserBlocks = false}) {
     try {
-      return projectManager.getProcessingBlockFor(parentId);
+      return projectManager.getProcessingBlockFor(parentId: parentId, includeUserBlocks: includeUserBlocks);
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to get processing blocks for parent: $e");
       return <ProcessingBlockModel>[];
@@ -161,6 +161,16 @@ extension ProcessingBlockViewmodel on ProjectViewModel {
       return projectManager.getProcessingBlockById(processingBlockId: processingBlockId);
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to get processing block by id: $e");
+      return null;
+    }
+  }
+
+  ProcessingBlockModel? getUserFacingGainBlockForZone({required String zoneId}) {
+    try {
+      final List<ProcessingBlockModel> processingBlocks = projectManager.getProcessingBlockFor(parentId: zoneId, includeUserBlocks: true);
+      return processingBlocks.firstWhereOrNull((ProcessingBlockModel block) => block.algorithmId == "gain" && block.isforUser);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get user facing gain block for zone: $e");
       return null;
     }
   }

@@ -14,53 +14,53 @@ class ConfigurationMediaFilesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        BlocBuilder<MediaFilesViewModel, ConfigurationMediaFilesState>(
-          builder: (BuildContext context, ConfigurationMediaFilesState state) {
-            if (state.errorMessage != null) {
-              return Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                color: Colors.red.shade50,
-                child: Row(
-                  children: <Widget>[
-                    Icon(Icons.error, color: Colors.red.shade700, size: 16),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: FusionAppText(
-                        text: state.errorMessage!,
-                        style: TextStyle(
-                          color: Colors.red.shade700,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, 'configuration_media_files'),
+      child: Column(
+        children: <Widget>[
+          BlocBuilder<MediaFilesViewModel, ConfigurationMediaFilesState>(
+            builder: (BuildContext context, ConfigurationMediaFilesState state) {
+              if (state.errorMessage != null) {
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  color: Colors.red.shade50,
+                  child: Row(
+                    children: <Widget>[
+                      FusionIcon.icon(semanticId: 'media_files_error_icon', Icons.error, color: Colors.red.shade700, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FusionAppText(
+                          text: state.errorMessage!,
+                          style: TextStyle(
+                            color: Colors.red.shade700,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
-                    ),
-                    SemanticHelper.button(
-                      testId: SemanticHelper.createTestId(SemanticTypes.button, "close_error_message"),
-                      child: GestureDetector(
+                      GestureDetector(
                         onTap: () => context.read<MediaFilesViewModel>().clearError(),
-                        child: Icon(Icons.close, color: Colors.red.shade700, size: 16),
+                        child: FusionIcon.icon(semanticId: "close_error_message", Icons.close, color: Colors.red.shade700, size: 16),
                       ),
-                    ),
-                  ],
-                ),
-              );
-            }
-            return const SizedBox.shrink();
-          },
-        ),
-        Expanded(
-          child: Row(
-            children: <Widget>[
-              Expanded(flex: 3, child: _MediaTable()),
-              const SizedBox(width: 4),
-              const Expanded(flex: 2, child: _PreviewPanel()),
-            ],
+                    ],
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
           ),
-        ),
-      ],
+          Expanded(
+            child: Row(
+              children: <Widget>[
+                Expanded(flex: 3, child: _MediaTable()),
+                const SizedBox(width: 4),
+                const Expanded(flex: 2, child: _PreviewPanel()),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -74,142 +74,156 @@ class _MediaTable extends StatelessWidget {
       builder: (BuildContext context, ProjectViewModelState state) {
         return BlocBuilder<MediaFilesViewModel, ConfigurationMediaFilesState>(
           builder: (BuildContext context, ConfigurationMediaFilesState state) {
-            return Column(
-              children: <Widget>[
-                SectionHeader(
-                  title: 'Media Files',
-                  trailing: SemanticHelper.button(
-                    testId: SemanticHelper.createTestId(SemanticTypes.button, "upload_media_files"),
-                    child: GestureDetector(
-                      onTap: cubit.pickFiles,
-                      child: Row(
-                        children: <Widget>[
-                          const Icon(Icons.upload, size: 18),
-                          const SizedBox(
-                            width: 10,
-                          ),
-                          FusionAppText(
-                            text: "Upload",
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
+            return SemanticHelper.container(
+              testId: SemanticHelper.createTestId(SemanticTypes.container, "media_files_section"),
+              child: Column(
+                children: <Widget>[
+                  SectionHeader(
+                    semanticLabel: 'media_files',
+                    title: 'Media Files',
+                    trailing: SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, "upload_media_files"),
+                      child: GestureDetector(
+                        onTap: cubit.pickFiles,
+                        child: Row(
+                          children: <Widget>[
+                            FusionIcon.icon(semanticId: 'upload_media_files_icon', Icons.upload, size: 18),
+                            const SizedBox(
+                              width: 10,
                             ),
-                          ),
-                        ],
+                            FusionAppText(
+                              text: "Upload",
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
 
-                const _TableHeader(),
+                  const _TableHeader(),
 
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(12),
-                        bottomRight: Radius.circular(12),
-                      ),
-                      border: Border.all(width: 1, color: context.colorScheme.elevation2),
-                    ),
-                    child:
-                        context.read<MediaFilesViewModel>().getAllFiles().isEmpty
-                            ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: <Widget>[
-                                  Icon(
-                                    Icons.audio_file_outlined,
-                                    size: 42,
-                                    color: Colors.grey[400],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  FusionAppText(
-                                    text: "Add files to view media",
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                            : ListView.builder(
-                              itemCount: context.read<MediaFilesViewModel>().getAllFiles().length,
-                              itemBuilder: (BuildContext context, int index) {
-                                final MediaFileModel file = context.read<MediaFilesViewModel>().getAllFiles()[index];
-                                final bool isSelected = state.selectedMediaFileId == file.id;
-
-                                return SemanticHelper.button(
-                                  testId: SemanticHelper.createTestId(SemanticTypes.button, "media_file_$index"),
-                                  child: GestureDetector(
-                                    onTap: () => context.read<MediaFilesViewModel>().selectFile(file),
-                                    child: Container(
-                                      margin: const EdgeInsets.only(top: 8, left: 12, right: 12),
-                                      decoration: BoxDecoration(
-                                        color: isSelected ? context.colorScheme.elevation2 : null,
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: isSelected ? context.colorScheme.elevation5 : Colors.transparent,
-                                          width: 1.0,
+                  Expanded(
+                    child: SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, "media_files_table_data"),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(12),
+                            bottomRight: Radius.circular(12),
+                          ),
+                          border: Border.all(width: 1, color: context.colorScheme.elevation2),
+                        ),
+                        child:
+                            context.read<MediaFilesViewModel>().getAllFiles().isEmpty
+                                ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: <Widget>[
+                                      FusionIcon.icon(
+                                        semanticId: 'no_media_files_icon',
+                                        Icons.audio_file_outlined,
+                                        size: 42,
+                                        color: Colors.grey[400],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      FusionAppText(
+                                        semanticId: 'add_media_files_text',
+                                        text: "Add files to view media",
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          fontSize: 14,
                                         ),
                                       ),
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                      child: Row(
-                                        spacing: 10,
-                                        children: <Widget>[
-                                          Expanded(
-                                            flex: 4,
-                                            child: FusionAppText(
-                                              text: file.name,
-                                              style: context.textTheme.bodySmall,
-                                              maxLine: 1,
-                                              textOverflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          Expanded(
-                                            flex: 2,
-                                            child: FusionAppText(
-                                              text: file.size.toString(),
-                                              style: context.textTheme.bodySmall,
-                                              maxLine: 1,
-                                              textOverflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          Expanded(
-                                            flex: 2,
-                                            child: FusionAppText(
-                                              text: file.length.toString(),
-                                              style: context.textTheme.bodySmall,
-                                              maxLine: 1,
-                                              textOverflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          Expanded(
-                                            flex: 3,
-                                            child: FusionAppText(
-                                              text: file.date.toString(),
-                                              style: context.textTheme.bodySmall,
-                                              maxLine: 1,
-                                              textOverflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-
-                                          GestureDetector(
-                                            onTap: () {
-                                              context.read<MediaFilesViewModel>().deleteMediaFile(file.id);
-                                            },
-                                            child: const Icon(Icons.delete_outline, size: 16),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                                    ],
                                   ),
-                                );
-                              },
-                            ),
+                                )
+                                : ListView.builder(
+                                  itemCount: context.read<MediaFilesViewModel>().getAllFiles().length,
+                                  itemBuilder: (BuildContext context, int index) {
+                                    final MediaFileModel file = context.read<MediaFilesViewModel>().getAllFiles()[index];
+                                    final bool isSelected = state.selectedMediaFileId == file.id;
+
+                                    return SemanticHelper.button(
+                                      isSelected: isSelected,
+                                      testId: SemanticHelper.createTestId(SemanticTypes.button, "media_file_$index"),
+                                      child: GestureDetector(
+                                        onTap: () => context.read<MediaFilesViewModel>().selectFile(file),
+                                        child: Container(
+                                          margin: const EdgeInsets.only(top: 8, left: 12, right: 12),
+                                          decoration: BoxDecoration(
+                                            color: isSelected ? context.colorScheme.elevation2 : null,
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: isSelected ? context.colorScheme.elevation5 : Colors.transparent,
+                                              width: 1.0,
+                                            ),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                          child: Row(
+                                            spacing: 10,
+                                            children: <Widget>[
+                                              Expanded(
+                                                flex: 4,
+                                                child: FusionAppText(
+                                                  semanticId: 'media_files_file_name',
+                                                  text: file.name,
+                                                  style: context.textTheme.bodySmall,
+                                                  maxLine: 1,
+                                                  textOverflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              Expanded(
+                                                flex: 2,
+                                                child: FusionAppText(
+                                                  semanticId: 'media_files_file_size',
+                                                  text: file.size.toString(),
+                                                  style: context.textTheme.bodySmall,
+                                                  maxLine: 1,
+                                                  textOverflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              Expanded(
+                                                flex: 2,
+                                                child: FusionAppText(
+                                                  semanticId: 'media_files_file_length',
+                                                  text: file.length.toString(),
+                                                  style: context.textTheme.bodySmall,
+                                                  maxLine: 1,
+                                                  textOverflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              Expanded(
+                                                flex: 3,
+                                                child: FusionAppText(
+                                                  semanticId: 'media_files_file_date',
+                                                  text: file.date.toString(),
+                                                  style: context.textTheme.bodySmall,
+                                                  maxLine: 1,
+                                                  textOverflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+
+                                              GestureDetector(
+                                                onTap: () {
+                                                  context.read<MediaFilesViewModel>().deleteMediaFile(file.id);
+                                                },
+                                                child: FusionIcon.icon(semanticId: 'media_file_delete_icon', Icons.delete_outline, size: 16),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             );
           },
         );
@@ -223,62 +237,68 @@ class _TableHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation2.withAlpha(120),
-
-        border: Border.symmetric(
-          vertical: BorderSide(
-            color: context.colorScheme.elevation2,
-            width: 1,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, "media_files_table_header"),
+      child: Container(
+        decoration: BoxDecoration(
+          color: context.colorScheme.elevation2.withAlpha(120),
+          border: Border.symmetric(
+            vertical: BorderSide(
+              color: context.colorScheme.elevation2,
+              width: 1,
+            ),
           ),
         ),
-      ),
-      padding: const EdgeInsets.only(top: 8, left: 20, right: 0, bottom: 8),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            flex: 4,
-            child: FusionAppText(
-              text: "File Name",
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+        padding: const EdgeInsets.only(top: 8, left: 20, right: 0, bottom: 8),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              flex: 4,
+              child: FusionAppText(
+                semanticId: 'media_files_table_header_file_name',
+                text: "File Name",
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
-          Expanded(
-            flex: 2,
-            child: FusionAppText(
-              text: "Size",
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+            Expanded(
+              flex: 2,
+              child: FusionAppText(
+                semanticId: 'media_files_table_header_size',
+                text: "Size",
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
-          Expanded(
-            flex: 2,
-            child: FusionAppText(
-              text: "Length",
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+            Expanded(
+              flex: 2,
+              child: FusionAppText(
+                semanticId: 'media_files_table_header_length',
+                text: "Length",
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
-          Expanded(
-            flex: 3,
-            child: FusionAppText(
-              text: "Date",
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+            Expanded(
+              flex: 3,
+              child: FusionAppText(
+                semanticId: 'media_files_table_header_date',
+                text: "Date",
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 40),
-        ],
+            const SizedBox(width: 40),
+          ],
+        ),
       ),
     );
   }
@@ -289,152 +309,157 @@ class _PreviewPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation1,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, "media_files_preview_panel"),
+      child: Container(
+        decoration: BoxDecoration(
+          color: context.colorScheme.elevation1,
 
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(width: 1, color: context.colorScheme.elevation2),
-      ),
-      child: BlocBuilder<MediaFilesViewModel, ConfigurationMediaFilesState>(
-        builder: (BuildContext context, ConfigurationMediaFilesState state) {
-          final MediaFileModel? selectedFile = context.read<MediaFilesViewModel>().getSelectedFile();
-          if (selectedFile == null) {
-            return Center(
-              child: FusionAppText(
-                text: "Select a media file to preview",
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            );
-          }
-
-          final MediaFilesViewModel cubit = context.read<MediaFilesViewModel>();
-          final MediaFileModel file = selectedFile;
-
-          final ThemeData theme = Theme.of(context);
-          final ColorScheme colors = theme.colorScheme;
-
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              spacing: 16,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                FusionAppText(
-                  text: 'Preview',
-                  style: theme.textTheme.bodyMedium?.copyWith(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(width: 1, color: context.colorScheme.elevation2),
+        ),
+        child: BlocBuilder<MediaFilesViewModel, ConfigurationMediaFilesState>(
+          builder: (BuildContext context, ConfigurationMediaFilesState state) {
+            final MediaFileModel? selectedFile = context.read<MediaFilesViewModel>().getSelectedFile();
+            if (selectedFile == null) {
+              return Center(
+                child: FusionAppText(
+                  text: "Select a media file to preview",
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: context.colorScheme.elevation2,
-                      width: 1.0,
+              );
+            }
+
+            final MediaFilesViewModel cubit = context.read<MediaFilesViewModel>();
+            final MediaFileModel file = selectedFile;
+
+            final ThemeData theme = Theme.of(context);
+            final ColorScheme colors = theme.colorScheme;
+
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                spacing: 16,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  FusionAppText(
+                    semanticId: 'media_files_preview_title',
+                    text: 'Preview',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      /// CONTROLS
-                      Row(
-                        spacing: 20,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: <Widget>[
-                          Flexible(
-                            child: FusionAppText(
-                              text: file.name.split('.').first,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: context.colorScheme.elevation2,
+                        width: 1.0,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        /// CONTROLS
+                        Row(
+                          spacing: 20,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: <Widget>[
+                            Flexible(
+                              child: FusionAppText(
+                                semanticId: 'media_files_preview_file_name',
+                                text: file.name.split('.').first,
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLine: 1,
+                                textOverflow: TextOverflow.ellipsis,
                               ),
-                              maxLine: 1,
-                              textOverflow: TextOverflow.ellipsis,
+                            ),
+                            Row(
+                              spacing: 10,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                SemanticHelper.button(
+                                  testId: SemanticHelper.createTestId(SemanticTypes.button, "play_previous"),
+                                  child: _CircleButton(
+                                    icon: Icons.fast_rewind_outlined,
+                                    borderColor: context.colorScheme.iconWhite,
+                                    onTap: cubit.playPrevious,
+                                  ),
+                                ),
+                                SemanticHelper.button(
+                                  testId: SemanticHelper.createTestId(SemanticTypes.button, "play_pause"),
+                                  child: _CircleButton(
+                                    icon: state.isPlaying ? Icons.pause : Icons.play_arrow,
+                                    borderColor: context.colorScheme.iconWhite,
+                                    onTap: cubit.playPause,
+                                  ),
+                                ),
+
+                                SemanticHelper.button(
+                                  testId: SemanticHelper.createTestId(SemanticTypes.button, "play_next"),
+                                  child: _CircleButton(
+                                    icon: Icons.fast_forward_outlined,
+                                    borderColor: context.colorScheme.iconWhite,
+                                    onTap: cubit.playNext,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: <Widget>[
+                            FusionAppText(semanticId: 'media_files_current_position', text: _fmt(state.currentPosition)),
+                            FusionAppText(semanticId: 'media_files_end_position', text: file.formattedLength),
+                          ],
+                        ),
+
+                        /// SLIDER
+                        SemanticHelper.button(
+                          testId: SemanticHelper.createTestId(SemanticTypes.button, "media_seek_slider"),
+                          child: SliderTheme(
+                            data: SliderTheme.of(context).copyWith(
+                              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                              overlayShape: const RoundSliderOverlayShape(overlayRadius: 4),
+                              trackHeight: 1,
+                              thumbColor: Theme.of(context).colorScheme.primaryBlack,
+                            ),
+                            child: Slider(
+                              value: state.currentPosition.inSeconds.toDouble(),
+                              padding: EdgeInsets.zero,
+                              activeColor: context.colorScheme.primaryWhite,
+                              inactiveColor: context.colorScheme.primaryBlack,
+                              min: 0,
+                              max: file.length!.inSeconds > 0 ? file.length!.inSeconds.toDouble() : 1,
+                              divisions: 100,
+
+                              onChanged: (double v) {
+                                cubit.seek(Duration(seconds: v.toInt()));
+                              },
                             ),
                           ),
-                          Row(
-                            spacing: 10,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              SemanticHelper.button(
-                                testId: SemanticHelper.createTestId(SemanticTypes.button, "play_previous"),
-                                child: _CircleButton(
-                                  icon: Icons.fast_rewind_outlined,
-                                  borderColor: context.colorScheme.iconWhite,
-                                  onTap: cubit.playPrevious,
-                                ),
-                              ),
-                              SemanticHelper.button(
-                                testId: SemanticHelper.createTestId(SemanticTypes.button, "play_pause"),
-                                child: _CircleButton(
-                                  icon: state.isPlaying ? Icons.pause : Icons.play_arrow,
-                                  borderColor: context.colorScheme.iconWhite,
-                                  onTap: cubit.playPause,
-                                ),
-                              ),
-
-                              SemanticHelper.button(
-                                testId: SemanticHelper.createTestId(SemanticTypes.button, "play_next"),
-                                child: _CircleButton(
-                                  icon: Icons.fast_forward_outlined,
-                                  borderColor: context.colorScheme.iconWhite,
-                                  onTap: cubit.playNext,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: <Widget>[
-                          FusionAppText(text: _fmt(state.currentPosition)),
-                          FusionAppText(text: file.formattedLength),
-                        ],
-                      ),
-
-                      /// SLIDER
-                      SemanticHelper.button(
-                        testId: SemanticHelper.createTestId(SemanticTypes.button, "media_seek_slider"),
-                        child: SliderTheme(
-                          data: SliderTheme.of(context).copyWith(
-                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                            overlayShape: const RoundSliderOverlayShape(overlayRadius: 4),
-                            trackHeight: 1,
-                            thumbColor: Theme.of(context).colorScheme.primaryBlack,
-                          ),
-                          child: Slider(
-                            value: state.currentPosition.inSeconds.toDouble(),
-                            padding: EdgeInsets.zero,
-                            activeColor: context.colorScheme.primaryWhite,
-                            inactiveColor: context.colorScheme.primaryBlack,
-                            min: 0,
-                            max: file.length!.inSeconds > 0 ? file.length!.inSeconds.toDouble() : 1,
-                            divisions: 100,
-
-                            onChanged: (double v) {
-                              cubit.seek(Duration(seconds: v.toInt()));
-                            },
-                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -472,7 +497,7 @@ class _CircleButton extends StatelessWidget {
       ),
       child: GestureDetector(
         onTap: onTap,
-        child: Icon(icon, size: 22),
+        child: FusionIcon.icon(icon, size: 22),
       ),
     );
   }

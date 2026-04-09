@@ -3,14 +3,12 @@
 /// This module contains the speaker catalog that would typically be
 /// fetched from a product catalog API in production. Currently contains
 /// hardcoded data for development and testing purposes.
+library;
 
 import 'speaker_types.dart';
 
 class SpeakerCatalog {
-  /// All available speakers in the catalog
-  ///
-  /// TODO: Replace with API call to product catalog service
-  static const Map<String, SpeakerModel> database = {
+  static final Map<String, SpeakerModel> fallbackDatabase = {
     'DM2C-LP': SpeakerModel(
       model: 'DM2C-LP',
       maxSpl: 97,
@@ -216,6 +214,8 @@ class SpeakerCatalog {
       color: 'black',
     ),
   };
+
+  static Map<String, SpeakerModel> database = fallbackDatabase;
 
   /// Get all speakers from the catalog
   static Map<String, SpeakerModel> getAllSpeakers() => database;

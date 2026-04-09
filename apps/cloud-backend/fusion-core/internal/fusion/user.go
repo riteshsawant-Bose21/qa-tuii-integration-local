@@ -34,4 +34,11 @@ type User interface {
 	CreateUserSettings(ctx context.Context, userSettings *types.UserSettings) (string, error)
 	UpdateUserSettings(ctx context.Context, settingsDetails *types.UpdateUserSettingsRequest, settingsID string, userID string) error
 	CreateUserSettingsForRegistration(ctx context.Context, userID string) (string, error)
+
+	// Role Management Methods
+	GetOrganizationRoleManagement(ctx context.Context, accountID string) (*types.RoleManagementResponse, error)
+	CreateRole(ctx context.Context, accountID string, req *types.CreateRoleRequest) (*types.Role, error)
+	UpdateUserRole(ctx context.Context, userID, accountID string, newRoleID int) error
+	UpdateRolePermissions(ctx context.Context, roleID int, accountID string, permissions []types.PermissionUpdateRequest) error
+	CheckAdminPermission(ctx context.Context, userEmail, accountID string) (bool, error)
 }

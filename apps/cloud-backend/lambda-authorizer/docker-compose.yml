@@ -12,7 +12,7 @@ services:
       - DB_HOST='host.docker.internal'  # Use host.docker.internal to connect to the host machine's database
       - DB_PORT=5432
       - DB_USER='fusion_cloud'
-      - DB_PASS='bose123'
+      - DB_PASSWORD='bose123'
       - DB_NAME='fusion_cloud'
       - DB_SSLMODE='disable'
     networks:

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'
-    show TextInputFormatter, FilteringTextInputFormatter;
+import 'package:flutter/services.dart' show TextInputFormatter, FilteringTextInputFormatter;
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../dto/pb_item.dart';
@@ -23,8 +22,7 @@ class PBItemTextfield extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final PBTextfieldParam data =
-        (handler?.resolveForItem(item) ?? item.param) as PBTextfieldParam;
+    final PBTextfieldParam data = (handler?.resolveForItem(item) ?? item.param) as PBTextfieldParam;
 
     return SemanticHelper.textInput(
       testId: SemanticHelper.createTestId(
@@ -109,7 +107,7 @@ class PBNumberTextField extends StatelessWidget {
     return SemanticHelper.textInput(
       testId: SemanticHelper.createTestId(
         SemanticTypes.textInput,
-        'pb_number_textfield${semanticId}',
+        'pb_number_textfield$semanticId',
       ),
       label: value?.toString(),
       child: PBTextField(
@@ -208,8 +206,10 @@ class _PBTextFieldState extends State<PBTextField> {
             onFieldSubmitted: (String value) {
               widget.onChanged?.call(value);
             },
+
             onTapOutside: (PointerDownEvent event) {
-              controller.text = widget.value ?? '';
+              // controller.text = widget.value ?? '';
+              widget.onChanged?.call(controller.text);
             },
           ),
         ),

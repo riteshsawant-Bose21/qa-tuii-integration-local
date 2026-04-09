@@ -1,0 +1,23 @@
+info:
+  name: Set Device Info
+  type: http
+  seq: 7
+
+http:
+  method: POST
+  url: "{{admin_url}}/device"
+  body:
+    type: json
+    data: |
+      {
+        "address": "192.168.64.2",
+        "id": "fusion1_server",
+        "name": "fusion1",
+        "location": "multipass"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

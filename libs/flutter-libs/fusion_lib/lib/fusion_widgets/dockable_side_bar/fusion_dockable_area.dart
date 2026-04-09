@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/dockable_side_bar/fusion_resizable_sidebar.dart';
 
 import '../../models/dock_item_config.dart';
 import '../../models/fusion_dock_item.dart';
@@ -10,6 +10,7 @@ class FusionDockableArea extends StatefulWidget {
   final bool showLeft;
   final bool showRight;
   final List<DockItemConfig> dockItemList;
+  final FusionResizableSidebar? sidebar;
   final Widget mainArea;
 
   const FusionDockableArea({
@@ -18,6 +19,7 @@ class FusionDockableArea extends StatefulWidget {
     required this.showLeft,
     required this.showRight,
     required this.dockItemList,
+    this.sidebar,
     required this.mainArea,
   });
 

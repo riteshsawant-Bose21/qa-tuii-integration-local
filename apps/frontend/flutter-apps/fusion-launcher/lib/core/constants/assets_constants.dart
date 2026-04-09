@@ -40,4 +40,5 @@ class Assets {
 
   //svgs
   static const String listeningAreaSvg = 'assets/svg/ear_sound.svg';
+  static const String messagePlayerConfig = 'assets/svg/message_player_config.svg';
 }

@@ -48,10 +48,7 @@ class _NewWidgetState extends State<NewWidget> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<CreateZoneViewModel>(
-      create:
-          (BuildContext context) =>
-              CreateZoneViewModel()
-                ..init(isFromBuilding: widget.isFromBuildingPage),
+      create: (BuildContext context) => CreateZoneViewModel()..init(isFromBuilding: widget.isFromBuildingPage),
       child: BlocBuilder<CreateZoneViewModel, CreateZoneViewModelState>(
         builder: (BuildContext context, CreateZoneViewModelState state) {
           return SizedBox(
@@ -106,16 +103,12 @@ class _NewWidgetState extends State<NewWidget> {
                       children: <Widget>[
                         // container 20 x 20
                         const SizedBox(height: 10),
-                        BlocBuilder<
-                          CreateZoneViewModel,
-                          CreateZoneViewModelState
-                        >(
+                        BlocBuilder<CreateZoneViewModel, CreateZoneViewModelState>(
                           buildWhen: (
                             CreateZoneViewModelState previous,
                             CreateZoneViewModelState current,
                           ) {
-                            return previous.zoneName != current.zoneName ||
-                                previous.zoneColor != current.zoneColor;
+                            return previous.zoneName != current.zoneName || previous.zoneColor != current.zoneColor;
                           },
                           builder: (
                             BuildContext context,
@@ -143,10 +136,7 @@ class _NewWidgetState extends State<NewWidget> {
                                     ),
                                     child: PropertyTextField(
                                       initialValue: zoneName,
-                                      onChanged:
-                                          context
-                                              .read<CreateZoneViewModel>()
-                                              .setZoneName,
+                                      onChanged: context.read<CreateZoneViewModel>().setZoneName,
                                       hintText: 'Enter zone name',
                                     ),
                                   ),
@@ -164,10 +154,7 @@ class _NewWidgetState extends State<NewWidget> {
                               SemanticTypes.container,
                               "zone_color_options",
                             ),
-                            child: BlocBuilder<
-                              CreateZoneViewModel,
-                              CreateZoneViewModelState
-                            >(
+                            child: BlocBuilder<CreateZoneViewModel, CreateZoneViewModelState>(
                               buildWhen: (
                                 CreateZoneViewModelState previous,
                                 CreateZoneViewModelState current,
@@ -182,34 +169,31 @@ class _NewWidgetState extends State<NewWidget> {
                                   shrinkWrap: true,
                                   padding: const EdgeInsets.only(),
                                   physics: const NeverScrollableScrollPhysics(),
-                                  gridDelegate:
-                                      const SliverGridDelegateWithMaxCrossAxisExtent(
-                                        maxCrossAxisExtent: 21,
-                                        crossAxisSpacing: 8,
-                                        mainAxisSpacing: 8,
-                                      ),
+                                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                                    maxCrossAxisExtent: 21,
+                                    crossAxisSpacing: 8,
+                                    mainAxisSpacing: 8,
+                                  ),
                                   itemCount: Zone.zoneColors.length,
                                   itemBuilder: (
                                     BuildContext context,
                                     int index,
                                   ) {
-                                    final String hexCode =
-                                        Zone.zoneColors[index];
+                                    final String hexCode = Zone.zoneColors[index];
                                     final Color color = hexToColor(hexCode);
-                                    final bool isSelected =
-                                        state.zoneColor == hexCode;
+                                    final bool isSelected = state.zoneColor == hexCode;
 
                                     return GestureDetector(
                                       onTap: () {
-                                        context
-                                            .read<CreateZoneViewModel>()
-                                            .setZoneColor(hexCode);
+                                        context.read<CreateZoneViewModel>().setZoneColor(hexCode);
                                       },
                                       child: SemanticHelper.container(
                                         testId: SemanticHelper.createTestId(
                                           SemanticTypes.container,
                                           "zone_color_option_$index",
                                         ),
+                                        value: hexCode,
+                                        isChecked: isSelected,
                                         child: Container(
                                           decoration: BoxDecoration(
                                             color: color,
@@ -263,22 +247,19 @@ class _NewWidgetState extends State<NewWidget> {
                             ),
                             Expanded(
                               flex: 2,
-                              child: BuildingPageDronDown<ZoneFunctionsType>(
+                              child: BuildingPageDropDown<ZoneFunctionsType>(
                                 value: state.zoneFunctionType,
                                 items: ZoneFunctionsType.values,
                                 labelBuilder: (ZoneFunctionsType option) {
                                   return FusionAppText(
                                     text: option.displayName,
                                     maxLine: 1,
-                                    style:
-                                        Theme.of(context).textTheme.labelMedium,
+                                    style: Theme.of(context).textTheme.labelMedium,
                                   );
                                 },
                                 hintText: "Select function type",
                                 onSelect: (ZoneFunctionsType newValue) {
-                                  context
-                                      .read<CreateZoneViewModel>()
-                                      .setZoneFunctionType(newValue);
+                                  context.read<CreateZoneViewModel>().setZoneFunctionType(newValue);
                                 },
                               ),
                             ),
@@ -336,10 +317,7 @@ class _NewWidgetState extends State<NewWidget> {
                             const SizedBox(width: 15),
                             FusionNeumorphicButton(
                               semanticId: 'create_zone_save_button',
-                              onTap:
-                                  () => context
-                                      .read<CreateZoneViewModel>()
-                                      .createZone(context),
+                              onTap: () => context.read<CreateZoneViewModel>().createZone(context),
                               color: context.colorScheme.surface,
                               text: "Save",
                               width: 69,

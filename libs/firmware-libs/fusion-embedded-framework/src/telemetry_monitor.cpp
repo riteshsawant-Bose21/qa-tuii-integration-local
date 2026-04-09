@@ -1,0 +1,836 @@
+
+#include <bosepro/telemetry_monitor.h>
+
+#include <bosepro/telemetry.h>
+#include <bosepro/named_shared_memory_manager_factory.h>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+
+#include <string>
+#include <functional>
+#include <thread>
+#include <pthread.h>
+#include <sched.h>
+#include <sys/un.h>
+#include <sys/socket.h>
+#include <cstring>
+#include <cerrno>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <iostream>
+
+
+namespace bosepro {
+
+
+TelemetryMonitor::TelemetryMonitor()
+    : shm_manager(NamedSharedMemoryManagerFactory::getInstance()),
+      shm_names(NUM_SHM_REGIONS, ""),
+      shm_sizes(NUM_SHM_REGIONS, 0),
+      telemetry_manager_addr(),
+      error(0),
+      initialized(false),
+      running(false),
+      stop_flag(false)
+{
+}
+
+
+TelemetryMonitor::~TelemetryMonitor()
+{
+    stop();
+    unlink(client_path.c_str());
+}
+
+
+TelemetryMonitor& TelemetryMonitor::get_instance()
+{
+    static TelemetryMonitor instance;
+    return instance;
+}
+
+
+void TelemetryMonitor::initialize(const std::string &filename,
+                                  const std::string socket_path,
+                                  const std::string pub_name)
+{
+    if (running || initialized)
+    {
+        return;
+    }
+
+    telemetry_messages = std::make_unique<TelemetryMessage>(filename);
+
+    server_path = socket_path;
+    publisher_name = pub_name;
+    client_path = "/tmp/" + publisher_name + "_" + std::to_string(getpid());
+
+    telemetry_fd = socket(AF_UNIX, SOCK_DGRAM, 0);
+    if (telemetry_fd < 0)
+    {
+        SPDLOG_CRITICAL("Failed to create UDS socket.");
+    }
+
+    struct sockaddr_un client_addr {};
+    client_addr.sun_family = AF_UNIX;
+    strncpy(client_addr.sun_path, client_path.c_str(),
+            sizeof(client_addr.sun_path) - 1);
+    unlink(client_path.c_str());
+
+    if (bind(telemetry_fd, (struct sockaddr *)&client_addr, sizeof(client_addr))
+        < 0)
+    {
+        close(telemetry_fd);
+        telemetry_fd = -1;
+        SPDLOG_CRITICAL("Failed to bind UDS client socket to {}", client_path);
+    }
+
+    // Set up the telemetry manager address
+    telemetry_manager_addr.sun_family = AF_UNIX;
+    strncpy(telemetry_manager_addr.sun_path, server_path.c_str(),
+            sizeof(telemetry_manager_addr.sun_path) - 1);
+
+    struct stat statbuf;
+    int n = 0;
+    while (n < METER_TIMEOUT)
+    {
+        if (stat(server_path.c_str(), &statbuf) == 0
+            && S_ISSOCK(statbuf.st_mode))
+        {
+            SPDLOG_INFO("Telemetry Manager UDS exists at {}", server_path);
+            break;
+        }
+
+        sleep(1);
+        if (++n >= METER_TIMEOUT)
+        {
+            SPDLOG_CRITICAL("Telemetry Manager UDS does NOT exist at {}",
+                            server_path);
+            return;
+        }
+    }
+
+    if (!register_with_telemetry_manager())
+    {
+        SPDLOG_CRITICAL("Failed to register with Telemetry Manager");
+        return;
+    }
+
+    setup_callbacks();
+
+    initialized = true;
+}
+
+
+bool TelemetryMonitor::is_running()
+{
+    return running;
+}
+
+
+void TelemetryMonitor::start()
+{
+    stop_flag = false;
+
+    error = 0;
+
+    if (initialized)
+    {
+        SPDLOG_INFO("Starting TelemetryMonitor...");
+        monitor_thread = std::thread(&TelemetryMonitor::monitor_loop, this);
+        events_thread = std::thread(&TelemetryMonitor::manage_events_loop, this);
+        name_thread(monitor_thread, "dsp-telm-mon");
+        name_thread(events_thread, "dsp-telm-evt");
+        pin_thread(monitor_thread, "monitor_thread");
+        pin_thread(events_thread, "events_thread");
+
+        running = true;
+    }
+}
+
+
+void TelemetryMonitor::unregister_all_telemetry()
+{
+    meters.clear();
+    events.clear();
+}
+
+
+void TelemetryMonitor::stop()
+{
+    if (!running)
+    {
+        return;
+    }
+
+    SPDLOG_INFO("Stopping TelemetryMonitor...");
+
+    // if we fail to deregister, chances are we lost connection
+    // and telemetry monitor has done it already
+    // or we get NAK--no prob
+    if (!deregister_with_telemetry_manager())
+    {
+        stop_flag = true;
+    }
+    // after deregistering, stop_flag set in handle_deregister()
+    // wait for it--if we don't get it, weird.
+    else
+    {
+        // we could also wait on the in flight message being present...
+        int timeout = 0;
+        while (!stop_flag)
+        {
+            if(++timeout > 5)
+            {
+                SPDLOG_ERROR("Timing out on stop flag trying to stop!?");
+                stop_flag = true;
+                break;
+            }
+            usleep(200000);
+        }
+    }
+
+    if (monitor_thread.joinable())
+    {
+        monitor_thread.join();
+    }
+    if (events_thread.joinable())
+    {
+        events_thread.join();
+    }
+
+    if (telemetry_fd)
+    {
+        close(telemetry_fd);
+    }
+
+    for (int i = 0; i < NUM_SHM_REGIONS; ++i)
+    {
+        if (shm_sizes[i] != 0 && !shm_names[i].empty())
+        {
+            shm_manager.removeSharedMemory(shm_names[i]);
+        }
+    }
+    shm_names.clear();
+    shm_sizes.clear();
+
+    unlink(client_path.c_str());
+
+    initialized = false;
+    running = false;
+}
+
+
+void TelemetryMonitor::register_telemetry(std::unique_ptr<Telemetry> telemetry)
+{
+    std::string qualified_name = telemetry->get_block_name() + "::" +
+        telemetry->get_name();
+
+    if (telemetry->get_telemetry_type() == "meter")
+    {
+        SPDLOG_TRACE("Registering meter {}", qualified_name);
+        meters[qualified_name] = std::move(telemetry);
+    }
+    else if (telemetry->get_telemetry_type() == "event")
+    {
+        SPDLOG_TRACE("Registering event {}", qualified_name);
+        events[qualified_name] = std::move(telemetry);
+    }
+    else
+    {
+        SPDLOG_WARN("Unknown telemetry type '{}'",
+                    telemetry->get_telemetry_type());
+    }
+}
+
+
+void TelemetryMonitor::unregister_block(const std::string &block_name)
+{
+    const std::string prefix = block_name + "::";
+
+    for (auto it = meters.begin(); it != meters.end();)
+    {
+        if (it->first.rfind(prefix, 0) == 0)
+        {
+            it = meters.erase(it); // Erase returns the next valid iterator
+        }
+        else
+        {
+            ++it; // Increment manually if no erase
+        }
+    }
+
+    for (auto it = events.begin(); it != events.end();)
+    {
+        if (it->first.rfind(prefix, 0) == 0)
+        {
+            it = events.erase(it); // Erase returns the next valid iterator
+        }
+        else
+        {
+            ++it;
+        }
+    }
+}
+
+
+bool TelemetryMonitor::has_telemetry(const std::string &qualified_name)
+{
+    if (meters.count(qualified_name) == 0)
+    {
+        if (events.count(qualified_name) == 0)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+bool TelemetryMonitor::has_meter(const std::string &qualified_name)
+{
+    if (meters.count(qualified_name) == 0)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+
+bool TelemetryMonitor::has_event(const std::string &qualified_name)
+{
+    if (events.count(qualified_name) == 0)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+
+Telemetry &TelemetryMonitor::get_telemetry(const std::string &qualified_name)
+{
+    if (meters.count(qualified_name) == 0)
+    {
+        if (events.count(qualified_name) == 0)
+        {
+            SPDLOG_CRITICAL("Unknown telemetry '{}'", qualified_name);
+        }
+        return *events[qualified_name];
+    }
+
+    return *meters[qualified_name];
+}
+
+
+Telemetry &TelemetryMonitor::get_meter(const std::string &qualified_name)
+{
+    if (meters.count(qualified_name) == 0)
+    {
+        SPDLOG_CRITICAL("Unknown meter '{}'", qualified_name);
+    }
+
+    return *meters[qualified_name];
+}
+
+
+Telemetry &TelemetryMonitor::get_event(const std::string &qualified_name)
+{
+    if (events.count(qualified_name) == 0)
+    {
+        SPDLOG_CRITICAL("Unknown meter '{}'", qualified_name);
+    }
+
+    return *events[qualified_name];
+}
+
+
+size_t TelemetryMonitor::get_meters_size(const std::string &period_type,
+                                         size_t default_message_size)
+{
+    size_t size = 0;
+    for (auto &m : meters)
+    {
+        if (m.second->get_period_type() == period_type)
+        {
+            size += m.second->get_meter_size();
+            size += default_message_size;
+            size += 2; // ", "
+        }
+    }
+
+    if (size >= 2)
+    {
+        size -= 2; // remove last ", "
+    }
+
+    return size;
+}
+
+
+int TelemetryMonitor::get_num_meters(const std::string &period_type)
+{
+    int num_items = 0;
+    for (auto &m : meters)
+    {
+        if (m.second->get_period_type() == period_type)
+        {
+            ++num_items;
+        }
+    }
+
+    return num_items;
+}
+
+
+int TelemetryMonitor::get_num_events()
+{
+    return events.size();
+}
+
+
+#ifdef USE_MAC_THREADS
+void TelemetryMonitor::pin_thread(std::thread & /*t*/,
+                                  const char * /*thread_label*/) const
+{
+}
+#else
+void TelemetryMonitor::pin_thread(std::thread &t,
+                                  const char *thread_label) const
+{
+    constexpr int kTelemetryCpu = 0;
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(kTelemetryCpu, &cpuset);
+    int rc = pthread_setaffinity_np(t.native_handle(), sizeof(cpu_set_t),
+                                    &cpuset);
+    if (rc != 0)
+    {
+        SPDLOG_WARN("Failed to set {} affinity to CPU {}: {}", thread_label,
+                    kTelemetryCpu, strerror(rc));
+    }
+}
+#endif
+
+
+#ifdef USE_MAC_THREADS
+void TelemetryMonitor::name_thread(std::thread & /*t*/,
+                                   const char * /*name*/) const
+{
+}
+#else
+void TelemetryMonitor::name_thread(std::thread &t, const char *name) const
+{
+    int rc = pthread_setname_np(t.native_handle(), name);
+    if (rc != 0)
+    {
+        SPDLOG_WARN("Failed to set thread name '{}': {}", name, strerror(rc));
+    }
+}
+#endif
+
+
+void TelemetryMonitor::send_event_uds(TelemetryMessage event_msg)
+{
+    std::string serialized_tm = event_msg.serialize_message();
+    const char *msg = serialized_tm.c_str();
+
+    if (sendto(telemetry_fd, msg, strlen(msg), 0,
+               (struct sockaddr *)&telemetry_manager_addr,
+               sizeof(telemetry_manager_addr)) < 0)
+    {
+        SPDLOG_WARN("Couldn't send telemetry to socket.");
+    }
+}
+
+
+void TelemetryMonitor::update_meters_shm(TelemetryMessage meter_msg,
+                                         std::string period_type,
+                                         size_t meters_remaining)
+{
+    int region_index = period_type == "HI"  ? 0 :
+        period_type == "MED" ? 1 :
+        period_type == "LO"  ? 2 : -1;
+
+    // Validate the region index and ensure shared memory is available
+    if (region_index < 0) {
+        return;
+    }
+
+    try
+    {
+        // Write the telemetry message into the shared memory region
+        std::string serialized_tm = meter_msg.serialize_message();
+        if (meters_remaining)
+        {
+            if (serialized_tm.back() == '\n')
+            {
+                serialized_tm.pop_back();
+            }
+            serialized_tm.append(",\n");
+        }
+
+        const char *msg = serialized_tm.c_str();
+
+        NamedSharedMemory& shm = shm_manager.getSharedMemory(shm_names[region_index]);
+        shm.lightWeightWrite(msg, strlen(msg));
+
+    }
+    catch (const std::runtime_error& e) {
+        SPDLOG_ERROR("Error accessing shared memory: {}", e.what());
+    }
+}
+
+
+bool TelemetryMonitor::send_message(TelemetryMessage &message)
+{
+    message.get_parameters().set_name(publisher_name);
+    const std::string str = message.serialize_message();
+    if (sendto(telemetry_fd, str.c_str(), str.size(), 0,
+               (struct sockaddr *)&telemetry_manager_addr,
+               sizeof(telemetry_manager_addr)) < 0)
+    {
+        SPDLOG_ERROR("Failed to send message to telemetry manager: {}",
+                     strerror(errno));
+        ++error;
+        return false;
+    }
+
+    return true;
+}
+
+TelemetryMessage TelemetryMonitor::recv_message()
+{
+    char buf[4096];
+    ssize_t recv_len = recvfrom(telemetry_fd, buf, sizeof(buf) - 1, 0,
+                                nullptr, nullptr);
+    if (recv_len < 0)
+    {
+        SPDLOG_ERROR("Failed to receive response from telemetry manager: {}", strerror(errno));
+        ++error;
+        TelemetryMessage message("");
+        return message;
+    }
+
+    buf[recv_len] = '\0';
+
+    if (recv_len >= (ssize_t)(sizeof(buf) - 1))
+    {
+        SPDLOG_ERROR("Telemetry message may be truncated at {} bytes", recv_len);
+        ++error;
+        TelemetryMessage message("");
+        return message;
+    }
+
+    std::stringstream ss(buf);
+    try
+    {
+        TelemetryMessage message(ss);
+        return message;
+    }
+    catch (const boost::property_tree::json_parser::json_parser_error& e)
+    {
+        SPDLOG_ERROR("Failed to parse telemetry manager JSON: {}", e.what());
+        ++error;
+        TelemetryMessage message("");
+        return message;
+    }
+    catch (const std::exception& e)
+    {
+        SPDLOG_ERROR("Failed to decode telemetry manager message: {}", e.what());
+        ++error;
+        TelemetryMessage message("");
+        return message;
+    }
+}
+
+
+bool TelemetryMonitor::register_with_telemetry_manager()
+{
+    TelemetryMessage req = telemetry_messages->get_default_command("pub_register_req");
+    size_t meter_blob_size = telemetry_messages->get_default_meter().serialize_message().size();
+    shm_sizes = {static_cast<int_fast32_t>(get_meters_size("HI", meter_blob_size)),
+        static_cast<int_fast32_t>(get_meters_size("MED", meter_blob_size)),
+        static_cast<int_fast32_t>(get_meters_size("LO", meter_blob_size))};
+    req.get_parameters().set_block_size(shm_sizes);
+    req.set_packet_id();
+
+    SPDLOG_DEBUG("Sending registration req: \n\n{}", req.serialize_message());
+
+    // Send the registration request
+    if (!send_message(req))
+    {
+        SPDLOG_ERROR("Connection to telemetry manager failed. Aborting");
+        close(telemetry_fd);
+        telemetry_fd = -1;
+        return false;
+    }
+
+    // For registration, monitor_loop thread is not yet running, 
+    // so we catch the response here as well.
+    TelemetryMessage rsp = recv_message();
+    if (rsp.serialize_message().empty())
+    {
+        SPDLOG_ERROR("Connection to telemetry manager failed. Aborting");
+        close(telemetry_fd);
+        telemetry_fd = -1;
+        return false;
+    }
+
+    if (rsp.get_message_name() == "pub_register_rsp" &&
+            rsp.has_supported_telemetry_versions() &&
+            rsp.get_parameters().get_value() == "OK" &&
+            rsp.get_packet_id() == req.get_packet_id())
+    {
+        SPDLOG_TRACE("Received valid registration rsp: \n\n{}", rsp.serialize_message());
+    }
+    else
+    {
+        SPDLOG_ERROR("Received bad rsp: \n\n{}", rsp.serialize_message());
+        close(telemetry_fd);
+        telemetry_fd = -1;
+        return false;
+    }
+
+    shm_names = rsp.get_parameters().get_block_name();
+    for (size_t i = 0; i < shm_names.size(); ++i) {
+        if (shm_sizes[i] > 0) {
+            try {
+                NamedSharedMemory &shm = shm_manager.openSharedMemory(shm_names[i]);
+                shm.setPersonalityAsWriter();
+
+                SPDLOG_TRACE("Found shared memory region {} with size {}", shm_names[i], shm_sizes[i]);
+            } catch (const std::runtime_error& e) {
+                SPDLOG_CRITICAL("Failed to create shared memory: {}", e.what());
+                return false;
+            }
+        }
+    }
+
+    SPDLOG_INFO("Successfully registered with telemetry core");
+
+    return true;
+}
+
+
+bool TelemetryMonitor::deregister_with_telemetry_manager()
+{
+    TelemetryMessage req = telemetry_messages->get_default_command("pub_deregister_req");
+    req.set_packet_id();
+
+    SPDLOG_DEBUG("Sending deregistration req: \n\n{}", req.serialize_message());
+
+    msg_in_flight[req.get_packet_id()] = req.get_message_name();
+
+    if (!send_message(req))
+    {
+        msg_in_flight.erase(req.get_packet_id());
+        return false;
+    }
+
+    return true;
+}
+
+
+void TelemetryMonitor::update_meters(TelemetryMessage &req)
+{
+    if (!req.has_supported_telemetry_versions())
+    {
+        SPDLOG_ERROR("Rejecting update_meters_req with incompatible telemetry version");
+        return;
+    }
+
+    std::string period_type = req.get_parameters().get_period_type();
+
+    int region_index = period_type == "HI"  ? 0 :
+        period_type == "MED" ? 1 :
+        period_type == "LO"  ? 2 : -1;
+
+    // Validate the region index and ensure shared memory is available
+    if (region_index < 0) {
+        return;
+    }
+
+    NamedSharedMemory& shm = shm_manager.getSharedMemory(shm_names[region_index]);
+    shm.softResetWritePointer();
+
+    TelemetryMessage meter_msg(telemetry_messages->get_default_meter());
+
+    size_t n = get_num_meters(period_type);
+
+    for (auto &m: meters)
+    {
+        SPDLOG_TRACE("Update meter {} period_type {}", m.first,
+                     m.second->get_period_type());
+        if (m.second->get_period_type() == period_type)
+        {
+            try
+            {
+                m.second->send_meter(meters_callback, meter_msg, --n);
+            }
+            catch (const std::runtime_error& e) 
+            {
+                SPDLOG_ERROR("Error accessing shared memory: {}", e.what());
+            }
+        }
+    }
+
+    shm.writeNumberBytesToSharedMemory();
+
+    TelemetryMessage rsp = telemetry_messages->get_default_command("update_meters_rsp");
+    rsp.get_parameters().set_value(std::string("OK"));
+    rsp.set_packet_id(req.get_packet_id());
+
+    SPDLOG_TRACE("Sending response: \n{}", rsp.serialize_message());
+
+    if (!send_message(rsp))
+    {
+        SPDLOG_ERROR("Failed to send update_meters_rsp.");
+    }
+}
+
+
+void TelemetryMonitor::handle_deregistration(TelemetryMessage &rsp)
+{
+    if (rsp.get_parameters().get_name() == publisher_name &&
+            rsp.get_parameters().get_value() == "OK")
+    {
+        try {
+            if (msg_in_flight.at(rsp.get_packet_id()) == "pub_deregister_req")
+            {
+                SPDLOG_TRACE("Received valid deregistration response: \n\n{}",
+                             rsp.serialize_message());
+                msg_in_flight.erase(rsp.get_packet_id());
+            }
+            else
+            {
+                SPDLOG_ERROR("Bad msg_in_flight setup... size: {}",
+                             msg_in_flight.size());
+            }
+        } catch (const std::out_of_range&) {
+            SPDLOG_ERROR("Couldn't find deregistration packet!");
+        }
+    }
+    else
+    {
+        SPDLOG_ERROR("Received bad response: \n\n{}", rsp.serialize_message());
+    }
+
+    stop_flag = true;
+
+    SPDLOG_INFO("Successfully de-registered from telemetry core");
+}
+
+
+void TelemetryMonitor::process_telemetry_message(TelemetryMessage &message)
+{
+    std::string msg_name = message.get_message_name();
+    if (msg_name == "update_meters_req")
+    {
+        update_meters(message);
+    }
+    else if (msg_name == "update_report_period_req")
+    {
+        // TODO
+    }
+    // TODO -- get all responses here too?
+    else if (msg_name == "update_report_period_rsp")
+    {
+        // TODO
+    }
+    else if (msg_name == "pub_deregister_rsp")
+    {
+        handle_deregistration(message);
+    }
+    else if (msg_name == "event_rsp")
+    {
+        // TODO
+    }
+}
+
+
+void TelemetryMonitor::send_events()
+{
+    TelemetryMessage event_msg(telemetry_messages->get_default_event());
+    event_msg.get_parameters().set_name(publisher_name);
+
+    for (auto &e: events)
+    {
+        e.second->send_event_if_changed(event_callback, event_msg);
+    }
+}
+
+
+void TelemetryMonitor::monitor_loop()
+{
+    if (telemetry_fd < 0)
+    {
+        SPDLOG_CRITICAL("Invalid connection socket.");
+    }
+
+    while (!stop_flag)
+    {
+        if (error >= METER_TIMEOUT)
+        {
+            SPDLOG_ERROR("Lost connection to telemetry manager... closing telemetry.");
+            stop();
+            break;
+        }
+
+        // Receive a message from the telemetry manager
+        TelemetryMessage message = recv_message();
+        if (message.serialize_message().empty())
+        {
+            SPDLOG_ERROR("Error receiving data from telemetry manager.");
+            ++error;
+            continue;
+        }
+
+        SPDLOG_TRACE("Received message from telemetry manager: \n\n{}",
+                     message.serialize_message());
+
+        try
+        {
+            process_telemetry_message(message);
+        }
+        catch (const std::exception &e)
+        {
+            SPDLOG_ERROR("Error processing received message: {}", e.what());
+        }
+
+        usleep(100);
+
+        error = 0;
+    }
+}
+
+
+void TelemetryMonitor::manage_events_loop()
+{
+    while (!stop_flag)
+    {
+        send_events();
+
+        usleep(100000);
+    }
+}
+
+
+void TelemetryMonitor::setup_callbacks()
+{
+    meters_callback = [this](TelemetryMessage meter_msg,
+            std::string period_type,
+            size_t meters_remaining) {
+        update_meters_shm(meter_msg, period_type, meters_remaining);
+    };
+
+    event_callback = [this](TelemetryMessage event_msg) {
+        send_event_uds(event_msg);
+    };
+}
+
+
+} // namespace bosepro

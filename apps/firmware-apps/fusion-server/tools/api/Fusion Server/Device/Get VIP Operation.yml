@@ -1,0 +1,21 @@
+info:
+  name: Get VIP Operation
+  type: http
+  seq: 6
+
+http:
+  method: GET
+  url: "{{api_url}}/devices/vip/operations/:operation_id"
+  params:
+    - name: operation_id
+      value: vipop_example
+      type: path
+  body:
+    type: json
+    data: ""
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

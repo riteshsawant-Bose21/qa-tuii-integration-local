@@ -5,6 +5,91 @@
 
 #include "fusion-io.h"
 
+#define SI5351B_I2C_BUS 0
+#define SI5351B_SEQ_DELAY_MS 2000
+
+#define SI5351B_ENDPOINT_INIT {                 \
+    .name = "ep_clk_si5351b",                  \
+    .type = EP_TYPE_CLK_SI5351B,               \
+    .use_i2c_bus_override = true,              \
+    .i2c_bus = SI5351B_I2C_BUS,                \
+    .i2c_addr = 0x60,                          \
+}
+
+#define SI5351B_NUM_MSGS 71
+
+#define SI5351B_CONFIG_MSGS { .reg_addr = 0x03, .data = 0xFF }, \
+    { .reg_addr = 0x10, .data = 0x80 }, \
+    { .reg_addr = 0x11, .data = 0x80 }, \
+    { .reg_addr = 0x12, .data = 0x80 }, \
+    { .reg_addr = 0x13, .data = 0x80 }, \
+    { .reg_addr = 0x14, .data = 0x80 }, \
+    { .reg_addr = 0x15, .data = 0x80 }, \
+    { .reg_addr = 0x16, .data = 0x80 }, \
+    { .reg_addr = 0x17, .data = 0x80 }, \
+    { .reg_addr = 0x02, .data = 0x33 }, \
+    { .reg_addr = 0x04, .data = 0x10 }, \
+    { .reg_addr = 0x07, .data = 0x01 }, \
+    { .reg_addr = 0x0F, .data = 0x00 }, \
+    { .reg_addr = 0x10, .data = 0x8C }, \
+    { .reg_addr = 0x11, .data = 0x2F }, \
+    { .reg_addr = 0x12, .data = 0x2F }, \
+    { .reg_addr = 0x13, .data = 0x8C }, \
+    { .reg_addr = 0x14, .data = 0x8C }, \
+    { .reg_addr = 0x15, .data = 0x2F }, \
+    { .reg_addr = 0x16, .data = 0x8C }, \
+    { .reg_addr = 0x17, .data = 0x2F }, \
+    { .reg_addr = 0x22, .data = 0x42 }, \
+    { .reg_addr = 0x23, .data = 0x40 }, \
+    { .reg_addr = 0x24, .data = 0x00 }, \
+    { .reg_addr = 0x25, .data = 0x10 }, \
+    { .reg_addr = 0x26, .data = 0x00 }, \
+    { .reg_addr = 0x27, .data = 0xF0 }, \
+    { .reg_addr = 0x28, .data = 0x00 }, \
+    { .reg_addr = 0x29, .data = 0x00 }, \
+    { .reg_addr = 0x32, .data = 0x00 }, \
+    { .reg_addr = 0x33, .data = 0x80 }, \
+    { .reg_addr = 0x34, .data = 0x00 }, \
+    { .reg_addr = 0x35, .data = 0x22 }, \
+    { .reg_addr = 0x36, .data = 0x9F }, \
+    { .reg_addr = 0x37, .data = 0x00 }, \
+    { .reg_addr = 0x38, .data = 0x00 }, \
+    { .reg_addr = 0x39, .data = 0x00 }, \
+    { .reg_addr = 0x3A, .data = 0x00 }, \
+    { .reg_addr = 0x3B, .data = 0x08 }, \
+    { .reg_addr = 0x3C, .data = 0x42 }, \
+    { .reg_addr = 0x3D, .data = 0x47 }, \
+    { .reg_addr = 0x3E, .data = 0xF0 }, \
+    { .reg_addr = 0x3F, .data = 0x00 }, \
+    { .reg_addr = 0x40, .data = 0x00 }, \
+    { .reg_addr = 0x41, .data = 0x00 }, \
+    { .reg_addr = 0x52, .data = 0x01 }, \
+    { .reg_addr = 0x53, .data = 0x00 }, \
+    { .reg_addr = 0x54, .data = 0x00 }, \
+    { .reg_addr = 0x55, .data = 0x10 }, \
+    { .reg_addr = 0x56, .data = 0x4F }, \
+    { .reg_addr = 0x57, .data = 0x00 }, \
+    { .reg_addr = 0x58, .data = 0x00 }, \
+    { .reg_addr = 0x59, .data = 0x80 }, \
+    { .reg_addr = 0x5A, .data = 0x00 }, \
+    { .reg_addr = 0x5B, .data = 0x5A }, \
+    { .reg_addr = 0x95, .data = 0x00 }, \
+    { .reg_addr = 0x96, .data = 0x00 }, \
+    { .reg_addr = 0x97, .data = 0x00 }, \
+    { .reg_addr = 0x98, .data = 0x00 }, \
+    { .reg_addr = 0x99, .data = 0x00 }, \
+    { .reg_addr = 0x9A, .data = 0x00 }, \
+    { .reg_addr = 0x9B, .data = 0x00 }, \
+    { .reg_addr = 0xA2, .data = 0x40 }, \
+    { .reg_addr = 0xA3, .data = 0x9C }, \
+    { .reg_addr = 0xA4, .data = 0x00 }, \
+    { .reg_addr = 0xA6, .data = 0xE3 }, \
+    { .reg_addr = 0xA7, .data = 0xE3 }, \
+    { .reg_addr = 0xAA, .data = 0xE7 }, \
+    { .reg_addr = 0xB7, .data = 0x12 }, \
+    { .reg_addr = 0xB1, .data = 0xAC }, \
+    { .reg_addr = 0x03, .data = 0x00 }
+
 
 // TODO
 // This stuff is for endpoint and IO card lookup
@@ -42,6 +127,10 @@ const struct base_device bd_fusion_powersmart = {
         .model = "powersmart",
         .sn = "tbd",
         .type = BD_TYPE_FUSION_POWERSMART
+    },
+    .num_eps = 1,
+    .endpoints = (struct endpoint[]) {
+        SI5351B_ENDPOINT_INIT
     },
     .num_gpios = 8,
     .gpios = (struct endpoint_gpio[]) {
@@ -92,8 +181,22 @@ const struct base_device bd_fusion_powersmart = {
             .name = "gpio_uv_warn",
             .type = EP_GPIO_TYPE_PHYS,
             .export = true,
-            .num = 129, // GPIO5_IO5
+            .num = 133, // GPIO5_IO5
             .dir = EP_GPIO_DIR_I
+        }
+    },
+    .cfg_seq = {
+        .num_pwrup_cmds = 1,
+        .pwrup_cmds = (struct config_sequence_cmd[]) {
+            {
+                .name = "si5351b_config",
+                .parent_ep_name = "ep_clk_si5351b",
+                .num_msgs = SI5351B_NUM_MSGS,
+                .msgs = (struct endpoint_cmd_msg[]) {
+                    SI5351B_CONFIG_MSGS
+                },
+                .seq_delay_ms = SI5351B_SEQ_DELAY_MS
+            }
         }
     }
 };
@@ -103,6 +206,10 @@ const struct base_device bd_fusion_c1_evk = {
         .model = "c1-evk",
         .sn = "tbd",
         .type = BD_TYPE_FUSION_C1_EVK
+    },
+    .num_eps = 1,
+    .endpoints = (struct endpoint[]) {
+        SI5351B_ENDPOINT_INIT
     },
     .num_gpios = 8,
     .gpios = (struct endpoint_gpio[]) {
@@ -153,8 +260,22 @@ const struct base_device bd_fusion_c1_evk = {
             .name = "gpio_uv_warn",
             .type = EP_GPIO_TYPE_PHYS,
             .export = true,
-            .num = 129, // GPIO5_IO5
+            .num = 133, // GPIO5_IO5
             .dir = EP_GPIO_DIR_I
+        }
+    },
+    .cfg_seq = {
+        .num_pwrup_cmds = 1,
+        .pwrup_cmds = (struct config_sequence_cmd[]) {
+            {
+                .name = "si5351b_config",
+                .parent_ep_name = "ep_clk_si5351b",
+                .num_msgs = SI5351B_NUM_MSGS,
+                .msgs = (struct endpoint_cmd_msg[]) {
+                    SI5351B_CONFIG_MSGS
+                },
+                .seq_delay_ms = SI5351B_SEQ_DELAY_MS
+            }
         }
     }
 };
@@ -164,6 +285,11 @@ const struct base_device bd_fusion_fm6 = {
         .model = "fm6",
         .sn = "tbd",
         .type = BD_TYPE_FUSION_FM6
+    },
+    .uv_mute_sw = {
+        .enabled = true,
+        .uv_warn_gpio_name = "gpio_uv_warn",
+        .dac_mute_gpio_name = "gpio_dac_mute",
     },
     .num_gpios = 4,
     .gpios = (struct endpoint_gpio[]) {
@@ -197,11 +323,13 @@ const struct base_device bd_fusion_fm6 = {
             .name = "gpio_uv_warn",
             .type = EP_GPIO_TYPE_PHYS,
             .export = true,
-            .num = 129, // GPIO5_IO5
-            .dir = EP_GPIO_DIR_I
+            .num = 133, // GPIO5_IO5
+            .dir = EP_GPIO_DIR_I,
+            .is_irq = true,
+            .trigger_type = IRQ_TYPE_EDGE_FALLING
         }
     },
-    .num_eps = 2,
+    .num_eps = 3,
     .endpoints = (struct endpoint[]) {
         {
             .name = "ep_i2csw_tca9544",
@@ -280,7 +408,8 @@ const struct base_device bd_fusion_fm6 = {
                     .trigger_type = IRQ_TYPE_LEVEL_LOW
                 }
             }
-        }
+        },
+        SI5351B_ENDPOINT_INIT
     },
     .num_ics = 3,
     .io_cards = (struct io_card[]) {
@@ -919,7 +1048,7 @@ const struct base_device bd_fusion_fm6 = {
         }
     },
     .cfg_seq = {
-        .num_pwrup_cmds = 9,
+        .num_pwrup_cmds = 10,
         .pwrup_cmds = (struct config_sequence_cmd[]) {
             {
                 .name = "tca9544_config",
@@ -947,6 +1076,15 @@ const struct base_device bd_fusion_fm6 = {
                     { .reg_addr = TCAL6408_REG_OUTPUT_PORT, .data = 0x01 }
                 },
                 .seq_delay_ms = 25
+            },
+            {
+                .name = "si5351b_config",
+                .parent_ep_name = "ep_clk_si5351b",
+                .num_msgs = SI5351B_NUM_MSGS,
+                .msgs = (struct endpoint_cmd_msg[]) {
+                    SI5351B_CONFIG_MSGS
+                },
+                .seq_delay_ms = SI5351B_SEQ_DELAY_MS
             },
             {
                 .name = "ana_15v_psw",
@@ -1043,6 +1181,17 @@ const struct base_device bd_fusion_fm6 = {
                     { .reg_addr  = EP9512T_REG_AUDIO_CFG,    .data = 0x01 }  // A_IN = 01 (I2S)
                 }
             }
+        },
+        .num_post_cfg_cmds = 1,
+        .post_cfg_cmds = (struct config_sequence_cmd[]) {
+            {
+                .name = "dac_mute",
+                .parent_ep_name = "ep_ioexp_tca9535-1",
+                .num_msgs = 1,
+                .msgs = (struct endpoint_cmd_msg[]) { 
+                    { .reg_addr = TCA9535_REG_OUTPUT_PORT0, .op_size = ENDPOINT_CMD_MSG_OP_16BIT, .data = 0x0030 } 
+                }
+            }
         }
     }
 };
@@ -1052,6 +1201,11 @@ const struct base_device bd_fusion_fm8y = {
         .model = "fm8y",
         .sn = "tbd",
         .type = BD_TYPE_FUSION_FM8Y
+    },
+    .uv_mute_sw = {
+        .enabled = true,
+        .uv_warn_gpio_name = "gpio_uv_warn",
+        .dac_mute_gpio_name = "gpio_dac_mute",
     },
     .num_gpios = 4,
     .gpios = (struct endpoint_gpio[]) {
@@ -1085,11 +1239,13 @@ const struct base_device bd_fusion_fm8y = {
             .name = "gpio_uv_warn",
             .type = EP_GPIO_TYPE_PHYS,
             .export = true,
-            .num = 129, // GPIO5_IO5
-            .dir = EP_GPIO_DIR_I
+            .num = 133, // GPIO5_IO5
+            .dir = EP_GPIO_DIR_I,
+            .is_irq = true,
+            .trigger_type = IRQ_TYPE_EDGE_FALLING
         }
     },
-    .num_eps = 2,
+    .num_eps = 3,
     .endpoints = (struct endpoint[]) {
         {
             .name = "ep_i2csw_tca9544",
@@ -1168,7 +1324,8 @@ const struct base_device bd_fusion_fm8y = {
                     .trigger_type = IRQ_TYPE_EDGE_FALLING
                 }
             }
-        }
+        },
+        SI5351B_ENDPOINT_INIT
     },
     .num_ics = 3,
     .io_cards = (struct io_card[]) {
@@ -1807,7 +1964,7 @@ const struct base_device bd_fusion_fm8y = {
         }
     },
     .cfg_seq = {
-        .num_pwrup_cmds = 9,
+        .num_pwrup_cmds = 10,
         .pwrup_cmds = (struct config_sequence_cmd[]) {
             {
                 .name = "tca9544_config",
@@ -1835,6 +1992,15 @@ const struct base_device bd_fusion_fm8y = {
                     { .reg_addr = TCAL6408_REG_OUTPUT_PORT, .data = 0x01 }
                 },
                 .seq_delay_ms = 25
+            },
+            {
+                .name = "si5351b_config",
+                .parent_ep_name = "ep_clk_si5351b",
+                .num_msgs = SI5351B_NUM_MSGS,
+                .msgs = (struct endpoint_cmd_msg[]) {
+                    SI5351B_CONFIG_MSGS
+                },
+                .seq_delay_ms = SI5351B_SEQ_DELAY_MS
             },
             {
                 .name = "ana_15v_psw",
@@ -1932,6 +2098,17 @@ const struct base_device bd_fusion_fm8y = {
                     { .reg_addr  = EP9512T_REG_AUDIO_CFG,    .data = 0x01 }  // A_IN = 01 (I2S)
                 }
             }
+        },
+        .num_post_cfg_cmds = 1,
+        .post_cfg_cmds = (struct config_sequence_cmd[]) {
+            {
+                .name = "dac_mute",
+                .parent_ep_name = "ep_ioexp_tca9535-1",
+                .num_msgs = 1,
+                .msgs = (struct endpoint_cmd_msg[]) { 
+                    { .reg_addr = TCA9535_REG_OUTPUT_PORT0, .op_size = ENDPOINT_CMD_MSG_OP_16BIT, .data = 0x0030 } 
+                }
+            }
         }
     }
 };
@@ -1941,6 +2118,10 @@ const struct base_device bd_fusion_xlr_pal = {
         .model = "xlr-pal",
         .sn = "tbd",
         .type = BD_TYPE_FUSION_XLR_PAL
+    },
+    .num_eps = 1,
+    .endpoints = (struct endpoint[]) {
+        SI5351B_ENDPOINT_INIT
     },
     .num_gpios = 3,
     .gpios = (struct endpoint_gpio[]) {
@@ -1964,6 +2145,20 @@ const struct base_device bd_fusion_xlr_pal = {
             .export = true,
             .num = 123 // GPIO1_IO6
         }
+    },
+    .cfg_seq = {
+        .num_pwrup_cmds = 1,
+        .pwrup_cmds = (struct config_sequence_cmd[]) {
+            {
+                .name = "si5351b_config",
+                .parent_ep_name = "ep_clk_si5351b",
+                .num_msgs = SI5351B_NUM_MSGS,
+                .msgs = (struct endpoint_cmd_msg[]) {
+                    SI5351B_CONFIG_MSGS
+                },
+                .seq_delay_ms = SI5351B_SEQ_DELAY_MS
+            }
+        }
     }
 };
 
@@ -1973,6 +2168,10 @@ const struct base_device bd_fusion_blue_pal = {
         .sn = "tbd",
         .type = BD_TYPE_FUSION_BLUE_PAL
     },
+    .num_eps = 1,
+    .endpoints = (struct endpoint[]) {
+        SI5351B_ENDPOINT_INIT
+    },
     .num_gpios = 1,
     .gpios = (struct endpoint_gpio[]) {
         {
@@ -1981,6 +2180,20 @@ const struct base_device bd_fusion_blue_pal = {
             .export = true,
             .dir = EP_GPIO_DIR_I,
             .num = 5 // GPIO1_IO5
+        }
+    },
+    .cfg_seq = {
+        .num_pwrup_cmds = 1,
+        .pwrup_cmds = (struct config_sequence_cmd[]) {
+            {
+                .name = "si5351b_config",
+                .parent_ep_name = "ep_clk_si5351b",
+                .num_msgs = SI5351B_NUM_MSGS,
+                .msgs = (struct endpoint_cmd_msg[]) {
+                    SI5351B_CONFIG_MSGS
+                },
+                .seq_delay_ms = SI5351B_SEQ_DELAY_MS
+            }
         }
     }
 };

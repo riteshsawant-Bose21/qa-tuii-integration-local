@@ -8,12 +8,29 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
 const DefaultConfFile = "keepalived.conf"
 
 var ErrLocalConfigEmpty = errors.New("local config is empty")
+
+// IsPlaceholder returns true if the VIP string is a known placeholder value
+// (e.g. "VIP_NOT_SET/24") or cannot be parsed as a valid IP/CIDR.
+// An empty string is not a placeholder — it indicates no VIP is configured.
+func IsPlaceholder(v string) bool {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return false
+	}
+	// Check for the well-known placeholder prefix
+	if strings.HasPrefix(strings.ToUpper(v), "VIP_NOT_SET") {
+		return true
+	}
+	// Anything that fails validation is effectively a placeholder
+	return Validate(v) != nil
+}
 
 // Canonicalize normalizes a VIP string to a plain IPv4 address or returns "".
 // "192.168.2.100/24" becomes "192.168.2.100".
@@ -55,8 +72,8 @@ func Validate(v string) error {
 	return fmt.Errorf("invalid VIP format: %q", v)
 }
 
-// IsLocalVIP compares the VIP (which might be in CIDR format) to the IPs on local interfaces.
-func IsLocalVIP(v string) (bool, error) {
+// IsIPPresentOnLocalInterface compares the given IP (which might be in CIDR format) to the IPs on local interfaces.
+func IsIPPresentOnLocalInterface(v string) (bool, error) {
 	expectedIP := net.ParseIP(v)
 	if expectedIP == nil {
 		ip, _, err := net.ParseCIDR(v)
@@ -152,8 +169,8 @@ func ReadFromKeepalivedConfig(path string) (string, bool, error) {
 	configText := string(data)
 
 	// This regex looks for a block starting with "virtual_ipaddress" and
-	// captures everything until the closing brace.
-	re := regexp.MustCompile(`virtual_ipaddress\s*{([^}]+)}`)
+	// captures everything until the closing brace (including empty blocks).
+	re := regexp.MustCompile(`virtual_ipaddress\s*{([^}]*)}`) // Note: * allows empty content
 	matches := re.FindStringSubmatch(configText)
 	if len(matches) < 2 {
 		return "", false, fmt.Errorf("no virtual_ipaddress block found")
@@ -212,6 +229,79 @@ func WriteToKeepalivedConfig(path, newVIP string) error {
 	}
 
 	return nil
+}
+
+// WritePriorityToKeepalivedConfig updates the first keepalived priority directive.
+func WritePriorityToKeepalivedConfig(path string, priority int) error {
+	if priority < 1 || priority > 250 {
+		return fmt.Errorf("invalid keepalived priority %d", priority)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("unable to read config file: %w", err)
+	}
+
+	lines := strings.Split(string(data), "\n")
+	updated := false
+
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		fields := strings.Fields(trimmed)
+		if len(fields) > 0 && fields[0] == "priority" {
+			indent := line[:len(line)-len(strings.TrimLeft(line, " \t"))]
+			lines[i] = fmt.Sprintf("%spriority %d", indent, priority)
+			updated = true
+			break
+		}
+	}
+
+	if !updated {
+		return fmt.Errorf("no keepalived priority directive found")
+	}
+
+	content := strings.Join(lines, "\n") + "\n"
+	if len(strings.TrimSpace(content)) == 0 {
+		return fmt.Errorf("refusing to write empty config")
+	}
+
+	if err := atomicReplaceConfig(path, content, ".bak"); err != nil {
+		return fmt.Errorf("failed to update config file: %w", err)
+	}
+
+	return nil
+}
+
+// ReadPriorityFromKeepalivedConfig returns the first keepalived priority directive value.
+func ReadPriorityFromKeepalivedConfig(path string) (int, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 0, fmt.Errorf("unable to read config file: %w", err)
+	}
+
+	lines := strings.Split(string(data), "\n")
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		fields := strings.Fields(trimmed)
+		if len(fields) > 0 && fields[0] == "priority" {
+			if len(fields) < 2 {
+				return 0, fmt.Errorf("invalid keepalived priority directive")
+			}
+
+			priority, err := strconv.Atoi(fields[1])
+			if err != nil {
+				return 0, fmt.Errorf("invalid keepalived priority value %q: %w", fields[1], err)
+			}
+			if priority < 1 {
+				return 0, fmt.Errorf("invalid keepalived priority %d", priority)
+			}
+
+			return priority, nil
+		}
+	}
+
+	return 0, fmt.Errorf("no keepalived priority directive found")
 }
 
 // ReadFromLocalConfig reads the VIP from the first line of the local config file.

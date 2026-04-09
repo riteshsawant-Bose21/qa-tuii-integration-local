@@ -1,0 +1,25 @@
+info:
+  name: Schedule message
+  type: http
+  seq: 14
+
+http:
+  method: POST
+  url: "{{api_url}}/pava/schedule"
+  body:
+    type: json
+    data: |-
+      {
+        "id" : "Lunch Break3",
+        "message_id": "01KAVZ68Q2QRBDC2135YCJZ4FH",
+        "cron_expr": "@every 1m",
+        "description":"Time For lunch",
+        "priority":100,
+        "zones":"lobby"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

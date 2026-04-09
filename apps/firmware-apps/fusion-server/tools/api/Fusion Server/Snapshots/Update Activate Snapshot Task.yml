@@ -1,0 +1,27 @@
+info:
+  name: Update Activate Snapshot Task
+  type: http
+  seq: 8
+
+http:
+  method: PATCH
+  url: "{{api_url}}/tasks/:id"
+  headers:
+    - name: Content-Type
+      value: application/json
+  params:
+    - name: id
+      value: Play
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "cron_expr": "@every 1m"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

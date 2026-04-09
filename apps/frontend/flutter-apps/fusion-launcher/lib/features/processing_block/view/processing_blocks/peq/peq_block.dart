@@ -1,8 +1,8 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/add_source_popup/view_model/add_source_viewmodel.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_blocks/widgets/pb_block_layout.dart';
+import 'package:fusion_launcher/features/processing_block/view/widgets/pb_out_meter.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
@@ -14,8 +14,11 @@ import '../widgets/disabled_widget_wrapper.dart';
 import '../widgets/pb_section.dart';
 
 part '_peq_band_section.dart';
+
 part '_peq_controller.dart';
+
 part '_peq_graph.dart';
+
 part '_peq_out_meter.dart';
 
 class PeqBlock extends StatelessWidget {
@@ -23,8 +26,8 @@ class PeqBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AlgorithmDataViewmodel watch =
-        context.watch<AlgorithmDataViewmodel>();
+    final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
+    final String targetBlockId = watch.processingBlock.id;
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,
@@ -35,12 +38,7 @@ class PeqBlock extends StatelessWidget {
         create: (BuildContext context) {
           return PEQController(watch);
         },
-        update:
-            (
-              BuildContext context,
-              AlgorithmDataViewmodel valueHandler,
-              PEQController? previous,
-            ) => PEQController(valueHandler),
+        update: (BuildContext context, AlgorithmDataViewmodel valueHandler, PEQController? previous) => PEQController(valueHandler),
         child: Builder(
           builder: (BuildContext context) {
             return PBBlockLayout(
@@ -64,10 +62,7 @@ class PeqBlock extends StatelessWidget {
                 FusionContainer(
                   raised: true,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 5.0,
-                      horizontal: 20,
-                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 20),
                     child: Row(
                       spacing: 10,
                       children: <Widget>[
@@ -88,12 +83,14 @@ class PeqBlock extends StatelessWidget {
                 ),
                 const SizedBox(width: 70),
               ],
-              body: const Row(
+              body: Row(
                 spacing: 4,
                 children: <Widget>[
-                  Expanded(child: _PeqGraphSection()),
-                  SizedBox(width: 600, child: _PeqBandSection()),
-                  _PeqOutMeter(),
+                  const Expanded(child: _PeqGraphSection()),
+                  const SizedBox(width: 600, child: _PeqBandSection()),
+                  _PeqOutMeter(
+                    blocId: targetBlockId,
+                  ),
                 ],
               ),
             );

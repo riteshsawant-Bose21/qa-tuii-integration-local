@@ -49,7 +49,7 @@ jobs:
             fusionLauncher:
               - "./apps/frontend/flutter-apps/**"
             cloudServicesBackend:
-              - "./apps/cloud-backend/fusion-core/**"
+              - "./apps/cloud-backend/**"
             fusionDSP:
               - "./apps/firmware-apps/fusion-dsp/**"
             fusionServer:

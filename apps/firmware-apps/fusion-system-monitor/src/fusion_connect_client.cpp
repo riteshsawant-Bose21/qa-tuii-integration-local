@@ -737,7 +737,7 @@ private:
     std::map<std::string, fusion_cn_stream_config> aes67_stream_map;
     std::map<std::string, struct fc_stream_state> pending_streams;
     std::string enet_iface;
-    int period_ms;
+    int_fast32_t period_ms;
     bool debug_enabled;
     bool debug_sent;
     bool iface_sent;

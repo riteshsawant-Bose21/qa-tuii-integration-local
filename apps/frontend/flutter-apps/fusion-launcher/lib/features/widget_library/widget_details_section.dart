@@ -24,6 +24,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fusion_launcher/features/widget_library/models/widget_item.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_widgets/form_fields/fusion_custom_textfield.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_flat_container.dart';
 import 'package:fusion_lib/models/dock_item_config.dart';
 import 'package:fusion_lib/models/fusion_dock_item.dart';
@@ -306,8 +307,14 @@ class _WidgetDetailsSectionState extends State<WidgetDetailsSection> {
         return _buildFusionTableVariants(context);
       case "FusionSwitch":
         return _buildFusionSwitchVariants(context);
-      case "FusionSvgIcon":
+      case "FusionIcon":
         return _buildFusionSvgIconVariants(context);
+      case "FusionAppText":
+        return _buildFusionAppText(context);
+      case "FusionRow":
+        return _buildFusionRow(context);
+      case "FusionColumn":
+        return _buildFusionColumn(context);
 
       default:
         return const FusionAppText(
@@ -365,7 +372,7 @@ class _WidgetDetailsSectionState extends State<WidgetDetailsSection> {
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.primary,
           ),
           code: '''
@@ -377,7 +384,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.primary,
           ),
 ''',
@@ -396,7 +403,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.primary,
           ),
           code: '''
@@ -409,7 +416,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.primary,
           ),
 ''',
@@ -427,7 +434,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.secondary,
           ),
           code: '''
@@ -439,7 +446,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.secondary,
           ),
 ''',
@@ -458,7 +465,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.secondary,
           ),
           code: '''
@@ -471,7 +478,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.secondary,
           ),
 ''',
@@ -489,7 +496,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.neumorphic,
           ),
           code: '''
@@ -501,7 +508,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.neumorphic,
           ),
 ''',
@@ -520,7 +527,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.neumorphic,
           ),
           code: '''
@@ -533,7 +540,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.neumorphic,
           ),
 ''',
@@ -552,7 +559,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.brand,
           ),
           code: '''
@@ -564,7 +571,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.brand,
           ),
 ''',
@@ -583,7 +590,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.brand,
           ),
           code: '''
@@ -596,7 +603,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.brand,
           ),
 ''',
@@ -615,7 +622,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.tertiary,
           ),
           code: '''
@@ -627,7 +634,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.tertiary,
           ),
 ''',
@@ -646,7 +653,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.tertiary,
           ),
           code: '''
@@ -659,7 +666,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.tertiary,
           ),
 ''',
@@ -677,7 +684,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.link,
           ),
           code: '''
@@ -689,7 +696,7 @@ FusionAppButton(
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.link,
           ),
 ''',
@@ -708,7 +715,7 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.link,
           ),
           code: '''
@@ -721,11 +728,264 @@ FusionAppButton(
             enabled: false,
             suffixIcon: Icons.arrow_forward,
             onPressed: () {},
-            IconButton: true,
+            iconButton: true,
             style: FusionAppButtonStyle.link,
           ),
 ''',
         ),
+      ],
+    );
+  }
+
+  Widget _buildFusionRow(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        /// CENTER + CENTER
+        _buildWithCopy(
+          context: context,
+          preview: const FusionRow(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            spacing: 10,
+            children: <Widget>[
+              Text("Left"),
+              Text("Right"),
+            ],
+          ),
+          code: '''
+const FusionRow(
+  mainAxisAlignment: MainAxisAlignment.center,
+  crossAxisAlignment: CrossAxisAlignment.center,
+  spacing: 10,
+  children: [
+    Text("Left"),
+    Text("Right"),
+  ],
+),
+''',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFusionColumn(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const SizedBox(
+          height: 10,
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: const FusionColumn(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text("Left"),
+              SizedBox(
+                width: 10,
+              ),
+              Text("Right"),
+            ],
+          ),
+          code: '''
+const FusionColumn(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Text("Left"),
+              SizedBox(
+                width: 10,
+              ),
+              Text("Right"),
+            ],
+          ),
+''',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFusionAppText(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        /// ================= H1 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H1 Regular", style: context.textTheme.h1Regular),
+          code: 'FusionAppText(text: "H1 Regular", style: context.textTheme.h1Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H1 Bold", style: context.textTheme.h1Bold),
+          code: 'FusionAppText(text: "H1 Bold", style: context.textTheme.h1Bold)',
+        ),
+
+        /// ================= H2 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H2 Regular", style: context.textTheme.h2Regular),
+          code: 'FusionAppText(text: "H2 Regular", style: context.textTheme.h2Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H2 Bold", style: context.textTheme.h2Bold),
+          code: 'FusionAppText(text: "H2 Bold", style: context.textTheme.h2Bold)',
+        ),
+
+        /// ================= H3 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H3 Regular", style: context.textTheme.h3Regular),
+          code: 'FusionAppText(text: "H3 Regular", style: context.textTheme.h3Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H3 Bold", style: context.textTheme.h3Bold),
+          code: 'FusionAppText(text: "H3 Bold", style: context.textTheme.h3Bold)',
+        ),
+
+        /// ================= H4 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H4 Regular", style: context.textTheme.h4Regular),
+          code: 'FusionAppText(text: "H4 Regular", style: context.textTheme.h4Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H4 SemiBold", style: context.textTheme.h4SemiBold),
+          code: 'FusionAppText(text: "H4 SemiBold", style: context.textTheme.h4SemiBold)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H4 Bold", style: context.textTheme.h4Bold),
+          code: 'FusionAppText(text: "H4 Bold", style: context.textTheme.h4Bold)',
+        ),
+
+        /// ================= H5 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H5 Regular", style: context.textTheme.h5Regular),
+          code: 'FusionAppText(text: "H5 Regular", style: context.textTheme.h5Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H5 Bold", style: context.textTheme.h5Bold),
+          code: 'FusionAppText(text: "H5 Bold", style: context.textTheme.h5Bold)',
+        ),
+
+        /// ================= H6 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H6 Regular", style: context.textTheme.h6Regular),
+          code: 'FusionAppText(text: "H6 Regular", style: context.textTheme.h6Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "H6 Bold", style: context.textTheme.h6Bold),
+          code: 'FusionAppText(text: "H6 Bold", style: context.textTheme.h6Bold)',
+        ),
+
+        /// ================= B1 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "B1 Regular", style: context.textTheme.b1Regular),
+          code: 'FusionAppText(text: "B1 Regular", style: context.textTheme.b1Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "B1 Bold", style: context.textTheme.b1Bold),
+          code: 'FusionAppText(text: "B1 Bold", style: context.textTheme.b1Bold)',
+        ),
+
+        /// ================= B2 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "B2 Regular", style: context.textTheme.b2Regular),
+          code: 'FusionAppText(text: "B2 Regular", style: context.textTheme.b2Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "B2 Medium", style: context.textTheme.b2Medium),
+          code: 'FusionAppText(text: "B2 Medium", style: context.textTheme.b2Medium)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "B2 SemiBold", style: context.textTheme.b2SemiBold),
+          code: 'FusionAppText(text: "B2 SemiBold", style: context.textTheme.b2SemiBold)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "B2 Bold", style: context.textTheme.b2Bold),
+          code: 'FusionAppText(text: "B2 Bold", style: context.textTheme.b2Bold)',
+        ),
+
+        /// ================= B3 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "B3 Regular", style: context.textTheme.b3Regular),
+          code: 'FusionAppText(text: "B3 Regular", style: context.textTheme.b3Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "B3 Medium", style: context.textTheme.b3Medium),
+          code: 'FusionAppText(text: "B3 Medium", style: context.textTheme.b3Medium)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "B3 SemiBold", style: context.textTheme.b3SemiBold),
+          code: 'FusionAppText(text: "B3 SemiBold", style: context.textTheme.b3SemiBold)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "B3 Bold", style: context.textTheme.b3Bold),
+          code: 'FusionAppText(text: "B3 Bold", style: context.textTheme.b3Bold)',
+        ),
+
+        /// ================= L1 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "L1 Regular", style: context.textTheme.l1Regular),
+          code: 'FusionAppText(text: "L1 Regular", style: context.textTheme.l1Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "L1 Medium", style: context.textTheme.l1Medium),
+          code: 'FusionAppText(text: "L1 Medium", style: context.textTheme.l1Medium)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "L1 SemiBold", style: context.textTheme.l1SemiBold),
+          code: 'FusionAppText(text: "L1 SemiBold", style: context.textTheme.l1SemiBold)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "L1 Bold", style: context.textTheme.l1Bold),
+          code: 'FusionAppText(text: "L1 Bold", style: context.textTheme.l1Bold)',
+        ),
+
+        /// ================= L2 =================
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "L2 Regular", style: context.textTheme.l2Regular),
+          code: 'FusionAppText(text: "L2 Regular", style: context.textTheme.l2Regular)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "L2 Medium", style: context.textTheme.l2Medium),
+          code: 'FusionAppText(text: "L2 Medium", style: context.textTheme.l2Medium)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "L2 SemiBold", style: context.textTheme.l2SemiBold),
+          code: 'FusionAppText(text: "L2 SemiBold", style: context.textTheme.l2SemiBold)',
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppText(text: "L2 Bold", style: context.textTheme.l2Bold),
+          code: 'FusionAppText(text: "L2 Bold", style: context.textTheme.l2Bold)',
+        ),
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -736,9 +996,9 @@ FusionAppButton(
         // ================= DEFAULT (OUTLINE) =================
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
-            semanticId: "Default",
-            label: "Default",
+          preview: FusionCustomTextField(
+            semanticId: "Outline",
+            label: "Outline",
             hint: "Value",
             controller: TextEditingController(),
             variant: FusionFieldVariant.outline,
@@ -757,7 +1017,7 @@ CustomTextField(
         // ================= DEFAULT (NEUMORPHIC) =================
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             semanticId: "Neumorphic",
             label: "Neumorphic",
             hint: "Value",
@@ -777,7 +1037,7 @@ CustomTextField(
         // ================= ERROR =================
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             semanticId: "Error",
             label: "Error",
             hint: "Value",
@@ -800,7 +1060,7 @@ CustomTextField(
         // ================= BLOCKED =================
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             label: "Blocked",
             semanticId: "Blocked",
             hint: "Value",
@@ -821,7 +1081,7 @@ CustomTextField(
         // ================= BLOCKED FILLED =================
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             label: "Blocked Filled",
             semanticId: "Blocked Filled",
             hint: "Value",
@@ -842,7 +1102,7 @@ CustomTextField(
         // ================= WITH BUTTON =================
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             semanticId: "With Button",
             label: "With Button",
             hint: "Value",
@@ -871,7 +1131,7 @@ CustomTextField(
         // ================= COUNTRY PICKER =================
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             semanticId: "Phone",
             label: "Phone",
             hint: "Mobile Number",
@@ -894,7 +1154,7 @@ CustomTextField(
         // ================= PREFIX + SUFFIX =================
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             semanticId: "Icons",
             label: "Icons",
             hint: "Value",
@@ -921,7 +1181,7 @@ CustomTextField(
         // ================= INFO + HELPERS =================
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             label: "Info",
             semanticId: "Info",
             hint: "Value",
@@ -952,7 +1212,7 @@ CustomTextField(
         // ================= SUCCESS =================
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             label: "Success",
             semanticId: "Success",
             hint: "Value",
@@ -974,7 +1234,7 @@ CustomTextField(
 
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             label: "Disabled",
             semanticId: "Disabled",
             hint: "Value",
@@ -995,7 +1255,7 @@ CustomTextField(
         ),
         _buildWithCopy(
           context: context,
-          preview: CustomTextField(
+          preview: FusionCustomTextField(
             showLabel: true,
             label: "Label",
             semanticId: "Label",
@@ -1197,6 +1457,7 @@ RadioButton(
 
   Widget _buildDropDownVariants(BuildContext context) {
     int selectedIndex = 0;
+    String? selectedFruit;
     return Column(
       children: <Widget>[
         // ================= DROPDOWN =================
@@ -1252,6 +1513,43 @@ FusionDropDown<String>(
         ),
         _buildWithCopy(
           context: context,
+          preview: FusionNeumorphicDropdown<String>(
+            hintText: 'Select Audio File',
+            width: 400,
+            items: const <String>['op1', 'op2', 'op3'],
+            onChanged: (String option) {
+              print(option);
+            },
+            displayValue: 'Select Audio File',
+            // child: _buildTrigger(context, audioFileName),
+          ),
+          code: '''
+FusionDropDown<String>(
+            semanticId: "itembased",
+            items: <String>["Small", "Medium", "Large"],
+            selectedIndex: selectedIndex,
+
+            itemBuilder: (BuildContext context, String item, bool isSelected) {
+              return Text(
+                item,
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              );
+            },
+
+            childBuilder: (BuildContext context, int index, String item) {
+              return Text(item);
+            },
+
+            onSelected: (int index) {
+              setState(() => selectedIndex = index);
+            },
+          ),
+''',
+        ),
+        _buildWithCopy(
+          context: context,
           preview: FusionDropDown<String>(
             semanticId: "iconbased",
             items: <String>["Edit", "Delete", "Share"],
@@ -1274,9 +1572,7 @@ FusionDropDown<String>(
             semanticId: "iconbased",
             items: <String>["Edit", "Delete", "Share"],
             selectedIndex: 0,
-
             trigger: const Icon(Icons.more_vert),
-
             itemBuilder: (BuildContext context, String item, bool isSelected) {
               return Text(item);
             },
@@ -1593,9 +1889,7 @@ FusionArrowPopup(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 Text(
-                  selectedGenders.isEmpty
-                      ? "Select"
-                      : selectedGenders.join(", "),
+                  selectedGenders.isEmpty ? "Select" : selectedGenders.join(", "),
                 ),
                 const Icon(Icons.arrow_drop_down),
               ],
@@ -1753,14 +2047,22 @@ FusionCheckboxGroup<String>(
           ),
 
           code: '''
-FusionArrowPopup(
-            semanticId: "show_on_load",
-            showOnCreate: true,
-            content: const Text("Tap here to start"),
-            child: ElevatedButton(
-              onPressed: () {},
-              child: const Text("Start"),
-            ),
+FusionCheckboxGroup<String>(
+            semanticId: "vertical",
+            options: <String>["Home", "Work", "School"],
+            selected: selected,
+            labelBuilder: (BuildContext context, String option) {
+              return Row(
+                children: <Widget>[
+                  const Icon(Icons.location_on, size: 14),
+                  const SizedBox(width: 4),
+                  Text(option),
+                ],
+              );
+            },
+            onChanged: (List<String> value) {
+              setState(() => selected = value);
+            },
           ),
 ''',
         ),
@@ -2023,7 +2325,7 @@ FusionVerticalResizableWidget(
           preview: const FusionFlatContainer(
             width: 150,
             height: 50,
-            semanticId: "default_Container",
+            semanticsId: "default_Container",
             child: Text("Hello Fusion"),
           ),
 
@@ -2042,7 +2344,7 @@ const FusionFlatContainer(
           preview: FusionFlatContainer(
             width: 150,
             height: 50,
-            semanticId: "coloured",
+            semanticsId: "coloured",
             color: context.colorScheme.elevation5,
             child: const Center(
               child: Text("Coloured"),
@@ -2069,7 +2371,7 @@ FusionFlatContainer(
           preview: FusionFlatContainer(
             width: 150,
             height: 50,
-            semanticId: "coloured",
+            semanticsId: "coloured",
             borderColor: context.colorScheme.elevation6,
             child: const Center(
               child: Text("Border"),
@@ -2106,8 +2408,7 @@ FusionFlatContainer(
                 context,
                 type: DialogType.success,
                 title: "Modal Title Text",
-                description:
-                    "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
+                description: "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
                 copyText: "COPY TEXT",
                 contactEmail: "info@boseprofessional.com",
                 primaryButtonText: "Primary Button",
@@ -2142,8 +2443,7 @@ FusionFlatContainer(
                 semanticId: 'widget_details',
                 type: DialogType.success,
                 title: "Modal Title Text",
-                description:
-                    "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
+                description: "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
                 copyText: "COPY TEXT",
                 contactEmail: "info@boseprofessional.com",
                 primaryButtonText: "Primary Button",
@@ -2176,8 +2476,7 @@ FusionFlatContainer(
             semanticId: 'widget_details',
             type: DialogType.success,
             title: "Modal Title Text",
-            description:
-                "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
+            description: "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
             copyText: "COPY TEXT",
             contactEmail: "info@boseprofessional.com",
             primaryButtonText: "Primary Button",
@@ -2209,8 +2508,7 @@ FusionFlatContainer(
             type: DialogType.success,
             devicetype: DeviceType.mobile,
             title: "Modal Title Text",
-            description:
-                "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
+            description: "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
             copyText: "COPY TEXT",
             contactEmail: "info@boseprofessional.com",
             primaryButtonText: "Primary Button",
@@ -2244,8 +2542,7 @@ FusionFlatContainer(
             semanticId: 'widget_details',
             type: DialogType.failure,
             title: "Modal Title Text",
-            description:
-                "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
+            description: "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
             copyText: "COPY TEXT",
             contactEmail: "info@boseprofessional.com",
             primaryButtonText: "Primary Button",
@@ -2279,8 +2576,7 @@ FusionFlatContainer(
             semanticId: 'widget_details',
             type: DialogType.confirmation,
             title: "Modal Title Text",
-            description:
-                "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
+            description: "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
             copyText: "COPY TEXT",
             contactEmail: "info@boseprofessional.com",
             primaryButtonText: "Primary Button",
@@ -2317,8 +2613,7 @@ FusionFlatContainer(
             type: DialogType.warning,
             semanticId: 'widget_details',
             title: "Modal Title Text",
-            description:
-                "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
+            description: "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",
             copyText: "COPY TEXT",
             contactEmail: "info@boseprofessional.com",
             primaryButtonText: "Primary Button",
@@ -2718,8 +3013,9 @@ FusionKeyboardWrapper(
           preview: ElevatedButton(
             onPressed: () {
               FusionToast.success(
+                duration: const Duration(seconds: 5),
                 context,
-                message: "Sucess Toast",
+                message: "Timed Sucess Toast",
               );
             },
             child: const Text("Success Toast"),
@@ -2727,6 +3023,7 @@ FusionKeyboardWrapper(
 
           code: '''
               FusionToast.success(
+              duration: const Duration(seconds: 5),
                 context,
                 message: "Sucess Toast",
               );
@@ -3372,9 +3669,9 @@ FusionSwitch(
       children: <Widget>[
         _buildWithCopy(
           context: context,
-          preview: const FusionSvgIcon(
+          preview: FusionIcon.svg(
             semanticId: "default_without_icon",
-            icon: AssetSvg.expandUp,
+            AssetSvg.expandUp,
             size: 40,
           ),
 
@@ -3388,9 +3685,9 @@ const FusionSvgIcon(
         ),
         _buildWithCopy(
           context: context,
-          preview: FusionSvgIcon(
+          preview: FusionIcon.svg(
             semanticId: "with_icon",
-            icon: AssetSvg.broadcast,
+            AssetSvg.broadcast,
             color: context.colorScheme.green,
             size: 40,
           ),

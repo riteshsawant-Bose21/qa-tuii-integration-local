@@ -51,7 +51,7 @@ private:
     //number of peaks to track in each feeback peak detection process
     int_fast32_t num_peaks_to_find;
     //max buffer size to store candidate feedback frequencies
-    uint_fast32_t rev_feedback_cand_freq_buf_size;
+    int_fast32_t rev_feedback_cand_freq_buf_size;
 
     bosepro::DspSignalMemory<const float *[]> in;
     bosepro::DspSignalMemory<float *[]> out;
@@ -568,7 +568,8 @@ int FeedbackSuppression::number_of_times_frequency_is_in_buffer(const PotentialF
 void FeedbackSuppression::add_candidate(const PotentialFeedbackPeak & new_peak)
 {
     //If adding another frequency would mean exceeding the max size
-    if(rev_feedback_cand_freq_buf_size < (revolving_container.size() + 1))
+    if(static_cast<size_t>(rev_feedback_cand_freq_buf_size)
+       < (revolving_container.size() + 1))
         //delete the oldest element (lower index)
         revolving_container.pop_front();
     //add the new element on the newest end (higher index)

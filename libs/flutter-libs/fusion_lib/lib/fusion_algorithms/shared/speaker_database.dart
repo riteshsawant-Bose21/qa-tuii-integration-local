@@ -13,4 +13,4 @@ import '../../api_data/speakers/speaker_catalog.dart';
 /// 
 /// This maintains backward compatibility for existing algorithm code
 /// while using the centralized speaker catalog from the API data layer.
-const speakerDatabase = SpeakerCatalog.database;
+var speakerDatabase = SpeakerCatalog.database;

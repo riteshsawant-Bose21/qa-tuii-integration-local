@@ -1,6 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/utils/bug_report_popup.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/home/presentation/pages/launcher_home_page.dart';
@@ -10,6 +10,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../../core/services/user_session_manager.dart';
 import '../../../create_new_project/views/create_new_project_dialog.dart';
+import '../../../projects/presentation/widgets/appbar/project_work_area_appbar.dart' show handleExportLogs;
 
 class FusionSidebar extends StatefulWidget {
   final ValueNotifier<bool> showAllProjects;
@@ -140,10 +141,9 @@ class _FusionSidebarState extends State<FusionSidebar> {
                             children: <Widget>[
                               FusionAppText(
                                 text: user.account?.name ?? 'Fusion User',
-                                style: context.textTheme.headlineMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                style: context.textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                                 maxLine: 2,
                               ),
                               const SizedBox(height: 8),
@@ -163,10 +163,9 @@ class _FusionSidebarState extends State<FusionSidebar> {
                             children: <Widget>[
                               FusionAppText(
                                 text: 'Fusion User',
-                                style: context.textTheme.headlineMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                style: context.textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                                 maxLine: 2,
                               ),
                             ],
@@ -235,9 +234,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                       icon: Icons.home_filled,
                                       title: DashboardTabs.home.name,
                                       semanticsId: 'home_tab',
-                                      isSelected:
-                                          widget.selectedTab ==
-                                          DashboardTabs.home,
+                                      isSelected: widget.selectedTab == DashboardTabs.home,
                                       onTap:
                                           () => widget.onTabChanged?.call(
                                             DashboardTabs.home,
@@ -247,9 +244,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                       icon: Icons.account_circle,
                                       title: DashboardTabs.profile.name,
                                       semanticsId: 'profile_tab',
-                                      isSelected:
-                                          widget.selectedTab ==
-                                          DashboardTabs.profile,
+                                      isSelected: widget.selectedTab == DashboardTabs.profile,
                                       onTap:
                                           () => widget.onTabChanged?.call(
                                             DashboardTabs.profile,
@@ -259,9 +254,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                       icon: Icons.settings_sharp,
                                       title: DashboardTabs.settings.name,
                                       semanticsId: 'settings_tab',
-                                      isSelected:
-                                          widget.selectedTab ==
-                                          DashboardTabs.settings,
+                                      isSelected: widget.selectedTab == DashboardTabs.settings,
                                       onTap:
                                           () => widget.onTabChanged?.call(
                                             DashboardTabs.settings,
@@ -274,6 +267,15 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                       isSelected: widget.selectedTab == DashboardTabs.testLibrady,
                                       onTap: () => widget.onTabChanged?.call(DashboardTabs.testLibrady),
                                     ),
+                                    if (kDebugMode) ...<Widget>[
+                                      _HoverNavItem(
+                                        icon: Icons.account_circle,
+                                        title: DashboardTabs.widgetLibrary.name,
+                                        semanticsId: 'widget_lib',
+                                        isSelected: widget.selectedTab == DashboardTabs.widgetLibrary,
+                                        onTap: () => widget.onTabChanged?.call(DashboardTabs.widgetLibrary),
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
@@ -315,10 +317,9 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                       semanticId: 'fusion_sidebar_new_project',
                                       step: GuideShowCaseSteps.myProjects,
                                       onHighlightedSpotTap:
-                                          (TapDownDetails details) =>
-                                              CreateNewProjectDialog.show(
-                                                context,
-                                              ),
+                                          (TapDownDetails details) => CreateNewProjectDialog.show(
+                                            context,
+                                          ),
                                       // onHighlightedSpotTap: (TapDownDetails details) => _showNewProjectDialog(context),
                                       child: _HoverNavItem(
                                         icon: Icons.description,
@@ -335,9 +336,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                     _HoverNavItem(
                                       icon: Icons.save,
                                       title: DashboardTabs.savedProjects.name,
-                                      isSelected:
-                                          widget.selectedTab ==
-                                          DashboardTabs.savedProjects,
+                                      isSelected: widget.selectedTab == DashboardTabs.savedProjects,
                                       semanticsId: 'saved_projects_section',
                                       onTap: () {
                                         widget.onTabChanged?.call(
@@ -506,12 +505,7 @@ class _HoverNavItemState extends State<_HoverNavItem> {
           borderRadius: BorderRadius.circular(8),
           child: Container(
             decoration: BoxDecoration(
-              color:
-                  widget.isSelected
-                      ? themeColor.withValues(alpha: 0.04)
-                      : (_isHovered
-                          ? themeColor.withValues(alpha: 0.02)
-                          : Colors.transparent),
+              color: widget.isSelected ? themeColor.withValues(alpha: 0.04) : (_isHovered ? themeColor.withValues(alpha: 0.02) : Colors.transparent),
               borderRadius: BorderRadius.circular(8),
             ),
             padding: const EdgeInsets.all(8),

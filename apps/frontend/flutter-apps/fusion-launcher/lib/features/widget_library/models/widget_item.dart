@@ -66,7 +66,7 @@ class WidgetLibraryData {
       category: WidgetCategory.container,
     ),
     const WidgetItem(
-      name: 'FusionSvgIcon',
+      name: 'FusionIcon',
       category: WidgetCategory.images,
     ),
     const WidgetItem(
@@ -113,11 +113,21 @@ class WidgetLibraryData {
       name: 'FusionTable',
       category: WidgetCategory.others,
     ),
+    const WidgetItem(
+      name: 'FusionAppText',
+      category: WidgetCategory.text,
+    ),
+    const WidgetItem(
+      name: 'FusionRow',
+      category: WidgetCategory.others,
+    ),
+    const WidgetItem(
+      name: 'FusionColumn',
+      category: WidgetCategory.others,
+    ),
   ];
 
   static List<WidgetItem> getWidgetsByCategory(WidgetCategory category) {
-    return widgets
-        .where((WidgetItem widget) => widget.category == category)
-        .toList();
+    return widgets.where((WidgetItem widget) => widget.category == category).toList();
   }
 }

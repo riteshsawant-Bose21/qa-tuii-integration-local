@@ -1,10 +1,13 @@
 /// SPL calculation helper functions
+library;
 
 import 'dart:math' as math;
+
+import '../../product_data/models/models.dart';
 import 'spl_constants.dart';
 
 /// Calculates the distance based on mounting type and heights
-/// 
+///
 /// For surface mounting, uses cosine calculation with 75-degree angle
 /// For other mounting types, returns the height difference
 /// Ensures minimum positive distance to avoid mathematical errors
@@ -15,27 +18,27 @@ double calculateDistance(String mountType, double speakerHeight, double listener
 
   final delta = speakerHeight - listenerHeight;
   double distance;
-  
+
   if (mountType.toLowerCase() == 'surface') {
     const angleRadians = 75 * math.pi / 180;
     final denom = math.cos(angleRadians);
-    
+
     if (denom == 0) {
       throw StateError('Invalid calculation: division by zero in surface mount distance');
     }
-    
+
     distance = delta / denom;
   } else {
     distance = delta;
   }
-  
+
   // Ensure minimum positive distance to avoid mathematical errors
   const minimumDistance = 0.01; // 1cm minimum distance (will round to 0.01)
   return distance.abs() <= minimumDistance ? minimumDistance : distance.abs();
 }
 
 /// Calculates SPL loss based on distance using inverse square law
-/// 
+///
 /// Uses 1 meter as reference distance and adds 3dB compensation
 double calculateSplLoss(double distance) {
   if (distance <= 0) {
@@ -44,29 +47,60 @@ double calculateSplLoss(double distance) {
 
   const refDist = 1.0; // reference distance of 1 meter
   final splLoss = 20 * math.log(distance / refDist) / math.ln10;
-  
+
   return splLoss + 3;
 }
 
 /// Recommends the nearest speakers for given SPL requirements
-/// 
+///
 /// Returns lists of recommended models for min, mid, and max SPL requirements
 SpeakerRecommendations recommendNearestSpeakers(
   String mountType,
   String environment,
   double splReqMin,
   double splReqMid,
-  double splReqMax,
-) {
+  double splReqMax, {
+  List<SpeakerProduct>? speakers,
+}) {
   final envLower = environment.toLowerCase();
-  
+
   String? bestMinModel;
   String? bestMidModel;
   String? bestMaxModel;
-  
+
   double bestMinDiff = double.infinity;
   double bestMidDiff = double.infinity;
   double bestMaxDiff = double.infinity;
+
+  final speakerModels = speakers?.map(
+    (item) {
+      return SpeakerModel(
+        model: item.modelName,
+        maxSpl: item.maxSpl?.at.firstOrNull?.value ?? 0.0,
+        mountingType: item.mountType!.toLowerCase(),
+        outdoorRated: item.isWeatherRated,
+        isSubwoofer: item.isSubwoofer,
+        nominalOhms: item.nominalImpedance?.value ?? 0.0,
+        hasHiZ: item.isHighImpedanceRated,
+        hiZTaps: item.highImpedanceTaps,
+        taps70V: item.availableTaps?.taps70V ?? [],
+        taps100V: item.availableTaps?.taps100V ?? [],
+        longTermRms: item.powerHandling?.longTermRms ?? 0.0,
+        ppk: item.powerHandling?.peak ?? 0.0,
+        imageUrl: '',
+        price: 0.0,
+        color: 'black',
+      );
+    },
+  );
+
+  if (speakerModels == null) {
+    // This fallback is needed for testing since 
+    // the shared database is not populated in test environment.
+    SpeakerCatalog.database = SpeakerCatalog.fallbackDatabase;
+  } else {
+    SpeakerCatalog.database = {for (final speaker in speakerModels) speaker.model: speaker};
+  }
 
   for (final speaker in SpeakerCatalog.getAllSpeakers().values) {
     // Check if mounting type matches

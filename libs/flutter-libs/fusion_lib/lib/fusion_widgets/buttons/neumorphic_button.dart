@@ -120,7 +120,7 @@ class _NeumorphicButtonState extends State<NeumorphicButton> {
       isEnabled: widget.isActive,
       testId: SemanticHelper.createTestId(
         SemanticTypes.button,
-        "neumorphic_button_${widget.text}",
+        "neumorphic_button_${widget.semanticId}",
       ),
       child: GestureDetector(
         // Disable gestures

@@ -59,6 +59,7 @@ extension FloorViewModel on ProjectViewModel {
       }
       final ResponseCallback<bool> responseCallback = projectManager.removeFloor(floorId);
       if (responseCallback.success) {
+        setCurrentFloorIndex(0);
         emitFloorUpdated();
         if (autoSave) {
           saveProject();

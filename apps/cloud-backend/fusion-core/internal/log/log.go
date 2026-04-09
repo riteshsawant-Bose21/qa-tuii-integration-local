@@ -3,6 +3,7 @@ package log
 import (
 	"fmt"
 
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -48,4 +49,18 @@ func (l *Logger) Warn(msg string, fields ...zapcore.Field) {
 // JobSyncLog returns the underlying zap logger for job synchronization logging.
 func (l *Logger) JobSyncLog() *zap.Logger {
 	return l.zap
+}
+
+// GetLogger extracts the logger from the gin context.
+// If the logger is not found, it returns the global zap logger as a fallback.
+func GetLogger(c *gin.Context) *zap.Logger {
+	loggerVal, exists := c.Get("logger")
+	if !exists {
+		return zap.L()
+	}
+	logger, ok := loggerVal.(*zap.Logger)
+	if !ok {
+		return zap.L()
+	}
+	return logger
 }

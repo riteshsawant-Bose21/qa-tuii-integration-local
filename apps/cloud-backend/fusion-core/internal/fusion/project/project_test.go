@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/constants"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/aarondl/null/v8"
 	"github.com/stretchr/testify/assert"
@@ -128,6 +128,30 @@ func (m *mockDBService) GetProjectByID(ctx context.Context, projectID string, lo
 	return args.Get(0).(*models.Project), args.Error(1)
 }
 
+func (m *mockDBService) SelectByID(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
+	args := m.Called(ctx, projectID, userAuth, logger)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.Project), args.Error(1)
+}
+
+func (m *mockDBService) GetProjectByIDForAccount(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
+	args := m.Called(ctx, projectID, userAuth, logger)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.Project), args.Error(1)
+}
+
+func (m *mockDBService) GetProjectByIDForUser(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
+	args := m.Called(ctx, projectID, userAuth, logger)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.Project), args.Error(1)
+}
+
 func (m *mockDBService) StarProject(ctx context.Context, projectID, userID string, logger *zap.Logger) error {
 	args := m.Called(ctx, projectID, userID, logger)
 	return args.Error(0)
@@ -215,7 +239,7 @@ func TestCreateProject(t *testing.T) {
 			mockID:         "",
 			mockErr:        errDatabaseMsg,
 			expectedID:     "",
-			expectedErr:    fmt.Errorf("failed to insert project: %v", errDatabaseMsg),
+			expectedErr:    errDatabaseMsg,
 			expectResponse: false,
 		},
 		{
@@ -244,7 +268,7 @@ func TestCreateProject(t *testing.T) {
 			mockID:         "123e4567-e89b-12d3-a456-426614174002",
 			mockErr:        nil,
 			expectedID:     "",
-			expectedErr:    fmt.Errorf("failed to generate presign URL: %v", errors.New("put error")),
+			expectedErr:    errors.New("put error"),
 			expectResponse: false,
 			presignFileURL: "",
 			presignFileErr: errors.New("put error"),
@@ -257,7 +281,7 @@ func TestCreateProject(t *testing.T) {
 			mockID:         "123e4567-e89b-12d3-a456-426614174003",
 			mockErr:        nil,
 			expectedID:     "",
-			expectedErr:    fmt.Errorf("failed to insert project: %v", errors.New("user assignment failed")),
+			expectedErr:    errors.New("user assignment failed"),
 			expectResponse: false,
 		},
 	}
@@ -306,10 +330,10 @@ func TestCreateProject(t *testing.T) {
 					mockDB.On("InsertProjectUser", mock.Anything, tt.mockID, "test-user-id", mock.Anything, mock.AnythingOfType("*zap.Logger")).Return(nil)
 					// Presign expectations when flags set
 					if tt.project.IsProjectFileCreated {
-						mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/projectFile/%s.zip", tt.mockID, tt.mockID), time.Minute*15, mock.Anything).Return(tt.presignFileURL, tt.presignFileErr)
+						mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/projectFile/%s.zip", tt.mockID, tt.mockID), constants.S3PresignedUrlTTL, mock.Anything).Return(tt.presignFileURL, tt.presignFileErr)
 					}
 					if tt.project.IsProjectThumbnailCreated {
-						mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/projectThumbnail/%s.zip", tt.mockID, tt.mockID), time.Minute*15, mock.Anything).Return(tt.presignThumbURL, tt.presignThumbErr)
+						mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/projectThumbnail/%s.zip", tt.mockID, tt.mockID), constants.S3PresignedUrlTTL, mock.Anything).Return(tt.presignThumbURL, tt.presignThumbErr)
 					}
 				}
 			}
@@ -392,7 +416,7 @@ func TestGetAllProjects(t *testing.T) {
 			mockDBErr:      errDatabaseMsg,
 			mockPresignURL: "",
 			mockPresignErr: nil,
-			expectedErr:    errDatabaseMsg,
+			expectedErr:    fmt.Errorf("%w", errDatabaseMsg),
 		},
 		{
 			name:           "presign error",
@@ -401,7 +425,7 @@ func TestGetAllProjects(t *testing.T) {
 			mockDBErr:      nil,
 			mockPresignURL: "",
 			mockPresignErr: fmt.Errorf("presign error"),
-			expectedErr:    fmt.Errorf("failed to generate presign URL for project 1: presign error"),
+			expectedErr:    fmt.Errorf("presign error"),
 		},
 	}
 
@@ -427,7 +451,7 @@ func TestGetAllProjects(t *testing.T) {
 					mockPresigner.On("PresignGet",
 						mock.Anything,
 						fmt.Sprintf("projects/%s/projectFile/%s.zip", p.ID, p.ID),
-						time.Minute*5,
+						constants.S3PresignedUrlTTL,
 						mock.Anything,
 					).Return(tt.mockPresignURL, tt.mockPresignErr).Maybe()
 
@@ -435,7 +459,7 @@ func TestGetAllProjects(t *testing.T) {
 					mockPresigner.On("PresignGet",
 						mock.Anything,
 						fmt.Sprintf("projects/%s/projectThumbnail/%s.zip", p.ID, p.ID),
-						time.Minute*5,
+						constants.S3PresignedUrlTTL,
 						mock.Anything,
 					).Return(tt.mockPresignURL, tt.mockPresignErr).Maybe()
 				}
@@ -510,7 +534,7 @@ func TestUpdateProject(t *testing.T) {
 			},
 			mockProjectRow: nil,
 			mockErr:        errDatabaseMsg,
-			expectedErr:    errDatabaseMsg,
+			expectedErr:    fmt.Errorf("%w", fmt.Errorf("%w", errDatabaseMsg)),
 		},
 	}
 
@@ -580,7 +604,7 @@ func TestUpdateProjectPresignURLs(t *testing.T) {
 		expectedErr     string
 	}{
 		{name: "dirty flags success", req: &types.ProjectUpdateRequest{IsProjectFileDirty: true, IsProjectThumbnailDirty: true}, presignFileURL: "https://upd-file", presignThumbURL: "https://upd-thumb"},
-		{name: "file presign error", req: &types.ProjectUpdateRequest{IsProjectFileDirty: true}, presignFileErr: errors.New("put error"), expectedErr: "failed to generate presign URL"},
+		{name: "file presign error", req: &types.ProjectUpdateRequest{IsProjectFileDirty: true}, presignFileErr: errors.New("put error"), expectedErr: "put error"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -590,10 +614,10 @@ func TestUpdateProjectPresignURLs(t *testing.T) {
 			mockDB.On("IsUserAssigned", mock.Anything, mockProjectRow.ID, testUserID1, mock.AnythingOfType("*zap.Logger")).Return(true, nil)
 			mockDB.On("Update", mock.Anything, mockProjectRow, tt.req, mock.AnythingOfType("*zap.Logger")).Return(nil)
 			if tt.req.IsProjectFileDirty {
-				mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/%s/%s.zip", mockProjectRow.ID, types.ProjectFileTypeProjectFile, mockProjectRow.ID), time.Minute*15, mock.Anything).Return(tt.presignFileURL, tt.presignFileErr)
+				mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/%s/%s.zip", mockProjectRow.ID, types.ProjectFileTypeProjectFile, mockProjectRow.ID), constants.S3PresignedUrlTTL, mock.Anything).Return(tt.presignFileURL, tt.presignFileErr)
 			}
 			if tt.req.IsProjectThumbnailDirty && tt.presignFileErr == nil { // only proceed if previous not failing so function reaches here
-				mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/%s/%s.zip", mockProjectRow.ID, types.ProjectFileTypeProjectThumbnail, mockProjectRow.ID), time.Minute*15, mock.Anything).Return(tt.presignThumbURL, tt.presignThumbErr)
+				mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/%s/%s.zip", mockProjectRow.ID, types.ProjectFileTypeProjectThumbnail, mockProjectRow.ID), constants.S3PresignedUrlTTL, mock.Anything).Return(tt.presignThumbURL, tt.presignThumbErr)
 			}
 			service := &Service{dbService: mockDB, presigner: mockPresigner}
 
@@ -662,7 +686,7 @@ func TestDeleteProject(t *testing.T) {
 			id:             "1",
 			mockProjectRow: nil,
 			mockErr:        errDatabaseMsg,
-			expectedErr:    errDatabaseMsg,
+			expectedErr:    fmt.Errorf("%w", fmt.Errorf("%w", errDatabaseMsg)),
 		},
 	}
 
@@ -1717,7 +1741,7 @@ func TestValidateUserAssignment(t *testing.T) {
 			mockSetup: func(m *mockDBService) {
 				m.On("IsUserAssigned", mock.Anything, testProjectID1, testUserID1, mock.AnythingOfType("*zap.Logger")).Return(false, errDatabaseMsg)
 			},
-			expectedErr: "failed to check user assignment",
+			expectedErr: databaseErrorMsg,
 		},
 	}
 
@@ -1800,7 +1824,7 @@ func TestValidateProjectNotLockedByOtherUser(t *testing.T) {
 			mockSetup: func(m *mockDBService) {
 				m.On("GetUserEmailByID", mock.Anything, testUserID2).Return("", errDatabaseMsg)
 			},
-			expectedErr: "failed to get user by email",
+			expectedErr: databaseErrorMsg,
 		},
 	}
 
@@ -1836,13 +1860,13 @@ func TestGenerateProjectFileURL(t *testing.T) {
 	projectID := "proj-123"
 	// GET
 	logger := zap.NewNop()
-	mockPresigner.On("PresignGet", mock.Anything, fmt.Sprintf("projects/%s/%s/%s.zip", projectID, types.ProjectFileTypeProjectFile, projectID), time.Minute*10, mock.Anything).Return("https://get-url", nil)
-	url, err := service.generateProjectFileURL(ctx, projectID, types.ProjectFileTypeProjectFile, time.Minute*10, "get", logger)
+	mockPresigner.On("PresignGet", mock.Anything, fmt.Sprintf("projects/%s/%s/%s.zip", projectID, types.ProjectFileTypeProjectFile, projectID), constants.S3PresignedUrlTTL, mock.Anything).Return("https://get-url", nil)
+	url, err := service.generateProjectFileURL(ctx, projectID, types.ProjectFileTypeProjectFile, constants.S3PresignedUrlTTL, "get", logger)
 	assert.NoError(t, err)
 	assert.Equal(t, "https://get-url", url)
 	// PUT
-	mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/%s/%s.zip", projectID, types.ProjectFileTypeProjectThumbnail, projectID), time.Minute*5, mock.Anything).Return("https://put-url", nil)
-	url, err = service.generateProjectFileURL(ctx, projectID, types.ProjectFileTypeProjectThumbnail, time.Minute*5, "put", logger)
+	mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/%s/%s.zip", projectID, types.ProjectFileTypeProjectThumbnail, projectID), constants.S3PresignedUrlTTL, mock.Anything).Return("https://put-url", nil)
+	url, err = service.generateProjectFileURL(ctx, projectID, types.ProjectFileTypeProjectThumbnail, constants.S3PresignedUrlTTL, "put", logger)
 	assert.NoError(t, err)
 	assert.Equal(t, "https://put-url", url)
 	// Unsupported
@@ -1865,7 +1889,7 @@ func TestValidateProject_UserAssignmentDBError(t *testing.T) {
 	logger, _ := zap.NewProduction()
 	_, err := service.validateProject(ctx, testProjectID1, ValidationOptions{CheckUserAssigned: true, UserID: testUserID1}, logger)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), errorutil.ErrMsgFailedUserAssignmentCheck)
+	assert.ErrorIs(t, err, errDatabaseMsg)
 	mockDB.AssertExpectations(t)
 }
 

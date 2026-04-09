@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"fusion/internal/api"
-	"fusion/internal/persistence"
 	"fusion/internal/routes"
 	"io"
 	"mime/multipart"
@@ -490,7 +489,7 @@ func getClusterNodeURLs(t *testing.T, ctx context.Context, vipURL string) []stri
 		t.Fatalf("/devices returned %d: %s", resp.StatusCode, string(body))
 	}
 
-	var devices []persistence.DeviceInfo
+	var devices []api.DeviceInfo
 	if err := json.NewDecoder(resp.Body).Decode(&devices); err != nil {
 		t.Fatalf("failed to decode /devices: %v", err)
 	}

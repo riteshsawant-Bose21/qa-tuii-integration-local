@@ -132,6 +132,14 @@ class ConfigEventsViewmodel extends Cubit<ConfigEventsState> {
     syncWithProjectViewModel();
   }
 
+  /// Update the selected state for a 2-state event (e.g. above / below).
+  /// Routed through ConfigEventsViewmodel so that the events state always
+  /// emits a new (different) object and all listeners rebuild correctly.
+  void updateEventSelectedState({required String eventId, required EventStates selectedState}) {
+    _projectViewModel.updateEventSelectedState(eventId: eventId, selectedState: selectedState);
+    syncWithProjectViewModel();
+  }
+
   @override
   Future<void> close() {
     _projectViewModel.setSelectedEventId(null);

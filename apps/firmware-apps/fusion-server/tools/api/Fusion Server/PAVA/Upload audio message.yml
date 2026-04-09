@@ -1,0 +1,30 @@
+info:
+  name: Upload audio message
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{api_url}}/pava/messages"
+  body:
+    type: multipart-form
+    data:
+      - name: display_name
+        type: text
+        value: froggy
+      - name: binary
+        type: file
+        value:
+          - /Users/gragan/Desktop/Docs/message.wav
+      - name: tags
+        type: text
+        value: Fire Drill
+      - name: tags
+        type: text
+        value: Emergencies
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
