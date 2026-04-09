@@ -1,4 +1,4 @@
-name: Fusion-App-Windows-Automation-Build
+name: Fusion-Desktop-Automation-Builds
 
 # Only run on commits, not when tags added
 on:
@@ -12,9 +12,9 @@ permissions:
   pull-requests: write
 
 jobs:
-  flutter-windows-build:
+  flutter-windows-automation-build:
     concurrency:
-      group: flutter-windows-build
+      group: flutter-windows-automation-build
     runs-on: windows-actions-build-agent
     timeout-minutes: 30
 
