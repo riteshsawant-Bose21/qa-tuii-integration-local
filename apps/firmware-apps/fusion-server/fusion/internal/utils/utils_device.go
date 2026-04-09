@@ -17,21 +17,72 @@ func GetModelName() string {
 	return api.ModelUnknown
 }
 
-func GetFirmwareVersion() string {
-	data, err := os.ReadFile(api.FirmwarePath)
+func GetSoftwareUpdateVersion() string {
+	data, err := os.ReadFile(api.SoftwareUpdateInfoPath)
 	if err != nil {
-		logging.GetLogger().Warn("%s not found.", api.FirmwarePath)
-		return api.FirmwareUnknown
+		logging.GetLogger().Warn("%s not found.", api.SoftwareUpdateInfoPath)
+		return api.SoftwareUpdateVersionUnknown
 	}
 
-	var fw api.FirmwareInfo
+	var fw api.SoftwareUpdateInfo
 	err = json.Unmarshal(data, &fw)
 	if err != nil {
-		logging.GetLogger().Warn("Failed to parse firmware file")
-		return api.FirmwareUnknown
+		logging.GetLogger().Warn("Failed to parse software update file")
+		return api.SoftwareUpdateVersionUnknown
 	}
 
-	return fw.BuildConfiguration.FirmwareBundleVersion
+	return fw.BuildConfiguration.SoftwareUpdateBundleVersion
+}
+
+func GetBranchName() string {
+	data, err := os.ReadFile(api.SoftwareUpdateInfoPath)
+	if err != nil {
+		logging.GetLogger().Warn("%s not found.", api.SoftwareUpdateInfoPath)
+		return api.BranchNameUnknown
+	}
+
+	var fw api.SoftwareUpdateInfo
+	err = json.Unmarshal(data, &fw)
+	if err != nil {
+		logging.GetLogger().Warn("Failed to parse software update file")
+		return api.BranchNameUnknown
+	}
+
+	return fw.BuildConfiguration.FusionMonorepoBranch
+}
+
+func GetCommitHash() string {
+	data, err := os.ReadFile(api.SoftwareUpdateInfoPath)
+	if err != nil {
+		logging.GetLogger().Warn("%s not found.", api.SoftwareUpdateInfoPath)
+		return api.CommitHashUnknown
+	}
+
+	var fw api.SoftwareUpdateInfo
+	err = json.Unmarshal(data, &fw)
+	if err != nil {
+		logging.GetLogger().Warn("Failed to parse software update file")
+		return api.CommitHashUnknown
+	}
+
+	return fw.BuildConfiguration.FusionMonorepoCommitHash
+}
+
+func GetJenkinsBuildNumber() string {
+	data, err := os.ReadFile(api.SoftwareUpdateInfoPath)
+	if err != nil {
+		logging.GetLogger().Warn("%s not found.", api.SoftwareUpdateInfoPath)
+		return api.JenkinsBuildNumberUnknown
+	}
+
+	var fw api.SoftwareUpdateInfo
+	err = json.Unmarshal(data, &fw)
+	if err != nil {
+		logging.GetLogger().Warn("Failed to parse software update file")
+		return api.JenkinsBuildNumberUnknown
+	}
+
+	return fw.BuildConfiguration.JenkinsBuildNumber
 }
 
 func GetSerialNumber() string {

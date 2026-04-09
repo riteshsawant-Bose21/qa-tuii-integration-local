@@ -1,0 +1,51 @@
+info:
+  name: Get Configuration
+  type: websocket
+  seq: 1
+
+websocket:
+  url: ws://{{api_url}}/ws
+  message:
+    type: json
+    data: |
+      {
+        "id": "config-001",
+        "version": 1,
+        "type": "config"
+      }
+  auth: inherit
+
+settings:
+  timeout: 0
+  keepAliveInterval: 0
+
+docs: |
+  Get current configuration and automatically subscribe to config updates.
+
+  **Response (3000 OK):**
+  ```json
+  {
+    "id": "config-001",
+    "version": 1,
+    "type": "config",
+    "code": 3000,
+    "status": "success",
+    "message": "OK",
+    "data": {
+      "updates": {
+        "zones": {
+          "zone_a": {
+            "volume": 50,
+            "enabled": true
+          }
+        },
+        "audio": {
+          "master_volume": 75
+        }
+      }
+    },
+    "timestamp": "2026-03-24T10:00:00Z"
+  }
+  ```
+
+  Auto-subscribes to config_update push notifications.

@@ -8,7 +8,6 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	"fusion/internal/server/handler"
 
 	"github.com/gorilla/websocket"
 )
@@ -217,6 +216,10 @@ func (s *FusionServer) sendErrorToConnection(conn *websocket.Conn, requestID str
 func (s *FusionServer) BroadcastMessage(message *api.NotifyMessage) error {
 	// Convert NotifyMessage to appropriate WebSocket format based on operation
 	switch message.Operation {
+	case api.NotifyOpConfigUpdate:
+		if message.ConfigUpdate != nil {
+			return s.broadcastConfigUpdate(message)
+		}
 	case api.NotifyOpDeviceUpdate:
 		if message.DeviceInfo != nil {
 			// Convert device update to WebSocket response format
@@ -231,48 +234,70 @@ func (s *FusionServer) BroadcastMessage(message *api.NotifyMessage) error {
 				Timestamp: time.Now(),
 			}
 			// Send to topic-based subscribers
-			return s.BroadcastToTopic(handler.TopicDeviceUpdates, updateMessage)
+			return s.BroadcastToTopic(api.WSTopicDeviceUpdates, updateMessage)
 		}
-	default:
-		// For other message types, wrap in WebSocketResponse format for consistency
+	case api.NotifyOpSoftwareUpdateProgress:
+		if message.SoftwareUpdateProgressAll == nil && message.SoftwareUpdateProgress == nil {
+			return nil
+		}
+		// Build a per-node map of formatted progress responses
+		nodesProgress := make(map[string]api.SoftwareUpdateProgressResponse)
+		if message.SoftwareUpdateProgressAll != nil {
+			for nodeName, p := range message.SoftwareUpdateProgressAll {
+				nodesProgress[nodeName] = api.SoftwareUpdateProgressResponse{
+					UpdateState:  p.Status.String(),
+					Step:         fmt.Sprintf("%d/%d", p.CurStep, p.NSteps),
+					CurrentTask:  p.CurImage,
+					Progress:     fmt.Sprintf("%d", p.CurPercent),
+					Node:         p.NodeName,
+					Handler:      p.HndName,
+					Timestamp:    p.Timestamp.Format(time.RFC3339),
+					SerialNumber: p.SerialNumber,
+				}
+			}
+		} else {
+			// Fallback: single node (e.g. local-only, no cluster)
+			p := message.SoftwareUpdateProgress
+			nodesProgress[p.NodeName] = api.SoftwareUpdateProgressResponse{
+				UpdateState:  p.Status.String(),
+				Step:         fmt.Sprintf("%d/%d", p.CurStep, p.NSteps),
+				CurrentTask:  p.CurImage,
+				Progress:     fmt.Sprintf("%d", p.CurPercent),
+				Node:         p.NodeName,
+				Handler:      p.HndName,
+				Timestamp:    p.Timestamp.Format(time.RFC3339),
+				SerialNumber: p.SerialNumber,
+			}
+		}
+		var progressData interface{} = nodesProgress
 		broadcastMessage := &api.WebSocketResponse{
-			ID:        nil, // Push notifications have null ID
+			ID:        nil,
 			Version:   api.WSCurrentVersion,
-			Type:      "notification",
-			Code:      api.WSCodeDeviceUpdated, // Use event code for notifications
+			Type:      api.WSMsgTypeUpdateProgress,
+			Code:      api.WSCodeDeviceUpdated,
 			Status:    api.WSStatusEvent,
 			Message:   fmt.Sprintf("System notification: %s", message.Operation),
-			Data:      message, // Include the original NotifyMessage as data
+			Data:      progressData,
 			Timestamp: time.Now(),
 		}
-
-		s.wsLock.RLock()
-		clients := make([]*websocket.Conn, 0, len(s.wsClients))
-		for conn := range s.wsClients {
-			clients = append(clients, conn)
-		}
-		s.wsLock.RUnlock()
-
-		var failedConnections []*websocket.Conn
-		for _, conn := range clients {
-			if err := s.safeWriteJSON(conn, broadcastMessage); err != nil {
-				logging.GetLogger().Error("Error broadcasting to WebSocket client: %v", err)
-				failedConnections = append(failedConnections, conn)
-			}
-		}
-
-		// Clean up failed connections
-		if len(failedConnections) > 0 {
-			s.wsLock.Lock()
-			for _, conn := range failedConnections {
-				delete(s.wsClients, conn)
-				delete(s.wsWriteMutex, conn)
-				conn.Close()
-			}
-			s.wsLock.Unlock()
-		}
+		return s.broadcastToAllClients(broadcastMessage)
 	}
-	return nil
+	return s.broadcastGenericNotification(message)
+}
+
+func (s *FusionServer) broadcastConfigUpdate(message *api.NotifyMessage) error {
+	configUpdateMessage := &api.WebSocketResponse{
+		ID:        nil,
+		Version:   api.WSCurrentVersion,
+		Type:      api.WSMsgTypeConfigUpdate,
+		Code:      api.WSCodeUpdated,
+		Status:    api.WSStatusEvent,
+		Message:   "Configuration updated",
+		Data:      message.ConfigUpdate.Data,
+		Timestamp: time.Now(),
+	}
+
+	return s.BroadcastToTopic(api.WSTopicConfigUpdates, configUpdateMessage)
 }
 
 // SubscribeToTopic subscribes a WebSocket connection to a specific topic
@@ -339,6 +364,51 @@ func (s *FusionServer) BroadcastToTopic(topic string, message *api.WebSocketResp
 		// Clean up empty topic maps
 		if len(s.subscriptions[topic]) == 0 {
 			delete(s.subscriptions, topic)
+		}
+		s.wsLock.Unlock()
+	}
+
+	return nil
+}
+
+func (s *FusionServer) broadcastGenericNotification(message *api.NotifyMessage) error {
+	broadcastMessage := &api.WebSocketResponse{
+		ID:        nil, // Push notifications have null ID
+		Version:   api.WSCurrentVersion,
+		Type:      "notification",
+		Code:      api.WSCodeDeviceUpdated, // Use event code for notifications
+		Status:    api.WSStatusEvent,
+		Message:   fmt.Sprintf("System notification: %s", message.Operation),
+		Data:      message, // Include the original NotifyMessage as data
+		Timestamp: time.Now(),
+	}
+	return s.broadcastToAllClients(broadcastMessage)
+}
+
+// broadcastToAllClients sends a WebSocket response to every connected client,
+// cleaning up any connections that fail during the send.
+func (s *FusionServer) broadcastToAllClients(message *api.WebSocketResponse) error {
+	s.wsLock.RLock()
+	clients := make([]*websocket.Conn, 0, len(s.wsClients))
+	for conn := range s.wsClients {
+		clients = append(clients, conn)
+	}
+	s.wsLock.RUnlock()
+
+	var failedConnections []*websocket.Conn
+	for _, conn := range clients {
+		if err := s.safeWriteJSON(conn, message); err != nil {
+			logging.GetLogger().Error("Error broadcasting to WebSocket client: %v", err)
+			failedConnections = append(failedConnections, conn)
+		}
+	}
+
+	if len(failedConnections) > 0 {
+		s.wsLock.Lock()
+		for _, conn := range failedConnections {
+			delete(s.wsClients, conn)
+			delete(s.wsWriteMutex, conn)
+			conn.Close()
 		}
 		s.wsLock.Unlock()
 	}

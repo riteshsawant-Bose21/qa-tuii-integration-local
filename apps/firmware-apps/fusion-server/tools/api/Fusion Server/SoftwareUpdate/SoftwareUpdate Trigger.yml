@@ -1,0 +1,20 @@
+info:
+  name: SoftwareUpdate Trigger
+  type: websocket
+  seq: 3
+
+websocket:
+  url: ws://{{api_url}}/ws
+  message:
+    type: json
+    data: |-
+      {
+        "id": "sw-update-001",
+        "version": 1,
+        "type": "start_update"
+      }
+  auth: inherit
+
+settings:
+  timeout: 0
+  keepAliveInterval: 0

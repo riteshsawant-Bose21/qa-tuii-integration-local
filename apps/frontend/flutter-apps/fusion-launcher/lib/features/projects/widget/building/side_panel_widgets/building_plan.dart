@@ -272,10 +272,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
 
                       return SemanticHelper.listItem(
                         index: index,
-                        testId: SemanticHelper.createTestId(
-                          SemanticTypes.listItem,
-                          "floor_item_$index",
-                        ),
+                        testId: SemanticHelper.createTestId(SemanticTypes.listItem, "floor_item_$index"),
                         child: Container(
                           margin: const EdgeInsets.symmetric(vertical: 2),
                           decoration: BoxDecoration(
@@ -298,10 +295,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                 FusionSizes.borderRadius8,
                               ),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
-                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                 child: Column(
                                   children: <Widget>[
                                     Row(
@@ -313,16 +307,12 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                           alignment: Alignment.center,
                                           decoration: BoxDecoration(
                                             color: context.colorScheme.primaryWhite,
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
+                                            borderRadius: BorderRadius.circular(4),
                                           ),
                                           child: FusionAppText(
                                             text: floor.name.length >= 2 ? floor.name.substring(0, 2).toUpperCase() : floor.name.toUpperCase(),
                                             textAlign: TextAlign.center,
-                                            style: Theme.of(
-                                              context,
-                                            ).textTheme.bodyMedium?.copyWith(
+                                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                               fontSize: 8,
                                               fontWeight: FontWeight.w600,
                                               color: context.colorScheme.primaryBlack,

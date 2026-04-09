@@ -65,7 +65,7 @@ class ConfigSyncViewModel extends Cubit<ConfigSyncState> {
                 // This would be determined based on your DSP configuration
                 portId: ioDevice.outputPortsData.first.id,
                 // This would also be determined based on your DSP configuration
-                type: ConnectionType.signal,
+                type: ConnectionType.analog,
               );
               serviceLocator<ProjectViewModel>().addWiringConnection(connection: wiringConnection);
             }
@@ -85,9 +85,14 @@ class ConfigSyncViewModel extends Cubit<ConfigSyncState> {
     required DroResponseData droResponseData,
   }) async {
     emit(SyncingConfigWithDsp());
+
+    final Map<String, dynamic> blocksData = serviceLocator<ProjectViewModel>().getAllProcessingBlocksData();
     final ResponseCallback<bool> response = await fusionConfigSyncService.syncConfigToDsp(
       config: <String, dynamic>{
         "devices": droResponseData.result!.devices,
+        "settings": <String, Map<String, dynamic>>{
+          "audio": blocksData,
+        },
       },
       vip: vip,
     );
