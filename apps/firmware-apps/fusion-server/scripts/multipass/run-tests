@@ -164,7 +164,7 @@ function test_file_for_type() {
         audio)        echo "audio_test.go" ;;
         bluetooth)    echo "bluetooth_test.go" ;;
         certs)        echo "cluster_certs_test.go" ;;
-        cluster)      echo "cluster_test.go" ;;
+        cluster)      echo "cluster_test.go, reboot_test.go" ;;
         controllers)  echo "controllers_test.go" ;;
         fusion)       echo "fusion_test.go" ;;
         logger)       echo "logger_test.go" ;;
@@ -267,7 +267,7 @@ case "$test_type" in
     certs)        run_package_tests "$(regex_for_test_file ./cluster_certs_test.go)" ;;
     audio)        run_package_tests "$(regex_for_test_file ./audio_test.go)" ;;
     bluetooth)    run_package_tests "$(regex_for_test_file ./bluetooth_test.go)" ;;
-    cluster)      run_package_tests "$(regex_for_test_file ./cluster_test.go)" ;;
+    cluster)      run_package_tests "$(regex_for_test_file ./cluster_test.go)|$(regex_for_test_file ./reboot_test.go)" ;;
     controllers)  run_package_tests "$(regex_for_test_file ./controllers_test.go)" ;;
     fusion)       run_package_tests "$(regex_for_test_file ./fusion_test.go)" ;;
     logger)       run_package_tests "$(regex_for_test_file ./logger_test.go)" ;;
