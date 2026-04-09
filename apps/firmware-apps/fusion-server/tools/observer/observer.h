@@ -1085,6 +1085,26 @@ private:
     }
   }
 
+  void sendKeepalive(const sockaddr_in &serverAddr)
+  {
+    Json::Value message;
+    message["action"] = "no_op";
+    Json::StreamWriterBuilder writerBuilder;
+    writerBuilder["indentation"] = "";
+    std::string jsonStr = Json::writeString(writerBuilder, message);
+    ssize_t sent = sendto(udpSocket_.get(), jsonStr.c_str(), jsonStr.length(), 0,
+                          reinterpret_cast<const sockaddr *>(&serverAddr),
+                          sizeof(serverAddr));
+    if (sent < 0)
+    {
+      SPDLOG_WARN("Failed to send keepalive: {}", std::string(strerror(errno)));
+    }
+    else
+    {
+      SPDLOG_TRACE("Sent keepalive to server");
+    }
+  }
+
   void receiveLoop()
   {
     pollfd pfd;
@@ -1094,6 +1114,11 @@ private:
     char buffer[BUFFER_SIZE];
     sockaddr_in senderAddr;
     socklen_t senderLen = sizeof(senderAddr);
+
+    // Send a keepalive every KEEPALIVE_INTERVAL_S seconds to prevent the
+    // server from pruning this client (clientStaleTTL = 10s).
+    static constexpr int KEEPALIVE_INTERVAL_S = 5;
+    int keepaliveCountdown = KEEPALIVE_INTERVAL_S;
 
     while (running_)
     {
@@ -1110,6 +1135,17 @@ private:
         if (!receivedInitialState_)
         {
           requestInitialDeviceInfo(serverAddr_);
+        }
+        else
+        {
+          // Keep our UDP client registration alive so the server continues
+          // broadcasting to us. Without this, the server prunes idle clients
+          // after 10 seconds and silently stops sending config_update packets.
+          if (--keepaliveCountdown <= 0)
+          {
+            sendKeepalive(serverAddr_);
+            keepaliveCountdown = KEEPALIVE_INTERVAL_S;
+          }
         }
         continue;
       }
@@ -1189,6 +1225,29 @@ private:
             else if (op == "device_update") // request originated from server
             {
               handleDeviceUpdate(response);
+              continue;
+            }
+            else if (op == "no_op") // keepalive ACK from server
+            {
+              auto now = std::chrono::steady_clock::now();
+              // If we haven't heard a noop ACK in more than SERVER_PRUNE_THRESHOLD_S
+              // seconds, the server was unavailable and has just come back. Re-do the
+              // full handshake so we reset stale Lamport counters.
+              static constexpr int SERVER_PRUNE_THRESHOLD_S = 15;
+              if (receivedInitialState_ && lastNoopAckTime_.time_since_epoch().count() > 0)
+              {
+                auto gapS = std::chrono::duration_cast<std::chrono::seconds>(
+                    now - lastNoopAckTime_).count();
+                if (gapS > SERVER_PRUNE_THRESHOLD_S)
+                {
+                  SPDLOG_WARN("Server was unreachable for {}s — re-requesting state", gapS);
+                  lastEpoch_ = -1;
+                  lastCounter_ = -1;
+                  lastNoopAckTime_ = now;
+                  continue;
+                }
+              }
+              lastNoopAckTime_ = now;
               continue;
             }
             else
@@ -1271,6 +1330,17 @@ private:
   JsonMonitor jsonMonitor_;
   sockaddr_in serverAddr_{};
   bool receivedInitialState_{false};
+
+  long long lastEpoch_{-1};
+  long long lastCounter_{-1};
+
+  // Timestamp of the last noop ACK received from the server. Used to detect
+  // server prunes: a gap > SERVER_PRUNE_THRESHOLD_S means the server was
+  // unavailable. The handshake is maintained by sending noop keepalives 
+  // every KEEPALIVE_INTERVAL_S seconds, so a gap > SERVER_PRUNE_THRESHOLD_S 
+  // indicates the server was down and has just come back up.
+  
+  std::chrono::steady_clock::time_point lastNoopAckTime_{};
 
   // Device ID change callbacks
   std::vector<DeviceIDChangeCallback> deviceIDCallbacks_;
