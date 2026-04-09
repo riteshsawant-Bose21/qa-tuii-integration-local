@@ -1,5 +1,7 @@
 package api
 
+import "os"
+
 import "time"
 
 const (
@@ -15,6 +17,7 @@ const (
 	FusionVersion   = "_fusion_version"
 	FusionMessageID = "_fusion_msg_id"
 	FusionOperation = "_fusion_op"
+	FusionSentAtNS  = "_fusion_sent_at_ns"
 
 	HTTPTimeout       = 5 * time.Second
 	HTTPUploadTimeout = 30 * time.Second
@@ -32,6 +35,13 @@ const (
 	SerialUnknown = "Unknown"
 
 	SnapshotIDKey = "snapshot_id"
+
+	VIPHighPriority        = "high"
+	VIPvrrpHighPriority    = 120
+	VIPDefaultPriority     = "default"
+	VIPvrrpDefaultPriority = 100
+	VIPLowPriority         = "low"
+	VIPvrrpLowPriority     = 90
 
 	// WS Request types (client -> server)
 	WSMsgTypeDevices            = "devices"
@@ -105,9 +115,9 @@ const (
 	UDPPort            = "7947"
 )
 
-const (
-	AudioFilesLocation      = "/var/lib/fusion/audio"
-	DefaultIdentityFilePath = "/var/lib/device-identity/"
+var (
+	AudioFilesLocation      = getenvDefault("FUSION_AUDIO_DIR", "/var/lib/fusion/audio")
+	DefaultIdentityFilePath = getenvDefault("FUSION_IDENTITY_DIR", "/var/lib/device-identity/")
 	DefaultCAFileName       = "AmazonRootCA1.pem"
 	DefaultCSRFileName      = "device.csr"
 	DefaultCertFileName     = "device.x509.cert"
@@ -115,6 +125,13 @@ const (
 	SoftwareUpdateInfoPath  = "/etc/buildinfo"
 	SerialPath              = "/sys/firmware/devicetree/base/serial-number"
 )
+
+func getenvDefault(key string, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
 
 // RECOVERY_STATUS enum values from SWUpdate
 const (

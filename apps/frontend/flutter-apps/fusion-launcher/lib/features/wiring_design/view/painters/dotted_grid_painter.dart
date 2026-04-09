@@ -6,7 +6,7 @@ class DottedGridPainter {
   DottedGridPainter({required this.color});
 
   void paint(Canvas canvas, Size size, Offset offset, double scale) {
-    const double baseSpacing = 80.0; // 100 pixels spacing same as building page.
+    const double baseSpacing = 100.0; // 100 pixels spacing same as building page.
     const double dotRadius = 1;
 
     final Paint paint = Paint();

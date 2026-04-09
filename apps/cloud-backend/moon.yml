@@ -1,6 +1,6 @@
 project:
   name: cloud-backend
-  description: Fusion Cloud backend services
+  description: Fusion Cloud backend services and push images to ECR repo
 
 tasks:
   build-all:

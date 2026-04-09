@@ -12,13 +12,14 @@ import (
 
 // AppConfig represents application configuration data
 type AppConfig struct {
-	NodeName string
-	BindAddr string
-	BindPort int
-	NetIface string
-	Local    bool
-	Profile  bool
-	Verbose  bool
+	NodeName       string
+	BindAddr       string
+	BindPort       int
+	NetIface       string
+	Local          bool
+	Profile        bool
+	UDPDiagnostics bool
+	Verbose        bool
 }
 
 func (a *AppConfig) SelfUrl() string {
@@ -187,6 +188,8 @@ type DeviceInfo struct {
 	FusionMonorepoBranch     string `json:"fusion_monorepo_branch,omitempty"`
 	FusionMonorepoCommitHash string `json:"fusion_monorepo_commit_hash,omitempty"`
 	JenkinsBuildNumber       string `json:"jenkins_build_number,omitempty"`
+	VrrpPriority             int    `json:"vrrp_priority"`
+
 }
 
 // DevicePatch represents patchable device configuration data.
