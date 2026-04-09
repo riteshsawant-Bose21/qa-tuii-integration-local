@@ -139,6 +139,7 @@ definitions:
         - $ref: '#/definitions/types.CommandType'
         enum:
         - REBOOT
+        - STANDBY
         example: REBOOT
       device_ids:
         items:
@@ -180,9 +181,11 @@ definitions:
   types.CommandType:
     enum:
     - REBOOT
+    - STANDBY
     type: string
     x-enum-varnames:
     - CommandRestart
+    - CommandStandby
   types.CreateOrganizationRequest:
     properties:
       description:
@@ -250,8 +253,25 @@ definitions:
     type: object
   types.DeviceClaimRequest:
     properties:
+      client_device_id:
+        maxLength: 100
+        type: string
       csr:
         type: string
+      device_location:
+        maxLength: 255
+        type: string
+      device_name:
+        maxLength: 255
+        type: string
+      device_zone:
+        maxLength: 100
+        type: string
+      firmware_version:
+        maxLength: 50
+        type: string
+      is_primary:
+        type: boolean
       project_id:
         type: string
     required:
@@ -266,26 +286,34 @@ definitions:
   types.DeviceCreateRequest:
     properties:
       client_device_id:
+        maxLength: 100
         type: string
       csr:
         type: string
       device_location:
+        maxLength: 255
         type: string
       device_name:
+        maxLength: 255
         type: string
       device_zone:
+        maxLength: 100
         type: string
       firmware_version:
+        maxLength: 50
         type: string
       is_primary:
         type: boolean
       mac_address:
+        maxLength: 20
         type: string
       model_name:
+        maxLength: 100
         type: string
       project_id:
         type: string
       serial_number:
+        maxLength: 100
         type: string
     required:
     - client_device_id
@@ -319,14 +347,19 @@ definitions:
   types.DeviceUpdateRequest:
     properties:
       client_device_id:
+        maxLength: 100
         type: string
       device_location:
+        maxLength: 255
         type: string
       device_name:
+        maxLength: 255
         type: string
       device_zone:
+        maxLength: 100
         type: string
       firmware_version:
+        maxLength: 50
         type: string
       is_primary:
         type: boolean

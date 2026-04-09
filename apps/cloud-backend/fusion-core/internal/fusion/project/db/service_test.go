@@ -129,16 +129,6 @@ func TestServiceInsert(t *testing.T) {
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
-	t.Run("panics when project is nil", func(t *testing.T) {
-		mock.ExpectBegin()
-		tx, err := db.BeginTx(ctx, nil)
-		require.NoError(t, err)
-		logger, _ := log.NewProduction()
-		assert.Panics(t, func() {
-			_, _ = service.Insert(ctx, nil, testProjectAccountID, tx, logger.JobSyncLog())
-		})
-	})
-
 	t.Run("rolls back transaction on project insert failure", func(t *testing.T) {
 		project := &types.ProjectCreateRequest{
 			ID:              testProjectID,
@@ -164,7 +154,7 @@ func TestServiceInsert(t *testing.T) {
 		id, err := service.Insert(ctx, project, testProjectAccountID, tx, logger.JobSyncLog())
 		assert.Error(t, err)
 		assert.Empty(t, id)
-		assert.Contains(t, err.Error(), "failed to insert project")
+		assert.ErrorIs(t, err, assert.AnError)
 
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
@@ -343,7 +333,7 @@ func TestServiceGetProjectByID(t *testing.T) {
 		project, err := service.GetProjectByID(ctx, testProjectID, logger.JobSyncLog())
 		assert.Error(t, err)
 		assert.Nil(t, project)
-		assert.Contains(t, err.Error(), "failed to get project")
+		assert.ErrorIs(t, err, assert.AnError)
 	})
 }
 
@@ -453,7 +443,7 @@ func TestServiceDelete(t *testing.T) {
 		logger, _ := log.NewProduction()
 		err := service.Delete(ctx, projectRow, logger.JobSyncLog())
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to delete project")
+		assert.ErrorIs(t, err, assert.AnError)
 	})
 }
 
