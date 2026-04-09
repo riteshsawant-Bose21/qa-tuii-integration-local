@@ -22,6 +22,7 @@ class DeviceOverviewTab extends StatelessWidget {
               /// DEVICE IDENTITY
               Expanded(
                 child: _card(
+                  context,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
 
@@ -62,6 +63,7 @@ class DeviceOverviewTab extends StatelessWidget {
               /// TELEMETRY
               Expanded(
                 child: _card(
+                  context,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -121,6 +123,7 @@ class DeviceOverviewTab extends StatelessWidget {
               /// LOCATION
               Expanded(
                 child: _card(
+                  context,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -151,11 +154,12 @@ class DeviceOverviewTab extends StatelessWidget {
   }
 
   /// CARD
-  Widget _card({required Widget child}) {
+  Widget _card(BuildContext context, {required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
+        color: context.colorScheme.elevation2,
       ),
       child: child,
     );

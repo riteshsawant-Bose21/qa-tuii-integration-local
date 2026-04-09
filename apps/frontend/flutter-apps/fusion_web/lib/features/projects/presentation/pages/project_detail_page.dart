@@ -127,7 +127,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                   children: [
                     /// BACK
                     TextButton.icon(
-                      onPressed: () => context.go(AppConstants.projectsRoute),
+                      onPressed: () =>
+                          // context.pushReplacement(AppConstants.projectsRoute),
+                          context.pop(),
                       icon: Icon(
                         Icons.arrow_back,
                         size: 18,
