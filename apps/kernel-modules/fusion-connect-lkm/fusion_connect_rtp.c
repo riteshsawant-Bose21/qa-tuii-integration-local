@@ -790,7 +790,7 @@ __always_inline void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp
     struct udphdr *udph = &stream->rtp_packet_base.udp;
 
     spin_lock(&stream->lock);
-    scheduled_send_ns = stream->next_action_time;
+    scheduled_send_ns = stream->next_action_time - stream->packet_time;
 
     /* ---------- Per-packet RTP fields ---------- */
     {
