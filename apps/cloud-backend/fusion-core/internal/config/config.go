@@ -1,7 +1,7 @@
 package config
 
 import (
-	"errors"
+	"fmt"
 )
 
 // Service provides methods to fetch configuration settings.
@@ -17,7 +17,7 @@ type Store interface {
 // NewService creates a new configuration service with the provided store.
 func NewService(store Store) (*Service, error) {
 	if store == nil {
-		return nil, errors.New("store cannot be nil")
+		return nil, fmt.Errorf("store cannot be nil")
 	}
 	return &Service{store: store}, nil
 }

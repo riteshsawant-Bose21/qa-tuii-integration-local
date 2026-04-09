@@ -1,0 +1,130 @@
+{
+  "devices": [
+    {
+      "id": "__DEVICE_ID__",
+      "device_type": "fusion_c1",
+      "label": "local-mac - __DEVICE_ID__",
+      "location": "local",
+      "dsp_static_config": {
+        "session": {
+          "name": "fusion_dsp",
+          "property_settings": [
+            {
+              "name": "frame_size",
+              "value": 32
+            },
+            {
+              "name": "sample_rate",
+              "value": 48000
+            }
+          ]
+        },
+        "audio_tasks": [
+          {
+            "name": "LOCAL_SIGNAL",
+            "property_settings": [
+              {
+                "name": "is_jack_client",
+                "value": false
+              },
+              {
+                "name": "frame_size",
+                "value": 32
+              },
+              {
+                "name": "sample_rate",
+                "value": 48000
+              }
+            ],
+            "blocks": [
+              {
+                "name": "SIGGEN_LOCAL",
+                "algorithm": "signal_generator",
+                "property_settings": [
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  }
+                ]
+              },
+              {
+                "name": "GAIN_LOCAL",
+                "algorithm": "gain",
+                "property_settings": [
+                  {
+                    "name": "channels",
+                    "value": 1
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  }
+                ]
+              },
+              {
+                "name": "WAVWRITE_LOCAL",
+                "algorithm": "wav_write",
+                "property_settings": [
+                  {
+                    "name": "filename",
+                    "value": "__OUTPUT_WAV__"
+                  },
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "name": "in",
+                    "channels": 1
+                  }
+                ]
+              }
+            ],
+            "block_connections": [
+              {
+                "source_block": "SIGGEN_LOCAL",
+                "output_terminal": "out",
+                "output_channel": 1,
+                "destination_block": "GAIN_LOCAL",
+                "input_terminal": "in",
+                "input_channel": 1
+              },
+              {
+                "source_block": "GAIN_LOCAL",
+                "output_terminal": "out",
+                "output_channel": 1,
+                "destination_block": "WAVWRITE_LOCAL",
+                "input_terminal": "in",
+                "input_channel": 1
+              }
+            ]
+          }
+        ],
+        "parameter_settings": [],
+        "task_connections": []
+      }
+    }
+  ],
+  "settings": {
+    "audio": {
+      "SIGGEN_LOCAL": {
+        "signal_type": "sine",
+        "sine_frequency": 1000.0
+      },
+      "GAIN_LOCAL": {
+        "gain": -6.0,
+        "mute": false
+      }
+    }
+  }
+}
