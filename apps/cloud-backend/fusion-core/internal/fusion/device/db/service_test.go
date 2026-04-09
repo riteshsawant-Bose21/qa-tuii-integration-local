@@ -9,6 +9,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/aarondl/null/v8"
 	"github.com/stretchr/testify/assert"
@@ -126,7 +127,7 @@ func TestGetDeviceByID(t *testing.T) {
 			WillReturnError(sql.ErrNoRows)
 
 		device, err := service.GetDeviceByID(ctx, "non-existent", logger.JobSyncLog())
-		assert.ErrorIs(t, err, sql.ErrNoRows)
+		assert.ErrorIs(t, err, errorutil.ErrDeviceNotFound)
 		assert.Nil(t, device)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})

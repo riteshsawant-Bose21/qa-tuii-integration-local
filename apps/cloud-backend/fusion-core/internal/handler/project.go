@@ -29,7 +29,7 @@ func NewProjectHandler(project fusion.Project) *ProjectHandler {
 }
 
 // handleProjectError maps project domain errors to appropriate HTTP responses.
-func handleProjectError(ctx *gin.Context, err error) {
+func handleProjectError(ctx *gin.Context, err error, logger *zap.Logger) {
 	switch {
 	case errors.Is(err, errorutil.ErrProjectNotFound):
 		response.NotFound(ctx, errorutil.ErrMsgProjectNotFound)
@@ -50,6 +50,7 @@ func handleProjectError(ctx *gin.Context, err error) {
 	case errors.Is(err, errorutil.ErrUnauthorized):
 		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 	default:
+		logger.Error("project operation failed", zap.Error(err))
 		response.InternalError(ctx)
 	}
 }
@@ -91,7 +92,7 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 	res, err := h.project.CreateProject(ctx, &p, *user, logger)
 
 	if err != nil {
-		handleProjectError(ctx, err)
+		handleProjectError(ctx, err, logger)
 		return
 	}
 
@@ -146,7 +147,7 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 
 	res, err := h.project.GetAllProjects(ctx, &params, *user, logger)
 	if err != nil {
-		response.InternalError(ctx)
+		handleProjectError(ctx, err, logger)
 		return
 	}
 
@@ -167,13 +168,7 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /projects/{projectId} [get]
 func (h *ProjectHandler) GetProjectByID(ctx *gin.Context) {
-
-	loggerFromContext, exists := ctx.Get("logger")
-	if !exists {
-		response.InternalError(ctx)
-		return
-	}
-	logger := loggerFromContext.(*zap.Logger)
+	logger := log.GetLogger(ctx)
 
 	projectID := ctx.Param("projectId")
 
@@ -183,21 +178,15 @@ func (h *ProjectHandler) GetProjectByID(ctx *gin.Context) {
 		return
 	}
 
-	userAuth, exists := ctx.Get("user_auth")
-	if !exists {
-		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
-		return
-	}
-
-	user, ok := userAuth.(*types.UserAuthorizationResponse)
-	if !ok || user == nil {
-		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
+	user, err := middleware.GetUserAuth(ctx)
+	if err != nil {
+		response.Unauthorized(ctx, err.Error())
 		return
 	}
 
 	res, err := h.project.GetProjectById(ctx, projectID, *user, logger)
 	if err != nil {
-		handleProjectError(ctx, err)
+		handleProjectError(ctx, err, logger)
 		return
 	}
 
@@ -254,7 +243,7 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 	// Use authenticated update method which includes all validations
 	res, err := h.project.UpdateProject(ctx, &p, *user, logger)
 	if err != nil {
-		handleProjectError(ctx, err)
+		handleProjectError(ctx, err, logger)
 		return
 	}
 	response.OK(ctx, res)
@@ -293,7 +282,7 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 	}
 
 	if err := h.project.DeleteProject(ctx, projectID, *user, logger); err != nil {
-		handleProjectError(ctx, err)
+		handleProjectError(ctx, err, logger)
 		return
 	}
 	response.NoContent(ctx)
@@ -333,7 +322,7 @@ func (h *ProjectHandler) AssignUserToProject(ctx *gin.Context) {
 
 	_, err = h.project.AssignUserToProject(ctx, projectID, userEmail, *user, logger)
 	if err != nil {
-		handleProjectError(ctx, err)
+		handleProjectError(ctx, err, logger)
 		return
 	}
 
@@ -374,7 +363,7 @@ func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 
 	_, err = h.project.RemoveUserFromProject(ctx, projectID, userEmail, *user, logger)
 	if err != nil {
-		handleProjectError(ctx, err)
+		handleProjectError(ctx, err, logger)
 		return
 	}
 
@@ -434,7 +423,7 @@ func (h *ProjectHandler) UpdateProjectStar(ctx *gin.Context) {
 	}
 
 	if err != nil {
-		handleProjectError(ctx, err)
+		handleProjectError(ctx, err, logger)
 		return
 	}
 
@@ -494,7 +483,7 @@ func (h *ProjectHandler) UpdateProjectArchive(ctx *gin.Context) {
 	}
 
 	if err != nil {
-		handleProjectError(ctx, err)
+		handleProjectError(ctx, err, logger)
 		return
 	}
 
@@ -554,7 +543,7 @@ func (h *ProjectHandler) UpdateProjectLock(ctx *gin.Context) {
 	}
 
 	if err != nil {
-		handleProjectError(ctx, err)
+		handleProjectError(ctx, err, logger)
 		return
 	}
 

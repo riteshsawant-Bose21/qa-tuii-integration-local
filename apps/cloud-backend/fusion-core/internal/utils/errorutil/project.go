@@ -2,38 +2,64 @@ package errorutil
 
 import "errors"
 
-// ErrProjectNotFound is the sentinel error for a missing project.
-var ErrProjectNotFound = errors.New(ErrMsgProjectNotFound)
+var (
+	// ErrProjectNotFound is the sentinel error for a missing project.
+	ErrProjectNotFound = errors.New(ErrMsgProjectNotFound)
 
-// ErrProjectAlreadyExists is the sentinel error for a duplicate project.
-var ErrProjectAlreadyExists = errors.New(ErrMsgProjectAlreadyExists)
+	// ErrProjectAlreadyExists is the sentinel error for a duplicate project.
+	ErrProjectAlreadyExists = errors.New(ErrMsgProjectAlreadyExists)
 
-// ErrProjectArchived is the sentinel error for an archived project.
-var ErrProjectArchived = errors.New(ErrMsgProjectArchived)
+	// ErrProjectArchived is the sentinel error for an archived project.
+	ErrProjectArchived = errors.New(ErrMsgProjectArchived)
 
-// ErrProjectNotArchived is the sentinel error for a non-archived project.
-var ErrProjectNotArchived = errors.New(ErrMsgProjectNotArchived)
+	// ErrProjectNotArchived is the sentinel error for a non-archived project.
+	ErrProjectNotArchived = errors.New(ErrMsgProjectNotArchived)
 
-// ErrProjectAlreadyLocked is the sentinel error for a project that is already locked.
-var ErrProjectAlreadyLocked = errors.New(ErrMsgProjectAlreadyLocked)
+	// ErrProjectAlreadyLocked is the sentinel error for a project that is already locked.
+	ErrProjectAlreadyLocked = errors.New(ErrMsgProjectAlreadyLocked)
 
-// ErrProjectNotLocked is the sentinel error for a project that is not locked.
-var ErrProjectNotLocked = errors.New(ErrMsgProjectNotLocked)
+	// ErrProjectNotLocked is the sentinel error for a project that is not locked.
+	ErrProjectNotLocked = errors.New(ErrMsgProjectNotLocked)
 
-// ErrProjectNotLockedByUser is the sentinel error when a project is not locked by the requesting user.
-var ErrProjectNotLockedByUser = errors.New(ErrMsgProjectNotLockedByUser)
+	// ErrProjectNotLockedByUser is the sentinel error when a project is not locked by the requesting user.
+	ErrProjectNotLockedByUser = errors.New(ErrMsgProjectNotLockedByUser)
 
-// ErrProjectLockedByOtherUser is the sentinel error when a project is locked by a different user.
-var ErrProjectLockedByOtherUser = errors.New(ErrMsgProjectLockedByUser)
+	// ErrProjectLockedByOtherUser is the sentinel error when a project is locked by a different user.
+	ErrProjectLockedByOtherUser = errors.New(ErrMsgProjectLockedByUser)
 
-// ErrUserNotFound is the sentinel error for a missing user.
-var ErrUserNotFound = errors.New(ErrMsgUserNotFound)
+	// ErrUserNotFound is the sentinel error for a missing user.
+	ErrUserNotFound = errors.New(ErrMsgUserNotFound)
 
-// ErrUserNotAssignedToProject is the sentinel error when a user is not assigned to a project.
-var ErrUserNotAssignedToProject = errors.New(ErrMsgUserNotAssignedToProject)
+	// ErrUserNotAssignedToProject is the sentinel error when a user is not assigned to a project.
+	ErrUserNotAssignedToProject = errors.New(ErrMsgUserNotAssignedToProject)
 
-// ErrUserAlreadyAssigned is the sentinel error when a user is already assigned to a project.
-var ErrUserAlreadyAssigned = errors.New(ErrMsgUserAlreadyAssigned)
+	// ErrUserAlreadyAssigned is the sentinel error when a user is already assigned to a project.
+	ErrUserAlreadyAssigned = errors.New(ErrMsgUserAlreadyAssigned)
+
+	// ErrProjectIDCannotBeEmpty is the sentinel error when a project ID is empty.
+	ErrProjectIDCannotBeEmpty = errors.New(ErrMsgProjectIDCannotBeEmpty)
+
+	// ErrIDCannotBeEmpty is the sentinel error when an ID is empty.
+	ErrProjectCannotBeNil = errors.New(ErrMsgProjectCannotBeNil)
+
+	// ErrProjectUpdateReqNil is the sentinel error when a project update request is nil.
+	ErrProjectUpdateReqNil = errors.New(ErrMsgProjectUpdateReqNil)
+
+	// ErrProjectRowNil is the sentinel error when a project row is nil.
+	ErrProjectRowNil = errors.New(ErrMsgProjectRowNil)
+
+	// ErrTransactionNil is the sentinel error when a transaction is nil.
+	ErrTransactionNil = errors.New(ErrMsgTransactionNil)
+
+	// ErrUserIDRequired is the sentinel error when user authorization information is empty.
+	ErrUserIDRequired = errors.New(ErrMsgUserIDRequired)
+
+	// ErrUserEmailEmpty is the sentinel error when a user's email is empty.
+	ErrUserEmailEmpty = errors.New(ErrMsgUserEmailEmpty)
+
+	// ErrQueryParamsNil is the sentinel error when query parameters are nil.
+	ErrQueryParamsNil = errors.New(ErrMsgQueryParamsNil)
+)
 
 // API Error Message Constants
 // Single source of truth for all error messages returned by the project API

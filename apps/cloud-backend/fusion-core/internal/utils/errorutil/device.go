@@ -4,13 +4,37 @@ import "errors"
 
 // Sentinel errors for use with errors.Is.
 var (
+	// Business logic errors
 	ErrDeviceAlreadyExists    = errors.New(ErrMsgDeviceAlreadyExists)
 	ErrDeviceUniqueConstraint = errors.New(ErrMsgDeviceUniqueConstraint)
 	ErrDeviceNotFound         = errors.New(ErrMsgDeviceNotFound)
 	ErrDeviceNotClaimed       = errors.New(ErrMsgDeviceNotClaimed)
 	ErrDeviceAlreadyClaimed   = errors.New(ErrMsgDeviceAlreadyClaimed)
+	ErrDeviceRequestInvalid   = errors.New(ErrMsgDeviceRequestInvalid)
 	ErrCommandNotFound        = errors.New(ErrMsgCommandNotFound)
 	ErrInvalidCSR             = errors.New(ErrMsgInvalidCSR)
+
+	// Validation / nil-input errors
+	ErrCSRPemEmpty            = errors.New(ErrMsgCSRPemEmpty)
+	ErrThingNameEmpty         = errors.New(ErrMsgThingNameEmpty)
+	ErrCertificateArnEmpty    = errors.New(ErrMsgCertificateArnEmpty)
+	ErrPolicyNameEmpty        = errors.New(ErrMsgPolicyNameEmpty)
+	ErrCertificateIDEmpty     = errors.New(ErrMsgCertificateIDEmpty)
+	ErrTopicEmpty             = errors.New(ErrMsgTopicEmpty)
+	ErrDeviceIDEmpty          = errors.New(ErrMsgDeviceIDEmpty)
+	ErrDeviceUUIDEmpty        = errors.New(ErrMsgDeviceUUIDEmpty)
+	ErrAccountIDEmpty         = errors.New(ErrMsgAccountIDEmpty)
+	ErrCertIDEmpty            = errors.New(ErrMsgCertIDEmpty)
+	ErrCertArnEmpty           = errors.New(ErrMsgCertArnEmpty)
+	ErrProjectIDEmpty         = errors.New(ErrMsgProjectIDEmpty)
+	ErrCommandIDEmpty         = errors.New(ErrMsgCommandIDEmpty)
+	ErrStatusEmpty            = errors.New(ErrMsgStatusEmpty)
+	ErrDeviceCreateReqNil     = errors.New(ErrMsgDeviceCreateReqNil)
+	ErrBulkDeviceCreateReqNil = errors.New(ErrMsgBulkDeviceCreateReqNil)
+	ErrDeviceUpdateReqNil     = errors.New(ErrMsgDeviceUpdateReqNil)
+	ErrDeviceClaimReqNil      = errors.New(ErrMsgDeviceClaimReqNil)
+	ErrDeviceRotateCertReqNil = errors.New(ErrMsgDeviceRotateCertReqNil)
+	ErrCommandReqNil          = errors.New(ErrMsgCommandReqNil)
 )
 
 // Validation Error Messages

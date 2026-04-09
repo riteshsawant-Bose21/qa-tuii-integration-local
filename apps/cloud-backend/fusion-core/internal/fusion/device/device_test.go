@@ -675,7 +675,7 @@ func TestCreateDevice(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, resp)
-		assert.Contains(t, err.Error(), "failed to begin transaction")
+		assert.Contains(t, err.Error(), "begin transaction:")
 		mockDB.AssertExpectations(t)
 		mockIoT.AssertExpectations(t)
 	})
@@ -771,7 +771,7 @@ func TestCreateDevice(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, resp)
-		assert.Contains(t, err.Error(), "failed to commit transaction")
+		assert.Contains(t, err.Error(), "commit transaction:")
 		mockDB.AssertExpectations(t)
 		mockIoT.AssertExpectations(t)
 	})
@@ -829,7 +829,7 @@ func TestUpdateDevice(t *testing.T) {
 			DeviceName: "Updated Device Name",
 		}
 
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, sql.ErrNoRows)
+		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, errorutil.ErrDeviceNotFound)
 
 		err := service.UpdateDevice(ctx, testDeviceID, updateReq, user, logger)
 
@@ -917,7 +917,7 @@ func TestUpdateDevice(t *testing.T) {
 		err := service.UpdateDevice(ctx, testDeviceID, updateReq, user, logger)
 
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to begin transaction")
+		assert.Contains(t, err.Error(), "begin transaction:")
 		mockDB.AssertExpectations(t)
 	})
 
@@ -981,7 +981,7 @@ func TestUpdateDevice(t *testing.T) {
 		err := service.UpdateDevice(ctx, testDeviceID, updateReq, user, logger)
 
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to commit transaction")
+		assert.Contains(t, err.Error(), "commit transaction:")
 		mockDB.AssertExpectations(t)
 	})
 }
@@ -1057,7 +1057,7 @@ func TestClaimDevice(t *testing.T) {
 			ProjectID: testProjectID,
 		}
 
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, sql.ErrNoRows)
+		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, errorutil.ErrDeviceNotFound)
 
 		resp, err := service.ClaimDevice(ctx, testDeviceID, req, user, logger)
 
@@ -1265,7 +1265,7 @@ func TestRotateCertificate(t *testing.T) {
 			CSR: testCSR,
 		}
 
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, sql.ErrNoRows)
+		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, errorutil.ErrDeviceNotFound)
 
 		resp, err := service.RotateCertificate(ctx, testDeviceID, req, user, logger)
 
@@ -1445,7 +1445,7 @@ func TestResetDevice(t *testing.T) {
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
 
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, sql.ErrNoRows)
+		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, errorutil.ErrDeviceNotFound)
 
 		err := service.ResetDevice(ctx, testDeviceID, user, logger)
 
@@ -1570,7 +1570,7 @@ func TestResetDevice(t *testing.T) {
 		err := service.ResetDevice(ctx, testDeviceID, user, logger)
 
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to begin transaction")
+		assert.Contains(t, err.Error(), "begin transaction:")
 		mockDB.AssertExpectations(t)
 		mockIoT.AssertExpectations(t)
 	})
@@ -1636,7 +1636,7 @@ func TestResetDevice(t *testing.T) {
 		err := service.ResetDevice(ctx, testDeviceID, user, logger)
 
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to commit transaction")
+		assert.Contains(t, err.Error(), "commit transaction:")
 		mockDB.AssertExpectations(t)
 		mockIoT.AssertExpectations(t)
 	})
