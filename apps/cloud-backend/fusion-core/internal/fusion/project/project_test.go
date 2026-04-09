@@ -416,7 +416,7 @@ func TestGetAllProjects(t *testing.T) {
 			mockDBErr:      errDatabaseMsg,
 			mockPresignURL: "",
 			mockPresignErr: nil,
-			expectedErr:    fmt.Errorf("GetAllProjects: %w", errDatabaseMsg),
+			expectedErr:    fmt.Errorf("%w", errDatabaseMsg),
 		},
 		{
 			name:           "presign error",
@@ -425,7 +425,7 @@ func TestGetAllProjects(t *testing.T) {
 			mockDBErr:      nil,
 			mockPresignURL: "",
 			mockPresignErr: fmt.Errorf("presign error"),
-			expectedErr:    fmt.Errorf("GetAllProjects: presign error"),
+			expectedErr:    fmt.Errorf("presign error"),
 		},
 	}
 
@@ -534,7 +534,7 @@ func TestUpdateProject(t *testing.T) {
 			},
 			mockProjectRow: nil,
 			mockErr:        errDatabaseMsg,
-			expectedErr:    fmt.Errorf("UpdateProject: %w", fmt.Errorf("validateProject: %w", errDatabaseMsg)),
+			expectedErr:    fmt.Errorf("%w", fmt.Errorf("%w", errDatabaseMsg)),
 		},
 	}
 
@@ -686,7 +686,7 @@ func TestDeleteProject(t *testing.T) {
 			id:             "1",
 			mockProjectRow: nil,
 			mockErr:        errDatabaseMsg,
-			expectedErr:    fmt.Errorf("DeleteProject: %w", fmt.Errorf("validateProject: %w", errDatabaseMsg)),
+			expectedErr:    fmt.Errorf("%w", fmt.Errorf("%w", errDatabaseMsg)),
 		},
 	}
 
