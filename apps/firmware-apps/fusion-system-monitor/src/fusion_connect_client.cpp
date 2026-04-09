@@ -934,7 +934,7 @@ bool FusionConnectClient::process_audio_streams_update() {
         return false;
     }
     if (device_id.empty()) {
-        if (!is_retry) SPDLOG_ERROR("Cannot process audio_streams_update: no device ID yet");
+        SPDLOG_ERROR("Cannot process audio_streams_update: no device ID yet");
         return false;
     }
 
