@@ -141,17 +141,24 @@ func (s *Service) GetBundleByID(ctx context.Context, bundleID string) (*models.B
 }
 
 func (s *Service) GetLatestBundleCompatibleWithFirmware(ctx context.Context, currentFirmwareVersion string, channel string) (*models.Bundle, error) {
-	parsedFirmware, err := s.toVersionArray(currentFirmwareVersion)
+	currentBundleVersionArray, err := s.toVersionArray(currentFirmwareVersion)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse current firmware version: %w", err)
+	}
+
+	parsedVersion, err := validation.ParseSemanticVersion(currentFirmwareVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse current firmware version: %w", err)
 	}
 
 	queryMods := []qm.QueryMod{
 		models.BundleWhere.ApprovalStatus.EQ(models.BundleApprovalStatusEnumAPPROVED),
-		models.BundleWhere.VersionArray.GT(parsedFirmware),
+		// Match bundles with higher version_array, OR same version_array with higher prerelease_num
+		qm.Where("(version_array > ? OR (version_array = ? AND prerelease_num > ?))",
+			currentBundleVersionArray, currentBundleVersionArray, parsedVersion.PrereleaseNum),
 		qm.Expr(
 			models.BundleWhere.MinPrevVersion.EQ("0.0.0"),
-			qm.Or2(models.BundleWhere.MinPrevVersionArray.LTE(parsedFirmware)),
+			qm.Or2(models.BundleWhere.MinPrevVersionArray.LTE(currentBundleVersionArray)),
 		),
 		qm.OrderBy("version_array DESC, prerelease_num DESC NULLS LAST"),
 	}
@@ -176,26 +183,33 @@ func (s *Service) GetLatestBundleCompatibleWithFirmware(ctx context.Context, cur
 }
 
 func (s *Service) GetLatestCompatibleBundle(ctx context.Context, currentFirmwareVersion string, currentDesktopAppVersion string, channel string) (*models.Bundle, error) {
-	parsedCurrentFirmwareVersion, err := s.toVersionArray(currentFirmwareVersion)
+	currentBundleVersionArray, err := s.toVersionArray(currentFirmwareVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse current firmware version: %w", err)
 	}
 
-	parsedCurrentDesktopAppVersion, err := s.toVersionArray(currentDesktopAppVersion)
+	currentDesktopAppVersionArray, err := s.toVersionArray(currentDesktopAppVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse current desktop app version: %w", err)
 	}
 
+	parsedVersion, err := validation.ParseSemanticVersion(currentFirmwareVersion)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse current firmware version: %w", err)
+	}
+
 	queryMods := []qm.QueryMod{
 		models.BundleWhere.ApprovalStatus.EQ(models.BundleApprovalStatusEnumAPPROVED),
-		models.BundleWhere.VersionArray.GT(parsedCurrentFirmwareVersion),
+		// Match bundles with higher version_array, OR same version_array with higher prerelease_num
+		qm.Where("(version_array > ? OR (version_array = ? AND prerelease_num > ?))",
+			currentBundleVersionArray, currentBundleVersionArray, parsedVersion.PrereleaseNum),
 		qm.Expr(
 			models.BundleWhere.MinPrevVersion.EQ("0.0.0"),
-			qm.Or2(models.BundleWhere.MinPrevVersionArray.LTE(parsedCurrentFirmwareVersion)),
+			qm.Or2(models.BundleWhere.MinPrevVersionArray.LTE(currentBundleVersionArray)),
 		),
 		qm.Expr(
 			models.BundleWhere.MinDesktopAppVersion.EQ("0.0.0"),
-			qm.Or2(models.BundleWhere.MinDesktopAppVersionArray.LTE(parsedCurrentDesktopAppVersion)),
+			qm.Or2(models.BundleWhere.MinDesktopAppVersionArray.LTE(currentDesktopAppVersionArray)),
 		),
 		qm.OrderBy("version_array DESC, prerelease_num DESC NULLS LAST"),
 	}

@@ -240,6 +240,10 @@ func (h *FirmwareUpdateHandler) CheckForUpdate(c *gin.Context) {
 		return
 	}
 
+	// Strip build metadata (irrelevant for version comparison)
+	payload.CurrentFirmwareVersion = validation.StripBuildMetadata(payload.CurrentFirmwareVersion)
+	payload.CurrentDesktopAppVersion = validation.StripBuildMetadata(payload.CurrentDesktopAppVersion)
+
 	// Validate version formats
 	if err := validation.ValidateBundleVersionFormat(payload.CurrentFirmwareVersion); err != nil {
 		response.BadRequest(c, fmt.Sprintf("invalid current_firmware_version format: %s", err.Error()))
