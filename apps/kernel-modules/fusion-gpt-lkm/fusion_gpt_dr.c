@@ -63,6 +63,11 @@
 #define DEFAULT_DAC_I2C_ADDR	 0x62
 #define DEFAULT_SI5351B_I2C_ADDR 0x60
 
+#define DAC_MIN_VALUE 0
+#define DAC_MAX_VALUE 65535
+#define DAC_MID_VALUE 32768
+#define DAC_INVALID_VALUE -1
+
 enum cal_state {
 	CAL_IDLE = 0,
 	CAL_CONFIG_CHECK,
@@ -76,24 +81,24 @@ enum cal_state {
 	CAL_FAIL,
 };
 
-#define CAL_CONFIG_VERSION 3U
+#define CAL_CONFIG_VERSION 4U
 #define CAL_CONFIG_PATH "/var/lib/fusion/fusion-gpt-calibration.conf"
 
 #define CAL_ENABLE true
 #define CAL_DEFAULT_GAIN_DELTA 20000U
-#define CAL_DEFAULT_DAC_DELTA 8U
+#define CAL_DEFAULT_DAC_DELTA 2056U
 #define CAL_DEFAULT_SETTLE_PPS 2U
 #define CAL_DEFAULT_MEASURE_PPS 4U
 #define CAL_DEFAULT_FIT_RESIDUAL_THRESH 30U
-#define CAL_DEFAULT_SI_GAIN_START 70000U
+#define CAL_DEFAULT_SI_GAIN_START 1000000U
 #define CAL_DEFAULT_INVERSE_GAIN_STEP 10000U
-#define CAL_DEFAULT_JUMP_DAC_MIN 30
-#define CAL_DEFAULT_JUMP_DAC_MAX 225
+#define CAL_DEFAULT_JUMP_DAC_MIN 7710
+#define CAL_DEFAULT_JUMP_DAC_MAX 57825
 #define CAL_DEFAULT_PRE_E0_SAMPLES 3U
 #define CAL_DEFAULT_PRE_E0_ABS_MAX 1000U
 #define CAL_DEFAULT_PRE_E0_MAX_WAIT 12U
 #define CAL_DEFAULT_VERIFY_GAIN_DELTA_MAX 10000U
-#define CAL_DEFAULT_VERIFY_DAC_DELTA_MAX 4U
+#define CAL_DEFAULT_VERIFY_DAC_DELTA_MAX 1028U
 #define CAL_DEFAULT_VERIFY_E0_DELTA_MAX 20U
 
 #define CAL_LOCK_CONSECUTIVE 5U
@@ -109,6 +114,18 @@ MODULE_PARM_DESC(error_thresh_param, "Raise discipline_ready after 5 PPS samples
 static bool pi_only_param = true;
 module_param(pi_only_param, bool, 0644);
 MODULE_PARM_DESC(pi_only_param, "Skip GPT calibration/jump logic and use PI fallback control only");
+
+static uint pi_p_threshold_param = 20;
+module_param(pi_p_threshold_param, uint, 0644);
+MODULE_PARM_DESC(pi_p_threshold_param, "PI P-term activation threshold in PPS error ticks");
+
+static uint pi_p_gain_q16_param = 65536;
+module_param(pi_p_gain_q16_param, uint, 0644);
+MODULE_PARM_DESC(pi_p_gain_q16_param, "PI P-term gain in Q16 fixed-point DAC-counts per PPS-error tick");
+
+static uint pi_i_gain_q16_param = 4096;
+module_param(pi_i_gain_q16_param, uint, 0644);
+MODULE_PARM_DESC(pi_i_gain_q16_param, "PI I-term gain in Q16 fixed-point DAC-counts per accumulated PPS-error tick");
 
 struct fusion_gpt_cal_config {
 	s32 k1_q16;
@@ -182,7 +199,7 @@ struct fusion_gpt
 	/* DAC control */
 	struct work_struct dac_work;
 	struct i2c_client *dac_client;
-	u16 current_dac_value;
+	int current_dac_value;
 	long latest_freq_error;    /* The most recent frequency delta */
 
 	/* PI loop */
@@ -473,21 +490,21 @@ static inline u64 ceil_div_u64(u64 a, u64 b)
 
 static inline u32 fusion_start_gain_value(const struct fusion_gpt_cal_config *cfg)
 {
-	return clamp_t(u32, cfg->si_gain_start, 40000, 250000);
+	return clamp_t(u32, cfg->si_gain_start, 40000, 1000000);
 }
 
 static inline int cal_jump_dac_min_value(const struct fusion_gpt_cal_config *cfg)
 {
 	return clamp_t(int,
 			min_t(int, cfg->cal_jump_dac_min, cfg->cal_jump_dac_max),
-			0, 255);
+			DAC_MIN_VALUE, DAC_MAX_VALUE);
 }
 
 static inline int cal_jump_dac_max_value(const struct fusion_gpt_cal_config *cfg)
 {
 	return clamp_t(int,
 			max_t(int, cfg->cal_jump_dac_min, cfg->cal_jump_dac_max),
-			0, 255);
+			DAC_MIN_VALUE, DAC_MAX_VALUE);
 }
 
 static bool cal_prebaked_fingerprint_matches(struct fusion_gpt *g, long e0)
@@ -542,8 +559,8 @@ static void gpt_reset_timing_state_locked(struct fusion_gpt *g)
 
 static void gpt_restore_control_baseline_locked(struct fusion_gpt *g)
 {
-	g->dac_target = 128;
-	g->current_dac_value = 0xFFFF; /* force next DAC write */
+	g->dac_target = DAC_MID_VALUE;
+	g->current_dac_value = DAC_INVALID_VALUE; /* force next DAC write */
 	g->si_gain_current = clamp(fusion_start_gain_value(&g->cal_cfg),
 				   g->si_gain_min, g->si_gain_max);
 	g->si_gain_target = g->si_gain_current;
@@ -557,8 +574,10 @@ static void gpt_reset_control_state_locked(struct fusion_gpt *g,
 	bool preserve_servo_state =
 		preserve_calibration &&
 		(g->cal_path_ran || READ_ONCE(pi_only_param));
-	int preserved_dac = (g->current_dac_value <= 255) ?
-		g->current_dac_value : clamp(g->dac_target, 0, 255);
+	int preserved_dac = (g->current_dac_value >= DAC_MIN_VALUE &&
+			     g->current_dac_value <= DAC_MAX_VALUE) ?
+		g->current_dac_value : clamp(g->dac_target, DAC_MIN_VALUE,
+					       DAC_MAX_VALUE);
 	u32 preserved_gain = clamp(g->si_gain_current,
 				      g->si_gain_min, g->si_gain_max);
 
@@ -600,7 +619,8 @@ static void gpt_reset_control_state_locked(struct fusion_gpt *g,
 	} else {
 		gpt_restore_control_baseline_locked(g);
 		g->cal_center_gain = g->si_gain_current;
-		g->cal_center_dac = clamp(g->dac_target, 0, 255);
+		g->cal_center_dac = clamp(g->dac_target, DAC_MIN_VALUE,
+					 DAC_MAX_VALUE);
 	}
 }
 
@@ -889,7 +909,7 @@ int fusion_gpt_reset_timing_state(void)
 		g->baseline_restore_pending = true;
 	}
 	baseline_gain = g->si_gain_target;
-	baseline_dac = clamp(g->dac_target, 0, 255);
+	baseline_dac = clamp(g->dac_target, DAC_MIN_VALUE, DAC_MAX_VALUE);
 	raw_spin_unlock(&g->ctrl_lock);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
@@ -998,7 +1018,7 @@ static void gpt_update_discipline_ready(struct fusion_gpt *g, long freq_error,
 static void cal_prepare_points(struct fusion_gpt *g)
 {
 	u32 g0 = g->si_gain_current;
-	int d0 = clamp(g->dac_target, 0, 255);
+	int d0 = clamp(g->dac_target, DAC_MIN_VALUE, DAC_MAX_VALUE);
 	u32 dg = max_t(u32, 1, g->cal_cfg.cal_gain_delta);
 	int dd = max_t(int, 1, (int)g->cal_cfg.cal_dac_delta);
 	u32 g1, g2, g4;
@@ -1033,9 +1053,9 @@ static void cal_prepare_points(struct fusion_gpt *g)
 	g->cal_probe_gain[2] = g2;
 	g->cal_probe_dac[2] = d0;
 	g->cal_probe_gain[3] = g0;
-	g->cal_probe_dac[3] = clamp(d0 + dd, 0, 255);
+	g->cal_probe_dac[3] = clamp(d0 + dd, DAC_MIN_VALUE, DAC_MAX_VALUE);
 	g->cal_probe_gain[4] = g4;
-	g->cal_probe_dac[4] = clamp(d0 + dd, 0, 255);
+	g->cal_probe_dac[4] = clamp(d0 + dd, DAC_MIN_VALUE, DAC_MAX_VALUE);
 
 	g->cal_probe_idx = 0;
 	g->cal_settle_left = 0;
@@ -1266,7 +1286,8 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 					schedule_work(&g->dac_work);
 				} else if (g->cal_cfg.coeffs_valid) {
 					g->cal_center_gain = g->si_gain_current;
-					g->cal_center_dac = clamp(g->dac_target, 0, 255);
+					g->cal_center_dac = clamp(g->dac_target, DAC_MIN_VALUE,
+								 DAC_MAX_VALUE);
 					g->cal_err_accum = 0;
 					g->cal_err_samples = 0;
 					g->cal_measure_left = max_t(u32, 1, g->cal_cfg.cal_pre_e0_samples);
@@ -1390,40 +1411,35 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 					}
 				}
 			} else {
-				const int INTEGRATOR_LIMIT = 5;
-				const int P_THRESHOLD = 20;
-				const int P_DIV = 10;
-				const int P_MAX_STEP = 10;
+				u32 p_threshold = READ_ONCE(pi_p_threshold_param);
+				u32 p_gain_q16 = READ_ONCE(pi_p_gain_q16_param);
+				u32 i_gain_q16 = READ_ONCE(pi_i_gain_q16_param);
+				long p_term = 0;
+				long i_term = 0;
 				long abs_err = (freq_error < 0) ? -freq_error : freq_error;
 
 				g->error_integrator += freq_error;
 
-				if (abs_err > P_THRESHOLD) {
-					int p_step = clamp((int)(abs_err / P_DIV), 1, P_MAX_STEP);
-
-					if (freq_error > 0)
-						g->dac_target -= p_step;
-					else
-						g->dac_target += p_step;
+				if (abs_err > p_threshold) {
+					p_term = (long)(((s64)freq_error * (s64)p_gain_q16) >> 16);
+					if (p_term == 0)
+						p_term = (freq_error > 0) ? 1 : -1;
+					g->dac_target -= (int)p_term;
 				}
 
-				if (g->error_integrator > INTEGRATOR_LIMIT) {
-					g->dac_target--;
-					g->error_integrator = 0;
-				} else if (g->error_integrator < -INTEGRATOR_LIMIT) {
-					g->dac_target++;
-					g->error_integrator = 0;
-				}
+				i_term = (long)(((s64)g->error_integrator * (s64)i_gain_q16) >> 16);
+				if (i_term != 0)
+					g->dac_target -= (int)i_term;
 
-				if (g->dac_target > 255 || g->dac_target < 0) {
+				if (g->dac_target > DAC_MAX_VALUE || g->dac_target < DAC_MIN_VALUE) {
 					const u32 si_gain_step = 10000;
 
-					if (g->dac_target > 255) {
-						g->dac_target = 255;
+					if (g->dac_target > DAC_MAX_VALUE) {
+						g->dac_target = DAC_MAX_VALUE;
 						pr_debug("fusion_gpt: DAC saturated high (freq_err=%ld tick, integ=%ld)\n",
 							freq_error, g->error_integrator);
 					} else {
-						g->dac_target = 0;
+						g->dac_target = DAC_MIN_VALUE;
 						pr_debug("fusion_gpt: DAC saturated low (freq_err=%ld tick, integ=%ld)\n",
 							freq_error, g->error_integrator);
 					}
@@ -1504,18 +1520,21 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 static int fusion_write_dac(struct fusion_gpt *g, int target, bool ratelimited_log)
 {
 	int ret;
-	u8 buf[3];
+	u8 buf[6];
 
-	target = clamp(target, 0, 255);
+	target = clamp(target, DAC_MIN_VALUE, DAC_MAX_VALUE);
 
-	buf[0] = 0x00; /* Register/Command Byte (device specific) */
-	buf[1] = 0x00; /* Often MSB or Control */
-	buf[2] = (u8)(target & 0xFF);
+	buf[0] = 0x00; /* DAC0 MSB */
+	buf[1] = 0x00;
+	buf[2] = (u8)((target & 0xFF00) >> 8);
+	buf[3] = 0x08; /* DAC1 LSB */
+	buf[4] = 0x00;
+	buf[5] = (u8)(target & 0xFF);
 
 	if (!g->dac_client)
 		return -ENODEV;
 
-	ret = i2c_master_send(g->dac_client, buf, 3);
+	ret = i2c_master_send(g->dac_client, buf, ARRAY_SIZE(buf));
 	if (ret < 0)
 		return ret;
 	if (ret != ARRAY_SIZE(buf))
@@ -1615,7 +1634,8 @@ static void fusion_dac_work_handler(struct work_struct *work)
 
 		if (g->cal_cfg.coeffs_valid) {
 			g->cal_center_gain = g->si_gain_current;
-			g->cal_center_dac = clamp(g->dac_target, 0, 255);
+			g->cal_center_dac = clamp(g->dac_target, DAC_MIN_VALUE,
+						 DAC_MAX_VALUE);
 			g->cal_err_accum = 0;
 			g->cal_err_samples = 0;
 			g->cal_measure_left = max_t(u32, 1, g->cal_cfg.cal_pre_e0_samples);
@@ -1682,7 +1702,8 @@ static void fusion_dac_work_handler(struct work_struct *work)
 		if (probe_gain != current_gain)
 			g->si_gain_current = probe_gain;
 		if (probe_dac != current_dac)
-			g->current_dac_value = clamp(probe_dac, 0, 255);
+			g->current_dac_value = clamp(probe_dac, DAC_MIN_VALUE,
+						    DAC_MAX_VALUE);
 		if (g->cal_state == CAL_APPLY_POINT) {
 			g->dac_target = probe_dac;
 			g->error_integrator = 0;
@@ -1831,7 +1852,7 @@ static void fusion_dac_work_handler(struct work_struct *work)
 		return;
 	}
 
-	target = clamp(target, 0, 255);
+	target = clamp(target, DAC_MIN_VALUE, DAC_MAX_VALUE);
 	if (target != current_dac) {
 		ret = fusion_write_dac(g, target, true);
 		if (ret == -ENODEV) {
@@ -1990,7 +2011,7 @@ static int gpt_probe(struct platform_device *pdev)
 
 	/* DAC + VCXO disciplining setup */
 	g->si_gain_min = 40000;
-	g->si_gain_max = 250000;
+	g->si_gain_max = 1000000;
 	cal_config_set_defaults(&g->cal_cfg);
 	g->si_gain_pending = false;
 	g->si_gain_sync_needed = false;
