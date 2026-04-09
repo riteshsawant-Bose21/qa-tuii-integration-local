@@ -66,7 +66,6 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
     List<FusionCanvasPoint> rawPoints = _buildPathPoints(path);
     if (isSelected) {
       final DateTime startTime = DateTime.now();
-      _connectionPaint.color = Colors.blue;
       final FusionToolState toolState = painter.toolState;
       final Set<String> selectedElements = toolState is SelectToolState ? toolState.selectedElementIds : <String>{};
       final List<AxisLock> previousAxisLocks = connection.axisLocks;
@@ -137,9 +136,8 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
         rawPoints = _buildPathPoints(path);
       }
       print("Time taken for axis lock processing: ${DateTime.now().difference(startTime).inMilliseconds} ms");
-    } else {
-      _connectionPaint.color = ConnectionColorUtil.getColorForConnectionType(connection.type);
     }
+    _connectionPaint.color = ConnectionColorUtil.getColorForConnectionType(connection.type);
 
     // Resolve all positions in a single pass to avoid repeated toolState /
     // snapState lookups inside _buildRoundedPath.

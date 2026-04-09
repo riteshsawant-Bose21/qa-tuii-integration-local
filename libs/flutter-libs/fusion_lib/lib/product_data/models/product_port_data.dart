@@ -456,7 +456,34 @@ class ProductPortData {
       //   ),
       // );
     }
-
+    if (ethernetPorts != null) {
+      ports.addAll(
+        List.generate(
+          ethernetPorts?.inputs ?? 0,
+          (index) => PortData(
+            id: FusionUtils.shortStringUUID(),
+            name: 'ETH${index + 1}',
+            type: PortType.networkSwitchIn,
+            portNumber: ports.length + index + 1,
+            description: "${(PortType.networkSwitchIn).description} ${index + 1}",
+            position: PortPosition.footerLeft,
+          ),
+        ),
+      );
+      ports.addAll(
+        List.generate(
+          ethernetPorts?.outputs ?? 0,
+          (index) => PortData(
+            id: FusionUtils.shortStringUUID(),
+            name: 'ETH${index + 1}',
+            type: PortType.networkSwitchOut,
+            portNumber: ports.length + index + 1,
+            description: "${(PortType.networkSwitchOut).description} ${index + 1}",
+            position: PortPosition.footerLeft,
+          ),
+        ),
+      );
+    }
     return ports;
   }
 }
