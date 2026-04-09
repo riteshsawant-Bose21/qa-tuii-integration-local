@@ -14,10 +14,7 @@ abstract class UsersDataSource {
   // New methods
   Future<UserModel> inviteUser(InviteUserParams params);
   Future<void> resendInvite(String userId);
-  Future<void> inviteUsersToOrganization(
-    String organizationId,
-    List<Map<String, dynamic>> users,
-  );
+  Future<void> inviteUsersToOrganization(List<Map<String, dynamic>> users);
   Future<UserModel> updateUserRoles(UpdateUserRoleParams params);
   Future<UserModel> assignUserToProjects(
     String userId,
@@ -43,7 +40,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   Future<List<UserModel>> getUsers() async {
     try {
       print('Users API: Calling organization/users endpoint');
-      final response = await _apiService.get('/organization/users');
+      final response = await _apiService.get('/organizations/users');
 
       // Debug: Print the full response structure
       print('API Response keys: ${response.keys.toList()}');
@@ -83,7 +80,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   @override
   Future<UserModel> getUserById(String id) async {
     try {
-      final response = await _apiService.get('/organization/users/$id');
+      final response = await _apiService.get('/organizations/users/$id');
       final userData =
           response['data'] as Map<String, dynamic>? ??
           response['user'] as Map<String, dynamic>? ??
@@ -102,7 +99,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   Future<UserModel> createUser(UserModel user) async {
     try {
       final response = await _apiService.post(
-        '/organization/users',
+        '/organizations/users',
         user.toJson(),
       );
       final userData =
@@ -123,7 +120,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   Future<UserModel> updateUser(UserModel user) async {
     try {
       final response = await _apiService.put(
-        '/organization/users/${user.id}',
+        '/organizations/users/${user.id}',
         user.toJson(),
       );
       final userData =
@@ -143,7 +140,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   @override
   Future<void> deleteUser(String id) async {
     try {
-      await _apiService.delete('/organization/users/$id');
+      await _apiService.delete('/organizations/users/$id');
     } catch (e) {
       // Fallback behavior - simulate success for demo
       print('API Error, simulating deletion: $e');
@@ -155,7 +152,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   Future<List<UserModel>> searchUsers(String query) async {
     try {
       final response = await _apiService.get(
-        '/organization/users/search?q=${Uri.encodeComponent(query)}',
+        '/organizations/users/search?q=${Uri.encodeComponent(query)}',
       );
       final usersJson =
           response['data'] as List<dynamic>? ??
@@ -183,18 +180,15 @@ class UsersRemoteDataSource implements UsersDataSource {
   @override
   Future<UserModel> inviteUser(InviteUserParams params) async {
     try {
-      // Use the bulk invite endpoint for single user invite
-      await _apiService.post(
-        '/organizations/${params.organizationId}/invite-users',
-        {
-          'users': [
-            {
-              'email': params.email,
-              'role': params.roles.isNotEmpty ? params.roles.first : 'User',
-            },
-          ],
-        },
-      );
+      // Use the org-level invite endpoint (account resolved from X-Account-ID header)
+      await _apiService.post('organizations/invite-users', {
+        'users': [
+          {
+            'email': params.email,
+            'role': params.roles.isNotEmpty ? params.roles.first : 'User',
+          },
+        ],
+      });
 
       // Since the bulk invite endpoint doesn't return user data,
       // create a basic UserModel from the invite parameters
@@ -237,7 +231,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   @override
   Future<void> resendInvite(String userId) async {
     try {
-      await _apiService.post('/organization/users/$userId/resend-invite', {});
+      await _apiService.post('/organizations/users/$userId/resend-invite', {});
     } catch (e) {
       print('API Error, simulating resend invite: $e');
       await Future.delayed(const Duration(milliseconds: 400));
@@ -246,13 +240,10 @@ class UsersRemoteDataSource implements UsersDataSource {
 
   @override
   Future<void> inviteUsersToOrganization(
-    String organizationId,
     List<Map<String, dynamic>> users,
   ) async {
     try {
-      await _apiService.post('organizations/$organizationId/invite-users', {
-        'users': users,
-      });
+      await _apiService.post('organizations/invite-users', {'users': users});
     } catch (e) {
       throw Exception('Failed to invite users to organization: $e');
     }
@@ -262,7 +253,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   Future<UserModel> updateUserRoles(UpdateUserRoleParams params) async {
     try {
       final response = await _apiService.put(
-        '/organization/users/${params.userId}/roles',
+        '/organizations/users/${params.userId}/roles',
         {'roles': params.roles},
       );
       final userData = response['data'] as Map<String, dynamic>? ?? response;
@@ -280,7 +271,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   ) async {
     try {
       final response = await _apiService.post(
-        '/organization/users/$userId/projects',
+        '/organizations/users/$userId/projects',
         {'project_ids': projectIds},
       );
       final userData = response['data'] as Map<String, dynamic>? ?? response;
@@ -297,9 +288,9 @@ class UsersRemoteDataSource implements UsersDataSource {
     List<String> projectIds,
   ) async {
     try {
-      await _apiService.delete('/organization/users/$userId/projects');
+      await _apiService.delete('/organizations/users/$userId/projects');
       // For now, fetch the updated user since delete doesn't return data
-      final response = await _apiService.get('/organization/users/$userId');
+      final response = await _apiService.get('/organizations/users/$userId');
       final userData = response['data'] as Map<String, dynamic>? ?? response;
       return UserModel.fromJson(userData);
     } catch (e) {
@@ -312,7 +303,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   Future<UserModel> activateUser(String userId) async {
     try {
       final response = await _apiService.post(
-        '/organization/users/$userId/activate',
+        '/organizations/users/$userId/activate',
         {},
       );
       final userData = response['data'] as Map<String, dynamic>? ?? response;
@@ -327,7 +318,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   Future<UserModel> deactivateUser(String userId) async {
     try {
       final response = await _apiService.post(
-        '/organization/users/$userId/deactivate',
+        '/organizations/users/$userId/deactivate',
         {},
       );
       final userData = response['data'] as Map<String, dynamic>? ?? response;
@@ -362,7 +353,7 @@ class UsersRemoteDataSource implements UsersDataSource {
           .join('&');
 
       final response = await _apiService.get(
-        '/organization/users/filter?$queryString',
+        '/organizations/users/filter?$queryString',
       );
       final usersJson =
           response['data'] as List<dynamic>? ??
@@ -381,7 +372,7 @@ class UsersRemoteDataSource implements UsersDataSource {
   @override
   Future<Map<String, int>> getUserMetrics() async {
     try {
-      final response = await _apiService.get('/organization/users/metrics');
+      final response = await _apiService.get('/organizations/users/metrics');
       final metrics = response['data'] as Map<String, dynamic>? ?? response;
 
       return {
@@ -467,7 +458,6 @@ class UsersLocalDataSource implements UsersDataSource {
 
   @override
   Future<void> inviteUsersToOrganization(
-    String organizationId,
     List<Map<String, dynamic>> users,
   ) async {
     throw UnimplementedError('Local datasource does not support bulk invite');

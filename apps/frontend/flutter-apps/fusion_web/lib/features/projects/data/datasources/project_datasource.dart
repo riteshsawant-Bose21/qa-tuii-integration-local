@@ -167,7 +167,7 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
   @override
   Future<List<UserModel>> getOrganisationUsers() async {
     try {
-      final response = await _apiService.get('/organization/users');
+      final response = await _apiService.get('/organizations/users');
 
       final usersJson =
           response['data'] as List<dynamic>? ??

@@ -93,13 +93,9 @@ class ResendInviteUseCase implements UseCase<void, String> {
 }
 
 class InviteUsersToOrganizationParams {
-  final String organizationId;
   final List<Map<String, dynamic>> users;
 
-  const InviteUsersToOrganizationParams({
-    required this.organizationId,
-    required this.users,
-  });
+  const InviteUsersToOrganizationParams({required this.users});
 }
 
 class InviteUsersToOrganizationUseCase
@@ -110,10 +106,7 @@ class InviteUsersToOrganizationUseCase
 
   @override
   Future<void> call(InviteUsersToOrganizationParams params) async {
-    return await repository.inviteUsersToOrganization(
-      params.organizationId,
-      params.users,
-    );
+    return await repository.inviteUsersToOrganization(params.users);
   }
 }
 
