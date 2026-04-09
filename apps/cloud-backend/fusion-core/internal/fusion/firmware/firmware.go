@@ -163,9 +163,9 @@ func mapBundleToUpdateResponse(b *models.Bundle) *types.FirmwareUpdateResponse {
 	return response
 }
 
-func (s *Service) GetBundleDownloadURL(ctx context.Context, bundleID string, logger *zap.Logger) (*types.DownloadArtifactResponse, error) {
-	// Get bundle by ID
-	bundle, err := s.dbService.GetBundleByID(ctx, bundleID)
+func (s *Service) GetBundleDownloadURL(ctx context.Context, version string, logger *zap.Logger) (*types.DownloadArtifactResponse, error) {
+	// Get bundle by version
+	bundle, err := s.dbService.GetBundleByVersion(ctx, version)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get bundle: %w", err)
 	}
