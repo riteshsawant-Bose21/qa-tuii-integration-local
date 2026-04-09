@@ -80,12 +80,12 @@
     { .reg_addr = 0x99, .data = 0x00 }, \
     { .reg_addr = 0x9A, .data = 0x00 }, \
     { .reg_addr = 0x9B, .data = 0x00 }, \
-    { .reg_addr = 0xA2, .data = 0x40 }, \
-    { .reg_addr = 0xA3, .data = 0x9C }, \
-    { .reg_addr = 0xA4, .data = 0x00 }, \
-    { .reg_addr = 0xA6, .data = 0xE3 }, \
-    { .reg_addr = 0xA7, .data = 0xE3 }, \
-    { .reg_addr = 0xAA, .data = 0xE7 }, \
+    { .reg_addr = 0xA2, .data = 0x99 }, \
+    { .reg_addr = 0xA3, .data = 0x61 }, \
+    { .reg_addr = 0xA4, .data = 0x11 }, \
+    { .reg_addr = 0xA6, .data = 0x00 }, \
+    { .reg_addr = 0xA7, .data = 0x00 }, \
+    { .reg_addr = 0xAA, .data = 0x00 }, \
     { .reg_addr = 0xB7, .data = 0x12 }, \
     { .reg_addr = 0xB1, .data = 0xAC }, \
     { .reg_addr = 0x03, .data = 0x00 }
