@@ -258,7 +258,7 @@ AlsaDevice::AlsaDevice(const std::string &device_name, int channels,
       period_size(period_size), max_transfer_size(max_transfer_size),
       hw_params(nullptr), sw_params(nullptr), device_name(device_name),
       is_input(is_input),
-      playback_start_threshold_frames(period_size),
+      playback_start_threshold_frames(2 * period_size),
       deferred_open_task(deferred_open, this, sample_rate, 500 * period_size,
                          period_size)
 {
@@ -1223,9 +1223,9 @@ AlsaIn::AlsaIn(const bosepro::BlockConfiguration &configuration)
     {
         base_ratio = 1.0;
         read_samples = get_frame_size();
-        min_depth = std::max(get_frame_size(), period_size);
-        max_depth = 3 * min_depth;
-        target_depth = 2 * min_depth;
+        min_depth = 2 * std::max(get_frame_size(), period_size);
+        max_depth = 2 * min_depth;
+        target_depth = min_depth + period_size;
     }
 
     // The JND for pitch is about 0.6% (or about 10 cents).  We can limit the
@@ -1348,9 +1348,9 @@ AlsaOut::AlsaOut(const bosepro::BlockConfiguration &configuration)
     else
     {
         max_write_samples = get_frame_size();
-        min_depth = std::max(get_frame_size(), period_size);
-        max_depth = 3 * min_depth;
-        target_depth = 2 * min_depth;
+        min_depth = 2 * std::max(get_frame_size(), period_size);
+        max_depth = 2 * min_depth;
+        target_depth = min_depth + period_size;
     }
 
     // The JND for pitch is about 0.6% (or about 10 cents).  We can limit the
