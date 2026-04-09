@@ -104,10 +104,10 @@ func (s *Service) InsertBundle(ctx context.Context, payload apiTypes.NotifyBundl
 
 func (s *Service) ApproveBundle(ctx context.Context, bundleID string, approvedBy string, approvalStatus string) error {
 	if bundleID == "" {
-		return errors.New("bundleID cannot be empty")
+		return fmt.Errorf("bundleID cannot be empty")
 	}
 	if approvedBy == "" {
-		return errors.New("approvedBy cannot be empty")
+		return fmt.Errorf("approvedBy cannot be empty")
 	}
 
 	bundle := &models.Bundle{
@@ -123,7 +123,7 @@ func (s *Service) ApproveBundle(ctx context.Context, bundleID string, approvedBy
 
 func (s *Service) GetBundleByID(ctx context.Context, bundleID string) (*models.Bundle, error) {
 	if bundleID == "" {
-		return nil, errors.New("bundleID cannot be empty")
+		return nil, fmt.Errorf("bundleID cannot be empty")
 	}
 
 	bundle, err := models.Bundles(
