@@ -414,8 +414,6 @@ func (h *Handler) HandleSoftwareUpdateDownload(w http.ResponseWriter, r *http.Re
 }
 
 // HandleSoftwareUpdateListLocal serves the admin-port GET /softwareUpdate/list endpoint.
-// It reads only the local /mnt/ota directory and is called by peer nodes when the
-// cluster aggregates the full bundle inventory via GetAllSoftwareUpdateList.
 func (h *Handler) HandleSoftwareUpdateListLocal(w http.ResponseWriter, r *http.Request) {
 	logger := logging.GetLogger()
 
@@ -477,9 +475,6 @@ func (h *Handler) HandleSoftwareUpdateListLocal(w http.ResponseWriter, r *http.R
 }
 
 // HandleSoftwareUpdateList serves GET /softwareUpdate/list on the public port.
-// It aggregates bundle lists from every cluster node (via the admin port) and
-// returns the de-duplicated union, so clients always see the full cluster inventory
-// rather than only what the VIP node holds on disk.
 func (h *Handler) HandleSoftwareUpdateList(w http.ResponseWriter, r *http.Request) {
 	bundles := h.clusterTransport.GetAllSoftwareUpdateList()
 	if bundles == nil {
@@ -561,9 +556,7 @@ func (h *Handler) handleSwUpdateInfo(request *api.WebSocketRequest) (*api.WebSoc
 	return createSuccessResponse(&request.ID, api.WSMsgTypeSwUpdateInfo, api.WSCodeOK, "OK", infos), nil
 }
 
-// handleListSoftwareUpdates fetches the OTA bundle list from every cluster node and
-// returns the de-duplicated union so the caller sees the full cluster inventory,
-// not just what the VIP holder has on disk.
+// handleListSoftwareUpdates fetches the OTA bundle list from every cluster node 
 func (h *Handler) handleListSoftwareUpdates(request *api.WebSocketRequest) (*api.WebSocketResponse, error) {
 	bundles := h.clusterTransport.GetAllSoftwareUpdateList()
 	if bundles == nil {
