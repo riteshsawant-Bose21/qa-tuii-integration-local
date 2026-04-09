@@ -620,57 +620,6 @@ size_t curl_write_callback(void* contents, size_t size, size_t nmemb, std::strin
     return total_size;
 }
 
-// Fetch device name and system IP via curl
-std::string get_device_id(std::string& system_ip) {
-    if (system_ip.empty()) {
-        SPDLOG_ERROR("System IP is not set");
-        return "";
-    }
-
-    CURL* curl = curl_easy_init();
-    if (!curl) {
-        SPDLOG_ERROR("Failed to initialize curl");
-        return "";
-    }
-
-    std::string url = "http://" + system_ip + ":9090/device";
-    std::string response;
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_callback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-
-    CURLcode res = curl_easy_perform(curl);
-    if (res != CURLE_OK) {
-        SPDLOG_ERROR("curl request failed for {}: {}", url, curl_easy_strerror(res));
-        curl_easy_cleanup(curl);
-        return "";
-    }
-
-    curl_easy_cleanup(curl);
-
-    // Parse JSON response
-    Json::Value root;
-    Json::Reader reader;
-    if (!reader.parse(response, root)) {
-        SPDLOG_ERROR("Failed to parse device response JSON: {}", response);
-        return "";
-    }
-
-    if (!root.isMember("id") || !root["id"].isString()) {
-        SPDLOG_ERROR("Missing or invalid id in device response");
-        return "";
-    }
-    std::string device_id = root["id"].asString();
-
-    if (!root.isMember("address") || !root["address"].isString()) {
-        SPDLOG_ERROR("Missing or invalid address in device response");
-        return "";
-    }
-    system_ip = root["address"].asString();
-
-    return device_id;
-}
-
 // Query IP address for a device UID via curl
 std::string query_device_ip(const std::string& device_uid, const std::string& system_ip) {
     if (system_ip.empty()) {
@@ -808,6 +757,7 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
 
     assign_parameter("audio_streams_update", &audio_streams_update, 
                      POST_FUNCTION_SCALAR(audio_streams_update_func));
+    assign_parameter("device_id", &device_id);
 
     ptp_last_poll = std::chrono::steady_clock::now();
     ptp_last_role_probe = ptp_last_poll;
@@ -965,12 +915,8 @@ bool FusionConnectClient::process_audio_streams_update(bool is_retry) {
         return false;
     }
     if (device_id.empty()) {
-        device_id = get_device_id(system_ip);
-        if (device_id.empty()) {
-            if (!is_retry) SPDLOG_ERROR("Failed to get device_id after audio_streams update!");
-            return false;
-        }
-        SPDLOG_INFO("Initialized device_id: {}, system_ip: {}", device_id, system_ip);
+        if (!is_retry) SPDLOG_ERROR("Cannot process audio_streams_update: no device ID yet");
+        return false;
     }
 
     Json::Value root;
