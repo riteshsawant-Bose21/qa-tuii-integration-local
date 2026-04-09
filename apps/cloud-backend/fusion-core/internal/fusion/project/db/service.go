@@ -147,7 +147,7 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 	var err error
 	if userAuth.Role.RoleName == constants.AdminRoleName {
 		query = fmt.Sprintf(`
-			SELECT ON (p.id) p.id, p.name, p.description, p.venue, 
+			SELECT p.id, p.name, p.description, p.venue, 
 		       p.environment_type, p.project_phase, p.application, p.budget_amount, 
 		       p.currency, p.is_archived, p.is_deleted, p.locked_by_user_id, 
 		       p.created_at, p.updated_at, pu.is_starred, u.email as locked_by_user_email
