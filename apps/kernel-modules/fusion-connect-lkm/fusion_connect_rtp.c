@@ -465,9 +465,9 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr,
                 &rtp_mgr->uc_packet_maps[PACKET_MAP_KEY_UC(map->source_ip, map->source_port)]);
         }
 
-        // finally, if playout delay is 0, default it to 2 * packet_time
+        // set sane and relatively safe default
         if (stream->info.playout_delay == 0) {
-            stream->info.playout_delay = 2 * stream->packet_time;
+            stream->info.playout_delay = 4 * stream->packet_time;
         }
     }
     write_unlock_irqrestore(&rtp_mgr->lock, flags);
@@ -629,7 +629,7 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
                 return;
             }
 
-            // get the current SAC for bottom 32 of the RTP timestamp reconstruction
+            // get the current SAC for TOP 32 of the RTP timestamp reconstruction
             current_sac = (((current_phc_ns >> (stream->info.sample_rate == 48000 ? 2 : 1)) * 3) / 15625);
 
             // reconstruct the global SAC by combining the current SAC with the incoming RTP timestamp

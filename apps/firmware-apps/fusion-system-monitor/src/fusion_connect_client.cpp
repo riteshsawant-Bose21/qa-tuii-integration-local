@@ -1067,12 +1067,13 @@ bool FusionConnectClient::process_audio_streams_update() {
 
         // Common defaults for both FC and AES67
         fusion_cn_stream_config config = {};
+        bool has_explicit_playout_delay = false;
         config.channels           = ch;
         config.sample_rate        = 48000;
         config.frames_per_packet  = 48;
         config.dest_port          = 5004;     // AES67 default; FC uses same
         config.source_port        = 49152;    // sensible default; FC overrides
-        config.playout_delay      = 1000000;
+        config.playout_delay      = 0;
         config.timestamp_offset   = 0;
         config.payload_type       = is_fusion_connect ? 100 : 97;
         config.format             = is_fusion_connect ? 15/*FLOAT_BE*/ : 33/*S24_3BE*/;
@@ -1087,8 +1088,10 @@ bool FusionConnectClient::process_audio_streams_update() {
             unsigned pt = properties["payload_type"].asUInt();
             if (pt >= 96 && pt <= 127) config.payload_type = pt;
         }
-        if (properties.isMember("playout_delay") && properties["playout_delay"].isUInt())
+        if (properties.isMember("playout_delay") && properties["playout_delay"].isUInt()) {
             config.playout_delay = properties["playout_delay"].asUInt();
+            has_explicit_playout_delay = true;
+        }
         if (properties.isMember("timestamp_offset") && properties["timestamp_offset"].isUInt())
             config.timestamp_offset = properties["timestamp_offset"].asUInt();
         if (properties.isMember("frames_per_packet") && properties["frames_per_packet"].isUInt())
@@ -1111,6 +1114,9 @@ bool FusionConnectClient::process_audio_streams_update() {
             if (!create_source && !create_sink) continue;
 
             config.frames_per_packet  = 16;
+
+            if (!has_explicit_playout_delay && config.sample_rate != 0)
+                config.playout_delay = static_cast<uint32_t>((4ULL * 1000000000ULL * config.frames_per_packet) / config.sample_rate);
 
             if (create_source) {
                 config.is_source = true;
@@ -1166,6 +1172,9 @@ bool FusionConnectClient::process_audio_streams_update() {
             const std::string pretty = "AES67_" + properties["stream_name"].asString();
             std::strncpy(config.stream_name, pretty.c_str(), sizeof(config.stream_name) - 1);
             config.stream_name[sizeof(config.stream_name) - 1] = '\0';
+
+            if (!has_explicit_playout_delay && config.sample_rate != 0)
+                config.playout_delay = static_cast<uint32_t>((4ULL * 1000000000ULL * config.frames_per_packet) / config.sample_rate);
 
             // role
             const bool is_source = (properties.isMember("is_source") && properties["is_source"].isBool())
