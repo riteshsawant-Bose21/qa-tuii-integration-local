@@ -100,6 +100,9 @@ class MeterBlock {
 
 class MeterPacket {
   final String name;
+  final String messageName;
+  final String deviceId;
+  final String packetId;
   final String type;
   final int length;
   final List<MeterBlock> blocks;
@@ -109,18 +112,24 @@ class MeterPacket {
     required this.type,
     required this.length,
     required this.blocks,
+    required this.messageName,
+    required this.deviceId,
+    required this.packetId,
   });
 
   factory MeterPacket.fromMap(Map<String, dynamic> map) {
     final Map<String, dynamic>? params = map['parameters'] as Map<String, dynamic>?;
     if (params == null) {
-      return const MeterPacket(name: '', type: '', length: 0, blocks: <MeterBlock>[]);
+      return const MeterPacket(name: '', type: '', length: 0, blocks: <MeterBlock>[], messageName: '', deviceId: '', packetId: '');
     }
     return MeterPacket(
       name: params['name']?.toString() ?? '',
       type: params['type']?.toString() ?? '',
       length: (params['length'] is num) ? (params['length'] as num).toInt() : int.tryParse(params['length']?.toString() ?? '') ?? 0,
       blocks: _parseBlocks(params['value']),
+      messageName: map['message_name']?.toString() ?? '',
+      deviceId: map['device_id']?.toString() ?? '',
+      packetId: map['packet_id']?.toString() ?? '',
     );
   }
 
@@ -151,5 +160,29 @@ class MeterPacket {
           .toList();
     }
     return <MeterBlock>[];
+  }
+
+  //to json
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'name': name,
+      'type': type,
+      'length': length,
+      'message_name': messageName,
+      'device_id': deviceId,
+      'packet_id': packetId,
+      'blocks':
+          blocks
+              .map(
+                (MeterBlock e) => <String, Object>{
+                  'block_name': e.blockName,
+                  'meter_name': e.meterName,
+                  'value_type': e.valueType,
+                  'dimensions': e.dimensions,
+                  'value': e.value,
+                },
+              )
+              .toList(),
+    };
   }
 }

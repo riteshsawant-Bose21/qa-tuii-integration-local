@@ -48,11 +48,15 @@ func parseFlags() *api.AppConfig {
 		*netIface = envVal
 	}
 
-	localIP, err := utils.GetLocalIPByInterface(*netIface)
-	if err != nil {
-		log.Fatalf("Failed to get local IP: %v", err)
+	if *local {
+		*bindAddr = "127.0.0.1"
+	} else {
+		localIP, err := utils.GetLocalIPByInterface(*netIface)
+		if err != nil {
+			log.Fatalf("Failed to get local IP: %v", err)
+		}
+		*bindAddr = localIP
 	}
-	*bindAddr = localIP
 
 	if envVal := os.Getenv("FUSION_PROFILE"); envVal != "" {
 		if envVal == "1" || strings.EqualFold(envVal, "true") {
