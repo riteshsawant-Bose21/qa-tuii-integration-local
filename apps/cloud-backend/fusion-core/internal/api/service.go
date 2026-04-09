@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -64,35 +63,35 @@ func New(cfg *Config,
 	engine.Use(middleware.ApplicationLoggerMiddleware(loggers.AppLogger)) // Add app logger to context
 
 	if productSvc == nil {
-		return nil, errors.New("missing product service")
+		return nil, fmt.Errorf("missing product service")
 	}
 
 	if project == nil {
-		return nil, errors.New("missing project service")
+		return nil, fmt.Errorf("missing project service")
 	}
 
 	if userSvc == nil {
-		return nil, errors.New("missing user service")
+		return nil, fmt.Errorf("missing user service")
 	}
 
 	if organizationSvc == nil {
-		return nil, errors.New("missing organization service")
+		return nil, fmt.Errorf("missing organization service")
 	}
 
 	if authSvc == nil {
-		return nil, errors.New("missing auth service")
+		return nil, fmt.Errorf("missing auth service")
 	}
 
 	if firmwareSvc == nil {
-		return nil, errors.New("missing firmware service")
+		return nil, fmt.Errorf("missing firmware service")
 	}
 
 	if authMiddleware == nil {
-		return nil, errors.New("missing auth middleware")
+		return nil, fmt.Errorf("missing auth middleware")
 	}
 
 	if deviceSvc == nil {
-		return nil, errors.New("missing device service")
+		return nil, fmt.Errorf("missing device service")
 	}
 
 	api := &API{
