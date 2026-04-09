@@ -70,7 +70,8 @@ ALGORITHM_REGISTER(SignalGenerator, "signal_generator");
 
 
 int_fast32_t SignalGenerator::noise_seed = INT32_C(310952);
-const float SignalGenerator::NOISE_SCALE = 2.0f / NOISE_VALUE_MASK;
+const float SignalGenerator::NOISE_SCALE =
+    static_cast<float>(2.0 / static_cast<double>(NOISE_VALUE_MASK));
 const float SignalGenerator::PINK_SCALE = 0.1995262;
 const float SignalGenerator::SWEEP_START = 20.0f;
 const float SignalGenerator::SWEEP_END = 20000.0f;

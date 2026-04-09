@@ -795,7 +795,7 @@ public:
   /// Type definition for device ID change notification callbacks.
   using DeviceIDChangeCallback = std::function<void(const std::string &)>;
 
-  UDPValueMonitor(const std::string &serverIP, int port)
+  UDPValueMonitor(const std::string &serverIP, int port, bool autostart = true)
       : jsonMonitor_(Json::objectValue)
   {
     
@@ -836,8 +836,24 @@ public:
       throw std::runtime_error(std::string("fcntl(F_SETFL) failed: ") +
                                strerror(errno));
     }
+
+    if (autostart)
+    {
+      start();
+    }
+  }
+
+  void start()
+  {
+    std::lock_guard<std::mutex> lk(start_mutex_);
+    if (started_)
+    {
+      return;
+    }
+
     requestInitialDeviceInfo(serverAddr_);
     receiveThread_ = std::thread(&UDPValueMonitor::receiveLoop, this);
+    started_ = true;
   }
 
   std::vector<PathComponent> splitPath(const std::string &path) const
@@ -1325,6 +1341,8 @@ private:
   UDPSocket udpSocket_{AF_INET, SOCK_DGRAM, 0};
   std::atomic<bool> running_{true};
   std::thread receiveThread_;
+  bool started_{false};
+  std::mutex start_mutex_;
   std::string deviceID_{""};
   std::vector<std::string> targetPaths_;
   JsonMonitor jsonMonitor_;

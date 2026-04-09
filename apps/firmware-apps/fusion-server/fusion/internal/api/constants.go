@@ -1,5 +1,7 @@
 package api
 
+import "os"
+
 import "time"
 
 const (
@@ -113,9 +115,9 @@ const (
 	UDPPort            = "7947"
 )
 
-const (
-	AudioFilesLocation      = "/var/lib/fusion/audio"
-	DefaultIdentityFilePath = "/var/lib/device-identity/"
+var (
+	AudioFilesLocation      = getenvDefault("FUSION_AUDIO_DIR", "/var/lib/fusion/audio")
+	DefaultIdentityFilePath = getenvDefault("FUSION_IDENTITY_DIR", "/var/lib/device-identity/")
 	DefaultCAFileName       = "AmazonRootCA1.pem"
 	DefaultCSRFileName      = "device.csr"
 	DefaultCertFileName     = "device.x509.cert"
@@ -123,6 +125,13 @@ const (
 	SoftwareUpdateInfoPath  = "/etc/buildinfo"
 	SerialPath              = "/sys/firmware/devicetree/base/serial-number"
 )
+
+func getenvDefault(key string, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
 
 // RECOVERY_STATUS enum values from SWUpdate
 const (

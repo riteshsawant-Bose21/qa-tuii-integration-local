@@ -284,7 +284,7 @@ func TestCreateDevice(t *testing.T) {
 
 		req := createDeviceRequest()
 		mockSvc.On("CreateDevice", mock.Anything, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
-			Return(nil, errors.New(errorutil.ErrMsgProjectNotFound))
+			Return(nil, errorutil.ErrProjectNotFound)
 
 		body, _ := json.Marshal(req)
 		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint, bytes.NewBuffer(body))
@@ -302,7 +302,7 @@ func TestCreateDevice(t *testing.T) {
 
 		req := createDeviceRequest()
 		mockSvc.On("CreateDevice", mock.Anything, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
-			Return(nil, errors.New(errorutil.ErrMsgDeviceAlreadyExists))
+			Return(nil, errorutil.ErrDeviceAlreadyExists)
 
 		body, _ := json.Marshal(req)
 		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint, bytes.NewBuffer(body))
@@ -320,7 +320,7 @@ func TestCreateDevice(t *testing.T) {
 
 		req := createDeviceRequest()
 		mockSvc.On("CreateDevice", mock.Anything, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
-			Return(nil, errors.New(errorutil.MsgUnauthorized))
+			Return(nil, errorutil.ErrUnauthorized)
 
 		body, _ := json.Marshal(req)
 		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint, bytes.NewBuffer(body))
@@ -428,7 +428,7 @@ func TestUpdateDevice(t *testing.T) {
 		}
 
 		mockSvc.On("UpdateDevice", mock.Anything, testDeviceIDConst, updateReq, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
-			Return(errors.New(errorutil.ErrMsgDeviceNotFound))
+			Return(errorutil.ErrDeviceNotFound)
 
 		body, _ := json.Marshal(updateReq)
 		httpReq := httptest.NewRequest(http.MethodPatch, devicesEndpoint+"/"+testDeviceIDConst, bytes.NewBuffer(body))
@@ -450,7 +450,7 @@ func TestUpdateDevice(t *testing.T) {
 		}
 
 		mockSvc.On("UpdateDevice", mock.Anything, testDeviceIDConst, updateReq, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
-			Return(errors.New(errorutil.ErrMsgProjectNotFound))
+			Return(errorutil.ErrProjectNotFound)
 
 		body, _ := json.Marshal(updateReq)
 		httpReq := httptest.NewRequest(http.MethodPatch, devicesEndpoint+"/"+testDeviceIDConst, bytes.NewBuffer(body))
@@ -472,7 +472,7 @@ func TestUpdateDevice(t *testing.T) {
 		}
 
 		mockSvc.On("UpdateDevice", mock.Anything, testDeviceIDConst, updateReq, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
-			Return(errors.New(errorutil.MsgUnauthorized))
+			Return(errorutil.ErrUnauthorized)
 
 		body, _ := json.Marshal(updateReq)
 		httpReq := httptest.NewRequest(http.MethodPatch, devicesEndpoint+"/"+testDeviceIDConst, bytes.NewBuffer(body))
@@ -564,7 +564,7 @@ func TestResetDevice(t *testing.T) {
 		r, mockSvc := setupDeviceTest()
 
 		mockSvc.On("ResetDevice", mock.Anything, testDeviceIDConst, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
-			Return(errors.New(errorutil.ErrMsgDeviceNotFound))
+			Return(errorutil.ErrDeviceNotFound)
 
 		httpReq := httptest.NewRequest(http.MethodDelete, devicesEndpoint+"/"+testDeviceIDConst+"/reset", nil)
 		w := httptest.NewRecorder()
@@ -579,7 +579,7 @@ func TestResetDevice(t *testing.T) {
 		r, mockSvc := setupDeviceTest()
 
 		mockSvc.On("ResetDevice", mock.Anything, testDeviceIDConst, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
-			Return(errors.New(errorutil.MsgUnauthorized))
+			Return(errorutil.ErrUnauthorized)
 
 		httpReq := httptest.NewRequest(http.MethodDelete, devicesEndpoint+"/"+testDeviceIDConst+"/reset", nil)
 		w := httptest.NewRecorder()
@@ -702,7 +702,7 @@ func TestClaimDevice(t *testing.T) {
 		}
 
 		mockSvc.On("ClaimDevice", mock.Anything, testDeviceIDConst, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
-			Return(nil, errors.New(errorutil.ErrMsgDeviceNotFound))
+			Return(nil, errorutil.ErrDeviceNotFound)
 
 		body, _ := json.Marshal(req)
 		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/claim", bytes.NewBuffer(body))
@@ -724,7 +724,7 @@ func TestClaimDevice(t *testing.T) {
 		}
 
 		mockSvc.On("ClaimDevice", mock.Anything, testDeviceIDConst, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
-			Return(nil, errors.New(errorutil.ErrMsgDeviceAlreadyClaimed))
+			Return(nil, errorutil.ErrDeviceAlreadyClaimed)
 
 		body, _ := json.Marshal(req)
 		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/claim", bytes.NewBuffer(body))
@@ -746,7 +746,7 @@ func TestClaimDevice(t *testing.T) {
 		}
 
 		mockSvc.On("ClaimDevice", mock.Anything, testDeviceIDConst, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
-			Return(nil, errors.New(errorutil.ErrMsgProjectNotFound))
+			Return(nil, errorutil.ErrProjectNotFound)
 
 		body, _ := json.Marshal(req)
 		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/claim", bytes.NewBuffer(body))
@@ -887,7 +887,7 @@ func TestRotateCertificate(t *testing.T) {
 		}
 
 		mockSvc.On("RotateCertificate", mock.Anything, testDeviceIDConst, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
-			Return(nil, errors.New(errorutil.ErrMsgDeviceNotFound))
+			Return(nil, errorutil.ErrDeviceNotFound)
 
 		body, _ := json.Marshal(req)
 		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/rotate-cert", bytes.NewBuffer(body))
@@ -908,7 +908,7 @@ func TestRotateCertificate(t *testing.T) {
 		}
 
 		mockSvc.On("RotateCertificate", mock.Anything, testDeviceIDConst, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
-			Return(nil, errors.New(errorutil.ErrMsgDeviceNotClaimed))
+			Return(nil, errorutil.ErrDeviceNotClaimed)
 
 		body, _ := json.Marshal(req)
 		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/rotate-cert", bytes.NewBuffer(body))
@@ -929,7 +929,7 @@ func TestRotateCertificate(t *testing.T) {
 		}
 
 		mockSvc.On("RotateCertificate", mock.Anything, testDeviceIDConst, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
-			Return(nil, errors.New(errorutil.MsgUnauthorized))
+			Return(nil, errorutil.ErrUnauthorized)
 
 		body, _ := json.Marshal(req)
 		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/rotate-cert", bytes.NewBuffer(body))
@@ -1086,7 +1086,7 @@ func TestCommand(t *testing.T) {
 		}
 
 		mockSvc.On("Command", mock.Anything, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
-			Return("", errors.New(errorutil.ErrMsgProjectNotFound))
+			Return("", errorutil.ErrProjectNotFound)
 
 		body, _ := json.Marshal(req)
 		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/commands", bytes.NewBuffer(body))
@@ -1108,7 +1108,7 @@ func TestCommand(t *testing.T) {
 		}
 
 		mockSvc.On("Command", mock.Anything, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
-			Return("", errors.New(errorutil.MsgUnauthorized))
+			Return("", errorutil.ErrUnauthorized)
 
 		body, _ := json.Marshal(req)
 		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/commands", bytes.NewBuffer(body))
@@ -1220,7 +1220,7 @@ func TestGetCommandStatus(t *testing.T) {
 		r, mockSvc := setupDeviceTest()
 
 		mockSvc.On("GetCommandStatus", mock.Anything, testCommandIDConst, mock.AnythingOfType("*zap.Logger")).
-			Return(nil, errors.New(errorutil.ErrMsgCommandNotFound))
+			Return(nil, errorutil.ErrCommandNotFound)
 
 		httpReq := httptest.NewRequest(http.MethodGet, devicesEndpoint+"/commands/"+testCommandIDConst+"/status", nil)
 		w := httptest.NewRecorder()
@@ -1267,32 +1267,32 @@ func TestHandleDeviceError(t *testing.T) {
 
 	testCases := []struct {
 		name           string
-		errorMessage   string
+		err            error
 		expectedStatus int
 	}{
 		{
 			name:           "device not found returns 404",
-			errorMessage:   errorutil.ErrMsgDeviceNotFound,
+			err:            errorutil.ErrDeviceNotFound,
 			expectedStatus: http.StatusNotFound,
 		},
 		{
 			name:           "project not found returns 404",
-			errorMessage:   errorutil.ErrMsgProjectNotFound,
+			err:            errorutil.ErrProjectNotFound,
 			expectedStatus: http.StatusNotFound,
 		},
 		{
 			name:           "unauthorized returns 401",
-			errorMessage:   errorutil.MsgUnauthorized,
+			err:            errorutil.ErrUnauthorized,
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{
 			name:           "device already exists returns 400",
-			errorMessage:   errorutil.ErrMsgDeviceAlreadyExists,
+			err:            errorutil.ErrDeviceAlreadyExists,
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
 			name:           "unknown error returns 500",
-			errorMessage:   "some unexpected error",
+			err:            errors.New("some unexpected error"),
 			expectedStatus: http.StatusInternalServerError,
 		},
 	}
@@ -1305,7 +1305,7 @@ func TestHandleDeviceError(t *testing.T) {
 			handler := NewDeviceHandler(new(MockDeviceService))
 			logger, _ := zap.NewProduction()
 
-			handler.handleDeviceError(c, errors.New(tc.errorMessage), logger, "test")
+			handler.handleDeviceError(c, tc.err, logger, "test")
 
 			assert.Equal(t, tc.expectedStatus, w.Code)
 		})
