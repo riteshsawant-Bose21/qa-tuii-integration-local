@@ -52,6 +52,7 @@ struct fusion_cn_worker_profile {
     u32 rx_q_depth_last;
     u32 rx_budget_hits;
     unsigned long next_jiffies;
+    u64 window_start_ns;
 };
 
 static struct fusion_cn_worker_profile fusion_cn_worker_prof;
@@ -68,9 +69,15 @@ static void fusion_cn_prof_maybe_log(void)
 {
     struct fusion_cn_worker_profile *prof = &fusion_cn_worker_prof;
     unsigned long period_j = msecs_to_jiffies(max_t(uint, 1, READ_ONCE(profile_log_ms)));
+    u64 now_ns, window_ns, rx_rate, sink_rate;
 
     if (!READ_ONCE(profile))
         return;
+
+    now_ns = ktime_get_ns();
+
+    if (!prof->window_start_ns)
+        prof->window_start_ns = now_ns;
 
     if (!prof->next_jiffies)
         prof->next_jiffies = jiffies + period_j;
@@ -78,14 +85,21 @@ static void fusion_cn_prof_maybe_log(void)
     if (!time_after_eq(jiffies, prof->next_jiffies))
         return;
 
-    printk(KERN_DEBUG "fusion_cn: profile total avg=%lluns max=%lluns n=%u rx avg=%lluns max=%lluns n=%u pkts_avg=%llu pkts_max=%u sinkn_avg=%llu sinkn_max=%u q_avg=%llu q_max=%u q_last=%u budget_hits=%u fc avg=%lluns max=%lluns n=%u other avg=%lluns max=%lluns n=%u\n",
+    window_ns = now_ns - prof->window_start_ns;
+    if (!window_ns)
+        window_ns = 1;
+
+    rx_rate = div64_u64(prof->rx_packets_sum * NSEC_PER_SEC, window_ns);
+    sink_rate = div64_u64(prof->sink_interrupts_sum * NSEC_PER_SEC, window_ns);
+
+    printk(KERN_DEBUG "fusion_cn: profile total avg=%lluns max=%lluns n=%u rx avg=%lluns max=%lluns n=%u pkts_rate=%llu/s rx_batch_max=%u sink_rate=%llu/s sink_burst_max=%u q_avg=%llu q_max=%u q_last=%u budget_hits=%u phase1 avg=%lluns max=%lluns n=%u phase2 avg=%lluns max=%lluns n=%u\n",
         prof->total.count ? div64_u64(prof->total.sum_ns, prof->total.count) : 0,
         prof->total.max_ns, prof->total.count,
         prof->rx_drain.count ? div64_u64(prof->rx_drain.sum_ns, prof->rx_drain.count) : 0,
         prof->rx_drain.max_ns, prof->rx_drain.count,
-        prof->rx_drain.count ? div64_u64(prof->rx_packets_sum, prof->rx_drain.count) : 0,
+        rx_rate,
         prof->rx_packets_max,
-        prof->fc_phase.count ? div64_u64(prof->sink_interrupts_sum, prof->fc_phase.count) : 0,
+        sink_rate,
         prof->sink_interrupts_max,
         prof->rx_drain.count ? div64_u64(prof->rx_q_depth_sum, prof->rx_drain.count) : 0,
         prof->rx_q_depth_max,
@@ -98,6 +112,7 @@ static void fusion_cn_prof_maybe_log(void)
 
     memset(prof, 0, sizeof(*prof));
     prof->next_jiffies = jiffies + period_j;
+    prof->window_start_ns = now_ns;
 }
 
 #ifndef abs64
@@ -227,7 +242,7 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
                 s->next_action_time += s->packet_time;
             }
 
-            if (count > 0) {
+            if (count > 0 || playing_silence) {
                 if (g_fusion_cn_mgr->trace_debug) printk(KERN_DEBUG
                     "fusion_cn: compute_sink: stream %s playback_idx=%u count=%u now=%llu playing_silence=%u action_time=%llu next_action_time=%llu\n",
                     s->info.stream_name, s->playback_slot, count, tick_ns,
