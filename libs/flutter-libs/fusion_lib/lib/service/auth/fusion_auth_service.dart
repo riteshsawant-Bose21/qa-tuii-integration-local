@@ -1,7 +1,11 @@
+import 'dart:convert';
+
 import 'package:auth0_flutter/auth0_flutter.dart';
 import 'package:auth0_flutter/auth0_flutter_web.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+
+import '../../di/service_locator.dart';
 
 class FusionAuthService {
   final Auth0 _auth0;
@@ -47,6 +51,50 @@ class FusionAuthService {
 
     await _saveCredentials(credentials);
     return credentials;
+  }
+
+  /// Handle login success (save credentials, emit authenticated state, etc.)
+  Future<Credentials> loginByPassForIntegrationTest() async {
+    try {
+      final fusionNetworkClient = fusionLibLocator<FusionNetworkClient>();
+      final response = await fusionNetworkClient.post(
+        api: FusionApiEndpoint.bypassLogin,
+        urlParameters: {
+          "username": "auth0-test@boseprofessional.com",
+        },
+      );
+
+      Map<String, dynamic>? decodeJwtPayload(String token) {
+        try {
+          final parts = token.split('.');
+          if (parts.length != 3) return null;
+          final payload = parts[1];
+          String normalized = base64Url.normalize(payload);
+          final decoded = utf8.decode(base64Url.decode(normalized));
+          return jsonDecode(decoded);
+        } catch (e) {
+          return null;
+        }
+      }
+
+      final Credentials credentials = Credentials(
+        idToken: response.data["id_token"],
+        accessToken: response.data["access_token"],
+        refreshToken: response.data["refresh_token"],
+        expiresAt: response.data["expiresAt"],
+        user: UserProfile(
+          email: response.data["user_email"],
+          name: response.data["user_name"],
+          sub: decodeJwtPayload(response.data["access_token"])?["sub"],
+        ),
+        tokenType: "bearer",
+      );
+
+      await _saveCredentials(credentials);
+      return credentials;
+    } catch (e) {
+      throw Exception('Integration test login failed: ${e.toString()}');
+    }
   }
 
   /// Logout

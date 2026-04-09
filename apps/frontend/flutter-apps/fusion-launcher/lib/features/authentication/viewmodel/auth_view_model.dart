@@ -54,10 +54,13 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
     emit(AuthWebRedirectInProgress());
   }
 
+  bool isIntegrationTest = false;
+
   // /// Initialize and check if user is already authenticated
-  Future<void> initialize() async {
+  Future<void> initialize({required bool isIntegrationTest}) async {
     try {
       _emitLoading();
+      this.isIntegrationTest = isIntegrationTest;
 
       // Check if user is already authenticated
       final bool isAuthenticated = await _authService.isAuthenticated();
@@ -88,11 +91,30 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
     }
   }
 
+  Future<Credentials> byPassLoginForIntegrationTest() async {
+    try {
+      _emitLoading();
+      final Credentials credentials = await _authService.loginByPassForIntegrationTest();
+      await serviceLocator<SharedPreferencesHandler>().setBool(SharedPreferenceKeys.skipLogin, false);
+      return credentials;
+    } on Exception catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: 'Bypass login error: $e');
+      rethrow;
+    }
+  }
+
   /// Login
   Future<void> login() async {
     try {
       _emitLoading();
-      final Credentials credentials = await _authService.login();
+
+      late final Credentials credentials;
+
+      if (isIntegrationTest) {
+        credentials = await byPassLoginForIntegrationTest();
+      } else {
+        credentials = await _authService.login();
+      }
 
       await serviceLocator<SharedPreferencesHandler>().setBool(SharedPreferenceKeys.skipLogin, false);
 

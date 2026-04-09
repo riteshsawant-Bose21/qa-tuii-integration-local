@@ -96,7 +96,8 @@ void _setupMacOSDeepLinkListener() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool isIntegrationTest;
+  const MyApp({super.key, this.isIntegrationTest = false});
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +112,7 @@ class MyApp extends StatelessWidget {
         ),
 
         BlocProvider<AuthViewModel>.value(
-          value: serviceLocator<AuthViewModel>()..initialize(),
+          value: serviceLocator<AuthViewModel>()..initialize(isIntegrationTest: isIntegrationTest),
           // lazy: false,
         ),
 
