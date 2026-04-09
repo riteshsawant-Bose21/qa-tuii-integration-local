@@ -119,13 +119,17 @@ static uint pi_p_threshold_param = 20;
 module_param(pi_p_threshold_param, uint, 0644);
 MODULE_PARM_DESC(pi_p_threshold_param, "PI P-term activation threshold in PPS error ticks");
 
-static uint pi_p_gain_q16_param = 65536;
+static uint pi_p_gain_q16_param = 262144;
 module_param(pi_p_gain_q16_param, uint, 0644);
 MODULE_PARM_DESC(pi_p_gain_q16_param, "PI P-term gain in Q16 fixed-point DAC-counts per PPS-error tick");
 
-static uint pi_i_gain_q16_param = 4096;
+static uint pi_i_gain_q16_param = 65536;
 module_param(pi_i_gain_q16_param, uint, 0644);
 MODULE_PARM_DESC(pi_i_gain_q16_param, "PI I-term gain in Q16 fixed-point DAC-counts per accumulated PPS-error tick");
+
+static uint pi_integrator_clamp_param = 5;
+module_param(pi_integrator_clamp_param, uint, 0644);
+MODULE_PARM_DESC(pi_integrator_clamp_param, "Absolute clamp applied to the PI error integrator state");
 
 struct fusion_gpt_cal_config {
 	s32 k1_q16;
@@ -1245,6 +1249,9 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 		bool rebase_ready = false;
 		long freq_error = 0;
 		long if2_offset_ns = 0;
+		long p_term_log = 0;
+		long i_term_log = 0;
+		long integrator_log = 0;
 		int dac_target = 0;
 
 		if (cap64 > now64)
@@ -1414,11 +1421,16 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 				u32 p_threshold = READ_ONCE(pi_p_threshold_param);
 				u32 p_gain_q16 = READ_ONCE(pi_p_gain_q16_param);
 				u32 i_gain_q16 = READ_ONCE(pi_i_gain_q16_param);
+				long integrator_clamp = max_t(long, 1,
+						(long)READ_ONCE(pi_integrator_clamp_param));
 				long p_term = 0;
 				long i_term = 0;
 				long abs_err = (freq_error < 0) ? -freq_error : freq_error;
 
 				g->error_integrator += freq_error;
+				g->error_integrator = clamp_t(long, g->error_integrator,
+							      -integrator_clamp,
+							      integrator_clamp);
 
 				if (abs_err > p_threshold) {
 					p_term = (long)(((s64)freq_error * (s64)p_gain_q16) >> 16);
@@ -1430,6 +1442,10 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 				i_term = (long)(((s64)g->error_integrator * (s64)i_gain_q16) >> 16);
 				if (i_term != 0)
 					g->dac_target -= (int)i_term;
+
+				p_term_log = -p_term;
+				i_term_log = -i_term;
+				integrator_log = g->error_integrator;
 
 				if (g->dac_target > DAC_MAX_VALUE || g->dac_target < DAC_MIN_VALUE) {
 					const u32 si_gain_step = 10000;
@@ -1471,13 +1487,16 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 				rms_jitter = int_sqrt(g->sq_err_sum / g->err_count);
 
 			if (pps_debug_param) {
-				if (time_after_eq(jiffies, g->pps_diag_next_jiffies)) {
-					dac_target = g->dac_target;
-					do_pps_log = true;
-					g->sq_err_sum = 0;
-					g->err_count = 0;
-					g->pps_diag_next_jiffies = jiffies + HZ;
+				dac_target = g->dac_target;
+				if (cal_active(g)) {
+					p_term_log = 0;
+					i_term_log = 0;
+					integrator_log = g->error_integrator;
 				}
+				do_pps_log = true;
+				g->sq_err_sum = 0;
+				g->err_count = 0;
+				g->pps_diag_next_jiffies = jiffies + HZ;
 			} else {
 				g->sq_err_sum = 0;
 				g->err_count = 0;
@@ -1497,9 +1516,10 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 			raw_spin_unlock(&g->pps_lock);
 
 			if (do_pps_log)
-				pr_info("fusion_gpt: [PPS] diff=%llu ticks err=%ld ticks rms=%u ticks 48k_off=%ldns dac=%d rebase=%d\n",
+				pr_info("fusion_gpt: [PPS] diff=%llu ticks err=%ld ticks rms=%u ticks 48k_off=%ldns dac=%d p=%ld i=%ld integ=%ld cal=%u rebase=%d\n",
 					diff, freq_error, rms_jitter, if2_offset_ns,
-					dac_target, rebase_ready);
+					dac_target, p_term_log, i_term_log, integrator_log,
+					cal_is_active ? 1 : 0, rebase_ready);
 		}
 
 		if (need_dac_work)
