@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"errors"
+
 	response "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/response"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
@@ -53,15 +55,25 @@ func (h *DeviceHandler) getLoggerAndUser(ctx *gin.Context) (*zap.Logger, *types.
 
 // handleDeviceError maps service errors to appropriate HTTP responses.
 func (h *DeviceHandler) handleDeviceError(ctx *gin.Context, err error, logger *zap.Logger, operation string) {
-	errMsg := err.Error()
-
-	switch errMsg {
-	case errorutil.ErrMsgDeviceNotFound, errorutil.ErrMsgProjectNotFound, errorutil.ErrMsgCommandNotFound:
-		response.NotFound(ctx, errMsg)
-	case errorutil.MsgUnauthorized:
-		response.Unauthorized(ctx, errMsg)
-	case errorutil.ErrMsgDeviceAlreadyExists, errorutil.ErrMsgDeviceAlreadyClaimed, errorutil.ErrMsgDeviceNotClaimed:
-		response.BadRequest(ctx, errMsg)
+	switch {
+	case errors.Is(err, errorutil.ErrDeviceNotFound):
+		response.NotFound(ctx, errorutil.ErrMsgDeviceNotFound)
+	case errors.Is(err, errorutil.ErrProjectNotFound):
+		response.NotFound(ctx, errorutil.ErrMsgProjectNotFound)
+	case errors.Is(err, errorutil.ErrCommandNotFound):
+		response.NotFound(ctx, errorutil.ErrMsgCommandNotFound)
+	case errors.Is(err, errorutil.ErrUnauthorized):
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
+	case errors.Is(err, errorutil.ErrDeviceAlreadyExists):
+		response.BadRequest(ctx, errorutil.ErrMsgDeviceAlreadyExists)
+	case errors.Is(err, errorutil.ErrDeviceAlreadyClaimed):
+		response.BadRequest(ctx, errorutil.ErrMsgDeviceAlreadyClaimed)
+	case errors.Is(err, errorutil.ErrDeviceNotClaimed):
+		response.BadRequest(ctx, errorutil.ErrMsgDeviceNotClaimed)
+	case errors.Is(err, errorutil.ErrDeviceUniqueConstraint):
+		response.BadRequest(ctx, errorutil.ErrMsgDeviceUniqueConstraint)
+	case errors.Is(err, errorutil.ErrInvalidCSR):
+		response.BadRequest(ctx, errorutil.ErrMsgInvalidCSR)
 	default:
 		logger.Error("Device operation failed", zap.String("operation", operation), zap.Error(err))
 		response.InternalError(ctx)
