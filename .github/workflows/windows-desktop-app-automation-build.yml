@@ -32,3 +32,26 @@ jobs:
           cert_thumbprint: ${{ secrets.CERT_THUMBPRINT }}
           SM_API_KEY: ${{ secrets.SM_API_KEY }}
           SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
+  flutter-mac-automation-build:
+    concurrency:
+      group: flutter-mac-automation-build
+    runs-on: mac-agent-actions-runner
+    timeout-minutes: 30
+
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v4
+
+      - name: Setup Monorepo Toolchain
+        uses: ./.github/reusable-actions/setup-toolchain
+
+      - name: Build Apps
+        uses: ./.github/reusable-actions/build-flutter-mac-automation
+        with:
+          flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
+          nexus_password: ${{ secrets.NEXUS_PASSWORD }}
+          nexus_url: ${{ secrets.NEXUS_BASE_URL }}
+          keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
+          notarize_apple_id: ${{ secrets.NOTARIZE_APPLE_ID }}
+          notarize_app_password: ${{ secrets.NOTARIZE_APP_PASSWORD }}
+
