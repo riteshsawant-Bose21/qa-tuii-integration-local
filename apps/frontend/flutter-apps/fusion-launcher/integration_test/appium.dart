@@ -29,7 +29,7 @@ void main() {
         ),
       );
     }
-      await tester.pumpWidget(const MyApp());
+      await tester.pumpWidget(const MyApp(isIntegrationTest: true));
     },
   );
 }
