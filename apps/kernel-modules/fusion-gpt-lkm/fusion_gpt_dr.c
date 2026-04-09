@@ -106,7 +106,7 @@ static uint error_thresh_param = 20;
 module_param(error_thresh_param, uint, 0644);
 MODULE_PARM_DESC(error_thresh_param, "Raise discipline_ready after 5 PPS samples with abs_error < this threshold");
 
-static bool pi_only_param;
+static bool pi_only_param = true;
 module_param(pi_only_param, bool, 0644);
 MODULE_PARM_DESC(pi_only_param, "Skip GPT calibration/jump logic and use PI fallback control only");
 
@@ -218,6 +218,7 @@ struct fusion_gpt
 	s32 cal_k3_q16;
 	struct fusion_gpt_cal_config cal_cfg;
 	bool cal_config_checked;
+	bool cal_path_ran;
 
 	/* Sticky startup-ready flag for downstream GPT clients. */
 	bool discipline_ready;
@@ -513,6 +514,7 @@ static bool cal_prebaked_fingerprint_matches(struct fusion_gpt *g, long e0)
 static void cal_start_live_calibration_locked(struct fusion_gpt *g)
 {
 	cal_prepare_points(g);
+	g->cal_path_ran = true;
 	g->cal_state = CAL_APPLY_POINT;
 	pr_info("fusion_gpt: cal start center gain=%u dac=%d settle=%u measure=%u\n",
 		g->cal_center_gain, g->cal_center_dac,
@@ -552,6 +554,13 @@ static inline bool cal_enabled_runtime(void);
 static void gpt_reset_control_state_locked(struct fusion_gpt *g,
 					   bool preserve_calibration)
 {
+	bool preserve_servo_state =
+		preserve_calibration && g->cal_path_ran;
+	int preserved_dac = (g->current_dac_value <= 255) ?
+		g->current_dac_value : clamp(g->dac_target, 0, 255);
+	u32 preserved_gain = clamp(g->si_gain_current,
+				      g->si_gain_min, g->si_gain_max);
+
 	g->latest_freq_error = 0;
 	g->error_integrator = 0;
 	g->sq_err_sum = 0;
@@ -561,14 +570,15 @@ static void gpt_reset_control_state_locked(struct fusion_gpt *g,
 	WRITE_ONCE(g->discipline_ready, false);
 	g->lock_streak = 0;
 	g->pps_diag_next_jiffies = jiffies + HZ;
-	g->cal_state = cal_enabled_runtime() ? CAL_IDLE : CAL_DONE;
+	g->cal_state = (cal_enabled_runtime() && !preserve_servo_state) ?
+		CAL_IDLE : CAL_DONE;
 	g->cal_probe_idx = 0;
 	g->cal_settle_left = 0;
 	g->cal_measure_left = 0;
 	g->cal_err_accum = 0;
 	g->cal_err_samples = 0;
-	g->cal_center_gain = g->si_gain_current;
-	g->cal_center_dac = clamp(g->dac_target, 0, 255);
+	g->cal_center_gain = preserved_gain;
+	g->cal_center_dac = preserved_dac;
 	memset(g->cal_probe_gain, 0, sizeof(g->cal_probe_gain));
 	memset(g->cal_probe_dac, 0, sizeof(g->cal_probe_dac));
 	memset(g->cal_probe_mean, 0, sizeof(g->cal_probe_mean));
@@ -579,10 +589,18 @@ static void gpt_reset_control_state_locked(struct fusion_gpt *g,
 	if (!preserve_calibration) {
 		cal_config_set_defaults(&g->cal_cfg);
 		g->cal_config_checked = false;
+		g->cal_path_ran = false;
 	}
-	gpt_restore_control_baseline_locked(g);
-	g->cal_center_gain = g->si_gain_current;
-	g->cal_center_dac = clamp(g->dac_target, 0, 255);
+	if (preserve_servo_state) {
+		g->dac_target = preserved_dac;
+		g->current_dac_value = preserved_dac;
+		g->si_gain_current = preserved_gain;
+		g->si_gain_target = preserved_gain;
+	} else {
+		gpt_restore_control_baseline_locked(g);
+		g->cal_center_gain = g->si_gain_current;
+		g->cal_center_dac = clamp(g->dac_target, 0, 255);
+	}
 }
 
 static struct fusion_gpt *fusion_gpt_get_locked(void)
@@ -837,6 +855,7 @@ int fusion_gpt_reset_timing_state(void)
 	long prev_freq_error;
 	u32 baseline_gain;
 	int baseline_dac;
+	bool preserve_servo_state;
 	bool prev_epoch_valid, prev_aligned, prev_ready, prev_pending;
 	enum cal_state prev_cal_state;
 	bool changed;
@@ -854,6 +873,7 @@ int fusion_gpt_reset_timing_state(void)
 	prev_ready = READ_ONCE(g->discipline_ready);
 	prev_pending = g->pending_future_anchor;
 	prev_cal_state = g->cal_state;
+	preserve_servo_state = g->cal_path_ran;
 	changed = g->pps_valid || g->if2_valid || g->phc_epoch_valid ||
 		g->pending_future_anchor || g->pps_seq ||
 		prev_ready || g->lock_streak ||
@@ -863,8 +883,10 @@ int fusion_gpt_reset_timing_state(void)
 		g->latest_freq_error || g->error_integrator;
 	gpt_reset_timing_state_locked(g);
 	gpt_reset_control_state_locked(g, true);
-	g->si_gain_sync_needed = true;
-	g->baseline_restore_pending = true;
+	if (!preserve_servo_state) {
+		g->si_gain_sync_needed = true;
+		g->baseline_restore_pending = true;
+	}
 	baseline_gain = g->si_gain_target;
 	baseline_dac = clamp(g->dac_target, 0, 255);
 	raw_spin_unlock(&g->ctrl_lock);
@@ -874,9 +896,14 @@ int fusion_gpt_reset_timing_state(void)
 		pr_info("fusion_gpt: timing reset reason=api prev{pps_seq=%u epoch=%u aligned=%u ready=%u pending=%u cal=%u freq_err=%ld}\n",
 				prev_pps_seq, prev_epoch_valid, prev_aligned, prev_ready,
 				prev_pending, prev_cal_state, prev_freq_error);
-	pr_info("fusion_gpt: baseline queued reason=timing_reset gain=%u dac=%d\n",
-		baseline_gain, baseline_dac);
-	schedule_work(&g->dac_work);
+	if (preserve_servo_state) {
+		pr_info("fusion_gpt: timing reset preserved servo state and forced PI fallback gain=%u dac=%d\n",
+			baseline_gain, baseline_dac);
+	} else {
+		pr_info("fusion_gpt: baseline queued reason=timing_reset gain=%u dac=%d\n",
+			baseline_gain, baseline_dac);
+		schedule_work(&g->dac_work);
+	}
 	fusion_gpt_put_locked(g);
 	return 0;
 }
@@ -1243,6 +1270,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 					g->cal_err_samples = 0;
 					g->cal_measure_left = max_t(u32, 1, g->cal_cfg.cal_pre_e0_samples);
 					g->cal_settle_left = max_t(u32, 1, g->cal_cfg.cal_pre_e0_max_wait);
+					g->cal_path_ran = true;
 					g->cal_state = CAL_PREBAKE_WAIT;
 					pr_info("fusion_gpt: cal prebaked wait center gain=%u dac=%d k=[%d %d %d] need=%u abs<=%u wait<=%u\n",
 						g->cal_center_gain, g->cal_center_dac,
@@ -1591,6 +1619,7 @@ static void fusion_dac_work_handler(struct work_struct *work)
 			g->cal_err_samples = 0;
 			g->cal_measure_left = max_t(u32, 1, g->cal_cfg.cal_pre_e0_samples);
 			g->cal_settle_left = max_t(u32, 1, g->cal_cfg.cal_pre_e0_max_wait);
+			g->cal_path_ran = true;
 			g->cal_state = CAL_PREBAKE_WAIT;
 			pr_info("fusion_gpt: cal prebaked wait center gain=%u dac=%d k=[%d %d %d] need=%u abs<=%u wait<=%u\n",
 				g->cal_center_gain, g->cal_center_dac,
