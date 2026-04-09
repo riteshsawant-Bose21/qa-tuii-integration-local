@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class InviteUserRow {
@@ -13,7 +14,7 @@ class InviteUserRow {
 }
 
 class InviteUserDialog extends StatefulWidget {
-  final Function(List<Map<String, String>> invites) onInvite;
+  final Function(List<Map<String, dynamic>> invites) onInvite;
 
   const InviteUserDialog({super.key, required this.onInvite});
 
@@ -50,15 +51,24 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
     }
   }
 
+  int _roleToId(String role) {
+    const roleMap = {
+      'Admin': 1,
+      'Designer': 2,
+      'Technician': 3,
+    };
+    return roleMap[role] ?? 3;
+  }
+
   void _handleSendInvites() {
     if (_formKey.currentState!.validate()) {
-      List<Map<String, String>> invites = [];
+      List<Map<String, dynamic>> invites = [];
 
       for (var row in _inviteRows) {
         if (row.emailController.text.isNotEmpty && row.selectedRole != null) {
           invites.add({
             'email': row.emailController.text.trim(),
-            'role': row.selectedRole!,
+            'account_type_role_id': _roleToId(row.selectedRole!),
           });
         }
       }
@@ -80,7 +90,11 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: context.colorScheme.elevation3, width: 1.2),
+      ),
+      backgroundColor: context.colorScheme.elevation1,
       child: Container(
         width: 600,
         constraints: const BoxConstraints(maxHeight: 500),
@@ -104,7 +118,6 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
                           style: GoogleFonts.inter(
                             fontSize: 24,
                             fontWeight: FontWeight.w600,
-                            color: Colors.black,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -112,7 +125,7 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
                           'Add email addresses and assign roles to invite users to your organization.',
                           style: GoogleFonts.inter(
                             fontSize: 14,
-                            color: Colors.grey[600],
+                            color: context.colorScheme.elevation6,
                           ),
                         ),
                       ],
@@ -145,28 +158,30 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
                                 flex: 2,
                                 child: TextFormField(
                                   controller: row.emailController,
+                                  style: TextStyle(
+                                    color: context.colorScheme.textPrimary,
+                                  ),
                                   decoration: InputDecoration(
                                     hintText: 'name@example.com',
-                                    hintStyle: GoogleFonts.inter(
-                                      color: Colors.grey[500],
-                                    ),
+                                    filled: true,
+                                    fillColor: context.colorScheme.elevation2,
                                     border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(12),
                                       borderSide: BorderSide(
-                                        color: Colors.grey[300]!,
+                                        color: context.colorScheme.elevation3,
                                       ),
                                     ),
                                     enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(12),
                                       borderSide: BorderSide(
-                                        color: Colors.grey[300]!,
+                                        color: context.colorScheme.elevation3,
                                       ),
                                     ),
                                     focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: const BorderSide(
-                                        color: Colors.blue,
-                                        width: 2,
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(
+                                        color: context.colorScheme.primaryColor,
+                                        width: 1.5,
                                       ),
                                     ),
                                     contentPadding: const EdgeInsets.symmetric(
@@ -193,28 +208,31 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
                               Expanded(
                                 child: DropdownButtonFormField<String>(
                                   value: row.selectedRole,
+                                  dropdownColor: context.colorScheme.elevation2,
+                                  style: TextStyle(
+                                    color: context.colorScheme.textPrimary,
+                                  ),
                                   decoration: InputDecoration(
                                     hintText: 'Select role',
-                                    hintStyle: GoogleFonts.inter(
-                                      color: Colors.grey[500],
-                                    ),
+                                    filled: true,
+                                    fillColor: context.colorScheme.elevation2,
                                     border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(12),
                                       borderSide: BorderSide(
-                                        color: Colors.grey[300]!,
+                                        color: context.colorScheme.elevation3,
                                       ),
                                     ),
                                     enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(12),
                                       borderSide: BorderSide(
-                                        color: Colors.grey[300]!,
+                                        color: context.colorScheme.elevation3,
                                       ),
                                     ),
                                     focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: const BorderSide(
-                                        color: Colors.blue,
-                                        width: 2,
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(
+                                        color: context.colorScheme.primaryColor,
+                                        width: 1.5,
                                       ),
                                     ),
                                     contentPadding: const EdgeInsets.symmetric(
@@ -252,7 +270,8 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
                                   icon: const Icon(Icons.close, size: 20),
                                   onPressed: () => _removeUser(index),
                                   style: IconButton.styleFrom(
-                                    backgroundColor: Colors.grey[100],
+                                    backgroundColor:
+                                        context.colorScheme.elevation3,
                                     padding: const EdgeInsets.all(8),
                                   ),
                                 ),
@@ -267,7 +286,7 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
                       // Add Another Button
                       InkWell(
                         onTap: _addAnotherUser,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
@@ -275,10 +294,10 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
                           ),
                           decoration: BoxDecoration(
                             border: Border.all(
-                              color: Colors.grey[300]!,
+                              color: context.colorScheme.elevation3,
                               style: BorderStyle.solid,
                             ),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -286,14 +305,14 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
                               Icon(
                                 Icons.person_add_outlined,
                                 size: 20,
-                                color: Colors.grey[700],
+                                color: context.colorScheme.elevation6,
                               ),
                               const SizedBox(width: 8),
                               Text(
                                 'Add another',
                                 style: GoogleFonts.inter(
                                   fontSize: 14,
-                                  color: Colors.grey[700],
+                                  color: context.colorScheme.elevation6,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -325,7 +344,7 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: Colors.grey[700],
+                        color: context.colorScheme.elevation6,
                       ),
                     ),
                   ),
@@ -333,8 +352,7 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
                   ElevatedButton(
                     onPressed: _handleSendInvites,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey[800],
-                      foregroundColor: Colors.white,
+                      foregroundColor: context.colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
                         vertical: 12,

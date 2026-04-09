@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_web/features/common-widgets/page_header.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:data_table_2/data_table_2.dart';
@@ -61,40 +62,35 @@ class _UsersPageState extends State<UsersPage> {
     return BlocProvider.value(
       value: _viewModel,
       child: Scaffold(
-        // backgroundColor: Colors.grey[50],
-        body: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight:
-                        constraints.maxHeight - 48, // Account for padding
+        body: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header Section with Metrics
+              _buildHeaderWithMetrics(),
+              const SizedBox(height: 24),
+
+              // Single container with filters + table (like projects page)
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: context.colorScheme.elevation2,
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header Section with Metrics
-                      _buildHeaderWithMetrics(),
+                      const SizedBox(height: 12),
+                      _buildFiltersRow(),
                       const SizedBox(height: 24),
-
-                      // Filters and Search Section
-                      _buildFiltersSection(),
-                      const SizedBox(height: 24),
-
-                      // Data Table Section
-                      SizedBox(
-                        height:
-                            constraints.maxHeight -
-                            400, // Reserve space for header and filters
-                        child: _buildDataTable(),
-                      ),
+                      Expanded(child: _buildTableContent()),
                     ],
                   ),
                 ),
-              );
-            },
+              ),
+            ],
           ),
         ),
       ),
@@ -133,8 +129,8 @@ class _UsersPageState extends State<UsersPage> {
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey[900],
-                    foregroundColor: Colors.white,
+                    backgroundColor: context.colorScheme.primaryColor,
+                    foregroundColor: context.colorScheme.white,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 10,
@@ -196,16 +192,15 @@ class _UsersPageState extends State<UsersPage> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
+        color: context.colorScheme.elevation2,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withOpacity(0.15),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: color, size: 24),
@@ -221,7 +216,7 @@ class _UsersPageState extends State<UsersPage> {
                   style: GoogleFonts.montserrat(
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black87,
+                    color: context.colorScheme.textPrimary,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -229,7 +224,7 @@ class _UsersPageState extends State<UsersPage> {
                   label,
                   style: GoogleFonts.montserrat(
                     fontSize: 13,
-                    color: Colors.grey[600],
+                    color: context.colorScheme.elevation6,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -241,455 +236,246 @@ class _UsersPageState extends State<UsersPage> {
     );
   }
 
-  Widget _buildFiltersSection() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            spreadRadius: 0,
-            offset: const Offset(0, 2),
+  Widget _buildFiltersRow() {
+    return Row(
+      children: [
+        // Search Field
+        Expanded(
+          flex: 2,
+          child: TextFormField(
+            controller: _searchController,
+            style: TextStyle(color: context.colorScheme.textPrimary),
+            decoration: InputDecoration(
+              labelText: 'Search users...',
+              prefixIcon: Icon(Icons.search),
+              filled: true,
+              fillColor: context.colorScheme.onSurface.withValues(alpha: 0.05),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+            ),
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          LayoutBuilder(
-            builder: (context, constraints) {
-              // Use responsive layout for smaller screens
-              if (constraints.maxWidth < 1200) {
-                return Column(
-                  children: [
-                    // Search Field
-                    TextFormField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        labelText: 'Search users...',
-                        labelStyle: GoogleFonts.montserrat(
-                          color: Colors.grey[600],
-                        ),
-                        prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Colors.black87),
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey[50],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        // Role Filter
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            value: _selectedRole,
-                            decoration: InputDecoration(
-                              labelText: 'Role',
-                              labelStyle: GoogleFonts.montserrat(
-                                color: Colors.grey[600],
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(
-                                  color: Colors.grey[300]!,
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(
-                                  color: Colors.grey[300]!,
-                                ),
-                              ),
-                              filled: true,
-                              fillColor: Colors.grey[50],
-                            ),
-                            items: [
-                              const DropdownMenuItem<String>(
-                                value: null,
-                                child: Text('All Roles'),
-                              ),
-                              ...['Admin', 'Designer', 'Technician'].map(
-                                (role) => DropdownMenuItem<String>(
-                                  value: role,
-                                  child: Text(role),
-                                ),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedRole = value;
-                              });
-                              _applyFilters();
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        // Status Filter
-                        Expanded(
-                          child: DropdownButtonFormField<UserStatus>(
-                            value: _selectedStatus,
-                            decoration: InputDecoration(
-                              labelText: 'Status',
-                              labelStyle: GoogleFonts.montserrat(
-                                color: Colors.grey[600],
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(
-                                  color: Colors.grey[300]!,
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(
-                                  color: Colors.grey[300]!,
-                                ),
-                              ),
-                              filled: true,
-                              fillColor: Colors.grey[50],
-                            ),
-                            items: [
-                              const DropdownMenuItem<UserStatus>(
-                                value: null,
-                                child: Text('All Statuses'),
-                              ),
-                              ...UserStatus.values.map(
-                                (status) => DropdownMenuItem<UserStatus>(
-                                  value: status,
-                                  child: Text(status.displayName),
-                                ),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedStatus = value;
-                              });
-                              _applyFilters();
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                );
-              } else {
-                return Row(
-                  children: [
-                    // Search Field
-                    Expanded(
-                      flex: 2,
-                      child: TextFormField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          labelText: 'Search users...',
-                          labelStyle: GoogleFonts.montserrat(
-                            color: Colors.grey[600],
-                          ),
-                          prefixIcon: Icon(
-                            Icons.search,
-                            color: Colors.grey[400],
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey[300]!),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey[300]!),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: Colors.black87),
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[50],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
+        ),
+        const SizedBox(width: 16),
 
-                    // Role Filter
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        value: _selectedRole,
-                        decoration: InputDecoration(
-                          labelText: 'Role',
-                          labelStyle: GoogleFonts.montserrat(
-                            color: Colors.grey[600],
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey[300]!),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey[300]!),
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[50],
-                        ),
-                        items: [
-                          const DropdownMenuItem<String>(
-                            value: null,
-                            child: Text('All Roles'),
-                          ),
-                          ...['Admin', 'Designer', 'Technician'].map(
-                            (role) => DropdownMenuItem<String>(
-                              value: role,
-                              child: Text(role),
-                            ),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedRole = value;
-                          });
-                          _applyFilters();
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-
-                    // Status Filter
-                    Expanded(
-                      child: DropdownButtonFormField<UserStatus>(
-                        value: _selectedStatus,
-                        decoration: InputDecoration(
-                          labelText: 'Status',
-                          labelStyle: GoogleFonts.montserrat(
-                            color: Colors.grey[600],
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey[300]!),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey[300]!),
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[50],
-                        ),
-                        items: [
-                          const DropdownMenuItem<UserStatus>(
-                            value: null,
-                            child: Text('All Statuses'),
-                          ),
-                          ...UserStatus.values.map(
-                            (status) => DropdownMenuItem<UserStatus>(
-                              value: status,
-                              child: Text(status.displayName),
-                            ),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedStatus = value;
-                          });
-                          _applyFilters();
-                        },
-                      ),
-                    ),
-                  ],
-                );
-              }
+        // Role Filter
+        Expanded(
+          child: DropdownButtonFormField<String>(
+            value: _selectedRole,
+            dropdownColor: context.colorScheme.elevation2,
+            style: TextStyle(color: context.colorScheme.textPrimary),
+            decoration: InputDecoration(
+              labelText: 'Role',
+              filled: true,
+              fillColor: context.colorScheme.onSurface.withValues(alpha: 0.05),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+            ),
+            items: [
+              const DropdownMenuItem<String>(
+                value: null,
+                child: Text('All Roles'),
+              ),
+              ...['Admin', 'Designer', 'Technician'].map(
+                (role) =>
+                    DropdownMenuItem<String>(value: role, child: Text(role)),
+              ),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _selectedRole = value;
+              });
+              _applyFilters();
             },
           ),
+        ),
+        const SizedBox(width: 16),
 
-          // Clear filters button
-          if (_selectedRole != null ||
-              _selectedStatus != null ||
-              _searchQuery.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton.icon(
-                  onPressed: _clearFilters,
-                  icon: const Icon(Icons.clear, size: 16),
-                  label: Text('Clear Filters', style: GoogleFonts.montserrat()),
-                ),
-              ],
+        // Status Filter
+        Expanded(
+          child: DropdownButtonFormField<UserStatus>(
+            value: _selectedStatus,
+            dropdownColor: context.colorScheme.elevation2,
+            style: TextStyle(color: context.colorScheme.textPrimary),
+            decoration: InputDecoration(
+              labelText: 'Status',
+              filled: true,
+              fillColor: context.colorScheme.onSurface.withValues(alpha: 0.05),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
             ),
-          ],
+            items: [
+              const DropdownMenuItem<UserStatus>(
+                value: null,
+                child: Text('All Statuses'),
+              ),
+              ...UserStatus.values.map(
+                (status) => DropdownMenuItem<UserStatus>(
+                  value: status,
+                  child: Text(status.displayName),
+                ),
+              ),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _selectedStatus = value;
+              });
+              _applyFilters();
+            },
+          ),
+        ),
+
+        // Clear filters
+        if (_selectedRole != null ||
+            _selectedStatus != null ||
+            _searchQuery.isNotEmpty) ...[
+          const SizedBox(width: 16),
+          IconButton(
+            onPressed: _clearFilters,
+            icon: Icon(
+              Icons.clear,
+              size: 20,
+              color: context.colorScheme.elevation6,
+            ),
+            tooltip: 'Clear Filters',
+          ),
         ],
-      ),
+      ],
     );
   }
 
-  Widget _buildDataTable() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Container(
-          height: constraints.maxHeight,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[200]!),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 8,
-                spreadRadius: 0,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: BlocBuilder<UsersViewModel, BaseState<List<UserEntity>>>(
-            builder: (context, state) {
-              if (state is LoadingState<List<UserEntity>>) {
-                return const Center(
-                  child: CircularProgressIndicator(color: Colors.black87),
-                );
-              }
+  Widget _buildTableContent() {
+    return BlocBuilder<UsersViewModel, BaseState<List<UserEntity>>>(
+      builder: (context, state) {
+        if (state is LoadingState<List<UserEntity>>) {
+          return Center(
+            child: CircularProgressIndicator(color: context.colorScheme.white),
+          );
+        }
 
-              if (state is ErrorState<List<UserEntity>>) {
-                return _buildErrorState();
-              }
+        if (state is ErrorState<List<UserEntity>>) {
+          return _buildErrorState();
+        }
 
-              final users = _viewModel.users;
+        final users = _viewModel.users;
 
-              if (users.isEmpty) {
-                return _buildEmptyState();
-              }
+        if (users.isEmpty) {
+          return _buildEmptyState();
+        }
 
-              return Column(
-                children: [
-                  // Results summary and actions
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(12),
-                        topRight: Radius.circular(12),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '${users.length} user${users.length == 1 ? '' : 's'} found',
-                          style: GoogleFonts.montserrat(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => _viewModel.loadUsers(),
-                          icon: const Icon(Icons.refresh, size: 20),
-                          tooltip: 'Refresh',
-                        ),
-                      ],
-                    ),
+        return Column(
+          children: [
+            // Data Table
+            Expanded(
+              child: DataTable2(
+                columnSpacing: 12,
+                horizontalMargin: 24,
+                minWidth: 1000,
+                dataRowHeight: 80,
+                headingRowHeight: 56,
+                headingRowColor: WidgetStateProperty.all(
+                  context.colorScheme.elevation3,
+                ),
+                border: TableBorder(
+                  horizontalInside: BorderSide(
+                    color: context.colorScheme.strokeLight,
+                    width: 1,
                   ),
-
-                  // Data Table
-                  Expanded(
-                    child: DataTable2(
-                      columnSpacing: 12,
-                      horizontalMargin: 24,
-                      minWidth: 1000,
-                      dataRowHeight: 80,
-                      headingRowHeight: 56,
-                      headingRowColor: WidgetStateProperty.all(Colors.grey[50]),
-                      border: TableBorder(
-                        horizontalInside: BorderSide(
-                          color: Colors.grey[200]!,
-                          width: 1,
-                        ),
+                ),
+                columns: [
+                  DataColumn2(
+                    label: Text(
+                      'User',
+                      style: GoogleFonts.montserrat(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: context.colorScheme.textPrimary,
                       ),
-                      columns: [
-                        DataColumn2(
-                          label: Text(
-                            'User',
-                            style: GoogleFonts.montserrat(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          size: ColumnSize.L,
-                        ),
-                        DataColumn2(
-                          label: Text(
-                            'Roles',
-                            style: GoogleFonts.montserrat(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          size: ColumnSize.M,
-                        ),
-                        DataColumn2(
-                          label: Text(
-                            'Status',
-                            style: GoogleFonts.montserrat(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          size: ColumnSize.S,
-                        ),
-                        DataColumn2(
-                          label: Text(
-                            'Last Login',
-                            style: GoogleFonts.montserrat(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          size: ColumnSize.M,
-                        ),
-                        DataColumn2(
-                          label: Text(
-                            'Actions',
-                            style: GoogleFonts.montserrat(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          size: ColumnSize.S,
-                          fixedWidth: 100,
-                        ),
-                      ],
-                      rows: users.map((user) {
-                        return DataRow2(
-                          cells: [
-                            DataCell(_buildUserCell(user)),
-                            DataCell(_buildRolesCell(user.roles)),
-                            DataCell(_buildStatusCell(user.status)),
-                            DataCell(_buildLastLoginCell(user.lastLoginAt)),
-                            DataCell(_buildActionsCell(user)),
-                          ],
-                          onTap: () => _showUserProfile(user),
-                        );
-                      }).toList(),
                     ),
+                    size: ColumnSize.L,
+                  ),
+                  DataColumn2(
+                    label: Text(
+                      'Roles',
+                      style: GoogleFonts.montserrat(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: context.colorScheme.textPrimary,
+                      ),
+                    ),
+                    size: ColumnSize.M,
+                  ),
+                  DataColumn2(
+                    label: Text(
+                      'Status',
+                      style: GoogleFonts.montserrat(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: context.colorScheme.textPrimary,
+                      ),
+                    ),
+                    size: ColumnSize.S,
+                  ),
+                  DataColumn2(
+                    label: Text(
+                      'Last Login',
+                      style: GoogleFonts.montserrat(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: context.colorScheme.textPrimary,
+                      ),
+                    ),
+                    size: ColumnSize.M,
+                  ),
+                  DataColumn2(
+                    label: Text(
+                      'Actions',
+                      style: GoogleFonts.montserrat(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: context.colorScheme.textPrimary,
+                      ),
+                    ),
+                    size: ColumnSize.S,
+                    fixedWidth: 100,
                   ),
                 ],
-              );
-            },
-          ),
+                rows: users.map((user) {
+                  return DataRow2(
+                    cells: [
+                      DataCell(_buildUserCell(user)),
+                      DataCell(_buildRolesCell(user.roles)),
+                      DataCell(_buildStatusCell(user.status)),
+                      DataCell(_buildLastLoginCell(user.lastLoginAt)),
+                      DataCell(_buildActionsCell(user)),
+                    ],
+                    onTap: () => _showUserProfile(user),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -701,7 +487,7 @@ class _UsersPageState extends State<UsersPage> {
       children: [
         CircleAvatar(
           radius: 24,
-          backgroundColor: Colors.blue[100],
+          backgroundColor: context.colorScheme.elevation3,
           backgroundImage: user.avatar != null
               ? NetworkImage(user.avatar!)
               : null,
@@ -718,7 +504,7 @@ class _UsersPageState extends State<UsersPage> {
                   style: GoogleFonts.montserrat(
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
-                    color: Colors.blue[700],
+                    color: context.colorScheme.textPrimary,
                   ),
                 )
               : null,
@@ -734,7 +520,7 @@ class _UsersPageState extends State<UsersPage> {
                 style: GoogleFonts.montserrat(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+                  color: context.colorScheme.textPrimary,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -743,7 +529,7 @@ class _UsersPageState extends State<UsersPage> {
                 user.email,
                 style: GoogleFonts.montserrat(
                   fontSize: 12,
-                  color: Colors.grey[600],
+                  color: context.colorScheme.elevation6,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -760,7 +546,7 @@ class _UsersPageState extends State<UsersPage> {
         'No roles',
         style: GoogleFonts.montserrat(
           fontSize: 12,
-          color: Colors.grey[600],
+          color: context.colorScheme.elevation6,
           fontStyle: FontStyle.italic,
         ),
       );
@@ -774,16 +560,18 @@ class _UsersPageState extends State<UsersPage> {
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.blue[50],
+                color: context.colorScheme.primaryColor.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue[200]!),
+                border: Border.all(
+                  color: context.colorScheme.primaryColor.withOpacity(0.3),
+                ),
               ),
               child: Text(
                 role,
                 style: GoogleFonts.montserrat(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
-                  color: Colors.blue[700],
+                  color: context.colorScheme.primaryColor,
                 ),
               ),
             );
@@ -796,14 +584,14 @@ class _UsersPageState extends State<UsersPage> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.grey[100],
+                        color: context.colorScheme.elevation3,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         '+${roles.length - 2}',
                         style: GoogleFonts.montserrat(
                           fontSize: 11,
-                          color: Colors.grey[600],
+                          color: context.colorScheme.elevation6,
                         ),
                       ),
                     ),
@@ -840,7 +628,7 @@ class _UsersPageState extends State<UsersPage> {
         'Never',
         style: GoogleFonts.montserrat(
           fontSize: 12,
-          color: Colors.grey[600],
+          color: context.colorScheme.elevation6,
           fontStyle: FontStyle.italic,
         ),
       );
@@ -867,12 +655,15 @@ class _UsersPageState extends State<UsersPage> {
           style: GoogleFonts.montserrat(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: Colors.black87,
+            color: context.colorScheme.textPrimary,
           ),
         ),
         Text(
           DateFormat('MMM dd').format(lastLogin),
-          style: GoogleFonts.montserrat(fontSize: 10, color: Colors.grey[600]),
+          style: GoogleFonts.montserrat(
+            fontSize: 10,
+            color: context.colorScheme.elevation6,
+          ),
         ),
       ],
     );
@@ -882,7 +673,12 @@ class _UsersPageState extends State<UsersPage> {
     return Material(
       color: Colors.transparent,
       child: PopupMenuButton<String>(
-        icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
+        color: context.colorScheme.elevation2,
+        icon: Icon(
+          Icons.more_vert,
+          size: 18,
+          color: context.colorScheme.elevation6,
+        ),
         offset: const Offset(-100, 0),
         constraints: const BoxConstraints(minWidth: 160, maxWidth: 200),
         itemBuilder: (context) => [
@@ -970,7 +766,7 @@ class _UsersPageState extends State<UsersPage> {
     showDialog(
       context: context,
       builder: (context) => InviteUserDialog(
-        onInvite: (List<Map<String, String>> invites) async {
+        onInvite: (List<Map<String, dynamic>> invites) async {
           // Use the new bulk invite method
           await _viewModel.inviteUsersToOrganization(invites);
 
@@ -1104,14 +900,18 @@ class _UsersPageState extends State<UsersPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.people_outline, size: 64, color: Colors.grey[400]),
+          Icon(
+            Icons.people_outline,
+            size: 64,
+            color: context.colorScheme.elevation6,
+          ),
           const SizedBox(height: 16),
           Text(
             'No users found',
             style: GoogleFonts.montserrat(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Colors.grey[600],
+              color: context.colorScheme.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -1119,7 +919,7 @@ class _UsersPageState extends State<UsersPage> {
             'Try adjusting your search or filters',
             style: GoogleFonts.montserrat(
               fontSize: 14,
-              color: Colors.grey[500],
+              color: context.colorScheme.elevation6,
             ),
           ),
           const SizedBox(height: 24),
@@ -1131,8 +931,8 @@ class _UsersPageState extends State<UsersPage> {
               style: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.black87,
-              foregroundColor: Colors.white,
+              backgroundColor: context.colorScheme.primaryColor,
+              foregroundColor: context.colorScheme.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             ),
           ),
@@ -1146,14 +946,18 @@ class _UsersPageState extends State<UsersPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: context.colorScheme.errorText,
+          ),
           const SizedBox(height: 16),
           Text(
             'Something went wrong',
             style: GoogleFonts.montserrat(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Colors.red[600],
+              color: context.colorScheme.errorText,
             ),
           ),
           const SizedBox(height: 8),
@@ -1161,7 +965,7 @@ class _UsersPageState extends State<UsersPage> {
             _viewModel.errorMessage,
             style: GoogleFonts.montserrat(
               fontSize: 14,
-              color: Colors.grey[600],
+              color: context.colorScheme.elevation6,
             ),
             textAlign: TextAlign.center,
           ),
@@ -1174,8 +978,8 @@ class _UsersPageState extends State<UsersPage> {
               style: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.black87,
-              foregroundColor: Colors.white,
+              backgroundColor: context.colorScheme.primaryColor,
+              foregroundColor: context.colorScheme.white,
             ),
           ),
         ],

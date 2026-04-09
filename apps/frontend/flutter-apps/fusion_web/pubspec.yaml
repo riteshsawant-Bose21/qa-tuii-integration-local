@@ -73,6 +73,8 @@ flutter:
   # Assets
   assets:
     - assets/images/
+    - assets/images/logo/light/
+    - assets/images/logo/dark/
     - .env
     - assets/data/devices.json
     - assets/icons/

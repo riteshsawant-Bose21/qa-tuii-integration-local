@@ -155,7 +155,7 @@ class UsersRepositoryImpl implements UsersRepository {
   @override
   Future<void> inviteUsersToOrganization(
     String organizationId,
-    List<Map<String, String>> users,
+    List<Map<String, dynamic>> users,
   ) async {
     try {
       await remoteDataSource.inviteUsersToOrganization(organizationId, users);

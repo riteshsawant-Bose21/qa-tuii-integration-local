@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fusion_web/features/users/domain/entities/user_entity.dart';
 import 'package:intl/intl.dart';
@@ -22,13 +23,13 @@ class UserProfileDialog extends StatelessWidget {
   Color _getStatusColor(UserStatus status) {
     switch (status) {
       case UserStatus.active:
-        return Colors.green;
+        return const Color(0xFF3E996E);
       case UserStatus.invited:
         return Colors.orange;
       case UserStatus.pending:
         return Colors.amber;
       case UserStatus.inactive:
-        return Colors.red;
+        return const Color(0xFFE57373);
     }
   }
 
@@ -37,7 +38,11 @@ class UserProfileDialog extends StatelessWidget {
     final dateFormat = DateFormat('MMM dd, yyyy HH:mm');
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: context.colorScheme.elevation3, width: 1.2),
+      ),
+      backgroundColor: context.colorScheme.elevation1,
       child: Container(
         width: 700,
         constraints: const BoxConstraints(maxHeight: 800),
@@ -48,7 +53,7 @@ class UserProfileDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
-                color: Colors.grey[100],
+                color: context.colorScheme.elevation2,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
@@ -59,7 +64,7 @@ class UserProfileDialog extends StatelessWidget {
                   // Avatar
                   CircleAvatar(
                     radius: 50,
-                    backgroundColor: Colors.black87,
+                    backgroundColor: context.colorScheme.elevation3,
                     backgroundImage: user.avatar != null
                         ? NetworkImage(user.avatar!)
                         : null,
@@ -69,7 +74,7 @@ class UserProfileDialog extends StatelessWidget {
                             style: GoogleFonts.montserrat(
                               fontSize: 32,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: context.colorScheme.textPrimary,
                             ),
                           )
                         : null,
@@ -87,8 +92,7 @@ class UserProfileDialog extends StatelessWidget {
                               user.name,
                               style: GoogleFonts.montserrat(
                                 fontSize: 24,
-                                fontWeight: FontWeight.w700,
-                              ),
+                                fontWeight: FontWeight.w700,                              color: context.colorScheme.textPrimary,                              ),
                             ),
                             const SizedBox(width: 12),
                             Container(
@@ -99,7 +103,7 @@ class UserProfileDialog extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: _getStatusColor(
                                   user.status,
-                                ).withOpacity(0.2),
+                                ).withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
@@ -118,7 +122,7 @@ class UserProfileDialog extends StatelessWidget {
                           user.email,
                           style: GoogleFonts.montserrat(
                             fontSize: 14,
-                            color: Colors.grey[600],
+                            color: context.colorScheme.elevation6,
                           ),
                         ),
                         if (user.phone != null) ...[
@@ -127,7 +131,7 @@ class UserProfileDialog extends StatelessWidget {
                             user.phone!,
                             style: GoogleFonts.montserrat(
                               fontSize: 14,
-                              color: Colors.grey[600],
+                              color: context.colorScheme.elevation6,
                             ),
                           ),
                         ],
@@ -137,7 +141,10 @@ class UserProfileDialog extends StatelessWidget {
 
                   // Close Button
                   IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: Icon(
+                      Icons.close,
+                      color: context.colorScheme.elevation6,
+                    ),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -164,7 +171,7 @@ class UserProfileDialog extends StatelessWidget {
                             style: GoogleFonts.montserrat(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: Colors.grey[700],
+                              color: context.colorScheme.elevation6,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -172,12 +179,22 @@ class UserProfileDialog extends StatelessWidget {
                             spacing: 8,
                             runSpacing: 8,
                             children: user.roles.map((role) {
-                              return Chip(
-                                label: Text(
-                                  role,
-                                  style: GoogleFonts.montserrat(fontSize: 12),
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
                                 ),
-                                backgroundColor: Colors.grey[200],
+                                decoration: BoxDecoration(
+                                  color: context.colorScheme.elevation3,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  role,
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: 12,
+                                    color: context.colorScheme.textPrimary,
+                                  ),
+                                ),
                               );
                             }).toList(),
                           ),
@@ -194,13 +211,27 @@ class UserProfileDialog extends StatelessWidget {
                         spacing: 8,
                         runSpacing: 8,
                         children: user.permissions.map((permission) {
-                          return Chip(
-                            label: Text(
-                              permission,
-                              style: GoogleFonts.montserrat(fontSize: 12),
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
                             ),
-                            backgroundColor: Colors.blue[50],
-                            side: BorderSide(color: Colors.blue[200]!),
+                            decoration: BoxDecoration(
+                              color: context.colorScheme.primaryColor
+                                  .withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: context.colorScheme.primaryColor
+                                    .withOpacity(0.3),
+                              ),
+                            ),
+                            child: Text(
+                              permission,
+                              style: GoogleFonts.montserrat(
+                                fontSize: 12,
+                                color: context.colorScheme.primaryColor,
+                              ),
+                            ),
                           );
                         }).toList(),
                       ),
@@ -216,7 +247,7 @@ class UserProfileDialog extends StatelessWidget {
                               'No projects assigned',
                               style: GoogleFonts.montserrat(
                                 fontSize: 14,
-                                color: Colors.grey[600],
+                                color: context.colorScheme.elevation6,
                                 fontStyle: FontStyle.italic,
                               ),
                             )
@@ -232,13 +263,15 @@ class UserProfileDialog extends StatelessWidget {
                                       Icon(
                                         Icons.folder_outlined,
                                         size: 16,
-                                        color: Colors.grey[600],
+                                        color: context.colorScheme.elevation6,
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
                                         projectId,
                                         style: GoogleFonts.montserrat(
                                           fontSize: 14,
+                                          color:
+                                              context.colorScheme.textPrimary,
                                         ),
                                       ),
                                     ],
@@ -289,7 +322,9 @@ class UserProfileDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: Colors.grey[200]!)),
+                border: Border(
+                  top: BorderSide(color: context.colorScheme.elevation3),
+                ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -302,10 +337,15 @@ class UserProfileDialog extends StatelessWidget {
                         Navigator.of(context).pop();
                         onResendInvite?.call();
                       },
-                      icon: const Icon(Icons.email),
+                      icon: Icon(
+                        Icons.email,
+                        color: context.colorScheme.elevation6,
+                      ),
                       label: Text(
                         'Resend Invite',
-                        style: GoogleFonts.montserrat(),
+                        style: GoogleFonts.montserrat(
+                          color: context.colorScheme.elevation6,
+                        ),
                       ),
                     ),
 
@@ -324,8 +364,11 @@ class UserProfileDialog extends StatelessWidget {
                         style: GoogleFonts.montserrat(),
                       ),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
+                        foregroundColor: const Color(0xFFE57373),
+                        side: const BorderSide(color: Color(0xFFE57373)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     )
                   else
@@ -337,8 +380,11 @@ class UserProfileDialog extends StatelessWidget {
                       icon: const Icon(Icons.check_circle),
                       label: Text('Activate', style: GoogleFonts.montserrat()),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.green,
-                        side: const BorderSide(color: Colors.green),
+                        foregroundColor: const Color(0xFF3E996E),
+                        side: const BorderSide(color: Color(0xFF3E996E)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
 
@@ -358,11 +404,14 @@ class UserProfileDialog extends StatelessWidget {
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black87,
-                      foregroundColor: Colors.white,
+                      backgroundColor: context.colorScheme.primaryColor,
+                      foregroundColor: context.colorScheme.textPrimary,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
                         vertical: 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),
@@ -376,44 +425,52 @@ class UserProfileDialog extends StatelessWidget {
   }
 
   Widget _buildSection(String title, Widget content) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: GoogleFonts.montserrat(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
+    return Builder(builder: (context) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.montserrat(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: context.colorScheme.textPrimary,
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
-        content,
-      ],
-    );
+          const SizedBox(height: 12),
+          content,
+        ],
+      );
+    });
   }
 
   Widget _buildInfoRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 120,
-          child: Text(
-            label,
-            style: GoogleFonts.montserrat(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[700],
+    return Builder(builder: (context) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: GoogleFonts.montserrat(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: context.colorScheme.elevation6,
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: GoogleFonts.montserrat(fontSize: 14, color: Colors.black87),
+          Expanded(
+            child: Text(
+              value,
+              style: GoogleFonts.montserrat(
+                fontSize: 14,
+                color: context.colorScheme.textPrimary,
+              ),
+            ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
+    });
   }
 }

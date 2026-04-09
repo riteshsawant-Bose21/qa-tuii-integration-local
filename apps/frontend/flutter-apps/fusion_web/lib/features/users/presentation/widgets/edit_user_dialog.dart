@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fusion_web/features/users/domain/entities/user_entity.dart';
 
@@ -82,7 +83,11 @@ class _EditUserDialogState extends State<EditUserDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: context.colorScheme.elevation3, width: 1.2),
+      ),
+      backgroundColor: context.colorScheme.elevation1,
       child: Container(
         width: 600,
         constraints: const BoxConstraints(maxHeight: 700),
@@ -105,6 +110,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                         style: GoogleFonts.montserrat(
                           fontSize: 24,
                           fontWeight: FontWeight.w700,
+                          color: context.colorScheme.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -112,13 +118,16 @@ class _EditUserDialogState extends State<EditUserDialog> {
                         'Update user details and permissions',
                         style: GoogleFonts.montserrat(
                           fontSize: 14,
-                          color: Colors.grey[600],
+                          color: context.colorScheme.elevation6,
                         ),
                       ),
                     ],
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: Icon(
+                      Icons.close,
+                      color: context.colorScheme.elevation6,
+                    ),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -133,14 +142,35 @@ class _EditUserDialogState extends State<EditUserDialog> {
                       // Name Field
                       TextFormField(
                         controller: _nameController,
+                        style: TextStyle(
+                          color: context.colorScheme.textPrimary,
+                        ),
                         decoration: InputDecoration(
                           labelText: 'Full Name *',
-                          labelStyle: GoogleFonts.montserrat(),
+                          labelStyle: GoogleFonts.montserrat(
+                            color: context.colorScheme.elevation6,
+                          ),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: context.colorScheme.elevation3,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: context.colorScheme.elevation3,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: context.colorScheme.primaryColor,
+                              width: 1.5,
+                            ),
                           ),
                           filled: true,
-                          fillColor: Colors.grey[50],
+                          fillColor: context.colorScheme.elevation2,
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
@@ -154,14 +184,35 @@ class _EditUserDialogState extends State<EditUserDialog> {
                       // Email Field
                       TextFormField(
                         controller: _emailController,
+                        style: TextStyle(
+                          color: context.colorScheme.textPrimary,
+                        ),
                         decoration: InputDecoration(
                           labelText: 'Email Address *',
-                          labelStyle: GoogleFonts.montserrat(),
+                          labelStyle: GoogleFonts.montserrat(
+                            color: context.colorScheme.elevation6,
+                          ),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: context.colorScheme.elevation3,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: context.colorScheme.elevation3,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: context.colorScheme.primaryColor,
+                              width: 1.5,
+                            ),
                           ),
                           filled: true,
-                          fillColor: Colors.grey[50],
+                          fillColor: context.colorScheme.elevation2,
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
@@ -180,14 +231,35 @@ class _EditUserDialogState extends State<EditUserDialog> {
                       // Phone Field
                       TextFormField(
                         controller: _phoneController,
+                        style: TextStyle(
+                          color: context.colorScheme.textPrimary,
+                        ),
                         decoration: InputDecoration(
                           labelText: 'Phone Number',
-                          labelStyle: GoogleFonts.montserrat(),
+                          labelStyle: GoogleFonts.montserrat(
+                            color: context.colorScheme.elevation6,
+                          ),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: context.colorScheme.elevation3,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: context.colorScheme.elevation3,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: context.colorScheme.primaryColor,
+                              width: 1.5,
+                            ),
                           ),
                           filled: true,
-                          fillColor: Colors.grey[50],
+                          fillColor: context.colorScheme.elevation2,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -198,15 +270,40 @@ class _EditUserDialogState extends State<EditUserDialog> {
                           Expanded(
                             child: DropdownButtonFormField<String>(
                               initialValue: _selectedRole,
+                              dropdownColor: context.colorScheme.elevation2,
+                              style: TextStyle(
+                                color: context.colorScheme.textPrimary,
+                              ),
                               decoration: InputDecoration(
                                 labelText: 'Role *',
-                                labelStyle: GoogleFonts.montserrat(),
+                                labelStyle: GoogleFonts.montserrat(
+                                  color: context.colorScheme.elevation6,
+                                ),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: context.colorScheme.elevation3,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: context.colorScheme.elevation3,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: context.colorScheme.primaryColor,
+                                    width: 1.5,
+                                  ),
                                 ),
                                 filled: true,
-                                fillColor: Colors.grey[50],
-                                prefixIcon: Icon(Icons.person_outline),
+                                fillColor: context.colorScheme.elevation2,
+                                prefixIcon: Icon(
+                                  Icons.person_outline,
+                                  color: context.colorScheme.elevation6,
+                                ),
                               ),
                               items: _availableRoles.map((role) {
                                 return DropdownMenuItem<String>(
@@ -234,14 +331,36 @@ class _EditUserDialogState extends State<EditUserDialog> {
                           Expanded(
                             child: DropdownButtonFormField<UserStatus>(
                               initialValue: _selectedStatus,
+                              dropdownColor: context.colorScheme.elevation2,
+                              style: TextStyle(
+                                color: context.colorScheme.textPrimary,
+                              ),
                               decoration: InputDecoration(
                                 labelText: 'Status *',
-                                labelStyle: GoogleFonts.montserrat(),
+                                labelStyle: GoogleFonts.montserrat(
+                                  color: context.colorScheme.elevation6,
+                                ),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: context.colorScheme.elevation3,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: context.colorScheme.elevation3,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: context.colorScheme.primaryColor,
+                                    width: 1.5,
+                                  ),
                                 ),
                                 filled: true,
-                                fillColor: Colors.grey[50],
+                                fillColor: context.colorScheme.elevation2,
                               ),
                               items: UserStatus.values.map((status) {
                                 return DropdownMenuItem(
@@ -268,15 +387,18 @@ class _EditUserDialogState extends State<EditUserDialog> {
                         style: GoogleFonts.montserrat(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
+                          color: context.colorScheme.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey[300]!),
-                          borderRadius: BorderRadius.circular(8),
-                          color: Colors.grey[50],
+                          border: Border.all(
+                            color: context.colorScheme.elevation3,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          color: context.colorScheme.elevation2,
                         ),
                         child: Column(
                           children: _availableProjects.map((project) {
@@ -286,9 +408,13 @@ class _EditUserDialogState extends State<EditUserDialog> {
                             return CheckboxListTile(
                               title: Text(
                                 project['name']!,
-                                style: GoogleFonts.montserrat(),
+                                style: GoogleFonts.montserrat(
+                                  color: context.colorScheme.textPrimary,
+                                ),
                               ),
                               value: isSelected,
+                              activeColor: context.colorScheme.primaryColor,
+                              checkColor: context.colorScheme.textPrimary,
                               onChanged: (selected) {
                                 setState(() {
                                   if (selected == true) {
@@ -318,21 +444,23 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     onPressed: () => Navigator.of(context).pop(),
                     child: Text(
                       'Cancel',
-                      style: GoogleFonts.montserrat(color: Colors.grey[700]),
+                      style: GoogleFonts.montserrat(
+                        color: context.colorScheme.elevation6,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 16),
                   ElevatedButton(
                     onPressed: _handleUpdate,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black87,
-                      foregroundColor: Colors.white,
+                      backgroundColor: context.colorScheme.primaryColor,
+                      foregroundColor: context.colorScheme.textPrimary,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 32,
                         vertical: 16,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                     child: Text(

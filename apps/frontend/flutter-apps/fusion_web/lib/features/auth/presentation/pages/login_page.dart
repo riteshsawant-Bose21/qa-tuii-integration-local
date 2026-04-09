@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fusion_web/features/auth/presentation/viewmodels/auth_viewmodel.dart';
 import 'package:fusion_web/features/auth/data/datasources/auth0_datasource.dart';
@@ -80,7 +82,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: context.colorScheme.elevation1,
       body: Stack(
         children: [
           Center(
@@ -88,9 +90,12 @@ class _LoginPageState extends State<LoginPage> {
               width: 450,
               padding: const EdgeInsets.all(48),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(5),
-                border: Border.all(color: Colors.grey[200]!, width: 1),
+                color: context.colorScheme.elevation2,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: context.colorScheme.elevation3,
+                  width: 1.2,
+                ),
               ),
               child: ListenableBuilder(
                 listenable: _viewModel,
@@ -98,13 +103,17 @@ class _LoginPageState extends State<LoginPage> {
                   return Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Bose Professional Logo
-                      Image.asset(
-                        'assets/images/bose_professional_logo.png',
-                        height: 60,
+                      // 802 Labs Logo
+                      SvgPicture.asset(
+                        'assets/images/logo/light/802Labs_Logo_Lockup_Horizontal_Linear_Light00_RGB.svg',
+                        height: 80,
                         fit: BoxFit.contain,
+                        colorFilter: ColorFilter.mode(
+                          context.colorScheme.textPrimary,
+                          BlendMode.srcIn,
+                        ),
                       ),
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 20),
 
                       // Welcome Text
                       Text(
@@ -112,7 +121,7 @@ class _LoginPageState extends State<LoginPage> {
                         style: GoogleFonts.montserrat(
                           fontSize: 32,
                           fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                          color: context.colorScheme.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -121,7 +130,7 @@ class _LoginPageState extends State<LoginPage> {
                         style: GoogleFonts.montserrat(
                           fontSize: 16,
                           fontWeight: FontWeight.w400,
-                          color: Colors.grey[600],
+                          color: context.colorScheme.elevation6,
                         ),
                       ),
                       const SizedBox(height: 40),
@@ -133,14 +142,16 @@ class _LoginPageState extends State<LoginPage> {
                           padding: const EdgeInsets.all(16),
                           margin: const EdgeInsets.only(bottom: 24),
                           decoration: BoxDecoration(
-                            color: Colors.red[50],
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.red[200]!),
+                            color: const Color(0xFFE57373).withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFFE57373).withOpacity(0.3),
+                            ),
                           ),
                           child: Text(
                             'Authentication failed. Please try again.',
                             style: GoogleFonts.montserrat(
-                              color: Colors.red[700],
+                              color: const Color(0xFFE57373),
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
                             ),
@@ -154,21 +165,21 @@ class _LoginPageState extends State<LoginPage> {
                         child: ElevatedButton(
                           onPressed: _viewModel.isLoading ? null : _handleLogin,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.black87,
-                            foregroundColor: Colors.white,
+                            backgroundColor: context.colorScheme.primaryColor,
+                            foregroundColor: context.colorScheme.textPrimary,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                           child: _viewModel.isLoading
-                              ? const SizedBox(
+                              ? SizedBox(
                                   height: 20,
                                   width: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                     valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
+                                      context.colorScheme.textPrimary,
                                     ),
                                   ),
                                 )
@@ -191,29 +202,31 @@ class _LoginPageState extends State<LoginPage> {
                             "Don't have an account? ",
                             style: GoogleFonts.montserrat(
                               fontSize: 14,
-                              color: Colors.grey[600],
+                              color: context.colorScheme.elevation6,
                               fontWeight: FontWeight.w400,
                             ),
                           ),
                           TextButton(
                             onPressed: () {
-                              // TODO: Implement register functionality
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
                                     'Registration feature coming soon. Please contact your administrator for account access.',
-                                    style: GoogleFonts.montserrat(),
+                                    style: GoogleFonts.montserrat(
+                                      color: context.colorScheme.textPrimary,
+                                    ),
                                   ),
-                                  backgroundColor: Colors.black87,
+                                  backgroundColor:
+                                      context.colorScheme.elevation3,
                                   behavior: SnackBarBehavior.floating,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
                               );
                             },
                             style: TextButton.styleFrom(
-                              foregroundColor: Colors.black87,
+                              foregroundColor: context.colorScheme.primaryColor,
                               padding: EdgeInsets.zero,
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -222,9 +235,11 @@ class _LoginPageState extends State<LoginPage> {
                               'Register here',
                               style: GoogleFonts.montserrat(
                                 fontSize: 14,
-                                color: Colors.black87,
+                                color: context.colorScheme.primaryColor,
                                 fontWeight: FontWeight.w600,
                                 decoration: TextDecoration.underline,
+                                decorationColor:
+                                    context.colorScheme.primaryColor,
                               ),
                             ),
                           ),

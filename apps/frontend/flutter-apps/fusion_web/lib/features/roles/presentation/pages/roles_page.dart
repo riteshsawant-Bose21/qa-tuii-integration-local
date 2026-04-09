@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_web/features/common-widgets/page_header.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:data_table_2/data_table_2.dart';
@@ -55,29 +56,17 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // backgroundColor: Colors.grey[50],
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight - 48,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(),
-                    const SizedBox(height: 24),
-                    _buildOverviewCards(),
-                    const SizedBox(height: 24),
-                    _buildTabSection(constraints),
-                  ],
-                ),
-              ),
-            );
-          },
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 24),
+            _buildOverviewCards(),
+            const SizedBox(height: 24),
+            Expanded(child: _buildTabSection()),
+          ],
         ),
       ),
     );
@@ -160,16 +149,15 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
+        color: context.colorScheme.elevation2,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withOpacity(0.15),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: color, size: 24),
@@ -185,7 +173,7 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
                   style: GoogleFonts.inter(
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: context.colorScheme.textPrimary,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -193,7 +181,7 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
                   label,
                   style: GoogleFonts.inter(
                     fontSize: 13,
-                    color: Colors.grey[600],
+                    color: context.colorScheme.elevation6,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -205,30 +193,20 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildTabSection(BoxConstraints constraints) {
+  Widget _buildTabSection() {
     return Container(
-      height: constraints.maxHeight - 300,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            spreadRadius: 0,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: context.colorScheme.elevation2,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         children: [
           Container(
             decoration: BoxDecoration(
-              color: Colors.grey[50],
+              color: context.colorScheme.elevation3,
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
               ),
             ),
             child: TabBar(
@@ -241,9 +219,9 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
                 fontWeight: FontWeight.w400,
                 fontSize: 14,
               ),
-              labelColor: Colors.black,
-              unselectedLabelColor: Colors.grey[600],
-              indicatorColor: Colors.black,
+              labelColor: context.colorScheme.textPrimary,
+              unselectedLabelColor: context.colorScheme.elevation6,
+              indicatorColor: context.colorScheme.textPrimary,
               indicatorWeight: 2,
               dividerColor: Colors.transparent,
               tabs: const [
@@ -274,7 +252,7 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
             style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.w600,
-              color: Colors.black,
+              color: context.colorScheme.textPrimary,
             ),
           ),
           const SizedBox(height: 4),
@@ -283,7 +261,10 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
             children: [
               Text(
                 'List of all available roles with descriptions and permission sets',
-                style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600]),
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: context.colorScheme.elevation6,
+                ),
               ),
               AnimatedBuilder(
                 animation: _viewModel,
@@ -294,7 +275,7 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
-                      color: Colors.grey[600],
+                      color: context.colorScheme.elevation6,
                     ),
                   );
                 },
@@ -309,36 +290,29 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
   }
 
   Widget _buildRolesTable() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: AnimatedBuilder(
-        animation: _viewModel,
-        builder: (context, child) {
-          switch (_viewModel.state) {
-            case RolesViewState.initial:
-            case RolesViewState.loading:
-              return _buildLoadingState();
-            case RolesViewState.loaded:
-              return _buildLoadedState();
-            case RolesViewState.empty:
-              return _buildEmptyState();
-            case RolesViewState.error:
-              return _buildErrorState();
-          }
-        },
-      ),
+    return AnimatedBuilder(
+      animation: _viewModel,
+      builder: (context, child) {
+        switch (_viewModel.state) {
+          case RolesViewState.initial:
+          case RolesViewState.loading:
+            return _buildLoadingState();
+          case RolesViewState.loaded:
+            return _buildLoadedState();
+          case RolesViewState.empty:
+            return _buildEmptyState();
+          case RolesViewState.error:
+            return _buildErrorState();
+        }
+      },
     );
   }
 
   Widget _buildLoadingState() {
-    return const Center(
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(48),
-        child: CircularProgressIndicator(color: Colors.black87),
+        padding: const EdgeInsets.all(48),
+        child: CircularProgressIndicator(color: context.colorScheme.white),
       ),
     );
   }
@@ -357,26 +331,29 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
       dataRowHeight: 80,
       headingRowHeight: 56,
       showCheckboxColumn: false,
-      headingRowColor: WidgetStateProperty.all(Colors.grey[50]),
+      headingRowColor: WidgetStateProperty.all(context.colorScheme.elevation3),
       dataRowColor: WidgetStateProperty.resolveWith<Color?>((
         Set<WidgetState> states,
       ) {
         if (states.contains(WidgetState.hovered)) {
-          return Colors.grey[50];
+          return context.colorScheme.elevation3;
         }
         return null;
       }),
       border: TableBorder(
-        horizontalInside: BorderSide(color: Colors.grey[200]!, width: 1),
+        horizontalInside: BorderSide(
+          color: context.colorScheme.strokeLight,
+          width: 1,
+        ),
       ),
       columns: [
         DataColumn2(
           label: Text(
             'Role',
             style: GoogleFonts.inter(
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
               fontSize: 12,
-              color: Colors.grey[600],
+              color: context.colorScheme.textPrimary,
             ),
           ),
           size: ColumnSize.L,
@@ -385,9 +362,9 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
           label: Text(
             'Users',
             style: GoogleFonts.inter(
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
               fontSize: 12,
-              color: Colors.grey[600],
+              color: context.colorScheme.textPrimary,
             ),
           ),
           size: ColumnSize.S,
@@ -396,9 +373,9 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
           label: Text(
             'Permissions',
             style: GoogleFonts.inter(
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
               fontSize: 12,
-              color: Colors.grey[600],
+              color: context.colorScheme.textPrimary,
             ),
           ),
           size: ColumnSize.M,
@@ -407,9 +384,9 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
           label: Text(
             'Actions',
             style: GoogleFonts.inter(
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
               fontSize: 12,
-              color: Colors.grey[600],
+              color: context.colorScheme.textPrimary,
             ),
           ),
           size: ColumnSize.S,
@@ -441,7 +418,7 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
             style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: Colors.black,
+              color: context.colorScheme.textPrimary,
             ),
             overflow: TextOverflow.ellipsis,
           ),
@@ -450,7 +427,10 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
             role.description.isNotEmpty
                 ? role.description
                 : _getDefaultDescription(role.name),
-            style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: context.colorScheme.elevation6,
+            ),
             overflow: TextOverflow.ellipsis,
           ),
         ],
@@ -474,7 +454,10 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
   Widget _buildUserCountCell(int userCount) {
     return Text(
       '$userCount users',
-      style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600]),
+      style: GoogleFonts.inter(
+        fontSize: 14,
+        color: context.colorScheme.elevation6,
+      ),
     );
   }
 
@@ -482,7 +465,7 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFE7F5E7),
+        color: context.colorScheme.primaryColor.withOpacity(0.15),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Text(
@@ -490,7 +473,7 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
         style: GoogleFonts.inter(
           fontSize: 12,
           fontWeight: FontWeight.w500,
-          color: const Color(0xFF0F7B0F),
+          color: context.colorScheme.primaryColor,
         ),
       ),
     );
@@ -505,11 +488,18 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.visibility_outlined, size: 16, color: Colors.grey[600]),
+            Icon(
+              Icons.visibility_outlined,
+              size: 16,
+              color: context.colorScheme.elevation6,
+            ),
             const SizedBox(width: 6),
             Text(
               'View Permissions',
-              style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: context.colorScheme.elevation6,
+              ),
             ),
           ],
         ),
@@ -524,20 +514,27 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.admin_panel_settings, size: 64, color: Colors.grey[400]),
+            Icon(
+              Icons.admin_panel_settings,
+              size: 64,
+              color: context.colorScheme.elevation6,
+            ),
             const SizedBox(height: 16),
             Text(
               'No roles found',
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey[600],
+                color: context.colorScheme.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Try adjusting your search criteria or add new roles',
-              style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[500]),
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: context.colorScheme.elevation6,
+              ),
             ),
           ],
         ),
@@ -552,28 +549,34 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: context.colorScheme.errorText,
+            ),
             const SizedBox(height: 16),
             Text(
               'Failed to load roles',
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: Colors.red[600],
+                color: context.colorScheme.errorText,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               _viewModel.errorMessage,
-              style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[500]),
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: context.colorScheme.elevation6,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () => _viewModel.loadRoles(),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red[600],
-                foregroundColor: Colors.white,
+                foregroundColor: context.colorScheme.onPrimary,
               ),
               child: Text(
                 'Retry',
@@ -597,13 +600,16 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
             style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.w600,
-              color: Colors.black,
+              color: context.colorScheme.textPrimary,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             'Track who changed user roles, before/after states, and timestamps',
-            style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600]),
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: context.colorScheme.elevation6,
+            ),
           ),
           const SizedBox(height: 20),
           Expanded(child: _buildAuditTrailTable()),
@@ -617,20 +623,23 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.history, size: 64, color: Colors.grey[400]),
+          Icon(Icons.history, size: 64, color: context.colorScheme.elevation6),
           const SizedBox(height: 16),
           Text(
             'Audit Trail',
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Colors.grey[600],
+              color: context.colorScheme.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Feature coming soon - Track role changes and approval history',
-            style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[500]),
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: context.colorScheme.elevation6,
+            ),
           ),
         ],
       ),
@@ -652,6 +661,11 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: context.colorScheme.elevation3, width: 1.2),
+        ),
+        backgroundColor: context.colorScheme.elevation1,
         title: Text(
           'Permissions - ${role.name}',
           style: GoogleFonts.inter(fontWeight: FontWeight.w600),
@@ -663,20 +677,22 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
             children: [
               Text(
                 'View all permissions assigned to this role',
-                style: GoogleFonts.inter(color: Colors.grey[600]),
+                style: GoogleFonts.inter(color: context.colorScheme.elevation6),
               ),
               const SizedBox(height: 16),
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: context.colorScheme.elevation3),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: role.permissions.isEmpty
                       ? Center(
                           child: Text(
                             'No permissions assigned',
-                            style: GoogleFonts.inter(color: Colors.grey[600]),
+                            style: GoogleFonts.inter(
+                              color: context.colorScheme.elevation6,
+                            ),
                           ),
                         )
                       : ListView.builder(
@@ -685,7 +701,7 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
                             return ListTile(
                               leading: Icon(
                                 Icons.security,
-                                color: Colors.blue[600],
+                                color: context.colorScheme.primaryColor,
                                 size: 16,
                               ),
                               title: Text(
@@ -694,7 +710,7 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
                               ),
                               trailing: Icon(
                                 Icons.check_circle,
-                                color: Colors.green[600],
+                                color: context.colorScheme.successText,
                                 size: 16,
                               ),
                             );
@@ -710,7 +726,7 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Close',
-              style: GoogleFonts.inter(color: Colors.grey[600]),
+              style: GoogleFonts.inter(color: context.colorScheme.elevation6),
             ),
           ),
         ],

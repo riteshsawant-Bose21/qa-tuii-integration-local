@@ -60,7 +60,7 @@ abstract class UsersRepository {
   Future<void> resendInvite(String userId);
   Future<void> inviteUsersToOrganization(
     String organizationId,
-    List<Map<String, String>> users,
+    List<Map<String, dynamic>> users,
   );
   Future<UserEntity> updateUserRoles(UpdateUserRoleParams params);
   Future<UserEntity> assignUserToProjects(

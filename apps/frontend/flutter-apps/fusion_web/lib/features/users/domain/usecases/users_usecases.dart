@@ -94,7 +94,7 @@ class ResendInviteUseCase implements UseCase<void, String> {
 
 class InviteUsersToOrganizationParams {
   final String organizationId;
-  final List<Map<String, String>> users;
+  final List<Map<String, dynamic>> users;
 
   const InviteUsersToOrganizationParams({
     required this.organizationId,

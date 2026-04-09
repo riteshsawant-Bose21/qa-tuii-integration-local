@@ -16,7 +16,7 @@ abstract class UsersDataSource {
   Future<void> resendInvite(String userId);
   Future<void> inviteUsersToOrganization(
     String organizationId,
-    List<Map<String, String>> users,
+    List<Map<String, dynamic>> users,
   );
   Future<UserModel> updateUserRoles(UpdateUserRoleParams params);
   Future<UserModel> assignUserToProjects(
@@ -247,10 +247,10 @@ class UsersRemoteDataSource implements UsersDataSource {
   @override
   Future<void> inviteUsersToOrganization(
     String organizationId,
-    List<Map<String, String>> users,
+    List<Map<String, dynamic>> users,
   ) async {
     try {
-      await _apiService.post('/organizations/$organizationId/invite-users', {
+      await _apiService.post('organizations/$organizationId/invite-users', {
         'users': users,
       });
     } catch (e) {
@@ -468,7 +468,7 @@ class UsersLocalDataSource implements UsersDataSource {
   @override
   Future<void> inviteUsersToOrganization(
     String organizationId,
-    List<Map<String, String>> users,
+    List<Map<String, dynamic>> users,
   ) async {
     throw UnimplementedError('Local datasource does not support bulk invite');
   }
