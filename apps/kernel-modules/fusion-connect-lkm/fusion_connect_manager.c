@@ -47,6 +47,8 @@ struct fusion_cn_worker_profile {
     u32 rx_packets_max;
     u64 sink_interrupts_sum;
     u32 sink_interrupts_max;
+    u64 source_interrupts_sum;
+    u32 source_interrupts_max;
     u64 rx_q_depth_sum;
     u32 rx_q_depth_max;
     u32 rx_q_depth_last;
@@ -69,7 +71,7 @@ static void fusion_cn_prof_maybe_log(void)
 {
     struct fusion_cn_worker_profile *prof = &fusion_cn_worker_prof;
     unsigned long period_j = msecs_to_jiffies(max_t(uint, 1, READ_ONCE(profile_log_ms)));
-    u64 now_ns, window_ns, rx_rate, sink_rate;
+    u64 now_ns, window_ns, rx_rate, sink_rate, source_rate;
 
     if (!READ_ONCE(profile))
         return;
@@ -91,8 +93,9 @@ static void fusion_cn_prof_maybe_log(void)
 
     rx_rate = div64_u64(prof->rx_packets_sum * NSEC_PER_SEC, window_ns);
     sink_rate = div64_u64(prof->sink_interrupts_sum * NSEC_PER_SEC, window_ns);
+    source_rate = div64_u64(prof->source_interrupts_sum * NSEC_PER_SEC, window_ns);
 
-    printk(KERN_DEBUG "fusion_cn: profile total avg=%lluns max=%lluns n=%u rx avg=%lluns max=%lluns n=%u pkts_rate=%llu/s rx_batch_max=%u sink_rate=%llu/s sink_burst_max=%u q_avg=%llu q_max=%u q_last=%u budget_hits=%u phase1 avg=%lluns max=%lluns n=%u phase2 avg=%lluns max=%lluns n=%u\n",
+    printk(KERN_DEBUG "fusion_cn: profile total avg=%lluns max=%lluns n=%u rx avg=%lluns max=%lluns n=%u pkts_rate=%llu/s rx_batch_max=%u sink_rate=%llu/s sink_burst_max=%u src_rate=%llu/s src_burst_max=%u q_avg=%llu q_max=%u q_last=%u budget_hits=%u phase1 avg=%lluns max=%lluns n=%u phase2 avg=%lluns max=%lluns n=%u\n",
         prof->total.count ? div64_u64(prof->total.sum_ns, prof->total.count) : 0,
         prof->total.max_ns, prof->total.count,
         prof->rx_drain.count ? div64_u64(prof->rx_drain.sum_ns, prof->rx_drain.count) : 0,
@@ -101,6 +104,8 @@ static void fusion_cn_prof_maybe_log(void)
         prof->rx_packets_max,
         sink_rate,
         prof->sink_interrupts_max,
+        source_rate,
+        prof->source_interrupts_max,
         prof->rx_drain.count ? div64_u64(prof->rx_q_depth_sum, prof->rx_drain.count) : 0,
         prof->rx_q_depth_max,
         prof->rx_q_depth_last,
@@ -216,13 +221,23 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
         // Policy: if next_action_times[playback_slot] is 0, we want to playback silence. 
         //         to playback silence in packet_time, we keep time with next_action_time instead
         //         next_action_time is managed completely from here
+        //         played_action_time tracks the latest action time actually consumed
         //         EARLY_SLACK_NS is a window after the tick to still play back the packet
-        //         we have no measure for "stale" packets--just play out packets timestamped in the past
         while (count < s->buf_size_in_packets) {
             u32 slot = s->playback_slot;
-            bool playing_silence = (s->next_action_times[slot] == 0);
-            u64 action_time = playing_silence ? s->next_action_time : s->next_action_times[slot];
+            u64 slot_action_time = s->next_action_times[slot];
+            bool stale_packet = (slot_action_time != 0 && slot_action_time <= s->played_action_time);
+            bool playing_silence;
+            u64 action_time;
             s64 delta;
+
+            if (stale_packet) {
+                s->next_action_times[slot] = 0;
+                slot_action_time = 0;
+            }
+
+            playing_silence = (slot_action_time == 0);
+            action_time = playing_silence ? s->next_action_time : slot_action_time;
 
             // use the appropriate action time for delta
             delta = (s64)tick_ns - (s64)action_time;
@@ -234,19 +249,18 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
 
             // if we have no packet, play silence based on next_action_time
             if (playing_silence) {
-                if (!a)
-                    break;
-
                 fusion_cn_alsa_fill_silence(a, slot * s->info.frames_per_packet,
                                             s->info.frames_per_packet);
                 s->next_action_time += s->packet_time;
             }
 
-            if (count > 0 || playing_silence) {
+            s->played_action_time = action_time;
+
+            if (count > 0 || playing_silence || stale_packet) {
                 if (g_fusion_cn_mgr->trace_debug) printk(KERN_DEBUG
-                    "fusion_cn: compute_sink: stream %s playback_idx=%u count=%u now=%llu playing_silence=%u action_time=%llu next_action_time=%llu\n",
-                    s->info.stream_name, s->playback_slot, count, tick_ns,
-                    playing_silence, action_time, s->next_action_time);
+                    "fusion_cn: compute_sink: stream %s playback_idx=%u count=%u now=%llu playing_silence=%u stale_packet=%u action_time=%llu next_action_time=%llu played_action_time=%llu\n",
+                    s->info.stream_name, slot, count, tick_ns,
+                    playing_silence, stale_packet, action_time, s->next_action_time, s->played_action_time);
             }
 
             s->next_action_times[slot] = 0;
@@ -289,6 +303,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
     u32 drained;
     u32 rx_q_depth = 0;
     u32 sink_interrupts = 0;
+    u32 source_interrupts = 0;
 
     struct {
         struct fusion_cn_rtp_stream *rtp;
@@ -367,12 +382,8 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         kref_put(&fn_sink[i].alsa->ref, fusion_cn_alsa_substream_release);
     }
 
-    if (profiling) {
+    if (profiling)
         fusion_cn_prof_add(&fusion_cn_worker_prof.fc_phase, ktime_get_ns() - t0);
-        fusion_cn_worker_prof.sink_interrupts_sum += sink_interrupts;
-        if (sink_interrupts > fusion_cn_worker_prof.sink_interrupts_max)
-            fusion_cn_worker_prof.sink_interrupts_max = sink_interrupts;
-    }
 
     /* -------- Phase 2: FC sources + AES67 sinks + AES67 sources -------- */
     read_lock_irqsave(&mgr->rtp.lock, flags);
@@ -385,6 +396,8 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         if (!atomic_read(&r->is_running) || !r->info.is_source || !r->info.is_fusion_connect) continue;
 
         int n = rtp_compute_source_interrupts(r, tick_ns);
+        if (n > 0)
+            source_interrupts += n;
         if (n > 0 && other_cnt < 40) {
             if (!kref_get_unless_zero(&r->ref)) continue;
             if (!kref_get_unless_zero(&a->ref)) { kref_put(&r->ref, fusion_cn_rtp_stream_release); continue; }
@@ -417,6 +430,8 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         if (!atomic_read(&r->is_running) || !r->info.is_source || r->info.is_fusion_connect) continue;
 
         int n = rtp_compute_source_interrupts(r, tick_ns);
+        if (n > 0)
+            source_interrupts += n;
         if (n > 0 && other_cnt < 40) {
             if (!kref_get_unless_zero(&r->ref)) continue;
             if (!kref_get_unless_zero(&a->ref)) { kref_put(&r->ref, fusion_cn_rtp_stream_release); continue; }
@@ -445,8 +460,15 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         kref_put(&other[i].alsa->ref, fusion_cn_alsa_substream_release);
     }
 
-    if (profiling)
+    if (profiling) {
         fusion_cn_prof_add(&fusion_cn_worker_prof.other_phase, ktime_get_ns() - t0);
+        fusion_cn_worker_prof.sink_interrupts_sum += sink_interrupts;
+        if (sink_interrupts > fusion_cn_worker_prof.sink_interrupts_max)
+            fusion_cn_worker_prof.sink_interrupts_max = sink_interrupts;
+        fusion_cn_worker_prof.source_interrupts_sum += source_interrupts;
+        if (source_interrupts > fusion_cn_worker_prof.source_interrupts_max)
+            fusion_cn_worker_prof.source_interrupts_max = source_interrupts;
+    }
 }
 
 static void do_metrics(struct fusion_cn_manager *mgr)
@@ -688,6 +710,7 @@ static void audio_frame_process_work(struct kthread_work *work)
     while (n-- > 0) {
         u64 t0 = profiling ? ktime_get_ns() : 0;
 
+        fusion_cn_refresh_runtime_params(g_fusion_cn_mgr);
         audio_frame_process(g_fusion_cn_mgr);
 
         if (profiling) {
@@ -1169,6 +1192,7 @@ static int handle_reset_timing_state(struct fusion_cn_manager *mgr,
 
         spin_lock(&stream->lock);
         stream->next_action_time = 0;
+        stream->played_action_time = 0;
         stream->current_seq_num = 0;
         if (stream->info.is_source) {
             alsa_stream = stream->stream_node ? stream->stream_node->alsa_stream : NULL;

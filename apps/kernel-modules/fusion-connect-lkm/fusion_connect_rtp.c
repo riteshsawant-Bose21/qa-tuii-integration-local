@@ -431,6 +431,7 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr,
     }
 
     stream->next_action_time = 0;
+    stream->played_action_time = 0;
     stream->packet_time = (info->frames_per_packet * NSEC_PER_SEC) / info->sample_rate;
 
     /* Validate sink packet map key material before inserting anything. */
@@ -586,6 +587,7 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
                 stream->current_seq_num = 0;
                 atomic_set(&stream->playback_armed, false);
                 stream->next_action_time = 0;
+                stream->played_action_time = 0;
                 if (stream->next_action_times && stream->buf_size_in_packets)
                     memset(stream->next_action_times, 0,
                            sizeof(u64) * stream->buf_size_in_packets);
@@ -673,11 +675,10 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
                 reorder = true;
             }
 
-            if (!late) {
-                stream->next_action_times[write_slot] = sched_playout_ns;
-                if (stream->next_action_time < (stream->next_action_times[write_slot] + stream->packet_time))
-                    stream->next_action_time = stream->next_action_times[write_slot] + stream->packet_time;
-            }
+            stream->next_action_times[write_slot] = sched_playout_ns;
+            if (stream->next_action_time < (stream->next_action_times[write_slot] + stream->packet_time))
+                stream->next_action_time = stream->next_action_times[write_slot] + stream->packet_time;
+            
             stream->current_seq_num = seq_num;
 
             if (rtp_mgr->trace_debug) {
@@ -927,6 +928,7 @@ int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, u64 
         }
         stream->playback_slot = 0;
         stream->next_action_time = 0;
+        stream->played_action_time = 0;
         stream->current_seq_num = 0;
         if (!stream->info.is_source)
             printk(KERN_DEBUG

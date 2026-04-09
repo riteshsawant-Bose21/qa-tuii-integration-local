@@ -84,6 +84,7 @@ struct fusion_cn_rtp_stream {
     u16 outgoing_seq_num;
     u16 current_seq_num;
     u64 next_action_time;
+    u64 played_action_time;
     u64 *next_action_times;
     u32 playback_slot; 
     u64 packet_time;
