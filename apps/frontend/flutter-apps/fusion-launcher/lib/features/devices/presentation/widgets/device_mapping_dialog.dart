@@ -6,6 +6,17 @@ import 'package:fusion_launcher/features/devices/presentation/widgets/settings/d
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'device_mapping_screen.dart';
+import 'device_updates_tab.dart';
+
+enum DeviceMappingDialogTab {
+  mapping("Mapping"),
+  settings("Settings"),
+  droConfig("Dro config"),
+  updates("Updates");
+
+  final String displayName;
+  const DeviceMappingDialogTab(this.displayName);
+}
 
 class DeviceMappingDialog extends StatefulWidget {
   const DeviceMappingDialog({super.key});
@@ -24,7 +35,7 @@ class DeviceMappingDialog extends StatefulWidget {
 }
 
 class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
-  int _selectedTabIndex = 0;
+  DeviceMappingDialogTab _selectedTab = DeviceMappingDialogTab.mapping;
 
   List<HardwareComponent> get _fusionDevices {
     // Combine DSPs, Amplifiers, and Controllers
@@ -52,14 +63,20 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
           children: <Widget>[
             _buildHeader(context),
             Expanded(
-              child:
-                  _selectedTabIndex == 0
-                      ? DeviceMappingScreen(
-                        devices: _fusionDevices,
-                      )
-                      : _selectedTabIndex == 1
-                      ? const DeviceGlobalSettingsTab()
-                      : const DroConfigScreen(),
+              child: Builder(
+                builder: (BuildContext context) {
+                  switch (_selectedTab) {
+                    case DeviceMappingDialogTab.mapping:
+                      return DeviceMappingScreen(devices: _fusionDevices);
+                    case DeviceMappingDialogTab.settings:
+                      return const DeviceGlobalSettingsTab();
+                    case DeviceMappingDialogTab.droConfig:
+                      return const DroConfigScreen();
+                    case DeviceMappingDialogTab.updates:
+                      return const DeviceUpdatesTab();
+                  }
+                },
+              ),
             ),
           ],
         ),
@@ -107,11 +124,13 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
           // Tabs
           Row(
             children: <Widget>[
-              _buildTab(context, 'Mapping', 0),
+              _buildTab(context, DeviceMappingDialogTab.mapping),
               const SizedBox(width: 32),
-              _buildTab(context, 'Settings', 1),
+              _buildTab(context, DeviceMappingDialogTab.settings),
               const SizedBox(width: 32),
-              _buildTab(context, "Dro config", 2),
+              _buildTab(context, DeviceMappingDialogTab.droConfig),
+              const SizedBox(width: 32),
+              _buildTab(context, DeviceMappingDialogTab.updates),
             ],
           ),
         ],
@@ -119,15 +138,11 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
     );
   }
 
-  Widget _buildTab(BuildContext context, String label, int index) {
-    final bool isSelected = _selectedTabIndex == index;
+  Widget _buildTab(BuildContext context, DeviceMappingDialogTab tab) {
+    final bool isSelected = _selectedTab == tab;
 
     return InkWell(
-      onTap: () {
-        setState(() {
-          _selectedTabIndex = index;
-        });
-      },
+      onTap: () => setState(() => _selectedTab = tab),
       child: Container(
         padding: const EdgeInsets.only(top: 14, bottom: 4),
         decoration: BoxDecoration(
@@ -139,7 +154,7 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
           ),
         ),
         child: FusionAppText(
-          text: label,
+          text: tab.displayName,
           style: TextStyle(
             color: isSelected ? context.colorScheme.textPrimary : context.colorScheme.iconDefault,
             fontSize: 14,
