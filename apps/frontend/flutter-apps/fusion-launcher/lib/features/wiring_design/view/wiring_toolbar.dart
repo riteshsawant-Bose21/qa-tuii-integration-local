@@ -5,11 +5,13 @@ import 'package:fusion_launcher/features/fusion_canvas/state/tools/select_tool_s
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canvas_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_tool_viewmodel.dart';
+import 'package:fusion_launcher/features/wiring_design/algorithm/zone_manager.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../fusion_canvas/view/fusion_canvas.dart';
+import '../usecase/auto_layout_usecase.dart';
 
 class WiringToolBar extends StatelessWidget {
   const WiringToolBar({super.key, this.onMoveLayer});
@@ -35,6 +37,39 @@ class WiringToolBar extends StatelessWidget {
               final List<WiringConnectionModel> allConnections = projectViewModel.getAllWiringConnections();
               for (final WiringConnectionModel element in allConnections) {
                 projectViewModel.removeWiringConnection(connectionId: element.id);
+              }
+            },
+          ),
+          _IconButton(
+            isActive: true,
+            semanticId: "fit_to_screen",
+            iconData: Icons.fit_screen,
+            onTap: () {
+              // if (painter != null) {
+              //   painter.fitToViewport();
+              // }
+            },
+          ),
+          _IconButton(
+            isActive: true,
+            semanticId: "auto_layout",
+            iconData: Icons.auto_graph,
+            onTap: () {
+              final WiringZoneManager zoneManager = WiringZoneManager()..syncWithProjectManager(projectViewModel);
+              final List<WiringLayoutResult> layouts = WiringAutoLayoutUseCase().execute(
+                devices: projectViewModel.getAllHardware(),
+                connections: projectViewModel.getAllWiringConnections(),
+                zones: projectViewModel.getAllZones(),
+                zoneManager: zoneManager,
+              );
+              for (final WiringConnectionModel element in projectViewModel.getAllWiringConnections()) {
+                projectViewModel.updateWiringConnection(connection: element.copyWith(axisLocks: <AxisLock>[]));
+              }
+              for (final WiringLayoutResult layout in layouts) {
+                final FusionBasePainter? layer = painter?.getLayerById(layout.hardwareComponent?.id ?? layout.zone?.id);
+                if (layer != null) {
+                  onMoveLayer?.call(layer, (layout.position - layer.getBounds(painter!).topLeft));
+                }
               }
             },
           ),
