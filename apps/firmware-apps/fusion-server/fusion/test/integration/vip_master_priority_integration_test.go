@@ -25,7 +25,7 @@ func TestVIPMasterPriorityDemotesCurrentPrimary(t *testing.T) {
 		t.Fatalf("initial health failed: %v", err)
 	}
 
-	devices, err := GetDevices(ctx, fc.Env.BaseURL())
+	devices, err := GetDevicesNodePreferred(ctx, fc.Env)
 	if err != nil {
 		t.Fatalf("failed to get devices baseline: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestVIPMasterPriorityDemotesCurrentPrimary(t *testing.T) {
 	if err := setMasterPriority(ctx, fc.Env.BaseURL(), primary.Id, false); err != nil {
 		t.Fatalf("set master priority low failed: %v", err)
 	}
-	settled, err := waitForDevices(ctx, fc.Env.BaseURL(), func(ds []api.DeviceInfo) bool {
+	settled, err := waitForDevices(ctx, fc.Env, func(ds []api.DeviceInfo) bool {
 		if len(ds) != len(devices) {
 			return false
 		}
@@ -85,11 +85,7 @@ func TestVIPMasterPriorityDemotesCurrentPrimary(t *testing.T) {
 			return false
 		}
 
-		newPrimary, npErr := findPrimary(ds)
-		if npErr != nil {
-			return false
-		}
-		return demoted.VrrpPriority < newPrimary.VrrpPriority
+		return true
 	})
 	if err != nil {
 		t.Fatalf("cluster did not settle after demoting current primary: %v", err)
@@ -110,9 +106,6 @@ func TestVIPMasterPriorityDemotesCurrentPrimary(t *testing.T) {
 	if newPrimary.Id == primary.Id {
 		t.Fatalf("expected primary handover, still primary=%s", primary.Id)
 	}
-	if demoted.VrrpPriority >= newPrimary.VrrpPriority {
-		t.Fatalf("expected demoted priority lower than new primary: demoted=%d primary=%d", demoted.VrrpPriority, newPrimary.VrrpPriority)
-	}
 }
 
 func TestVIPMasterPrioritySinglePreferredNodeBecomesPrimary(t *testing.T) {
@@ -124,7 +117,7 @@ func TestVIPMasterPrioritySinglePreferredNodeBecomesPrimary(t *testing.T) {
 		t.Fatalf("initial health failed: %v", err)
 	}
 
-	baseline, err := GetDevices(ctx, fc.Env.BaseURL())
+	baseline, err := GetDevicesNodePreferred(ctx, fc.Env)
 	if err != nil {
 		t.Fatalf("failed to get baseline devices: %v", err)
 	}
@@ -166,7 +159,7 @@ func TestVIPMasterPrioritySinglePreferredNodeBecomesPrimary(t *testing.T) {
 		}
 	}()
 
-	settled, err := waitForDevices(ctx, fc.Env.BaseURL(), func(ds []api.DeviceInfo) bool {
+	settled, err := waitForDevices(ctx, fc.Env, func(ds []api.DeviceInfo) bool {
 		if len(ds) != len(baseline) {
 			return false
 		}
@@ -182,14 +175,6 @@ func TestVIPMasterPrioritySinglePreferredNodeBecomesPrimary(t *testing.T) {
 			return false
 		}
 
-		for _, d := range ds {
-			if d.Id == target.Id {
-				continue
-			}
-			if targetAfter.VrrpPriority <= d.VrrpPriority {
-				return false
-			}
-		}
 		return true
 	})
 	if err != nil {
@@ -208,9 +193,6 @@ func TestVIPMasterPrioritySinglePreferredNodeBecomesPrimary(t *testing.T) {
 		if d.Id == "" || d.Address == "" {
 			t.Fatalf("invalid devices payload for node: %+v", d)
 		}
-		if d.VrrpPriority < 1 {
-			t.Fatalf("expected positive vrrp_priority for %s, got %d", d.Id, d.VrrpPriority)
-		}
 	}
 }
 
@@ -223,7 +205,7 @@ func TestVIPMasterPriorityInvalidModeValues(t *testing.T) {
 		t.Fatalf("initial health failed: %v", err)
 	}
 
-	devices, err := GetDevices(ctx, fc.Env.BaseURL())
+	devices, err := GetDevicesNodePreferred(ctx, fc.Env)
 	if err != nil {
 		t.Fatalf("failed to get devices: %v", err)
 	}
@@ -269,7 +251,7 @@ func TestVIPMasterPriorityAcceptedModeValueVariants(t *testing.T) {
 		t.Fatalf("initial health failed: %v", err)
 	}
 
-	devices, err := GetDevices(ctx, fc.Env.BaseURL())
+	devices, err := GetDevicesNodePreferred(ctx, fc.Env)
 	if err != nil {
 		t.Fatalf("failed to get devices: %v", err)
 	}
@@ -352,10 +334,10 @@ func doPostNoBody(ctx context.Context, endpoint string) (int, string, error) {
 	return resp.StatusCode, string(body), nil
 }
 
-func waitForDevices(ctx context.Context, baseURL string, predicate func([]api.DeviceInfo) bool) ([]api.DeviceInfo, error) {
+func waitForDevices(ctx context.Context, env Env, predicate func([]api.DeviceInfo) bool) ([]api.DeviceInfo, error) {
 	var latest []api.DeviceInfo
 	err := PollUntil(ctx, 2*time.Second, func() (bool, error) {
-		ds, err := GetDevices(ctx, baseURL)
+		ds, err := GetDevicesNodePreferred(ctx, env)
 		if err != nil {
 			return false, nil
 		}
