@@ -90,7 +90,7 @@ enum cal_state {
 #define CAL_DEFAULT_SETTLE_PPS 2U
 #define CAL_DEFAULT_MEASURE_PPS 4U
 #define CAL_DEFAULT_FIT_RESIDUAL_THRESH 30U
-#define CAL_DEFAULT_SI_GAIN_START 1000000U
+#define CAL_DEFAULT_SI_GAIN_START 1139097U
 #define CAL_DEFAULT_INVERSE_GAIN_STEP 10000U
 #define CAL_DEFAULT_JUMP_DAC_MIN 7710
 #define CAL_DEFAULT_JUMP_DAC_MAX 57825
@@ -494,7 +494,7 @@ static inline u64 ceil_div_u64(u64 a, u64 b)
 
 static inline u32 fusion_start_gain_value(const struct fusion_gpt_cal_config *cfg)
 {
-	return clamp_t(u32, cfg->si_gain_start, 40000, 1000000);
+	return clamp_t(u32, cfg->si_gain_start, 40000, 1139097U);
 }
 
 static inline int cal_jump_dac_min_value(const struct fusion_gpt_cal_config *cfg)
@@ -2031,7 +2031,7 @@ static int gpt_probe(struct platform_device *pdev)
 
 	/* DAC + VCXO disciplining setup */
 	g->si_gain_min = 40000;
-	g->si_gain_max = 1000000;
+	g->si_gain_max = 1139097U;
 	cal_config_set_defaults(&g->cal_cfg);
 	g->si_gain_pending = false;
 	g->si_gain_sync_needed = false;
