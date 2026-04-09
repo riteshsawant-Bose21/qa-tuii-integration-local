@@ -34,7 +34,6 @@ class _ZoneVolumeControlState extends State<ZoneVolumeControl> {
   @override
   Widget build(BuildContext context) {
 
-
     return SafeArea(
       bottom: false,
       child: BlocBuilder<ControlPalZonesViewModel, ControlPalZonesState>(
@@ -44,7 +43,10 @@ class _ZoneVolumeControlState extends State<ZoneVolumeControl> {
           builder: (context, state) {
             if(state is ZoneSelected) {
               ZoneModel selectedZone = state.zone;
-              Source selectedSource = selectedZone.sources[state.currentSourceIndex];
+              print("selectedZone.sources.length");
+              print(selectedZone.sources.length);
+              print(selectedZone.sourceSelected);
+              Source? selectedSource = selectedZone.sources?[selectedZone.sourceSelected-1] ?? null;
               ZoneSourceModel selectSubZone = selectedZone.subZones[state.currentSubzoneIndex];
               double volume = selectSubZone.volume;
               return Scaffold(
@@ -66,6 +68,9 @@ class _ZoneVolumeControlState extends State<ZoneVolumeControl> {
                             if(selectSourceState is SourceSelected){
                               selectedSource = selectSourceState.source;
                             }
+                            print("selectedSource.sourceName");
+                            print(selectedSource!.sourceName);
+                            print(selectedZone.sourceSelected);
                           return GestureDetector(
                             onTap: () {
                               showModalBottomSheet(
@@ -74,19 +79,19 @@ class _ZoneVolumeControlState extends State<ZoneVolumeControl> {
                                   isScrollControlled: true,
                                   builder: (_) =>
                                       BottomSheetSelectSource(
-                                        source: ValueNotifier(selectedSource),
+                                        source: ValueNotifier(selectedSource!),
                                           sources: selectedZone.sources,
                                           onSelected: (Source source) {
                                             context
                                                 .read<
                                                 ControlPalZonesViewModel>()
-                                                .selectSource(source,selectSubZone.id,selectedZone.id);
+                                                .selectSource(source,selectSubZone.id,selectedZone.id,sendToService: true);
 
                                           },
                                         )
                               );
                             },
-                            child: SourceCard(source: selectedSource)
+                            child: SourceCard(source: selectedSource!)
                           );
                         }
                       ),
@@ -176,7 +181,7 @@ class _ZoneVolumeControlState extends State<ZoneVolumeControl> {
                                                             context
                                                                 .read<
                                                                 ControlPalZonesViewModel>()
-                                                                .updateVolume(state.zoneIndex,selectSubZone,volume);
+                                                                .updateVolume(selectSubZone,volume,sendToService: true);
 
                                                           },
                                                         ),

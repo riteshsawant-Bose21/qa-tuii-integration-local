@@ -70,6 +70,7 @@ class QrScannerViewModel extends Cubit<QrScannerState> {
       print("Parsed URI: $uri");
 
       if (uri != null && uri.queryParameters.isNotEmpty) {
+        vipAddress = uri.queryParameters['vip']!;
         return {
           "vip": uri.queryParameters['vip'],
           "controller_id": uri.queryParameters['controller_id'],
@@ -87,7 +88,7 @@ class QrScannerViewModel extends Cubit<QrScannerState> {
 
 
       emit(QrConnecting());
-        ResponseCallback<SchemaModel> model = await _qrService.getSchema();
+        ResponseCallback<SchemaModel> model = await _qrService.getSchema(details.vip);
 
         if(model.success) {
           FusionLogger.log(
