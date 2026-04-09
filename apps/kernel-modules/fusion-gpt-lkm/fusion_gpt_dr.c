@@ -555,7 +555,8 @@ static void gpt_reset_control_state_locked(struct fusion_gpt *g,
 					   bool preserve_calibration)
 {
 	bool preserve_servo_state =
-		preserve_calibration && g->cal_path_ran;
+		preserve_calibration &&
+		(g->cal_path_ran || READ_ONCE(pi_only_param));
 	int preserved_dac = (g->current_dac_value <= 255) ?
 		g->current_dac_value : clamp(g->dac_target, 0, 255);
 	u32 preserved_gain = clamp(g->si_gain_current,
@@ -873,7 +874,7 @@ int fusion_gpt_reset_timing_state(void)
 	prev_ready = READ_ONCE(g->discipline_ready);
 	prev_pending = g->pending_future_anchor;
 	prev_cal_state = g->cal_state;
-	preserve_servo_state = g->cal_path_ran;
+	preserve_servo_state = g->cal_path_ran || READ_ONCE(pi_only_param);
 	changed = g->pps_valid || g->if2_valid || g->phc_epoch_valid ||
 		g->pending_future_anchor || g->pps_seq ||
 		prev_ready || g->lock_streak ||
