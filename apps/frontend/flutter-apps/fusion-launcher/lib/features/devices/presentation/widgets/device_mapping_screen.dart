@@ -51,10 +51,10 @@ class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
   String? _draggedHardwareId;
   List<FusionNetworkDevice> _networkDevices = <FusionNetworkDevice>[];
 
+  FusionNetworkDeviceViewModel get fusionNetworkDeviceViewModel => context.read<FusionNetworkDeviceViewModel>();
+
   Future<void> _handleAssignHardware(HardwareComponent device, FusionNetworkDevice? hardware) async {
     if (hardware != null && hardware.id == device.id) return;
-
-    final FusionNetworkDeviceViewModel fusionNetworkDeviceViewModel = context.read<FusionNetworkDeviceViewModel>();
 
     try {
       for (final FusionNetworkDevice hw in _networkDevices.where((FusionNetworkDevice h) => h.id == device.id)) {
@@ -93,6 +93,8 @@ class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
 
   @override
   Widget build(BuildContext context) {
+    final List<FusionNetworkDevice> unregisteredDevices = fusionNetworkDeviceViewModel.getUnregisteredDevicesForCurrentProject();
+
     return BlocListener<FusionNetworkDeviceViewModel, FusionNetworkDeviceViewModelState>(
       listener: (BuildContext context, FusionNetworkDeviceViewModelState state) {
         if (state is FusionNetworkDeviceViewModelLoaded) {
@@ -145,15 +147,16 @@ class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
                   ),
                   const SizedBox(width: 16),
                   // PANEL SECTION
-                  Expanded(
-                    flex: 3,
-                    child: NetworkHardwarePanel(
-                      networkDevices: _networkDevices,
-                      onDragStarted: (String id) => setState(() => _draggedHardwareId = id),
-                      onDragEnded: () => setState(() => _draggedHardwareId = null),
-                      onRegisterDevicesTap: widget.devices.isEmpty ? null : () => showUnregisteredDevicesClaimDialog(context, widget.devices),
+                  if (_networkDevices.isNotEmpty)
+                    Expanded(
+                      flex: 3,
+                      child: NetworkHardwarePanel(
+                        networkDevices: _networkDevices,
+                        onDragStarted: (String id) => setState(() => _draggedHardwareId = id),
+                        onDragEnded: () => setState(() => _draggedHardwareId = null),
+                        onRegisterDevicesTap: widget.devices.isEmpty ? null : () => showUnregisteredDevicesClaimDialog(context, unregisteredDevices),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -167,8 +170,8 @@ class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
 /// Opens a dialog that checks the cloud registration status of [hardwareDevices]
 /// (via GET /devices) and lists devices that are not yet registered.
 /// On confirmation it bulk-registers them then claims each one individually.
-void showUnregisteredDevicesClaimDialog(BuildContext context, List<HardwareComponent> hardwareDevices) {
-  if (hardwareDevices.isEmpty) return;
+void showUnregisteredDevicesClaimDialog(BuildContext context, List<FusionNetworkDevice> unregisteredDevices) {
+  if (unregisteredDevices.isEmpty) return;
 
   final FusionNetworkDeviceViewModel vm = context.read<FusionNetworkDeviceViewModel>();
 
@@ -178,16 +181,16 @@ void showUnregisteredDevicesClaimDialog(BuildContext context, List<HardwareCompo
     builder: (BuildContext dialogContext) {
       return BlocProvider<FusionNetworkDeviceViewModel>.value(
         value: vm,
-        child: _UnregisteredDevicesDialog(hardwareDevices: hardwareDevices),
+        child: _UnregisteredDevicesDialog(networkDevices: unregisteredDevices),
       );
     },
   );
 }
 
 class _UnregisteredDevicesDialog extends StatefulWidget {
-  final List<HardwareComponent> hardwareDevices;
+  final List<FusionNetworkDevice> networkDevices;
 
-  const _UnregisteredDevicesDialog({required this.hardwareDevices});
+  const _UnregisteredDevicesDialog({required this.networkDevices});
 
   @override
   State<_UnregisteredDevicesDialog> createState() => _UnregisteredDevicesDialogState();
@@ -195,45 +198,12 @@ class _UnregisteredDevicesDialog extends StatefulWidget {
 
 class _UnregisteredDevicesDialogState extends State<_UnregisteredDevicesDialog> {
   // Three phases: checking → listing → registering
-  bool _isChecking = true;
+  final bool _isChecking = true;
   bool _isRegistering = false;
   String? _errorMessage;
-  List<FusionNetworkDevice> _unregisteredDevices = <FusionNetworkDevice>[];
-
-  @override
-  void initState() {
-    super.initState();
-    _checkCloudStatus();
-  }
 
   FusionNetworkDeviceViewModel get fusionNetworkDeviceViewModel => context.read<FusionNetworkDeviceViewModel>();
   String get projectId => serviceLocator<ProjectViewModel>().projectId;
-
-  Future<void> _checkCloudStatus() async {
-    try {
-      final List<FusionNetworkDevice> unregistered = await fusionNetworkDeviceViewModel.getUnregisteredDevices(projectId: projectId);
-
-      if (!mounted) return;
-
-      if (unregistered.isEmpty) {
-        Navigator.of(context).pop();
-        FusionToast.success(context, message: 'All devices are already registered in the cloud.');
-        return;
-      }
-
-      setState(() {
-        _isChecking = false;
-        _unregisteredDevices = unregistered;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      // On error fall back to showing all hardware so the user can still act.
-      setState(() {
-        _isChecking = false;
-        _unregisteredDevices = widget.hardwareDevices.cast<FusionNetworkDevice>();
-      });
-    }
-  }
 
   Future<void> _onRegisterAndClaimTap() async {
     setState(() {
@@ -242,7 +212,7 @@ class _UnregisteredDevicesDialogState extends State<_UnregisteredDevicesDialog> 
     });
 
     try {
-      await fusionNetworkDeviceViewModel.registerAndClaimDevices(devices: _unregisteredDevices, projectId: projectId);
+      await fusionNetworkDeviceViewModel.registerAndClaimDevices(devices: widget.networkDevices, projectId: projectId);
 
       final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
       if (vip != null && mounted) await fusionNetworkDeviceViewModel.getFusionNetworkDevice(vip: vip);
@@ -259,7 +229,7 @@ class _UnregisteredDevicesDialogState extends State<_UnregisteredDevicesDialog> 
 
   @override
   Widget build(BuildContext context) {
-    final int count = _unregisteredDevices.length;
+    final int count = widget.networkDevices.length;
     final String deviceWord = count == 1 ? 'device' : 'devices';
 
     return Dialog(
@@ -339,9 +309,9 @@ class _UnregisteredDevicesDialogState extends State<_UnregisteredDevicesDialog> 
                         ),
                         child: ListView.builder(
                           physics: const ClampingScrollPhysics(),
-                          itemCount: _unregisteredDevices.length,
+                          itemCount: widget.networkDevices.length,
                           itemBuilder: (BuildContext ctx, int index) {
-                            final FusionNetworkDevice hw = _unregisteredDevices[index];
+                            final FusionNetworkDevice hw = widget.networkDevices[index];
                             return Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,

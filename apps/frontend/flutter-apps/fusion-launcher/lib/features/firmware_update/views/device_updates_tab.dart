@@ -1,14 +1,11 @@
-import 'dart:io';
+import 'dart:async';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/devices/view_model/firmware_update/firmware_update_vm.dart';
+import 'package:fusion_launcher/features/firmware_update/viewmodel/firmware_update_vm.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class DeviceUpdatesTab extends StatefulWidget {
   const DeviceUpdatesTab({super.key});
@@ -18,345 +15,111 @@ class DeviceUpdatesTab extends StatefulWidget {
 }
 
 class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
-  static const String _prefsKey = 'firmware_updates_state_v1';
-
   final FirmwareUpdateViewModel _firmwareUpdateViewModel = serviceLocator<FirmwareUpdateViewModel>();
-
-  CancelToken? _downloadCancelToken;
-  CancelToken? _installCancelToken;
 
   @override
   void initState() {
     super.initState();
-    _initialize();
+    _firmwareUpdateViewModel.initialize();
   }
 
-  @override
-  void dispose() {
-    _downloadCancelToken?.cancel();
-    _installCancelToken?.cancel();
-    _firmwareUpdateViewModel.stopFirmwareInstallProgressTracking();
-    super.dispose();
+  void _onDownloadNow() {
+    unawaited(_firmwareUpdateViewModel.onDownloadTap());
   }
 
-  Future<void> _initialize() async {
-    await _loadDesktopVersion();
-    await _loadInUseVersionFromDevice();
-    await _restoreState();
-    await _checkForUpdates();
-  }
-
-  Future<void> _loadInUseVersionFromDevice() async {
-    final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
-    if (vip == null || vip.isEmpty) return;
-    try {
-      final String deviceVersion = await _firmwareUpdateViewModel.fetchDeviceVersion(vip: vip);
-      if (deviceVersion.isNotEmpty) {
-        _firmwareUpdateViewModel.setInUseVersion(deviceVersion);
-      }
-    } catch (_) {
-      // Non-fatal: fall back to persisted or default version.
-    }
-  }
-
-  Future<void> _loadDesktopVersion() async {
-    final String desktopVersion = await _firmwareUpdateViewModel.loadDesktopVersion();
-    _firmwareUpdateViewModel.setDesktopVersion(desktopVersion);
-  }
-
-  Future<void> _restoreState() async {
-    final SharedPreferences prefs = serviceLocator<SharedPreferences>();
-    final String? raw = prefs.getString(_prefsKey);
-    final FirmwareLocalState restored = _firmwareUpdateViewModel.restoreLocalState(
-      rawState: raw,
-      fallbackInUseVersion: _firmwareUpdateViewModel.state.inUseVersion,
-    );
-    _firmwareUpdateViewModel.hydrateLocalState(restored);
-
-    if (restored.downloadedFilePath.isNotEmpty) {
-      debugPrint('Firmware bundle cached at: ${restored.downloadedFilePath}');
-    }
-  }
-
-  Future<void> _persistState() async {
-    final FirmwareUpdateViewModelState state = _firmwareUpdateViewModel.state;
-    final SharedPreferences prefs = serviceLocator<SharedPreferences>();
-    await prefs.setString(
-      _prefsKey,
-      _firmwareUpdateViewModel.serializeLocalState(
-        // TODO: REMOVE THIS inUseVersion
-        inUseVersion: state.inUseVersion,
-        availableVersion: state.availableVersion,
-        downloadChecksum: state.downloadChecksum,
-        downloadedFilePath: state.downloadedFilePath,
-      ),
-    );
-  }
-
-  Future<void> _checkForUpdates() async {
-    // Don't re-check while a download or install is actively in progress.
-    // Re-initialization (tab reopen) must not overwrite an active operation.
-    final FirmwareUpdateUiState current = _firmwareUpdateViewModel.state.uiState;
-    if (current == FirmwareUpdateUiState.downloading || current == FirmwareUpdateUiState.installing) return;
-
-    _firmwareUpdateViewModel.setChecking();
-
-    try {
-      final FirmwareUpdateViewModelState state = _firmwareUpdateViewModel.state;
-      final FirmwareCheckDecision decision = await _firmwareUpdateViewModel.checkForUpdatesDecision(
-        inUseVersion: state.inUseVersion,
-        desktopVersion: state.desktopVersion,
-        downloadedFilePath: state.downloadedFilePath,
-        localAvailableVersion: state.availableVersion,
-      );
-
-      if (!mounted) return;
-
-      _firmwareUpdateViewModel.applyCheckDecision(decision);
-      await _persistState();
-    } catch (e) {
-      if (!mounted) return;
-      _firmwareUpdateViewModel.setDownloadFailed('Failed to check updates: $e');
-    }
-  }
-
-  Future<void> _downloadNow() async {
-    if (_firmwareUpdateViewModel.state.bundleId.isEmpty) {
-      _firmwareUpdateViewModel.setDownloadFailed('Bundle id is missing.');
-      return;
-    }
-
-    _downloadCancelToken?.cancel();
-    _downloadCancelToken = CancelToken();
-
-    _firmwareUpdateViewModel.setDownloadStarted();
-
-    try {
-      final String bundleId = _firmwareUpdateViewModel.state.bundleId;
-      final BundleDownloadUrlResult downloadInfo = await _firmwareUpdateViewModel.getDownloadUrl(bundleId: bundleId);
-      if (downloadInfo.downloadUrl.isEmpty) {
-        throw Exception('Cloud did not return a download URL.');
-      }
-
-      final Directory dir = await _firmwareUpdateViewModel.updatesDirectory();
-      final Uri downloadUri = Uri.parse(downloadInfo.downloadUrl);
-      final String originalFileName = downloadUri.pathSegments.isNotEmpty ? Uri.decodeComponent(downloadUri.pathSegments.last) : '';
-      final String fallbackFileName = 'firmware_${_firmwareUpdateViewModel.state.availableVersion}.bundle';
-      final String targetFilePath =
-          originalFileName.trim().isEmpty
-              ? File('${dir.path}${Platform.pathSeparator}$fallbackFileName').path
-              : File('${dir.path}${Platform.pathSeparator}$originalFileName').path;
-
-      await _firmwareUpdateViewModel.downloadBundle(
-        downloadUrl: downloadInfo.downloadUrl,
-        targetFilePath: targetFilePath,
-        cancelToken: _downloadCancelToken!,
-        onProgress: (int received, int total) {
-          if (!mounted || total <= 0) {
-            return;
-          }
-          _firmwareUpdateViewModel.setDownloadProgress(received / total);
-        },
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      _firmwareUpdateViewModel.setDownloaded(filePath: targetFilePath, checksum: downloadInfo.checksum);
-      debugPrint('Firmware bundle downloaded at: $targetFilePath');
-      await _persistState();
-    } on DioException catch (e) {
-      if (!mounted) {
-        return;
-      }
-      if (CancelToken.isCancel(e)) {
-        _firmwareUpdateViewModel.setDownloadCancelled();
-        return;
-      }
-      _firmwareUpdateViewModel.setDownloadFailed('Download failed. Please try again.');
-    } catch (e) {
-      if (!mounted) {
-        return;
-      }
-      _firmwareUpdateViewModel.setDownloadFailed('Download failed: $e');
-    }
-  }
-
-  Future<void> _installNow() async {
-    final FirmwareUpdateViewModelState state = _firmwareUpdateViewModel.state;
-    final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
-    if (vip == null || vip.isEmpty) {
-      _firmwareUpdateViewModel.setInstallFailed('Virtual IP is not configured.');
-      return;
-    }
-
-    if (state.downloadedFilePath.isEmpty || !File(state.downloadedFilePath).existsSync()) {
-      _firmwareUpdateViewModel.setInstallFailed('Downloaded file not found.');
-      return;
-    }
-
-    _installCancelToken?.cancel();
-    _installCancelToken = CancelToken();
-
-    final String previousVersion = state.inUseVersion;
-    final String installedBundlePath = state.downloadedFilePath;
-
-    _firmwareUpdateViewModel.setInstallStarted();
-
-    try {
-      await _firmwareUpdateViewModel.uploadToFusionServer(
-        vip: vip,
-        bundleFilePath: state.downloadedFilePath,
-        checksum: state.downloadChecksum,
-        cancelToken: _installCancelToken!,
-        onProgress: (int sent, int total) {
-          if (!mounted || total <= 0) {
-            return;
-          }
-          _firmwareUpdateViewModel.setInstallProgress(sent / total);
-        },
-      );
-
-      if (!mounted) return;
-
-      _firmwareUpdateViewModel.markInstallUploadCompleted();
-
-      await Future<void>.delayed(const Duration(seconds: 3));
-
-      await _firmwareUpdateViewModel.trackFirmwareInstallProgress(vip: vip);
-
-      if (!mounted) {
-        return;
-      }
-
-      _firmwareUpdateViewModel.setInstalledSuccess();
-
-      // Keep cached file through install, then clean it up after successful upload.
-      try {
-        final File cachedBundle = File(installedBundlePath);
-        if (await cachedBundle.exists()) {
-          await cachedBundle.delete();
-        }
-      } catch (_) {
-        // Install already succeeded; ignore cache cleanup errors.
-      }
-
-      await _persistState();
-
-      try {
-        final String projectId = serviceLocator<ProjectViewModel>().projectId;
-        await _firmwareUpdateViewModel.logInstallStatus(
-          projectId: projectId,
-          bundleVersion: _firmwareUpdateViewModel.state.availableVersion,
-          previousVersion: previousVersion,
-          launcherVersion: _firmwareUpdateViewModel.state.desktopVersion,
-          status: 'INSTALL_SUCCESS',
-        );
-      } catch (e) {
-        //
-      }
-    } on DioException catch (e) {
-      if (!mounted) {
-        return;
-      }
-      if (CancelToken.isCancel(e)) {
-        _firmwareUpdateViewModel.setInstallCancelled(message: 'Upload cancelled by user.');
-        return;
-      }
-      _firmwareUpdateViewModel.setInstallFailed('Install failed. Please retry. $e');
-
-      try {
-        final String projectId = serviceLocator<ProjectViewModel>().projectId;
-        await _firmwareUpdateViewModel.logInstallStatus(
-          projectId: projectId,
-          bundleVersion: _firmwareUpdateViewModel.state.availableVersion,
-          previousVersion: previousVersion,
-          launcherVersion: _firmwareUpdateViewModel.state.desktopVersion,
-          status: 'INSTALL_FAIL',
-        );
-      } catch (_) {
-        // Keep install failure visible even if logging fails.
-      }
-    } catch (e) {
-      if (!mounted) {
-        return;
-      }
-
-      if (e.toString().contains('cancelled by user')) {
-        _firmwareUpdateViewModel.setInstallCancelled(message: 'Socket progress tracking cancelled by user.');
-        return;
-      }
-
-      _firmwareUpdateViewModel.setInstallFailed('Install failed. Please retry. $e');
-
-      try {
-        final String projectId = serviceLocator<ProjectViewModel>().projectId;
-        await _firmwareUpdateViewModel.logInstallStatus(
-          projectId: projectId,
-          bundleVersion: _firmwareUpdateViewModel.state.availableVersion,
-          previousVersion: previousVersion,
-          launcherVersion: _firmwareUpdateViewModel.state.desktopVersion,
-          status: 'INSTALL_FAIL',
-        );
-      } catch (_) {
-        // Keep install failure visible even if logging fails.
-      }
-    }
-  }
-
-  void _cancelDownload() {
-    _downloadCancelToken?.cancel('cancelled-by-user');
+  void _installNow() {
+    unawaited(_firmwareUpdateViewModel.installNow());
   }
 
   void _retryDownload() {
-    _downloadNow();
+    unawaited(_firmwareUpdateViewModel.retryDownload());
   }
 
   void _retryInstall() {
-    _installNow();
+    unawaited(_firmwareUpdateViewModel.retryInstall());
   }
 
   void _rollbackToDownloaded() {
-    _firmwareUpdateViewModel.rollbackToDownloadedOrAvailable();
+    unawaited(_firmwareUpdateViewModel.rollbackToDownloaded());
   }
 
   String get _description {
-    final String releaseNotes = _firmwareUpdateViewModel.state.releaseNotes;
+    final String releaseNotes = _firmwareUpdateViewModel.state.updateCheckResult?.releaseNotes ?? '';
     if (releaseNotes.trim().isNotEmpty) return releaseNotes;
-    return 'A new update is ready. Download it now to get all the latest features and improvements. '
-        'It only takes a moment, and updating ensures everything works smoothly and feels better than before. '
-        'Don\'t miss out grab the newest version.';
+    return 'A new update is ready. Download it now to get all the latest features and improvements.';
   }
 
   Future<void> _showInstallSuccessDialog() async {
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
-        return const AlertDialog(
-          title: Text('Firmware Update'),
-          content: Text('Firmware update was successful.'),
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 420),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
+            decoration: BoxDecoration(
+              color: dialogContext.colorScheme.elevation1,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: dialogContext.colorScheme.strokeLight),
+              boxShadow: const <BoxShadow>[
+                BoxShadow(
+                  color: Color(0x26000000),
+                  blurRadius: 24,
+                  offset: Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: const BoxDecoration(
+                    color: Color(0x1F1BC47D),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check_rounded,
+                    color: Color(0xFF1BC47D),
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FusionAppText(
+                  text: 'Firmware Updated',
+                  style: dialogContext.textTheme.b2Medium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 6),
+                FusionAppText(
+                  text: 'Firmware update was successful.',
+                  style: dialogContext.textTheme.b3Regular.copyWith(
+                    color: dialogContext.colorScheme.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLine: 2,
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
   }
 
   Future<void> _showInstallSuccessDialogForTwoSeconds() async {
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     _showInstallSuccessDialog();
     await Future<void>.delayed(const Duration(seconds: 2));
 
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     final NavigatorState navigator = Navigator.of(context, rootNavigator: false);
     if (navigator.canPop()) {
@@ -488,7 +251,11 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
 
     switch (state.uiState) {
       case FirmwareUpdateUiState.updateAvailable:
-        content = _buildButton(context, 'Download Now', _downloadNow);
+        content = _buildButton(
+          context,
+          'Download Now',
+          _onDownloadNow,
+        );
       case FirmwareUpdateUiState.downloading:
         content = Row(
           mainAxisSize: MainAxisSize.min,

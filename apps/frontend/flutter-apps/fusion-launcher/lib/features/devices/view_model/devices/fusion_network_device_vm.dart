@@ -27,7 +27,7 @@ class FusionNetworkDeviceViewModel extends Cubit<FusionNetworkDeviceViewModelSta
     }
   }
 
-  Future<List<FusionNetworkDevice>> getUnregisteredDevices({required String projectId}) async {
+  List<FusionNetworkDevice> getUnregisteredDevicesForCurrentProject() {
     if (state is FusionNetworkDeviceViewModelLoaded) {
       final List<FusionNetworkDevice> networkDevices = (state as FusionNetworkDeviceViewModelLoaded).devices;
       return networkDevices.where((FusionNetworkDevice element) => !element.isDeviceCertificateValid).toList();
@@ -37,8 +37,6 @@ class FusionNetworkDeviceViewModel extends Cubit<FusionNetworkDeviceViewModelSta
   }
 
   Future<void> registerAndClaimDevices({required List<FusionNetworkDevice> devices, required String projectId}) async {
-    if (devices.isEmpty) return;
-
     emit(FusionNetworkDeviceViewModelClaiming());
 
     final ResponseCallback<List<DeviceBulkRegisterResult>> registerResponse = await fusionDeviceService.registerDevicesBulk(

@@ -2,11 +2,12 @@ import 'dart:developer' show log;
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:equatable/equatable.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
-class FirmwareUpdateCheckResult {
+class FirmwareUpdateCheckResult extends Equatable {
   final bool updateAvailable;
   final bool appUpdateRequired;
   final String? bundleId;
@@ -33,9 +34,23 @@ class FirmwareUpdateCheckResult {
       minDesktopAppVersion: json['min_desktop_app_version'] as String?,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'update_available': updateAvailable,
+      'app_update_required': appUpdateRequired,
+      'bundle_id': bundleId,
+      'version': version,
+      'release_notes': releaseNotes,
+      'min_desktop_app_version': minDesktopAppVersion,
+    };
+  }
+
+  @override
+  List<Object?> get props => [updateAvailable, appUpdateRequired, bundleId, version, releaseNotes, minDesktopAppVersion];
 }
 
-class BundleDownloadUrlResult {
+class BundleDownloadUrlResult extends Equatable {
   final String downloadUrl;
   final String checksum;
 
@@ -44,33 +59,24 @@ class BundleDownloadUrlResult {
     required this.checksum,
   });
 
+  @override
+  List<Object?> get props => [downloadUrl, checksum];
+
   factory BundleDownloadUrlResult.fromJson(Map<String, dynamic> json) {
     return BundleDownloadUrlResult(
       downloadUrl: json['download_url'] as String? ?? '',
       checksum: json['checksum'] as String? ?? '',
     );
   }
-}
 
-/// Cloud-side registration + claim status for a single device.
-class CloudDeviceStatus {
-  final String id;
-  final bool registered;
-  final bool claimed;
-
-  const CloudDeviceStatus({
-    required this.id,
-    required this.registered,
-    required this.claimed,
-  });
-
-  factory CloudDeviceStatus.fromJson(Map<String, dynamic> json) {
-    return CloudDeviceStatus(
-      id: json['id'] as String? ?? '',
-      registered: json['registered'] as bool? ?? false,
-      claimed: json['claimed'] as bool? ?? false,
-    );
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'download_url': downloadUrl,
+      'checksum': checksum,
+    };
   }
+
+  String get downloadFileName => Uri.parse(downloadUrl).pathSegments.last;
 }
 
 class DeviceBulkRegisterResult {
@@ -337,10 +343,10 @@ class FusionDeviceService {
     }
   }
 
-  Future<ResponseCallback<void>> sendStartFirmwareUpdateEvent() async {
+  Future<ResponseCallback<void>> sendStartFirmwareUpdateEvent({required String bundleId}) async {
     try {
       final ResponseCallback<void> response = await networkClient.sendWebSocketMessage<void>(<String, dynamic>{
-        'id': 'sw-update-001',
+        'id': bundleId,
         'version': 1,
         'type': 'start_update',
       });
@@ -350,7 +356,7 @@ class FusionDeviceService {
     }
   }
 
-  Stream<ResponseCallback<FirmwareUpdateProgressEvent>> firmwareUpdateProgressEvents() async* {
+  Stream<ResponseCallback<FirmwareUpdateProgressEvent>> listenFirmwareUpdateProgressEvents() async* {
     await for (final ResponseCallback<dynamic> message in networkClient.webSocketMessages) {
       log('Firmware WS message received: success=${message.success}');
 
@@ -382,32 +388,17 @@ class FusionDeviceService {
     }
   }
 
-  Future<ResponseCallback<void>> disconnectFirmwareUpdateWebSocket() async {
-    try {
-      return await networkClient.disconnectWebSocket<void>();
-    } catch (e) {
-      return ResponseCallback<void>.failure(e.toString());
-    }
-  }
-
   String _normalizeFusionHost(String vip) {
     final String trimmed = vip.trim();
     if (trimmed.isEmpty) return '';
     return trimmed.contains(':') ? trimmed : '$trimmed:8080';
   }
 
-  /// Fetches the cloud registration + claim status for all devices belonging
-  /// to the given project from the cloud backend.
-  Future<ResponseCallback<List<CloudDeviceStatus>>> getCloudDevicesStatus({required String projectId}) async {
+  Future<ResponseCallback<void>> disconnectFirmwareUpdateWebSocket() async {
     try {
-      final ResponseCallback<List<CloudDeviceStatus>> response = await networkClient.get(
-        api: FusionApiEndpoint.devicesCloud,
-        urlParameters: <String, dynamic>{'project_id': projectId},
-        fromJson: (dynamic json) => (json as List<dynamic>).whereType<Map<String, dynamic>>().map(CloudDeviceStatus.fromJson).toList(),
-      );
-      return response;
+      return await networkClient.disconnectWebSocket<void>();
     } catch (e) {
-      return ResponseCallback<List<CloudDeviceStatus>>.failure(e.toString());
+      return ResponseCallback<void>.failure(e.toString());
     }
   }
 
