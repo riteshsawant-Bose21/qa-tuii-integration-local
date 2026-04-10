@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart' show CupertinoActivityIndicator;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -232,16 +234,14 @@ class ProductQuerySpeakerList extends StatelessWidget {
                     // In non-withSubwoofer mode, hide the card entirely when nothing is placed
                     final bool isWithSubwooferMode = speakerSelectionViewModel.selectedListeningArea?.lowFrequency == LowFrequency.withSubwoofer;
                     if (!isWithSubwooferMode && categorizedSpeakers.isEmpty) {
-                      return Expanded(
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: FusionAppText(
-                              text: 'No speakers selected yet. Select a speaker from the list.',
-                              textAlign: TextAlign.center,
-                              style: context.textTheme.bodySmall?.copyWith(
-                                color: context.colorScheme.onSurface.withValues(alpha: 0.5),
-                              ),
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: FusionAppText(
+                            text: 'No speakers selected yet. Select a speaker from the list.',
+                            textAlign: TextAlign.center,
+                            style: context.textTheme.bodySmall?.copyWith(
+                              color: context.colorScheme.onSurface.withValues(alpha: 0.5),
                             ),
                           ),
                         ),
@@ -945,11 +945,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
     widget.product.assets.assets.forEach(
       (String key, List<String> values) {
         if (values.isNotEmpty) {
-          final String? assetImagePath = context.read<ProductQueryViewModel>().getProductImage(widget.product.productId);
-          // log("key: $key : ${values.first}");
-          // final String? assetImagePath = context.read<ProductQueryViewModel>().getImagePath(widget.product.productId, key);
-          // final String assetImagePath = context.read<ProductQueryViewModel>().cachedImages[widget.product.productId]?[key] ?? '';
-          // final String assetImageName = context.read<ProductQueryViewModel>().getImageName(values.first);
+          final String? cachedImagePath = context.read<ProductQueryViewModel>().getProductImage(widget.product.productId);
 
           final SpeakerColor speakerColor = SpeakerColor.getValueBasedOnKey(key);
           if (filterColor == speakerColor) {
@@ -957,7 +953,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
               _SpeakerColorVarient(
                 productId: widget.product.productId,
                 color: speakerColor,
-                cachedImagePath: assetImagePath,
+                cachedImagePath: cachedImagePath,
               ),
             );
           }
@@ -1026,9 +1022,19 @@ class _SpeakerCardState extends State<SpeakerCard> {
                         ),
                         child: Builder(
                           builder: (BuildContext context) {
-                            if (selectedVarient?.cachedImagePath == null) return const SizedBox();
-                            return Image.asset(
-                              selectedVarient!.cachedImagePath!,
+                            if (selectedVarient?.cachedImagePath == null) {
+                              return Icon(
+                                LucideIcons.speaker200,
+                                size: 20,
+                                color: context.colorScheme.iconDefault,
+                              );
+                            }
+
+                            final File file = File(selectedVarient!.cachedImagePath!);
+                            if (!file.existsSync()) return const SizedBox(); // file not cached yet
+
+                            return Image.file(
+                              file,
                               fit: BoxFit.cover,
                             );
                           },
