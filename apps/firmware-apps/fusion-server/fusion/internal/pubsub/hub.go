@@ -155,9 +155,10 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 
 	case api.NotifyOpSoftwareUpdate:
 		logger.Info("[Hub] Broadcasting software update trigger")
-		// Start progress monitoring when software update begins
+		// Primary starts follower orchestration: broadcast to followers first,
+		// wait for all followers to reach DONE, then start self-update.
 		if h.transport != nil && h.transport.LocalNode() != nil && message.Node == h.transport.LocalNode().Name {
-			h.startSWUpdateProgressMonitoring()
+			h.startFollowerOrchestration()
 		}
 
 	case api.NotifyOpSoftwareUpdateProgress:
@@ -205,9 +206,10 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 		if err != nil {
 			return fmt.Errorf("failed to marshal update: %w", err)
 		}
-		// Include local node only for software updates
-		includeLocalNode := message.Operation == api.NotifyOpSoftwareUpdate
-		h.broadcastToNodes(data, includeLocalNode)
+		// Primary never triggers itself via gossip for software updates.
+		// The orchestration goroutine (waitForFollowersThenUpdateSelf) starts
+		// the primary's own update after all followers have reached DONE.
+		h.broadcastToNodes(data, false)
 	}
 
 	// Attach the aggregated progress map only for local WebSocket delivery.

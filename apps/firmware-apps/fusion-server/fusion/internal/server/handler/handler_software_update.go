@@ -413,10 +413,8 @@ func (h *Handler) HandleSoftwareUpdateDownload(w http.ResponseWriter, r *http.Re
 	}
 }
 
-// HandleSoftwareUpdateList serves GET /SoftwareUpdate/list.
-// Returns all SoftwareUpdate bundles present in /mnt/ota as []api.SoftwareUpdateSyncUpdate.
-// Called by joining nodes to perform initial SoftwareUpdate sync from a peer.
-func (h *Handler) HandleSoftwareUpdateList(w http.ResponseWriter, r *http.Request) {
+// HandleSoftwareUpdateListLocal serves the admin-port GET /softwareUpdate/list endpoint.
+func (h *Handler) HandleSoftwareUpdateListLocal(w http.ResponseWriter, r *http.Request) {
 	logger := logging.GetLogger()
 
 	entries, err := os.ReadDir(api.SoftwareUpdateOTAPath)
@@ -427,7 +425,7 @@ func (h *Handler) HandleSoftwareUpdateList(w http.ResponseWriter, r *http.Reques
 			w.Write([]byte("[]"))
 			return
 		}
-		logger.Error("SoftwareUpdate list: readdir %s: %v", api.SoftwareUpdateOTAPath, err)
+		logger.Error("SoftwareUpdate list (local): readdir %s: %v", api.SoftwareUpdateOTAPath, err)
 		writeSoftwareUpdateError(w, http.StatusInternalServerError, "server_error", "Failed to list SoftwareUpdate directory")
 		return
 	}
@@ -447,13 +445,13 @@ func (h *Handler) HandleSoftwareUpdateList(w http.ResponseWriter, r *http.Reques
 
 		info, err := entry.Info()
 		if err != nil {
-			logger.Warn("SoftwareUpdate list: stat %s: %v — skipping", fullPath, err)
+			logger.Warn("SoftwareUpdate list (local): stat %s: %v — skipping", fullPath, err)
 			continue
 		}
 
 		checksum, err := utils.FileChecksum(fullPath)
 		if err != nil {
-			logger.Warn("SoftwareUpdate list: checksum %s: %v — skipping", fullPath, err)
+			logger.Warn("SoftwareUpdate list (local): checksum %s: %v — skipping", fullPath, err)
 			continue
 		}
 
@@ -472,7 +470,19 @@ func (h *Handler) HandleSoftwareUpdateList(w http.ResponseWriter, r *http.Reques
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	if err := json.NewEncoder(w).Encode(bundles); err != nil {
-		logger.Error("SoftwareUpdate list: json encode: %v", err)
+		logger.Error("SoftwareUpdate list (local): json encode: %v", err)
+	}
+}
+
+// HandleSoftwareUpdateList serves GET /softwareUpdate/list on the public port.
+func (h *Handler) HandleSoftwareUpdateList(w http.ResponseWriter, r *http.Request) {
+	bundles := h.clusterTransport.GetAllSoftwareUpdateList()
+	if bundles == nil {
+		bundles = []api.SoftwareUpdateSync{}
+	}
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	if err := json.NewEncoder(w).Encode(bundles); err != nil {
+		logging.GetLogger().Error("SoftwareUpdate list: json encode: %v", err)
 	}
 }
 
@@ -540,6 +550,21 @@ func (h *Handler) processSoftwareUpdateStream(part *multipart.Part, origName str
 	return checksum, written, tmpPath, nil
 }
 
+// handleSwUpdateInfo fetches /etc/swupdate from all cluster nodes and returns the aggregated results.
+func (h *Handler) handleSwUpdateInfo(request *api.WebSocketRequest) (*api.WebSocketResponse, error) {
+	infos := h.clusterTransport.GetAllSwUpdateInfo()
+	return createSuccessResponse(&request.ID, api.WSMsgTypeSwUpdateInfo, api.WSCodeOK, "OK", infos), nil
+}
+
+// handleListSoftwareUpdates fetches the OTA bundle list from every cluster node 
+func (h *Handler) handleListSoftwareUpdates(request *api.WebSocketRequest) (*api.WebSocketResponse, error) {
+	bundles := h.clusterTransport.GetAllSoftwareUpdateList()
+	if bundles == nil {
+		bundles = []api.SoftwareUpdateSync{}
+	}
+	return createSuccessResponse(&request.ID, api.WSMsgTypeListSoftwareUpdates, api.WSCodeOK, "OK", bundles), nil
+}
+
 // Helper functions for improved error handling and validation
 
 // validateChecksum validates the computed checksum against expected value
@@ -558,7 +583,7 @@ func validateChecksum(actual, expected string) error {
 		return fmt.Errorf("invalid checksum format - not valid hex: %w", err)
 	}
 	if !strings.EqualFold(actual, expected) {
-		return fmt.Errorf("checksum mismatch: computed=%s, expected=%s", actual, expected)
+		return fmt.Errorf("SHA-256 of received bundle does not match X-Checksum-SHA256 header. Bundle discarded.")
 	}
 	return nil
 }
