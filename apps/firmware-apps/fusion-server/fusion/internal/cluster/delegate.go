@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/persistence"
@@ -312,18 +313,33 @@ func (d *ClusterDelegate) handleSoftwareUpdate(message *api.NotifyMessage) {
 	logger.Info("[SoftwareUpdate] Received software update trigger from %s on node %s",
 		message.Node, d.appConfig.NodeName)
 
-	// Execute the systemctl command to start the swupdate service
-	cmd := exec.Command("systemctl", "start", "swupdate-ota-install.service")
-	err := cmd.Run()
+	if out, err := exec.Command("systemctl", "reset-failed", "swupdate-ota-install.service").CombinedOutput(); err != nil {
+		logger.Debug("[SoftwareUpdate] reset-failed (ignored): %v — %s", err, string(out))
+	}
 
+	cmd := exec.Command("systemctl", "start", "--no-block", "swupdate-ota-install.service")
+	out, err := cmd.CombinedOutput()
 	if err != nil {
-		logger.Error("[SoftwareUpdate] Failed to start swupdate-ota-install.service on node %s: %v",
-			d.appConfig.NodeName, err)
+		logger.Error("[SoftwareUpdate] Failed to start swupdate-ota-install.service on node %s: %v — %s",
+			d.appConfig.NodeName, err, string(out))
+
+		if d.hub != nil {
+			d.hub.GossipSWUpdateFailure(d.appConfig.NodeName,
+				fmt.Sprintf("failed to start swupdate-ota-install.service: %v — %s", err, string(out)))
+		}
 		return
 	}
 
-	logger.Info("[SoftwareUpdate] Successfully started swupdate-ota-install.service on node %s",
+	logger.Info("[SoftwareUpdate] Successfully queued swupdate-ota-install.service on node %s",
 		d.appConfig.NodeName)
+
+	// Each node monitors its own /tmp/swupdateprog socket, stops any previous monitor, and resets progress for a clean start.
+	if d.hub != nil {
+		d.hub.StopSWUpdateProgressMonitoring()
+		d.hub.StartSWUpdateProgressMonitoring()
+		logger.Info("[SoftwareUpdate] Started local progress monitoring on node %s",
+			d.appConfig.NodeName)
+	}
 }
 
 // handleSoftwareUpdateAvailable processes bundle availability notifications from any node
