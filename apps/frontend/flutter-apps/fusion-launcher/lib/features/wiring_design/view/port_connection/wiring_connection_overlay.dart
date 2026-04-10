@@ -23,21 +23,35 @@ class WiringConnectionOverlay extends StatelessWidget {
     final List<CircuitModel> circuits = context.watch<ProjectViewModel>().circuits;
     final Map<HardwareComponent, List<PortData>> compatibleHardwarePorts = <HardwareComponent, List<PortData>>{};
     final Map<CircuitModel, List<PortData>> compatibleCircuitPorts = <CircuitModel, List<PortData>>{};
+    final List<WiringConnectionModel> connections = context.watch<ProjectViewModel>().getAllWiringConnections();
     final ConnectionUseCase useCase = ConnectionUseCase();
 
     for (final HardwareComponent hardware in hardwares) {
       final List<PortData> compatible =
           <PortData>[
-            ...hardware.inputPortsData,
-            ...hardware.outputPortsData,
-            ...hardware.communicationPorts,
-          ].where((PortData port) => useCase.isCompatible(fromPortData.type, port.type)).toList();
+                ...hardware.inputPortsData,
+                ...hardware.outputPortsData,
+                ...hardware.communicationPorts,
+              ]
+              .where(
+                (PortData port) =>
+                    useCase.isCompatible(fromPortData.type, port.type) &&
+                    !connections.any((WiringConnectionModel connection) => connection.portId == port.id || connection.targetPortId == port.id),
+              )
+              .toList();
       if (compatible.isNotEmpty) {
         compatibleHardwarePorts[hardware] = compatible;
       }
     }
     for (final CircuitModel circuit in circuits) {
-      final List<PortData> compatible = <PortData>[circuit.inputPort].where((PortData port) => useCase.isCompatible(fromPortData.type, port.type)).toList();
+      final List<PortData> compatible =
+          <PortData>[circuit.inputPort]
+              .where(
+                (PortData port) =>
+                    useCase.isCompatible(fromPortData.type, port.type) &&
+                    !connections.any((WiringConnectionModel connection) => connection.portId == port.id || connection.targetPortId == port.id),
+              )
+              .toList();
       if (compatible.isNotEmpty) {
         compatibleCircuitPorts[circuit] = compatible;
       }
@@ -48,7 +62,7 @@ class WiringConnectionOverlay extends StatelessWidget {
         children: <Widget>[
           Text(
             "Connect ${fromPortData.name} to:",
-            style: context.textTheme.b3Regular,
+            style: context.textTheme.l1Medium,
           ),
           const Divider(),
           for (final HardwareComponent hardware in compatibleHardwarePorts.keys)
@@ -57,27 +71,17 @@ class WiringConnectionOverlay extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   ...compatibleHardwarePorts[hardware]!.map(
-                    (PortData port) => Row(
-                      spacing: 10,
-                      children: <Widget>[
-                        WiringPortWidget(
-                          portData: port,
-                          onTap: () {
-                            // context.read<ProjectViewModel>().addWiringConnection(
-                            //   fromDeviceId: deviceId,
-                            //   fromPort: fromPortData,
-                            //   toDeviceId: hardware.id,
-                            //   toPort: port,
-                            // );
-                            // Navigator.of(context).pop();
-                          },
-                        ),
-
-                        Text(
-                          port.type.description,
-                          style: context.textTheme.b3Regular,
-                        ),
-                      ],
+                    (PortData port) => WiringPortWidget(
+                      portData: port,
+                      onTap: () {
+                        // context.read<ProjectViewModel>().addWiringConnection(
+                        //   fromDeviceId: deviceId,
+                        //   fromPort: fromPortData,
+                        //   toDeviceId: hardware.id,
+                        //   toPort: port,
+                        // );
+                        // Navigator.of(context).pop();
+                      },
                     ),
                   ),
                 ],
@@ -90,7 +94,10 @@ class WiringConnectionOverlay extends StatelessWidget {
                         duration: const Duration(milliseconds: 200),
                         child: const Icon(Icons.arrow_drop_down),
                       ),
-                      Text(hardware.name),
+                      Text(
+                        hardware.name,
+                        style: context.textTheme.l2Regular,
+                      ),
                     ],
                   ),
               semanticsId: "compatible_hardware_${hardware.name}",
@@ -101,27 +108,17 @@ class WiringConnectionOverlay extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   ...compatibleCircuitPorts[circuit]!.map(
-                    (PortData port) => Row(
-                      spacing: 10,
-                      children: <Widget>[
-                        WiringPortWidget(
-                          portData: port,
-                          onTap: () {
-                            // context.read<ProjectViewModel>().addWiringConnection(
-                            //   fromDeviceId: deviceId,
-                            //   fromPort: fromPortData,
-                            //   toDeviceId: hardware.id,
-                            //   toPort: port,
-                            // );
-                            // Navigator.of(context).pop();
-                          },
-                        ),
-
-                        Text(
-                          port.type.description,
-                          style: context.textTheme.b3Regular,
-                        ),
-                      ],
+                    (PortData port) => WiringPortWidget(
+                      portData: port,
+                      onTap: () {
+                        // context.read<ProjectViewModel>().addWiringConnection(
+                        //   fromDeviceId: deviceId,
+                        //   fromPort: fromPortData,
+                        //   toDeviceId: hardware.id,
+                        //   toPort: port,
+                        // );
+                        // Navigator.of(context).pop();
+                      },
                     ),
                   ),
                 ],
@@ -151,23 +148,44 @@ class WiringPortWidget extends StatelessWidget {
   final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) {
+    final String? imageForPort = switch (portData.type) {
+      PortType.ethernet || PortType.networkSwitchIn || PortType.networkSwitchOut => 'assets/icons/wiring_ports/ethernet.png',
+      PortType.wifiIn || PortType.wifiOut => 'assets/icons/wiring_ports/wifi.png',
+      PortType.bleIn || PortType.bleOut => 'assets/icons/wiring_ports/bluetooth.png',
+      PortType.hdmiIn || PortType.hdmiOut => 'assets/icons/wiring_ports/hdmi.png',
+      PortType.usbIn || PortType.usbOut || PortType.usb => 'assets/icons/wiring_ports/usb.png',
+      PortType.audioJackInput || PortType.audioJackOutput => 'assets/icons/wiring_ports/audio_jack.png',
+      PortType.rcaInput || PortType.rcaOutput => 'assets/icons/wiring_ports/stereo.png',
+      _ => null,
+    };
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: context.colorScheme.inactivePortBG,
-            width: 2,
+      child: Row(
+        spacing: 10,
+        children: <Widget>[
+          imageForPort != null
+              ? FusionImage.asset(imageForPort, width: 20, height: 20)
+              : Container(
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: context.colorScheme.inactivePortBG,
+                    width: 2,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                padding: const EdgeInsets.all(6),
+                child: Text(
+                  portData.name,
+                  style: context.textTheme.bodySmall?.copyWith(
+                    fontSize: 8,
+                  ),
+                ),
+              ),
+          Text(
+            portData.name,
+            style: context.textTheme.b3Regular,
           ),
-          shape: BoxShape.circle,
-        ),
-        padding: const EdgeInsets.all(6),
-        child: Text(
-          portData.name,
-          style: context.textTheme.bodySmall?.copyWith(
-            fontSize: 8,
-          ),
-        ),
+        ],
       ),
     );
   }
