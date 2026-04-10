@@ -443,9 +443,6 @@ class FusionNetworkClient {
 enum FusionApiType { fusionServer, droServer, backendServer }
 
 enum FusionApiEndpoint {
-  // This API is used only for integration testing to bypass the normal Auth0 login flow.
-  bypassLogin('/auth/automation/tokens', FusionApiType.backendServer),
-
   //Fusion Backend endpoints
   process('/process', FusionApiType.droServer), //DRO endpoint
   fusionValue('/value', FusionApiType.fusionServer),
