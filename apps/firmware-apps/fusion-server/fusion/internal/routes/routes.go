@@ -70,10 +70,11 @@ const (
 	DevicesResetEndpoint               = DevicesEndpoint + "/reset"
 	EndpointsEndpoint                  = "/endpoints"
 
-	SoftwareUpdateEndpoint         = "/softwareUpdate"
-	SoftwareUpdateUploadEndpoint   = SoftwareUpdateEndpoint + "/upload"
-	SoftwareUpdateDownloadEndpoint = SoftwareUpdateEndpoint + "/download/{filename}"
-	SoftwareUpdateListEndpoint     = SoftwareUpdateEndpoint + "/list"
+	SoftwareUpdateEndpoint          = "/softwareUpdate"
+	SoftwareUpdateUploadEndpoint    = SoftwareUpdateEndpoint + "/upload"
+	SoftwareUpdateDownloadEndpoint  = SoftwareUpdateEndpoint + "/download/{filename}"
+	SoftwareUpdateListEndpoint      = SoftwareUpdateEndpoint + "/list"
+	SoftwareUpdateInfoLocalEndpoint = SoftwareUpdateEndpoint + "/info"
 
 	HealthEndpoint = "/health"
 
