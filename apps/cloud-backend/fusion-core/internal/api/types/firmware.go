@@ -50,7 +50,6 @@ type DownloadArtifactResponse struct {
 type FirmwareUpdateRequest struct {
 	CurrentFirmwareVersion   string `form:"current_firmware_version" binding:"required"`
 	CurrentDesktopAppVersion string `form:"current_desktop_app_version" binding:"required"`
-	Channel                  string `form:"channel"` // Optional: "beta", "alpha", etc. Empty or omitted = stable (prerelease is null)
 }
 
 type FirmwareUpdateResponse struct {

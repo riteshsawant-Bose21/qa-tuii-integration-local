@@ -530,11 +530,10 @@ func TestCheckForUpdate(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name: "success - update available (beta channel)",
+			name: "success - update available (beta channel inferred from version)",
 			queryParams: map[string]string{
-				"current_firmware_version":    "1.0.0",
+				"current_firmware_version":    "1.0.0-beta.1",
 				"current_desktop_app_version": "2.0.0",
-				"channel":                     "beta",
 			},
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
@@ -543,7 +542,7 @@ func TestCheckForUpdate(t *testing.T) {
 						UpdateAvailable:   true,
 						AppUpdateRequired: false,
 						BundleID:          "bundle-beta-123",
-						Version:           "2.1.0-beta",
+						Version:           "2.1.0-beta.2",
 					}, nil)
 			},
 			expectedStatus: http.StatusOK,
@@ -683,11 +682,11 @@ func TestGetBundleDownloadURL(t *testing.T) {
 			},
 		},
 		{
-			name:        "success - build metadata stripped",
+			name:        "success - version with build metadata accepted",
 			version:     "1.2.3-dev.3+build123",
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("GetBundleDownloadURL", mock.Anything, "1.2.3-dev.3", mock.AnythingOfType("*zap.Logger")).
+				m.On("GetBundleDownloadURL", mock.Anything, "1.2.3-dev.3+build123", mock.AnythingOfType("*zap.Logger")).
 					Return(&types.DownloadArtifactResponse{
 						DownloadURL: "https://s3.presigned.url/download",
 						Checksum:    "sha256:ghi789",

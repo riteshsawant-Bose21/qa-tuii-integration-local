@@ -110,14 +110,16 @@ func (s *Service) ApproveBundle(ctx context.Context, bundleID string, approvedBy
 		return errors.New("approvedBy cannot be empty")
 	}
 
+	now := time.Now()
 	bundle := &models.Bundle{
 		ID:                      bundleID,
 		ApprovalStatus:          approvalStatus,
 		ApprovalStatusChangedBy: null.StringFrom(approvedBy),
-		ApprovalStatusChangedAt: null.TimeFrom(time.Now()),
+		ApprovalStatusChangedAt: null.TimeFrom(now),
+		UpdatedAt:               now,
 	}
 
-	_, err := bundle.Update(ctx, s.db, boil.Whitelist(models.BundleColumns.ApprovalStatus, models.BundleColumns.ApprovalStatusChangedBy, models.BundleColumns.ApprovalStatusChangedAt))
+	_, err := bundle.Update(ctx, s.db, boil.Whitelist(models.BundleColumns.ApprovalStatus, models.BundleColumns.ApprovalStatusChangedBy, models.BundleColumns.ApprovalStatusChangedAt, models.BundleColumns.UpdatedAt))
 	return err
 }
 

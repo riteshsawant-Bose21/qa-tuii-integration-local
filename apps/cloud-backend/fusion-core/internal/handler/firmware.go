@@ -199,11 +199,12 @@ func (h *FirmwareUpdateHandler) ApproveBundle(c *gin.Context) {
 // CheckForUpdate checks for available firmware updates for a device
 // @Summary Check for Firmware Updates
 // @Description Checks for the latest available firmware bundle. Steps performed:
-// @Description 1. Query for latest approved bundle where: bundle.version > current_firmware_version AND bundle.min_prev_version <= current_firmware_version AND bundle.min_desktop_app_version <= current_desktop_app_version AND (channel matches prerelease OR prerelease IS NULL for stable)
-// @Description 2. If found and current_firmware_version >= bundle.min_prev_version: return update_available=true with bundle details
-// @Description 3. If not found or firmware too old: query for latest bundle where bundle is compatible with current firmware (ignoring desktop app version)
-// @Description 4. If found and current_desktop_app_version < bundle.min_desktop_app_version: return update_available=true, app_update_required=true
-// @Description 5. Otherwise: return update_available=false
+// @Description 1. The release channel is auto-inferred from the prerelease tag of current_firmware_version (e.g. "beta" from 1.2.3-beta.1, empty for stable 1.2.3)
+// @Description 2. Query for latest approved bundle where: bundle.version > current_firmware_version AND bundle.min_prev_version <= current_firmware_version AND bundle.min_desktop_app_version <= current_desktop_app_version AND (channel matches prerelease OR prerelease IS NULL for stable)
+// @Description 3. If found and current_firmware_version >= bundle.min_prev_version: return update_available=true with bundle details
+// @Description 4. If not found or firmware too old: query for latest bundle where bundle is compatible with current firmware (ignoring desktop app version)
+// @Description 5. If found and current_desktop_app_version < bundle.min_desktop_app_version: return update_available=true, app_update_required=true
+// @Description 6. Otherwise: return update_available=false
 // @Description
 // @Description **Response Scenarios:**
 // @Description
@@ -223,9 +224,8 @@ func (h *FirmwareUpdateHandler) ApproveBundle(c *gin.Context) {
 // @Description ```
 // @Tags Firmware Update - Client API
 // @Produce json
-// @Param current_firmware_version query string true "Current firmware version (semver format) (make sure to URL Encode)"
-// @Param current_desktop_app_version query string true "Current desktop application version (semver format) (make sure to URL Encode)"
-// @Param channel query string false "Release channel: 'beta', 'alpha', etc. Omit for stable releases (prerelease IS NULL)"
+// @Param current_firmware_version query string true "Current firmware version (semver format, e.g. 1.2.3 for stable, 1.2.3-beta.1 for beta channel). The release channel is auto-inferred from the prerelease tag."
+// @Param current_desktop_app_version query string true "Current desktop application version (semver format)"
 // @Success 200 {object} types.FirmwareUpdateResponse "Response varies by scenario - see description above"
 // @Failure 400 {object} types.ErrorResponse "Invalid request payload"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
@@ -266,7 +266,7 @@ func (h *FirmwareUpdateHandler) CheckForUpdate(c *gin.Context) {
 
 // GetBundleDownloadURL generates a presigned download URL for a firmware bundle
 // @Summary Get Firmware Bundle Download URL
-// @Description Generates a presigned S3 URL for downloading a specific firmware bundle artifact by version. The URL is valid for 2 hours and includes the file checksum for integrity verification. Only approved bundles can be downloaded.
+// @Description Generates a presigned S3 URL for downloading a specific firmware bundle artifact by version. The URL is valid for 15 minutes and includes the file checksum for integrity verification. Only approved bundles can be downloaded.
 // @Tags Firmware Update - Client API
 // @Accept json
 // @Produce json
