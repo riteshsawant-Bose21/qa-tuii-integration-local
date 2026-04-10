@@ -865,6 +865,11 @@ class SpeakerImageContainer extends StatelessWidget {
             color: context.colorScheme.iconDefault,
           );
         },
+        fallbackIcon: Icon(
+          LucideIcons.speaker200,
+          size: 20,
+          color: context.colorScheme.iconDefault,
+        ),
       ),
     );
   }

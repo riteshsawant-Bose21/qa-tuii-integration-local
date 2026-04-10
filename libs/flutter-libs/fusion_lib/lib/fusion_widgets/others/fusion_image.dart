@@ -30,9 +30,6 @@ class FusionImageAuto extends StatelessWidget {
   /// Defaults to [Icons.broken_image] at [errorIconSize].
   final Widget? fallbackIcon;
 
-  /// Size of the default broken-image icon. Ignored when [fallbackIcon] is set.
-  final double errorIconSize;
-
   /// Custom error builder — overrides [fallbackIcon] when provided.
   final Widget Function(BuildContext, Object, StackTrace?)? errorBuilder;
 
@@ -50,7 +47,6 @@ class FusionImageAuto extends StatelessWidget {
     this.color,
     this.placeholder,
     this.fallbackIcon,
-    this.errorIconSize = 24,
     this.errorBuilder,
     this.semanticId,
     this.semanticLabel,
@@ -141,7 +137,7 @@ class FusionImageAuto extends StatelessWidget {
             fallbackIcon ??
             Icon(
               LucideIcons.imageOff200,
-              size: errorIconSize,
+              size: 16,
               color: context.colorScheme.iconDefault,
             ),
       ),
