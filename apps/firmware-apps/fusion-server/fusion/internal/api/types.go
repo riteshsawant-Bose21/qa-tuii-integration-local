@@ -189,7 +189,6 @@ type DeviceInfo struct {
 	FusionMonorepoCommitHash string `json:"fusion_monorepo_commit_hash,omitempty"`
 	JenkinsBuildNumber       string `json:"jenkins_build_number,omitempty"`
 	VrrpPriority             int    `json:"vrrp_priority"`
-
 }
 
 // DevicePatch represents patchable device configuration data.

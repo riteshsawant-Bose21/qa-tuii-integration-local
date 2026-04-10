@@ -16,13 +16,13 @@ import (
 )
 
 type taskPatchRequest struct {
-	Description *string            `json:"description,omitempty"`
-	CronExpr    *string            `json:"cron_expr,omitempty"`
-	StartAt     *time.Time         `json:"start_at,omitempty"`
-	EndAt       *time.Time         `json:"end_at,omitempty"`
+	Description *string              `json:"description,omitempty"`
+	CronExpr    *string              `json:"cron_expr,omitempty"`
+	StartAt     *time.Time           `json:"start_at,omitempty"`
+	EndAt       *time.Time           `json:"end_at,omitempty"`
 	Recurrence  *api.RecurringWindow `json:"recurrence,omitempty"`
-	Params      map[string]any     `json:"params,omitempty"`
-	Snapshot    *string            `json:"snapshot,omitempty"`
+	Params      map[string]any       `json:"params,omitempty"`
+	Snapshot    *string              `json:"snapshot,omitempty"`
 }
 
 func (tm *TaskManager) CreateTask(w http.ResponseWriter, r *http.Request) {

@@ -12,11 +12,11 @@ import (
 
 	json "github.com/goccy/go-json"
 
-	"fusion/internal/api"
-	"fusion/internal/server/handler"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
+	"fusion/internal/server/handler"
 	"fusion/internal/utils"
 
 	"github.com/robfig/cron/v3"

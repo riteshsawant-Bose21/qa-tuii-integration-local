@@ -1,8 +1,9 @@
 package api
 
-import "os"
-
-import "time"
+import (
+	"os"
+	"time"
+)
 
 const (
 	SoftwareUpdateVersionUnknown = "Unknown"
@@ -34,7 +35,7 @@ const (
 
 	SerialUnknown = "Unknown"
 
-	SnapshotIDKey = "snapshot_id"
+	SnapshotIDKey           = "snapshot_id"
 	SnapshotDefinitionIDKey = "snapshot_definition_id"
 	SceneSetIDKey           = "set_id"
 	SceneIDKey              = "scene_id"
