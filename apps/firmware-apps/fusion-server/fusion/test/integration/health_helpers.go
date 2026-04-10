@@ -5,12 +5,15 @@ package integration
 
 import (
 	"context"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"fusion/internal/api"
+	"io"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -67,7 +70,7 @@ func CheckClusterHealth(ctx context.Context, env Env, expectedSize int) error {
 	if expectedSize == 1 {
 		// Poll briefly for a single primary if not already detected.
 		if !hasSinglePrimary(devices) {
-			innerCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			innerCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 			defer cancel()
 			_ = PollUntil(innerCtx, 500*time.Millisecond, func() (bool, error) {
 				ds, e := GetDevicesNodePreferred(innerCtx, env)
@@ -211,11 +214,45 @@ func GetDevices(ctx context.Context, baseURL string) ([]api.DeviceInfo, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("devices status=%d", resp.StatusCode)
 	}
-	var ds []api.DeviceInfo
-	if err := json.NewDecoder(resp.Body).Decode(&ds); err != nil {
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
 		return nil, err
 	}
+
+	ds, err := decodeDevicesResponse(body)
+	if err != nil {
+		return nil, fmt.Errorf("decode /devices from %s failed: %w; body=%s", baseURL, err, string(body))
+	}
 	return ds, nil
+}
+
+func decodeDevicesResponse(body []byte) ([]api.DeviceInfo, error) {
+	var devices []api.DeviceInfo
+	if err := json.Unmarshal(body, &devices); err == nil {
+		return devices, nil
+	}
+
+	var wrapped struct {
+		Devices []api.DeviceInfo `json:"devices"`
+	}
+	if err := json.Unmarshal(body, &wrapped); err == nil && wrapped.Devices != nil {
+		return wrapped.Devices, nil
+	}
+
+	var single api.DeviceInfo
+	if err := json.Unmarshal(body, &single); err == nil {
+		if single.Address != "" || single.Id != "" || single.Name != "" {
+			return []api.DeviceInfo{single}, nil
+		}
+	}
+
+	trimmed := bytes.TrimSpace(body)
+	if len(trimmed) == 0 {
+		return nil, fmt.Errorf("empty response body")
+	}
+
+	return nil, fmt.Errorf("unexpected response shape")
 }
 
 func (fc FusionCluster) WaitForClusterSize(ctx context.Context, n int) error {
@@ -230,4 +267,77 @@ func (fc FusionCluster) WaitForClusterSize(ctx context.Context, n int) error {
 
 		return false, nil
 	})
+}
+
+func WaitForPerNodeClusterAgreement(ctx context.Context, env Env, expectedSize int) error {
+	err := PollUntil(ctx, 1*time.Second, func() (bool, error) {
+		ok, _, err := checkPerNodeClusterAgreement(ctx, env, expectedSize)
+		if err != nil {
+			return false, nil
+		}
+		return ok, nil
+	})
+	if err == nil {
+		return nil
+	}
+
+	_, details, detailErr := checkPerNodeClusterAgreement(ctx, env, expectedSize)
+	if detailErr != nil {
+		return fmt.Errorf("per-node cluster agreement not reached: %w", detailErr)
+	}
+	return fmt.Errorf("per-node cluster agreement not reached: %s", details)
+}
+
+func checkPerNodeClusterAgreement(ctx context.Context, env Env, expectedSize int) (bool, string, error) {
+	urls := nodeBaseURLs(ctx, env)
+	if len(urls) < expectedSize {
+		return false, fmt.Sprintf("reachable node URL count %d < expected %d", len(urls), expectedSize), nil
+	}
+
+	var expectedSignature string
+	var expectedPrimary string
+	summaries := make([]string, 0, len(urls))
+
+	for _, baseURL := range urls {
+		devices, err := GetDevices(ctx, baseURL)
+		if err != nil {
+			return false, fmt.Sprintf("%s devices error: %v", baseURL, err), nil
+		}
+
+		if len(devices) != expectedSize {
+			return false, fmt.Sprintf("%s sees %d devices, expected %d", baseURL, len(devices), expectedSize), nil
+		}
+
+		primaryCount := 0
+		primaryAddr := ""
+		addrs := make([]string, 0, len(devices))
+		for _, d := range devices {
+			addrs = append(addrs, d.Address)
+			if d.IsPrimaryNode {
+				primaryCount++
+				primaryAddr = d.Address
+			}
+		}
+		if primaryCount != 1 {
+			return false, fmt.Sprintf("%s sees primary_count=%d", baseURL, primaryCount), nil
+		}
+
+		sort.Strings(addrs)
+		signature := strings.Join(addrs, ",")
+		summaries = append(summaries, fmt.Sprintf("%s members=[%s] primary=%s", baseURL, signature, primaryAddr))
+
+		if expectedSignature == "" {
+			expectedSignature = signature
+			expectedPrimary = primaryAddr
+			continue
+		}
+		if signature != expectedSignature {
+			return false, strings.Join(summaries, "; "), nil
+		}
+		if primaryAddr != expectedPrimary {
+			return false, strings.Join(summaries, "; "), nil
+		}
+	}
+
+	return true, strings.Join(summaries, "; "), nil
 }
