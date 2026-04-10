@@ -9,7 +9,7 @@ import '../../../../configuration/presentation/viewmodel/project_view_model.dart
 class HardwareItemCard extends StatefulWidget {
   final int index;
   final String name;
-  final String assetImagePath;
+  final String image;
   final String? itemId;
   final String? location;
   final String? equipmentLocation;
@@ -27,7 +27,7 @@ class HardwareItemCard extends StatefulWidget {
     super.key,
     required this.index,
     required this.name,
-    required this.assetImagePath,
+    required this.image,
     this.itemId,
     this.location,
     required this.isSelected,
@@ -129,7 +129,7 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                       Row(
                         children: <Widget>[
                           FusionImageAuto(
-                            path: widget.assetImagePath,
+                            path: widget.image,
                             width: 22,
                             height: 22,
                             fit: BoxFit.contain,

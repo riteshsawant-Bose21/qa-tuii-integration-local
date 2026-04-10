@@ -13,7 +13,6 @@ class _ProductTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String? assetImagePath = product.imageCachePath;
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,
@@ -45,12 +44,8 @@ class _ProductTile extends StatelessWidget {
                     ),
                     child: Builder(
                       builder: (BuildContext context) {
-                        if (assetImagePath == null || assetImagePath.isEmpty) {
-                          return const SizedBox();
-                        }
-
                         return FusionImageAuto(
-                          path: assetImagePath,
+                          path: serviceLocator<ProductQueryViewModel>().getProductImage(product.productId),
                           fit: BoxFit.contain,
                         );
                       },
@@ -81,8 +76,7 @@ class _ProductTile extends StatelessWidget {
                           const SizedBox(width: 4),
                           // info
                           FusionArrowPopup(
-                            semanticId:
-                                'equipment_location_dialog_product_tile_info_button_$index',
+                            semanticId: 'equipment_location_dialog_product_tile_info_button_$index',
                             content: SizedBox(
                               width: 300,
                               child: Padding(
@@ -92,56 +86,38 @@ class _ProductTile extends StatelessWidget {
                                   mainAxisSize: MainAxisSize.min,
                                   children: <Widget>[
                                     FusionAppText(
-                                      text:
-                                          product
-                                              .description, //"L 22.4cm | W 14.7cm | H 8.3cm | 9kg", // TODO: hardcoded
-                                      style: context.textTheme.bodySmall
-                                          ?.copyWith(
-                                            color:
-                                                context.colorScheme.onSurface,
-                                          ),
+                                      text: product.description, //"L 22.4cm | W 14.7cm | H 8.3cm | 9kg", // TODO: hardcoded
+                                      style: context.textTheme.bodySmall?.copyWith(
+                                        color: context.colorScheme.onSurface,
+                                      ),
                                     ),
 
                                     // GRID VIEW
                                     Divider(
-                                      color: context.colorScheme.onSurface
-                                          .withValues(alpha: 0.2),
+                                      color: context.colorScheme.onSurface.withValues(alpha: 0.2),
                                     ),
                                     Builder(
                                       builder: (BuildContext context) {
-                                        final Map<String, String> details =
-                                            product.specifications;
+                                        final Map<String, String> details = product.specifications;
 
                                         final List<Widget> children = <Widget>[
                                           ...details.keys.map((String key) {
                                             return Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
+                                              crossAxisAlignment: CrossAxisAlignment.start,
                                               mainAxisSize: MainAxisSize.min,
                                               children: <Widget>[
                                                 FusionAppText(
                                                   text: key,
-                                                  style: context
-                                                      .textTheme
-                                                      .bodySmall
-                                                      ?.copyWith(
-                                                        fontWeight:
-                                                            FontWeight.normal,
-                                                      ),
+                                                  style: context.textTheme.bodySmall?.copyWith(
+                                                    fontWeight: FontWeight.normal,
+                                                  ),
                                                 ),
                                                 FusionAppText(
                                                   text: details[key]!,
-                                                  style: context
-                                                      .textTheme
-                                                      .bodySmall
-                                                      ?.copyWith(
-                                                        fontWeight:
-                                                            FontWeight.normal,
-                                                        color: context
-                                                            .colorScheme
-                                                            .onSurface
-                                                            .withAlpha(128),
-                                                      ),
+                                                  style: context.textTheme.bodySmall?.copyWith(
+                                                    fontWeight: FontWeight.normal,
+                                                    color: context.colorScheme.onSurface.withAlpha(128),
+                                                  ),
                                                 ),
                                               ],
                                             );
@@ -177,8 +153,7 @@ class _ProductTile extends StatelessWidget {
                           "cost",
                         ),
                         child: FusionAppText(
-                          text:
-                              "\$${product.price.toStringAsFixed(2)}", // TODO: hardcoded
+                          text: "\$${product.price.toStringAsFixed(2)}", // TODO: hardcoded
                           style: context.textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.normal,
                             color: context.colorScheme.onSurface.withValues(
@@ -199,8 +174,7 @@ class _ProductTile extends StatelessWidget {
                     height: 24,
                     width: 24,
                     borderRadius: 6,
-                    backgroundColor:
-                        null, //isSelected ? FusionDarkColorPallette.green20 : null,
+                    backgroundColor: null, //isSelected ? FusionDarkColorPallette.green20 : null,
                     child: Icon(
                       LucideIcons.plus,
                       size: 12,

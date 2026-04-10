@@ -1,17 +1,22 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-/// A smart image widget that auto-detects the image source from a single [path].
+/// A smart image widget that auto-detects the image source.
 ///
 /// ### Source detection order
-/// 1. [path] is null or empty     → shows [fallbackIcon] immediately
-/// 2. Starts with `http(s)://`    → [Image.network]
-/// 3. Exists on disk              → [Image.file]
-/// 4. Otherwise                   → [Image.asset]
+/// 1. [bytes] is provided          → [Image.memory]
+/// 2. [path] is null or empty      → shows [fallbackIcon] immediately
+/// 3. Starts with `http(s)://`     → [Image.network]
+/// 4. Exists on disk               → [Image.file]
+/// 5. Otherwise                    → [Image.asset]
 class FusionImageAuto extends StatelessWidget {
+  /// Raw image bytes — takes priority over [path].
+  final Uint8List? bytes;
+
   /// The image path — URL, absolute file path, or asset path.
   /// Pass null to show [fallbackIcon] immediately.
   final String? path;
@@ -26,8 +31,7 @@ class FusionImageAuto extends StatelessWidget {
   /// Widget to show while a network image is loading.
   final Widget? placeholder;
 
-  /// Icon/widget shown when [path] is null, file is missing, or load fails.
-  /// Defaults to [Icons.broken_image] at [errorIconSize].
+  /// Icon/widget shown when no source is available or load fails.
   final Widget? fallbackIcon;
 
   /// Custom error builder — overrides [fallbackIcon] when provided.
@@ -38,7 +42,8 @@ class FusionImageAuto extends StatelessWidget {
 
   const FusionImageAuto({
     super.key,
-    required this.path,
+    this.bytes,
+    this.path,
     this.width,
     this.height,
     this.fit = BoxFit.cover,
@@ -58,16 +63,48 @@ class FusionImageAuto extends StatelessWidget {
   }
 
   // ── source resolution ─────────────────────────────────────────────────────
+
   Widget _buildImage(BuildContext context) {
+    // 1. Memory bytes — highest priority
+    if (bytes != null && bytes!.isNotEmpty) {
+      return _memory(context, bytes!);
+    }
+
     final String? resolvedPath = path?.trim();
 
-    if (resolvedPath == null || resolvedPath.isEmpty) return _fallback(context);
-    if (resolvedPath.startsWith('http://') || resolvedPath.startsWith('https://')) return _network(context, resolvedPath);
-    if (File(resolvedPath).existsSync()) return _file(context, File(resolvedPath));
+    // 2. No path → fallback
+    if (resolvedPath == null || resolvedPath.isEmpty) {
+      return _fallback(context);
+    }
+
+    // 3. Network
+    if (resolvedPath.startsWith('http://') || resolvedPath.startsWith('https://')) {
+      return _network(context, resolvedPath);
+    }
+
+    // 4. Local file
+    if (File(resolvedPath).existsSync()) {
+      return _file(context, File(resolvedPath));
+    }
+
+    // 5. Asset
     return _asset(context, resolvedPath);
   }
 
   // ── per-source builders ───────────────────────────────────────────────────
+
+  Widget _memory(BuildContext context, Uint8List data) {
+    return _wrap(
+      Image.memory(
+        data,
+        width: width,
+        height: height,
+        fit: fit,
+        color: color,
+        errorBuilder: (ctx, err, st) => errorBuilder?.call(ctx, err, st) ?? _fallback(ctx),
+      ),
+    );
+  }
 
   Widget _network(BuildContext context, String url) {
     return _wrap(

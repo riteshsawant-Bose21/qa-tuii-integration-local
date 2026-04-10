@@ -4,8 +4,9 @@ import 'package:fusion_launcher/features/projects/viewmodel/eql_products_vm.dart
 import 'package:fusion_lib/product_data/models/product_port_data.dart';
 
 class EQLProduct {
+  final int productId;
   final String name;
-  final String? imageCachePath;
+  final String? image;
   final String description;
   final String modelFamily;
   final dynamic data;
@@ -15,8 +16,9 @@ class EQLProduct {
   final Map<String, String> specifications;
   final ProductPortData portData;
   EQLProduct({
+    required this.productId,
     required this.name,
-    required this.imageCachePath,
+    required this.image,
     required this.description,
     required this.modelFamily,
     required this.data,
