@@ -43,13 +43,22 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		http.Error(w, "params.snapshot_id is required for snapshot tasks", http.StatusBadRequest)
 		return
 	}
+	exists, err := tm.persistence.SnapshotExists(fmt.Sprintf("%v", snapID))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error checking snapshot existence: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		http.Error(w, fmt.Sprintf("Snapshot %v not found", snapID), http.StatusNotFound)
+		return
+	}
 
 	if err := validateRecurringWindow(task.Recurrence); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid recurrence: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	exists, err := tm.persistence.TaskExists(&task)
+	exists, err = tm.persistence.TaskExists(&task)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error checking task existence: %v", err), http.StatusInternalServerError)
 		return
