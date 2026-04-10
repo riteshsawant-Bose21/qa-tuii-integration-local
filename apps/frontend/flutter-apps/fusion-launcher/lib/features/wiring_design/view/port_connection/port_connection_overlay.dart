@@ -247,6 +247,7 @@ class _FusionExpansionPanelState extends State<FusionExpansionPanel> {
         curve: Curves.easeInOut,
         alignment: Alignment.topCenter,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             InkWell(
               onTap: toggleExpanded,
