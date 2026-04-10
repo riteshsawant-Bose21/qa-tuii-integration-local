@@ -1,7 +1,6 @@
 #pragma once
 
 #include <linux/kernel.h>
-#include <linux/hrtimer.h>
 #include <linux/list.h>
 #include <sound/pcm.h>
 #include "fusion_connect_alsa.h"
@@ -17,7 +16,8 @@ enum fusion_cn_ctrl_cmd {
     FUSION_CN_CTRL_CMD_REMOVE_STREAM,
     FUSION_CN_CTRL_CMD_GET_METRICS,
     FUSION_CN_CTRL_CMD_SET_PHC_ANCHOR,
-    FUSION_CN_CTRL_CMD_GET_PHC_STATUS,
+    FUSION_CN_CTRL_CMD_GET_TIMING_STATUS,
+    FUSION_CN_CTRL_CMD_RESET_TIMING_STATE,
     FUSION_CN_CTRL_CMD_SET_DEBUG,
     FUSION_CN_CTRL_CMD_SET_ETH_IFACE
 };
@@ -30,12 +30,6 @@ struct fusion_cn_alsa {
     struct fusion_cn_chip *alsa_chip;
     const struct fusion_cn_mgr_ops *mgr_callbacks;
     const struct fusion_cn_alsa_ops *alsa_callbacks;
-};
-
-struct fusion_cn_timer {
-    u64 last_tick_ns;
-    u64 next_tick_ns;
-    u8 tick_count;
 };
 
 struct fusion_cn_netlink {
@@ -63,12 +57,14 @@ struct fusion_cn_manager {
     struct fusion_cn_state state;
     struct fusion_cn_alsa alsa;
     struct fusion_cn_rtp_manager rtp;
-    struct fusion_cn_timer timer;
     struct fusion_cn_netfilter netfilter;
     struct fusion_cn_netlink netlink;
     struct platform_device *pdev;
     struct active_streams active_streams;
+    u64 tick_ns;
     bool debug;
+    bool trace_debug;
+    bool timing_ready;
 };
 
 struct fusion_cn_ctrl_msg {
@@ -87,5 +83,6 @@ struct message_handler_entry {
 int fusion_cn_mgr_init(struct fusion_cn_manager *mgr);
 void fusion_cn_mgr_destroy(struct fusion_cn_manager *mgr);
 u64 fusion_cn_get_phc_ns(void);
+void fusion_cn_refresh_runtime_params(struct fusion_cn_manager *mgr);
 
 extern const struct fusion_cn_alsa_ops fusion_cn_alsa_ops;

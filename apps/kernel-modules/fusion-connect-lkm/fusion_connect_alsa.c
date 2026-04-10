@@ -101,17 +101,90 @@ void fusion_cn_alsa_substream_release(struct kref *kref)
     struct fusion_cn_substream *s =
         container_of(kref, struct fusion_cn_substream, ref);
 
-    /* Free PCM only if it’s not open and not attached to a live substream */
-    if (s->pcm && atomic_read(&s->open_count) == 0 && !s->substream) {
-        struct snd_card *card = s->pcm->card;
-        struct snd_pcm  *pcm  = s->pcm;
-        s->pcm = NULL;
-        snd_device_free(card, pcm);  /* non-GPL */
-    }
+    /*
+     * PCM device lifetime is owned by ALSA disconnect/card teardown, not by
+     * the close path for an individual substream.
+     */
+    s->pcm = NULL;
 
     printk(KERN_DEBUG "fusion_cn_alsa: substream_release: release stream %s\n", s->stream_name);
 
     kfree(s);
+}
+
+void fusion_cn_alsa_set_playback_phase(struct fusion_cn_substream *stream, u32 buffer_pos)
+{
+    unsigned long flags;
+
+    if (!stream)
+        return;
+
+    spin_lock_irqsave(&stream->lock, flags);
+    stream->buffer_pos = buffer_pos;
+    if (stream->substream && stream->substream->runtime && stream->rtp_frames_per_packet) {
+        u32 period_size = stream->substream->runtime->period_size;
+        stream->interrupt_idx = (buffer_pos % period_size) / stream->rtp_frames_per_packet;
+    } else {
+        stream->interrupt_idx = 0;
+    }
+    spin_unlock_irqrestore(&stream->lock, flags);
+}
+
+void fusion_cn_alsa_fill_silence(struct fusion_cn_substream *stream, u32 frame_offset, u32 frames)
+{
+    unsigned long flags;
+    struct snd_pcm_substream *ss;
+    struct snd_pcm_runtime *rt;
+    u32 frame_bytes;
+    u32 buffer_frames;
+    u32 first_frames;
+    u8 *base;
+
+    if (!stream || !frames)
+        return;
+
+    spin_lock_irqsave(&stream->lock, flags);
+    ss = READ_ONCE(stream->substream);
+    if (!ss || !ss->runtime || !ss->runtime->dma_area) {
+        spin_unlock_irqrestore(&stream->lock, flags);
+        return;
+    }
+
+    rt = ss->runtime;
+    frame_bytes = stream->channels * stream->sample_width;
+    buffer_frames = rt->buffer_size;
+    frame_offset %= buffer_frames;
+    base = (u8 *)rt->dma_area;
+
+    first_frames = min(frames, buffer_frames - frame_offset);
+    memset(base + (size_t)frame_offset * frame_bytes, 0,
+           (size_t)first_frames * frame_bytes);
+    if (frames > first_frames) {
+        memset(base, 0, (size_t)(frames - first_frames) * frame_bytes);
+    }
+    spin_unlock_irqrestore(&stream->lock, flags);
+}
+
+void fusion_cn_alsa_reset_stream_timing(struct fusion_cn_substream *stream, bool clear_buffer)
+{
+    unsigned long flags;
+
+    if (!stream)
+        return;
+
+    spin_lock_irqsave(&stream->lock, flags);
+    stream->buffer_pos = 0;
+    stream->interrupt_idx = 0;
+    stream->pcm_indirect.hw_data = 0;
+    stream->pcm_indirect.sw_data = 0;
+    atomic_set(&stream->dma_offset, 0);
+    if (clear_buffer && stream->substream && stream->substream->runtime && stream->substream->runtime->dma_area)
+        memset(stream->substream->runtime->dma_area, 0,
+               snd_pcm_lib_buffer_bytes(stream->substream));
+    spin_unlock_irqrestore(&stream->lock, flags);
+
+    printk(KERN_DEBUG "fusion_cn_alsa: reset_stream_timing stream %s clear_buffer=%u\n",
+           stream->stream_name, clear_buffer ? 1 : 0);
 }
 
 int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, struct fusion_cn_substream *stream)
@@ -119,9 +192,9 @@ int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, struct fusion
     struct fusion_cn_chip *chip = alsa_chip;
     struct snd_pcm_substream *ss;
     struct snd_pcm_runtime *rt;
+    bool do_period_elapsed = false;
 
-    if (fusion_cn_alsa_stream_disconnected(stream))
-        return -ENODEV;
+    if (fusion_cn_alsa_stream_disconnected(stream)) return -ENODEV;
 
     spin_lock_irq(&stream->lock);
     ss = READ_ONCE(stream->substream);
@@ -131,18 +204,21 @@ int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, struct fusion
     }
     rt = ss->runtime;
 
-    stream->buffer_pos += stream->rtp_frame_size;
+    stream->buffer_pos += stream->rtp_frames_per_packet;
     if (stream->buffer_pos >= rt->buffer_size)
         stream->buffer_pos -= rt->buffer_size;
 
-    if (chip->debug) printk(KERN_DEBUG "fusion_cn_alsa: pcm_interrupt: stream %s buffer_pos=%d interrupt_idx=%u\n", stream->stream_name, stream->buffer_pos, stream->interrupt_idx);
+    if (chip->trace_debug) printk(KERN_DEBUG "fusion_cn_alsa: pcm_interrupt: stream %s buffer_pos=%d interrupt_idx=%u\n", stream->stream_name, stream->buffer_pos, stream->interrupt_idx);
 
     if (++stream->interrupt_idx >= stream->interrupts_per_period) {
         stream->interrupt_idx = 0;
-        snd_pcm_period_elapsed(stream->substream);
+        do_period_elapsed = true;
     }
 
     spin_unlock_irq(&stream->lock);
+
+    if (do_period_elapsed)
+        snd_pcm_period_elapsed(ss);
 
     return 0;
 }
@@ -215,6 +291,7 @@ static int fusion_cn_pcm_fill_silence(struct snd_pcm_substream *substream,
 int fusion_cn_alsa_remove_substream(struct fusion_cn_substream *stream)
 {
     struct fusion_cn_chip *chip;
+    struct snd_pcm_substream *ss = NULL;
     unsigned long flags;
 
     if (!stream)
@@ -222,17 +299,18 @@ int fusion_cn_alsa_remove_substream(struct fusion_cn_substream *stream)
 
     chip = platform_get_drvdata(g_pdev);
 
-    // Mark disconnected and force ALSA state change if still open
     spin_lock_irqsave(&stream->lock, flags);
-    if (stream->substream) {
-        atomic_set(&stream->disconnected, 1);
-        // Force wake of any blocking I/O on this substream
-        snd_pcm_stop(stream->substream, SNDRV_PCM_STATE_DISCONNECTED);
-        /* DO NOT clear stream->substream here; ALSA still owns it until close */
-    }
+    atomic_set(&stream->disconnected, 1);
+    ss = stream->substream;
+    stream->pending_free = true;
     spin_unlock_irqrestore(&stream->lock, flags);
 
-    // unlink from hash and free device index
+    if (ss)
+        snd_pcm_stop(ss, SNDRV_PCM_STATE_DISCONNECTED);
+
+    if (stream->pcm)
+        snd_device_disconnect(stream->pcm->card, stream->pcm);
+
     if (chip) {
         write_lock_irqsave(&chip->lock, flags);
         if (!hlist_unhashed(&stream->hnode))
@@ -241,19 +319,6 @@ int fusion_cn_alsa_remove_substream(struct fusion_cn_substream *stream)
         write_unlock_irqrestore(&chip->lock, flags);
     }
 
-    // If not open anymore, unregister now; otherwise defer
-    if (atomic_read(&stream->open_count) == 0 && !stream->substream) {
-        if (stream->pcm) {
-            struct snd_card *card = stream->pcm->card;
-            struct snd_pcm  *pcm  = stream->pcm;
-            stream->pcm = NULL;
-            snd_device_free(card, pcm);
-        }
-    } else {
-        stream->pending_free = true;
-    }
-
-    // remove ref taken in add_substream
     kref_put(&stream->ref, fusion_cn_alsa_substream_release);
 
     printk(KERN_DEBUG "fusion_cn_alsa: remove_substream: Stream %s removed, device=%d%s\n",
@@ -264,7 +329,6 @@ int fusion_cn_alsa_remove_substream(struct fusion_cn_substream *stream)
 
 static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
 {
-    struct fusion_cn_chip *chip = snd_pcm_substream_chip(substream);
     struct snd_pcm_runtime *runtime = substream->runtime;
     unsigned long flags;
     char stream_name[FUSION_CN_NAME_MAX];
@@ -326,11 +390,11 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     hw.rate_max = stream->rate;
     hw.channels_min = stream->channels;
     hw.channels_max = stream->channels;
-    hw.period_bytes_min = stream->rtp_frame_size * stream->channels * stream->sample_width;
-    hw.period_bytes_max = (stream->rtp_frame_size * 4 * 4) * stream->channels * stream->sample_width;
-    hw.buffer_bytes_max = hw.period_bytes_max * 256 / 4;
+    hw.period_bytes_min = stream->rtp_frames_per_packet * stream->channels * stream->sample_width;
+    hw.period_bytes_max = (stream->rtp_frames_per_packet * 4 * 4) * stream->channels * stream->sample_width;
+    hw.buffer_bytes_max = stream->rtp_frames_per_packet * 16 * stream->channels * stream->sample_width;
     hw.periods_min = 2;
-    hw.periods_max = 128;
+    hw.periods_max = 16;
 
     runtime->hw = hw;
     runtime->private_data = stream;
@@ -358,7 +422,7 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     }
 
     err = snd_pcm_hw_constraint_minmax(runtime, SNDRV_PCM_HW_PARAM_BUFFER_SIZE, 
-                                       stream->rtp_frame_size * 2, stream->rtp_frame_size * 256);
+                                       stream->rtp_frames_per_packet * 2, stream->rtp_frames_per_packet * 16);
     if (err < 0) {
         stream->substream = NULL;
         kref_put(&stream->ref, fusion_cn_alsa_substream_release);
@@ -399,16 +463,7 @@ static int fusion_cn_pcm_close(struct snd_pcm_substream *substream)
     }
     spin_unlock_irqrestore(&stream->lock, flags);
 
-    if (atomic_dec_and_test(&stream->open_count)) {
-        if (stream->pending_free && stream->pcm) {
-            struct snd_card *card = stream->pcm->card;
-            struct snd_pcm  *pcm  = stream->pcm;
-            stream->pcm = NULL;
-            snd_device_free(card, pcm);
-        }
-    }
-
-    atomic_set(&stream->disconnected, 0);
+    atomic_dec(&stream->open_count);
     kref_put(&stream->ref, fusion_cn_alsa_substream_release);
 
     printk(KERN_DEBUG "fusion_cn_alsa: pcm_close: Closed stream %s\n", stream->stream_name);
@@ -424,7 +479,7 @@ static int fusion_cn_pcm_prepare(struct snd_pcm_substream *substream)
     if (fusion_cn_alsa_stream_disconnected(runtime->private_data)) return -ENODEV;
 
     spin_lock_irq(&stream->lock);
-    stream->interrupts_per_period = runtime->period_size / stream->rtp_frame_size;
+    stream->interrupts_per_period = runtime->period_size / stream->rtp_frames_per_packet;
     if (stream->interrupts_per_period == 0) stream->interrupts_per_period = 1;
     stream->interrupt_idx = 0;
     stream->buffer_pos = 0;
@@ -624,7 +679,7 @@ int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, u64 stream_h
     stream->channels = channels;
     stream->rate = rate;
     stream->format = format;
-    stream->rtp_frame_size = frames_per_packet;
+    stream->rtp_frames_per_packet = frames_per_packet;
     stream->stream_index = stream_index;
     stream->pcm = pcm;
 
@@ -705,6 +760,7 @@ clr_hnode:
     hlist_del(&stream->hnode);
     write_unlock_irqrestore(&chip->lock, flags);
 stream_free:
+    stream->pcm = NULL;
     kref_put(&stream->ref, fusion_cn_alsa_substream_release);
 dev_free:
     snd_device_free(chip->card, pcm);
@@ -778,41 +834,32 @@ static void fusion_cn_chip_remove(struct platform_device *pdev)
     /* Block new user opens early */
     snd_card_disconnect(card);
 
-    /* Collect & unlink under lock (no sleeping ops inside) */
+    /* Collect & unlink under lock only */
     write_lock_irqsave(&chip->lock, flags);
     for (i = 0; i < (1 << FUSION_CN_ALSA_HASH_BITS); i++) {
         struct hlist_node *tmp;
         struct fusion_cn_substream *stream;
         hlist_for_each_entry_safe(stream, tmp, &chip->streams[i], hnode) {
-            if (chip->alsa_ops && chip->alsa_ops->stop_interrupts)
-                chip->alsa_ops->stop_interrupts(chip->fusion_cn_mgr, stream->stream_handle);
-
-            if (stream->substream)
-                snd_pcm_stop(stream->substream, SNDRV_PCM_STATE_DISCONNECTED);
-
             hlist_del_init(&stream->hnode);
             clear_bit(stream->stream_index, chip->stream_indices);
-
+            atomic_set(&stream->disconnected, 1);
+            stream->pending_free = true;
             to_free[n++] = stream;
         }
     }
     write_unlock_irqrestore(&chip->lock, flags);
 
-    /* Now sleepable frees without holding chip->lock */
+    /* Now sleepable teardown without holding chip->lock */
     for (i = 0; i < n; i++) {
         struct fusion_cn_substream *s = to_free[i];
+        struct snd_pcm_substream *ss;
 
-        if (s->pcm) {
-            /* If it isn’t open, free now; otherwise let .close do it (pending_free) */
-            if (atomic_read(&s->open_count) == 0 && !s->substream) {
-                struct snd_card *c = s->pcm->card;
-                struct snd_pcm  *p = s->pcm;
-                s->pcm = NULL;
-                snd_device_free(c, p);    /* non-GPL */
-            } else {
-                s->pending_free = true;
-            }
-        }
+        if (chip->alsa_ops && chip->alsa_ops->stop_interrupts)
+            chip->alsa_ops->stop_interrupts(chip->fusion_cn_mgr, s->stream_handle);
+
+        ss = READ_ONCE(s->substream);
+        if (ss)
+            snd_pcm_stop(ss, SNDRV_PCM_STATE_DISCONNECTED);
 
         kref_put(&s->ref, fusion_cn_alsa_substream_release);
     }
