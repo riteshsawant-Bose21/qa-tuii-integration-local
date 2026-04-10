@@ -252,7 +252,7 @@ class _CircuitPainter extends FusionCanvasElementPainter {
     canvas.save();
     drawImage(
       canvas: canvas..clipRRect(RRect.fromRectAndRadius(rect2, Radius.circular(radius * 0.8))),
-      imagePath: hardware?.imageCachePath ?? "",
+      imagePath: hardware?.image ?? "",
       rect: rect2,
       painter: painter,
     );

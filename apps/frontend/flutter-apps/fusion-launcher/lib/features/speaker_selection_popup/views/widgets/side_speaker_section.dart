@@ -179,11 +179,11 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                           color: Colors.white,
                                           borderRadius: BorderRadius.circular(6),
                                         ),
-                                        child: FusionImage.asset(
-                                          serviceLocator<ProjectViewModel>().getHardwareImage(
-                                            productId: representative.productId ?? 0,
-                                            currentImagePath: representative.imageCachePath,
-                                          ),
+                                        child: FusionImageAuto(
+                                          path: serviceLocator<ProductQueryViewModel>().getProductImage(representative.productId) ?? "",
+                                          height: 24,
+                                          width: 24,
+                                          fit: BoxFit.contain,
                                         ),
                                       )
                                     else

@@ -31,7 +31,7 @@ class Speaker extends HardwareComponent {
     this.pitch = 0.0,
     this.roll = 0.0,
     this.yaw = 0.0,
-    required super.imageCachePath,
+    required super.image,
     required this.type,
     this.ipAddress,
     List<int>? portNumbers,
@@ -60,7 +60,7 @@ class Speaker extends HardwareComponent {
     double? rotation,
     double? gain,
     double? zAxis,
-    String? imageCachePath,
+    String? image,
     OutputType? type,
     String? listeningAreaId,
     LocationModel? locationEntity,
@@ -90,7 +90,7 @@ class Speaker extends HardwareComponent {
       rotation: rotation ?? this.rotation,
       gain: gain ?? this.gain,
       zAxis: zAxis ?? this.zAxis,
-      imageCachePath: imageCachePath ?? this.imageCachePath,
+      image: image ?? this.image,
       type: type ?? this.type,
       locationEntity: locationEntity ?? this.locationEntity,
       ipAddress: ipAddress ?? this.ipAddress,
@@ -121,7 +121,7 @@ class Speaker extends HardwareComponent {
       rotation: rotation,
       gain: gain,
       zAxis: zAxis,
-      imageCachePath: speaker.imageCachePath,
+      image: speaker.image,
       type: speaker.type,
       locationEntity: locationEntity,
       ipAddress: ipAddress,
@@ -164,7 +164,7 @@ class Speaker extends HardwareComponent {
 
     // Check string fields (slightly more expensive)
     if (name != other.name ||
-        imageCachePath != other.imageCachePath ||
+        image != other.image ||
         ipAddress != other.ipAddress ||
         speakerSKU != other.speakerSKU ||
         hardwareName != other.hardwareName) {
@@ -208,7 +208,7 @@ class Speaker extends HardwareComponent {
           wiringPos,
           rotation,
           gain,
-          imageCachePath,
+          image,
           locationEntity,
           ipAddress,
           speakerSKU,
@@ -234,7 +234,7 @@ class Speaker extends HardwareComponent {
       'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
       'rotation': rotation,
       'gain': gain,
-      'imageCachePath': imageCachePath,
+      'image': image,
       'componentType': 'speaker',
       'type': type.name,
       'locationEntity': locationEntity.toJson(),
@@ -266,7 +266,7 @@ class Speaker extends HardwareComponent {
       wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['dx'] as num).toDouble(), (json['wiringPos']['dy'] as num).toDouble()) : null,
       rotation: (json['rotation'] as num).toDouble(),
       gain: (json['gain'] as num).toDouble(),
-      imageCachePath: json['imageCachePath'] as String,
+      image: json['image'] as String,
       type: OutputType.values.firstWhere((OutputType e) => e.name == json['type'], orElse: () => OutputType.analogOutput),
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
       ipAddress: json['ipAddress'] as String?,

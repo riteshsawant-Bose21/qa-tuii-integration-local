@@ -53,7 +53,7 @@ class WiringSourcePainter extends FusionCanvasElementPainter with PortPainter, W
     final double imagePadding = rect.height * 0.1;
     final Rect imageRect = Rect.fromLTWH(rect.left + imagePadding, rect.top + imagePadding, rect.height - 2 * imagePadding, rect.height - 2 * imagePadding);
     canvas.drawRRect(RRect.fromRectAndRadius(imageRect, Radius.circular(radius * 0.8)), Paint()..color = Colors.grey);
-    drawImage(canvas: canvas, imagePath: source.imageCachePath, rect: imageRect.deflate(imagePadding), painter: painter);
+    drawImage(canvas: canvas, imagePath: source.image, rect: imageRect.deflate(imagePadding), painter: painter);
     final Rect textRect = Rect.fromLTWH(
       imageRect.right + imagePadding,
       rect.top + imagePadding,

@@ -2,12 +2,13 @@ import 'dart:developer';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+
+import '../../../../speaker_selection_popup/viewmodel/product_query_view_model.dart';
 
 // ignore: constant_identifier_names
 const int _MAX_SPEAKER_COUNT = 25;
@@ -109,21 +110,13 @@ class SchematicPropertiesState extends State<SchematicProperties> {
 
       if (speakers.isEmpty) return const _NoPropertiesWidget();
       selectedDevice = speakers.first;
-      // assetImagePath = selectedDevice.assetImagePath;
-      assetImagePath =
-          serviceLocator<ProjectViewModel>().getHardwareImage(
-            productId: speakers.first.productId ?? 0,
-            currentImagePath: speakers.isNotEmpty ? speakers.first.imageCachePath : '',
-          ) ??
-          "";
-
-      print(" speakers.first.addedFromBuildingPage => ${speakers.first.addedFromBuildingPage}");
+      assetImagePath = serviceLocator<ProductQueryViewModel>().getProductImage(speakers.first.productId ?? 0);
 
       // is added from building page
       isFromBuildingPage = speakers.first.addedFromBuildingPage;
     } else {
       selectedDevice = projectViewModel.getHardware(hardwareId: selectedItem.id);
-      assetImagePath = selectedDevice?.imageCachePath;
+      assetImagePath = selectedDevice?.image;
     }
 
     if (selectedItem.type == SelectedItemType.zone) {
@@ -162,7 +155,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                       ),
                     );
                   }
-                  return Image.asset(assetImagePath, width: 118);
+                  return FusionImageAuto(path: assetImagePath, width: 118);
                 },
               ),
             ),

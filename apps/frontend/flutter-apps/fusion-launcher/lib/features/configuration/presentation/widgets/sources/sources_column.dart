@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/models/products_data.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_lib/models/fusion_models.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/constants.dart';
 import 'source_widget.dart';
@@ -112,7 +112,7 @@ class _SourcesColumnState extends State<SourcesColumn> {
                   addedFromBuildingPage: false,
                   type: selectedBlock.type,
                   connectionType: selectedBlock.connectionType,
-                  imageCachePath: selectedBlock.assetPath,
+                  image: selectedBlock.assetPath,
                   locationEntity: LocationModel(),
                   sku: selectedBlock.id,
                   price: selectedBlock.price,
@@ -126,8 +126,8 @@ class _SourcesColumnState extends State<SourcesColumn> {
                     value: block,
                     child: Row(
                       children: <Widget>[
-                        Image.asset(
-                          block.assetPath,
+                        FusionImageAuto(
+                          path: block.assetPath,
                           height: 24,
                         ),
                         const SizedBox(width: 8),

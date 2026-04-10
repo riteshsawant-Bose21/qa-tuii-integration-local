@@ -20,10 +20,10 @@ class MDNSRetryScreen extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          FusionImage.asset(
-            AssetImages.notFound,
+          FusionImageAuto(
+            path: AssetImages.notFound,
             height: 150,
-            assetColor: context.colorScheme.iconWhite,
+            color: context.colorScheme.iconWhite,
           ),
           const SizedBox(height: 32),
           Text(

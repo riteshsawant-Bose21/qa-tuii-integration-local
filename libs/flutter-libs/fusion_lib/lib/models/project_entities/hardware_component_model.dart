@@ -30,7 +30,7 @@ abstract class HardwareComponent {
   Offset? pos;
   Offset? wiringPos;
   double? zAxis;
-  final String imageCachePath;
+  final String image; // Can be URL, asset path, or base64 string. use [FusionImageAuto] to handle different types of image sources.
   final LocationModel locationEntity;
   final double price;
   final int? equipmentLocationPosition;
@@ -49,7 +49,7 @@ abstract class HardwareComponent {
     this.pos,
     this.wiringPos,
     this.zAxis,
-    required this.imageCachePath,
+    required this.image,
     required this.locationEntity,
     required this.price,
     required this.hardwareName,
@@ -98,19 +98,13 @@ abstract class HardwareComponent {
         equipmentLocationPosition == other.equipmentLocationPosition &&
         pos == other.pos &&
         wiringPos == other.wiringPos &&
-        imageCachePath == other.imageCachePath &&
+        image == other.image &&
         locationEntity == other.locationEntity;
   }
 
   @override
   int get hashCode {
-    return id.hashCode ^
-        name.hashCode ^
-        pos.hashCode ^
-        wiringPos.hashCode ^
-        imageCachePath.hashCode ^
-        locationEntity.hashCode ^
-        equipmentLocationPosition.hashCode;
+    return id.hashCode ^ name.hashCode ^ pos.hashCode ^ wiringPos.hashCode ^ image.hashCode ^ locationEntity.hashCode ^ equipmentLocationPosition.hashCode;
   }
 
   HardwareComponent copyWith({
@@ -119,7 +113,7 @@ abstract class HardwareComponent {
     Offset? pos,
     Offset? wiringPos,
     double? zAxis,
-    String? imageCachePath,
+    String? image,
     LocationModel? locationEntity,
     double? price,
     int? equipmentLocationPosition,

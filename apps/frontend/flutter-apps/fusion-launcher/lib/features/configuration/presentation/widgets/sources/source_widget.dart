@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_lib/models/fusion_models.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/constants.dart';
@@ -255,8 +255,8 @@ class _SourceWidgetState extends State<SourceWidget> {
       padding: const EdgeInsets.all(8),
       child: Row(
         children: <Widget>[
-          Image.asset(
-            widget.source.imageCachePath,
+          FusionImageAuto(
+            path: widget.source.image,
             height: 24,
           ),
           const SizedBox(width: 6),

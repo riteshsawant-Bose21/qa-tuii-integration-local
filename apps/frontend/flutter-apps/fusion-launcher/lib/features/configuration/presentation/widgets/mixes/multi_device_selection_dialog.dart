@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_lib/models/fusion_models.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/constants.dart';
 import '../../../../../core/service_locator.dart';
@@ -189,8 +189,8 @@ class MultiDevicePickerDialogState extends State<MultiDevicePickerDialog> {
                                     const SizedBox(width: 12),
 
                                     // Device icon based on type
-                                    Image.asset(
-                                      device.imageCachePath,
+                                    FusionImageAuto(
+                                      path: device.image,
                                       height: 24,
                                       color: AppColors.primarySoft,
                                     ),
@@ -309,7 +309,7 @@ class MultiDevicePickerDialogState extends State<MultiDevicePickerDialog> {
     if (location.floorId != null && location.listeningAreaId != null) {
       final FloorModel floor = serviceLocator<ProjectViewModel>().getFloorById(floorId: location.floorId!);
 
-      final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(areaId: location.listeningAreaId!)!;
+      final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(areaId: location.listeningAreaId!);
 
       return "${floor.name}/${area.name}"; // Display floor and listening area names
     } else if (location.floorId != null) {

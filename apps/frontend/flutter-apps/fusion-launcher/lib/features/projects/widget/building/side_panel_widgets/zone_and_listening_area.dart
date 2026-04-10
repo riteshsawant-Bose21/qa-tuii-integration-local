@@ -11,6 +11,7 @@ import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/widgets/color_selector_popup.dart';
+import '../../../../speaker_selection_popup/viewmodel/product_query_view_model.dart';
 
 class ZoneAndListeningAreaPanel extends StatefulWidget {
   final FloorCanvasController floorCanvasController;
@@ -706,8 +707,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Row(
                 children: <Widget>[
-                  Image.asset(
-                    hardware.imageCachePath,
+                  FusionImageAuto(
+                    path: hardware.image,
                     width: 14,
                     height: 14,
                   ),
@@ -747,12 +748,11 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                           sourceId: hardware.id,
                         );
                       },
-                      child: FusionImage.asset(
-                        Assets.configurationFilledIcon,
+                      child: FusionImageAuto(
+                        path: Assets.configurationFilledIcon,
                         width: 18,
                         height: 18,
-                        assetColor: context.colorScheme.primaryWhite,
-
+                        color: context.colorScheme.primaryWhite,
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -887,11 +887,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                         const SizedBox(width: 4),
                         // Circuit icon - show actual speaker image if circuit has speakers
                         if (circuitSpeakers.isNotEmpty)
-                          FusionImage.asset(
-                            serviceLocator<ProjectViewModel>().getHardwareImage(
-                              productId: circuitSpeakers.first.productId ?? 0,
-                              currentImagePath: circuitSpeakers.first.imageCachePath,
-                            ),
+                          FusionImageAuto(
+                            path: serviceLocator<ProductQueryViewModel>().getProductImage(circuitSpeakers.first.productId),
                             width: 16,
                             height: 16,
                           )
@@ -1048,11 +1045,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  FusionImage.asset(
-                    serviceLocator<ProjectViewModel>().getHardwareImage(
-                      productId: speaker.productId ?? 0,
-                      currentImagePath: speaker.imageCachePath,
-                    ),
+                  FusionImageAuto(
+                    path: serviceLocator<ProductQueryViewModel>().getProductImage(speaker.productId),
                     width: 12,
                     height: 12,
                   ),
@@ -1091,11 +1085,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                 child: Row(
                   children: <Widget>[
-                    FusionImage.asset(
-                      serviceLocator<ProjectViewModel>().getHardwareImage(
-                        productId: speaker.productId ?? 0,
-                        currentImagePath: speaker.imageCachePath,
-                      ),
+                    FusionImageAuto(
+                      path: serviceLocator<ProductQueryViewModel>().getProductImage(speaker.productId),
                       width: 14,
                       height: 14,
                     ),
@@ -1342,11 +1333,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  FusionImage.asset(
-                    serviceLocator<ProjectViewModel>().getHardwareImage(
-                      productId: speaker.productId ?? 0,
-                      currentImagePath: speaker.imageCachePath,
-                    ),
+                  FusionImageAuto(
+                    path: serviceLocator<ProductQueryViewModel>().getProductImage(speaker.productId),
                     width: 12,
                     height: 12,
                   ),
@@ -1380,11 +1368,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 child: Row(
                   children: <Widget>[
-                    FusionImage.asset(
-                      serviceLocator<ProjectViewModel>().getHardwareImage(
-                        productId: speaker.productId ?? 0,
-                        currentImagePath: speaker.imageCachePath,
-                      ),
+                    FusionImageAuto(
+                      path: serviceLocator<ProductQueryViewModel>().getProductImage(speaker.productId),
                       width: 14,
                       height: 14,
                     ),

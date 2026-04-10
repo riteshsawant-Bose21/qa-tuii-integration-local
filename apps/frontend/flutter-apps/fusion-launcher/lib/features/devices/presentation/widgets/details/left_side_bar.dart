@@ -202,9 +202,8 @@ class _DeviceLeftSideBarState extends State<DeviceLeftSideBar> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     alignment: Alignment.center,
-                    child: FusionImage.asset(
-                      widget.device.imageCachePath,
-
+                    child: FusionImageAuto(
+                      path: widget.device.image,
                       height: 64,
                       fit: BoxFit.contain,
                     ), // Placeholder

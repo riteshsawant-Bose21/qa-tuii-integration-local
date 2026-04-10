@@ -225,13 +225,13 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                               ),
                                         );
                                       },
-                                      child: FusionImage.asset(
+                                      child: FusionImageAuto(
+                                        path: widget.sourceSet.isLinked ? Assets.unLinkIcon : Assets.linkIcon,
                                         semanticId: FusionTestKeys.instance.sourcesetdataitmheaderlink,
                                         semanticLabel: widget.sourceSet.isLinked ? 'unlink_source_set' : 'link_source_set',
-                                        widget.sourceSet.isLinked ? Assets.unLinkIcon : Assets.linkIcon,
                                         width: 22,
                                         height: 22,
-                                        assetColor: context.colorScheme.primaryWhite,
+                                        color: context.colorScheme.primaryWhite,
                                         fit: BoxFit.contain,
                                       ),
                                     ),
@@ -248,12 +248,12 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                   ProcessingChainView.showForSourceSet(context, widget.sourceSet);
                                 },
 
-                                child: FusionImage.asset(
+                                child: FusionImageAuto(
+                                  path: Assets.processingBlocksIcon,
                                   semanticId: FusionTestKeys.instance.sourcesetdataitmheaderprocessingblock,
-                                  Assets.processingBlocksIcon,
                                   width: 18,
                                   height: 12,
-                                  assetColor: context.colorScheme.primaryWhite,
+                                  color: context.colorScheme.primaryWhite,
                                   fit: BoxFit.contain,
                                 ),
                               ),
@@ -264,12 +264,12 @@ class _SourceSetItemState extends State<SourceSetItem> {
                               child: GestureDetector(
                                 key: _addSourceIconKey,
                                 onTap: _showEditSourceSetPopup,
-                                child: FusionImage.asset(
+                                child: FusionImageAuto(
                                   semanticId: FusionTestKeys.instance.sourcesetdataitmheadereditsource,
-                                  Assets.addSourceIcon,
+                                  path: Assets.addSourceIcon,
                                   width: 22,
                                   height: 22,
-                                  assetColor: context.colorScheme.primaryWhite,
+                                  color: context.colorScheme.primaryWhite,
                                   fit: BoxFit.contain,
                                 ),
                               ),
@@ -280,12 +280,12 @@ class _SourceSetItemState extends State<SourceSetItem> {
                               message: 'Delete Source Set',
                               child: GestureDetector(
                                 onTap: _confirmDeleteSourceSet,
-                                child: FusionImage.asset(
+                                child: FusionImageAuto(
                                   semanticId: FusionTestKeys.instance.sourcesetdataitmheaderdeletesource,
-                                  Assets.deleteIcon,
+                                  path: Assets.deleteIcon,
                                   width: 17,
                                   height: 17,
-                                  assetColor: context.colorScheme.primaryWhite,
+                                  color: context.colorScheme.primaryWhite,
                                   fit: BoxFit.contain,
                                 ),
                               ),

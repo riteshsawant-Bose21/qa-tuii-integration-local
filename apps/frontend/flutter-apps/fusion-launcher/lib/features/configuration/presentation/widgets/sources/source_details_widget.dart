@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/models/fusion_models.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/service_locator.dart';
 import '../../viewmodel/project_view_model.dart';
@@ -86,8 +86,8 @@ class _DevicePropertiesWidgetState extends State<DevicePropertiesWidget> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: <Widget>[
-                  Image.asset(
-                    widget.device.imageCachePath,
+                  FusionImageAuto(
+                    path: widget.device.image,
                     color: Colors.black,
                     width: 30,
                     height: 30,

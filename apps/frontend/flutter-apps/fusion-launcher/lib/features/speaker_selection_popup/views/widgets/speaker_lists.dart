@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/cupertino.dart' show CupertinoActivityIndicator;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -857,27 +855,15 @@ class SpeakerImageContainer extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Builder(
-        builder: (BuildContext ctx) {
-          if (productId == null) {
-            return Icon(
-              LucideIcons.speaker200,
-              size: 20,
-              color: context.colorScheme.iconDefault,
-            );
-          } else {
-            final String? path = context.read<ProductQueryViewModel>().getProductImage(productId!);
-
-            if (path == null) {
-              return Icon(
-                LucideIcons.speaker200,
-                size: 20,
-                color: context.colorScheme.iconDefault,
-              );
-            }
-
-            return Image.file(File(path), fit: BoxFit.cover);
-          }
+      child: FusionImageAuto(
+        path: context.read<ProductQueryViewModel>().getProductImage(productId),
+        fit: BoxFit.contain,
+        errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) {
+          return Icon(
+            LucideIcons.speaker200,
+            size: 20,
+            color: context.colorScheme.iconDefault,
+          );
         },
       ),
     );

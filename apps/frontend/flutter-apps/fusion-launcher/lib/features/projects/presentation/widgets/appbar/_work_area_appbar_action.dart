@@ -84,9 +84,9 @@ class _WorkAreaAppbarAction extends StatelessWidget {
                       onTap: () {
                         DeviceMappingDialog.show(context);
                       },
-                      child: FusionImage.asset(
-                        AssetIcons.networkIcon,
-                        assetColor: Theme.of(context).colorScheme.iconWhite,
+                      child: FusionImageAuto(
+                        path: AssetIcons.networkIcon,
+                        color: Theme.of(context).colorScheme.iconWhite,
                       ),
                     ),
                   ),

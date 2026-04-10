@@ -122,7 +122,7 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
 
   void refresh() => loadProducts(refresh: true);
 
-  String? getProductImage(int productId) => _productsApi.imageFor(productId: productId)?.firstPath;
+  String? getProductImage(int? productId) => productId != null ? _productsApi.imageFor(productId: productId)?.firstPath : null;
 
   bool get isLoading => state.isLoading;
 

@@ -65,8 +65,8 @@ class _SourceItemState extends State<SourceItem> {
               if (widget.sourceSet != null)
                 Opacity(
                   opacity: 0.4,
-                  child: FusionImage.asset(
-                    widget.sourceSet!.isLinked ? Assets.linkIcon : null,
+                  child: FusionImageAuto(
+                    path: widget.sourceSet!.isLinked ? Assets.linkIcon : null,
                     width: 18,
                     height: 18,
                     fit: BoxFit.contain,
@@ -74,9 +74,9 @@ class _SourceItemState extends State<SourceItem> {
                 ),
 
               if (widget.sourceSet != null) const SizedBox(width: 8),
-              FusionImage.asset(
+              FusionImageAuto(
+                path: widget.source.image,
                 semanticId: FusionTestKeys.instance.sourcelistitemimage,
-                widget.source.imageCachePath,
                 width: 24,
                 height: 24,
                 fit: BoxFit.contain,
@@ -109,12 +109,11 @@ class _SourceItemState extends State<SourceItem> {
                       sourceId: widget.source.id,
                     );
                   },
-                  child: FusionImage.asset(
-                    Assets.configurationFilledIcon,
+                  child: FusionImageAuto(
+                    path: Assets.configurationFilledIcon,
                     width: 24,
                     height: 24,
-                    assetColor: context.colorScheme.primaryWhite,
-
+                    color: context.colorScheme.primaryWhite,
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -130,12 +129,12 @@ class _SourceItemState extends State<SourceItem> {
                     onTap: () {
                       ProcessingChainView.showForSource(context, widget.source);
                     },
-                    child: FusionImage.asset(
+                    child: FusionImageAuto(
+                      path: Assets.processingBlocksFilledIcon,
                       semanticId: FusionTestKeys.instance.sourceitemprocessing,
-                      Assets.processingBlocksFilledIcon,
                       width: 24,
                       height: 24,
-                      assetColor: context.colorScheme.primaryWhite,
+                      color: context.colorScheme.primaryWhite,
                       fit: BoxFit.contain,
                     ),
                   ),

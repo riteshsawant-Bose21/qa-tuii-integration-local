@@ -2,252 +2,169 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-/// A unified and reusable image widget for the Fusion design system.
+/// A smart image widget that auto-detects the image source from a single [path].
 ///
-/// The [FusionImage] widget provides a consistent way to display images
-/// from different sources (network, file, or asset) with support for:
-///
-/// - Network images (with placeholder and error handling)
-/// - File images (from local storage)
-/// - Asset images (bundled with the app)
-/// - Placeholder widgets while loading
-/// - Custom error builders when loading fails
-/// - Rounded corners with [BorderRadiusGeometry] or circular shape
-/// - Configurable width, height, and [BoxFit]
-///
-/// ### Example usage
-///
-/// **Network image (rounded corners):**
-/// ```dart
-/// FusionImage.network(
-///   "https://picsum.photos/200",
-///   width: 120,
-///   height: 120,
-///   borderRadius: BorderRadius.circular(12),
-/// )
-/// ```
-///
-/// **File image (circle):**
-/// ```dart
-/// FusionImage.circle(
-///   file: File("/storage/emulated/0/Download/sample.png"),
-///   size: 80,
-/// )
-/// ```
-///
-/// **Asset image (circle):**
-/// ```dart
-/// FusionImage.circle(
-///   asset: "assets/images/avatar.png",
-///   size: 64,
-/// )
-/// ```
-class FusionImage extends StatelessWidget {
-  /// The network image URL (only used in [FusionImage.network] or [FusionImage.circle]).
-  final String? imageUrl;
+/// ### Source detection order
+/// 1. [path] is null or empty     → shows [fallbackIcon] immediately
+/// 2. Starts with `http(s)://`    → [Image.network]
+/// 3. Exists on disk              → [Image.file]
+/// 4. Otherwise                   → [Image.asset]
+class FusionImageAuto extends StatelessWidget {
+  /// The image path — URL, absolute file path, or asset path.
+  /// Pass null to show [fallbackIcon] immediately.
+  final String? path;
 
-  /// The file source for the image (only used in [FusionImage.file] or [FusionImage.circle]).
-  final File? file;
+  final double? width;
+  final double? height;
+  final BoxFit fit;
+  final BorderRadiusGeometry? borderRadius;
+  final bool isCircle;
+  final Color? color;
 
-  /// The asset path for the image (only used in [FusionImage.asset] or [FusionImage.circle]).
-  final String? asset;
-
-  /// Placeholder widget displayed while a network image is loading.
+  /// Widget to show while a network image is loading.
   final Widget? placeholder;
 
-  /// Custom error builder when loading the image fails.
-  ///
-  /// If not provided, a default broken image icon will be shown.
-  final Widget Function(
-    BuildContext context,
-    Object error,
-    StackTrace? stackTrace,
-  )?
-  errorBuilder;
+  /// Icon/widget shown when [path] is null, file is missing, or load fails.
+  /// Defaults to [Icons.broken_image] at [errorIconSize].
+  final Widget? fallbackIcon;
 
-  /// The width of the image.
-  final double? width;
+  /// Size of the default broken-image icon. Ignored when [fallbackIcon] is set.
+  final double errorIconSize;
 
-  /// The height of the image.
-  final double? height;
-
-  /// Defines how the image should be inscribed into the allocated space.
-  ///
-  /// Defaults to [BoxFit.cover].
-  final BoxFit fit;
-
-  /// Optional border radius to apply rounded corners.
-  final BorderRadiusGeometry? borderRadius;
-
-  /// Whether the image should be circular.
-  final bool isCircle;
-
-  /// Optional color to apply to asset images.
-  final Color? assetColor;
+  /// Custom error builder — overrides [fallbackIcon] when provided.
+  final Widget Function(BuildContext, Object, StackTrace?)? errorBuilder;
 
   final String? semanticId;
   final String? semanticLabel;
 
-  /// Creates a [FusionImage] that loads from a network URL.
-  const FusionImage.network(
-    this.imageUrl, {
+  const FusionImageAuto({
     super.key,
-    this.placeholder,
-    this.errorBuilder,
+    required this.path,
     this.width,
     this.height,
     this.fit = BoxFit.cover,
     this.borderRadius,
-    this.assetColor,
-    this.semanticId,
-    this.semanticLabel,
-  }) : file = null,
-       asset = null,
-       isCircle = false;
-
-  /// Creates a [FusionImage] that loads from a local file.
-  const FusionImage.file(
-    this.file, {
-    super.key,
-    this.width,
-    this.semanticId,
-    this.height,
-    this.fit = BoxFit.cover,
-    this.borderRadius,
+    this.isCircle = false,
+    this.color,
     this.placeholder,
+    this.fallbackIcon,
+    this.errorIconSize = 24,
     this.errorBuilder,
-    this.assetColor,
-    this.semanticLabel,
-  }) : imageUrl = null,
-       asset = null,
-       isCircle = false;
-
-  /// Creates a [FusionImage] that loads from an asset.
-  const FusionImage.asset(
-    this.asset, {
-    super.key,
     this.semanticId,
-    this.width,
-    this.height,
-    this.fit = BoxFit.cover,
-    this.borderRadius,
-    this.placeholder,
-    this.errorBuilder,
-    this.assetColor,
     this.semanticLabel,
-  }) : file = null,
-       imageUrl = null,
-       isCircle = false;
-
-  /// Creates a circular [FusionImage].
-  ///
-  /// Can be used with either [imageUrl], [file], or [asset].
-  /// You must provide exactly **one source**.
-  const FusionImage.circle({
-    super.key,
-    this.imageUrl,
-    this.semanticId,
-    this.file,
-    this.asset,
-    this.placeholder,
-    this.errorBuilder,
-    double? size,
-    this.fit = BoxFit.cover,
-    this.assetColor,
-    this.semanticLabel,
-  }) : width = size,
-       height = size,
-       borderRadius = null,
-       isCircle = true;
+  });
 
   @override
   Widget build(BuildContext context) {
-    Widget image;
+    return _applyClip(_buildImage(context));
+  }
 
-    if (imageUrl != null) {
-      image = Image.network(
-        imageUrl!,
+  // ── source resolution ─────────────────────────────────────────────────────
+  Widget _buildImage(BuildContext context) {
+    final String? resolvedPath = path?.trim();
+
+    if (resolvedPath == null || resolvedPath.isEmpty) return _fallback(context);
+    if (resolvedPath.startsWith('http://') || resolvedPath.startsWith('https://')) return _network(context, resolvedPath);
+    if (File(resolvedPath).existsSync()) return _file(context, File(resolvedPath));
+    return _asset(context, resolvedPath);
+  }
+
+  // ── per-source builders ───────────────────────────────────────────────────
+
+  Widget _network(BuildContext context, String url) {
+    return _wrap(
+      Image.network(
+        url,
         width: width,
         height: height,
         fit: fit,
+        color: color,
         loadingBuilder: (context, child, progress) {
           if (progress == null) return child;
           return placeholder ??
-              SemanticHelper.image(
-                testId: SemanticHelper.createTestId(
-                  SemanticTypes.icon,
-                  "fusion_image_$semanticId",
-                ),
-                label: semanticLabel,
-                child: SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    value: progress.expectedTotalBytes != null ? progress.cumulativeBytesLoaded / (progress.expectedTotalBytes ?? 1) : null,
+              SizedBox(
+                width: width,
+                height: height,
+                child: Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      value: progress.expectedTotalBytes != null ? progress.cumulativeBytesLoaded / (progress.expectedTotalBytes ?? 1) : null,
+                    ),
                   ),
                 ),
               );
         },
-        errorBuilder: (context, error, stackTrace) {
-          if (errorBuilder != null) {
-            return errorBuilder!(context, error, stackTrace);
-          }
-          return Icon(Icons.broken_image, size: height, color: Colors.grey);
-        },
-      );
-    } else if (file != null) {
-      /// File image
-      image = SemanticHelper.image(
-        testId: SemanticHelper.createTestId(
-          SemanticTypes.icon,
-          "fusion_image_$semanticId",
-        ),
-        label: semanticLabel,
-        child: Image.file(
-          file!,
-          width: width,
-          height: height,
-          fit: fit,
-          errorBuilder: (context, error, stackTrace) {
-            if (errorBuilder != null) {
-              return errorBuilder!(context, error, stackTrace);
-            }
-            return Icon(Icons.broken_image, size: height, color: Colors.grey);
-          },
-        ),
-      );
-    } else if (asset != null) {
-      /// Asset image
-      image = SemanticHelper.image(
-        testId: SemanticHelper.createTestId(
-          SemanticTypes.icon,
-          "fusion_image_$semanticId",
-        ),
-        label: semanticLabel,
-        child: Image.asset(
-          asset!,
-          width: width,
-          height: height,
-          fit: fit,
-          color: assetColor,
-          errorBuilder: (context, error, stackTrace) {
-            if (errorBuilder != null) {
-              return errorBuilder!(context, error, stackTrace);
-            }
-            return Icon(Icons.broken_image, size: height, color: Colors.grey);
-          },
-        ),
-      );
-    } else {
-      // Nothing provided
-      image = const SizedBox();
-    }
+        errorBuilder: (ctx, err, st) => errorBuilder?.call(ctx, err, st) ?? _fallback(ctx),
+      ),
+    );
+  }
 
-    if (isCircle) {
-      return ClipOval(child: image);
-    } else if (borderRadius != null) {
+  Widget _file(BuildContext context, File f) {
+    return _wrap(
+      Image.file(
+        f,
+        width: width,
+        height: height,
+        fit: fit,
+        color: color,
+        errorBuilder: (ctx, err, st) => errorBuilder?.call(ctx, err, st) ?? _fallback(ctx),
+      ),
+    );
+  }
+
+  Widget _asset(BuildContext context, String assetPath) {
+    return _wrap(
+      Image.asset(
+        assetPath,
+        width: width,
+        height: height,
+        fit: fit,
+        color: color,
+        errorBuilder: (ctx, err, st) => errorBuilder?.call(ctx, err, st) ?? _fallback(ctx),
+      ),
+    );
+  }
+
+  // ── fallback ──────────────────────────────────────────────────────────────
+
+  Widget _fallback(BuildContext context) {
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Center(
+        child:
+            fallbackIcon ??
+            Icon(
+              LucideIcons.imageOff200,
+              size: errorIconSize,
+              color: context.colorScheme.iconDefault,
+            ),
+      ),
+    );
+  }
+
+  // ── helpers ───────────────────────────────────────────────────────────────
+
+  Widget _wrap(Widget child) {
+    if (semanticId == null && semanticLabel == null) return child;
+    return SemanticHelper.image(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.icon,
+        'fusion_image_auto_$semanticId',
+      ),
+      label: semanticLabel,
+      child: child,
+    );
+  }
+
+  Widget _applyClip(Widget image) {
+    if (isCircle) return ClipOval(child: image);
+    if (borderRadius != null) {
       return ClipRRect(borderRadius: borderRadius!, child: image);
     }
     return image;

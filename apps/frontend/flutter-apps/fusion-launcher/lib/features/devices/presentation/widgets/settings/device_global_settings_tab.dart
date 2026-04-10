@@ -130,9 +130,9 @@ class _SettingsDashboardState extends State<SettingsDashboard> {
                             onTap: () => setState(() => _selectedIndex = index),
                             leading:
                                 item.icon != null
-                                    ? FusionImage.asset(
-                                      item.icon,
-                                      assetColor: context.colorScheme.iconWhite,
+                                    ? FusionImageAuto(
+                                      path: item.icon,
+                                      color: context.colorScheme.iconWhite,
                                       height: 20,
                                       width: 20,
                                     )

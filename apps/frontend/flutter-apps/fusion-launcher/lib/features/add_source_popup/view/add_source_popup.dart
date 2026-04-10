@@ -191,8 +191,8 @@ class AddSourcePopup extends StatelessWidget {
                                                     child: Row(
                                                       children: <Widget>[
                                                         // image
-                                                        Image.asset(
-                                                          option.assetPath,
+                                                        FusionImageAuto(
+                                                          path: option.assetPath,
                                                           height: 14,
                                                           width: 14,
                                                         ),

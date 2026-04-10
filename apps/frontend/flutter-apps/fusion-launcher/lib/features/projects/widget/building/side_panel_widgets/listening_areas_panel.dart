@@ -4,6 +4,7 @@ import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -300,11 +301,8 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                             color: context.colorScheme.onSurface,
                           ),
                         ),
-                        FusionImage.asset(
-                          serviceLocator<ProjectViewModel>().getHardwareImage(
-                            productId: speakerList.first.productId ?? 0,
-                            currentImagePath: speakerList.first.imageCachePath,
-                          ),
+                        FusionImageAuto(
+                          path: serviceLocator<ProductQueryViewModel>().getProductImage(speakerList.first.productId),
                           width: 14,
                           height: 14,
                         ),
@@ -373,11 +371,8 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Row(
                 children: <Widget>[
-                  FusionImage.asset(
-                    serviceLocator<ProjectViewModel>().getHardwareImage(
-                      productId: speaker.productId ?? 0,
-                      currentImagePath: speaker.imageCachePath,
-                    ),
+                  FusionImageAuto(
+                    path: serviceLocator<ProductQueryViewModel>().getProductImage(speaker.productId),
                     width: 14,
                     height: 14,
                   ),

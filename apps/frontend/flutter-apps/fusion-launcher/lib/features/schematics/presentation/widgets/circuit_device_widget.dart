@@ -107,8 +107,8 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                           /// Device name with circuit/device type label
                           Row(
                             children: <Widget>[
-                              FusionImage.asset(
-                                widget.assetImagePath,
+                              FusionImageAuto(
+                                path: widget.assetImagePath,
                                 width: 22,
                                 height: 22,
                                 fit: BoxFit.contain,
@@ -390,8 +390,8 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: <Widget>[
-                                    FusionImage.asset(
-                                      widget.speakers.first.imageCachePath,
+                                    FusionImageAuto(
+                                      path: widget.speakers.firstOrNull?.image,
                                       width: 22,
                                       height: 22,
                                       fit: BoxFit.contain,
@@ -399,7 +399,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                                     const SizedBox(width: 6),
                                     Expanded(
                                       child: FusionAppText(
-                                        text: widget.speakers.first.hardwareName,
+                                        text: widget.speakers.firstOrNull?.hardwareName ?? '',
                                         maxLine: 1,
                                         style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
                                       ),

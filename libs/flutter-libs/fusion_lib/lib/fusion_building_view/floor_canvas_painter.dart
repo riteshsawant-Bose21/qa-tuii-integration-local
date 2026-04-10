@@ -667,7 +667,7 @@ class FloorCanvasPainter extends CustomPainter {
         }
       } else {
         if (!showSpl) {
-          final ui.Image? img = hardwareImages[comp.imageCachePath];
+          final ui.Image? img = hardwareImages[comp.image];
           if (img != null) {
             // draw the loaded image, scaling it into dst
             final ui.Rect src = Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble());

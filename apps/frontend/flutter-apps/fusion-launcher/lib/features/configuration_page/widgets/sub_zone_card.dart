@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_zones_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../core/constants/assets_constants.dart';
 import '../../../core/service_locator.dart';
-import '../../configuration/presentation/viewmodel/project_view_model.dart' show SelectedItem, SelectedItemType, ProjectViewModel, HardwareViewModel;
+import '../../configuration/presentation/viewmodel/project_view_model.dart' show SelectedItem, SelectedItemType;
+import '../../processing_block/view/processing_chain_view.dart';
 import '../viewModel/zones_viewmodel/config_zones_state.dart';
 import '../viewModel/zones_viewmodel/config_zones_viewmodel.dart';
-import '../../processing_block/view/processing_chain_view.dart';
 
 class SubZoneCard extends StatefulWidget {
   final String subZoneId;
@@ -131,8 +131,8 @@ class _SubZoneCardState extends State<SubZoneCard> {
               const SizedBox(width: 6),
 
               /// Sub Zone icon
-              const FusionImage.asset(
-                Assets.subZoneIcon,
+              const FusionImageAuto(
+                path: Assets.subZoneIcon,
                 width: 10,
                 height: 10,
                 fit: BoxFit.contain,
@@ -168,11 +168,11 @@ class _SubZoneCardState extends State<SubZoneCard> {
                       widget.subZoneData,
                     );
                   },
-                  child: FusionImage.asset(
-                    Assets.processingBlocksFilledIcon,
+                  child: FusionImageAuto(
+                    path: Assets.processingBlocksFilledIcon,
                     width: 24,
                     height: 24,
-                    assetColor: context.colorScheme.primaryWhite,
+                    color: context.colorScheme.primaryWhite,
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -241,12 +241,7 @@ class _SubZoneCardState extends State<SubZoneCard> {
   /// Build individual circuit card to avoid recursion
   Widget _buildCircuitCard({required int index, required CircuitModel circuitData, required List<Speaker> speakersList}) {
     final bool isThisCircuitHovered = _hoveredCircuitIndex == index;
-    final String assetImagePath =
-        serviceLocator<ProjectViewModel>().getHardwareImage(
-          productId: speakersList.isNotEmpty ? speakersList.first.productId ?? 0 : 0,
-          currentImagePath: speakersList.isNotEmpty ? speakersList.first.imageCachePath : '',
-        ) ??
-        "";
+    final String image = serviceLocator<ProductQueryViewModel>().getProductImage(speakersList.firstOrNull?.productId) ?? "";
 
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
@@ -266,9 +261,8 @@ class _SubZoneCardState extends State<SubZoneCard> {
                 SemanticTypes.container,
                 FusionTestKeys.instance.circuitimg,
               ),
-              child: FusionImage.asset(
-                // speakersList.isNotEmpty ? speakersList.first.assetImagePath : "",
-                assetImagePath,
+              child: FusionImageAuto(
+                path: image,
                 width: 24,
                 height: 24,
                 fit: BoxFit.contain,
@@ -304,11 +298,11 @@ class _SubZoneCardState extends State<SubZoneCard> {
                     SemanticTypes.button,
                     FusionTestKeys.instance.zoneheaderprocessingbutton,
                   ),
-                  child: FusionImage.asset(
-                    Assets.processingBlocksFilledIcon,
+                  child: FusionImageAuto(
+                    path: Assets.processingBlocksFilledIcon,
                     width: 24,
                     height: 24,
-                    assetColor: context.colorScheme.primaryWhite,
+                    color: context.colorScheme.primaryWhite,
                     fit: BoxFit.contain,
                   ),
                 ),

@@ -128,8 +128,8 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                       /// device name
                       Row(
                         children: <Widget>[
-                          FusionImage.asset(
-                            widget.assetImagePath,
+                          FusionImageAuto(
+                            path: widget.assetImagePath,
                             width: 22,
                             height: 22,
                             fit: BoxFit.contain,
@@ -304,12 +304,11 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                         sourceId: widget.itemId ?? "",
                       );
                     },
-                    child: FusionImage.asset(
-                      Assets.configurationFilledIcon,
+                    child: FusionImageAuto(
+                      path: Assets.configurationFilledIcon,
                       width: 20,
                       height: 20,
-                      assetColor: context.colorScheme.primaryWhite,
-
+                      color: context.colorScheme.primaryWhite,
                       fit: BoxFit.contain,
                     ),
                   ),
