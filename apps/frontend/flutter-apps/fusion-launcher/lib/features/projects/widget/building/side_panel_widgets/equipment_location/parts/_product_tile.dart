@@ -13,7 +13,7 @@ class _ProductTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String? assetImagePath = product.assetPath;
+    final String? assetImagePath = product.imageCachePath;
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,

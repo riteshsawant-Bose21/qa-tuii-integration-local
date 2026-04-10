@@ -253,7 +253,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                     SemanticHelper.container(
                       testId: SemanticHelper.createTestId(SemanticTypes.container, "hardware_image"),
                       child: FusionImage.asset(
-                        widget.selectedHardware.assetImagePath,
+                        widget.selectedHardware.imageCachePath,
                         width: 28,
                         height: 28,
                         fit: BoxFit.contain,

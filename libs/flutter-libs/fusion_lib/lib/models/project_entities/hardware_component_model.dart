@@ -30,7 +30,7 @@ abstract class HardwareComponent {
   Offset? pos;
   Offset? wiringPos;
   double? zAxis;
-  final String assetImagePath;
+  final String imageCachePath;
   final LocationModel locationEntity;
   final double price;
   final int? equipmentLocationPosition;
@@ -49,7 +49,7 @@ abstract class HardwareComponent {
     this.pos,
     this.wiringPos,
     this.zAxis,
-    required this.assetImagePath,
+    required this.imageCachePath,
     required this.locationEntity,
     required this.price,
     required this.hardwareName,
@@ -98,7 +98,7 @@ abstract class HardwareComponent {
         equipmentLocationPosition == other.equipmentLocationPosition &&
         pos == other.pos &&
         wiringPos == other.wiringPos &&
-        assetImagePath == other.assetImagePath &&
+        imageCachePath == other.imageCachePath &&
         locationEntity == other.locationEntity;
   }
 
@@ -108,7 +108,7 @@ abstract class HardwareComponent {
         name.hashCode ^
         pos.hashCode ^
         wiringPos.hashCode ^
-        assetImagePath.hashCode ^
+        imageCachePath.hashCode ^
         locationEntity.hashCode ^
         equipmentLocationPosition.hashCode;
   }
@@ -119,7 +119,7 @@ abstract class HardwareComponent {
     Offset? pos,
     Offset? wiringPos,
     double? zAxis,
-    String? assetImagePath,
+    String? imageCachePath,
     LocationModel? locationEntity,
     double? price,
     int? equipmentLocationPosition,

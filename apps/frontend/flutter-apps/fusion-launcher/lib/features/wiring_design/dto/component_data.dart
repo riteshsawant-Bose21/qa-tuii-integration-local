@@ -56,7 +56,7 @@ class DeviceSchematicComponentData extends ComponentData {
 
   static DeviceSchematicComponentData from(HardwareComponent hardware) {
     return DeviceSchematicComponentData(
-      image: hardware.assetImagePath,
+      image: hardware.imageCachePath,
       label: hardware.name,
       comPorts:
           hardware.communicationPorts
@@ -210,7 +210,7 @@ class SourceComponentData extends ComponentData {
 
   static SourceComponentData from(Source source) {
     return SourceComponentData(
-      image: source.assetImagePath,
+      image: source.imageCachePath,
       label: source.name,
       comPorts: <ComponentPort>[],
       inputPorts: <ComponentPort>[],
@@ -262,7 +262,7 @@ class ZoneComponentData extends ComponentData {
 
   static ZoneComponentData from(Zone zone) {
     return ZoneComponentData(
-      // image: source.assetImagePath,
+      // image: source.imageCachePath,
       label: zone.name,
       comPorts: <ComponentPort>[],
       inputPorts: <ComponentPort>[],
@@ -306,7 +306,7 @@ class SubZoneComponentData extends ComponentData {
 
   static SubZoneComponentData from(SubZone zone) {
     return SubZoneComponentData(
-      // image: source.assetImagePath,
+      // image: source.imageCachePath,
       label: zone.name,
       comPorts: <ComponentPort>[],
       inputPorts: <ComponentPort>[],
@@ -355,7 +355,7 @@ class CircuitComponentData extends ComponentData {
     List<ComponentData> speakers,
   ) {
     return CircuitComponentData(
-      // image: source.assetImagePath,
+      // image: source.imageCachePath,
       label: zone.name,
       comPorts: <ComponentPort>[],
       inputPorts: <ComponentPort>[
@@ -404,7 +404,7 @@ class SpeakerComponentData extends ComponentData {
     return SpeakerComponentData(
       image: serviceLocator<ProjectViewModel>().getHardwareImage(
         productId: speaker.productId ?? 0,
-        currentImagePath: speaker.assetImagePath,
+        currentImagePath: speaker.imageCachePath,
       ),
       label: speaker.name,
       comPorts: <ComponentPort>[],

@@ -707,7 +707,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
               child: Row(
                 children: <Widget>[
                   Image.asset(
-                    hardware.assetImagePath,
+                    hardware.imageCachePath,
                     width: 14,
                     height: 14,
                   ),
@@ -890,7 +890,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                           FusionImage.asset(
                             serviceLocator<ProjectViewModel>().getHardwareImage(
                               productId: circuitSpeakers.first.productId ?? 0,
-                              currentImagePath: circuitSpeakers.first.assetImagePath,
+                              currentImagePath: circuitSpeakers.first.imageCachePath,
                             ),
                             width: 16,
                             height: 16,
@@ -1051,7 +1051,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                   FusionImage.asset(
                     serviceLocator<ProjectViewModel>().getHardwareImage(
                       productId: speaker.productId ?? 0,
-                      currentImagePath: speaker.assetImagePath,
+                      currentImagePath: speaker.imageCachePath,
                     ),
                     width: 12,
                     height: 12,
@@ -1094,7 +1094,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                     FusionImage.asset(
                       serviceLocator<ProjectViewModel>().getHardwareImage(
                         productId: speaker.productId ?? 0,
-                        currentImagePath: speaker.assetImagePath,
+                        currentImagePath: speaker.imageCachePath,
                       ),
                       width: 14,
                       height: 14,
@@ -1345,7 +1345,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                   FusionImage.asset(
                     serviceLocator<ProjectViewModel>().getHardwareImage(
                       productId: speaker.productId ?? 0,
-                      currentImagePath: speaker.assetImagePath,
+                      currentImagePath: speaker.imageCachePath,
                     ),
                     width: 12,
                     height: 12,
@@ -1383,7 +1383,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                     FusionImage.asset(
                       serviceLocator<ProjectViewModel>().getHardwareImage(
                         productId: speaker.productId ?? 0,
-                        currentImagePath: speaker.assetImagePath,
+                        currentImagePath: speaker.imageCachePath,
                       ),
                       width: 14,
                       height: 14,

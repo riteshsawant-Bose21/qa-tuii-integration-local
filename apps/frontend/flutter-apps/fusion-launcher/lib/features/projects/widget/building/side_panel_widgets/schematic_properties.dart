@@ -113,7 +113,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
       assetImagePath =
           serviceLocator<ProjectViewModel>().getHardwareImage(
             productId: speakers.first.productId ?? 0,
-            currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+            currentImagePath: speakers.isNotEmpty ? speakers.first.imageCachePath : '',
           ) ??
           "";
 
@@ -123,7 +123,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
       isFromBuildingPage = speakers.first.addedFromBuildingPage;
     } else {
       selectedDevice = projectViewModel.getHardware(hardwareId: selectedItem.id);
-      assetImagePath = selectedDevice?.assetImagePath;
+      assetImagePath = selectedDevice?.imageCachePath;
     }
 
     if (selectedItem.type == SelectedItemType.zone) {

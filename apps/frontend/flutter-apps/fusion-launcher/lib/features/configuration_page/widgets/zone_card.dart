@@ -522,7 +522,7 @@ class _ZoneCardState extends State<ZoneCard> {
                     } else {
                       for (final Source src in availableSources) {
                         final String value = src.id;
-                        final String assetPath = src.assetImagePath;
+                        final String assetPath = src.imageCachePath;
                         final bool isAlreadyInPriority = prioritySources.contains(value);
                         final bool isCurrentSelection = selectedSourceId == value;
 
@@ -1348,7 +1348,7 @@ class _ZoneCardState extends State<ZoneCard> {
     final String assetImagePath =
         serviceLocator<ProjectViewModel>().getHardwareImage(
           productId: speakersList.isNotEmpty ? speakersList.first.productId ?? 0 : 0,
-          currentImagePath: speakersList.isNotEmpty ? speakersList.first.assetImagePath : '',
+          currentImagePath: speakersList.isNotEmpty ? speakersList.first.imageCachePath : '',
         ) ??
         "";
 

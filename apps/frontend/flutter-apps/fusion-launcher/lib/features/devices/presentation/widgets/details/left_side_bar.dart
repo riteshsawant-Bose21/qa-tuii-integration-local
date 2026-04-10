@@ -203,7 +203,7 @@ class _DeviceLeftSideBarState extends State<DeviceLeftSideBar> {
                     ),
                     alignment: Alignment.center,
                     child: FusionImage.asset(
-                      widget.device.assetImagePath,
+                      widget.device.imageCachePath,
 
                       height: 64,
                       fit: BoxFit.contain,

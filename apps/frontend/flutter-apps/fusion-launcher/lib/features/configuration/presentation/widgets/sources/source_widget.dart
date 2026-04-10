@@ -256,7 +256,7 @@ class _SourceWidgetState extends State<SourceWidget> {
       child: Row(
         children: <Widget>[
           Image.asset(
-            widget.source.assetImagePath,
+            widget.source.imageCachePath,
             height: 24,
           ),
           const SizedBox(width: 6),

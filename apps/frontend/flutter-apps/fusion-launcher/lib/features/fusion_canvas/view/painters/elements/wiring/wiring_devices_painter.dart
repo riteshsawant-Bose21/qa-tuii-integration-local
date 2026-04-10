@@ -156,7 +156,7 @@ class WiringDevicesPainter extends FusionCanvasElementPainter with PortPainter, 
     );
     canvas.drawRRect(RRect.fromRectAndRadius(imageRect, Radius.circular(radius * 0.8)), Paint()..color = Colors.grey);
 
-    drawImage(canvas: canvas, imagePath: device.assetImagePath, rect: imageRect.deflate(imagePadding), painter: painter);
+    drawImage(canvas: canvas, imagePath: device.imageCachePath, rect: imageRect.deflate(imagePadding), painter: painter);
     final Rect textRect = Rect.fromLTRB(
       imageRect.left,
       imageRect.bottom + imagePadding,

@@ -385,7 +385,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                               floorId: floorId,
                             ),
                             name: item.name,
-                            assetImagePath: item.assetPath,
+                            imageCachePath: item.assetPath,
                             price: item.price,
                             hardwareName: item.name,
                             addedFromBuildingPage: false,
@@ -405,7 +405,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                             ),
                             addedFromBuildingPage: false,
                             name: item.name,
-                            assetImagePath: item.assetPath,
+                            imageCachePath: item.assetPath,
                             price: item.price,
                             hardwareName: item.name,
                           );

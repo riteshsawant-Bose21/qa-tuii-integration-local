@@ -163,7 +163,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                                     // Placeholder for device icon - In real implementation, this would be an actual image/icon based on device type
                                     Center(
                                       child: FusionImage.asset(
-                                        widget.device.assetImagePath,
+                                        widget.device.imageCachePath,
                                       ),
                                     ),
 

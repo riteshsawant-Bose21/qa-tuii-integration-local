@@ -303,7 +303,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                         FusionImage.asset(
                           serviceLocator<ProjectViewModel>().getHardwareImage(
                             productId: speakerList.first.productId ?? 0,
-                            currentImagePath: speakerList.first.assetImagePath,
+                            currentImagePath: speakerList.first.imageCachePath,
                           ),
                           width: 14,
                           height: 14,
@@ -376,7 +376,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                   FusionImage.asset(
                     serviceLocator<ProjectViewModel>().getHardwareImage(
                       productId: speaker.productId ?? 0,
-                      currentImagePath: speaker.assetImagePath,
+                      currentImagePath: speaker.imageCachePath,
                     ),
                     width: 14,
                     height: 14,

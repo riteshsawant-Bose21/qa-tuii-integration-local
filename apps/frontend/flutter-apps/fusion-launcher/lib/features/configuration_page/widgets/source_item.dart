@@ -76,7 +76,7 @@ class _SourceItemState extends State<SourceItem> {
               if (widget.sourceSet != null) const SizedBox(width: 8),
               FusionImage.asset(
                 semanticId: FusionTestKeys.instance.sourcelistitemimage,
-                widget.source.assetImagePath,
+                widget.source.imageCachePath,
                 width: 24,
                 height: 24,
                 fit: BoxFit.contain,

@@ -122,7 +122,7 @@ class _DeviceListSection extends StatelessWidget {
                 return _DeviceCard(
                   id: device.id,
                   type: SelectedItemType.source,
-                  image: device.assetImagePath,
+                  image: device.imageCachePath,
                   title: device.name,
                   ports: portData,
                 );

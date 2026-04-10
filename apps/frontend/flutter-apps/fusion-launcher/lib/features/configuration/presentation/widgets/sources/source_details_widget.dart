@@ -87,7 +87,7 @@ class _DevicePropertiesWidgetState extends State<DevicePropertiesWidget> {
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: <Widget>[
                   Image.asset(
-                    widget.device.assetImagePath,
+                    widget.device.imageCachePath,
                     color: Colors.black,
                     width: 30,
                     height: 30,

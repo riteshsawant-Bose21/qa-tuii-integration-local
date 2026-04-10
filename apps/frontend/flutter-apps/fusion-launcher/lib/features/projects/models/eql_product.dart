@@ -5,7 +5,7 @@ import 'package:fusion_lib/product_data/models/product_port_data.dart';
 
 class EQLProduct {
   final String name;
-  final String? assetPath;
+  final String? imageCachePath;
   final String description;
   final String modelFamily;
   final dynamic data;
@@ -16,7 +16,7 @@ class EQLProduct {
   final ProductPortData portData;
   EQLProduct({
     required this.name,
-    required this.assetPath,
+    required this.imageCachePath,
     required this.description,
     required this.modelFamily,
     required this.data,

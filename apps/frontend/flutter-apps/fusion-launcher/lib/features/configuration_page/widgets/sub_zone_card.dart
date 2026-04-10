@@ -244,7 +244,7 @@ class _SubZoneCardState extends State<SubZoneCard> {
     final String assetImagePath =
         serviceLocator<ProjectViewModel>().getHardwareImage(
           productId: speakersList.isNotEmpty ? speakersList.first.productId ?? 0 : 0,
-          currentImagePath: speakersList.isNotEmpty ? speakersList.first.assetImagePath : '',
+          currentImagePath: speakersList.isNotEmpty ? speakersList.first.imageCachePath : '',
         ) ??
         "";
 

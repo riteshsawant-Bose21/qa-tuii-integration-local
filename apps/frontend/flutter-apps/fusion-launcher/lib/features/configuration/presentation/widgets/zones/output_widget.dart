@@ -295,7 +295,7 @@ class OutputWidgetState extends State<OutputWidget> {
       child: Row(
         children: <Widget>[
           Image.asset(
-            widget.speaker.assetImagePath,
+            widget.speaker.imageCachePath,
             height: 24,
           ),
           const SizedBox(width: 6),

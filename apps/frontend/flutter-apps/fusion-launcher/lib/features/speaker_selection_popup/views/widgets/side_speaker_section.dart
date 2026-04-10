@@ -182,7 +182,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                         child: FusionImage.asset(
                                           serviceLocator<ProjectViewModel>().getHardwareImage(
                                             productId: representative.productId ?? 0,
-                                            currentImagePath: representative.assetImagePath,
+                                            currentImagePath: representative.imageCachePath,
                                           ),
                                         ),
                                       )

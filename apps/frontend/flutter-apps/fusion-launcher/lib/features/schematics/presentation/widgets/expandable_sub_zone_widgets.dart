@@ -279,7 +279,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                             assetImagePath:
                                 serviceLocator<ProjectViewModel>().getHardwareImage(
                                   productId: speakers.first.productId ?? 0,
-                                  currentImagePath: speakers.first.assetImagePath,
+                                  currentImagePath: speakers.first.imageCachePath,
                                 ) ??
                                 "",
                             circuitDeviceCount: speakers.length,
@@ -332,7 +332,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                             assetImagePath:
                                 serviceLocator<ProjectViewModel>().getHardwareImage(
                                   productId: speakers.isNotEmpty ? speakers.first.productId ?? 0 : 0,
-                                  currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                                  currentImagePath: speakers.isNotEmpty ? speakers.first.imageCachePath : '',
                                 ) ??
                                 "",
                             circuitDeviceCount: speakers.length,
@@ -358,7 +358,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                       assetImagePath:
                           serviceLocator<ProjectViewModel>().getHardwareImage(
                             productId: speakers.isNotEmpty ? speakers.first.productId ?? 0 : 0,
-                            currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                            currentImagePath: speakers.isNotEmpty ? speakers.first.imageCachePath : '',
                           ) ??
                           "",
                       circuitDeviceCount: speakers.length,

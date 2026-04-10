@@ -190,7 +190,7 @@ class MultiDevicePickerDialogState extends State<MultiDevicePickerDialog> {
 
                                     // Device icon based on type
                                     Image.asset(
-                                      device.assetImagePath,
+                                      device.imageCachePath,
                                       height: 24,
                                       color: AppColors.primarySoft,
                                     ),

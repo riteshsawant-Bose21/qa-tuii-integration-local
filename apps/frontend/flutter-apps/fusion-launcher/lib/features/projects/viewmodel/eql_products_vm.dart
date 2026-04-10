@@ -35,7 +35,7 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
         EQLProduct(
           name: element.modelName,
           modelFamily: element.modelFamily ?? '',
-          assetPath: datasource.getProductImage(element.productId),
+          imageCachePath: datasource.getProductImage(element.productId),
           description: element.modelFamily,
           data: element,
           searchingFields: '${element.modelName} ${element.modelFamily}',
@@ -59,7 +59,7 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
         EQLProduct(
           name: element.modelName,
           modelFamily: element.modelFamily ?? '',
-          assetPath: datasource.getProductImage(element.productId),
+          imageCachePath: datasource.getProductImage(element.productId),
           data: element,
           //TODO: Check Endpoint Port Data
           portData: element.numberOfInputsAndOutputs ?? ProductPortData(),
@@ -84,7 +84,7 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
         EQLProduct(
           portData: element.numberOfInputsAndOutputs ?? ProductPortData(),
           name: element.modelName,
-          assetPath: datasource.getProductImage(element.productId),
+          imageCachePath: datasource.getProductImage(element.productId),
           modelFamily: element.modelFamily,
           data: element,
           searchingFields: '${element.modelName} ${element.modelFamily}',
@@ -202,7 +202,7 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
     return ProductQueryModel(
       name: product.name,
       price: product.price,
-      image: product.assetPath ?? '',
+      image: product.imageCachePath ?? '',
       type: switch (product.deviceType) {
         EQLDeviceType.amplifier => ProductType.amplifier,
         EQLDeviceType.endpoint => ProductType.endpoints,

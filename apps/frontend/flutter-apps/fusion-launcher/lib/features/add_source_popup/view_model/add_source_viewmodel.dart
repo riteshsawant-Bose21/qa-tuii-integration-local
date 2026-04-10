@@ -165,7 +165,7 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
       type: selectedItem.type,
       addedFromBuildingPage: false,
       connectionType: connectType,
-      assetImagePath: selectedItem.assetPath,
+      imageCachePath: selectedItem.assetPath,
       locationEntity: LocationModel(listeningAreaId: selectedAreaId, floorId: floorId),
       sku: selectedItem.id,
       price: selectedItem.price,

@@ -112,7 +112,7 @@ class _SourcesColumnState extends State<SourcesColumn> {
                   addedFromBuildingPage: false,
                   type: selectedBlock.type,
                   connectionType: selectedBlock.connectionType,
-                  assetImagePath: selectedBlock.assetPath,
+                  imageCachePath: selectedBlock.assetPath,
                   locationEntity: LocationModel(),
                   sku: selectedBlock.id,
                   price: selectedBlock.price,

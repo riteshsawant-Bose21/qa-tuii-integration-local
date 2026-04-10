@@ -391,7 +391,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: <Widget>[
                                     FusionImage.asset(
-                                      widget.speakers.first.assetImagePath,
+                                      widget.speakers.first.imageCachePath,
                                       width: 22,
                                       height: 22,
                                       fit: BoxFit.contain,
