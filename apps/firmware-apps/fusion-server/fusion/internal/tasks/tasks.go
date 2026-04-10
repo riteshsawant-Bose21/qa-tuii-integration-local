@@ -13,6 +13,7 @@ import (
 	json "github.com/goccy/go-json"
 
 	"fusion/internal/api"
+	"fusion/internal/server/handler"
 	"fusion-services-core/logging"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
@@ -47,6 +48,7 @@ type TaskManager struct {
 	mu               sync.Mutex
 	node             string
 	persistence      *persistence.Persistence
+	handler          *handler.Handler
 	hub              *pubsub.Hub
 	running          bool
 	taskFuncs        map[string]func()
@@ -86,8 +88,18 @@ func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence,
 		api.TaskTypeMessage: func(t *api.Task) func() {
 			return tm.wrapTask(t, tm.taskTriggerMessageFunc(t))
 		},
+		api.TaskTypeSceneSnapshot: func(t *api.Task) func() {
+			return tm.wrapTask(t, tm.taskActivateSceneSnapshotFunc(t))
+		},
+		api.TaskTypeSceneActivate: func(t *api.Task) func() {
+			return tm.wrapTask(t, tm.taskActivateSceneFunc(t))
+		},
 	}
 	return tm
+}
+
+func (tm *TaskManager) SetHandler(handler *handler.Handler) {
+	tm.handler = handler
 }
 
 func (tm *TaskManager) AddTask(t *api.Task) error {
@@ -558,6 +570,25 @@ func (tm *TaskManager) makeTaskFunc(task *api.Task) (TaskFunc, error) {
 			return nil, fmt.Errorf("missing '%s'", api.SnapshotIDKey)
 		}
 		return tm.taskActivateSnapshotFunc(task), nil
+
+	case api.TaskTypeSceneSnapshot:
+		id := task.Params[api.SnapshotDefinitionIDKey]
+		if id == "" {
+			return nil, fmt.Errorf("missing '%s'", api.SnapshotDefinitionIDKey)
+		}
+		return tm.taskActivateSceneSnapshotFunc(task), nil
+
+	case api.TaskTypeSceneActivate:
+		setID := task.Params[api.SceneSetIDKey]
+		if setID == "" {
+			return nil, fmt.Errorf("missing '%s'", api.SceneSetIDKey)
+		}
+
+		sceneID := task.Params[api.SceneIDKey]
+		if sceneID == "" {
+			return nil, fmt.Errorf("missing '%s'", api.SceneIDKey)
+		}
+		return tm.taskActivateSceneFunc(task), nil
 
 	default:
 		return nil, fmt.Errorf("unsupported task type %q", task.Type)

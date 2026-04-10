@@ -97,6 +97,7 @@ func NewApp(config *api.AppConfig) *App {
 	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
 	hub.SetClusterTransport(clusterInstance)
 	connectionHandler := handler.NewHandler(config, clusterInstance, persistence, stateManager, hub, controllerManager)
+	taskManager.SetHandler(connectionHandler)
 
 	// Set the sync handler on the delegate so it can handle software update acknowledgments
 	delegate.SetSyncHandler(connectionHandler)
@@ -318,9 +319,9 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.TasksHistoryEndpoint, app.TaskManager.GetHistory)
 	app.registerPublicDELETE(routes.TasksHistoryEndpoint, app.TaskManager.ClearHistory)
 	app.registerPublicGET(routes.TasksEndpoint, app.TaskManager.GetTasks)
-	app.registerPublicPOST(routes.TasksEndpoint, app.TaskManager.CreateApplySnapshotTask)
+	app.registerPublicPOST(routes.TasksEndpoint, app.TaskManager.CreateTask)
 	app.registerPublicGET(routes.TasksIdEndpoint, app.TaskManager.GetTaskHandler)
-	app.registerPublicPATCH(routes.TasksIdEndpoint, app.TaskManager.UpdateApplySnapshotTask)
+	app.registerPublicPATCH(routes.TasksIdEndpoint, app.TaskManager.UpdateTaskHandler)
 	app.registerPublicDELETE(routes.TasksIdEndpoint, app.TaskManager.DeleteTask)
 	app.registerPublicPOST(routes.TasksIdEnableEndpoint, app.TaskManager.EnableTask)
 	app.registerPublicPOST(routes.TasksIdDisableEndpoint, app.TaskManager.DisableTask)
