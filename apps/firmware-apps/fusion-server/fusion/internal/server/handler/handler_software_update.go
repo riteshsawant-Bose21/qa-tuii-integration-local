@@ -556,7 +556,7 @@ func (h *Handler) handleSwUpdateInfo(request *api.WebSocketRequest) (*api.WebSoc
 	return createSuccessResponse(&request.ID, api.WSMsgTypeSwUpdateInfo, api.WSCodeOK, "OK", infos), nil
 }
 
-// handleListSoftwareUpdates fetches the OTA bundle list from every cluster node 
+// handleListSoftwareUpdates fetches the OTA bundle list from every cluster node
 func (h *Handler) handleListSoftwareUpdates(request *api.WebSocketRequest) (*api.WebSocketResponse, error) {
 	bundles := h.clusterTransport.GetAllSoftwareUpdateList()
 	if bundles == nil {
@@ -753,6 +753,86 @@ func checkDiskSpace(uploadSize int64, logger *logging.Logger) error {
 	logger.Info("softwareUpdate upload: disk space validation passed - %.1f MB available in OTA directory",
 		float64(otaAvailable)/(1<<20))
 	return nil
+}
+
+// ensureSWUFilesOnFollowers checks that every follower node has the same .swu files
+// as the leader (by checksum). For any file that is missing or has a differing checksum
+// on a follower, it triggers a gossip-based HTTP-pull sync and waits for all sync acks before returning.
+// Returns the total number of followers in the cluster.
+func (h *Handler) ensureSWUFilesOnFollowers(swuFilePaths []string) (int, error) {
+	logger := logging.GetLogger()
+
+	localNode := h.clusterTransport.LocalNode()
+	if localNode == nil {
+		return 0, fmt.Errorf("local node not available")
+	}
+	localName := localNode.Name
+	localIP := localNode.Addr.String()
+
+	// Step 1: collect all followers (cluster members excluding the local node)
+	var followers []string
+	for _, m := range h.clusterTransport.MemberListMembers() {
+		if m.Name != localName {
+			followers = append(followers, m.Name)
+		}
+	}
+	logger.Info("[StartUpdate] Total followers in cluster: %d — %v", len(followers), followers)
+
+	if len(followers) == 0 {
+		logger.Info("[StartUpdate] No followers in cluster — skipping file sync pre-check")
+		return 0, nil
+	}
+
+	// For each .swu file on the leader, broadcast software_update_available
+	// and wait for all followers to ack. Followers that already have the file with the
+	// same checksum will ack immediately without downloading (handled by handleSoftwareUpdateAvailable).
+	for _, filePath := range swuFilePaths {
+		filename := filepath.Base(filePath)
+
+		checksum, err := utils.FileChecksum(filePath)
+		if err != nil {
+			return len(followers), fmt.Errorf("checksum failed for %s: %w", filename, err)
+		}
+
+		info, err := os.Stat(filePath)
+		if err != nil {
+			return len(followers), fmt.Errorf("stat failed for %s: %w", filename, err)
+		}
+
+		syncID := ulid.Make().String()
+		logger.Info("[StartUpdate] Syncing %s (checksum: %s) to %d follower(s), sync ID: %s",
+			filename, checksum, len(followers), syncID)
+
+		// Register sync tracker — same as upload flow
+		h.StartSyncTracking(syncID, filename, checksum, followers, 5*time.Minute)
+
+		// Broadcast availability gossip so followers HTTP-pull if they don't have it yet
+		update := &api.SoftwareUpdateSync{
+			Filename:  filename,
+			Checksum:  checksum,
+			SizeBytes: info.Size(),
+			Uploaded:  info.ModTime().UTC(),
+			SourceIP:  localIP,
+			SyncID:    syncID,
+		}
+		msg := api.NewNotifyMessage(
+			api.NotifyOpSoftwareUpdateAvailable,
+			localName,
+			api.WithSoftwareUpdate(update),
+		)
+		if err := h.hub.BroadcastToNodes(msg); err != nil {
+			return len(followers), fmt.Errorf("broadcast failed for %s: %w", filename, err)
+		}
+
+		// Wait for all followers to ack sync completion
+		logger.Info("[StartUpdate] Waiting for all followers to confirm %s...", filename)
+		if ok, waitErr := h.WaitForSyncCompletion(syncID); !ok {
+			return len(followers), fmt.Errorf("sync timed out or failed for %s: %w", filename, waitErr)
+		}
+		logger.Info("[StartUpdate] All followers confirmed %s is present and correct", filename)
+	}
+
+	return len(followers), nil
 }
 
 // isMaxBytesError checks if an error is from http.MaxBytesReader exceeding the size limit
