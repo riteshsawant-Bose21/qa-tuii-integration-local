@@ -12,13 +12,14 @@ import (
 
 // AppConfig represents application configuration data
 type AppConfig struct {
-	NodeName string
-	BindAddr string
-	BindPort int
-	NetIface string
-	Local    bool
-	Profile  bool
-	Verbose  bool
+	NodeName       string
+	BindAddr       string
+	BindPort       int
+	NetIface       string
+	Local          bool
+	Profile        bool
+	UDPDiagnostics bool
+	Verbose        bool
 }
 
 func (a *AppConfig) SelfUrl() string {
@@ -187,6 +188,8 @@ type DeviceInfo struct {
 	FusionMonorepoBranch     string `json:"fusion_monorepo_branch,omitempty"`
 	FusionMonorepoCommitHash string `json:"fusion_monorepo_commit_hash,omitempty"`
 	JenkinsBuildNumber       string `json:"jenkins_build_number,omitempty"`
+	VrrpPriority             int    `json:"vrrp_priority"`
+
 }
 
 // DevicePatch represents patchable device configuration data.
@@ -370,6 +373,21 @@ type SoftwareUpdateUploadResponse struct {
 	Checksum  string    `json:"checksum"`
 	SizeBytes int64     `json:"size_bytes"`
 	Uploaded  time.Time `json:"uploaded"`
+}
+
+// SwUpdateInfo represents the contents of the /etc/swupdate file.
+type SwUpdateInfo struct {
+	SerialNumber          string `json:"serial_number"`
+	CurrentBundleVersion  string `json:"current_bundle_version"`
+	PreviousBundleVersion string `json:"previous_bundle_version"`
+	Mount                 string `json:"mount"`
+	PreviousMount         string `json:"previous_mount"`
+	Status                string `json:"status"`
+	CurrentState          string `json:"current_state"`
+	BootPartition         string `json:"boot_partition"`
+	PreviousBootPartition string `json:"previous_boot_partition"`
+	Error                 string `json:"error"`
+	UpdatedAt             string `json:"updated_at"`
 }
 
 // softwareUpdateErrorResponse is the JSON body returned on bundle upload errors.

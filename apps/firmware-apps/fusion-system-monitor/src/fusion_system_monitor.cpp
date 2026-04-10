@@ -23,8 +23,6 @@
 
 std::atomic<bool> g_running{true};
 
-std::string server_device_id = "";
-
 void signal_handler(int signum)
 {
     if (signum == SIGINT || signum == SIGTERM) {
@@ -76,7 +74,14 @@ static void handle_amp_control_update(const std::string &path,
 
 static void handle_device_id(const std::string &new_device_id)
 {
-    server_device_id = new_device_id;
+    Json::Value message_json;
+    message_json["target"] = "fusion_connect_client";
+    message_json["name"] = "device_id";
+    message_json["value"] = new_device_id;
+
+    Json::StreamWriterBuilder writer;
+    writer["indentation"] = "";
+    handle_update(Json::writeString(writer, message_json));
 }
 
 

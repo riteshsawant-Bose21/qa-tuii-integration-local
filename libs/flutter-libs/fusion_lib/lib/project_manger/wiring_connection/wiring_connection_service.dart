@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 extension WiringConnectionService on ProjectService {
@@ -6,7 +7,7 @@ extension WiringConnectionService on ProjectService {
     if (wiringConnection.exists(connection.id)) {
       throw Exception('WiringConnection ${connection.id} already exists');
     }
-    print("Adding wiring connection: ${connection.id} between device ${connection.deviceId} and target device ${connection.targetDeviceId}");
+    debugPrint("Adding wiring connection: ${connection.id} between device ${connection.deviceId} and target device ${connection.targetDeviceId}");
 
     wiringConnection.add(connection.id, connection);
 

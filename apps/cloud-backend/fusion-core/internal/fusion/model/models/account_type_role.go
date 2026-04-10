@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
@@ -24,9 +23,9 @@ import (
 
 // AccountTypeRole is an object representing the database table.
 type AccountTypeRole struct {
-	ID            int         `boil:"id" json:"id" toml:"id" yaml:"id"`
-	RoleID        int         `boil:"role_id" json:"role_id" toml:"role_id" yaml:"role_id"`
-	AccountTypeID null.String `boil:"account_type_id" json:"account_type_id,omitempty" toml:"account_type_id" yaml:"account_type_id,omitempty"`
+	ID            int    `boil:"id" json:"id" toml:"id" yaml:"id"`
+	AccountTypeID string `boil:"account_type_id" json:"account_type_id" toml:"account_type_id" yaml:"account_type_id"`
+	RoleID        int    `boil:"role_id" json:"role_id" toml:"role_id" yaml:"role_id"`
 
 	R *accountTypeRoleR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L accountTypeRoleL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -34,34 +33,34 @@ type AccountTypeRole struct {
 
 var AccountTypeRoleColumns = struct {
 	ID            string
-	RoleID        string
 	AccountTypeID string
+	RoleID        string
 }{
 	ID:            "id",
-	RoleID:        "role_id",
 	AccountTypeID: "account_type_id",
+	RoleID:        "role_id",
 }
 
 var AccountTypeRoleTableColumns = struct {
 	ID            string
-	RoleID        string
 	AccountTypeID string
+	RoleID        string
 }{
 	ID:            "account_type_role.id",
-	RoleID:        "account_type_role.role_id",
 	AccountTypeID: "account_type_role.account_type_id",
+	RoleID:        "account_type_role.role_id",
 }
 
 // Generated where
 
 var AccountTypeRoleWhere = struct {
 	ID            whereHelperint
+	AccountTypeID whereHelperstring
 	RoleID        whereHelperint
-	AccountTypeID whereHelpernull_String
 }{
 	ID:            whereHelperint{field: "\"account_type_role\".\"id\""},
+	AccountTypeID: whereHelperstring{field: "\"account_type_role\".\"account_type_id\""},
 	RoleID:        whereHelperint{field: "\"account_type_role\".\"role_id\""},
-	AccountTypeID: whereHelpernull_String{field: "\"account_type_role\".\"account_type_id\""},
 }
 
 // AccountTypeRoleRels is where relationship names are stored.
@@ -158,9 +157,9 @@ func (r *accountTypeRoleR) GetFeaturePermissions() FeaturePermissionSlice {
 type accountTypeRoleL struct{}
 
 var (
-	accountTypeRoleAllColumns            = []string{"id", "role_id", "account_type_id"}
-	accountTypeRoleColumnsWithoutDefault = []string{"role_id"}
-	accountTypeRoleColumnsWithDefault    = []string{"id", "account_type_id"}
+	accountTypeRoleAllColumns            = []string{"id", "account_type_id", "role_id"}
+	accountTypeRoleColumnsWithoutDefault = []string{"account_type_id", "role_id"}
+	accountTypeRoleColumnsWithDefault    = []string{"id"}
 	accountTypeRolePrimaryKeyColumns     = []string{"id"}
 	accountTypeRoleGeneratedColumns      = []string{}
 )
@@ -553,9 +552,7 @@ func (accountTypeRoleL) LoadAccountType(ctx context.Context, e boil.ContextExecu
 		if object.R == nil {
 			object.R = &accountTypeRoleR{}
 		}
-		if !queries.IsNil(object.AccountTypeID) {
-			args[object.AccountTypeID] = struct{}{}
-		}
+		args[object.AccountTypeID] = struct{}{}
 
 	} else {
 		for _, obj := range slice {
@@ -563,9 +560,7 @@ func (accountTypeRoleL) LoadAccountType(ctx context.Context, e boil.ContextExecu
 				obj.R = &accountTypeRoleR{}
 			}
 
-			if !queries.IsNil(obj.AccountTypeID) {
-				args[obj.AccountTypeID] = struct{}{}
-			}
+			args[obj.AccountTypeID] = struct{}{}
 
 		}
 	}
@@ -630,7 +625,7 @@ func (accountTypeRoleL) LoadAccountType(ctx context.Context, e boil.ContextExecu
 
 	for _, local := range slice {
 		for _, foreign := range resultSlice {
-			if queries.Equal(local.AccountTypeID, foreign.ID) {
+			if local.AccountTypeID == foreign.ID {
 				local.R.AccountType = foreign
 				if foreign.R == nil {
 					foreign.R = &accountTypeR{}
@@ -1017,7 +1012,7 @@ func (o *AccountTypeRole) SetAccountType(ctx context.Context, exec boil.ContextE
 		return errors.Wrap(err, "failed to update local table")
 	}
 
-	queries.Assign(&o.AccountTypeID, related.ID)
+	o.AccountTypeID = related.ID
 	if o.R == nil {
 		o.R = &accountTypeRoleR{
 			AccountType: related,
@@ -1034,39 +1029,6 @@ func (o *AccountTypeRole) SetAccountType(ctx context.Context, exec boil.ContextE
 		related.R.AccountTypeRoles = append(related.R.AccountTypeRoles, o)
 	}
 
-	return nil
-}
-
-// RemoveAccountType relationship.
-// Sets o.R.AccountType to nil.
-// Removes o from all passed in related items' relationships struct.
-func (o *AccountTypeRole) RemoveAccountType(ctx context.Context, exec boil.ContextExecutor, related *AccountType) error {
-	var err error
-
-	queries.SetScanner(&o.AccountTypeID, nil)
-	if _, err = o.Update(ctx, exec, boil.Whitelist("account_type_id")); err != nil {
-		return errors.Wrap(err, "failed to update local table")
-	}
-
-	if o.R != nil {
-		o.R.AccountType = nil
-	}
-	if related == nil || related.R == nil {
-		return nil
-	}
-
-	for i, ri := range related.R.AccountTypeRoles {
-		if queries.Equal(o.AccountTypeID, ri.AccountTypeID) {
-			continue
-		}
-
-		ln := len(related.R.AccountTypeRoles)
-		if ln > 1 && i < ln-1 {
-			related.R.AccountTypeRoles[i] = related.R.AccountTypeRoles[ln-1]
-		}
-		related.R.AccountTypeRoles = related.R.AccountTypeRoles[:ln-1]
-		break
-	}
 	return nil
 }
 

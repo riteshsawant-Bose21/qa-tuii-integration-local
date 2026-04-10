@@ -21,6 +21,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -33,12 +34,23 @@ const (
 	bleCharacterUUID       = "AD10"
 	bleServiceUUID         = "B053"
 	clusterLeaveTime       = 5 * time.Second
-	fusionDataPath         = "/var/lib/fusion"
 	fusionDatabaseName     = "fusion.db"
-	fusionDatabasePath     = fusionDataPath + "/" + fusionDatabaseName
 	networkMonitorInterval = 5 * time.Second
 	startupWaitDelay       = 100
 )
+
+var (
+	fusionDataPath     = getEnvOrDefault("FUSION_DATA_DIR", "/var/lib/fusion")
+	fusionDatabasePath = filepath.Join(fusionDataPath, fusionDatabaseName)
+	fusionLogDir       = getEnvOrDefault("FUSION_LOG_DIR", "/var/log/fusion")
+)
+
+func getEnvOrDefault(key string, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
 
 var SAPGroups = []string{"224.2.127.254", "239.255.255.255"}
 
@@ -91,7 +103,7 @@ func NewApp(config *api.AppConfig) *App {
 	mdnsManager := initMDNSManager(config.NetIface)
 	bleServer := initBLEServer()
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
-	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub)
+	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub, config)
 	fusionServer := server.NewFusionServer(config.NodeName, connectionHandler, hub)
 
 	// Initialize VIPMonitor
@@ -210,6 +222,9 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.ClusterMembersEndpoint, app.Server.GetMembers)
 	app.registerPublicGET(routes.ClusterNTPSkewEndpoint, app.Cluster.GetNTPSkew)
 	app.registerPublicGET(routes.ClusterStatusEndpoint, app.Cluster.Metrics.GetClusterStatus)
+	if app.config.UDPDiagnostics {
+		app.registerPublicGET(routes.ClusterUDPStatusEndpoint, app.HandleUDPStatus)
+	}
 	app.registerPublicPOST(routes.ClusterRebootEndpoint, app.Cluster.RebootSystem)
 	app.registerPublicPOST(routes.ClusterSoftwareUpdateEndpoint, app.Cluster.SoftwareUpdateSystem)
 
@@ -225,6 +240,7 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.DevicesVIPOperationEndpoint, app.VIPMonitor.HandleGetVIPOperation)
 	app.registerPublicGET(routes.DeviceReloadVIPStatusEndpoint, app.VIPMonitor.HandleGetVIPReloadStatus)
 	app.registerPublicPOST(routes.DevicesSetVIPEndpoint, app.VIPMonitor.HandleSetVIP)
+	app.registerPublicPOST(routes.DevicesIDVIPMasterPriorityEndpoint, app.VIPMonitor.HandleSetMasterPriority)
 	app.registerPublicPOST(routes.DeviceReloadVIPEndpoint, app.VIPMonitor.HandleReloadVIP)
 	app.registerPublicPATCH(routes.DevicesIDEndpoint, app.Server.UpdateDeviceInfo)
 
@@ -313,6 +329,9 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivateGET(routes.ClusterLatencySyncAveragesLocalEndpoint, app.Cluster.GetSyncLatencyAveragesLocal)
 	app.registerPrivateGET(routes.ClusterLatencyNetworkFailuresLocalEndpoint, app.Cluster.GetNetworkFailuresLocal)
 	app.registerPrivateGET(routes.ClusterLatencyStatusLocalEndpoint, app.Cluster.GetLatencyStatusLocal)
+	if app.config.UDPDiagnostics {
+		app.registerPrivateGET(routes.ClusterUDPStatusEndpoint, app.HandleUDPStatus)
+	}
 	app.registerPrivatePOST(routes.ClusterRebootLocalEndpoint, app.Cluster.RebootSystemLocal)
 	app.registerPrivatePOST(routes.ClusterSoftwareUpdateLocalEndpoint, app.Cluster.SoftwareUpdateSystemLocal)
 
@@ -324,10 +343,14 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivateGET(routes.DevicesVIPOperationEndpoint, app.VIPMonitor.HandleGetVIPOperation)
 	app.registerPrivateGET(routes.DeviceReloadVIPStatusEndpoint, app.VIPMonitor.HandleGetVIPReloadStatus)
 	app.registerPrivatePOST(routes.DevicesSetVIPEndpoint, app.VIPMonitor.HandleUpdateVIPLocal)
+	app.registerPrivatePOST(routes.DevicesIDVIPMasterPriorityEndpoint, app.VIPMonitor.HandleSetMasterPriorityLocal)
 	app.registerPrivatePOST(routes.DeviceReloadVIPEndpoint, app.VIPMonitor.HandleReloadVIPLocal)
 	app.registerPrivateGET(routes.DevicesGetCSREndpoint, app.Server.GetCSR)
 	app.registerPrivateDELETE(routes.DevicesIDResetEndpoint, app.Server.ResetDeviceCertificate)
 	app.registerPrivatePOST(routes.DevicesIDCertificateEndpoint, app.Server.SetDeviceCertificate)
+
+	app.registerPrivateGET(routes.SoftwareUpdateInfoLocalEndpoint, app.Server.GetLocalSwUpdateInfo)
+	app.registerPrivateGET(routes.SoftwareUpdateListEndpoint, app.ConnectionHandler.HandleSoftwareUpdateListLocal)
 
 	app.registerPrivateGET(routes.DataEndpoint, app.Server.ExportData)
 	app.registerPrivatePOST(routes.DataEndpoint, app.Server.ImportData)
@@ -615,10 +638,10 @@ func initSAPServer(config *api.AppConfig, port string, handler *handler.Handler,
 }
 
 // initUDPServer initializes the UDP server.
-func initUDPServer(port string, handler *handler.Handler, hub *pubsub.Hub) *network.UDPServer {
+func initUDPServer(port string, handler *handler.Handler, hub *pubsub.Hub, config *api.AppConfig) *network.UDPServer {
 
 	udpPort := fmt.Sprintf(":%s", port)
-	udpServer, err := network.NewUDPServer(udpPort, handler)
+	udpServer, err := network.NewUDPServer(udpPort, handler, config.UDPDiagnostics)
 	if err != nil {
 		logger := logging.GetLogger()
 		logger.Fatal("Failed to create UDP server: %v", err)
@@ -638,7 +661,7 @@ func initLogging(config *api.AppConfig) *logging.Logger {
 
 	logging.InitLogger(logging.LogConfig{
 		NodeName:    config.NodeName,
-		LogDir:      "/var/log/fusion",
+		LogDir:      fusionLogDir,
 		MaxFileSize: 100,
 		MaxFiles:    5,
 		LogLevel:    logLevel,

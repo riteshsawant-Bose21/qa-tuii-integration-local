@@ -36,6 +36,7 @@ struct fusion_cn_metrics_pcpu {
     u64 packets_total, bytes_total;
     u64 packets_dup, packets_marked, malformed_count;
     u64 late_drop_count;
+    u64 rx_queue_drop_count;
 
     /* TX */
     u64 tx_packets_total, tx_bytes_total;
@@ -60,6 +61,7 @@ struct fusion_cn_metrics_window
     u32 iat_min_ns;
     u32 iat_p50_ns;
     u32 iat_p99_ns;
+    u32 batch_max;
 
     /* jitter buffer & deadlines (fed by ALSA / scheduler sites) */
     u32 jb_depth_cur_samples;
@@ -69,9 +71,12 @@ struct fusion_cn_metrics_window
     u32 jb_depth_count;
     u32 resync_count;
 
-    /* latency / clock (reserved for future) */
+    /* latency / clock */
     u32 path_latency_est_ns;
-    u32 e2e_playout_latency_ns;
+    u32 path_latency_min_ns;
+    u32 path_latency_max_ns;
+    u32 path_latency_p50_ns;
+    u32 path_latency_p99_ns;
 
     /* TX timing (egress) – kept in window; mirror later if you expose */
     u64 tx_last_send_ns;
@@ -79,6 +84,7 @@ struct fusion_cn_metrics_window
     u32 tx_iat_p50_ns;
     u32 tx_iat_p99_ns;
     u32 tx_sched_err_abs_p50_ns;
+    u32 tx_sched_err_abs_max_ns;
 };
 
 struct fusion_cn_metrics_snapshot
@@ -90,15 +96,18 @@ struct fusion_cn_metrics_snapshot
     u64 packets_lost, packets_reordered, packets_dup;
     u64 packets_marked, malformed_count;
     u64 late_drop_count;
+    u64 rx_queue_drop_count;
     u64 burst_loss_max;
 
     u32 rfc3550_jitter_ns;
     u32 iat_min_ns, iat_p50_ns, iat_p99_ns;
+    u32 batch_max;
 
     u32 jb_depth_cur_samples, jb_depth_min_samples, jb_depth_max_samples, jb_depth_avg_samples;
     u32 resync_count;
 
-    u32 path_latency_est_ns, e2e_playout_latency_ns;
+    u32 path_latency_est_ns, path_latency_min_ns, path_latency_max_ns;
+    u32 path_latency_p50_ns, path_latency_p99_ns;
 
     /* TX */
     u64 tx_packets_total;
@@ -108,6 +117,7 @@ struct fusion_cn_metrics_snapshot
     u32 tx_iat_p50_ns;
     u32 tx_iat_p99_ns;
     u32 tx_sched_err_abs_p50_ns;
+    u32 tx_sched_err_abs_max_ns;
 } __attribute__((packed));
 
 struct fusion_cn_metrics_record {
@@ -172,9 +182,18 @@ static inline void fusion_cn_metrics_rx_stash(struct fusion_cn_stream_metrics *m
     }
 }
 
+static inline void fusion_cn_metrics_rx_queue_drop(struct fusion_cn_stream_metrics *m)
+{
+    struct fusion_cn_metrics_pcpu *p = this_cpu_ptr(m->pcpu);
+
+    u64_stats_update_begin(&p->syncp);
+    p->rx_queue_drop_count++;
+    u64_stats_update_end(&p->syncp);
+}
+
 static inline void fusion_cn_metrics_tx_stash(struct fusion_cn_stream_metrics *m,
                                               u64 send_phc_ns, u16 payload_len,
-                                              u64 scheduled_send_ns /* 0 if unknown */)
+                                              u64 scheduled_send_ns)
 {
     struct fusion_cn_metrics_pcpu *p = this_cpu_ptr(m->pcpu);
 
@@ -213,12 +232,18 @@ static inline void fusion_cn_metrics_tx_stash(struct fusion_cn_stream_metrics *m
                 m->win.tx_sched_err_abs_p50_ns =
                     m->win.tx_sched_err_abs_p50_ns +
                     ((s32)err - (s32)m->win.tx_sched_err_abs_p50_ns) / 8;
+
+            if (err > m->win.tx_sched_err_abs_max_ns)
+                m->win.tx_sched_err_abs_max_ns = err;
         }
     }
 }
 
-void fusion_cn_metrics_aggregate_tx(struct fusion_cn_stream_metrics *m);
-void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m, u32 jb_depth_samples);
+void fusion_cn_metrics_aggregate_tx(struct fusion_cn_stream_metrics *m,
+                                    u64 snapshot_ns);
+void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
+                                    u32 jb_depth_samples,
+                                    u64 snapshot_ns);
 
 void fusion_cn_metrics_read_snapshot(const struct fusion_cn_stream_metrics *m,
                                      struct fusion_cn_metrics_snapshot *out);

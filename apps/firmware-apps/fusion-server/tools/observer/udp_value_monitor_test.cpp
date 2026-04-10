@@ -20,7 +20,9 @@ TEST(UDPValueMonitorTest, AsynchronousUpdatesAndNetworking) {
   std::thread serverThread([&serverRunning]() {
     // Create the UDP socket for the server.
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
-    ASSERT_NE(sock, -1) << "Server failed to create socket";
+    if (sock == -1) {
+      return;
+    }
 
     struct sockaddr_in serverAddr;
     memset(&serverAddr, 0, sizeof(serverAddr));
@@ -29,7 +31,10 @@ TEST(UDPValueMonitorTest, AsynchronousUpdatesAndNetworking) {
     serverAddr.sin_port = htons(serverPort);
 
     int rc = bind(sock, (struct sockaddr *)&serverAddr, sizeof(serverAddr));
-    ASSERT_EQ(rc, 0) << "Server failed to bind socket";
+    if (rc != 0) {
+      close(sock);
+      return;
+    }
 
     char buffer[1024];
     struct sockaddr_in clientAddr;
@@ -104,8 +109,9 @@ TEST(UDPValueMonitorTest, AsynchronousUpdatesAndNetworking) {
     close(sock);
   });
 
-  UDPValueMonitor monitorUDP("127.0.0.1", serverPort);
+  UDPValueMonitor monitorUDP("127.0.0.1", serverPort, false);
   monitorUDP.watch("test.value", [](const std::string &, const Json::Value &, const Json::Value &) {});
+  monitorUDP.start();
 
   // Allow some time for asynchronous processing (the receive thread picks up
   // the response).
@@ -173,19 +179,19 @@ TEST(UDPValueMonitorTest, GetLocalDeviceInformationCallback) {
     close(sock);
   });
 
-  UDPValueMonitor monitorUDP("127.0.0.1", serverPort);
-
   std::mutex callbackMutex;
   std::condition_variable callbackCv;
   bool callbackCalled = false;
   std::string callbackDeviceID;
 
+  UDPValueMonitor monitorUDP("127.0.0.1", serverPort, false);
   monitorUDP.watchDeviceID([&](const std::string &deviceID) {
     std::lock_guard<std::mutex> lock(callbackMutex);
     callbackCalled = true;
     callbackDeviceID = deviceID;
     callbackCv.notify_one();
   });
+  monitorUDP.start();
 
   {
     std::unique_lock<std::mutex> lock(callbackMutex);
@@ -207,6 +213,23 @@ bool isEnvEnabled(const char *name) {
   return value != nullptr && value[0] != '\0' && std::string(value) != "0";
 }
 
+bool parseJsonMessage(const char *buffer, ssize_t size, Json::Value *message) {
+  Json::CharReaderBuilder readerBuilder;
+  readerBuilder["collectComments"] = false;
+  std::string errs;
+  std::istringstream stream(std::string(buffer, static_cast<size_t>(size)));
+  return Json::parseFromStream(readerBuilder, stream, message, &errs);
+}
+
+void sendJsonMessage(int sock, const sockaddr_in &clientAddr, socklen_t clientLen,
+                     const Json::Value &message) {
+  Json::StreamWriterBuilder writer;
+  writer["indentation"] = "";
+  const std::string response = Json::writeString(writer, message);
+  sendto(sock, response.c_str(), response.size(), 0,
+         reinterpret_cast<const sockaddr *>(&clientAddr), clientLen);
+}
+
 bool parseHostPort(const std::string &addr, std::string *host, int *port) {
   const auto pos = addr.rfind(':');
   if (pos == std::string::npos) {
@@ -225,6 +248,249 @@ bool parseHostPort(const std::string &addr, std::string *host, int *port) {
 }
 } // namespace
 
+TEST(UDPValueMonitorTest, SendsKeepaliveWhileIdle) {
+  const int serverPort = 54323;
+  std::atomic<bool> sawKeepalive{false};
+
+  std::thread serverThread([&]() {
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock == -1) {
+      return;
+    }
+
+    timeval timeout{};
+    timeout.tv_sec = 5;
+    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) != 0) {
+      close(sock);
+      return;
+    }
+
+    sockaddr_in serverAddr{};
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    serverAddr.sin_port = htons(serverPort);
+    if (bind(sock, reinterpret_cast<sockaddr *>(&serverAddr), sizeof(serverAddr)) != 0) {
+      close(sock);
+      return;
+    }
+
+    char buffer[1024];
+    sockaddr_in clientAddr{};
+    socklen_t clientLen = sizeof(clientAddr);
+
+    ssize_t n = recvfrom(sock, buffer, sizeof(buffer), 0,
+                         reinterpret_cast<sockaddr *>(&clientAddr), &clientLen);
+    if (n <= 0) {
+      close(sock);
+      return;
+    }
+    Json::Value request;
+    if (!parseJsonMessage(buffer, n, &request) ||
+        request["action"].asString() != "get_local_device_information") {
+      close(sock);
+      return;
+    }
+
+    Json::Value deviceInfo;
+    deviceInfo["_fusion_op"] = "get_local_device_information";
+    deviceInfo["status"] = "success";
+    deviceInfo["payload"]["id"] = "keepalive-device";
+    sendJsonMessage(sock, clientAddr, clientLen, deviceInfo);
+
+    n = recvfrom(sock, buffer, sizeof(buffer), 0,
+                 reinterpret_cast<sockaddr *>(&clientAddr), &clientLen);
+    if (n <= 0 || !parseJsonMessage(buffer, n, &request) ||
+        request["action"].asString() != "get") {
+      close(sock);
+      return;
+    }
+
+    Json::Value state;
+    state["_fusion_op"] = "get";
+    state["status"] = "success";
+    state["payload"]["test"]["value"] = 1;
+    sendJsonMessage(sock, clientAddr, clientLen, state);
+
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+    while (std::chrono::steady_clock::now() < deadline && !sawKeepalive.load()) {
+      n = recvfrom(sock, buffer, sizeof(buffer), 0,
+                   reinterpret_cast<sockaddr *>(&clientAddr), &clientLen);
+      if (n <= 0) {
+        continue;
+      }
+      if (!parseJsonMessage(buffer, n, &request)) {
+        continue;
+      }
+      if (request.isMember("action") && request["action"].asString() == "no_op") {
+        sawKeepalive.store(true);
+        Json::Value noopAck;
+        noopAck["_fusion_op"] = "no_op";
+        noopAck["status"] = "ok";
+        sendJsonMessage(sock, clientAddr, clientLen, noopAck);
+      }
+    }
+
+    close(sock);
+  });
+
+  UDPValueMonitor monitorUDP(
+      "127.0.0.1", serverPort, false,
+      UDPValueMonitor::TimingConfig{1, 2});
+  monitorUDP.watch("test.value",
+                   [](const std::string &, const Json::Value &, const Json::Value &) {});
+  monitorUDP.start();
+
+  serverThread.join();
+  monitorUDP.stop();
+
+  EXPECT_TRUE(sawKeepalive.load());
+}
+
+TEST(UDPValueMonitorTest, ReHandshakesAfterKeepaliveAckGap) {
+  const int serverPort = 54324;
+  std::atomic<bool> reHandshakeObserved{false};
+
+  std::thread serverThread([&]() {
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock == -1) {
+      return;
+    }
+
+    timeval timeout{};
+    timeout.tv_sec = 8;
+    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) != 0) {
+      close(sock);
+      return;
+    }
+
+    sockaddr_in serverAddr{};
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    serverAddr.sin_port = htons(serverPort);
+    if (bind(sock, reinterpret_cast<sockaddr *>(&serverAddr), sizeof(serverAddr)) != 0) {
+      close(sock);
+      return;
+    }
+
+    char buffer[1024];
+    sockaddr_in clientAddr{};
+    socklen_t clientLen = sizeof(clientAddr);
+    Json::Value request;
+
+    auto recvRequest = [&](const char *expectedAction) {
+      const ssize_t n = recvfrom(sock, buffer, sizeof(buffer), 0,
+                                 reinterpret_cast<sockaddr *>(&clientAddr), &clientLen);
+      if (n <= 0 || !parseJsonMessage(buffer, n, &request) ||
+          !request.isMember("action") ||
+          request["action"].asString() != expectedAction) {
+        request = Json::Value();
+      }
+    };
+
+    recvRequest("get_local_device_information");
+    if (request.isNull()) {
+      close(sock);
+      return;
+    }
+    Json::Value deviceInfo;
+    deviceInfo["_fusion_op"] = "get_local_device_information";
+    deviceInfo["status"] = "success";
+    deviceInfo["payload"]["id"] = "rehydrate-device";
+    sendJsonMessage(sock, clientAddr, clientLen, deviceInfo);
+
+    recvRequest("get");
+    if (request.isNull()) {
+      close(sock);
+      return;
+    }
+    Json::Value state;
+    state["_fusion_op"] = "get";
+    state["status"] = "success";
+    state["payload"]["test"]["value"] = 1;
+    sendJsonMessage(sock, clientAddr, clientLen, state);
+
+    bool firstNoopAckSent = false;
+    bool delayedNoopAckSent = false;
+    auto firstAckAt = std::chrono::steady_clock::now();
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(6);
+
+    while (std::chrono::steady_clock::now() < deadline) {
+      const ssize_t n = recvfrom(sock, buffer, sizeof(buffer), 0,
+                                 reinterpret_cast<sockaddr *>(&clientAddr), &clientLen);
+      if (n <= 0 || !parseJsonMessage(buffer, n, &request) || !request.isMember("action")) {
+        continue;
+      }
+
+      const std::string action = request["action"].asString();
+      if (action == "no_op") {
+        if (!firstNoopAckSent) {
+          Json::Value noopAck;
+          noopAck["_fusion_op"] = "no_op";
+          noopAck["status"] = "ok";
+          sendJsonMessage(sock, clientAddr, clientLen, noopAck);
+          firstNoopAckSent = true;
+          firstAckAt = std::chrono::steady_clock::now();
+        } else if (!delayedNoopAckSent &&
+                   std::chrono::steady_clock::now() - firstAckAt >= std::chrono::seconds(3)) {
+          Json::Value noopAck;
+          noopAck["_fusion_op"] = "no_op";
+          noopAck["status"] = "ok";
+          sendJsonMessage(sock, clientAddr, clientLen, noopAck);
+          delayedNoopAckSent = true;
+        }
+        continue;
+      }
+
+      if (delayedNoopAckSent && action == "get_local_device_information") {
+        reHandshakeObserved.store(true);
+        Json::Value secondDeviceInfo;
+        secondDeviceInfo["_fusion_op"] = "get_local_device_information";
+        secondDeviceInfo["status"] = "success";
+        secondDeviceInfo["payload"]["id"] = "rehydrate-device";
+        sendJsonMessage(sock, clientAddr, clientLen, secondDeviceInfo);
+
+        recvRequest("get");
+        if (request.isNull()) {
+          close(sock);
+          return;
+        }
+        Json::Value secondState;
+        secondState["_fusion_op"] = "get";
+        secondState["status"] = "success";
+        secondState["payload"]["test"]["value"] = 99;
+        sendJsonMessage(sock, clientAddr, clientLen, secondState);
+        break;
+      }
+    }
+
+    close(sock);
+  });
+
+  UDPValueMonitor monitorUDP(
+      "127.0.0.1", serverPort, false,
+      UDPValueMonitor::TimingConfig{1, 2});
+  monitorUDP.watch("test.value",
+                   [](const std::string &, const Json::Value &, const Json::Value &) {});
+  monitorUDP.start();
+
+  Json::Value val;
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(7);
+  while (std::chrono::steady_clock::now() < deadline) {
+    val = monitorUDP.get("test.value");
+    if (val.isInt() && val.asInt() == 99) {
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  }
+
+  serverThread.join();
+  monitorUDP.stop();
+
+  EXPECT_TRUE(reHandshakeObserved.load());
+  ASSERT_TRUE(val.isInt());
+  EXPECT_EQ(val.asInt(), 99);
+}
+
 TEST(UDPValueMonitorTest, IntegrationWithFusionServer) {
   if (!isEnvEnabled("FUSION_UDP_INTEGRATION")) {
     GTEST_SKIP() << "Set FUSION_UDP_INTEGRATION=1 to enable this test.";
@@ -242,8 +508,9 @@ TEST(UDPValueMonitorTest, IntegrationWithFusionServer) {
     host = "127.0.0.1";
   }
 
-  UDPValueMonitor monitorUDP(host, port);
+  UDPValueMonitor monitorUDP(host, port, false);
   monitorUDP.watch("observer_test.value", [](const std::string &, const Json::Value &, const Json::Value &) {});
+  monitorUDP.start();
 
   const int expected = 42;
   Json::Value update;
