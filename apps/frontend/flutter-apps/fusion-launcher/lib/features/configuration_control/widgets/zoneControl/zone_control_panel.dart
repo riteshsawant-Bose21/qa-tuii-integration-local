@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/zoneControlViewmodel/zone_control_state.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/zoneControlViewmodel/zone_control_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/zoneControl/zones_list_panel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/zoneControl/virtual_controller_panel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -12,9 +12,9 @@ class ZoneControlPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
-      builder: (BuildContext context, ConfigurationControlState state) {
-        if (state is! ConfigControlLoaded) {
+    return BlocBuilder<ZoneControlViewModel, ZoneControlState>(
+      builder: (BuildContext context, ZoneControlState state) {
+        if (state is! ZoneControlLoaded) {
           return const SizedBox.shrink();
         }
 

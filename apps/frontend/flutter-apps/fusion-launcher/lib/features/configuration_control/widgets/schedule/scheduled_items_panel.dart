@@ -1,23 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/ScheduleViewModel/schedule_state.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/ScheduleViewModel/schedule_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Left panel — SCHEDULED ITEMS.
 ///
-/// Reads from and writes to [ConfigurationControlViewmodel] so state
-/// survives tab switches and is persisted on the controller model.
+/// Reads from and writes to [ScheduleViewModel].
 class ScheduledItemsPanel extends StatelessWidget {
   const ScheduledItemsPanel({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
-      builder: (BuildContext context, ConfigurationControlState state) {
-        if (state is! ConfigControlLoaded) return const SizedBox.shrink();
-        final ConfigurationControlViewmodel vm = context.read<ConfigurationControlViewmodel>();
+    return BlocBuilder<ScheduleViewModel, ScheduleState>(
+      builder: (BuildContext context, ScheduleState state) {
+        if (state is! ScheduleLoaded) return const SizedBox.shrink();
+        final ScheduleViewModel vm = context.read<ScheduleViewModel>();
 
         return Container(
           decoration: BoxDecoration(
@@ -44,29 +43,29 @@ class ScheduledItemsPanel extends StatelessWidget {
                     // ── Filter mode radio buttons ────────────────────────
                     _RadioRow(
                       label: 'Show none',
-                      isSelected: state.scheduleDisplayMode == ScheduleDisplayMode.none,
-                      onTap: () => vm.setScheduleDisplayMode(ScheduleDisplayMode.none),
+                      isSelected: state.filterMode == ScheduleFilterMode.none,
+                      onTap: () => vm.setFilterMode(ScheduleFilterMode.none),
                     ),
                     _RadioRow(
                       label: 'Show all',
-                      isSelected: state.scheduleDisplayMode == ScheduleDisplayMode.all,
-                      onTap: () => vm.setScheduleDisplayMode(ScheduleDisplayMode.all),
+                      isSelected: state.filterMode == ScheduleFilterMode.all,
+                      onTap: () => vm.setFilterMode(ScheduleFilterMode.all),
                     ),
                     _RadioRow(
                       label: 'Show selected',
-                      isSelected: state.scheduleDisplayMode == ScheduleDisplayMode.selected,
-                      onTap: () => vm.setScheduleDisplayMode(ScheduleDisplayMode.selected),
+                      isSelected: state.filterMode == ScheduleFilterMode.selected,
+                      onTap: () => vm.setFilterMode(ScheduleFilterMode.selected),
                     ),
 
                     // ── Schedule checklist (only for "Show selected") ────
-                    if (state.scheduleDisplayMode == ScheduleDisplayMode.selected) ...<Widget>[
+                    if (state.filterMode == ScheduleFilterMode.selected) ...<Widget>[
                       const SizedBox(height: 4),
                       ...state.allSchedules.map((ScheduleConfig schedule) {
                         final bool isChecked = state.selectedScheduleIds.contains(schedule.id);
                         return _ScheduleCheckboxRow(
                           schedule: schedule,
                           isChecked: isChecked,
-                          onToggle: () => vm.toggleScheduleItemSelection(schedule.id),
+                          onToggle: () => vm.toggleScheduleSelection(schedule.id),
                         );
                       }),
                     ],

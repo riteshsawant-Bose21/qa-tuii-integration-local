@@ -8,9 +8,11 @@ import 'package:fusion_launcher/features/configuration_control/widgets/schedule/
 import 'package:fusion_launcher/features/configuration_control/widgets/settings/settings_panel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/snapshotsAndScenes/snapshots_scenes_panel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/zoneControl/zone_control_panel.dart';
-import 'package:fusion_lib/fusion_lib.dart';
 
-/// Main content panel showing tabs and content for the selected controller
+/// Main content panel showing tabs and content for the selected controller.
+///
+/// Only reads from [ConfigurationControlViewmodel] to determine tab/controller.
+/// Each tab panel uses its own dedicated ViewModel.
 class ControlContentPanel extends StatelessWidget {
   const ControlContentPanel({super.key});
 
@@ -29,7 +31,7 @@ class ControlContentPanel extends StatelessWidget {
 
             /// Content based on selected tab
             Expanded(
-              child: _buildTabContent(context, state),
+              child: _buildTabContent(state),
             ),
           ],
         );
@@ -37,32 +39,18 @@ class ControlContentPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildTabContent(BuildContext context, ConfigControlLoaded state) {
+  Widget _buildTabContent(ConfigControlLoaded state) {
     switch (state.currentTab) {
       case ConfigControlTab.zoneControl:
         return const ZoneControlPanel();
       case ConfigControlTab.snapshotsScenes:
         return const SnapshotsScenesPanel();
       case ConfigControlTab.schedule:
-        return const SchedulePanel();
+        return SchedulePanel(controllerName: state.selectedController?.name ?? '');
       case ConfigControlTab.message:
         return const MessagePanel();
       case ConfigControlTab.settings:
         return const SettingsPanel();
     }
-  }
-
-  Widget _buildPlaceholderContent(BuildContext context, String tabName) {
-    return Container(
-      color: context.colorScheme.primaryBlack,
-      child: Center(
-        child: FusionAppText(
-          text: '$tabName content coming soon',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: context.colorScheme.textSecondary,
-          ),
-        ),
-      ),
-    );
   }
 }

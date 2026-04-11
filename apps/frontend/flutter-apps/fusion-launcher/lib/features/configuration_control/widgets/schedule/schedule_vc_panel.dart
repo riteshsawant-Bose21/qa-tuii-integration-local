@@ -1,20 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/ScheduleViewModel/schedule_state.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/ScheduleViewModel/schedule_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:intl/intl.dart';
 
 /// Right panel — VIRTUAL CONTROLLER (schedule tab).
-///
-/// Shows an "Events" card with:
-///  • Scheduled tab (always visible)
-///  • Upcoming tab (only when "Show upcoming items" is checked)
-///
-/// Reads state from [ConfigurationControlViewmodel] so changes are persisted
-/// per-controller via [ControllerSchedulePageConfig].
 class ScheduleVcPanel extends StatefulWidget {
-  const ScheduleVcPanel({super.key});
+  /// Name of the selected controller, shown as event subtitle.
+  final String controllerName;
+
+  const ScheduleVcPanel({super.key, this.controllerName = ''});
 
   @override
   State<ScheduleVcPanel> createState() => _ScheduleVcPanelState();
@@ -35,47 +31,24 @@ class _ScheduleVcPanelState extends State<ScheduleVcPanel> with SingleTickerProv
     super.dispose();
   }
 
-  /// Derive the scheduled items based on the current filter mode.
-  List<ScheduleConfig> _getScheduledItems(ConfigControlLoaded state) {
-    switch (state.scheduleDisplayMode) {
-      case ScheduleDisplayMode.none:
-        return <ScheduleConfig>[];
-      case ScheduleDisplayMode.all:
-        return state.allSchedules;
-      case ScheduleDisplayMode.selected:
-        return state.allSchedules.where((ScheduleConfig s) => state.selectedScheduleIds.contains(s.id)).toList();
-    }
-  }
-
-  /// Derive the upcoming items (schedules whose time is later than now).
-  List<ScheduleConfig> _getUpcomingItems(List<ScheduleConfig> scheduledItems) {
-    final DateTime now = DateTime.now();
-    return scheduledItems.where((ScheduleConfig s) {
-      final DateTime scheduleTime = DateTime(now.year, now.month, now.day, s.time.hour, s.time.minute);
-      return scheduleTime.isAfter(now);
-    }).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
-      builder: (BuildContext context, ConfigurationControlState ctrlState) {
-        if (ctrlState is! ConfigControlLoaded) return const SizedBox.shrink();
+    return BlocBuilder<ScheduleViewModel, ScheduleState>(
+      builder: (BuildContext context, ScheduleState state) {
+        if (state is! ScheduleLoaded) return const SizedBox.shrink();
 
-        final ConfigurationControlViewmodel vm = context.read<ConfigurationControlViewmodel>();
-        final String controllerName = ctrlState.selectedController?.name ?? '';
+        final ScheduleViewModel vm = context.read<ScheduleViewModel>();
+        final bool showUpcoming = state.showUpcoming;
 
         // Ensure tab index is valid when upcoming tab is hidden
-        final bool showUpcoming = ctrlState.showUpcoming;
         if (!showUpcoming && _tabController.index == 1) {
           _tabController.animateTo(0);
         }
 
-        final List<ScheduleConfig> scheduledItems = _getScheduledItems(ctrlState);
-        final List<ScheduleConfig> upcomingItems = _getUpcomingItems(scheduledItems);
-
-        // Determine empty message based on filter mode
-        final String emptyMessage = ctrlState.scheduleDisplayMode == ScheduleDisplayMode.none ? 'No items to display' : 'No scheduled items';
+        // Use helpers from ScheduleLoaded
+        final List<ScheduleConfig> scheduledItems = state.filteredSchedules;
+        final List<ScheduleConfig> upcomingItems = state.upcomingSchedules;
+        final String emptyMessage = state.filterMode == ScheduleFilterMode.none ? 'No items to display' : 'No scheduled items';
 
         return Container(
           decoration: BoxDecoration(
@@ -111,12 +84,8 @@ class _ScheduleVcPanelState extends State<ScheduleVcPanel> with SingleTickerProv
                     // ── Tab bar ────────────────────────────────────
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _EventsTabBar(
-                        controller: _tabController,
-                        showUpcoming: showUpcoming,
-                      ),
+                      child: _EventsTabBar(controller: _tabController, showUpcoming: showUpcoming),
                     ),
-
                     const SizedBox(height: 8),
 
                     // ── Tab content ────────────────────────────────
@@ -128,22 +97,21 @@ class _ScheduleVcPanelState extends State<ScheduleVcPanel> with SingleTickerProv
                                 children: <Widget>[
                                   _EventList(
                                     schedules: scheduledItems,
-                                    controllerName: controllerName,
+                                    controllerName: widget.controllerName,
                                     emptyMessage: emptyMessage,
                                     onToggle: (ScheduleConfig s) => vm.toggleScheduleStatus(s),
                                   ),
                                   _EventList(
                                     schedules: upcomingItems,
-                                    controllerName: controllerName,
+                                    controllerName: widget.controllerName,
                                     emptyMessage: 'No upcoming items',
                                     onToggle: (ScheduleConfig s) => vm.toggleScheduleStatus(s),
                                   ),
                                 ],
                               )
-                              // Single-tab mode: show only scheduled
                               : _EventList(
                                 schedules: scheduledItems,
-                                controllerName: controllerName,
+                                controllerName: widget.controllerName,
                                 emptyMessage: emptyMessage,
                                 onToggle: (ScheduleConfig s) => vm.toggleScheduleStatus(s),
                               ),
@@ -165,21 +133,14 @@ class _EventsTabBar extends StatelessWidget {
   final TabController controller;
   final bool showUpcoming;
 
-  const _EventsTabBar({
-    required this.controller,
-    required this.showUpcoming,
-  });
+  const _EventsTabBar({required this.controller, required this.showUpcoming});
 
   @override
   Widget build(BuildContext context) {
     if (!showUpcoming) {
-      // Single pill — no real tab controller involved
       return Container(
         height: 38,
-        decoration: BoxDecoration(
-          color: context.colorScheme.elevation3,
-          borderRadius: BorderRadius.circular(8),
-        ),
+        decoration: BoxDecoration(color: context.colorScheme.elevation3, borderRadius: BorderRadius.circular(8)),
         child: Container(
           margin: const EdgeInsets.all(3),
           decoration: BoxDecoration(
@@ -190,10 +151,7 @@ class _EventsTabBar extends StatelessWidget {
           alignment: Alignment.center,
           child: FusionAppText(
             text: 'Scheduled',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: context.colorScheme.textPrimary,
-            ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: context.colorScheme.textPrimary),
           ),
         ),
       );
@@ -201,10 +159,7 @@ class _EventsTabBar extends StatelessWidget {
 
     return Container(
       height: 38,
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation3,
-        borderRadius: BorderRadius.circular(8),
-      ),
+      decoration: BoxDecoration(color: context.colorScheme.elevation3, borderRadius: BorderRadius.circular(8)),
       child: TabBar(
         controller: controller,
         indicatorSize: TabBarIndicatorSize.tab,
@@ -232,12 +187,7 @@ class _EventList extends StatelessWidget {
   final String emptyMessage;
   final void Function(ScheduleConfig) onToggle;
 
-  const _EventList({
-    required this.schedules,
-    required this.controllerName,
-    required this.emptyMessage,
-    required this.onToggle,
-  });
+  const _EventList({required this.schedules, required this.controllerName, required this.emptyMessage, required this.onToggle});
 
   @override
   Widget build(BuildContext context) {
@@ -247,24 +197,17 @@ class _EventList extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           child: FusionAppText(
             text: emptyMessage,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: context.colorScheme.textSecondary,
-            ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.colorScheme.textSecondary),
           ),
         ),
       );
     }
-
     return ListView.builder(
       padding: const EdgeInsets.only(bottom: 8),
       itemCount: schedules.length,
       itemBuilder: (BuildContext context, int index) {
         final ScheduleConfig schedule = schedules[index];
-        return _EventItem(
-          schedule: schedule,
-          subtitle: controllerName,
-          onToggle: () => onToggle(schedule),
-        );
+        return _EventItem(schedule: schedule, subtitle: controllerName, onToggle: () => onToggle(schedule));
       },
     );
   }
@@ -277,11 +220,7 @@ class _EventItem extends StatelessWidget {
   final String subtitle;
   final VoidCallback onToggle;
 
-  const _EventItem({
-    required this.schedule,
-    required this.subtitle,
-    required this.onToggle,
-  });
+  const _EventItem({required this.schedule, required this.subtitle, required this.onToggle});
 
   @override
   Widget build(BuildContext context) {
@@ -294,28 +233,19 @@ class _EventItem extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.colorScheme.elevation3,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: context.colorScheme.strokeLight,
-          width: 1,
-        ),
+        border: Border.all(color: context.colorScheme.strokeLight, width: 1),
       ),
       child: Row(
         children: <Widget>[
-          // ── Colored left strip ───────────────────────────────────
           Container(
             width: 4,
             height: 64,
             decoration: BoxDecoration(
               color: stripColor,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(10),
-                bottomLeft: Radius.circular(10),
-              ),
+              borderRadius: const BorderRadius.only(topLeft: Radius.circular(10), bottomLeft: Radius.circular(10)),
             ),
           ),
           const SizedBox(width: 12),
-
-          // ── Time ─────────────────────────────────────────────────
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -323,33 +253,18 @@ class _EventItem extends StatelessWidget {
             children: <Widget>[
               FusionAppText(
                 text: timeStr,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: context.colorScheme.textPrimary,
-                ),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: context.colorScheme.textPrimary),
               ),
               Row(
                 children: <Widget>[
-                  Icon(
-                    Icons.access_time,
-                    size: 10,
-                    color: context.colorScheme.textSecondary,
-                  ),
+                  Icon(Icons.access_time, size: 10, color: context.colorScheme.textSecondary),
                   const SizedBox(width: 2),
-                  FusionAppText(
-                    text: amPm,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: context.colorScheme.textSecondary,
-                      fontSize: 10,
-                    ),
-                  ),
+                  FusionAppText(text: amPm, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.colorScheme.textSecondary, fontSize: 10)),
                 ],
               ),
             ],
           ),
           const SizedBox(width: 14),
-
-          // ── Title + subtitle ─────────────────────────────────────
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -357,30 +272,19 @@ class _EventItem extends StatelessWidget {
               children: <Widget>[
                 FusionAppText(
                   text: schedule.name,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: context.colorScheme.textPrimary,
-                  ),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500, color: context.colorScheme.textPrimary),
                 ),
                 if (subtitle.isNotEmpty)
                   FusionAppText(
                     text: subtitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: context.colorScheme.textSecondary,
-                      fontSize: 11,
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.colorScheme.textSecondary, fontSize: 11),
                   ),
               ],
             ),
           ),
-
-          // ── Toggle switch ─────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: GestureDetector(
-              onTap: onToggle,
-              child: _ToggleSwitch(isOn: schedule.status),
-            ),
+            child: GestureDetector(onTap: onToggle, child: _ToggleSwitch(isOn: schedule.status)),
           ),
         ],
       ),
@@ -412,24 +316,14 @@ class _ToggleSwitch extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         color: isOn ? context.colorScheme.primaryColor : context.colorScheme.elevation1,
-        border: Border.all(
-          color: isOn ? context.colorScheme.primaryColor : context.colorScheme.strokeLight,
-          width: 1,
-        ),
+        border: Border.all(color: isOn ? context.colorScheme.primaryColor : context.colorScheme.strokeLight, width: 1),
       ),
       child: Padding(
         padding: const EdgeInsets.all(2),
         child: AnimatedAlign(
           duration: const Duration(milliseconds: 200),
           alignment: isOn ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(
-            width: 18,
-            height: 18,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white,
-            ),
-          ),
+          child: Container(width: 18, height: 18, decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white)),
         ),
       ),
     );

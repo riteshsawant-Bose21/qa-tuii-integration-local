@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/MessageViewModel/message_state.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/MessageViewModel/message_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -15,9 +15,9 @@ class MessagePagesPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
-      builder: (BuildContext context, ConfigurationControlState state) {
-        if (state is! ConfigControlLoaded) return const SizedBox.shrink();
+    return BlocBuilder<MessageViewModel, MessageState>(
+      builder: (BuildContext context, MessageState state) {
+        if (state is! MessageLoaded) return const SizedBox.shrink();
 
         // Only checked players appear as pages
         final List<Source> pageItems = state.messagePlayers.where((Source s) => state.selectedMessagePlayerIds.contains(s.id)).toList();
@@ -51,7 +51,7 @@ class MessagePagesPanel extends StatelessWidget {
                                 return _PageRow(
                                   label: s.name,
                                   isActive: isActive,
-                                  onTap: () => context.read<ConfigurationControlViewmodel>().selectMessagePage(s.id),
+                                  onTap: () => context.read<MessageViewModel>().selectMessagePage(s.id),
                                 );
                               }).toList(),
                         ),
