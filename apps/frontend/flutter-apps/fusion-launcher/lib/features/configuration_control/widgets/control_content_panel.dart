@@ -19,6 +19,15 @@ class ControlContentPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
+      // Only rebuild when the selected tab or controller actually changes —
+      // prevents spurious rebuilds (and intermediate stale-state renders)
+      // triggered by _sync() re-emitting ConfigControlLoaded with the same
+      // tab/controller after a project-level persistence call.
+      buildWhen: (ConfigurationControlState previous, ConfigurationControlState current) {
+        if (current is! ConfigControlLoaded) return true;
+        if (previous is! ConfigControlLoaded) return true;
+        return previous.currentTab != current.currentTab || previous.selectedControllerId != current.selectedControllerId;
+      },
       builder: (BuildContext context, ConfigurationControlState state) {
         if (state is! ConfigControlLoaded) {
           return const SizedBox.shrink();

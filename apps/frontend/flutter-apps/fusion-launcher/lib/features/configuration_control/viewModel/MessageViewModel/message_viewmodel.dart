@@ -168,21 +168,26 @@ class MessageViewModel extends Cubit<MessageState> {
       newPageId = loaded.selectedMessagePageId;
     }
 
-    // Persist
-    if (loaded.controllerId != null) {
-      _persistMessagePages(
-        controllerId: loaded.controllerId!,
-        selectedPlayerIds: updated,
-        selectedMessageIdsPerPlayer: loaded.selectedMessageIdsPerPlayer,
-      );
-    }
-
+    // Optimistic update — UI reflects the change immediately.
     emit(
       loaded.copyWith(
         selectedMessagePlayerIds: updated,
         selectedMessagePageId: newPageId,
       ),
     );
+
+    // Persist in the background; errors are logged but never block the UI.
+    if (loaded.controllerId != null) {
+      try {
+        _persistMessagePages(
+          controllerId: loaded.controllerId!,
+          selectedPlayerIds: updated,
+          selectedMessageIdsPerPlayer: loaded.selectedMessageIdsPerPlayer,
+        );
+      } catch (e) {
+        FusionLogger.log(tag: LogTag.project, message: 'MessageViewModel: toggleMessagePlayerSelection persist failed: $e');
+      }
+    }
   }
 
   /// Select a message-player page (highlights it in the PAGES panel).
@@ -211,16 +216,21 @@ class MessageViewModel extends Cubit<MessageState> {
     }
     updatedMap[playerId] = playerSet;
 
-    // Persist
-    if (loaded.controllerId != null) {
-      _persistMessagePages(
-        controllerId: loaded.controllerId!,
-        selectedPlayerIds: loaded.selectedMessagePlayerIds,
-        selectedMessageIdsPerPlayer: updatedMap,
-      );
-    }
-
+    // Optimistic update — UI reflects the change immediately.
     emit(loaded.copyWith(selectedMessageIdsPerPlayer: updatedMap));
+
+    // Persist in the background; errors are logged but never block the UI.
+    if (loaded.controllerId != null) {
+      try {
+        _persistMessagePages(
+          controllerId: loaded.controllerId!,
+          selectedPlayerIds: loaded.selectedMessagePlayerIds,
+          selectedMessageIdsPerPlayer: updatedMap,
+        );
+      } catch (e) {
+        FusionLogger.log(tag: LogTag.project, message: 'MessageViewModel: toggleMessageSelection persist failed: $e');
+      }
+    }
   }
 
   // ─── Persistence ───────────────────────────────────────────────────────────

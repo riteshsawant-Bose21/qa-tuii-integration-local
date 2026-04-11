@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/ScheduleViewModel/schedule_state.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/ScheduleViewModel/schedule_viewmodel.dart';
@@ -40,9 +41,12 @@ class _ScheduleVcPanelState extends State<ScheduleVcPanel> with SingleTickerProv
         final ScheduleViewModel vm = context.read<ScheduleViewModel>();
         final bool showUpcoming = state.showUpcoming;
 
-        // Ensure tab index is valid when upcoming tab is hidden
+        // Ensure tab index is valid when upcoming tab is hidden.
+        // Must run after the current build frame to avoid illegal setState-in-build.
         if (!showUpcoming && _tabController.index == 1) {
-          _tabController.animateTo(0);
+          SchedulerBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _tabController.animateTo(0);
+          });
         }
 
         // Use helpers from ScheduleLoaded

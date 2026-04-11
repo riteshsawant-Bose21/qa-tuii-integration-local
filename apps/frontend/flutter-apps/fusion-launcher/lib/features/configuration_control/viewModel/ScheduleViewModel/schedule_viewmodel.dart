@@ -62,9 +62,13 @@ class ScheduleViewModel extends Cubit<ScheduleState> {
     final ScheduleLoaded? loaded = _loaded;
     if (loaded == null) return;
 
-    final bool next = !loaded.showUpcoming;
-    _persistConfig(loaded.copyWith(showUpcoming: next));
-    emit(loaded.copyWith(showUpcoming: next));
+    final ScheduleLoaded next = loaded.copyWith(showUpcoming: !loaded.showUpcoming);
+    emit(next); // Optimistic update — UI responds immediately.
+    try {
+      _persistConfig(next);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: 'ScheduleViewModel: toggleShowUpcoming persist failed: $e');
+    }
   }
 
   /// Set filter mode (Show none / Show all / Show selected) and persist.
@@ -72,8 +76,13 @@ class ScheduleViewModel extends Cubit<ScheduleState> {
     final ScheduleLoaded? loaded = _loaded;
     if (loaded == null) return;
 
-    _persistConfig(loaded.copyWith(filterMode: mode));
-    emit(loaded.copyWith(filterMode: mode));
+    final ScheduleLoaded next = loaded.copyWith(filterMode: mode);
+    emit(next); // Optimistic update — UI responds immediately.
+    try {
+      _persistConfig(next);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: 'ScheduleViewModel: setFilterMode persist failed: $e');
+    }
   }
 
   /// Toggle a schedule checkbox in "Show selected" mode and persist.
@@ -89,8 +98,12 @@ class ScheduleViewModel extends Cubit<ScheduleState> {
     }
 
     final ScheduleLoaded next = loaded.copyWith(selectedScheduleIds: updated);
-    _persistConfig(next);
-    emit(next);
+    emit(next); // Optimistic update — UI responds immediately.
+    try {
+      _persistConfig(next);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: 'ScheduleViewModel: toggleScheduleSelection persist failed: $e');
+    }
   }
 
   /// Toggle the enabled/disabled status of a schedule.
