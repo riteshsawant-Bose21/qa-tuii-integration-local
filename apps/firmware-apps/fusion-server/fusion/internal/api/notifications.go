@@ -18,6 +18,14 @@ const (
 	NotifyOpDeviceUpdate              NotifyOp = "device_update"
 	NotifyOpGetLocalDeviceInformation NotifyOp = "get_local_device_information"
 	NotifyOpNoop                      NotifyOp = "no_op"
+	NotifyOpSceneActivate             NotifyOp = "scene_activate"
+	NotifyOpSceneSetsUpsert           NotifyOp = "scene_sets_upsert"
+	NotifyOpSnapshotDefsUpsert        NotifyOp = "snapshot_defs_upsert"
+	NotifyOpSnapshotV2Activate        NotifyOp = "snapshot_v2_activate"
+	NotifyOpTimeMachineActivate       NotifyOp = "time_machine_activate"
+	NotifyOpTimeMachineCreate         NotifyOp = "time_machine_create"
+	NotifyOpTimeMachineDelete         NotifyOp = "time_machine_delete"
+	NotifyOpTimeMachineSave           NotifyOp = "time_machine_save"
 	NotifyOpSnapActivate              NotifyOp = "snapshot_activate"
 	NotifyOpSnapCreate                NotifyOp = "snapshot_create"
 	NotifyOpSnapDelete                NotifyOp = "snapshot_delete"
@@ -49,6 +57,10 @@ type NotifyMessage struct {
 	SoftwareUpdateAck         *SoftwareUpdateSyncAck
 	SoftwareUpdateProgress    *SoftwareUpdateProgress
 	SoftwareUpdateProgressAll map[string]*SoftwareUpdateProgress // aggregated progress from all nodes
+	SceneActivation           *ActivateSceneSetRequest
+	SceneSets                 []SceneSet
+	SnapshotActivation        *ActivateSnapshotRequest
+	SnapshotDefinitions       []SnapshotDefinition
 	SnapshotOperation         *SnapshotOperation
 	Task                      *Task
 	VersionUpdate             *VersionUpdate
@@ -77,6 +89,34 @@ func validateTask(m *NotifyMessage) error {
 func validateSnapshot(m *NotifyMessage) error {
 	if m.SnapshotOperation == nil {
 		return errors.New("SnapshotOperation required for operation")
+	}
+	return nil
+}
+
+func validateSceneActivation(m *NotifyMessage) error {
+	if m.SceneActivation == nil {
+		return errors.New("SceneActivation required for operation")
+	}
+	return nil
+}
+
+func validateSceneSets(m *NotifyMessage) error {
+	if len(m.SceneSets) == 0 {
+		return errors.New("SceneSets required for operation")
+	}
+	return nil
+}
+
+func validateSnapshotActivation(m *NotifyMessage) error {
+	if m.SnapshotActivation == nil {
+		return errors.New("SnapshotActivation required for operation")
+	}
+	return nil
+}
+
+func validateSnapshotDefinitions(m *NotifyMessage) error {
+	if len(m.SnapshotDefinitions) == 0 {
+		return errors.New("SnapshotDefinitions required for operation")
 	}
 	return nil
 }
@@ -124,9 +164,13 @@ var validators = map[NotifyOp]func(*NotifyMessage) error{
 	NotifyOpTaskUpdate: validateTask,
 	NotifyOpTaskDelete: validateTask,
 
-	NotifyOpSnapActivate: validateSnapshot,
-	NotifyOpSnapCreate:   validateSnapshot,
-	NotifyOpSnapDelete:   validateSnapshot,
+	NotifyOpTimeMachineActivate: validateSnapshot,
+	NotifyOpTimeMachineCreate:   validateSnapshot,
+	NotifyOpTimeMachineDelete:   validateSnapshot,
+	NotifyOpSnapshotDefsUpsert:  validateSnapshotDefinitions,
+	NotifyOpSceneSetsUpsert:     validateSceneSets,
+	NotifyOpSnapshotV2Activate:  validateSnapshotActivation,
+	NotifyOpSceneActivate:       validateSceneActivation,
 
 	NotifyOpValueGet: validateConfigValue,
 	NotifyOpValueSet: validateConfigValue,
@@ -134,7 +178,7 @@ var validators = map[NotifyOp]func(*NotifyMessage) error{
 
 func (msg *NotifyMessage) IsPublic() bool {
 	return msg.Operation == NotifyOpConfigUpdate ||
-		msg.Operation == NotifyOpSnapActivate ||
+		msg.Operation == NotifyOpTimeMachineActivate ||
 		msg.Operation == NotifyOpAck ||
 		msg.Operation == NotifyOpVIPStatus ||
 		msg.Operation == NotifyOpDeviceUpdate ||
@@ -165,6 +209,30 @@ func WithConfigUpdate(update *ConfigUpdate) func(*NotifyMessage) {
 func WithSnapshotOperation(operation *SnapshotOperation) func(*NotifyMessage) {
 	return func(m *NotifyMessage) {
 		m.SnapshotOperation = operation
+	}
+}
+
+func WithSnapshotDefinitions(definitions []SnapshotDefinition) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.SnapshotDefinitions = definitions
+	}
+}
+
+func WithSceneSets(sceneSets []SceneSet) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.SceneSets = sceneSets
+	}
+}
+
+func WithSnapshotActivation(request *ActivateSnapshotRequest) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.SnapshotActivation = request
+	}
+}
+
+func WithSceneActivation(request *ActivateSceneSetRequest) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.SceneActivation = request
 	}
 }
 
