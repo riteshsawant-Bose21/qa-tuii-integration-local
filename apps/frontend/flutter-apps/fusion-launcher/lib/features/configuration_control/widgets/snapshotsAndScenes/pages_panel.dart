@@ -1,0 +1,142 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/snapshotViewModel/snapshot_state.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/snapshotViewModel/snapshot_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
+import 'package:fusion_lib/fusion_lib.dart';
+
+/// Middle panel — PAGES (snapshot/scene tab).
+class PagesPanel extends StatelessWidget {
+  const PagesPanel({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<SnapshotViewModel, SnapshotState>(
+      builder: (BuildContext context, SnapshotState state) {
+        if (state is! SnapshotLoaded) return const SizedBox.shrink();
+
+        // Checked scene sets (only these appear as scene-set rows)
+        final List<SceneSetModel> selectedSets = state.sceneSets.where((SceneSetModel s) => state.selectedSceneSetIds.contains(s.id)).toList();
+
+        // User-created snapshot pages — always shown in PAGES
+        final List<SnapshotPageModel> snapshotPages = state.snapshotPages;
+
+        final bool nothingToShow = selectedSets.isEmpty && snapshotPages.isEmpty;
+
+        return Container(
+          decoration: BoxDecoration(
+            color: context.colorScheme.elevation1,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: context.colorScheme.strokeLight, width: 1),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const PanelSectionHeader(title: 'PAGES'),
+              Expanded(
+                child:
+                    nothingToShow
+                        ? Center(
+                          child: FusionAppText(
+                            text: 'No pages available',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: context.colorScheme.textSecondary,
+                            ),
+                          ),
+                        )
+                        : ListView(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          children: <Widget>[
+                            // ── Checked scene-set rows ───────────────────────────
+                            ...selectedSets.map((SceneSetModel s) {
+                              // Scene-set row is active only when NO snapshot page is selected
+                              final bool isActive = s.id == state.selectedSceneSetId && state.selectedSnapshotPageId == null;
+                              return _PageRow(
+                                label: s.name,
+                                isActive: isActive,
+                                onTap: () => context.read<SnapshotViewModel>().selectSceneSet(s.id),
+                              );
+                            }),
+
+                            // ── User-created snapshot pages ──────────────────────
+                            ...snapshotPages.map((SnapshotPageModel page) {
+                              final bool isActive = state.selectedSnapshotPageId == page.id;
+                              return _PageRow(
+                                label: page.name,
+                                isActive: isActive,
+                                onTap: () => context.read<SnapshotViewModel>().selectSnapshotPage(page.id),
+                              );
+                            }),
+                          ],
+                        ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ─── Single page row ──────────────────────────────────────────────────────────
+// Identical visual for scene-set and snapshot-page rows:
+//   Active   → primaryColor solid fill + white text/icon.
+//   Inactive → elevation2 bg + strokeLight border.
+
+class _PageRow extends StatelessWidget {
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _PageRow({
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        decoration: BoxDecoration(
+          color: isActive ? context.colorScheme.primaryColor : context.colorScheme.elevation2,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: isActive ? context.colorScheme.primaryColor : context.colorScheme.strokeLight,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: <Widget>[
+            Icon(
+              Icons.drag_indicator,
+              size: 14,
+              color: isActive ? context.colorScheme.primaryWhite : context.colorScheme.iconDefault,
+            ),
+            const SizedBox(width: 2),
+            Text(
+              ':',
+              style: TextStyle(
+                fontSize: 11,
+                color: isActive ? context.colorScheme.primaryWhite : context.colorScheme.textSecondary,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: FusionAppText(
+                text: label,
+                style: Theme.of(context).textTheme.l1SemiBold.copyWith(
+                  color: isActive ? context.colorScheme.primaryWhite : context.colorScheme.textPrimary,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
