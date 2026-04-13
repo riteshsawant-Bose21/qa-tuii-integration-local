@@ -18,6 +18,14 @@ const (
 	NotifyOpDeviceUpdate              NotifyOp = "device_update"
 	NotifyOpGetLocalDeviceInformation NotifyOp = "get_local_device_information"
 	NotifyOpNoop                      NotifyOp = "no_op"
+	NotifyOpSceneActivate             NotifyOp = "scene_activate"
+	NotifyOpSceneSetsUpsert           NotifyOp = "scene_sets_upsert"
+	NotifyOpSnapshotDefsUpsert        NotifyOp = "snapshot_defs_upsert"
+	NotifyOpSnapshotV2Activate        NotifyOp = "snapshot_v2_activate"
+	NotifyOpTimeMachineActivate       NotifyOp = "time_machine_activate"
+	NotifyOpTimeMachineCreate         NotifyOp = "time_machine_create"
+	NotifyOpTimeMachineDelete         NotifyOp = "time_machine_delete"
+	NotifyOpTimeMachineSave           NotifyOp = "time_machine_save"
 	NotifyOpSnapActivate              NotifyOp = "snapshot_activate"
 	NotifyOpSnapCreate                NotifyOp = "snapshot_create"
 	NotifyOpSnapDelete                NotifyOp = "snapshot_delete"
@@ -28,21 +36,34 @@ const (
 	NotifyOpVIPStatus                 NotifyOp = "vip_status"
 	NotifyOpValueGet                  NotifyOp = "get"
 	NotifyOpValueSet                  NotifyOp = "set"
+	NotifyOpSoftwareUpdateAvailable   NotifyOp = "software_update_available"
+	NotifyOpSoftwareUpdateSyncAck     NotifyOp = "software_update_sync_ack"
+	NotifyOpSoftwareUpdate            NotifyOp = "software_update"
+	NotifyOpSoftwareUpdateProgress    NotifyOp = "software_update_progress"
 )
 
 // NotifyMessage holds information about a cross-node message
 type NotifyMessage struct {
-	ID                string   `json:"id"`
-	Operation         NotifyOp `json:"operation"`
-	Node              string
-	SentAt            time.Time
-	AudioRemove       *AudioRemoveUpdate
-	AudioSync         *AudioSyncUpdate
-	ConfigUpdate      *ConfigUpdate
-	ConfigValue       *ConfigValue
-	DeviceInfo        *DeviceInfo
-	SnapshotOperation *SnapshotOperation
-	Task              *Task
+	ID                        string   `json:"id"`
+	Operation                 NotifyOp `json:"operation"`
+	Node                      string
+	SentAt                    time.Time
+	AudioRemove               *AudioRemoveUpdate
+	AudioSync                 *AudioSyncUpdate
+	ConfigUpdate              *ConfigUpdate
+	ConfigValue               *ConfigValue
+	DeviceInfo                *DeviceInfo
+	SoftwareUpdate            *SoftwareUpdateSync
+	SoftwareUpdateAck         *SoftwareUpdateSyncAck
+	SoftwareUpdateProgress    *SoftwareUpdateProgress
+	SoftwareUpdateProgressAll map[string]*SoftwareUpdateProgress // aggregated progress from all nodes
+	SceneActivation           *ActivateSceneSetRequest
+	SceneSets                 []SceneSet
+	SnapshotActivation        *ActivateSnapshotRequest
+	SnapshotDefinitions       []SnapshotDefinition
+	SnapshotOperation         *SnapshotOperation
+	Task                      *Task
+	VersionUpdate             *VersionUpdate
 }
 
 func NewNotifyMessage(op NotifyOp, node string, builder func(*NotifyMessage)) *NotifyMessage {
@@ -68,6 +89,34 @@ func validateTask(m *NotifyMessage) error {
 func validateSnapshot(m *NotifyMessage) error {
 	if m.SnapshotOperation == nil {
 		return errors.New("SnapshotOperation required for operation")
+	}
+	return nil
+}
+
+func validateSceneActivation(m *NotifyMessage) error {
+	if m.SceneActivation == nil {
+		return errors.New("SceneActivation required for operation")
+	}
+	return nil
+}
+
+func validateSceneSets(m *NotifyMessage) error {
+	if len(m.SceneSets) == 0 {
+		return errors.New("SceneSets required for operation")
+	}
+	return nil
+}
+
+func validateSnapshotActivation(m *NotifyMessage) error {
+	if m.SnapshotActivation == nil {
+		return errors.New("SnapshotActivation required for operation")
+	}
+	return nil
+}
+
+func validateSnapshotDefinitions(m *NotifyMessage) error {
+	if len(m.SnapshotDefinitions) == 0 {
+		return errors.New("SnapshotDefinitions required for operation")
 	}
 	return nil
 }
@@ -99,13 +148,29 @@ var validators = map[NotifyOp]func(*NotifyMessage) error{
 		}
 		return nil
 	},
+	NotifyOpSoftwareUpdateAvailable: func(m *NotifyMessage) error {
+		if m.SoftwareUpdate == nil {
+			return errors.New("SoftwareUpdate required for operation")
+		}
+		return nil
+	},
+	NotifyOpSoftwareUpdateSyncAck: func(m *NotifyMessage) error {
+		if m.SoftwareUpdateAck == nil {
+			return errors.New("SoftwareUpdateAck required for operation")
+		}
+		return nil
+	},
 	NotifyOpTaskCreate: validateTask,
 	NotifyOpTaskUpdate: validateTask,
 	NotifyOpTaskDelete: validateTask,
 
-	NotifyOpSnapActivate: validateSnapshot,
-	NotifyOpSnapCreate:   validateSnapshot,
-	NotifyOpSnapDelete:   validateSnapshot,
+	NotifyOpTimeMachineActivate: validateSnapshot,
+	NotifyOpTimeMachineCreate:   validateSnapshot,
+	NotifyOpTimeMachineDelete:   validateSnapshot,
+	NotifyOpSnapshotDefsUpsert:  validateSnapshotDefinitions,
+	NotifyOpSceneSetsUpsert:     validateSceneSets,
+	NotifyOpSnapshotV2Activate:  validateSnapshotActivation,
+	NotifyOpSceneActivate:       validateSceneActivation,
 
 	NotifyOpValueGet: validateConfigValue,
 	NotifyOpValueSet: validateConfigValue,
@@ -113,10 +178,14 @@ var validators = map[NotifyOp]func(*NotifyMessage) error{
 
 func (msg *NotifyMessage) IsPublic() bool {
 	return msg.Operation == NotifyOpConfigUpdate ||
-		msg.Operation == NotifyOpSnapActivate ||
+		msg.Operation == NotifyOpTimeMachineActivate ||
 		msg.Operation == NotifyOpAck ||
 		msg.Operation == NotifyOpVIPStatus ||
-		msg.Operation == NotifyOpDeviceUpdate
+		msg.Operation == NotifyOpDeviceUpdate ||
+		msg.Operation == NotifyOpSoftwareUpdate ||
+		msg.Operation == NotifyOpSoftwareUpdateAvailable ||
+		msg.Operation == NotifyOpSoftwareUpdateSyncAck ||
+		msg.Operation == NotifyOpSoftwareUpdateProgress
 }
 
 func WithAudioRemove(update *AudioRemoveUpdate) func(*NotifyMessage) {
@@ -143,9 +212,51 @@ func WithSnapshotOperation(operation *SnapshotOperation) func(*NotifyMessage) {
 	}
 }
 
+func WithSnapshotDefinitions(definitions []SnapshotDefinition) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.SnapshotDefinitions = definitions
+	}
+}
+
+func WithSceneSets(sceneSets []SceneSet) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.SceneSets = sceneSets
+	}
+}
+
+func WithSnapshotActivation(request *ActivateSnapshotRequest) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.SnapshotActivation = request
+	}
+}
+
+func WithSceneActivation(request *ActivateSceneSetRequest) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.SceneActivation = request
+	}
+}
+
 func WithTask(task *Task) func(*NotifyMessage) {
 	return func(m *NotifyMessage) {
 		m.Task = task
+	}
+}
+
+func WithSoftwareUpdate(update *SoftwareUpdateSync) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.SoftwareUpdate = update
+	}
+}
+
+func WithSoftwareUpdateAck(ack *SoftwareUpdateSyncAck) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.SoftwareUpdateAck = ack
+	}
+}
+
+func WithVersionUpdate(update *VersionUpdate) func(*NotifyMessage) {
+	return func(m *NotifyMessage) {
+		m.VersionUpdate = update
 	}
 }
 

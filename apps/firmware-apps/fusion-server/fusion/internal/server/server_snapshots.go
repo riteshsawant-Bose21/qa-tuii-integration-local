@@ -9,8 +9,8 @@ import (
 	json "github.com/goccy/go-json"
 )
 
-// GetSnapshot handles HTTP GET requests to retrieve a specific snapshot.
-func (s *FusionServer) GetSnapshot(w http.ResponseWriter, r *http.Request) {
+// GetTimeMachine handles HTTP GET requests to retrieve a specific time machine entry.
+func (s *FusionServer) GetTimeMachine(w http.ResponseWriter, r *http.Request) {
 
 	if !utils.RequireGet(w, r) {
 		return
@@ -32,8 +32,8 @@ func (s *FusionServer) GetSnapshot(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(snapshot)
 }
 
-// GetActiveSnapshot handles HTTP GET requests to retrieve the active snapshot name.
-func (s *FusionServer) GetActiveSnapshotName(w http.ResponseWriter, r *http.Request) {
+// GetActiveTimeMachineName handles HTTP GET requests to retrieve the active time machine name.
+func (s *FusionServer) GetActiveTimeMachineName(w http.ResponseWriter, r *http.Request) {
 
 	if !utils.RequireGet(w, r) {
 		return
@@ -45,8 +45,8 @@ func (s *FusionServer) GetActiveSnapshotName(w http.ResponseWriter, r *http.Requ
 	json.NewEncoder(w).Encode(snapshot)
 }
 
-// ListSnapshots handles HTTP GET requests to list available snapshots.
-func (s *FusionServer) ListSnapshots(w http.ResponseWriter, r *http.Request) {
+// ListTimeMachines handles HTTP GET requests to list available time machine entries.
+func (s *FusionServer) ListTimeMachines(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
 		return
 	}
@@ -67,9 +67,9 @@ func (s *FusionServer) ListSnapshots(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(snapshotsResponse{Snapshots: snapshots})
 }
 
-// ActivateSnapshot handles HTTP POST requests to activate a specific snapshot.
-// It expects a query parameter "name" specifying the snapshot to activate.
-func (s *FusionServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) {
+// ActivateTimeMachine handles HTTP POST requests to activate a specific time machine entry.
+// It expects a query parameter "name" specifying the entry to activate.
+func (s *FusionServer) ActivateTimeMachine(w http.ResponseWriter, r *http.Request) {
 
 	if !utils.RequirePost(w, r) {
 		return
@@ -100,8 +100,8 @@ func (s *FusionServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// CreateSnapshot handles HTTP POST requests to create a new snapshot.
-func (s *FusionServer) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
+// CreateTimeMachine handles HTTP POST requests to create a new time machine entry.
+func (s *FusionServer) CreateTimeMachine(w http.ResponseWriter, r *http.Request) {
 
 	if !utils.RequirePost(w, r) {
 		return
@@ -136,8 +136,8 @@ func (s *FusionServer) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-// DeleteSnapshot handles HTTP DELETE requests to remove an existing snapshot.
-func (s *FusionServer) DeleteSnapshot(w http.ResponseWriter, r *http.Request) {
+// DeleteTimeMachine handles HTTP DELETE requests to remove an existing time machine entry.
+func (s *FusionServer) DeleteTimeMachine(w http.ResponseWriter, r *http.Request) {
 
 	if !utils.RequireDelete(w, r) {
 		return
@@ -162,9 +162,9 @@ func (s *FusionServer) DeleteSnapshot(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// SaveSnapshot handles POST /snapshots/{name}/save
-// It overwrites an existing snapshot with the current active state.
-func (s *FusionServer) SaveSnapshot(w http.ResponseWriter, r *http.Request) {
+// SaveTimeMachine handles POST /time-machine/update/{name}
+// It overwrites an existing time machine entry with the current active state.
+func (s *FusionServer) SaveTimeMachine(w http.ResponseWriter, r *http.Request) {
 
 	if !utils.RequirePost(w, r) {
 		return

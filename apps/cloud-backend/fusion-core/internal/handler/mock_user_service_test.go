@@ -96,3 +96,35 @@ func (m *MockUserService) CreateUserSettingsForRegistration(ctx context.Context,
 	args := m.Called(ctx, userID)
 	return args.String(0), args.Error(1)
 }
+
+// Role Management Methods
+func (m *MockUserService) GetOrganizationRoleManagement(ctx context.Context, accountID string) (*types.RoleManagementResponse, error) {
+	args := m.Called(ctx, accountID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.RoleManagementResponse), args.Error(1)
+}
+
+func (m *MockUserService) CreateRole(ctx context.Context, accountID string, req *types.CreateRoleRequest) (*types.Role, error) {
+	args := m.Called(ctx, accountID, req)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.Role), args.Error(1)
+}
+
+func (m *MockUserService) UpdateUserRole(ctx context.Context, userID, accountID string, newRoleID int) error {
+	args := m.Called(ctx, userID, accountID, newRoleID)
+	return args.Error(0)
+}
+
+func (m *MockUserService) UpdateRolePermissions(ctx context.Context, roleID int, accountID string, permissions []types.PermissionUpdateRequest) error {
+	args := m.Called(ctx, roleID, accountID, permissions)
+	return args.Error(0)
+}
+
+func (m *MockUserService) CheckAdminPermission(ctx context.Context, userEmail, accountID string) (bool, error) {
+	args := m.Called(ctx, userEmail, accountID)
+	return args.Bool(0), args.Error(1)
+}

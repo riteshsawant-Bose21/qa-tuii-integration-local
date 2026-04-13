@@ -80,12 +80,12 @@
     { .reg_addr = 0x99, .data = 0x00 }, \
     { .reg_addr = 0x9A, .data = 0x00 }, \
     { .reg_addr = 0x9B, .data = 0x00 }, \
-    { .reg_addr = 0xA2, .data = 0x40 }, \
-    { .reg_addr = 0xA3, .data = 0x9C }, \
-    { .reg_addr = 0xA4, .data = 0x00 }, \
-    { .reg_addr = 0xA6, .data = 0xE3 }, \
-    { .reg_addr = 0xA7, .data = 0xE3 }, \
-    { .reg_addr = 0xAA, .data = 0xE7 }, \
+    { .reg_addr = 0xA2, .data = 0x99 }, \
+    { .reg_addr = 0xA3, .data = 0x61 }, \
+    { .reg_addr = 0xA4, .data = 0x11 }, \
+    { .reg_addr = 0xA6, .data = 0x00 }, \
+    { .reg_addr = 0xA7, .data = 0x00 }, \
+    { .reg_addr = 0xAA, .data = 0x00 }, \
     { .reg_addr = 0xB7, .data = 0x12 }, \
     { .reg_addr = 0xB1, .data = 0xAC }, \
     { .reg_addr = 0x03, .data = 0x00 }
@@ -339,7 +339,7 @@ const struct base_device bd_fusion_fm6 = {
         .uv_warn_gpio_name = "gpio_uv_warn",
         .dac_mute_gpio_name = "gpio_dac_mute",
     },
-    .num_gpios = 4,
+    .num_gpios = 5,
     .gpios = (struct endpoint_gpio[]) {
         {
             .name = "gpio_a_mute_out",
@@ -347,13 +347,13 @@ const struct base_device bd_fusion_fm6 = {
             .num = 5, // GPIO1_IO5
             .dir = EP_GPIO_DIR_I
         },
-        // {
-        //     .name = "gpio_tca9544_int",
-        //     .type = EP_GPIO_TYPE_PHYS,
-        //     .is_irq = true,
-        //     .num = 6, // GPIO1_IO6
-        //     .trigger_type = IRQ_TYPE_LEVEL_LOW
-        // },
+        {
+            .name = "gpio_tca9544_int",
+            .type = EP_GPIO_TYPE_PHYS,
+            .is_irq = true,
+            .num = 6, // GPIO1_IO6
+            .trigger_type = IRQ_TYPE_LEVEL_LOW
+        },
         {
             .name = "gpio_ui_rstn",
             .type = EP_GPIO_TYPE_PHYS,
@@ -1255,7 +1255,7 @@ const struct base_device bd_fusion_fm8y = {
         .uv_warn_gpio_name = "gpio_uv_warn",
         .dac_mute_gpio_name = "gpio_dac_mute",
     },
-    .num_gpios = 4,
+    .num_gpios = 5,
     .gpios = (struct endpoint_gpio[]) {
         {
             .name = "gpio_a_mute_out",
@@ -1263,13 +1263,13 @@ const struct base_device bd_fusion_fm8y = {
             .num = 5, // GPIO1_IO5
             .dir = EP_GPIO_DIR_I
         },
-        // {
-        //     .name = "gpio_tca9544_int",
-        //     .type = EP_GPIO_TYPE_PHYS,
-        //     .is_irq = true,
-        //     .num = 6, // GPIO1_IO6
-        //     .trigger_type = IRQ_TYPE_LEVEL_LOW
-        // },
+        {
+            .name = "gpio_tca9544_int",
+            .type = EP_GPIO_TYPE_PHYS,
+            .is_irq = true,
+            .num = 6, // GPIO1_IO6
+            .trigger_type = IRQ_TYPE_LEVEL_LOW
+        },
         {
             .name = "gpio_ui_rstn",
             .type = EP_GPIO_TYPE_PHYS,

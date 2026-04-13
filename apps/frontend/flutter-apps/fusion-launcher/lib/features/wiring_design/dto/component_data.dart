@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../core/service_locator.dart';

@@ -14,7 +14,7 @@ class ProjectMetaData {
   final String organisationName;
   final String? fileVersion;
   final String? authorName;
-  final List<String>? tags;
+  final List<String> tags;
   final String? category;
   final String? notes;
   final String? state;
@@ -34,7 +34,7 @@ class ProjectMetaData {
     required this.organisationName,
     this.fileVersion,
     this.authorName,
-    this.tags,
+    this.tags = const [],
     this.category,
     this.notes,
     this.state,
@@ -58,18 +58,14 @@ class ProjectMetaData {
   }
 
   factory ProjectMetaData.fromJson(Map<String, dynamic> json) {
-    if (json['file_version'] == null) {
-      return ProjectMetaData.empty();
-    }
-
     return ProjectMetaData(
-      fileId: json['file_id'] as String,
-      thumbnailUrl: json['thumbnail_url'] as String,
-      projectName: json['project_name'],
-      organisationName: json['organisation_name'],
+      fileId: json['file_id'] ?? '',
+      thumbnailUrl: json['thumbnail_url'] ?? '',
+      projectName: json['project_name'] ?? '',
+      organisationName: json['organisation_name'] ?? '',
       fileVersion: json['file_version'],
       authorName: json['author_name'],
-      tags: (json['tags'] as List<dynamic>?)?.map((dynamic e) => e.toString()).toList(),
+      tags: List<String>.from(json['tags'] ?? <String>[]),
       category: json['category'],
       notes: json['notes'],
       state: json['state'],

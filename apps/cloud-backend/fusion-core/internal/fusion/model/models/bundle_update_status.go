@@ -24,86 +24,86 @@ import (
 
 // BundleUpdateStatus is an object representing the database table.
 type BundleUpdateStatus struct {
-	ID              string      `boil:"id" json:"id" toml:"id" yaml:"id"`
-	UpdateID        string      `boil:"update_id" json:"update_id" toml:"update_id" yaml:"update_id"`
-	ProjectID       string      `boil:"project_id" json:"project_id" toml:"project_id" yaml:"project_id"`
-	BundleVersion   string      `boil:"bundle_version" json:"bundle_version" toml:"bundle_version" yaml:"bundle_version"`
-	PreviousVersion null.String `boil:"previous_version" json:"previous_version,omitempty" toml:"previous_version" yaml:"previous_version,omitempty"`
-	Status          string      `boil:"status" json:"status" toml:"status" yaml:"status"`
-	LauncherVersion null.String `boil:"launcher_version" json:"launcher_version,omitempty" toml:"launcher_version" yaml:"launcher_version,omitempty"`
-	InstalledAt     time.Time   `boil:"installed_at" json:"installed_at" toml:"installed_at" yaml:"installed_at"`
-	CreatedAt       time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	ID                    string      `boil:"id" json:"id" toml:"id" yaml:"id"`
+	UpdateID              string      `boil:"update_id" json:"update_id" toml:"update_id" yaml:"update_id"`
+	ProjectID             string      `boil:"project_id" json:"project_id" toml:"project_id" yaml:"project_id"`
+	BundleVersion         string      `boil:"bundle_version" json:"bundle_version" toml:"bundle_version" yaml:"bundle_version"`
+	PreviousBundleVersion null.String `boil:"previous_bundle_version" json:"previous_bundle_version,omitempty" toml:"previous_bundle_version" yaml:"previous_bundle_version,omitempty"`
+	Status                string      `boil:"status" json:"status" toml:"status" yaml:"status"`
+	DesktopAppVersion     null.String `boil:"desktop_app_version" json:"desktop_app_version,omitempty" toml:"desktop_app_version" yaml:"desktop_app_version,omitempty"`
+	InstalledAt           time.Time   `boil:"installed_at" json:"installed_at" toml:"installed_at" yaml:"installed_at"`
+	CreatedAt             time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 
 	R *bundleUpdateStatusR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L bundleUpdateStatusL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var BundleUpdateStatusColumns = struct {
-	ID              string
-	UpdateID        string
-	ProjectID       string
-	BundleVersion   string
-	PreviousVersion string
-	Status          string
-	LauncherVersion string
-	InstalledAt     string
-	CreatedAt       string
+	ID                    string
+	UpdateID              string
+	ProjectID             string
+	BundleVersion         string
+	PreviousBundleVersion string
+	Status                string
+	DesktopAppVersion     string
+	InstalledAt           string
+	CreatedAt             string
 }{
-	ID:              "id",
-	UpdateID:        "update_id",
-	ProjectID:       "project_id",
-	BundleVersion:   "bundle_version",
-	PreviousVersion: "previous_version",
-	Status:          "status",
-	LauncherVersion: "launcher_version",
-	InstalledAt:     "installed_at",
-	CreatedAt:       "created_at",
+	ID:                    "id",
+	UpdateID:              "update_id",
+	ProjectID:             "project_id",
+	BundleVersion:         "bundle_version",
+	PreviousBundleVersion: "previous_bundle_version",
+	Status:                "status",
+	DesktopAppVersion:     "desktop_app_version",
+	InstalledAt:           "installed_at",
+	CreatedAt:             "created_at",
 }
 
 var BundleUpdateStatusTableColumns = struct {
-	ID              string
-	UpdateID        string
-	ProjectID       string
-	BundleVersion   string
-	PreviousVersion string
-	Status          string
-	LauncherVersion string
-	InstalledAt     string
-	CreatedAt       string
+	ID                    string
+	UpdateID              string
+	ProjectID             string
+	BundleVersion         string
+	PreviousBundleVersion string
+	Status                string
+	DesktopAppVersion     string
+	InstalledAt           string
+	CreatedAt             string
 }{
-	ID:              "bundle_update_status.id",
-	UpdateID:        "bundle_update_status.update_id",
-	ProjectID:       "bundle_update_status.project_id",
-	BundleVersion:   "bundle_update_status.bundle_version",
-	PreviousVersion: "bundle_update_status.previous_version",
-	Status:          "bundle_update_status.status",
-	LauncherVersion: "bundle_update_status.launcher_version",
-	InstalledAt:     "bundle_update_status.installed_at",
-	CreatedAt:       "bundle_update_status.created_at",
+	ID:                    "bundle_update_status.id",
+	UpdateID:              "bundle_update_status.update_id",
+	ProjectID:             "bundle_update_status.project_id",
+	BundleVersion:         "bundle_update_status.bundle_version",
+	PreviousBundleVersion: "bundle_update_status.previous_bundle_version",
+	Status:                "bundle_update_status.status",
+	DesktopAppVersion:     "bundle_update_status.desktop_app_version",
+	InstalledAt:           "bundle_update_status.installed_at",
+	CreatedAt:             "bundle_update_status.created_at",
 }
 
 // Generated where
 
 var BundleUpdateStatusWhere = struct {
-	ID              whereHelperstring
-	UpdateID        whereHelperstring
-	ProjectID       whereHelperstring
-	BundleVersion   whereHelperstring
-	PreviousVersion whereHelpernull_String
-	Status          whereHelperstring
-	LauncherVersion whereHelpernull_String
-	InstalledAt     whereHelpertime_Time
-	CreatedAt       whereHelpertime_Time
+	ID                    whereHelperstring
+	UpdateID              whereHelperstring
+	ProjectID             whereHelperstring
+	BundleVersion         whereHelperstring
+	PreviousBundleVersion whereHelpernull_String
+	Status                whereHelperstring
+	DesktopAppVersion     whereHelpernull_String
+	InstalledAt           whereHelpertime_Time
+	CreatedAt             whereHelpertime_Time
 }{
-	ID:              whereHelperstring{field: "\"bundle_update_status\".\"id\""},
-	UpdateID:        whereHelperstring{field: "\"bundle_update_status\".\"update_id\""},
-	ProjectID:       whereHelperstring{field: "\"bundle_update_status\".\"project_id\""},
-	BundleVersion:   whereHelperstring{field: "\"bundle_update_status\".\"bundle_version\""},
-	PreviousVersion: whereHelpernull_String{field: "\"bundle_update_status\".\"previous_version\""},
-	Status:          whereHelperstring{field: "\"bundle_update_status\".\"status\""},
-	LauncherVersion: whereHelpernull_String{field: "\"bundle_update_status\".\"launcher_version\""},
-	InstalledAt:     whereHelpertime_Time{field: "\"bundle_update_status\".\"installed_at\""},
-	CreatedAt:       whereHelpertime_Time{field: "\"bundle_update_status\".\"created_at\""},
+	ID:                    whereHelperstring{field: "\"bundle_update_status\".\"id\""},
+	UpdateID:              whereHelperstring{field: "\"bundle_update_status\".\"update_id\""},
+	ProjectID:             whereHelperstring{field: "\"bundle_update_status\".\"project_id\""},
+	BundleVersion:         whereHelperstring{field: "\"bundle_update_status\".\"bundle_version\""},
+	PreviousBundleVersion: whereHelpernull_String{field: "\"bundle_update_status\".\"previous_bundle_version\""},
+	Status:                whereHelperstring{field: "\"bundle_update_status\".\"status\""},
+	DesktopAppVersion:     whereHelpernull_String{field: "\"bundle_update_status\".\"desktop_app_version\""},
+	InstalledAt:           whereHelpertime_Time{field: "\"bundle_update_status\".\"installed_at\""},
+	CreatedAt:             whereHelpertime_Time{field: "\"bundle_update_status\".\"created_at\""},
 }
 
 // BundleUpdateStatusRels is where relationship names are stored.
@@ -143,9 +143,9 @@ func (r *bundleUpdateStatusR) GetProject() *Project {
 type bundleUpdateStatusL struct{}
 
 var (
-	bundleUpdateStatusAllColumns            = []string{"id", "update_id", "project_id", "bundle_version", "previous_version", "status", "launcher_version", "installed_at", "created_at"}
+	bundleUpdateStatusAllColumns            = []string{"id", "update_id", "project_id", "bundle_version", "previous_bundle_version", "status", "desktop_app_version", "installed_at", "created_at"}
 	bundleUpdateStatusColumnsWithoutDefault = []string{"id", "update_id", "project_id", "bundle_version", "status", "installed_at"}
-	bundleUpdateStatusColumnsWithDefault    = []string{"previous_version", "launcher_version", "created_at"}
+	bundleUpdateStatusColumnsWithDefault    = []string{"previous_bundle_version", "desktop_app_version", "created_at"}
 	bundleUpdateStatusPrimaryKeyColumns     = []string{"id"}
 	bundleUpdateStatusGeneratedColumns      = []string{}
 )

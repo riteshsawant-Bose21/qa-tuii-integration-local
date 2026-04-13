@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/grid_view.dart';
+import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/models/models.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -96,9 +96,8 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                         ),
                                         child: Builder(
                                           builder: (BuildContext ctx) {
-                                            final String? firstAsset = product.assets.assets.values.expand((List<String> v) => v).firstOrNull;
-                                            if (firstAsset == null) return const SizedBox();
-                                            final String path = pq.getImagePath(firstAsset);
+                                            final String? path = pq.getProductImage(productId!);
+                                            if (path == null) return const SizedBox();
                                             return Image.asset(path, fit: BoxFit.cover);
                                           },
                                         ),
@@ -185,9 +184,8 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                 ),
                                 child: Builder(
                                   builder: (BuildContext ctx) {
-                                    final String? firstAsset = suggestedProduct.assets.assets.values.expand((List<String> v) => v).firstOrNull;
-                                    if (firstAsset == null) return const SizedBox();
-                                    final String path = pq.getImagePath(firstAsset);
+                                    final String? path = pq.getProductImage(suggestedId);
+                                    if (path == null) return const SizedBox();
                                     return Image.asset(path, fit: BoxFit.cover);
                                   },
                                 ),
@@ -233,7 +231,22 @@ class ProductQuerySpeakerList extends StatelessWidget {
 
                     // In non-withSubwoofer mode, hide the card entirely when nothing is placed
                     final bool isWithSubwooferMode = speakerSelectionViewModel.selectedListeningArea?.lowFrequency == LowFrequency.withSubwoofer;
-                    if (!isWithSubwooferMode && categorizedSpeakers.isEmpty) return const SizedBox.shrink();
+                    if (!isWithSubwooferMode && categorizedSpeakers.isEmpty) {
+                      return Expanded(
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: FusionAppText(
+                              text: 'No speakers selected yet. Select a speaker from the list.',
+                              textAlign: TextAlign.center,
+                              style: context.textTheme.bodySmall?.copyWith(
+                                color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
 
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -596,7 +609,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
 
               BlocBuilder<ProjectViewModel, ProjectViewModelState>(
                 builder: (BuildContext context, ProjectViewModelState projectViewModelState) {
-                  final List<Speaker> listeningAreaSpeakers = speakerSelectionViewModel.getAllPlacedNonPlacedSpeakers();
+                  final List<Speaker> listeningAreaSpeakers = speakerSelectionViewModel.getAllPlacedAndNonPlacedSpeakers();
 
                   return BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
                     builder: (
@@ -628,11 +641,12 @@ class ProductQuerySpeakerList extends StatelessWidget {
                             SemanticTypes.container,
                             "speaker_products_empty_indicator",
                           ),
-                          child: const Center(
+                          child: Center(
                             child: Padding(
-                              padding: EdgeInsets.all(16.0),
+                              padding: const EdgeInsets.all(16.0),
                               child: FusionAppText(
                                 text: 'No products found',
+                                style: context.textTheme.l1Regular,
                               ),
                             ),
                           ),
@@ -717,9 +731,8 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                                       ),
                                                       child: Builder(
                                                         builder: (BuildContext context) {
-                                                          final String? firstAsset = product.assets.assets.values.expand((List<String> v) => v).firstOrNull;
-                                                          if (firstAsset == null) return const SizedBox();
-                                                          final String path = productQueryViewModel.getImagePath(firstAsset);
+                                                          final String? path = productQueryViewModel.getProductImage(product.productId);
+                                                          if (path == null) return const SizedBox();
                                                           return Image.asset(path, fit: BoxFit.cover);
                                                         },
                                                       ),
@@ -785,9 +798,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                                     // Radio button
                                                     GestureDetector(
                                                       onTap: () async {
-                                                        final String? firstAsset = product.assets.assets.values.expand((List<String> v) => v).firstOrNull;
-                                                        final String? cachedImagePath =
-                                                            firstAsset != null ? productQueryViewModel.getImagePath(firstAsset) : null;
+                                                        final String? cachedImagePath = productQueryViewModel.getProductImage(product.productId);
 
                                                         await speakerSelectionViewModel.selectSuggestedSpeaker(
                                                           context: context,
@@ -858,9 +869,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
 
                         return Flexible(
                           child: ScrollConfiguration(
-                            behavior: ScrollConfiguration.of(
-                              context,
-                            ).copyWith(scrollbars: false),
+                            behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
                             child: Builder(
                               builder: (BuildContext context) {
                                 return ListView.separated(
@@ -871,9 +880,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                   itemBuilder: (BuildContext context, int index) {
                                     final SpeakerProduct product = items[index];
 
-                                    final bool isSelected = listeningAreaSpeakers.any(
-                                      (Speaker sp) => sp.productId == product.productId,
-                                    );
+                                    final bool isSelected = listeningAreaSpeakers.any((Speaker sp) => sp.productId == product.productId);
 
                                     return SpeakerCard(
                                       index: index,
@@ -938,7 +945,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
     widget.product.assets.assets.forEach(
       (String key, List<String> values) {
         if (values.isNotEmpty) {
-          final String assetImagePath = context.read<ProductQueryViewModel>().getImagePath(values.first);
+          final String? assetImagePath = context.read<ProductQueryViewModel>().getProductImage(widget.product.productId);
           // log("key: $key : ${values.first}");
           // final String? assetImagePath = context.read<ProductQueryViewModel>().getImagePath(widget.product.productId, key);
           // final String assetImagePath = context.read<ProductQueryViewModel>().cachedImages[widget.product.productId]?[key] ?? '';
