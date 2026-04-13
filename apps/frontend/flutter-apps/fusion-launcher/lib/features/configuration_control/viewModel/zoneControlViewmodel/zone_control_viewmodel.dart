@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
@@ -10,7 +12,21 @@ import 'zone_control_state.dart';
 /// Manages zone and sub-zone selections for a controller.
 /// Loads and persists data using [ProjectViewModel] relationships.
 class ZoneControlViewModel extends Cubit<ZoneControlState> {
-  ZoneControlViewModel() : super(const ZoneControlInitial());
+  late final StreamSubscription<ProjectViewModelState> _projectSubscription;
+
+  ZoneControlViewModel() : super(const ZoneControlInitial()) {
+    // Re-sync zone assignments whenever project data changes externally
+    // (e.g. zone assignments edited via the edit controller dialog).
+    _projectSubscription = _projectViewModel.stream.listen((_) {
+      if (_loaded != null) refresh();
+    });
+  }
+
+  @override
+  Future<void> close() {
+    _projectSubscription.cancel();
+    return super.close();
+  }
 
   /// Lazy reference to ProjectViewModel.
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
