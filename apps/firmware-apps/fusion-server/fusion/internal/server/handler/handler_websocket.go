@@ -240,6 +240,18 @@ func (h *Handler) handleStartUpdate(request *api.WebSocketRequest) (*api.WebSock
 	}
 	logger.Info("Found %d .swu file(s) in %s, proceeding with update", len(swuFiles), api.SoftwareUpdateOTAPath)
 
+	// Count followers and ensure every .swu file is present on all followers
+	// before triggering the update. And gossip + HTTP-pull sync as the upload API.
+	// Followers that already have the file with a matching checksum ack immediately (no re-download).
+	followerCount, syncErr := h.ensureSWUFilesOnFollowers(swuFiles)
+	if syncErr != nil {
+		logger.Error("[StartUpdate] SWU file sync to followers failed: %v", syncErr)
+		return createErrorResponse(&request.ID, api.WSCodeApplicationError,
+			fmt.Sprintf("Failed to sync SWU files to cluster before triggering update: %v", syncErr)), nil
+	}
+	logger.Info("[StartUpdate] %d follower(s) confirmed — all SWU files present on all nodes, proceeding with trigger", followerCount)
+
+	// All nodes have the files — broadcast the update trigger
 	// Create a cluster message to broadcast the software update trigger to all nodes
 	// This will call the delegate's handleSoftwareUpdate method on each node
 	msg := api.NewNotifyMessage(
