@@ -5,13 +5,16 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/routes"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -25,22 +28,75 @@ const (
 	snapshotDefaultBucketName = "fusion"
 	snapshotSyncTime          = 5 * time.Second
 
-	snapServerAddress   = "http://192.168.2.100"
-	snapServerPort      = "8080"
-	snapServerAdminPort = "9090"
-	snapServerAddr      = snapServerAddress + ":" + snapServerPort
-	snapAdminServerAddr = snapServerAddress + ":" + snapServerAdminPort
+	defaultSnapshotTestVIP   = "http://192.168.2.100:8080"
+	defaultSnapshotTestAdmin = "http://192.168.2.100:9090"
+)
+
+var (
+	snapServerAddr      string
+	snapServerPort      string
+	snapAdminServerAddr string
 
 	// Core endpoints
-	snapshotsURL        = snapServerAddr + routes.SnapshotsEndpoint
-	snapshotByNameURL   = snapServerAddr + routes.SnapshotsNameEndpoint
-	snapshotActivateURL = snapServerAddr + routes.SnapshotsActivateEndpoint
-	snapshotUpdateURL   = snapServerAddr + routes.SnapshotsUpdateEndpoint
-	valueURL            = snapServerAddr + routes.ValueEndpoint
+	snapshotsURL        string
+	snapshotByNameURL   string
+	snapshotActivateURL string
+	snapshotUpdateURL   string
+	valueURL            string
+
+	// Scene catalog endpoints
+	snapshotDefsActivateURL string
+	snapshotDefsListURL     string
+	scenesListURL           string
+	sceneSetsActivateURL    string
+	sceneSetsCurrentURL     string
+	sceneSetsListURL        string
+	sceneCatalogListURL     string
 )
 
 func init() {
 	_ = os.Setenv("GOMAXPROCS", "1")
+
+	vip := os.Getenv("FUSION_TEST_VIP")
+	if vip == "" {
+		vip = defaultSnapshotTestVIP
+	}
+	snapServerAddr = normalizeTestBaseURL(vip, "8080")
+
+	admin := os.Getenv("FUSION_TEST_ADMIN")
+	if admin == "" {
+		// Derive admin URL from VIP host on port 9090 rather than using a
+		// hardcoded multipass default. This makes local darwin runs work without
+		// having to set FUSION_TEST_ADMIN explicitly.
+		if parsed, err := url.Parse(snapServerAddr); err == nil {
+			host := parsed.Hostname()
+			admin = parsed.Scheme + "://" + net.JoinHostPort(host, "9090")
+		} else {
+			admin = defaultSnapshotTestAdmin
+		}
+	}
+	snapAdminServerAddr = normalizeTestBaseURL(admin, "9090")
+
+	if parsed, err := url.Parse(snapServerAddr); err == nil {
+		snapServerPort = parsed.Port()
+	}
+	if snapServerPort == "" {
+		snapServerPort = "8080"
+	}
+
+	snapshotsURL = snapServerAddr + routes.TimeMachineEndpoint
+	snapshotByNameURL = snapServerAddr + routes.TimeMachineNameEndpoint
+	snapshotActivateURL = snapServerAddr + routes.TimeMachineActivateEndpoint
+	snapshotUpdateURL = snapServerAddr + routes.TimeMachineUpdateEndpoint
+	valueURL = snapServerAddr + routes.ValueEndpoint
+
+	snapshotDefsActivateURL = snapServerAddr + routes.SnapshotsActivateEndpoint
+	snapshotDefsListURL = snapServerAddr + routes.SnapshotsListEndpoint
+	scenesListURL = snapServerAddr + routes.ScenesListEndpoint
+	sceneSetsActivateURL = snapServerAddr + routes.SceneSetsActivateEndpoint
+	sceneSetsCurrentURL = snapServerAddr + routes.SceneSetsCurrentEndpoint
+	sceneSetsListURL = snapServerAddr + routes.SceneSetsListEndpoint
+	sceneCatalogListURL = snapServerAddr + routes.SceneCatalogListEndpoint
 
 	logging.InitLogger(logging.LogConfig{
 		NodeName:    "snapshot_test",
@@ -51,7 +107,81 @@ func init() {
 	})
 }
 
-func TestSnapshotCreateAndList(t *testing.T) {
+func normalizeTestBaseURL(raw, defaultPort string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "http://127.0.0.1:" + defaultPort
+	}
+
+	if !strings.HasPrefix(raw, "http://") && !strings.HasPrefix(raw, "https://") {
+		raw = "http://" + raw
+	}
+
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return raw
+	}
+
+	host := parsed.Host
+	if _, _, err := net.SplitHostPort(host); err != nil {
+		host = net.JoinHostPort(host, defaultPort)
+	}
+
+	return parsed.Scheme + "://" + host
+}
+
+func requireClusterNodes(t *testing.T, min int) {
+	t.Helper()
+
+	nodes, err := getLiveNodeAddresses()
+	if err != nil {
+		t.Skipf("cluster-only test skipped: could not get cluster members from %s (%v)", snapServerAddr, err)
+	}
+
+	if len(nodes) < min {
+		t.Skipf("cluster-only test skipped: requires at least %d node(s), found %d", min, len(nodes))
+	}
+}
+
+func resolveRestartScriptPath() string {
+	if fromEnv := strings.TrimSpace(os.Getenv("FUSION_RESTART_SCRIPT")); fromEnv != "" {
+		if filepath.IsAbs(fromEnv) {
+			return fromEnv
+		}
+
+		if wd, err := os.Getwd(); err == nil {
+			candidates := []string{
+				filepath.Clean(fromEnv),
+				filepath.Clean(filepath.Join(wd, fromEnv)),
+				filepath.Clean(filepath.Join(wd, "..", fromEnv)),
+				filepath.Clean(filepath.Join(wd, "..", "..", fromEnv)),
+			}
+			for _, candidate := range candidates {
+				if _, statErr := os.Stat(candidate); statErr == nil {
+					return candidate
+				}
+			}
+		}
+
+		return fromEnv
+	}
+
+	if wd, err := os.Getwd(); err == nil {
+		candidates := []string{
+			filepath.Clean(filepath.Join(wd, "..", "scripts", "multipass", "restart-fusion.sh")),
+			filepath.Clean(filepath.Join(wd, "..", "..", "scripts", "multipass", "restart-fusion.sh")),
+		}
+		for _, candidate := range candidates {
+			if _, statErr := os.Stat(candidate); statErr == nil {
+				return candidate
+			}
+		}
+	}
+
+	return ""
+}
+
+func TestTimeMachineCreateAndList(t *testing.T) {
 	snapshotName := fmt.Sprintf("test_snapshot_%d", time.Now().UnixNano())
 	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
 	resp, err := http.Post(createURL, api.JsonMIMEType, nil)
@@ -80,7 +210,7 @@ func TestSnapshotCreateAndList(t *testing.T) {
 	}
 }
 
-func TestSnapshotActivateAndDelete(t *testing.T) {
+func TestTimeMachineActivateAndDelete(t *testing.T) {
 	snapshotName := fmt.Sprintf("test_snapshot_%d", time.Now().UnixNano())
 	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
 	resp, err := http.Post(createURL, api.JsonMIMEType, nil)
@@ -115,7 +245,7 @@ func TestSnapshotActivateAndDelete(t *testing.T) {
 	}
 }
 
-func TestSnapshotInvalidCreate(t *testing.T) {
+func TestTimeMachineInvalidCreate(t *testing.T) {
 	resp, err := http.Post(snapshotsURL, api.JsonMIMEType, nil)
 	if err != nil {
 		t.Fatalf("Failed to create snapshot with empty name: %v", err)
@@ -126,7 +256,7 @@ func TestSnapshotInvalidCreate(t *testing.T) {
 	}
 }
 
-func TestSnapshotDuplicateCreate(t *testing.T) {
+func TestTimeMachineDuplicateCreate(t *testing.T) {
 	snapshotName := fmt.Sprintf("test_snapshot_%d", time.Now().UnixNano())
 	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
 	resp, err := http.Post(createURL, api.JsonMIMEType, nil)
@@ -144,7 +274,7 @@ func TestSnapshotDuplicateCreate(t *testing.T) {
 	}
 }
 
-func TestSnapshotActivateNonExistent(t *testing.T) {
+func TestTimeMachineActivateNonExistent(t *testing.T) {
 	snapshotName := "nonexistent"
 	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)
 	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
@@ -159,7 +289,11 @@ func TestSnapshotActivateNonExistent(t *testing.T) {
 	}
 }
 
-func TestSnapshotPropagation(t *testing.T) {
+func TestTimeMachinePropagation(t *testing.T) {
+	// Cluster-only: snapshot gossip propagation can only be verified when multiple nodes exist.
+	// Skipped automatically on local single-node runs. See test/README.md for cluster setup.
+	requireClusterNodes(t, 2)
+
 	snapshotName := fmt.Sprintf("test_snapshot_propagation_%d", time.Now().UnixNano())
 	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
 
@@ -206,7 +340,7 @@ func TestSnapshotPropagation(t *testing.T) {
 	}
 }
 
-func TestSnapshotExport(t *testing.T) {
+func TestTimeMachineExport(t *testing.T) {
 	exportURL := fmt.Sprintf("%s/data", snapAdminServerAddr)
 	resp, err := http.Get(exportURL)
 	if err != nil {
@@ -226,7 +360,7 @@ func TestSnapshotExport(t *testing.T) {
 	}
 }
 
-func TestSnapshotExportImport(t *testing.T) {
+func TestTimeMachineExportImport(t *testing.T) {
 	exportURL := fmt.Sprintf("%s/data", snapAdminServerAddr)
 	resp, err := http.Get(exportURL)
 	if err != nil {
@@ -281,7 +415,7 @@ func snapshotExistsOnAllNodes(t *testing.T, name string) bool {
 		return false
 	}
 	for _, addr := range nodes {
-		resp, err := http.Get(fmt.Sprintf("%s%s", addr, routes.SnapshotsEndpoint))
+		resp, err := http.Get(fmt.Sprintf("%s%s", addr, routes.TimeMachineEndpoint))
 		if err != nil {
 			return false
 		}
@@ -305,7 +439,7 @@ func snapshotRemovedOnAllNodes(t *testing.T, name string) bool {
 		return false
 	}
 	for _, addr := range nodes {
-		resp, err := http.Get(fmt.Sprintf("%s%s", addr, routes.SnapshotsEndpoint))
+		resp, err := http.Get(fmt.Sprintf("%s%s", addr, routes.TimeMachineEndpoint))
 		if err != nil {
 			return false
 		}
@@ -325,7 +459,11 @@ func snapshotRemovedOnAllNodes(t *testing.T, name string) bool {
 // Snapshot Epoch Consistency Tests
 //
 
-func TestSnapshotActivationBumpsEpoch(t *testing.T) {
+func TestTimeMachineActivationBumpsEpoch(t *testing.T) {
+	// Cluster-only: epoch convergence is driven by gossip metadata; /metadata does not reflect
+	// the bumped epoch synchronously in local single-node mode. Requires 2+ nodes.
+	// Skipped automatically on local single-node runs. See test/README.md for cluster setup.
+	requireClusterNodes(t, 2)
 
 	initial := getAnyClusterEpoch(t)
 
@@ -353,7 +491,11 @@ func TestSnapshotActivationBumpsEpoch(t *testing.T) {
 	}
 }
 
-func TestRejectOldEpochUpdatesAfterSnapshot(t *testing.T) {
+func TestTimeMachineRejectOldEpochUpdatesAfterActivation(t *testing.T) {
+	// Cluster-only: stale-epoch rejection is meaningful only once a bumped epoch has propagated
+	// across multiple nodes; the boundary is not observable in local single-node mode.
+	// Skipped automatically on local single-node runs. See test/README.md for cluster setup.
+	requireClusterNodes(t, 2)
 	initialEpoch := getAnyClusterEpoch(t)
 
 	// Create + activate snapshot
@@ -400,7 +542,11 @@ func TestRejectOldEpochUpdatesAfterSnapshot(t *testing.T) {
 	}
 }
 
-func TestNewEpochUpdatesApply(t *testing.T) {
+func TestTimeMachineNewEpochUpdatesApply(t *testing.T) {
+	// Cluster-only: verifying that writes accepted under the new epoch propagate to all nodes
+	// requires multiple live nodes. Skipped automatically on local single-node runs.
+	// See test/README.md for cluster setup.
+	requireClusterNodes(t, 2)
 
 	// Create + activate snapshot
 	snapshotName := fmt.Sprintf("epoch_updates_apply_%d", time.Now().UnixNano())
@@ -623,7 +769,7 @@ func getStateValue(t *testing.T, key string) any {
 	return result.Value
 }
 
-func TestSnapshotRestoresStateExactly(t *testing.T) {
+func TestTimeMachineRestoresStateExactly(t *testing.T) {
 	initialEpoch := getAnyClusterEpoch(t)
 
 	// Use unique keys to avoid interference with other tests
@@ -687,7 +833,7 @@ func TestSnapshotRestoresStateExactly(t *testing.T) {
 	}
 }
 
-func TestSnapshotRestoresNestedState(t *testing.T) {
+func TestTimeMachineRestoresNestedState(t *testing.T) {
 	initialEpoch := getAnyClusterEpoch(t)
 
 	snapshotName := fmt.Sprintf("nested_state_%d", time.Now().UnixNano())
@@ -777,7 +923,7 @@ func logPerNodeSnapshotStatus(t *testing.T, snapshotName string) {
 	t.Logf("---- Snapshot propagation debug for %q ----", snapshotName)
 
 	for _, addr := range nodes {
-		url := fmt.Sprintf("%s/snapshots", addr)
+		url := fmt.Sprintf("%s/time-machine", addr)
 		resp, err := http.Get(url)
 		if err != nil {
 			t.Logf("[%s] ERROR: %v", addr, err)
@@ -813,7 +959,12 @@ func logPerNodeSnapshotStatus(t *testing.T, snapshotName string) {
 	t.Log("-------------------------------------------------")
 }
 
-func TestActiveSnapshotPropagatesClusterWide(t *testing.T) {
+func TestTimeMachineActiveSnapshotPropagatesClusterWide(t *testing.T) {
+	// Cluster-only: confirms the active snapshot name is consistent across all nodes after
+	// activation. No propagation to validate against in single-node mode.
+	// Skipped automatically on local single-node runs. See test/README.md for cluster setup.
+	requireClusterNodes(t, 2)
+
 	snapshotName := fmt.Sprintf("active_snap_%d", time.Now().UnixNano())
 
 	// Create
@@ -883,7 +1034,12 @@ func getClusterActiveSnapshots(t *testing.T) []string {
 	return out
 }
 
-func TestActiveSnapshotSurvivesRestart(t *testing.T) {
+func TestTimeMachineActiveSnapshotSurvivesRestart(t *testing.T) {
+	// Cluster-only: also requires FUSION_RESTART_SCRIPT or the default multipass restart script.
+	// Verifies that the active snapshot name persists across a full cluster restart.
+	// Skipped automatically on local single-node runs. See test/README.md for cluster setup.
+	requireClusterNodes(t, 2)
+
 	snapshotName := fmt.Sprintf("persist_snap_%d", time.Now().UnixNano())
 
 	// Create
@@ -916,7 +1072,12 @@ func TestActiveSnapshotSurvivesRestart(t *testing.T) {
 	}
 }
 
-func TestSnapshotDataSurvivesRestart(t *testing.T) {
+func TestTimeMachineDataSurvivesRestart(t *testing.T) {
+	// Cluster-only: also requires FUSION_RESTART_SCRIPT or the default multipass restart script.
+	// Verifies that state captured in a snapshot is fully restored after a cluster restart.
+	// Skipped automatically on local single-node runs. See test/README.md for cluster setup.
+	requireClusterNodes(t, 2)
+
 	initialEpoch := getAnyClusterEpoch(t)
 
 	snapshotName := fmt.Sprintf("persist_data_%d", time.Now().UnixNano())
@@ -1021,7 +1182,12 @@ func TestSnapshotDataSurvivesRestart(t *testing.T) {
 	}
 }
 
-func TestSnapshotActivationOutOfOrderMessages(t *testing.T) {
+func TestTimeMachineActivationOutOfOrderMessages(t *testing.T) {
+	// Cluster-only: out-of-order gossip delivery (ConfigUpdate arriving before SnapActivate) is
+	// only reproducible with multiple nodes exchanging memberlist messages.
+	// Skipped automatically on local single-node runs. See test/README.md for cluster setup.
+	requireClusterNodes(t, 2)
+
 	snapshotName := fmt.Sprintf("ooom_%d", time.Now().UnixNano())
 
 	// Create snapshot
@@ -1052,7 +1218,12 @@ func TestSnapshotActivationOutOfOrderMessages(t *testing.T) {
 	}
 }
 
-func TestDeleteActiveSnapshotResetsActiveSnapshot(t *testing.T) {
+func TestTimeMachineDeleteActiveSnapshotResetsActiveSnapshot(t *testing.T) {
+	// Cluster-only: validates that deleting the active snapshot resets it to the default
+	// consistently across all nodes. No cross-node assertion is possible in single-node mode.
+	// Skipped automatically on local single-node runs. See test/README.md for cluster setup.
+	requireClusterNodes(t, 2)
+
 	snapshotName := fmt.Sprintf("delete_active_%d", time.Now().UnixNano())
 
 	// Create and activate
@@ -1088,8 +1259,10 @@ func TestDeleteActiveSnapshotResetsActiveSnapshot(t *testing.T) {
 func restartAllNodes(t *testing.T) {
 	t.Helper()
 
-	// I can't get the go test runner to use a relative path!!!
-	script := "/Users/gragan/inprogress/bose/fusion-monorepo/apps/firmware-apps/fusion-server/scripts/multipass/restart-fusion.sh"
+	script := resolveRestartScriptPath()
+	if script == "" {
+		t.Skip("restart test skipped: restart script not found; set FUSION_RESTART_SCRIPT to enable")
+	}
 
 	cmd := exec.Command(script)
 	cmd.Dir = "" // ensure it uses the test's actual working directory
@@ -1176,7 +1349,7 @@ func waitForAllNodesReady(timeout time.Duration) bool {
 	return false
 }
 
-func TestSnapshotUpdateOverwritesState(t *testing.T) {
+func TestTimeMachineUpdateOverwritesState(t *testing.T) {
 	snapshotName := fmt.Sprintf("update_test_%d", time.Now().UnixNano())
 	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
 	updateURL := strings.Replace(snapshotUpdateURL, nameParam, snapshotName, 1)
@@ -1234,7 +1407,7 @@ func TestSnapshotUpdateOverwritesState(t *testing.T) {
 	}
 }
 
-func TestSnapshotUpdateDoesNotBumpEpoch(t *testing.T) {
+func TestTimeMachineUpdateDoesNotBumpEpoch(t *testing.T) {
 	snapshotName := fmt.Sprintf("update_epoch_%d", time.Now().UnixNano())
 	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
 	updateURL := strings.Replace(snapshotUpdateURL, nameParam, snapshotName, 1)
@@ -1259,7 +1432,7 @@ func TestSnapshotUpdateDoesNotBumpEpoch(t *testing.T) {
 	}
 }
 
-func TestSnapshotUpdateDoesNotChangeActiveSnapshot(t *testing.T) {
+func TestTimeMachineUpdateDoesNotChangeActiveSnapshot(t *testing.T) {
 	snapshotName := fmt.Sprintf("update_active_%d", time.Now().UnixNano())
 	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
 	updateURL := strings.Replace(snapshotUpdateURL, nameParam, snapshotName, 1)
