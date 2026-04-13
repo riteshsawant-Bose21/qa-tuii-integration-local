@@ -48,18 +48,20 @@ const (
 	VIPvrrpLowPriority     = 90
 
 	// WS Request types (client -> server)
-	WSMsgTypeDevices            = "devices"
-	WSMsgTypeDeviceByID         = "device_by_id"
-	WSMsgTypeUpdateDeviceInfo   = "update_device_info"
-	WSMsgTypeConfiguration      = "config"
-	WSMsgTypePatchConfiguration = "patch_config"
-	WSMsgTypeUnsubscribeConfig  = "unsubscribe_config"
-	WSMsgTypeUnsubscribeDevices = "unsubscribe_devices"
-	WSMsgTypePing               = "ping"
-	WSMsgTypePong               = "pong"
-	WSMsgTypeError              = "error"
-	WSMsgTypeStartUpdate        = "start_update"
-	WSMsgTypeUpdateProgress     = "update_progress"
+	WSMsgTypeDevices             = "devices"
+	WSMsgTypeDeviceByID          = "device_by_id"
+	WSMsgTypeUpdateDeviceInfo    = "update_device_info"
+	WSMsgTypeConfiguration       = "config"
+	WSMsgTypePatchConfiguration  = "patch_config"
+	WSMsgTypeUnsubscribeConfig   = "unsubscribe_config"
+	WSMsgTypeUnsubscribeDevices  = "unsubscribe_devices"
+	WSMsgTypePing                = "ping"
+	WSMsgTypePong                = "pong"
+	WSMsgTypeError               = "error"
+	WSMsgTypeStartUpdate         = "start_update"
+	WSMsgTypeUpdateProgress      = "update_progress"
+	WSMsgTypeSwUpdateInfo        = "sw_update_info"
+	WSMsgTypeListSoftwareUpdates = "list_sw_update_files"
 
 	// WS event types (server -> client)
 	WSMsgTypeDeviceUpdate = "device_update"
@@ -127,6 +129,7 @@ var (
 	DefaultCertFileName     = "device.x509.cert"
 	DefaultKeyFileName      = "device.key"
 	SoftwareUpdateInfoPath  = "/etc/buildinfo"
+	SwUpdateInfoPath        = "/etc/swupdate-status"
 	SerialPath              = "/sys/firmware/devicetree/base/serial-number"
 )
 
