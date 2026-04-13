@@ -49,28 +49,28 @@ class MDNSRetryScreen extends StatelessWidget {
             height: 35,
           ),
           const SizedBox(height: 16),
-          Text(
-            '-or-',
-            style: TextStyle(
-              color: context.colorScheme.textBody,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Do you have other wireless devices to configure?',
-            style: TextStyle(
-              color: context.colorScheme.textBody,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 16),
-          FusionSecondaryButton(
-            semanticId: 'mdns_configure_wireless_button',
-            text: 'Configure Wireless Devices',
-            onPressed: onConfigureWireless,
-            width: 0.25 * MediaQuery.of(context).size.width,
-          ),
+          // Text(
+          //   '-or-',
+          //   style: TextStyle(
+          //     color: context.colorScheme.textBody,
+          //     fontSize: 14,
+          //   ),
+          // ),
+          // const SizedBox(height: 16),
+          // Text(
+          //   'Do you have other wireless devices to configure?',
+          //   style: TextStyle(
+          //     color: context.colorScheme.textBody,
+          //     fontSize: 14,
+          //   ),
+          // ),
+          // const SizedBox(height: 16),
+          // FusionSecondaryButton(
+          //   semanticId: 'mdns_configure_wireless_button',
+          //   text: 'Configure Wireless Devices',
+          //   onPressed: onConfigureWireless,
+          //   width: 0.25 * MediaQuery.of(context).size.width,
+          // ),
         ],
       ),
     );

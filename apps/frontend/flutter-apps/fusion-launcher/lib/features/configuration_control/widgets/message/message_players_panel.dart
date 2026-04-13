@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/MessageViewModel/message_state.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/MessageViewModel/message_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -13,9 +13,9 @@ class MessagePlayersPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
-      builder: (BuildContext context, ConfigurationControlState state) {
-        if (state is! ConfigControlLoaded) return const SizedBox.shrink();
+    return BlocBuilder<MessageViewModel, MessageState>(
+      builder: (BuildContext context, MessageState state) {
+        if (state is! MessageLoaded) return const SizedBox.shrink();
 
         return Column(
           children: <Widget>[
@@ -32,7 +32,7 @@ class MessagePlayersPanel extends StatelessWidget {
 // ─── MESSAGE PLAYERS section ──────────────────────────────────────────────────
 
 class _MessagePlayersSection extends StatelessWidget {
-  final ConfigControlLoaded state;
+  final MessageLoaded state;
   const _MessagePlayersSection({required this.state});
 
   @override
@@ -67,7 +67,7 @@ class _MessagePlayersSection extends StatelessWidget {
                         return _MessagePlayerItem(
                           player: player,
                           isChecked: isChecked,
-                          onToggle: () => context.read<ConfigurationControlViewmodel>().toggleMessagePlayerSelection(player.id),
+                          onToggle: () => context.read<MessageViewModel>().toggleMessagePlayerSelection(player.id),
                         );
                       },
                     ),
@@ -83,11 +83,7 @@ class _MessagePlayerItem extends StatelessWidget {
   final bool isChecked;
   final VoidCallback onToggle;
 
-  const _MessagePlayerItem({
-    required this.player,
-    required this.isChecked,
-    required this.onToggle,
-  });
+  const _MessagePlayerItem({required this.player, required this.isChecked, required this.onToggle});
 
   @override
   Widget build(BuildContext context) {
@@ -117,13 +113,13 @@ class _MessagePlayerItem extends StatelessWidget {
 // ─── MESSAGE LIST section ─────────────────────────────────────────────────────
 
 class _MessageListSection extends StatelessWidget {
-  final ConfigControlLoaded state;
+  final MessageLoaded state;
   const _MessageListSection({required this.state});
 
   @override
   Widget build(BuildContext context) {
     // Only show message lists for checked players
-    final List<Source> activePlayers = state.messagePlayers.where((Source s) => state.selectedMessagePlayerIds.contains(s.id)).toList();
+    final List<Source> activePlayers = state.checkedPlayers;
 
     return Container(
       decoration: BoxDecoration(
@@ -154,13 +150,13 @@ class _MessageListSection extends StatelessWidget {
                       itemCount: activePlayers.length,
                       itemBuilder: (BuildContext context, int index) {
                         final Source player = activePlayers[index];
-                        final List<MessageModel> messages = state.messagesPerPlayer[player.id] ?? <MessageModel>[];
-                        final Set<String> selectedIds = state.selectedMessageIdsPerPlayer[player.id] ?? <String>{};
+                        final List<MessageModel> messages = state.getMessagesForPlayer(player.id);
+                        final Set<String> selectedIds = state.getSelectedMessagesForPlayer(player.id);
                         return _PlayerMessageGroup(
                           player: player,
                           messages: messages,
                           selectedMessageIds: selectedIds,
-                          onToggle: (String messageId) => context.read<ConfigurationControlViewmodel>().toggleMessageSelection(player.id, messageId),
+                          onToggle: (String messageId) => context.read<MessageViewModel>().toggleMessageSelection(player.id, messageId),
                         );
                       },
                     ),
@@ -238,11 +234,7 @@ class _MessageItem extends StatelessWidget {
   final bool isChecked;
   final VoidCallback onToggle;
 
-  const _MessageItem({
-    required this.message,
-    required this.isChecked,
-    required this.onToggle,
-  });
+  const _MessageItem({required this.message, required this.isChecked, required this.onToggle});
 
   @override
   Widget build(BuildContext context) {

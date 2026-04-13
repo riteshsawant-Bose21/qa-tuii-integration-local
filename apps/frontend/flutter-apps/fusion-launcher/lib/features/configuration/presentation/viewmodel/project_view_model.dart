@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/projects/view_model/meter_data/meter_data_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/project_manger/dro/dro_input_mapper.dart';
 
@@ -323,9 +325,14 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     return projectManager.getDroInputData();
   }
 
+  Map<String, dynamic> getAllProcessingBlocksData() {
+    return projectManager.getAllProcessingBlockData();
+  }
+
   /// Clears the current project selection.
   void closeProject() {
     if (state is ProjectLoaded) {
+      serviceLocator<MeterDataViewModel>().stopTelemetry(reason: MeterInactiveReason.projectClosed);
       final ProjectLoaded currentState = state as ProjectLoaded;
       _currentProject = null;
       emit(

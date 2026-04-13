@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/zoneControlViewmodel/zone_control_state.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/zoneControlViewmodel/zone_control_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -23,9 +23,9 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
-      builder: (BuildContext context, ConfigurationControlState state) {
-        if (state is! ConfigControlLoaded) {
+    return BlocBuilder<ZoneControlViewModel, ZoneControlState>(
+      builder: (BuildContext context, ZoneControlState state) {
+        if (state is! ZoneControlLoaded) {
           return const SizedBox.shrink();
         }
 
@@ -55,7 +55,7 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
     );
   }
 
-  Widget _buildContent(BuildContext context, ConfigControlLoaded state) {
+  Widget _buildContent(BuildContext context, ZoneControlLoaded state) {
     final Zone? selectedZone =
         state.selectedZoneId != null
             ? state.zones.firstWhere(

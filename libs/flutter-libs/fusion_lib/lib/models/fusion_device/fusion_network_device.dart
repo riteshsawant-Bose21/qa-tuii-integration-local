@@ -15,28 +15,44 @@ class FusionNetworkDevice {
   /// the model name of the device
   final String modelName;
 
-  /// The Xyte cloud identifier (can be empty).
-  final String xyteCloudId;
-
-  /// Whether the device has been claimed.
-  final bool isClaimed;
-
   /// The serial number of the device.
   final String serialNumber;
 
   /// Whether this device is the primary device.
   final bool isPrimary;
 
+  /// The MAC address of the device.
+  final String macAddress;
+
+  /// The software update version available for the device.
+  final String softwareUpdateVersion;
+
+  /// Whether the device certificate is valid.
+  final bool isDeviceCertificateValid;
+
+  /// The monorepo branch running on the device.
+  final String fusionMonorepoBranch;
+
+  /// The monorepo commit hash running on the device.
+  final String fusionMonorepoCommitHash;
+
+  /// The Jenkins build number running on the device.
+  final String jenkinsBuildNumber;
+
   const FusionNetworkDevice({
     required this.address,
     required this.id,
     this.location = '',
     required this.name,
-    this.modelName = 'FM8Y',
-    this.xyteCloudId = '',
-    this.isClaimed = false,
+    this.modelName = '',
     required this.serialNumber,
     this.isPrimary = false,
+    this.macAddress = '',
+    this.softwareUpdateVersion = '',
+    this.isDeviceCertificateValid = false,
+    this.fusionMonorepoBranch = '',
+    this.fusionMonorepoCommitHash = '',
+    this.jenkinsBuildNumber = '',
   });
 
   factory FusionNetworkDevice.fromJson(Map<String, dynamic> json) {
@@ -45,12 +61,15 @@ class FusionNetworkDevice {
       id: json['id'] as String? ?? '',
       location: json['location'] as String? ?? '',
       name: json['name'] as String? ?? '',
-      // modelName: json['model_name'] as String? ?? 'FM8Y',
-      modelName: 'FM8Y', //using this as we dont have model name in the api currently
-      xyteCloudId: json['xyte_cloud_id'] as String? ?? '',
-      isClaimed: json['is_claimed'] as bool? ?? false,
+      modelName: 'FM8Y', // json['model_name'] as String? ??
       serialNumber: json['serial_number'] as String? ?? '',
       isPrimary: json['is_primary'] as bool? ?? false,
+      macAddress: json['mac_address'] as String? ?? '',
+      softwareUpdateVersion: json['software_update_version'] as String? ?? '',
+      isDeviceCertificateValid: json['is_device_certificate_valid'] as bool? ?? false,
+      fusionMonorepoBranch: json['fusion_monorepo_branch'] as String? ?? '',
+      fusionMonorepoCommitHash: json['fusion_monorepo_commit_hash'] as String? ?? '',
+      jenkinsBuildNumber: json['jenkins_build_number'] as String? ?? '',
     );
   }
 
@@ -61,10 +80,14 @@ class FusionNetworkDevice {
       'location': location,
       'name': name,
       'model_name': modelName,
-      'xyte_cloud_id': xyteCloudId,
-      'is_claimed': isClaimed,
       'serial_number': serialNumber,
       'is_primary': isPrimary,
+      'mac_address': macAddress,
+      'software_update_version': softwareUpdateVersion,
+      'is_device_certificate_valid': isDeviceCertificateValid,
+      'fusion_monorepo_branch': fusionMonorepoBranch,
+      'fusion_monorepo_commit_hash': fusionMonorepoCommitHash,
+      'jenkins_build_number': jenkinsBuildNumber,
     };
   }
 
@@ -74,10 +97,14 @@ class FusionNetworkDevice {
     String? location,
     String? name,
     String? modelName,
-    String? xyteCloudId,
-    bool? isClaimed,
     String? serialNumber,
     bool? isPrimary,
+    String? macAddress,
+    String? softwareUpdateVersion,
+    bool? isDeviceCertificateValid,
+    String? fusionMonorepoBranch,
+    String? fusionMonorepoCommitHash,
+    String? jenkinsBuildNumber,
   }) {
     return FusionNetworkDevice(
       address: address ?? this.address,
@@ -85,16 +112,24 @@ class FusionNetworkDevice {
       location: location ?? this.location,
       name: name ?? this.name,
       modelName: modelName ?? this.modelName,
-      xyteCloudId: xyteCloudId ?? this.xyteCloudId,
-      isClaimed: isClaimed ?? this.isClaimed,
       serialNumber: serialNumber ?? this.serialNumber,
       isPrimary: isPrimary ?? this.isPrimary,
+      macAddress: macAddress ?? this.macAddress,
+      softwareUpdateVersion: softwareUpdateVersion ?? this.softwareUpdateVersion,
+      isDeviceCertificateValid: isDeviceCertificateValid ?? this.isDeviceCertificateValid,
+      fusionMonorepoBranch: fusionMonorepoBranch ?? this.fusionMonorepoBranch,
+      fusionMonorepoCommitHash: fusionMonorepoCommitHash ?? this.fusionMonorepoCommitHash,
+      jenkinsBuildNumber: jenkinsBuildNumber ?? this.jenkinsBuildNumber,
     );
   }
 
   @override
   String toString() {
-    return 'FusionNetworkDevice(address: $address, id: $id, name: $name, model_name: $modelName ,  serialNumber: $serialNumber, isPrimary: $isPrimary, isClaimed: $isClaimed)';
+    return 'FusionNetworkDevice(address: $address, id: $id, name: $name, '
+        'modelName: $modelName, serialNumber: $serialNumber, isPrimary: $isPrimary, '
+        'macAddress: $macAddress, softwareUpdateVersion: $softwareUpdateVersion, '
+        'isDeviceCertificateValid: $isDeviceCertificateValid, '
+        'fusionMonorepoBranch: $fusionMonorepoBranch)';
   }
 
   @override
@@ -106,10 +141,14 @@ class FusionNetworkDevice {
         other.location == location &&
         other.name == name &&
         other.modelName == modelName &&
-        other.xyteCloudId == xyteCloudId &&
-        other.isClaimed == isClaimed &&
         other.serialNumber == serialNumber &&
-        other.isPrimary == isPrimary;
+        other.isPrimary == isPrimary &&
+        other.macAddress == macAddress &&
+        other.softwareUpdateVersion == softwareUpdateVersion &&
+        other.isDeviceCertificateValid == isDeviceCertificateValid &&
+        other.fusionMonorepoBranch == fusionMonorepoBranch &&
+        other.fusionMonorepoCommitHash == fusionMonorepoCommitHash &&
+        other.jenkinsBuildNumber == jenkinsBuildNumber;
   }
 
   @override
@@ -120,10 +159,14 @@ class FusionNetworkDevice {
       location,
       name,
       modelName,
-      xyteCloudId,
-      isClaimed,
       serialNumber,
       isPrimary,
+      macAddress,
+      softwareUpdateVersion,
+      isDeviceCertificateValid,
+      fusionMonorepoBranch,
+      fusionMonorepoCommitHash,
+      jenkinsBuildNumber,
     );
   }
 }

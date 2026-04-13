@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/snapshotViewModel/snapshot_state.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/snapshotViewModel/snapshot_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 class ScenesSection extends StatelessWidget {
-  final ConfigControlLoaded state;
+  final SnapshotLoaded state;
   const ScenesSection({super.key, required this.state});
 
   @override
@@ -41,8 +41,7 @@ class ScenesSection extends StatelessWidget {
                         return _SceneSetItem(
                           sceneSet: sceneSet,
                           isChecked: isChecked,
-                          // Checkbox tap → toggles PAGES-panel membership only
-                          onToggle: () => context.read<ConfigurationControlViewmodel>().toggleSceneSetSelection(sceneSet.id),
+                          onToggle: () => context.read<SnapshotViewModel>().toggleSceneSetSelection(sceneSet.id),
                         );
                       },
                     ),

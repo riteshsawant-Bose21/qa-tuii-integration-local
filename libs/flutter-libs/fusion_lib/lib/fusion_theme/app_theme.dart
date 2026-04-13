@@ -4,8 +4,25 @@ import 'package:google_fonts/google_fonts.dart';
 
 export 'color_scheme.dart';
 
-/// Centralized theme configuration for the Fusion App,
-/// providing both light and dark themes with comprehensive styling for typography, colors, and components.
+/// Main theme class for the Fusion App that provides both light and dark theme configurations.
+///
+/// This class follows Material Design 3 guidelines and integrates with the custom [ColorExtends]
+/// extension to provide consistent theming across the entire application.
+///
+/// Features:
+/// - Complete Material Design 3 typography with Montserrat font
+/// - Custom color palette that adapts to light/dark themes
+/// - Comprehensive component theming (buttons, inputs, cards, etc.)
+/// - Accessible color contrast ratios
+///
+/// Usage:
+/// ```dart
+/// MaterialApp(
+///   theme: FusionAppTheme.lightTheme,
+///   darkTheme: FusionAppTheme.darkTheme,
+///   themeMode: ThemeMode.system, // Follows system theme
+/// )
+/// ```
 class FusionAppTheme {
   /// Private constructor to prevent instantiation
   FusionAppTheme._();
@@ -178,9 +195,7 @@ class FusionAppTheme {
         radius: const Radius.circular(4),
         thumbColor: WidgetStateProperty.all(Colors.grey.shade400),
         trackColor: WidgetStateProperty.all(Colors.transparent),
-        thumbVisibility: WidgetStateProperty.all(
-          true,
-        ), // always visible (optional)
+        thumbVisibility: WidgetStateProperty.all(true), // always visible (optional)
       ),
 
       /// Outlined button styling with primary color border and text
@@ -327,9 +342,7 @@ class FusionAppTheme {
       scrollbarTheme: ScrollbarThemeData(
         thickness: WidgetStateProperty.all(3), // small thickness globally
         radius: const Radius.circular(4),
-        thumbVisibility: WidgetStateProperty.all(
-          true,
-        ), // always visible (optional)
+        thumbVisibility: WidgetStateProperty.all(true), // always visible (optional)
       ),
 
       /// Outlined button styling with primary color border for dark theme
@@ -457,10 +470,27 @@ extension FusionTextStyle on TextTheme {
     weight: FontWeight.w400,
   );
 
+  TextStyle get h1RegularMobile => _fusionText(
+    displayLarge!,
+    size: 24,
+    lineHeight: 32,
+    letterSpacing: -2,
+    weight: FontWeight.w400,
+  );
+
   TextStyle get h1Bold => _fusionText(
     displayLarge!,
     size: 48,
     lineHeight: 56,
+    letterSpacing: -2,
+    weight: FontWeight.w700,
+    fontFamily: 'EaseStd',
+  );
+
+  TextStyle get h1BoldMobile => _fusionText(
+    displayLarge!,
+    size: 24,
+    lineHeight: 32,
     letterSpacing: -2,
     weight: FontWeight.w700,
     fontFamily: 'EaseStd',
@@ -471,8 +501,17 @@ extension FusionTextStyle on TextTheme {
   /// ------------------------
   TextStyle get h2Regular => _fusionText(
     displayMedium!,
-    size: 40,
+    size: 24,
     lineHeight: 48,
+    letterSpacing: -1,
+    weight: FontWeight.w400,
+    fontFamily: 'EaseStd',
+  );
+
+  TextStyle get h2RegularMobile => _fusionText(
+    displayMedium!,
+    size: 40,
+    lineHeight: 32,
     letterSpacing: -1,
     weight: FontWeight.w400,
     fontFamily: 'EaseStd',
@@ -482,6 +521,15 @@ extension FusionTextStyle on TextTheme {
     displayMedium!,
     size: 40,
     lineHeight: 48,
+    letterSpacing: -1,
+    weight: FontWeight.w700,
+    fontFamily: 'EaseStd',
+  );
+
+  TextStyle get h2BoldMobile => _fusionText(
+    displayMedium!,
+    size: 40,
+    lineHeight: 32,
     letterSpacing: -1,
     weight: FontWeight.w700,
     fontFamily: 'EaseStd',
@@ -499,6 +547,15 @@ extension FusionTextStyle on TextTheme {
     fontFamily: 'EaseStd',
   );
 
+  TextStyle get h3RegularMobile => _fusionText(
+    headlineLarge!,
+    size: 24,
+    lineHeight: 32,
+    letterSpacing: -1,
+    weight: FontWeight.w400,
+    fontFamily: 'EaseStd',
+  );
+
   TextStyle get h3Bold => _fusionText(
     headlineLarge!,
     size: 32,
@@ -506,6 +563,15 @@ extension FusionTextStyle on TextTheme {
     letterSpacing: -1,
     weight: FontWeight.w700,
     fontFamily: 'EaseStd',
+  );
+
+  TextStyle get h3BoldMobile => _fusionText(
+    headlineLarge!,
+    size: 24,
+    lineHeight: 32,
+    letterSpacing: -1,
+    weight: FontWeight.w700,
+    fontFamily: 'Headings',
   );
 
   /// ------------------------
@@ -520,10 +586,27 @@ extension FusionTextStyle on TextTheme {
     fontFamily: 'Inter',
   );
 
+  TextStyle get h4RegularMobile => _fusionText(
+    headlineSmall!,
+    size: 20,
+    lineHeight: 24,
+    letterSpacing: -1,
+    weight: FontWeight.w400,
+    fontFamily: 'Inter',
+  );
+
   TextStyle get h4SemiBold => _fusionText(
     headlineSmall!,
     size: 24,
     lineHeight: 32,
+    letterSpacing: -1,
+    weight: FontWeight.w600,
+    fontFamily: 'Inter',
+  );
+  TextStyle get h4SemiBoldMobile => _fusionText(
+    headlineSmall!,
+    size: 20,
+    lineHeight: 24,
     letterSpacing: -1,
     weight: FontWeight.w600,
     fontFamily: 'Inter',
@@ -533,6 +616,15 @@ extension FusionTextStyle on TextTheme {
     headlineSmall!,
     size: 24,
     lineHeight: 32,
+    letterSpacing: -1,
+    weight: FontWeight.w700,
+    fontFamily: 'Inter',
+  );
+
+  TextStyle get h4BoldMobile => _fusionText(
+    headlineSmall!,
+    size: 20,
+    lineHeight: 24,
     letterSpacing: -1,
     weight: FontWeight.w700,
     fontFamily: 'Inter',
@@ -549,7 +641,23 @@ extension FusionTextStyle on TextTheme {
     fontFamily: 'EaseStd',
   );
 
+  TextStyle get h5RegularMobile => _fusionText(
+    titleLarge!,
+    size: 20,
+    lineHeight: 24,
+    weight: FontWeight.w400,
+    fontFamily: 'EaseStd',
+  );
+
   TextStyle get h5Bold => _fusionText(
+    titleLarge!,
+    size: 20,
+    lineHeight: 24,
+    weight: FontWeight.w700,
+    fontFamily: 'EaseStd',
+  );
+
+  TextStyle get h5BoldMobile => _fusionText(
     titleLarge!,
     size: 20,
     lineHeight: 24,
@@ -568,9 +676,25 @@ extension FusionTextStyle on TextTheme {
     fontFamily: 'EaseStd',
   );
 
+  TextStyle get h6RegularMobile => _fusionText(
+    titleMedium!,
+    size: 16,
+    lineHeight: 24,
+    weight: FontWeight.w400,
+    fontFamily: 'EaseStd',
+  );
+
   TextStyle get h6Bold => _fusionText(
     titleMedium!,
     size: 18,
+    lineHeight: 24,
+    weight: FontWeight.w700,
+    fontFamily: 'EaseStd',
+  );
+
+  TextStyle get h6BoldMobile => _fusionText(
+    titleMedium!,
+    size: 16,
     lineHeight: 24,
     weight: FontWeight.w700,
     fontFamily: 'EaseStd',

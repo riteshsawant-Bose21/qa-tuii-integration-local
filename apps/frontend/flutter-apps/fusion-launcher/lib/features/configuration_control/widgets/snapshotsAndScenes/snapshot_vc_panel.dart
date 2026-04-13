@@ -1,24 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/snapshotViewModel/snapshot_state.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/snapshotViewModel/snapshot_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-/// Right panel — Virtual Controller.
-///
-/// • Title  = selected snapshot-page name OR active scene-set name.
-/// • List   = snapshots linked to the selected snapshot-page (snapshotsPerPage),
-///            or allSnapshots when a scene-set row is active.
-/// • Radio  = tracks activeSnapshotId; tapping updates it.
+/// Right panel — Virtual Controller (snapshot/scene tab).
 class SnapshotVcPanel extends StatelessWidget {
   const SnapshotVcPanel({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
-      builder: (BuildContext context, ConfigurationControlState state) {
-        if (state is! ConfigControlLoaded) return const SizedBox.shrink();
+    return BlocBuilder<SnapshotViewModel, SnapshotState>(
+      builder: (BuildContext context, SnapshotState state) {
+        if (state is! SnapshotLoaded) return const SizedBox.shrink();
 
         return Container(
           decoration: BoxDecoration(
@@ -38,19 +33,15 @@ class SnapshotVcPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildContent(BuildContext context, ConfigControlLoaded state) {
-    // ── Resolve title and snapshot list ─────────────────────────────────────
+  Widget _buildContent(BuildContext context, SnapshotLoaded state) {
     String title;
     List<SnapshotsModel> snapshots;
 
     if (state.selectedSnapshotPageId != null) {
-      // A snapshot page row was tapped → show only the snapshots the user
-      // selected when creating that page.
       final SnapshotPageModel? page = _findSnapshotPage(state, state.selectedSnapshotPageId!);
       title = page?.name ?? 'Snapshot Page';
       snapshots = _resolveSnapshots(state, page);
     } else if (state.selectedSceneSetId != null) {
-      // A scene-set row was tapped in PAGES → show snapshots for that scene set
       final SceneSetModel? sceneSet = _findSceneSet(state, state.selectedSceneSetId!);
       title = sceneSet?.name ?? 'Scene';
       snapshots = state.snapshotsInSceneSets[state.selectedSceneSetId] ?? <SnapshotsModel>[];
@@ -113,7 +104,7 @@ class SnapshotVcPanel extends StatelessWidget {
                       return _SnapshotRadioItem(
                         snapshot: snapshot,
                         isActive: isActive,
-                        onTap: () => context.read<ConfigurationControlViewmodel>().setActiveSnapshot(snapshot.id),
+                        onTap: () => context.read<SnapshotViewModel>().setActiveSnapshot(snapshot.id),
                       );
                     },
                   ),
@@ -125,8 +116,7 @@ class SnapshotVcPanel extends StatelessWidget {
     );
   }
 
-  /// Finds a SnapshotPageModel by ID from the local snapshotPages list.
-  SnapshotPageModel? _findSnapshotPage(ConfigControlLoaded state, String pageId) {
+  SnapshotPageModel? _findSnapshotPage(SnapshotLoaded state, String pageId) {
     try {
       return state.snapshotPages.firstWhere((SnapshotPageModel p) => p.id == pageId);
     } catch (_) {
@@ -134,8 +124,7 @@ class SnapshotVcPanel extends StatelessWidget {
     }
   }
 
-  /// Finds a SceneSetModel by ID from the sceneSets list.
-  SceneSetModel? _findSceneSet(ConfigControlLoaded state, String sceneSetId) {
+  SceneSetModel? _findSceneSet(SnapshotLoaded state, String sceneSetId) {
     try {
       return state.sceneSets.firstWhere((SceneSetModel s) => s.id == sceneSetId);
     } catch (_) {
@@ -143,9 +132,7 @@ class SnapshotVcPanel extends StatelessWidget {
     }
   }
 
-  /// Resolves the snapshot IDs stored in a SnapshotPageModel to actual
-  /// SnapshotsModel instances from state.allSnapshots.
-  List<SnapshotsModel> _resolveSnapshots(ConfigControlLoaded state, SnapshotPageModel? page) {
+  List<SnapshotsModel> _resolveSnapshots(SnapshotLoaded state, SnapshotPageModel? page) {
     if (page == null) return <SnapshotsModel>[];
     final Map<String, SnapshotsModel> lookup = <String, SnapshotsModel>{
       for (final SnapshotsModel s in state.allSnapshots) s.id: s,
