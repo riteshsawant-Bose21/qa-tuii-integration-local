@@ -105,7 +105,6 @@ class _SnapshotPageItem extends StatelessWidget {
           Expanded(
             child: FusionAppText(text: page.name, style: Theme.of(context).textTheme.l1Regular),
           ),
-          FusionKebabPopup(onDelete: onDelete),
           FusionKebabPopup(
             semanticId: 'snapshot_page_item',
             onDelete: onDelete,
