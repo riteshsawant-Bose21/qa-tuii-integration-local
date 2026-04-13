@@ -6,7 +6,6 @@ import 'dart:io';
 import 'package:bloc/bloc.dart';
 import 'package:dio/dio.dart';
 import 'package:equatable/equatable.dart';
-import 'package:fusion_launcher/core/config/app_config.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -39,7 +38,18 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
   void initialize() => unawaited(_initializeInternal());
 
   Future<void> _initializeInternal() async {
-    getFusionNetworkDevice();
+    if (vip?.isEmpty ?? true) {
+      _emitIfOpen(
+        state.copyWith(
+          uiState: FirmwareUpdateUiState.noUpdate,
+          errorShortText: _shortError('Target device is not configured.'),
+          errorText: 'Target device is not configured.',
+        ),
+      );
+      return;
+    }
+
+    await getFusionNetworkDevice();
     await _restoreStateFromSnapshot();
     if (await _restoreInstallableStateFromSnapshot()) return;
     await checkNewFirmwareUpdates();
@@ -61,28 +71,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     _emitIfOpen(state.copyWith(uiState: FirmwareUpdateUiState.checking, errorShortText: '', errorText: ''));
 
     try {
-      final String desktopVersion = await loadDesktopVersion();
-      final String targetVip = (vip ?? '').trim();
-
-      if (targetVip.isEmpty) {
-        _emitIfOpen(
-          state.copyWith(
-            uiState: FirmwareUpdateUiState.noUpdate,
-            errorShortText: _shortError('Target device is not configured.'),
-            errorText: 'Target device is not configured.',
-          ),
-        );
-        return;
-      }
-
-      final String currentVersion = _normalizedSemver(await getPrimaryFirmwareDeviceVersion());
-      final String envChannel = AppConfig.firmwareUpdateChannel.trim();
-
-      final FirmwareUpdateCheckResult updateCheckResult = await checkForUpdates(
-        currentFirmwareVersion: currentVersion,
-        desktopVersion: desktopVersion,
-        channel: envChannel.isNotEmpty ? envChannel : null,
-      );
+      final FirmwareUpdateCheckResult updateCheckResult = await checkForUpdates();
       _persistedBundleId = (updateCheckResult.bundleId ?? '').trim().isEmpty ? null : (updateCheckResult.bundleId ?? '').trim();
 
       final String updateAvailableVersion = _normalizedSemver(updateCheckResult.version ?? '');
@@ -90,7 +79,6 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
       final String downloadedBundlePath = await _cachedBundlePathFromSnapshot(snapshot);
       final String downloadedBundleVersion = snapshot.availableVersion;
 
-      log("updateAvailableVersion $updateAvailableVersion");
       bool hasValidDownloadedBundle = false;
       if (downloadedBundlePath.isNotEmpty) {
         hasValidDownloadedBundle = await File(downloadedBundlePath).exists();
@@ -116,7 +104,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
       } else if (updateCheckResult.appUpdateRequired) {
         nextUiState = FirmwareUpdateUiState.appUpdateRequired;
         nextErrorText = 'Launcher update required (min ${updateCheckResult.minDesktopAppVersion ?? 'unknown'}).';
-      } else if (currentVersion == updateAvailableVersion) {
+      } else if (primaryFusionDeviceVersion == updateAvailableVersion) {
         // Already on the latest version — no need to keep a downloaded bundle.
         if (hasValidDownloadedBundle) {
           await _deleteCachedBundleIfExists(downloadedBundlePath);
@@ -147,7 +135,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
           errorShortText: _shortError(nextErrorText),
           errorText: nextErrorText,
           updateCheckResult: updateCheckResult,
-          inUseVersion: currentVersion,
+          inUseVersion: primaryFusionDeviceVersion,
           availableVersion: updateAvailableVersion,
           downloadedFilePath: nextDownloadedPath,
           progress: nextProgress,
@@ -172,20 +160,11 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     return withoutPrefix.isEmpty ? '0.0.0' : withoutPrefix;
   }
 
-  Future<String> loadDesktopVersion() async {
-    try {
-      final PackageInfo info = await PackageInfo.fromPlatform();
-      return _normalizedSemver(info.version);
-    } catch (_) {
-      return '0.0.0';
-    }
-  }
-
-  Future<FirmwareUpdateCheckResult> checkForUpdates({required String currentFirmwareVersion, required String desktopVersion, String? channel}) async {
+  Future<FirmwareUpdateCheckResult> checkForUpdates() async {
     final ResponseCallback<FirmwareUpdateCheckResult> response = await fusionDeviceService.checkForFirmwareUpdates(
-      currentFirmwareVersion: currentFirmwareVersion,
-      currentDesktopAppVersion: desktopVersion,
-      channel: channel,
+      currentFirmwareVersion: primaryFusionDeviceVersion,
+      currentDesktopAppVersion: (await PackageInfo.fromPlatform()).version,
+      jenkinsBuildNumber: primaryFusionDevicejenkinsBuildNumber,
     );
 
     if (!response.success || response.data == null) {
@@ -206,8 +185,8 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     return path.join(firmwareUpdateDirectory.path, fileName);
   }
 
-  Future<BundleDownloadUrlResult> getDownloadUrl({required String bundleId}) async {
-    final ResponseCallback<BundleDownloadUrlResult> response = await fusionDeviceService.requestFirmwareBundleDownloadUrl(bundleId: bundleId);
+  Future<BundleDownloadUrlResult> getDownloadUrl({required String version}) async {
+    final ResponseCallback<BundleDownloadUrlResult> response = await fusionDeviceService.requestFirmwareBundleDownloadUrl(version: version);
     if (!response.success || response.data == null) {
       throw Exception(response.message.isEmpty ? 'Failed to fetch firmware download URL.' : response.message);
     }
@@ -278,7 +257,9 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     try {
       _emitIfOpen(state.copyWith(uiState: FirmwareUpdateUiState.downloading));
 
-      final BundleDownloadUrlResult bundleDownloadUrlResult = await getDownloadUrl(bundleId: currentBundleId);
+      final String version = state.updateCheckResult?.version?.trim() ?? '';
+
+      final BundleDownloadUrlResult bundleDownloadUrlResult = await getDownloadUrl(version: version);
       await _persistDownloadedBundleMetadata(bundleDownloadUrlResult);
       final String savePath = await getFirmwareBundleDownloadSavePath(bundleDownloadUrlResult.downloadFileName);
 
@@ -505,113 +486,16 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     _emitIfOpen(state.copyWith(isProgressExpanded: !state.isProgressExpanded));
   }
 
-  Future<String> getPrimaryFirmwareDeviceVersion() async {
-    final String targetVip = (vip ?? '').trim();
-    if (targetVip.isEmpty) return '';
-
-    final ResponseCallback<List<FusionNetworkDevice>> response = await fusionDeviceService.getAvailableDevicesOnNetwork(ip: targetVip);
-
-    if (response.success && response.data != null && response.data!.isNotEmpty) {
-      final FusionNetworkDevice? primaryDevice = response.data!.cast<FusionNetworkDevice?>().firstWhereOrNull((FusionNetworkDevice? d) => d?.isPrimary == true);
-      return primaryDevice?.softwareUpdateVersion ?? '';
-    }
-
-    return '';
+  String get primaryFusionDeviceVersion {
+    final List<FusionNetworkDevice> fustionNetworkDevices = state.networkDevices;
+    final FusionNetworkDevice? primaryDevice = fustionNetworkDevices.firstWhereOrNull((FusionNetworkDevice? d) => d?.isPrimary == true);
+    return primaryDevice?.softwareUpdateVersion ?? '';
   }
 
-  Future<FirmwareCheckDecision> checkForUpdatesDecision({
-    required String inUseVersion,
-    required String desktopVersion,
-    required String downloadedFilePath,
-  }) async {
-    final String envChannel = AppConfig.firmwareUpdateChannel.trim();
-
-    final FirmwareUpdateCheckResult result = await checkForUpdates(
-      currentFirmwareVersion: inUseVersion,
-      desktopVersion: desktopVersion,
-      channel: envChannel.isNotEmpty ? envChannel : null,
-    );
-
-    final bool hasCachedBundlePath = downloadedFilePath.trim().isNotEmpty;
-
-    if (result.appUpdateRequired) {
-      return FirmwareCheckDecision(
-        state: FirmwareCheckDecisionState.appUpdateRequired,
-        errorText: 'Launcher update required (min ${result.minDesktopAppVersion ?? 'unknown'}).',
-      );
-    }
-
-    final String nextVersion = _normalizedSemver(result.version ?? '');
-    final String nextBundleId = (result.bundleId ?? '').trim();
-
-    if (!result.updateAvailable || nextVersion == '0.0.0') {
-      if (hasCachedBundlePath) await _deleteCachedBundleIfExists(downloadedFilePath);
-
-      return FirmwareCheckDecision(
-        state: FirmwareCheckDecisionState.noUpdate,
-        clearDownloadedCache: hasCachedBundlePath,
-      );
-    }
-
-    if (nextBundleId.isEmpty) {
-      return const FirmwareCheckDecision(
-        state: FirmwareCheckDecisionState.failed,
-        errorText: 'Update is available but bundle_id is missing in response.',
-      );
-    }
-
-    if (_normalizedSemver(inUseVersion) == nextVersion) {
-      if (hasCachedBundlePath) await _deleteCachedBundleIfExists(downloadedFilePath);
-
-      return FirmwareCheckDecision(
-        state: FirmwareCheckDecisionState.installed,
-        availableVersion: nextVersion,
-        bundleId: nextBundleId,
-        releaseNotes: result.releaseNotes ?? '',
-        clearDownloadedCache: hasCachedBundlePath,
-      );
-    }
-
-    if (hasCachedBundlePath) {
-      final bool cachedBundleExists = await File(downloadedFilePath).exists();
-      if (!cachedBundleExists) {
-        return FirmwareCheckDecision(
-          state: FirmwareCheckDecisionState.updateAvailable,
-          availableVersion: nextVersion,
-          bundleId: nextBundleId,
-          releaseNotes: result.releaseNotes ?? '',
-          clearDownloadedCache: true,
-        );
-      }
-
-      final String normalizedLocalAvailableVersion = _normalizedSemver(path.basenameWithoutExtension(downloadedFilePath));
-
-      final bool isCachedBundleMatchingCurrentCloudVersion = normalizedLocalAvailableVersion == nextVersion;
-      if (!isCachedBundleMatchingCurrentCloudVersion) {
-        await _deleteCachedBundleIfExists(downloadedFilePath);
-        return FirmwareCheckDecision(
-          state: FirmwareCheckDecisionState.updateAvailable,
-          availableVersion: nextVersion,
-          bundleId: nextBundleId,
-          releaseNotes: result.releaseNotes ?? '',
-          clearDownloadedCache: true,
-        );
-      }
-
-      return FirmwareCheckDecision(
-        state: FirmwareCheckDecisionState.downloaded,
-        availableVersion: nextVersion,
-        bundleId: nextBundleId,
-        releaseNotes: result.releaseNotes ?? '',
-      );
-    }
-
-    return FirmwareCheckDecision(
-      state: FirmwareCheckDecisionState.updateAvailable,
-      availableVersion: nextVersion,
-      bundleId: nextBundleId,
-      releaseNotes: result.releaseNotes ?? '',
-    );
+  String get primaryFusionDevicejenkinsBuildNumber {
+    final List<FusionNetworkDevice> fustionNetworkDevices = state.networkDevices;
+    final FusionNetworkDevice? primaryDevice = fustionNetworkDevices.firstWhereOrNull((FusionNetworkDevice? d) => d?.isPrimary == true);
+    return primaryDevice?.jenkinsBuildNumber ?? '';
   }
 
   Future<void> _deleteCachedBundleIfExists(String downloadedFilePath) async {
@@ -721,13 +605,26 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
 
       await completer.future;
 
+      final bool allCompleted = state.deviceInstallProgress.every((FirmwareInstallDeviceProgress e) => e.isCompleted);
+
+      if (allCompleted) {
+        // Installation successful - delete the downloaded bundle file but keep metadata for rollback
+        final String bundlePathToDelete = state.downloadedFilePath.trim();
+        if (bundlePathToDelete.isNotEmpty) {
+          await _deleteCachedBundleIfExists(bundlePathToDelete);
+        }
+      }
+
       _emitIfOpen(
         state.copyWith(
           uiState: FirmwareUpdateUiState.installed,
           progress: 1,
           errorText: '',
+          errorShortText: '',
           installTrackingCompleted: true,
           isSocketTrackingInProgress: false,
+          inUseVersion: state.availableVersion, // Update in-use version to the newly installed version
+          downloadedFilePath: '', // Clear the file path since we deleted the bundle
         ),
       );
     } catch (e) {

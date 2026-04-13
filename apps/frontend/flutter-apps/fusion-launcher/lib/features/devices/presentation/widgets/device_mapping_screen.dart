@@ -93,7 +93,6 @@ class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
 
   @override
   Widget build(BuildContext context) {
-
     return BlocListener<FusionNetworkDeviceViewModel, FusionNetworkDeviceViewModelState>(
       listener: (BuildContext context, FusionNetworkDeviceViewModelState state) {
         if (state is FusionNetworkDeviceViewModelLoaded) {

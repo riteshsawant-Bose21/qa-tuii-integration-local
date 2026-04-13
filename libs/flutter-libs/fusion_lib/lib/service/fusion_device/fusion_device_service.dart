@@ -188,15 +188,14 @@ class FusionDeviceService {
   Future<ResponseCallback<FirmwareUpdateCheckResult>> checkForFirmwareUpdates({
     required String currentFirmwareVersion,
     required String currentDesktopAppVersion,
-    String? channel,
+    required String jenkinsBuildNumber,
   }) async {
     try {
       final ResponseCallback<FirmwareUpdateCheckResult> response = await networkClient.get<FirmwareUpdateCheckResult>(
         api: FusionApiEndpoint.firmwareUpdateCheck,
         urlParameters: <String, dynamic>{
-          'current_firmware_version': currentFirmwareVersion,
+          'current_firmware_version': "$currentFirmwareVersion-dev.$jenkinsBuildNumber",
           'current_desktop_app_version': currentDesktopAppVersion,
-          if (channel != null && channel.trim().isNotEmpty) 'channel': channel.trim(),
         },
         fromJson: (dynamic json) {
           if (json is! Map<String, dynamic>) {
@@ -211,16 +210,15 @@ class FusionDeviceService {
     }
   }
 
-  Future<ResponseCallback<BundleDownloadUrlResult>> requestFirmwareBundleDownloadUrl({required String bundleId}) async {
+  Future<ResponseCallback<BundleDownloadUrlResult>> requestFirmwareBundleDownloadUrl({required String version}) async {
     try {
-      final String trimmedBundleId = bundleId.trim();
-      if (trimmedBundleId.isEmpty) {
+      if (version.isEmpty) {
         return ResponseCallback<BundleDownloadUrlResult>.failure('bundleId is required');
       }
 
       final ResponseCallback<BundleDownloadUrlResult> response = await networkClient.get<BundleDownloadUrlResult>(
         api: FusionApiEndpoint.firmwareBundleDownloadUrl,
-        additionalPath: '$trimmedBundleId/request-download-url',
+        additionalPath: '$version/request-download-url',
         fromJson: (dynamic json) {
           if (json is! Map<String, dynamic>) {
             throw Exception('Unexpected firmware bundle download response format.');
@@ -415,18 +413,24 @@ class FusionDeviceService {
         data: <String, dynamic>{
           'devices': [
             ...devices.map(
-              (FusionNetworkDevice device) => <String, dynamic>{
-                'client_device_id': device.id,
-                'csr': '', // TODO: SHARATH
-                'device_location': device.location,
-                'device_name': device.name,
-                'device_zone': device.location,
-                // 'firmware_version': device.firmwareVersion, // TODO: check this field
-                'is_primary': device.isPrimary,
-                'mac_address': device.macAddress,
-                'model_name': device.modelName,
-                'project_id': projectId,
-                'serial_number': device.serialNumber,
+              (FusionNetworkDevice device) async {
+                ResponseCallback<String?> response = await networkClient.get(
+                  api: FusionApiEndpoint.fusionDevice,
+                  additionalPath: "${device.id}/csr",
+                );
+
+                return <String, dynamic>{
+                  'client_device_id': device.id,
+                  'csr': response.data,
+                  'device_location': device.location,
+                  'device_name': device.name,
+                  'device_zone': device.location,
+                  'is_primary': device.isPrimary,
+                  'mac_address': device.macAddress,
+                  'model_name': device.modelName,
+                  'project_id': projectId,
+                  'serial_number': device.serialNumber,
+                };
               },
             ),
           ],
