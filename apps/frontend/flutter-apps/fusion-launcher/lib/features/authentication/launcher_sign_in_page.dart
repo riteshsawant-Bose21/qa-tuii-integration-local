@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
+import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -139,13 +140,20 @@ class _LauncherSignInPageView extends StatelessWidget {
                               testId: SemanticHelper.createTestId(SemanticTypes.button, "skip_login_button"),
                               child: TextButton(
                                 onPressed: () async {
-                                  _handleAuthAction(context, isAuthenticated);
-                                  // serviceLocator<SessionViewModel>().skipLogin();
-                                  // Navigator.pushNamedAndRemoveUntil(
-                                  //   context,
-                                  //   Routes.launcherHomePage,
-                                  //   (Route<dynamic> route) => false,
-                                  // );
+                                  final bool isIntegrationTest = serviceLocator<AuthViewModel>().isIntegrationTest;
+
+                                  if (isIntegrationTest) {
+                                    serviceLocator<AuthViewModel>().login();
+                                  } else {
+                                    serviceLocator<SessionViewModel>().skipLogin();
+                                    _handleAuthAction(context, isAuthenticated);
+                                    serviceLocator<SessionViewModel>().skipLogin();
+                                    Navigator.pushNamedAndRemoveUntil(
+                                      context,
+                                      Routes.launcherHomePage,
+                                      (Route<dynamic> route) => false,
+                                    );
+                                  }
                                 },
                                 child: FusionAppText(
                                   text: 'Skip login',

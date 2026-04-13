@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/service/auth/fusion_auth_service.dart';
 
@@ -54,13 +55,14 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
     emit(AuthWebRedirectInProgress());
   }
 
-  bool isIntegrationTest = false;
+  bool _isIntegrationTest = false;
+  bool get isIntegrationTest => _isIntegrationTest;
 
   // /// Initialize and check if user is already authenticated
   Future<void> initialize({required bool isIntegrationTest}) async {
     try {
       _emitLoading();
-      this.isIntegrationTest = isIntegrationTest;
+      _isIntegrationTest = isIntegrationTest;
 
       // Check if user is already authenticated
       final bool isAuthenticated = await _authService.isAuthenticated();
@@ -110,7 +112,7 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
 
       late final Credentials credentials;
 
-      if (isIntegrationTest) {
+      if (_isIntegrationTest) {
         credentials = await byPassLoginForIntegrationTest();
       } else {
         credentials = await _authService.login();
@@ -119,6 +121,8 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
       await serviceLocator<SharedPreferencesHandler>().setBool(SharedPreferenceKeys.skipLogin, false);
 
       await _handleLoginSuccess(credentials);
+
+      serviceLocator<ProductQueryViewModel>().loadProducts(); // Load products after successful login
     } on Exception catch (e) {
       // Web redirect initiated - this is expected
       if (kIsWeb && e.toString().contains('Web redirect initiated')) {
