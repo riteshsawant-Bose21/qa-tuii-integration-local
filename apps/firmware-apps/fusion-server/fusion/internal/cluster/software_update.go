@@ -35,9 +35,7 @@ func (c *Cluster) getSwUpdateInfoLocal() api.SwUpdateInfo {
 	return info
 }
 
-// GetAllSoftwareUpdateList fetches /mnt/ota bundle list from every cluster node and
-// returns the de-duplicated union (by filename) so the WebSocket caller always sees
-// the full cluster inventory, not just what the VIP holds.
+// GetAllSoftwareUpdateList fetches /mnt/ota bundle list from every cluster node
 func (c *Cluster) GetAllSoftwareUpdateList() []api.SoftwareUpdateSync {
 	return fetchAllFromAdmin(
 		c,
@@ -47,7 +45,6 @@ func (c *Cluster) GetAllSoftwareUpdateList() []api.SoftwareUpdateSync {
 }
 
 // getSoftwareUpdateListLocal reads the local /mnt/ota directory and returns all
-// complete (non-.part) bundles with their metadata.
 func (c *Cluster) getSoftwareUpdateListLocal() []api.SoftwareUpdateSync {
 	logger := logging.GetLogger()
 	sourceIP := c.memberlist.LocalNode().Addr.String()
