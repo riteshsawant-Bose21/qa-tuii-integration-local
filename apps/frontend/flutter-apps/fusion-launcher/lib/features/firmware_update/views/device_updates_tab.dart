@@ -16,6 +16,7 @@ class DeviceUpdatesTab extends StatefulWidget {
 
 class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
   final FirmwareUpdateViewModel _firmwareUpdateViewModel = serviceLocator<FirmwareUpdateViewModel>();
+  OverlayEntry? _globalInstallBlockerEntry;
 
   @override
   void initState() {
@@ -23,25 +24,21 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
     _firmwareUpdateViewModel.initialize();
   }
 
-  void _onDownloadNow() {
-    unawaited(_firmwareUpdateViewModel.onDownloadTap());
+  @override
+  void dispose() {
+    _hideGlobalInstallBlocker();
+    super.dispose();
   }
 
-  void _installNow() {
-    unawaited(_firmwareUpdateViewModel.installNow());
-  }
+  void _onDownloadNow() => unawaited(_firmwareUpdateViewModel.onDownloadTap());
 
-  void _retryDownload() {
-    unawaited(_firmwareUpdateViewModel.retryDownload());
-  }
+  void _installNow() => unawaited(_firmwareUpdateViewModel.installNow());
 
-  void _retryInstall() {
-    unawaited(_firmwareUpdateViewModel.retryInstall());
-  }
+  void _retryDownload() => unawaited(_firmwareUpdateViewModel.retryDownload());
 
-  void _rollbackToDownloaded() {
-    unawaited(_firmwareUpdateViewModel.rollbackToDownloaded());
-  }
+  void _retryInstall() => unawaited(_firmwareUpdateViewModel.retryInstall());
+
+  void _rollbackToDownloaded() => unawaited(_firmwareUpdateViewModel.rollbackToDownloaded());
 
   String get _description {
     final String releaseNotes = _firmwareUpdateViewModel.state.updateCheckResult?.releaseNotes ?? '';
@@ -127,15 +124,52 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
     }
   }
 
+  void _syncGlobalInstallBlocker(FirmwareUpdateViewModelState state) {
+    if (state.uiState == FirmwareUpdateUiState.installing) {
+      _showGlobalInstallBlocker();
+    } else {
+      _hideGlobalInstallBlocker();
+    }
+  }
+
+  void _showGlobalInstallBlocker() {
+    // if (!mounted || _globalInstallBlockerEntry != null) return;
+
+    // final OverlayState overlayState = Overlay.of(context, rootOverlay: true);
+
+    // _globalInstallBlockerEntry = OverlayEntry(
+    //   builder: (BuildContext context) {
+    //     return Positioned.fill(
+    //       child: Material(
+    //         color: Colors.transparent,
+    //         child: GestureDetector(
+    //           behavior: HitTestBehavior.opaque,
+    //           onTap: _showInstallTapHint,
+    //           child: const SizedBox.expand(),
+    //         ),
+    //       ),
+    //     );
+    //   },
+    // );
+
+    // overlayState.insert(_globalInstallBlockerEntry!);
+  }
+
+  void _hideGlobalInstallBlocker() {
+    _globalInstallBlockerEntry?.remove();
+    _globalInstallBlockerEntry = null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<FirmwareUpdateViewModel, FirmwareUpdateViewModelState>(
       bloc: _firmwareUpdateViewModel,
-      listenWhen:
-          (FirmwareUpdateViewModelState previous, FirmwareUpdateViewModelState current) =>
-              previous.uiState == FirmwareUpdateUiState.installing && current.uiState == FirmwareUpdateUiState.installed,
+      listenWhen: (FirmwareUpdateViewModelState previous, FirmwareUpdateViewModelState current) => previous.uiState != current.uiState,
       listener: (BuildContext context, FirmwareUpdateViewModelState state) {
-        _showInstallSuccessDialogForTwoSeconds();
+        _syncGlobalInstallBlocker(state);
+        if (state.uiState == FirmwareUpdateUiState.installed) {
+          _showInstallSuccessDialogForTwoSeconds();
+        }
       },
       builder: (BuildContext context, FirmwareUpdateViewModelState state) {
         if (state.uiState == FirmwareUpdateUiState.noUpdate) {
@@ -173,6 +207,8 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
               if ((state.uiState == FirmwareUpdateUiState.installing || state.uiState == FirmwareUpdateUiState.installed) && state.isProgressExpanded)
                 const SizedBox(height: 18),
               _buildInUseVersionRow(context, state),
+              if (state.errorText.trim().isNotEmpty) const SizedBox(height: 12),
+              if (state.errorText.trim().isNotEmpty) _buildDetailedErrorFooter(context, state.errorText),
             ],
           ),
         );
@@ -198,6 +234,13 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
           SizedBox(
             width: 560,
             child: _buildInUseVersionRow(context, state),
+          ),
+          const SizedBox(height: 20),
+          _buildButton(
+            context,
+            'Check Again',
+            () => unawaited(_firmwareUpdateViewModel.checkNewFirmwareUpdates()),
+            width: 180,
           ),
         ],
       ),
@@ -283,6 +326,10 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
               ],
             ),
             const SizedBox(height: 14),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 300),
+              child: _buildErrorLabel(state.errorShortText.isEmpty ? 'Download failed.' : state.errorShortText),
+            ),
           ],
         );
       case FirmwareUpdateUiState.installing:
@@ -324,7 +371,7 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
             const SizedBox(height: 14),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 300),
-              child: _buildErrorLabel(state.errorText.isEmpty ? 'Device Timeout' : state.errorText),
+              child: _buildErrorLabel(state.errorShortText.isEmpty ? 'Device Timeout' : state.errorShortText),
             ),
           ],
         );
@@ -376,7 +423,7 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
       case FirmwareUpdateUiState.appUpdateRequired:
         content = Column(
           children: <Widget>[
-            _buildErrorLabel(state.errorText.isEmpty ? 'Launcher update required.' : state.errorText),
+            _buildErrorLabel(state.errorShortText.isEmpty ? 'Launcher update required.' : state.errorShortText),
           ],
         );
     }
@@ -458,6 +505,37 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
     );
   }
 
+  Widget _buildDetailedErrorFooter(BuildContext context, String text) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0x33E43333)),
+        color: const Color(0x14E43333),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Icon(Icons.error_outline, color: Color(0xFFE43333), size: 16),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: FusionAppText(
+              text: text,
+              maxLine: 6,
+              style: context.textTheme.b3Regular.copyWith(
+                color: const Color(0xFFE43333),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildInUseVersionRow(BuildContext context, FirmwareUpdateViewModelState state) {
     return Container(
       height: 52,
@@ -494,40 +572,59 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
       ),
       child: Column(
         children: <Widget>[
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              children: <Widget>[
-                Expanded(flex: 2, child: _TableHeaderText('STATUS')),
-                Expanded(flex: 3, child: _TableHeaderText('SERIAL NUMBER')),
-                Expanded(flex: 3, child: _TableHeaderText('NODE')),
-                Expanded(flex: 2, child: _TableHeaderText('STEP')),
-                Expanded(flex: 3, child: _TableHeaderText('TASK')),
-                Expanded(flex: 4, child: _TableHeaderText('INSTALLATION PROGRESS')),
-              ],
-            ),
-          ),
-          if (devices.isEmpty)
+          if (devices.isEmpty) ...<Widget>[
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: _TableValueText('Waiting for device update events...'),
+                // Downloaded file is uploaded message
+                child: _TableValueText('Firmware software file is uploading...'),
               ),
             ),
-          for (final FirmwareInstallDeviceProgress device in devices) _buildDeviceRow(device),
+          ] else ...<Widget>[
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: <Widget>[
+                  Expanded(flex: 2, child: _TableHeaderText('STATUS')),
+                  Expanded(flex: 3, child: _TableHeaderText('SERIAL NUMBER')),
+                  Expanded(flex: 3, child: _TableHeaderText('NODE')),
+                  Expanded(flex: 2, child: _TableHeaderText('STEP')),
+                  Expanded(flex: 3, child: _TableHeaderText('TASK')),
+                  Expanded(flex: 4, child: _TableHeaderText('INSTALLATION PROGRESS')),
+                ],
+              ),
+            ),
+            Builder(
+              builder: (BuildContext context) {
+                final List<FusionNetworkDevice> networkDevices = serviceLocator<FirmwareUpdateViewModel>().state.networkDevices;
+
+                return Column(
+                  children: <Widget>[
+                    ...networkDevices.map((FusionNetworkDevice networkDevice) {
+                      final FirmwareInstallDeviceProgress? device = devices.firstWhereOrNull(
+                        (FirmwareInstallDeviceProgress d) => d.serialNumber == networkDevice.serialNumber,
+                      );
+
+                      return _buildDeviceRow(networkDevice, device);
+                    }),
+                  ],
+                );
+              },
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildDeviceRow(FirmwareInstallDeviceProgress device) {
-    final String normalizedState = device.updateState.toUpperCase();
+  Widget _buildDeviceRow(FusionNetworkDevice networkDevice, FirmwareInstallDeviceProgress? device) {
+    final String normalizedState = device?.updateState.toUpperCase() ?? '';
     final bool completed = normalizedState == 'COMPLETED';
     final bool success = normalizedState == 'SUCCESS';
     final Color stateColor = completed || success ? const Color(0xFF5CC59A) : const Color(0xFFE0A645);
-    final double rowProgress = completed || success ? 1 : (device.stepProgress / 100).clamp(0, 1);
-    final String progressLabel = completed || success ? '100%' : '${device.stepProgress.clamp(0, 100)}%';
+    final double rowProgress = completed || success ? 1 : ((device?.stepProgress ?? 0) / 100).clamp(0, 1);
+    final String progressLabel = completed || success ? '100%' : '${(device?.stepProgress ?? 0).clamp(0, 100)}%';
 
     return Container(
       height: 46,
@@ -547,10 +644,10 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
               ],
             ),
           ),
-          Expanded(flex: 3, child: _TableValueText(device.serialNumber, color: const Color(0xFF2FA16B), underline: true)),
-          Expanded(flex: 3, child: _TableValueText(device.node.isEmpty ? '--' : device.node)),
-          Expanded(flex: 2, child: _TableValueText(device.stepLabel)),
-          Expanded(flex: 3, child: _TableValueText(device.currentTask.isEmpty ? '--' : device.currentTask)),
+          Expanded(flex: 3, child: _TableValueText(networkDevice.serialNumber, color: const Color(0xFF2FA16B), underline: true)),
+          Expanded(flex: 3, child: _TableValueText(device?.node.isEmpty ?? true ? '--' : device?.node ?? '')),
+          Expanded(flex: 2, child: _TableValueText(device?.stepLabel ?? '--')),
+          Expanded(flex: 3, child: _TableValueText(device?.currentTask.isEmpty ?? true ? '--' : device?.currentTask ?? '')),
           Expanded(
             flex: 4,
             child: Row(

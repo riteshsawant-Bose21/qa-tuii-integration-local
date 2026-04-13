@@ -11,14 +11,12 @@ class NetworkHardwarePanel extends StatelessWidget {
   final List<FusionNetworkDevice> networkDevices;
   final Function(String) onDragStarted;
   final VoidCallback onDragEnded;
-  final VoidCallback? onRegisterDevicesTap;
 
   const NetworkHardwarePanel({
     super.key,
     required this.networkDevices,
     required this.onDragStarted,
     required this.onDragEnded,
-    required this.onRegisterDevicesTap,
   });
 
   @override
@@ -84,13 +82,25 @@ class NetworkHardwarePanel extends StatelessWidget {
             },
           ),
         ),
-        const SizedBox(height: 16),
-        FusionNeumorphicButton(
-          semanticId: "register_devices_btn",
-          text: "Register devices",
-          height: 48,
-          enabled: onRegisterDevicesTap != null,
-          onTap: () => onRegisterDevicesTap?.call(),
+        Builder(
+          builder: (BuildContext context) {
+            return const SizedBox();
+            // final List<FusionNetworkDevice> unregisteredDevices = context.watch<FusionNetworkDeviceViewModel>().getUnregisteredDevicesForCurrentProject();
+
+            // return Column(
+            //   crossAxisAlignment: CrossAxisAlignment.start,
+            //   children: <Widget>[
+            //     const SizedBox(height: 16),
+            //     FusionNeumorphicButton(
+            //       semanticId: "register_devices_btn",
+            //       text: "Register devices",
+            //       height: 48,
+            //       enabled: onRegisterDevicesTap != null,
+            //       onTap: () => onRegisterDevicesTap?.call(),
+            //     ),
+            //   ],
+            // );
+          },
         ),
       ],
     );

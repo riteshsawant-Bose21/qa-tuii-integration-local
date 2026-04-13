@@ -93,7 +93,6 @@ class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
 
   @override
   Widget build(BuildContext context) {
-    final List<FusionNetworkDevice> unregisteredDevices = fusionNetworkDeviceViewModel.getUnregisteredDevicesForCurrentProject();
 
     return BlocListener<FusionNetworkDeviceViewModel, FusionNetworkDeviceViewModelState>(
       listener: (BuildContext context, FusionNetworkDeviceViewModelState state) {
@@ -146,17 +145,15 @@ class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
                     color: context.colorScheme.strokeLight,
                   ),
                   const SizedBox(width: 16),
-                  // PANEL SECTION
-                  if (_networkDevices.isNotEmpty)
-                    Expanded(
-                      flex: 3,
-                      child: NetworkHardwarePanel(
-                        networkDevices: _networkDevices,
-                        onDragStarted: (String id) => setState(() => _draggedHardwareId = id),
-                        onDragEnded: () => setState(() => _draggedHardwareId = null),
-                        onRegisterDevicesTap: widget.devices.isEmpty ? null : () => showUnregisteredDevicesClaimDialog(context, unregisteredDevices),
-                      ),
+
+                  Expanded(
+                    flex: 3,
+                    child: NetworkHardwarePanel(
+                      networkDevices: _networkDevices,
+                      onDragStarted: (String id) => setState(() => _draggedHardwareId = id),
+                      onDragEnded: () => setState(() => _draggedHardwareId = null),
                     ),
+                  ),
                 ],
               ),
             ),

@@ -204,7 +204,7 @@ Future<void> setupServiceLocator() async {
   );
 
   // Download manager for handling file downloads across the app
-  serviceLocator.registerSingleton<DownloadManagerCubit>(DownloadManagerCubit());
+  serviceLocator.registerSingleton<TransferManagerCubit>(TransferManagerCubit());
 
   serviceLocator.registerSingleton<DroConfigService>(
     DroConfigService(

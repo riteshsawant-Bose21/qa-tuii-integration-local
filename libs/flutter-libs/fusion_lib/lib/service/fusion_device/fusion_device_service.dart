@@ -358,30 +358,19 @@ class FusionDeviceService {
 
   Stream<ResponseCallback<FirmwareUpdateProgressEvent>> listenFirmwareUpdateProgressEvents() async* {
     await for (final ResponseCallback<dynamic> message in networkClient.webSocketMessages) {
-      log('Firmware WS message received: success=${message.success}');
-
       if (!message.success || message.data == null) {
-        log('Firmware WS invalid message: ${message.message}');
         yield ResponseCallback<FirmwareUpdateProgressEvent>.failure(message.message);
         continue;
       }
 
       final dynamic payload = message.data;
       if (payload is! Map<String, dynamic>) {
-        log('Firmware WS ignored non-map payload: ${payload.runtimeType}');
         continue;
       }
 
       final FirmwareUpdateProgressEvent event = FirmwareUpdateProgressEvent.fromJson(payload);
       if (!event.isUpdateProgress) {
-        log('Firmware WS ignored event type=${event.type}');
         continue;
-      }
-
-      log('Firmware WS progress event: devices=${event.devicesBySerial.length}, status=${event.status}, code=${event.code}');
-      for (final MapEntry<String, FirmwareUpdateDeviceProgress> entry in event.devicesBySerial.entries) {
-        final FirmwareUpdateDeviceProgress device = entry.value;
-        log('serial=${entry.key}, state=${device.updateState}, step=${device.step}, progress=${device.progress}, task=${device.currentTask}');
       }
 
       yield ResponseCallback<FirmwareUpdateProgressEvent>.success(event);
