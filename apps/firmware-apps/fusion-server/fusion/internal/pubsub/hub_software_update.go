@@ -4,16 +4,22 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"io"
 	"net"
+	"os"
+	"os/exec"
 	"time"
 )
 
-// startSWUpdateProgressMonitoring begins monitoring the SWUpdate progress socket
-func (h *Hub) startSWUpdateProgressMonitoring() {
+// errSWUpdateGracefulStop is returned by connectAndMonitorSocket when the socket closes after a SUCCESS event.
+var errSWUpdateGracefulStop = errors.New("swupdate socket closed after SUCCESS")
+
+// StartSWUpdateProgressMonitoring begins monitoring the SWUpdate progress socket.
+func (h *Hub) StartSWUpdateProgressMonitoring() {
 	h.swUpdateMutex.Lock()
 	defer h.swUpdateMutex.Unlock()
 
@@ -62,7 +68,14 @@ func (h *Hub) monitorSWUpdateProgress(ctx context.Context) {
 			return
 		default:
 			if err := h.connectAndMonitorSocket(ctx); err != nil {
-				logger.Error("SWUpdate progress monitoring error: %v", err)
+				if errors.Is(err, os.ErrNotExist) {
+					logger.Debug("[Hub] SWUpdate socket not yet available, retrying in 2s")
+				} else if errors.Is(err, errSWUpdateGracefulStop) {
+					logger.Info("[Hub] SWUpdate socket closed after SUCCESS (device rebooting), stopping monitor")
+					return
+				} else {
+					logger.Error("SWUpdate progress monitoring error: %v", err)
+				}
 				// Wait before retrying
 				select {
 				case <-ctx.Done():
@@ -98,6 +111,10 @@ func (h *Hub) connectAndMonitorSocket(ctx context.Context) error {
 
 	logger.Info("Connected to SWUpdate progress socket (API 0x%08X, message size %d)", apiVer, msgSize)
 
+	// seenSuccess is set when SUCCESS is received.
+	// If the socket closes after this without DONE, we assume it's a graceful shutdown due to device reboot and stop monitoring.
+	seenSuccess := false
+
 	buf := make([]byte, msgSize)
 	for {
 		select {
@@ -112,11 +129,21 @@ func (h *Hub) connectAndMonitorSocket(ctx context.Context) error {
 				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 					continue // Continue on timeout to check context
 				}
+				if seenSuccess {
+					// Socket closed after SUCCESS — device is about to reboot.
+					// DONE may not have been emitted; stop gracefully.
+					return errSWUpdateGracefulStop
+				}
 				return fmt.Errorf("read error: %w", err)
 			}
 
-			if err := h.processSWUpdateMessage(buf); err != nil {
-				logger.Error("Error processing SWUpdate message: %v", err)
+			progress, processErr := h.processAndReturnProgress(buf)
+			if processErr != nil {
+				logger.Error("Error processing SWUpdate message: %v", processErr)
+				continue
+			}
+			if progress != nil && progress.Status == api.SWUpdateStatusSuccess {
+				seenSuccess = true
 			}
 		}
 	}
@@ -139,15 +166,21 @@ func (h *Hub) readConnectAck(conn net.Conn) (uint32, error) {
 	return apiVer, nil
 }
 
-// processSWUpdateMessage parses a progress message and broadcasts it
-func (h *Hub) processSWUpdateMessage(buf []byte) error {
+// processSWUpdateMessage parses a progress message, gossips it, and returns the
+// parsed progress so callers can inspect status (e.g. to track SUCCESS).
+// It calls StopSWUpdateProgressMonitoring on DONE or FAILURE.
+func (h *Hub) processAndReturnProgress(buf []byte) (*api.SoftwareUpdateProgress, error) {
+	return h.processSWUpdateMessageInternal(buf)
+}
+
+func (h *Hub) processSWUpdateMessageInternal(buf []byte) (*api.SoftwareUpdateProgress, error) {
 	progress, err := h.parseProgressMessage(buf)
 	if err != nil {
-		return fmt.Errorf("failed to parse progress message: %w", err)
+		return nil, fmt.Errorf("failed to parse progress message: %w", err)
 	}
 
 	if h.transport == nil || h.transport.LocalNode() == nil {
-		return fmt.Errorf("transport not configured")
+		return nil, fmt.Errorf("transport not configured")
 	}
 
 	progress.NodeName = h.transport.LocalNode().Name
@@ -160,23 +193,19 @@ func (h *Hub) processSWUpdateMessage(buf []byte) error {
 
 	// Broadcast to cluster nodes
 	if err := h.BroadcastToNodes(message); err != nil {
-		return err
+		return progress, err
 	}
 
-	// Stop monitoring once a terminal state is reached so the goroutine
-	// does not keep retrying/logging after the update completes.
+	// Stop monitoring only on DONE (COMPLETED) or FAILURE.
 	if isSWUpdateTerminalStatus(progress.Status) {
 		logging.GetLogger().Info("[Hub] SWUpdate reached terminal status %s; stopping progress monitoring", progress.Status)
 		h.StopSWUpdateProgressMonitoring()
 	}
 
-	return nil
+	return progress, nil
 }
 
-// isSWUpdateTerminalStatus reports whether the given status marks the end of an update.
-// SUCCESS is intentionally not terminal here so that monitoring continues until
-// swupdate emits DONE (COMPLETED), giving clients visibility of the full sequence.
-// Monitoring stops on DONE (normal completion) or FAILURE (error path).
+// isSWUpdateTerminalStatus returns true if the status is DONE or FAILURE, indicating monitoring should stop (not on SUCCESS).
 func isSWUpdateTerminalStatus(s api.SWUpdateStatus) bool {
 	switch s {
 	case api.SWUpdateStatusDone, api.SWUpdateStatusFailure:
@@ -221,6 +250,178 @@ func (h *Hub) parseProgressMessage(buf []byte) (*api.SoftwareUpdateProgress, err
 	}
 
 	return progress, nil
+}
+
+// startFollowerOrchestration orchestrates SWUpdate: resets state, gossips start_update to followers, waits for all to finish, then updates primary.
+func (h *Hub) startFollowerOrchestration() {
+	logger := logging.GetLogger()
+	// Ensure any previous SWUpdate monitoring is stopped before starting a new orchestration.
+	h.StopSWUpdateProgressMonitoring()
+	// Clear progress map to avoid stale entries affecting orchestration checks.
+	h.resetSWUpdateProgress()
+	logger.Info("[SWUpdate] Primary orchestration started — waiting for all followers to complete before self-update")
+	go h.waitForFollowersThenUpdateSelf()
+}
+
+// resetSWUpdateProgress clears per-node progress accumulated from previous runs.
+func (h *Hub) resetSWUpdateProgress() {
+	h.swUpdateMutex.Lock()
+	h.swUpdateProgress = make(map[string]*api.SoftwareUpdateProgress)
+	h.swUpdateMutex.Unlock()
+}
+
+// waitForFollowersThenUpdateSelf waits for all followers to complete SWUpdate before starting the primary's self-update.
+func (h *Hub) waitForFollowersThenUpdateSelf() {
+	logger := logging.GetLogger()
+
+	followers := h.getFollowerNames()
+	if len(followers) == 0 {
+		logger.Info("[SWUpdate] No followers in cluster — starting primary self-update immediately")
+		h.startSelfUpdate()
+		return
+	}
+
+	logger.Info("[SWUpdate] Waiting for %d follower(s) to complete update before starting primary: %v",
+		len(followers), followers)
+
+	timeout := time.NewTimer(30 * time.Minute)
+	defer timeout.Stop()
+	tick := time.NewTicker(5 * time.Second)
+	defer tick.Stop()
+
+	for {
+		select {
+		case <-timeout.C:
+			logger.Error("[SWUpdate] Timed out waiting for followers — aborting primary self-update")
+			return
+		case <-tick.C:
+			if h.anyFollowerFailed(followers) {
+				logger.Error("[SWUpdate] A follower reported FAILURE — aborting primary self-update")
+				return
+			}
+			if h.allFollowersDone(followers) {
+				logger.Info("[SWUpdate] All followers reached DONE — starting primary self-update")
+				h.startSelfUpdate()
+				return
+			}
+			logger.Info("[SWUpdate] Still waiting for followers (pending: %v)", h.pendingFollowers(followers))
+		}
+	}
+}
+
+// getFollowerNames returns names of all cluster members except the local node.
+func (h *Hub) getFollowerNames() []string {
+	if h.transport == nil || h.transport.LocalNode() == nil {
+		return nil
+	}
+	localName := h.transport.LocalNode().Name
+	var followers []string
+	for _, m := range h.transport.MemberListMembers() {
+		if m.Name != localName {
+			followers = append(followers, m.Name)
+		}
+	}
+	return followers
+}
+
+// isFollowerUpdateComplete returns true if the follower has STATUS SUCCESS/DONE or is no longer in the memberlist (rebooted after update).
+func (h *Hub) isFollowerUpdateComplete(name string) bool {
+	// Check gossip-reported status first
+	if p, ok := h.swUpdateProgress[name]; ok {
+		if p.Status == api.SWUpdateStatusSuccess || p.Status == api.SWUpdateStatusDone {
+			return true
+		}
+	}
+	// Node left the memberlist → it rebooted after a successful update
+	if h.transport != nil {
+		for _, m := range h.transport.MemberListMembers() {
+			if m.Name == name {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
+
+// allFollowersDone reports whether every follower has completed (SUCCESS/DONE or left cluster).
+func (h *Hub) allFollowersDone(followers []string) bool {
+	h.swUpdateMutex.RLock()
+	defer h.swUpdateMutex.RUnlock()
+	for _, name := range followers {
+		if !h.isFollowerUpdateComplete(name) {
+			return false
+		}
+	}
+	return true
+}
+
+// anyFollowerFailed returns true if any follower has SWUpdateStatusFailure; node disappearance is not treated as failure.
+func (h *Hub) anyFollowerFailed(followers []string) bool {
+	h.swUpdateMutex.RLock()
+	defer h.swUpdateMutex.RUnlock()
+	for _, name := range followers {
+		if p, ok := h.swUpdateProgress[name]; ok && p.Status == api.SWUpdateStatusFailure {
+			return true
+		}
+	}
+	return false
+}
+
+// pendingFollowers returns names of followers not yet considered complete.
+func (h *Hub) pendingFollowers(followers []string) []string {
+	h.swUpdateMutex.RLock()
+	defer h.swUpdateMutex.RUnlock()
+	var pending []string
+	for _, name := range followers {
+		if !h.isFollowerUpdateComplete(name) {
+			pending = append(pending, name)
+		}
+	}
+	return pending
+}
+
+// startSelfUpdate triggers swupdate-ota-install.service on the primary and
+// starts monitoring the local /tmp/swupdateprog progress socket.
+func (h *Hub) startSelfUpdate() {
+	logger := logging.GetLogger()
+
+	// Clear any previously-failed state so systemctl start doesn't refuse to run.
+	if out, err := exec.Command("systemctl", "reset-failed", "swupdate-ota-install.service").CombinedOutput(); err != nil {
+		logger.Debug("[SWUpdate] reset-failed on primary (ignored): %v — %s", err, string(out))
+	}
+
+	cmd := exec.Command("systemctl", "start", "--no-block", "swupdate-ota-install.service")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		logger.Error("[SWUpdate] Failed to start swupdate-ota-install.service on primary: %v — %s", err, string(out))
+		h.GossipSWUpdateFailure(h.transport.LocalNode().Name,
+			fmt.Sprintf("failed to start swupdate-ota-install.service: %v — %s", err, string(out)))
+		return
+	}
+	logger.Info("[SWUpdate] Queued swupdate-ota-install.service on primary")
+	h.StartSWUpdateProgressMonitoring()
+}
+
+// GossipSWUpdateFailure broadcasts a FAILURE progress message for a node when swupdate cannot be started, so orchestration and WebSocket clients are notified.
+func (h *Hub) GossipSWUpdateFailure(nodeName, reason string) {
+	logger := logging.GetLogger()
+	logger.Error("[SWUpdate] Gossiping FAILURE for node %s: %s", nodeName, reason)
+
+	progress := &api.SoftwareUpdateProgress{
+		NodeName:  nodeName,
+		Status:    api.SWUpdateStatusFailure,
+		Info:      reason,
+		Timestamp: time.Now().UTC(),
+	}
+
+	msg := api.NewNotifyMessage(api.NotifyOpSoftwareUpdateProgress, nodeName, func(m *api.NotifyMessage) {
+		m.SoftwareUpdateProgress = progress
+	})
+
+	if err := h.BroadcastToNodes(msg); err != nil {
+		logger.Error("[SWUpdate] Failed to gossip FAILURE for node %s: %v", nodeName, err)
+	}
 }
 
 // cstring converts null-terminated C byte slice to Go string
