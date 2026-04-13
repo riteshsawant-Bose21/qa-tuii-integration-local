@@ -104,7 +104,10 @@ class AutoWiringUseCase {
       return newConnections;
     }
 
-    for (final PortData port in <PortData>[...component.inputPortsData, ...component.outputPortsData, ...component.communicationPorts]) {
+    for (final PortData port in <PortData>[
+      ...component.inputPortsData,
+      ...component.outputPortsData,
+    ]) {
       final List<WiringConnectionModel> allConnections = <WiringConnectionModel>[...existingConnections, ...newConnections];
       if (_hasExistingConnection(component.id, port.id, allConnections)) {
         continue;
@@ -173,45 +176,45 @@ class AutoWiringUseCase {
       }
     }
 
-    for (final PortData port in amplifier.inputPortsData) {
-      final List<WiringConnectionModel> allConnections = <WiringConnectionModel>[...existingConnections, ...newConnections];
+    // for (final PortData port in amplifier.inputPortsData) {
+    //   final List<WiringConnectionModel> allConnections = <WiringConnectionModel>[...existingConnections, ...newConnections];
 
-      final int connectedOutputs =
-          amplifier.outputPortsData.where((PortData outputPort) => _hasExistingConnection(amplifier.id, outputPort.id, allConnections)).length;
+    //   final int connectedOutputs =
+    //       amplifier.outputPortsData.where((PortData outputPort) => _hasExistingConnection(amplifier.id, outputPort.id, allConnections)).length;
 
-      final int connectedInputs =
-          amplifier.inputPortsData.where((PortData inputPort) => _hasExistingConnection(amplifier.id, inputPort.id, allConnections)).length;
+    //   final int connectedInputs =
+    //       amplifier.inputPortsData.where((PortData inputPort) => _hasExistingConnection(amplifier.id, inputPort.id, allConnections)).length;
 
-      if (connectedInputs >= connectedOutputs) {
-        break;
-      }
+    //   if (connectedInputs >= connectedOutputs) {
+    //     break;
+    //   }
 
-      if (_hasExistingConnection(amplifier.id, port.id, allConnections)) {
-        continue;
-      }
+    //   if (_hasExistingConnection(amplifier.id, port.id, allConnections)) {
+    //     continue;
+    //   }
 
-      final (String, PortData)? bestMatch = _findBestPortMatch(
-        amplifier.id,
-        port,
-        allComponents,
-        circuits,
-        allConnections,
-      );
+    //   final (String, PortData)? bestMatch = _findBestPortMatch(
+    //     amplifier.id,
+    //     port,
+    //     allComponents,
+    //     circuits,
+    //     allConnections,
+    //   );
 
-      if (bestMatch != null) {
-        final String targetComponentId = bestMatch.$1;
-        final PortData targetPort = bestMatch.$2;
+    //   if (bestMatch != null) {
+    //     final String targetComponentId = bestMatch.$1;
+    //     final PortData targetPort = bestMatch.$2;
 
-        newConnections.add(
-          _createConnection(
-            fromDeviceId: amplifier.id,
-            fromPort: port,
-            toDeviceId: targetComponentId,
-            toPort: targetPort,
-          ),
-        );
-      }
-    }
+    //     newConnections.add(
+    //       _createConnection(
+    //         fromDeviceId: amplifier.id,
+    //         fromPort: port,
+    //         toDeviceId: targetComponentId,
+    //         toPort: targetPort,
+    //       ),
+    //     );
+    //   }
+    // }
 
     return newConnections;
   }
@@ -253,43 +256,43 @@ class AutoWiringUseCase {
       }
     }
 
-    for (final PortData port in dsp.outputPortsData) {
-      final List<WiringConnectionModel> allConnections = <WiringConnectionModel>[...existingConnections, ...newConnections];
+    // for (final PortData port in dsp.outputPortsData) {
+    //   final List<WiringConnectionModel> allConnections = <WiringConnectionModel>[...existingConnections, ...newConnections];
 
-      final int connectedInputs = dsp.inputPortsData.where((PortData inputPort) => _hasExistingConnection(dsp.id, inputPort.id, allConnections)).length;
+    //   final int connectedInputs = dsp.inputPortsData.where((PortData inputPort) => _hasExistingConnection(dsp.id, inputPort.id, allConnections)).length;
 
-      final int connectedOutputs = dsp.outputPortsData.where((PortData outputPort) => _hasExistingConnection(dsp.id, outputPort.id, allConnections)).length;
+    //   final int connectedOutputs = dsp.outputPortsData.where((PortData outputPort) => _hasExistingConnection(dsp.id, outputPort.id, allConnections)).length;
 
-      if (connectedOutputs >= connectedInputs) {
-        break;
-      }
+    //   if (connectedOutputs >= connectedInputs) {
+    //     break;
+    //   }
 
-      if (_hasExistingConnection(dsp.id, port.id, allConnections)) {
-        continue;
-      }
+    //   if (_hasExistingConnection(dsp.id, port.id, allConnections)) {
+    //     continue;
+    //   }
 
-      final (String, PortData)? bestMatch = _findBestPortMatchForDspOutput(
-        dsp.id,
-        port,
-        allComponents,
-        circuits,
-        allConnections,
-      );
+    //   final (String, PortData)? bestMatch = _findBestPortMatchForDspOutput(
+    //     dsp.id,
+    //     port,
+    //     allComponents,
+    //     circuits,
+    //     allConnections,
+    //   );
 
-      if (bestMatch != null) {
-        final String targetComponentId = bestMatch.$1;
-        final PortData targetPort = bestMatch.$2;
+    //   if (bestMatch != null) {
+    //     final String targetComponentId = bestMatch.$1;
+    //     final PortData targetPort = bestMatch.$2;
 
-        newConnections.add(
-          _createConnection(
-            fromDeviceId: dsp.id,
-            fromPort: port,
-            toDeviceId: targetComponentId,
-            toPort: targetPort,
-          ),
-        );
-      }
-    }
+    //     newConnections.add(
+    //       _createConnection(
+    //         fromDeviceId: dsp.id,
+    //         fromPort: port,
+    //         toDeviceId: targetComponentId,
+    //         toPort: targetPort,
+    //       ),
+    //     );
+    //   }
+    // }
 
     return newConnections;
   }

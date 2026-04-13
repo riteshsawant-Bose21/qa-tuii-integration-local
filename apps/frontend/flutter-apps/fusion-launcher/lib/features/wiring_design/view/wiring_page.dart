@@ -14,9 +14,12 @@ import 'package:fusion_launcher/features/wiring_design/controller/circuit_contro
 import 'package:fusion_launcher/features/wiring_design/usecase/connection_usecase.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_toolbar.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/controller.dart';
+import 'package:fusion_lib/models/project_entities/endpoints.dart';
 
 import '../../fusion_canvas/view/fusion_canvas.dart';
 import '../../fusion_canvas/view/painters/elements/wiring/wiring_connection_painter.dart';
+import '../../fusion_canvas/view/painters/elements/wiring/wiring_controller_painter.dart' show WiringControllerPainter;
 import '../../fusion_canvas/view/painters/elements/wiring/wiring_devices_painter.dart';
 import '../../fusion_canvas/view/painters/elements/wiring/wiring_source_painter.dart' show WiringSourcePainter;
 import '../../fusion_canvas/view/painters/elements/wiring/wiring_zone_painter.dart';
@@ -126,6 +129,8 @@ class _WiringPageState extends State<WiringPage> {
             for (HardwareComponent source in projectViewModel.hardwareComponents)
               if (source is Source)
                 WiringSourcePainter(source: source, connectionManager: connectionManager)
+              else if (source is FusionController || source is FusionEndpoints)
+                WiringControllerPainter(device: source, connectionManager: connectionManager)
               else if (source is! Speaker && source is! HardwareRack)
                 WiringDevicesPainter(device: source, connectionManager: connectionManager),
 

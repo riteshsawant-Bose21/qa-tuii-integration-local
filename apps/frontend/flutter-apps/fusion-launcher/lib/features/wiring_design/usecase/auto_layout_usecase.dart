@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/wiring/wiring_controller_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/wiring/wiring_devices_painter.dart';
 import 'package:fusion_launcher/features/wiring_design/algorithm/connection_manager.dart';
 import 'package:fusion_launcher/features/wiring_design/algorithm/zone_manager.dart';
@@ -41,7 +42,7 @@ class WiringAutoLayoutUseCase {
         dspPainters.add(WiringDevicesPainter(device: device, connectionManager: connectionManager));
         continue;
       }
-      otherPainters.add(WiringDevicesPainter(device: device, connectionManager: connectionManager));
+      otherPainters.add(WiringControllerPainter(device: device, connectionManager: connectionManager));
     }
 
     final Map<String, Size> sizeById = <String, Size>{
@@ -56,10 +57,50 @@ class WiringAutoLayoutUseCase {
     final List<FusionDsp> dsps = dspPainters.map((WiringDevicesPainter painter) => painter.device).whereType<FusionDsp>().toList();
     final List<Amplifier> amplifiers = amplifierPainters.map((WiringDevicesPainter painter) => painter.device).whereType<Amplifier>().toList();
     final List<HardwareComponent> others = otherPainters.map((WiringDevicesPainter painter) => painter.device).toList();
+    final Map<String, HardwareComponent> hardwareById = <String, HardwareComponent>{for (final HardwareComponent device in devices) device.id: device};
+    final Map<String, List<int>> sourceConnectionPortRanks = _buildSourceConnectionPortRanks(
+      sources: sources,
+      connections: connections,
+      hardwareById: hardwareById,
+    );
 
     final Map<String, FusionDsp> dspById = <String, FusionDsp>{for (final FusionDsp dsp in dsps) dsp.id: dsp};
     final Map<String, Amplifier> amplifierById = <String, Amplifier>{for (final Amplifier amp in amplifiers) amp.id: amp};
     final Map<String, Zone> zoneById = <String, Zone>{for (final Zone zone in zones) zone.id: zone};
+    final Map<String, HardwareComponent> otherById = <String, HardwareComponent>{for (final HardwareComponent other in others) other.id: other};
+
+    final List<HardwareComponent> orderedOthers =
+        others.toList()..sort((HardwareComponent a, HardwareComponent b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final Map<String, int> otherOrderById = <String, int>{for (int i = 0; i < orderedOthers.length; i++) orderedOthers[i].id: i};
+
+    final Map<String, _TopSourceLinkMeta> topSourceLinkMetaById = _buildTopSourceLinkMeta(
+      sources: sources,
+      connections: connections,
+      otherById: otherById,
+      otherOrderById: otherOrderById,
+    );
+    final Set<String> topConnectedSourceIds = topSourceLinkMetaById.keys.toSet();
+    final List<Source> topConnectedSources =
+        sources.where((Source source) => topConnectedSourceIds.contains(source.id)).toList()..sort((Source a, Source b) {
+          final List<int> aRanks = sourceConnectionPortRanks[a.id] ?? <int>[1 << 30];
+          final List<int> bRanks = sourceConnectionPortRanks[b.id] ?? <int>[1 << 30];
+          final int rankCompare = _compareOrderedIntLists(aRanks, bRanks);
+          if (rankCompare != 0) {
+            return rankCompare;
+          }
+          final _TopSourceLinkMeta aMeta = topSourceLinkMetaById[a.id]!;
+          final _TopSourceLinkMeta bMeta = topSourceLinkMetaById[b.id]!;
+          if (aMeta.otherOrder != bMeta.otherOrder) {
+            return aMeta.otherOrder.compareTo(bMeta.otherOrder);
+          }
+          if (aMeta.otherPortOrder != bMeta.otherPortOrder) {
+            return aMeta.otherPortOrder.compareTo(bMeta.otherPortOrder);
+          }
+          if (aMeta.sourcePortOrder != bMeta.sourcePortOrder) {
+            return aMeta.sourcePortOrder.compareTo(bMeta.sourcePortOrder);
+          }
+          return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        });
 
     final double sourceColumnMaxWidth = _maxWidth(sources.map((Source source) => sizeById[source.id]));
     final double dspColumnMaxWidth = _maxWidth(dsps.map((FusionDsp dsp) => sizeById[dsp.id]));
@@ -108,9 +149,15 @@ class WiringAutoLayoutUseCase {
           dspIds: dspById.keys,
         ),
     };
+    final Map<String, String?> connectedDspIdBySourceId = <String, String?>{
+      for (final Source source in sources) source.id: sourceLinkMetaById[source.id]?.dspId,
+    };
 
     final Map<int, List<Source>> sourcesByGroupKey = <int, List<Source>>{};
     for (final Source source in sources) {
+      if (topConnectedSourceIds.contains(source.id)) {
+        continue;
+      }
       final _SourceLinkMeta? meta = sourceLinkMetaById[source.id];
       int? resolvedGroupKey;
       if (meta != null && meta.groupKey != _unassignedGroupKey && groups.containsKey(meta.groupKey)) {
@@ -127,18 +174,24 @@ class WiringAutoLayoutUseCase {
     }
     for (final MapEntry<int, List<Source>> entry in sourcesByGroupKey.entries) {
       entry.value.sort((Source a, Source b) {
+        final List<int> aRanks = sourceConnectionPortRanks[a.id] ?? <int>[1 << 30];
+        final List<int> bRanks = sourceConnectionPortRanks[b.id] ?? <int>[1 << 30];
+        final int rankCompare = _compareOrderedIntLists(aRanks, bRanks);
+        if (rankCompare != 0) {
+          return rankCompare;
+        }
         final _SourceLinkMeta aMeta = sourceLinkMetaById[a.id]!;
         final _SourceLinkMeta bMeta = sourceLinkMetaById[b.id]!;
-        final int aDspOrder = aMeta.dspId != null ? (dspOrderById[aMeta.dspId!] ?? (1 << 30)) : (1 << 30);
-        final int bDspOrder = bMeta.dspId != null ? (dspOrderById[bMeta.dspId!] ?? (1 << 30)) : (1 << 30);
-        if (aDspOrder != bDspOrder) {
-          return aDspOrder.compareTo(bDspOrder);
-        }
         if (aMeta.dspPortOrder != bMeta.dspPortOrder) {
           return aMeta.dspPortOrder.compareTo(bMeta.dspPortOrder);
         }
         if (aMeta.sourcePortOrder != bMeta.sourcePortOrder) {
           return aMeta.sourcePortOrder.compareTo(bMeta.sourcePortOrder);
+        }
+        final int aDspOrder = aMeta.dspId != null ? (dspOrderById[aMeta.dspId!] ?? (1 << 30)) : (1 << 30);
+        final int bDspOrder = bMeta.dspId != null ? (dspOrderById[bMeta.dspId!] ?? (1 << 30)) : (1 << 30);
+        if (aDspOrder != bDspOrder) {
+          return aDspOrder.compareTo(bDspOrder);
         }
         return a.name.toLowerCase().compareTo(b.name.toLowerCase());
       });
@@ -147,13 +200,13 @@ class WiringAutoLayoutUseCase {
     final List<WiringLayoutResult> results = <WiringLayoutResult>[];
 
     // Keep remaining devices as a dedicated top row.
-    final List<HardwareComponent> orderedOthers =
-        others.toList()..sort((HardwareComponent a, HardwareComponent b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     final double topRowHeight = _maxHeight(orderedOthers.map((HardwareComponent device) => sizeById[device.id]));
+    final Map<String, double> otherCenterXById = <String, double>{};
     double topRowCursorX = 0;
     for (final HardwareComponent other in orderedOthers) {
       final Size otherSize = sizeById[other.id] ?? Size.zero;
       final double centerX = topRowCursorX + otherSize.width / 2;
+      otherCenterXById[other.id] = centerX;
       results.add(
         WiringLayoutResult(
           hardwareComponent: other,
@@ -163,9 +216,32 @@ class WiringAutoLayoutUseCase {
       topRowCursorX += otherSize.width + _topRowDeviceGap;
     }
 
+    final double topConnectedSourceRowHeight = _maxHeight(topConnectedSources.map((Source source) => sizeById[source.id]));
+    final double topConnectedSourceRowTop = topRowHeight > 0 ? topRowHeight + _verticalGroupGap : 0;
+    double topConnectedSourceCursorX = 0;
+    for (final Source source in topConnectedSources) {
+      final _TopSourceLinkMeta meta = topSourceLinkMetaById[source.id]!;
+      final Size sourceSize = sizeById[source.id] ?? Size.zero;
+      final double preferredCenterX = otherCenterXById[meta.otherDeviceId] ?? (topConnectedSourceCursorX + sourceSize.width / 2);
+      final double centerX = math.max(topConnectedSourceCursorX + sourceSize.width / 2, preferredCenterX);
+      results.add(
+        WiringLayoutResult(
+          hardwareComponent: source,
+          position: Offset(centerX, topConnectedSourceRowTop + topConnectedSourceRowHeight / 2),
+        ),
+      );
+      topConnectedSourceCursorX = centerX + sourceSize.width / 2 + _topRowDeviceGap;
+    }
+
     final Map<String, Offset> amplifierPositionById = <String, Offset>{};
 
-    double currentTopY = topRowHeight > 0 ? topRowHeight + _verticalGroupGap : 0;
+    double currentTopY = 0;
+    if (topRowHeight > 0) {
+      currentTopY += topRowHeight + _verticalGroupGap;
+    }
+    if (topConnectedSourceRowHeight > 0) {
+      currentTopY += topConnectedSourceRowHeight + _verticalGroupGap;
+    }
     for (final int groupKey in orderedGroupKeys) {
       final _EquipmentGroup group = groups[groupKey]!;
       final List<Source> groupSources = sourcesByGroupKey[groupKey] ?? <Source>[];
@@ -173,19 +249,6 @@ class WiringAutoLayoutUseCase {
       final double dspStackHeight = _stackHeight(group.dsps, sizeById);
       final double rightStackHeight = _stackHeight(group.amplifiers, sizeById);
       final double groupHeight = math.max(sourceStackHeight, math.max(dspStackHeight, rightStackHeight));
-
-      double sourceTopY = currentTopY + (groupHeight - sourceStackHeight) / 2;
-      for (final Source source in groupSources) {
-        final Size sourceSize = sizeById[source.id] ?? Size.zero;
-        final double centerY = sourceTopY + sourceSize.height / 2;
-        results.add(
-          WiringLayoutResult(
-            hardwareComponent: source,
-            position: Offset(sourceColumnCenterX, centerY),
-          ),
-        );
-        sourceTopY += sourceSize.height + _verticalGroupGap;
-      }
 
       double dspTopY = currentTopY + (groupHeight - dspStackHeight) / 2;
       final Map<String, double> dspCenterYById = <String, double>{};
@@ -202,12 +265,58 @@ class WiringAutoLayoutUseCase {
         dspTopY += dspSize.height + _verticalGroupGap;
       }
 
+      double sourceTopY = currentTopY + (groupHeight - sourceStackHeight) / 2;
+      final List<_DesiredCenter> desiredSourceCenters = <_DesiredCenter>[];
+      for (final Source source in groupSources) {
+        final Size sourceSize = sizeById[source.id] ?? Size.zero;
+        final String? connectedDspId = connectedDspIdBySourceId[source.id];
+        final double? linkedDspCenterY = connectedDspId != null ? dspCenterYById[connectedDspId] : null;
+        final double preferredY = linkedDspCenterY ?? (sourceTopY + sourceSize.height / 2);
+        desiredSourceCenters.add(
+          _DesiredCenter(
+            id: source.id,
+            preferredCenterY: preferredY,
+            height: sourceSize.height,
+          ),
+        );
+        sourceTopY += sourceSize.height + _verticalGroupGap;
+      }
+      final Map<String, double> resolvedSourceY = _resolveNonOverlappingCenters(
+        desiredSourceCenters,
+        _verticalGroupGap,
+      );
+      for (final Source source in groupSources) {
+        final double centerY = resolvedSourceY[source.id] ?? 0;
+        results.add(
+          WiringLayoutResult(
+            hardwareComponent: source,
+            position: Offset(sourceColumnCenterX, centerY),
+          ),
+        );
+      }
+
       double rightTopY = currentTopY + (groupHeight - rightStackHeight) / 2;
+      final List<_DesiredCenter> desiredAmplifierCenters = <_DesiredCenter>[];
       for (final Amplifier amplifier in group.amplifiers) {
         final Size ampSize = sizeById[amplifier.id] ?? Size.zero;
         final String? connectedDspId = connectedDspIdByAmplifierId[amplifier.id];
         final double? linkedDspCenterY = connectedDspId != null ? dspCenterYById[connectedDspId] : null;
-        final double centerY = linkedDspCenterY ?? (rightTopY + ampSize.height / 2);
+        final double preferredY = linkedDspCenterY ?? (rightTopY + ampSize.height / 2);
+        desiredAmplifierCenters.add(
+          _DesiredCenter(
+            id: amplifier.id,
+            preferredCenterY: preferredY,
+            height: ampSize.height,
+          ),
+        );
+        rightTopY += ampSize.height + _verticalGroupGap;
+      }
+      final Map<String, double> resolvedAmplifierY = _resolveNonOverlappingCenters(
+        desiredAmplifierCenters,
+        _verticalGroupGap,
+      );
+      for (final Amplifier amplifier in group.amplifiers) {
+        final double centerY = resolvedAmplifierY[amplifier.id] ?? 0;
         final Offset ampPosition = Offset(rightColumnCenterX, centerY);
         amplifierPositionById[amplifier.id] = ampPosition;
         results.add(
@@ -216,7 +325,6 @@ class WiringAutoLayoutUseCase {
             position: ampPosition,
           ),
         );
-        rightTopY += ampSize.height + _verticalGroupGap;
       }
 
       currentTopY += groupHeight + _verticalGroupGap;
@@ -253,7 +361,17 @@ class WiringAutoLayoutUseCase {
       });
     }
 
-    for (final Amplifier amplifier in amplifiers) {
+    final List<_DesiredCenter> desiredZoneCenters = <_DesiredCenter>[];
+    final List<Amplifier> amplifiersByY =
+        amplifiers.toList()..sort((Amplifier a, Amplifier b) {
+          final double ay = amplifierPositionById[a.id]?.dy ?? double.infinity;
+          final double by = amplifierPositionById[b.id]?.dy ?? double.infinity;
+          if (ay != by) {
+            return ay.compareTo(by);
+          }
+          return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        });
+    for (final Amplifier amplifier in amplifiersByY) {
       final Offset? ampPosition = amplifierPositionById[amplifier.id];
       if (ampPosition == null) {
         continue;
@@ -266,15 +384,32 @@ class WiringAutoLayoutUseCase {
       double zoneTopY = ampPosition.dy - zonesStackHeight / 2;
       for (final Zone zone in connectedZones) {
         final Size zoneSize = sizeById[zone.id] ?? Size.zero;
-        final double centerY = zoneTopY + zoneSize.height / 2;
-        results.add(
-          WiringLayoutResult(
-            zone: zone,
-            position: Offset(zoneColumnCenterX, centerY),
+        final double preferredCenterY = zoneTopY + zoneSize.height / 2;
+        desiredZoneCenters.add(
+          _DesiredCenter(
+            id: zone.id,
+            preferredCenterY: preferredCenterY,
+            height: zoneSize.height,
           ),
         );
         zoneTopY += zoneSize.height + _verticalGroupGap;
       }
+    }
+    final Map<String, double> resolvedZoneY = _resolveNonOverlappingCenters(
+      desiredZoneCenters,
+      _verticalGroupGap,
+    );
+    for (final Zone zone in zones) {
+      final double? centerY = resolvedZoneY[zone.id];
+      if (centerY == null) {
+        continue;
+      }
+      results.add(
+        WiringLayoutResult(
+          zone: zone,
+          position: Offset(zoneColumnCenterX, centerY),
+        ),
+      );
     }
 
     if (unconnectedZones.isNotEmpty) {
@@ -370,12 +505,12 @@ class WiringAutoLayoutUseCase {
         final int groupOrder = groupOrderByKey[_locationKey(dsp.equipmentLocationPosition)] ?? (1 << 30);
 
         final bool isBetter =
-            groupOrder < bestGroupOrder ||
-            (groupOrder == bestGroupOrder && dspPortOrder < bestDspPortOrder) ||
-            (groupOrder == bestGroupOrder && dspPortOrder == bestDspPortOrder && sourcePortOrder < bestSourcePortOrder) ||
-            (groupOrder == bestGroupOrder &&
-                dspPortOrder == bestDspPortOrder &&
+            dspPortOrder < bestDspPortOrder ||
+            (dspPortOrder == bestDspPortOrder && sourcePortOrder < bestSourcePortOrder) ||
+            (dspPortOrder == bestDspPortOrder && sourcePortOrder == bestSourcePortOrder && groupOrder < bestGroupOrder) ||
+            (dspPortOrder == bestDspPortOrder &&
                 sourcePortOrder == bestSourcePortOrder &&
+                groupOrder == bestGroupOrder &&
                 (bestDspId == null || dspId.compareTo(bestDspId) < 0));
 
         if (isBetter) {
@@ -539,6 +674,25 @@ class WiringAutoLayoutUseCase {
     return 1 << 30;
   }
 
+  static int _portOrderOnHardware(HardwareComponent device, String? portId) {
+    if (portId == null) {
+      return 1 << 30;
+    }
+    final PortData? inputPort = device.inputPortsData.firstWhereOrNull((PortData port) => port.id == portId);
+    if (inputPort != null) {
+      return inputPort.portNumber;
+    }
+    final PortData? outputPort = device.outputPortsData.firstWhereOrNull((PortData port) => port.id == portId);
+    if (outputPort != null) {
+      return outputPort.portNumber + 1000;
+    }
+    final PortData? communicationPort = device.communicationPorts.firstWhereOrNull((PortData port) => port.id == portId);
+    if (communicationPort != null) {
+      return communicationPort.portNumber + 2000;
+    }
+    return 1 << 30;
+  }
+
   static int _locationKey(int? equipmentLocationPosition) {
     return equipmentLocationPosition ?? (1 << 30);
   }
@@ -557,6 +711,99 @@ class WiringAutoLayoutUseCase {
       }
     }
     return null;
+  }
+
+  Map<String, _TopSourceLinkMeta> _buildTopSourceLinkMeta({
+    required List<Source> sources,
+    required List<WiringConnectionModel> connections,
+    required Map<String, HardwareComponent> otherById,
+    required Map<String, int> otherOrderById,
+  }) {
+    final Map<String, _TopSourceLinkMeta> metaBySourceId = <String, _TopSourceLinkMeta>{};
+
+    for (final Source source in sources) {
+      _TopSourceLinkMeta? best;
+      for (final WiringConnectionModel connection in connections) {
+        final String? otherDeviceId = _counterpartIfConnected(connection, source.id, otherById.keys);
+        if (otherDeviceId == null) {
+          continue;
+        }
+        final HardwareComponent? otherDevice = otherById[otherDeviceId];
+        if (otherDevice == null) {
+          continue;
+        }
+        final int otherOrder = otherOrderById[otherDeviceId] ?? (1 << 30);
+        final int sourcePortOrder = _portOrderOnSource(source, _portIdForDevice(connection, source.id));
+        final int otherPortOrder = _portOrderOnHardware(otherDevice, _portIdForDevice(connection, otherDeviceId));
+
+        final _TopSourceLinkMeta candidate = _TopSourceLinkMeta(
+          otherDeviceId: otherDeviceId,
+          otherOrder: otherOrder,
+          otherPortOrder: otherPortOrder,
+          sourcePortOrder: sourcePortOrder,
+        );
+
+        if (best == null || candidate.isHigherPriorityThan(best)) {
+          best = candidate;
+        }
+      }
+      if (best != null) {
+        metaBySourceId[source.id] = best;
+      }
+    }
+
+    return metaBySourceId;
+  }
+
+  static Map<String, List<int>> _buildSourceConnectionPortRanks({
+    required List<Source> sources,
+    required List<WiringConnectionModel> connections,
+    required Map<String, HardwareComponent> hardwareById,
+  }) {
+    final Set<String> sourceIds = sources.map((Source source) => source.id).toSet();
+    final Map<String, List<int>> ranks = <String, List<int>>{};
+
+    for (final Source source in sources) {
+      final List<int> indices = <int>[];
+      for (final WiringConnectionModel connection in connections) {
+        String? counterpartId;
+        String? counterpartPortId;
+        if (connection.deviceId == source.id) {
+          counterpartId = connection.targetDeviceId;
+          counterpartPortId = connection.targetPortId;
+        } else if (connection.targetDeviceId == source.id) {
+          counterpartId = connection.deviceId;
+          counterpartPortId = connection.portId;
+        } else {
+          continue;
+        }
+
+        if (sourceIds.contains(counterpartId)) {
+          continue;
+        }
+
+        final HardwareComponent? counterpartDevice = hardwareById[counterpartId];
+        if (counterpartDevice == null) {
+          continue;
+        }
+        indices.add(_portOrderOnHardware(counterpartDevice, counterpartPortId));
+      }
+
+      indices.sort();
+      ranks[source.id] = indices.isEmpty ? <int>[1 << 30] : indices;
+    }
+
+    return ranks;
+  }
+
+  static int _compareOrderedIntLists(List<int> a, List<int> b) {
+    final int commonLength = math.min(a.length, b.length);
+    for (int i = 0; i < commonLength; i++) {
+      if (a[i] != b[i]) {
+        return a[i].compareTo(b[i]);
+      }
+    }
+    return a.length.compareTo(b.length);
   }
 
   static double _maxWidth(Iterable<Size?> sizes) {
@@ -590,6 +837,36 @@ class WiringAutoLayoutUseCase {
     }
     total += (items.length - 1) * _verticalGroupGap;
     return total;
+  }
+
+  static Map<String, double> _resolveNonOverlappingCenters(List<_DesiredCenter> desired, double gap) {
+    if (desired.isEmpty) {
+      return <String, double>{};
+    }
+    final List<_DesiredCenter> ordered =
+        desired.toList()..sort((_DesiredCenter a, _DesiredCenter b) {
+          if (a.preferredCenterY != b.preferredCenterY) {
+            return a.preferredCenterY.compareTo(b.preferredCenterY);
+          }
+          return a.id.compareTo(b.id);
+        });
+
+    final Map<String, double> resolved = <String, double>{};
+    double? previousCenter;
+    double? previousHeight;
+    for (final _DesiredCenter current in ordered) {
+      double center = current.preferredCenterY;
+      if (previousCenter != null && previousHeight != null) {
+        final double minCenter = previousCenter + previousHeight / 2 + gap + current.height / 2;
+        if (center < minCenter) {
+          center = minCenter;
+        }
+      }
+      resolved[current.id] = center;
+      previousCenter = center;
+      previousHeight = current.height;
+    }
+    return resolved;
   }
 }
 
@@ -631,6 +908,38 @@ class _ZoneLinkMeta {
   final int amplifierPortOrder;
 
   _ZoneLinkMeta({required this.amplifierId, required this.amplifierPortOrder});
+}
+
+class _DesiredCenter {
+  final String id;
+  final double preferredCenterY;
+  final double height;
+
+  _DesiredCenter({required this.id, required this.preferredCenterY, required this.height});
+}
+
+class _TopSourceLinkMeta {
+  final String otherDeviceId;
+  final int otherOrder;
+  final int otherPortOrder;
+  final int sourcePortOrder;
+
+  _TopSourceLinkMeta({
+    required this.otherDeviceId,
+    required this.otherOrder,
+    required this.otherPortOrder,
+    required this.sourcePortOrder,
+  });
+
+  bool isHigherPriorityThan(_TopSourceLinkMeta other) {
+    if (otherOrder != other.otherOrder) {
+      return otherOrder < other.otherOrder;
+    }
+    if (otherPortOrder != other.otherPortOrder) {
+      return otherPortOrder < other.otherPortOrder;
+    }
+    return sourcePortOrder < other.sourcePortOrder;
+  }
 }
 
 class WiringLayoutResult {
