@@ -284,7 +284,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                                           sourceId: source.id,
                                                                         );
                                                                         serviceLocator<BlockDataViewmodel>().updateBlockParameter(
-                                                                          blockId: widget.zoneID,
+                                                                          blockId: "${zoneFunction!.id}/selector",
                                                                           parameter: 'input',
                                                                           value: index + 1,
                                                                         );

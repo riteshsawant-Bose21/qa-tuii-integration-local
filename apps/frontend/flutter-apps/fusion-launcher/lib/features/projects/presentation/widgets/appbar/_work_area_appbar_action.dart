@@ -416,6 +416,33 @@ class _ProjectJsonDialogState extends State<_ProjectJsonDialog> {
         ),
         const SizedBox(width: 8),
         SemanticHelper.button(
+          testId: SemanticHelper.createTestId(SemanticTypes.button, 'copy_json'),
+          child: ElevatedButton.icon(
+            onPressed: () {
+              final String jsonString = const JsonEncoder.withIndent('  ').convert(widget.jsonMap);
+              Clipboard.setData(ClipboardData(text: jsonString));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('JSON copied to clipboard'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            icon: const Icon(Icons.copy, size: 18),
+            label: const FusionAppText(
+              text: 'Copy JSON',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.teal.shade700,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+              elevation: 0,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SemanticHelper.button(
           testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.close),
           child: ElevatedButton(
             onPressed: () => Navigator.of(context).pop(),

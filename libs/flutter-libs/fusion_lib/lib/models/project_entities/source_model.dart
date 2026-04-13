@@ -15,7 +15,8 @@ enum SourceConnectionType {
   rca("RCA"),
   endpoint("Endpoint"),
   xlr("XLR"),
-  hdmi("HDMI");
+  hdmi("HDMI"),
+  messagePlayer("Message Player");
 
   const SourceConnectionType(this.displayName);
 
@@ -43,6 +44,8 @@ extension SourceConnectionTypeExtension on SourceConnectionType {
         return 'analog';
       case SourceConnectionType.hdmi:
         return 'hdmi';
+      case SourceConnectionType.messagePlayer:
+        return 'playback';
     }
   }
 }
