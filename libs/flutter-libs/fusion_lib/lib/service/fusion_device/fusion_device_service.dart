@@ -406,22 +406,39 @@ class FusionDeviceService {
     }
   }
 
-  Future<ResponseCallback<List<DeviceBulkRegisterResult>>> registerDevicesBulk({required List<FusionNetworkDevice> devices, required String projectId}) async {
+  Future<ResponseCallback<List<DeviceBulkRegisterResult>>> registerDevicesBulk({
+    required String vip,
+    required List<FusionNetworkDevice> devices,
+    required String projectId,
+  }) async {
     try {
+      Map<String, dynamic> deviceIdToCsr = <String, dynamic>{};
+      try {
+        for (final FusionNetworkDevice device in devices) {
+          final ResponseCallback<dynamic> response = await networkClient.get(
+            api: FusionApiEndpoint.fusionDevice,
+            baseUrlToOverride: vip,
+            isSecure: false,
+            additionalPath: "${device.id}/csr",
+          );
+
+          if (response.success && response.data != null) {
+            deviceIdToCsr[device.id] = response.data;
+          }
+        }
+      } catch (e) {
+        log("Failed to fetch CSR for devices: ${e.toString()}");
+      }
+
       final ResponseCallback<dynamic> response = await networkClient.post(
         api: FusionApiEndpoint.devicesBulkCloud,
         data: <String, dynamic>{
           'devices': [
             ...devices.map(
-              (FusionNetworkDevice device) async {
-                ResponseCallback<String?> response = await networkClient.get(
-                  api: FusionApiEndpoint.fusionDevice,
-                  additionalPath: "${device.id}/csr",
-                );
-
+              (FusionNetworkDevice device) {
                 return <String, dynamic>{
                   'client_device_id': device.id,
-                  'csr': response.data,
+                  'csr': deviceIdToCsr[device.id],
                   'device_location': device.location,
                   'device_name': device.name,
                   'device_zone': device.location,
@@ -436,6 +453,7 @@ class FusionDeviceService {
           ],
         },
       );
+
       if (response.success) {
         final Map<String, dynamic> data = (response.data as Map<String, dynamic>?) ?? <String, dynamic>{};
         final List<dynamic> resultsJson = (data['results'] as List<dynamic>?) ?? <dynamic>[];

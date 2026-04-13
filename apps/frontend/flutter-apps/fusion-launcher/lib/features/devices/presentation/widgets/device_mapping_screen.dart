@@ -177,16 +177,20 @@ void showUnregisteredDevicesClaimDialog(BuildContext context, List<FusionNetwork
     builder: (BuildContext dialogContext) {
       return BlocProvider<FusionNetworkDeviceViewModel>.value(
         value: vm,
-        child: _UnregisteredDevicesDialog(networkDevices: unregisteredDevices),
+        child: _UnregisteredDevicesDialog(
+          viewModel: vm,
+          networkDevices: unregisteredDevices,
+        ),
       );
     },
   );
 }
 
 class _UnregisteredDevicesDialog extends StatefulWidget {
+  final FusionNetworkDeviceViewModel viewModel;
   final List<FusionNetworkDevice> networkDevices;
 
-  const _UnregisteredDevicesDialog({required this.networkDevices});
+  const _UnregisteredDevicesDialog({required this.viewModel, required this.networkDevices});
 
   @override
   State<_UnregisteredDevicesDialog> createState() => _UnregisteredDevicesDialogState();
@@ -194,12 +198,12 @@ class _UnregisteredDevicesDialog extends StatefulWidget {
 
 class _UnregisteredDevicesDialogState extends State<_UnregisteredDevicesDialog> {
   // Three phases: checking → listing → registering
-  final bool _isChecking = true;
   bool _isRegistering = false;
   String? _errorMessage;
 
-  FusionNetworkDeviceViewModel get fusionNetworkDeviceViewModel => context.read<FusionNetworkDeviceViewModel>();
   String get projectId => serviceLocator<ProjectViewModel>().projectId;
+
+  FusionNetworkDeviceViewModel get fusionNetworkDeviceViewModel => widget.viewModel;
 
   Future<void> _onRegisterAndClaimTap() async {
     setState(() {
@@ -208,7 +212,11 @@ class _UnregisteredDevicesDialogState extends State<_UnregisteredDevicesDialog> 
     });
 
     try {
-      await fusionNetworkDeviceViewModel.registerAndClaimDevices(devices: widget.networkDevices, projectId: projectId);
+      await fusionNetworkDeviceViewModel.registerAndClaimDevices(
+        vip: serviceLocator<ProjectViewModel>().virtualIP ?? "",
+        devices: widget.networkDevices,
+        projectId: projectId,
+      );
 
       final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
       if (vip != null && mounted) await fusionNetworkDeviceViewModel.getFusionNetworkDevice(vip: vip);
@@ -232,7 +240,7 @@ class _UnregisteredDevicesDialogState extends State<_UnregisteredDevicesDialog> 
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(40),
       child: Container(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0).copyWith(top: 8),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.elevation1,
           borderRadius: BorderRadius.circular(12),
@@ -242,138 +250,144 @@ class _UnregisteredDevicesDialogState extends State<_UnregisteredDevicesDialog> 
         ),
         child: Column(
           children: <Widget>[
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    'Devices Registration',
+                    style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: Icon(
+                    Icons.close,
+                    size: 20,
+                    color: context.colorScheme.onSurface.withAlpha(160),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
-                  if (_isChecking) ...<Widget>[
-                    const Spacer(),
-                    const CircularProgressIndicator(),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Checking cloud registration status…',
+                  const Icon(Icons.cloud_off_rounded, size: 48, color: Colors.orange),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Unregistered Devices Found',
+                    style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  RichText(
+                    textAlign: TextAlign.center,
+                    text: TextSpan(
                       style: context.textTheme.bodySmall?.copyWith(
-                        color: context.colorScheme.onSurface.withAlpha(160),
+                        color: context.colorScheme.onSurface.withAlpha(180),
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const Spacer(),
-                  ] else ...<Widget>[
-                    const Icon(Icons.cloud_off_rounded, size: 48, color: Colors.orange),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Unregistered Devices Found',
-                      style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    RichText(
-                      textAlign: TextAlign.center,
-                      text: TextSpan(
-                        style: context.textTheme.bodySmall?.copyWith(
-                          color: context.colorScheme.onSurface.withAlpha(180),
+                      children: <InlineSpan>[
+                        TextSpan(
+                          text: '$count $deviceWord',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange,
+                          ),
                         ),
-                        children: <InlineSpan>[
-                          TextSpan(
-                            text: '$count $deviceWord',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange,
+                        TextSpan(
+                          text: ' ${count == 1 ? 'is' : 'are'} not yet registered in the fusion cloud.',
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Do you want to register ${count == 1 ? 'it' : 'them'} now?',
+                    style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  // ── Device list ──
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: context.colorScheme.elevation1,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: context.colorScheme.strokeLight),
+                      ),
+                      child: ListView.builder(
+                        physics: const ClampingScrollPhysics(),
+                        itemCount: widget.networkDevices.length,
+                        itemBuilder: (BuildContext ctx, int index) {
+                          final FusionNetworkDevice hw = widget.networkDevices[index];
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
                             ),
-                          ),
-                          TextSpan(
-                            text: ' ${count == 1 ? 'is' : 'are'} not yet registered in the fusion cloud.',
-                          ),
-                        ],
+                            child: Row(
+                              children: <Widget>[
+                                const Icon(
+                                  Icons.device_hub_rounded,
+                                  size: 16,
+                                  color: Colors.orange,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Text(
+                                        hw.name,
+                                        style: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        hw.name,
+                                        style: context.textTheme.labelSmall?.copyWith(
+                                          color: context.colorScheme.onSurface.withAlpha(140),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withAlpha(30),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    'Unregistered',
+                                    style: context.textTheme.labelSmall?.copyWith(
+                                      color: Colors.orange,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ),
-                    const SizedBox(height: 8),
+                  ),
+                  if (_errorMessage != null) ...<Widget>[
+                    const SizedBox(height: 12),
                     Text(
-                      'Do you want to register ${count == 1 ? 'it' : 'them'} now?',
-                      style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
+                      _errorMessage!,
+                      style: context.textTheme.labelSmall?.copyWith(color: context.colorScheme.errorText),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 16),
-                    // ── Device list ──
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: context.colorScheme.elevation1,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: context.colorScheme.strokeLight),
-                        ),
-                        child: ListView.builder(
-                          physics: const ClampingScrollPhysics(),
-                          itemCount: widget.networkDevices.length,
-                          itemBuilder: (BuildContext ctx, int index) {
-                            final FusionNetworkDevice hw = widget.networkDevices[index];
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 10,
-                              ),
-                              child: Row(
-                                children: <Widget>[
-                                  const Icon(
-                                    Icons.device_hub_rounded,
-                                    size: 16,
-                                    color: Colors.orange,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: <Widget>[
-                                        Text(
-                                          hw.name,
-                                          style: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        Text(
-                                          hw.name,
-                                          style: context.textTheme.labelSmall?.copyWith(
-                                            color: context.colorScheme.onSurface.withAlpha(140),
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.orange.withAlpha(30),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      'Unregistered',
-                                      style: context.textTheme.labelSmall?.copyWith(
-                                        color: Colors.orange,
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                    if (_errorMessage != null) ...<Widget>[
-                      const SizedBox(height: 12),
-                      Text(
-                        _errorMessage!,
-                        style: context.textTheme.labelSmall?.copyWith(color: context.colorScheme.errorText),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
                   ],
                 ],
               ),
@@ -384,7 +398,7 @@ class _UnregisteredDevicesDialogState extends State<_UnregisteredDevicesDialog> 
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: <Widget>[
                   GestureDetector(
-                    onTap: (_isChecking || _isRegistering) ? null : () => Navigator.of(context).pop(),
+                    onTap: _isRegistering ? null : () => Navigator.of(context).pop(),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                       child: Text(
@@ -396,24 +410,24 @@ class _UnregisteredDevicesDialogState extends State<_UnregisteredDevicesDialog> 
                     ),
                   ),
                   const SizedBox(width: 8),
-                  if (!_isChecking)
-                    ElevatedButton(
-                      onPressed: _isRegistering ? null : _onRegisterAndClaimTap,
-                      style: ElevatedButton.styleFrom(minimumSize: const Size(180, 45)),
-                      child: Builder(
-                        builder: (BuildContext context) {
-                          if (_isRegistering) {
-                            return const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            );
-                          } else {
-                            return const Text('Register & Claim Now');
-                          }
-                        },
-                      ),
+
+                  ElevatedButton(
+                    onPressed: _isRegistering ? null : _onRegisterAndClaimTap,
+                    style: ElevatedButton.styleFrom(minimumSize: const Size(180, 45)),
+                    child: Builder(
+                      builder: (BuildContext context) {
+                        if (_isRegistering) {
+                          return const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          );
+                        } else {
+                          return const Text('Register & Claim Now');
+                        }
+                      },
                     ),
+                  ),
                 ],
               ),
             ),

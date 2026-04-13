@@ -36,10 +36,11 @@ class FusionNetworkDeviceViewModel extends Cubit<FusionNetworkDeviceViewModelSta
     }
   }
 
-  Future<void> registerAndClaimDevices({required List<FusionNetworkDevice> devices, required String projectId}) async {
+  Future<void> registerAndClaimDevices({required String vip, required List<FusionNetworkDevice> devices, required String projectId}) async {
     emit(FusionNetworkDeviceViewModelClaiming());
 
     final ResponseCallback<List<DeviceBulkRegisterResult>> registerResponse = await fusionDeviceService.registerDevicesBulk(
+      vip: vip,
       devices: devices,
       projectId: projectId,
     );
