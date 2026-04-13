@@ -150,6 +150,7 @@ flutter:
     - assets/images/splash/
     - assets/icons/
     - assets/icons/wiring_ports/
+    - assets/icons/wiring_page/
     - assets/icons/scheduler/
     - assets/icons/gpio/
     - assets/icons/canvas_cursor/

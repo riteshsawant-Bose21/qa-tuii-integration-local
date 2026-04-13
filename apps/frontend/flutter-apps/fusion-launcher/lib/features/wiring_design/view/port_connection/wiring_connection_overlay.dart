@@ -15,7 +15,7 @@ class WiringConnectionOverlay extends StatelessWidget {
   });
   final String deviceId;
   final PortData fromPortData;
-  final void Function(PortData fromPort, PortData toPort)? onPortTap;
+  final void Function(PortData fromPort, PortData toPort, String deviceId)? onPortTap;
   @override
   Widget build(BuildContext context) {
     final List<HardwareComponent> hardwares =
@@ -74,12 +74,7 @@ class WiringConnectionOverlay extends StatelessWidget {
                     (PortData port) => WiringPortWidget(
                       portData: port,
                       onTap: () {
-                        // context.read<ProjectViewModel>().addWiringConnection(
-                        //   fromDeviceId: deviceId,
-                        //   fromPort: fromPortData,
-                        //   toDeviceId: hardware.id,
-                        //   toPort: port,
-                        // );
+                        onPortTap?.call(fromPortData, port, hardware.id);
                         // Navigator.of(context).pop();
                       },
                     ),
@@ -111,6 +106,7 @@ class WiringConnectionOverlay extends StatelessWidget {
                     (PortData port) => WiringPortWidget(
                       portData: port,
                       onTap: () {
+                        onPortTap?.call(fromPortData, port, circuit.id);
                         // context.read<ProjectViewModel>().addWiringConnection(
                         //   fromDeviceId: deviceId,
                         //   fromPort: fromPortData,

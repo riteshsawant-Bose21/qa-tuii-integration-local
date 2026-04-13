@@ -7,6 +7,7 @@ import 'package:fusion_launcher/features/fusion_canvas/state/tools/connection_to
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/wiring/port_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart' show FusionBasePainter;
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canvas_painter.dart';
+import 'package:fusion_launcher/features/projects/presentation/project_work_area.dart';
 import 'package:fusion_launcher/features/wiring_design/algorithm/intersection_manager.dart';
 import 'package:fusion_launcher/features/wiring_design/algorithm/path_system_storage.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/circuit_controller.dart';
@@ -25,6 +26,7 @@ import '../algorithm/connection_manager.dart';
 import '../algorithm/zone_manager.dart';
 import 'port_connection/wiring_connection_overlay.dart';
 import 'widgets/overlay_container.dart';
+import 'wiring_legend.dart';
 
 class WiringPage extends StatefulWidget {
   const WiringPage({super.key});
@@ -84,13 +86,26 @@ class _WiringPageState extends State<WiringPage> {
             FusionCanvasTool.dragTool,
             FusionCanvasTool.connectionTool(
               connectionParams: ConnectionToolParams(
-                onConnectionDrop: (WiringPortData source, Offset pos, WiringPortData? dest) {
-                  if (dest == null) {
+                onConnectionDrop: (WiringConnectionModel connection) {
+                  // showDialog(context: context, builder: builder)
+                  projectViewModel.removeWiringConnection(connectionId: connection.id);
+                },
+                getExistingConnectionsForPort: (String deviceId, String portId) {
+                  return projectViewModel.getAllWiringConnections().where((WiringConnectionModel connection) {
+                    return (connection.deviceId == deviceId && connection.portId == portId) ||
+                        (connection.targetDeviceId == deviceId && connection.targetPortId == portId);
+                  }).toList();
+                },
+                onConnectionCreate: (WiringPortData source, Offset pos, WiringPortData dest) {
+                  final ConnectionUseCase connectionUseCase = ConnectionUseCase();
+                  final WiringConnectionModel? existingConnection = projectViewModel.getAllWiringConnections().firstWhereOrNull(
+                    (WiringConnectionModel connection) =>
+                        (connection.deviceId == source.deviceId && connection.portId == source.port.id) ||
+                        (connection.targetDeviceId == source.deviceId && connection.targetPortId == source.port.id),
+                  );
+                  if (existingConnection != null) {
                     return;
                   }
-
-                  final ConnectionUseCase connectionUseCase = ConnectionUseCase();
-
                   if (connectionUseCase.isCompatible(source.port.type, dest.port.type)) {
                     projectViewModel.addWiringConnection(
                       connection: connectionUseCase.createConnection(
@@ -131,12 +146,14 @@ class _WiringPageState extends State<WiringPage> {
                 if (painter != null && layerId != null && portId != null) {
                   final FusionBasePainter? layer = painter.getLayerById(layerId!);
                   if (layer != null && layer is PortPainter) {
-                    position = context.read<FusionCanvasStateViewModel>().transformPosition(layer.getPortPosition(portId!.id, painter) ?? Offset.zero);
+                    position = context.read<FusionCanvasStateViewModel>().transformPosition(
+                      layer.getPortPositionWithPadding(portId!.id, painter) ?? Offset.zero,
+                    );
                   }
                 }
                 final Offset resultedPosition = position ?? Offset.zero;
                 final double width = 250; //* controller.canvasScale;
-                final double padding = 30 * controller.canvasState.scale;
+                // final double padding = 30 * controller.canvasState.scale;
                 // if (port.relativePosition.dx < port.parent.size.width * 0.1) {
                 //   resultedPosition = position! + Offset(-width - padding, 0);
                 // } else if (port.relativePosition.dx > port.parent.size.width * 0.7) {
@@ -176,8 +193,24 @@ class _WiringPageState extends State<WiringPage> {
                         child: WiringConnectionOverlay(
                           deviceId: portId!.deviceId,
                           fromPortData: portId!.port,
+                          onPortTap: (PortData fromPort, PortData toPort, String toDeviceId) {
+                            projectViewModel.addWiringConnection(
+                              connection: ConnectionUseCase().createConnection(
+                                fromDeviceId: portId!.deviceId,
+                                fromPort: fromPort,
+                                toDeviceId: toDeviceId,
+                                toPort: toPort,
+                              ),
+                            );
+                            setState(() {
+                              portId = null;
+                              layerId = null;
+                            });
+                          },
                         ),
                       ),
+
+                    const Align(alignment: Alignment.topRight, child: WorkSafeAreaContent(child: WiringLegend())),
                   ],
                 );
               },
@@ -208,11 +241,9 @@ class _WiringPageState extends State<WiringPage> {
             },
             onMovePoints: (FusionBasePainter painter, List<String> points, Offset delta) {
               if (painter is WiringConnectionPainter) {
-                print(" Moving points for connection ${painter.connection.id}, delta=$delta ");
                 final WiringConnectionModel connection = painter.connection;
                 final List<AxisLock> axisLocks = painter.axisLocks ?? <AxisLock>[];
 
-                print("Calculated axis locks: $axisLocks");
                 projectViewModel.updateWiringConnection(
                   connection: connection.copyWith(
                     axisLocks: axisLocks,

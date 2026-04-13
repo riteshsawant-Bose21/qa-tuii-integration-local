@@ -5,7 +5,14 @@ import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/wi
 import 'package:fusion_launcher/features/wiring_design/algorithm/connection_manager.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../../../state/tools/connection_tool_state.dart';
 import '../../fusion_canvas_painter.dart';
+
+enum _PortState {
+  idle,
+  connected,
+  disconnecting,
+}
 
 mixin PortPainter on FusionCanvasElementPainter {
   ConnectionManager get connectionManager;
@@ -33,6 +40,12 @@ mixin PortPainter on FusionCanvasElementPainter {
       final Color portColor =
           connection != null ? ConnectionColorUtil.getColorForConnectionType(connection.type) : ConnectionColorUtil.getColorForPortType(portData.port.type);
       final bool isConnected = connection != null;
+      final bool isDisconnecting =
+          isConnected &&
+          painter.toolState is ConnectingToolState &&
+          (painter.toolState as ConnectingToolState).originalConnection?.id == connection.id &&
+          (painter.toolState as ConnectingToolState).sourcePort.id != portData.id;
+      final _PortState state = isDisconnecting ? _PortState.disconnecting : (isConnected ? _PortState.connected : _PortState.idle);
       if (portData.image != null) {
         _paintPortWithImage(
           canvas: canvas,
@@ -41,7 +54,7 @@ mixin PortPainter on FusionCanvasElementPainter {
           painter: painter,
           portData: portData,
           portColor: portColor,
-          isConnected: isConnected,
+          isConnected: state,
         );
       } else {
         final String? imageForPort = switch (portData.port.type) {
@@ -55,8 +68,8 @@ mixin PortPainter on FusionCanvasElementPainter {
           _ => null,
         };
         final Color? colorForImage = switch (portData.port.type) {
-          PortType.rcaInput || PortType.rcaOutput  ||  PortType.hdmiIn || PortType.hdmiOut => null,
-          
+          PortType.rcaInput || PortType.rcaOutput || PortType.hdmiIn || PortType.hdmiOut => null,
+
           _ => painter.context.colorScheme.primaryWhite,
         };
         if (imageForPort != null) {
@@ -67,7 +80,7 @@ mixin PortPainter on FusionCanvasElementPainter {
             painter: painter,
             portData: portData,
             portColor: colorForImage,
-            isConnected: isConnected,
+            isConnected: state,
           );
         } else {
           _drawDefaultPort(
@@ -76,7 +89,7 @@ mixin PortPainter on FusionCanvasElementPainter {
             color: portColor,
             painter: painter,
             portData: portData,
-            isConnected: isConnected,
+            isConnected: state,
           );
         }
       }
@@ -90,7 +103,7 @@ mixin PortPainter on FusionCanvasElementPainter {
     required FusionCanvasPainter painter,
     required WiringPortData portData,
     required Color? portColor,
-    required bool isConnected,
+    required _PortState isConnected,
   }) {
     final Rect portRect = Rect.fromCircle(center: position, radius: portRadius);
     drawImage(canvas: canvas, imagePath: imagePath, rect: portRect.deflate(portRadius * 0.1), painter: painter, color: portColor);
@@ -102,14 +115,14 @@ mixin PortPainter on FusionCanvasElementPainter {
     required Color color,
     required FusionCanvasPainter painter,
     required WiringPortData portData,
-    required bool isConnected,
+    required _PortState isConnected,
   }) {
     canvas.drawCircle(
       position,
       portRadius,
       Paint()
-        ..color = isConnected ? color : painter.context.colorScheme.elevation4
-        ..style = isConnected ? PaintingStyle.fill : PaintingStyle.stroke
+        ..color = isConnected != _PortState.idle ? color : painter.context.colorScheme.elevation4
+        ..style = isConnected == _PortState.connected ? PaintingStyle.fill : PaintingStyle.stroke
         ..strokeWidth = 3,
     );
     drawText(
@@ -118,7 +131,7 @@ mixin PortPainter on FusionCanvasElementPainter {
       position: position,
       positionAlignment: Alignment.center,
       style: painter.context.textTheme.b3Regular.copyWith(
-        color: isConnected ? Colors.black : null,
+        color: isConnected == _PortState.connected ? Colors.black : null,
         fontSize: portRadius * 0.8,
       ),
     );
@@ -131,7 +144,7 @@ mixin PortPainter on FusionCanvasElementPainter {
     required FusionCanvasPainter painter,
     required WiringPortData portData,
     required Color portColor,
-    required bool isConnected,
+    required _PortState isConnected,
   }) {
     final Rect portRect = Rect.fromCircle(center: position, radius: portRadius);
     drawImage(canvas: canvas, imagePath: imagePath, rect: portRect.deflate(portRadius * 0.1), painter: painter, paint: Paint()..color = Colors.white);
@@ -140,8 +153,8 @@ mixin PortPainter on FusionCanvasElementPainter {
       position,
       portRadius,
       Paint()
-        ..color = isConnected ? portColor : painter.context.colorScheme.elevation4
-        ..style = isConnected ? PaintingStyle.fill : PaintingStyle.stroke
+        ..color = isConnected != _PortState.idle ? portColor : painter.context.colorScheme.elevation4
+        ..style = isConnected == _PortState.connected ? PaintingStyle.fill : PaintingStyle.stroke
         ..strokeWidth = 3,
     );
     if (portData.image != null) {
@@ -150,7 +163,7 @@ mixin PortPainter on FusionCanvasElementPainter {
         imagePath: portData.image!,
         rect: Rect.fromCircle(center: position, radius: portRadius).deflate(portRadius * 0.25),
         painter: painter,
-        color: !isConnected ? portColor : Colors.black,
+        color: isConnected != _PortState.connected ? portColor : Colors.black,
         // paint:
         //     Paint()
         //       ..colorFilter = ColorFilter.mode(
@@ -162,19 +175,26 @@ mixin PortPainter on FusionCanvasElementPainter {
     }
   }
 
-  Offset? getPortPosition(String portId, FusionCanvasPainter painter) {
+  (Rect rect, Alignment alignment)? getPortPosition(String portId, FusionCanvasPainter painter) {
     final WiringPortData? portData = _ports?.firstWhereOrNull((WiringPortData data) => data.id == portId);
     if (portData != null) {
       final Rect rect = getTransformedRect(painter);
 
-      final Offset paddingOffset = switch (portData.portAlignment) {
-        Alignment.centerLeft => Offset(-portRadius, 0),
-        Alignment.centerRight => Offset(portRadius, 0),
-        Alignment.topCenter => Offset(0, -portRadius),
-        Alignment.bottomCenter => Offset(0, portRadius),
+      return (Rect.fromCircle(center: portData.position + rect.topLeft, radius: portRadius), portData.portAlignment);
+    }
+    return null;
+  }
+
+  Offset? getPortPositionWithPadding(String portId, FusionCanvasPainter painter) {
+    final (Rect, Alignment)? data = getPortPosition(portId, painter);
+    if (data != null) {
+      return switch (data.$2) {
+        Alignment.centerLeft => data.$1.centerLeft,
+        Alignment.centerRight => data.$1.centerRight,
+        Alignment.topCenter => data.$1.topCenter,
+        Alignment.bottomCenter => data.$1.bottomCenter,
         _ => Offset.zero,
       };
-      return portData.position + rect.topLeft + paddingOffset;
     }
     return null;
   }
@@ -188,7 +208,8 @@ mixin PortPainter on FusionCanvasElementPainter {
       final List<WiringPortData> ports = _ports ?? getPorts(Offset.zero & getTransformedRect(painter).size, painter);
       _ports = ports;
       for (final WiringPortData portData in ports) {
-        final Rect portRect = Rect.fromCircle(center: portData.position + getTransformedRect(painter).topLeft, radius: portRadius);
+        final Rect portRect =
+            getPortPosition(portData.id, painter)?.$1 ?? Rect.fromCircle(center: portData.position + getTransformedRect(painter).topLeft, radius: portRadius);
         if (portRect.contains(position)) {
           return portData;
         }
