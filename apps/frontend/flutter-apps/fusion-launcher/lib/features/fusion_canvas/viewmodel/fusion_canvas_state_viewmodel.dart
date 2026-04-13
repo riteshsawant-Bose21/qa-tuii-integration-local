@@ -137,14 +137,14 @@ class FusionCanvasStateViewModel extends Cubit<FusionCanvasState> {
   void fitToScreen() {
     final Size? contSize = contentSize;
     Size? viewportSize = canvasSize;
-    if (contSize == null || viewportSize == null) return;
+    if (contSize == null || viewportSize == null || contSize.width == 0 || contSize.height == 0) return;
     viewportSize = viewportSize * 0.6; // Add some padding around the content
     final double scaleX = viewportSize.width / contSize.width;
     final double scaleY = viewportSize.height / contSize.height;
     final double scale = scaleX < scaleY ? scaleX : scaleY;
 
     final Offset offset = Offset(contSize.width / 2, contSize.height / 2);
-    print("Offset: $offset, Scale: $scale");
+
     setCanvasState(
       state
           .scaleCanvas(

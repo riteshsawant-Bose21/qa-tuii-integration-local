@@ -11,7 +11,7 @@ const (
 )
 
 type NotifyBundleUploadPayload struct {
-	Version              string      `json:"version" binding:"required" example:"1.2.3"`
+	Version              string      `json:"version" binding:"required" example:"1.2.3-dev.4+build123"`
 	Checksum             string      `json:"checksum" binding:"required"`
 	ReleaseNotes         string      `json:"release_notes"`
 	MinPrevVersion       string      `json:"min_prev_version" binding:"required" example:"0.0.0"`
@@ -50,7 +50,6 @@ type DownloadArtifactResponse struct {
 type FirmwareUpdateRequest struct {
 	CurrentFirmwareVersion   string `form:"current_firmware_version" binding:"required"`
 	CurrentDesktopAppVersion string `form:"current_desktop_app_version" binding:"required"`
-	Channel                  string `form:"channel"` // Optional: "beta", "alpha", etc. Empty or omitted = stable (prerelease is null)
 }
 
 type FirmwareUpdateResponse struct {
@@ -66,11 +65,11 @@ type FirmwareUpdateResponse struct {
 }
 
 type LogBundleUpdateStatusPayload struct {
-	UpdateID        string    `json:"update_id" binding:"required,uuid"`
-	ProjectID       string    `json:"project_id" binding:"required,uuid"`
-	BundleVersion   string    `json:"bundle_version" binding:"required"`
-	PreviousVersion string    `json:"previous_version"`
-	Status          string    `json:"status" binding:"required,oneof=INSTALL_SUCCESS INSTALL_FAIL"`
-	LauncherVersion string    `json:"launcher_version"`
-	InstalledAt     time.Time `json:"installed_at" binding:"required"`
+	UpdateID              string    `json:"update_id" binding:"required,uuid"`
+	ProjectID             string    `json:"project_id" binding:"required,uuid"`
+	BundleVersion         string    `json:"bundle_version" binding:"required"`
+	PreviousBundleVersion string    `json:"previous_bundle_version"`
+	Status                string    `json:"status" binding:"required,oneof=INSTALL_SUCCESS INSTALL_FAIL"`
+	DesktopAppVersion     string    `json:"desktop_app_version"`
+	InstalledAt           time.Time `json:"installed_at" binding:"required"`
 }

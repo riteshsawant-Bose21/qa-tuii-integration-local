@@ -1,12 +1,13 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/fusion_canvas_element_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../state/tools/select_tool_state.dart';
+import '../elements/derived/hardware_component_painter.dart';
 import '../elements/fusion_canvas_line_painter.dart';
-import '../elements/fusion_canvas_point_painter.dart';
-import '../elements/fusion_image_painter.dart';
 import '../elements/fusion_rect_painter.dart';
 import '../fusion_canvas_painter.dart';
 
@@ -30,10 +31,31 @@ class SelectionToolPainter extends FusionBasePainter {
 
   @override
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter) {
-    if (state.selectedLayerIds.isEmpty) return;
+    if (state is MarqueeSelectToolState) {
+      final Rect marqueeRect = (state as MarqueeSelectToolState).selectionRect;
+      if (marqueeRect.width > 0 && marqueeRect.height > 0) {
+        canvas.drawRect(
+          marqueeRect,
+          Paint()
+            ..color = selectionColor.withValues(alpha: 0.15)
+            ..style = PaintingStyle.fill,
+        );
+        canvas.drawRect(
+          marqueeRect,
+          Paint()
+            ..color = selectionColor.withValues(alpha: 0.9)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = nonScaling(strokeWidth, painter),
+        );
+      }
+    }
 
+    if (state.selectedLayerIds.isEmpty) return;
+    // print("Painting selection for layers: ${state.selectedLayerIds}, elements: ${state.selectedElementIds}");
+    Rect? rect;
     for (final FusionBasePainter element in allPainters) {
       if (element.id != null && state.isLayerSelected(element.id)) {
+        rect = rect?.expandToInclude(element.getBounds(painter)) ?? element.getBounds(painter);
         _paintSelectionForElement(canvas, size, painter, element);
         for (final FusionCanvasElement ele in element.elements) {
           if (state.isElementSelected(ele.id)) {
@@ -41,6 +63,17 @@ class SelectionToolPainter extends FusionBasePainter {
           }
         }
       }
+    }
+
+    if (state.selectedLayerIds.length > 1 && rect != null && rect.width > 0 && rect.height > 0) {
+      // Draw overall bounding box for selection
+      canvas.drawRect(
+        rect, //.inflate(nonScaling(10, painter)),
+        Paint()
+          ..color = selectionColor.withValues(alpha: 0.5)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = nonScaling(strokeWidth, painter),
+      );
     }
   }
 
@@ -90,9 +123,31 @@ class SelectionToolPainter extends FusionBasePainter {
       _paintPolygonSelection(canvas, size, painter, element);
     } else if (element is FusionCanvasLinePainter) {
       _paintLineSelection(canvas, size, painter, element);
+    } else if (element is HardwareComponentPainter && element.hardware is Speaker && (element.hardware as Speaker).mountingType == MountingType.surface) {
+      _paintSurfaceSpeakerSelection(canvas, element.getTransformedRect(painter), painter, (element.hardware as Speaker).yaw);
     } else if (element is FusionCanvasElementPainter) {
       _paintSimpleRectSelection(canvas, element.getTransformedRect(painter), painter);
+    } else {
+      // _paintSimpleRectSelection(canvas, element.getBounds(painter), painter);
     }
+  }
+
+  void _paintSurfaceSpeakerSelection(Canvas canvas, Rect rect, FusionCanvasPainter painter, double yaw) {
+    final double yawRad = yaw * pi / 180.0;
+    canvas.save();
+    canvas.translate(rect.center.dx, rect.center.dy);
+    canvas.rotate(yawRad);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset.zero, width: rect.width, height: rect.height),
+        Radius.circular(rect.shortestSide * 0.15),
+      ),
+      Paint()
+        ..color = selectionColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = nonScaling(strokeWidth, painter),
+    );
+    canvas.restore();
   }
 
   void _paintSimpleRectSelection(Canvas canvas, Rect rect, FusionCanvasPainter painter) {
@@ -120,46 +175,6 @@ class SelectionToolPainter extends FusionBasePainter {
       layerId: linePainter.layerId,
     );
     selectionLinePainter.paint(canvas, size, painter);
-  }
-
-  void _paintImageSelection(
-    Canvas canvas,
-    Size size,
-    FusionCanvasPainter painter,
-    FusionImagePainter imagePainter,
-  ) {
-    final Rect imageRect = Rect.fromLTWH(
-      imagePainter.position.dx,
-      imagePainter.position.dy,
-      imagePainter.size.width,
-      imagePainter.size.height,
-    );
-
-    // Draw selection rectangle
-    final Paint strokePaint =
-        Paint()
-          ..color = selectionColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = nonScaling(strokeWidth, painter);
-    canvas.drawRect(imageRect, strokePaint);
-
-    // Draw corner handles
-    final List<Offset> cornerPoints = <Offset>[
-      imageRect.topLeft,
-      imageRect.topRight,
-      imageRect.bottomRight,
-      imageRect.bottomLeft,
-    ];
-
-    for (final Offset corner in cornerPoints) {
-      final FusionCanvasPointPainter handlePainter = FusionCanvasPointPainter(
-        point: FusionCanvasPoint(position: corner),
-        radius: handleRadius,
-        color: handleColor,
-        layerId: imagePainter.id ?? '',
-      );
-      handlePainter.paint(canvas, size, painter);
-    }
   }
 
   void _paintPolygonSelection(

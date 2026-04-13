@@ -14,19 +14,17 @@ import (
 	"time"
 
 	json "github.com/goccy/go-json"
-
-	"github.com/go-ble/ble"
 )
 
 const (
-	advertiserName   = "Fusion Mini"
+	bluetoothDeviceName = "Fusion Mini"
+
 	backoffAttempts  = 10
 	backoffDelay     = 50 * time.Millisecond
 	backoffIncrement = 2
 	bleRetryTime     = 5 * time.Second
 	bleTimeout       = 15 * time.Second
 	channelSize      = 10
-	deviceName       = "Fusion Mini"
 	maxChunkSize     = 100
 	restTimeout      = 10 * time.Second
 )
@@ -54,6 +52,42 @@ type BluetoothHTTPPayload struct {
 type ResponseChunk struct {
 	Data string `json:"data"`
 	Last bool   `json:"last"`
+}
+
+type bluetoothTransport interface {
+	serve(context.Context) error
+	stop()
+}
+
+type notificationSession interface {
+	Context() context.Context
+	Close() error
+	Write([]byte) error
+}
+
+// BLEServer currently hosts the BLE transport, but its internals are transport-agnostic so
+// a BlueZ D-Bus BLE backend and a classic Bluetooth backend can share the same protocol logic.
+type BLEServer struct {
+	cancel  context.CancelFunc
+	wg      sync.WaitGroup
+	backend bluetoothTransport
+}
+
+type bluetoothBridge struct {
+	logger              *logging.Logger
+	globalRequestBuffer bytes.Buffer
+
+	notificationMu   sync.Mutex
+	notificationChan chan []byte
+
+	requestMu sync.Mutex
+
+	idleMu        sync.Mutex
+	idleResetChan chan struct{}
+}
+
+func newBluetoothBridge(logger *logging.Logger) *bluetoothBridge {
+	return &bluetoothBridge{logger: logger}
 }
 
 // performHTTPRequest processes the incoming request and calls the actual REST API.
@@ -156,191 +190,144 @@ func enqueueResponseChunks(response []byte, ch chan []byte, logger *logging.Logg
 	}
 }
 
-// BLEServer encapsulates the BLE server's context, cancel function, device, and WaitGroup.
-type BLEServer struct {
-	ctx                 context.Context
-	cancel              context.CancelFunc
-	device              ble.Device
-	wg                  sync.WaitGroup
-	globalRequestBuffer bytes.Buffer
+func (b *bluetoothBridge) resetIdleTimer() {
+	b.idleMu.Lock()
+	defer b.idleMu.Unlock()
+	if b.idleResetChan == nil {
+		return
+	}
+	select {
+	case b.idleResetChan <- struct{}{}:
+	default:
+	}
+}
+
+func (b *bluetoothBridge) handleWrite(incoming []byte) {
+	b.resetIdleTimer()
+
+	go func() {
+		b.requestMu.Lock()
+		b.globalRequestBuffer.Write(incoming)
+		data := b.globalRequestBuffer.Bytes()
+		b.requestMu.Unlock()
+
+		var dummy map[string]any
+		if err := json.Unmarshal(data, &dummy); err != nil {
+			if strings.Contains(err.Error(), "unexpected end") {
+				return
+			}
+			b.logger.Error("Invalid JSON: %v", err)
+			b.requestMu.Lock()
+			b.globalRequestBuffer.Reset()
+			b.requestMu.Unlock()
+			return
+		}
+
+		b.requestMu.Lock()
+		complete := make([]byte, len(data))
+		copy(complete, data)
+		b.globalRequestBuffer.Reset()
+		b.requestMu.Unlock()
+
+		respBytes, err := handleRequest(complete, b.logger)
+		if err != nil {
+			b.logger.Error("Error handling request: %v", err)
+			return
+		}
+
+		b.notificationMu.Lock()
+		ch := b.notificationChan
+		b.notificationMu.Unlock()
+		if ch == nil {
+			b.logger.Error("No subscriber; response dropped")
+			return
+		}
+		enqueueResponseChunks(respBytes, ch, b.logger)
+	}()
+}
+
+func (b *bluetoothBridge) runNotificationSession(session notificationSession) {
+	b.idleMu.Lock()
+	b.idleResetChan = make(chan struct{}, 1)
+	b.idleMu.Unlock()
+
+	go func() {
+		timer := time.NewTimer(bleTimeout)
+		defer timer.Stop()
+		for {
+			select {
+			case <-timer.C:
+				b.logger.Warn("Closing stale BLE connection.")
+				_ = session.Close()
+				return
+			case <-b.idleResetChan:
+				if !timer.Stop() {
+					<-timer.C
+				}
+				timer.Reset(bleTimeout)
+			case <-session.Context().Done():
+				b.idleMu.Lock()
+				close(b.idleResetChan)
+				b.idleResetChan = nil
+				b.idleMu.Unlock()
+				return
+			}
+		}
+	}()
+
+	b.notificationMu.Lock()
+	b.notificationChan = make(chan []byte, channelSize)
+	b.notificationMu.Unlock()
+
+	for {
+		select {
+		case data := <-b.notificationChan:
+			delay := backoffDelay
+			sent := false
+			for attempt := 1; attempt <= backoffAttempts; attempt++ {
+				if err := session.Write(data); err != nil {
+					b.logger.Debug("Failed to send notification (attempt %d/%d): %v", attempt, backoffAttempts, err)
+					time.Sleep(delay)
+					delay *= backoffIncrement
+				} else {
+					sent = true
+					break
+				}
+			}
+			if !sent {
+				b.logger.Error("Dropping notification chunk after %d attempts", backoffAttempts)
+			}
+		case <-session.Context().Done():
+			b.notificationMu.Lock()
+			b.notificationChan = nil
+			b.notificationMu.Unlock()
+			return
+		}
+	}
 }
 
 // NewBLEServer initializes the BLE server and starts advertising in a separate goroutine.
 func NewBLEServer(serviceUUID string, characterUUID string) (*BLEServer, error) {
 	logger := logging.GetLogger()
+	ctx, cancel := context.WithCancel(context.Background())
 
-	d, err := newBLEDevice(deviceName)
+	bridge := newBluetoothBridge(logger)
+	backend, err := newPlatformBLETransport(bluetoothDeviceName, serviceUUID, characterUUID, bridge)
 	if err != nil {
+		cancel()
 		return nil, err
 	}
-	ble.SetDefaultDevice(d)
 
-	// Create cancelable context
-	ctx, cancel := context.WithCancel(context.Background())
-	server := &BLEServer{ctx: ctx, cancel: cancel, device: d}
+	server := &BLEServer{
+		cancel:  cancel,
+		backend: backend,
+	}
 
-	// Shared channels and mutexes
-	var (
-		notificationChan chan []byte
-		notificationMu   sync.Mutex
-		requestMu        sync.Mutex
-		idleMu           sync.Mutex
-		idleResetChan    chan struct{}
-	)
-
-	svcUUID := ble.MustParse(serviceUUID)
-	svc := ble.NewService(svcUUID)
-
-	charUUID := ble.MustParse(characterUUID)
-	char := ble.NewCharacteristic(charUUID)
-	char.Property = ble.CharRead | ble.CharWrite | ble.CharNotify
-
-	// Write handler. Reset idle timer and queue request
-	char.HandleWrite(ble.WriteHandlerFunc(func(req ble.Request, rsp ble.ResponseWriter) {
-		// Reset idle timer
-		idleMu.Lock()
-		if idleResetChan != nil {
-			select {
-			case idleResetChan <- struct{}{}:
-			default:
-			}
-		}
-		idleMu.Unlock()
-
-		incoming := append([]byte(nil), req.Data()...)
-		rsp.SetStatus(ble.ErrSuccess)
-
-		go func() {
-			requestMu.Lock()
-			server.globalRequestBuffer.Write(incoming)
-			data := server.globalRequestBuffer.Bytes()
-			requestMu.Unlock()
-
-			var dummy map[string]any
-			if err := json.Unmarshal(data, &dummy); err != nil {
-				if strings.Contains(err.Error(), "unexpected end") {
-					return
-				}
-				logger.Error("Invalid JSON: %v", err)
-				requestMu.Lock()
-				server.globalRequestBuffer.Reset()
-				requestMu.Unlock()
-				return
-			}
-
-			requestMu.Lock()
-			complete := make([]byte, len(data))
-			copy(complete, data)
-			server.globalRequestBuffer.Reset()
-			requestMu.Unlock()
-
-			respBytes, err := handleRequest(complete, logger)
-			if err != nil {
-				logger.Error("Error handling request: %v", err)
-				return
-			}
-
-			notificationMu.Lock()
-			ch := notificationChan
-			notificationMu.Unlock()
-			if ch == nil {
-				logger.Error("No subscriber; response dropped")
-				return
-			}
-			enqueueResponseChunks(respBytes, ch, logger)
-		}()
-	}))
-
-	char.HandleNotify(ble.NotifyHandlerFunc(func(req ble.Request, n ble.Notifier) {
-		conn := req.Conn()
-
-		// Initialize idle reset channel
-		idleMu.Lock()
-		idleResetChan = make(chan struct{}, 1)
-		idleMu.Unlock()
-
-		// Spawn idle monitor
-		go func() {
-			timer := time.NewTimer(bleTimeout)
-			defer timer.Stop()
-			for {
-				select {
-				case <-timer.C:
-					logger.Warn("Closing stale BLE connection.")
-					conn.Close()
-					return
-				case <-idleResetChan:
-					if !timer.Stop() {
-						<-timer.C
-					}
-					timer.Reset(bleTimeout)
-				case <-n.Context().Done():
-					// Clean up idle monitor
-					idleMu.Lock()
-					close(idleResetChan)
-					idleResetChan = nil
-					idleMu.Unlock()
-					return
-				}
-			}
-		}()
-
-		// Notification loop
-		notificationMu.Lock()
-		notificationChan = make(chan []byte, channelSize)
-		notificationMu.Unlock()
-
-		for {
-			select {
-			case data := <-notificationChan:
-				delay := backoffDelay
-				maxAttempts := backoffAttempts
-				sent := false
-				for attempt := 1; attempt <= maxAttempts; attempt++ {
-					if _, err := n.Write(data); err != nil {
-						logger.Debug("Failed to send notification (attempt %d/%d): %v", attempt, maxAttempts, err)
-						time.Sleep(delay)
-						delay *= backoffIncrement
-					} else {
-						sent = true
-						break
-					}
-				}
-				if !sent {
-					logger.Error("Dropping notification chunk after %d attempts", maxAttempts)
-				}
-			case <-n.Context().Done():
-				notificationMu.Lock()
-				notificationChan = nil
-				notificationMu.Unlock()
-				return
-			}
-		}
-	}))
-
-	svc.AddCharacteristic(char)
-	ble.AddService(svc)
-
-	// Advertising loop
 	server.wg.Add(1)
 	go func() {
 		defer server.wg.Done()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				err := ble.AdvertiseNameAndServices(ctx, advertiserName, svc.UUID)
-				if err != nil {
-					if errors.Is(err, context.Canceled) {
-						logger.Info("Shutting down BLE advertiser...")
-						return
-					}
-					logger.Error("BLE advertising failed: %v. Retrying in %d seconds", err, bleRetryTime)
-					time.Sleep(bleRetryTime * time.Second)
-					continue
-				}
-			}
+		if err := backend.serve(ctx); err != nil && !errors.Is(err, context.Canceled) {
+			logger.Error("BLE transport stopped: %v", err)
 		}
 	}()
 
@@ -352,6 +339,8 @@ func NewBLEServer(serviceUUID string, characterUUID string) (*BLEServer, error) 
 // stopping the device, and waiting for the advertisement to finish.
 func (s *BLEServer) Stop() {
 	s.cancel()
-	s.device.Stop()
+	if s.backend != nil {
+		s.backend.stop()
+	}
 	s.wg.Wait()
 }

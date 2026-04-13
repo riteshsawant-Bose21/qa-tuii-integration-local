@@ -52,8 +52,8 @@ func (m *MockFirmwareService) CheckForUpdate(ctx context.Context, payload *types
 	return args.Get(0).(*types.FirmwareUpdateResponse), args.Error(1)
 }
 
-func (m *MockFirmwareService) GetBundleDownloadURL(ctx context.Context, bundleID string, logger *zap.Logger) (*types.DownloadArtifactResponse, error) {
-	args := m.Called(ctx, bundleID, logger)
+func (m *MockFirmwareService) GetBundleDownloadURL(ctx context.Context, version string, logger *zap.Logger) (*types.DownloadArtifactResponse, error) {
+	args := m.Called(ctx, version, logger)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -530,11 +530,10 @@ func TestCheckForUpdate(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name: "success - update available (beta channel)",
+			name: "success - update available (beta channel inferred from version)",
 			queryParams: map[string]string{
-				"current_firmware_version":    "1.0.0",
+				"current_firmware_version":    "1.0.0-beta.1",
 				"current_desktop_app_version": "2.0.0",
-				"channel":                     "beta",
 			},
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
@@ -543,7 +542,7 @@ func TestCheckForUpdate(t *testing.T) {
 						UpdateAvailable:   true,
 						AppUpdateRequired: false,
 						BundleID:          "bundle-beta-123",
-						Version:           "2.1.0-beta",
+						Version:           "2.1.0-beta.2",
 					}, nil)
 			},
 			expectedStatus: http.StatusOK,
@@ -642,7 +641,7 @@ func TestGetBundleDownloadURL(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		bundleID       string
+		version        string
 		setupLogger    bool
 		mockSetup      func(m *MockFirmwareService)
 		expectedStatus int
@@ -650,10 +649,10 @@ func TestGetBundleDownloadURL(t *testing.T) {
 	}{
 		{
 			name:        "success - download URL generated",
-			bundleID:    "550e8400-e29b-41d4-a716-446655440000",
+			version:     "1.2.3",
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("GetBundleDownloadURL", mock.Anything, "550e8400-e29b-41d4-a716-446655440000", mock.AnythingOfType("*zap.Logger")).
+				m.On("GetBundleDownloadURL", mock.Anything, "1.2.3", mock.AnythingOfType("*zap.Logger")).
 					Return(&types.DownloadArtifactResponse{
 						DownloadURL: "https://s3.presigned.url/download",
 						Checksum:    "sha256:abc123",
@@ -666,45 +665,79 @@ func TestGetBundleDownloadURL(t *testing.T) {
 			},
 		},
 		{
-			name:           "bad request - invalid bundleId (not UUID)",
-			bundleID:       "invalid-uuid",
+			name:        "success - prerelease version",
+			version:     "1.0.0-beta.1",
+			setupLogger: true,
+			mockSetup: func(m *MockFirmwareService) {
+				m.On("GetBundleDownloadURL", mock.Anything, "1.0.0-beta.1", mock.AnythingOfType("*zap.Logger")).
+					Return(&types.DownloadArtifactResponse{
+						DownloadURL: "https://s3.presigned.url/download",
+						Checksum:    "sha256:def456",
+					}, nil)
+			},
+			expectedStatus: http.StatusOK,
+			expectedBody: map[string]interface{}{
+				"download_url": "https://s3.presigned.url/download",
+				"checksum":     "sha256:def456",
+			},
+		},
+		{
+			name:        "success - version with build metadata accepted",
+			version:     "1.2.3-dev.3+build123",
+			setupLogger: true,
+			mockSetup: func(m *MockFirmwareService) {
+				m.On("GetBundleDownloadURL", mock.Anything, "1.2.3-dev.3+build123", mock.AnythingOfType("*zap.Logger")).
+					Return(&types.DownloadArtifactResponse{
+						DownloadURL: "https://s3.presigned.url/download",
+						Checksum:    "sha256:ghi789",
+					}, nil)
+			},
+			expectedStatus: http.StatusOK,
+			expectedBody: map[string]interface{}{
+				"download_url": "https://s3.presigned.url/download",
+				"checksum":     "sha256:ghi789",
+			},
+		},
+		{
+			name:           "bad request - invalid version format",
+			version:        "not-a-version",
 			setupLogger:    true,
 			mockSetup:      func(m *MockFirmwareService) {},
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "bad request - empty bundleId",
-			bundleID:       "",
+			name:           "bad request - empty version",
+			version:        "",
 			setupLogger:    true,
 			mockSetup:      func(m *MockFirmwareService) {},
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
 			name:        "forbidden - bundle not approved",
-			bundleID:    "550e8400-e29b-41d4-a716-446655440000",
+			version:     "1.2.3",
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("GetBundleDownloadURL", mock.Anything, "550e8400-e29b-41d4-a716-446655440000", mock.AnythingOfType("*zap.Logger")).
+				m.On("GetBundleDownloadURL", mock.Anything, "1.2.3", mock.AnythingOfType("*zap.Logger")).
 					Return(nil, errorutil.ErrBundleNotApprovedForDownload)
 			},
 			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:        "not found - bundle does not exist",
-			bundleID:    "550e8400-e29b-41d4-a716-446655440000",
+			version:     "1.2.3",
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("GetBundleDownloadURL", mock.Anything, "550e8400-e29b-41d4-a716-446655440000", mock.AnythingOfType("*zap.Logger")).
+				m.On("GetBundleDownloadURL", mock.Anything, "1.2.3", mock.AnythingOfType("*zap.Logger")).
 					Return(nil, errorutil.ErrBundleNotFound)
 			},
 			expectedStatus: http.StatusNotFound,
 		},
 		{
 			name:        "internal server error - S3 failure",
-			bundleID:    "550e8400-e29b-41d4-a716-446655440000",
+			version:     "1.2.3",
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("GetBundleDownloadURL", mock.Anything, "550e8400-e29b-41d4-a716-446655440000", mock.AnythingOfType("*zap.Logger")).
+				m.On("GetBundleDownloadURL", mock.Anything, "1.2.3", mock.AnythingOfType("*zap.Logger")).
 					Return(nil, errors.New("failed to generate presign url"))
 			},
 			expectedStatus: http.StatusInternalServerError,
@@ -718,8 +751,8 @@ func TestGetBundleDownloadURL(t *testing.T) {
 
 			h := NewFirmwareUpdateHandler(mockFirmware)
 
-			w, c := setupTestContext(http.MethodGet, "/firmware/bundles/"+tt.bundleID+"/download", nil)
-			c.Params = gin.Params{gin.Param{Key: "bundleID", Value: tt.bundleID}}
+			w, c := setupTestContext(http.MethodGet, "/firmware/bundles/"+tt.version+"/request-download-url", nil)
+			c.Params = gin.Params{gin.Param{Key: "version", Value: tt.version}}
 			if !tt.setupLogger {
 				c.Keys = map[string]interface{}{}
 			}
@@ -775,12 +808,12 @@ func TestInsertBundleUpdateStatus(t *testing.T) {
 		{
 			name: "success - INSTALL_FAIL logged",
 			requestBody: types.LogBundleUpdateStatusPayload{
-				UpdateID:        "550e8400-e29b-41d4-a716-446655440000",
-				ProjectID:       "550e8400-e29b-41d4-a716-446655440001",
-				BundleVersion:   "2.0.0",
-				PreviousVersion: "1.0.0",
-				Status:          "INSTALL_FAIL",
-				InstalledAt:     installedAt,
+				UpdateID:              "550e8400-e29b-41d4-a716-446655440000",
+				ProjectID:             "550e8400-e29b-41d4-a716-446655440001",
+				BundleVersion:         "2.0.0",
+				PreviousBundleVersion: "1.0.0",
+				Status:                "INSTALL_FAIL",
+				InstalledAt:           installedAt,
 			},
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {

@@ -12,6 +12,9 @@ import (
 	"net/http"
 	"reflect"
 	"sync"
+	"time"
+
+	json "github.com/goccy/go-json"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -31,6 +34,10 @@ type Handler struct {
 
 	controllerManager controllers.ControllerManagerInterface
 	httpClient        *http.Client
+
+	// Software update sync tracking
+	syncTrackers     map[string]*api.SoftwareUpdateSyncTracker
+	syncTrackersLock sync.RWMutex
 }
 
 type serverInfoResponse struct {
@@ -60,6 +67,7 @@ func NewHandler(
 		controllerManager: controllerManager,
 		sessions:          make(map[string]*SAPSession),
 		httpClient:        &http.Client{Timeout: api.HTTPTimeout},
+		syncTrackers:      make(map[string]*api.SoftwareUpdateSyncTracker),
 	}
 }
 
@@ -108,39 +116,91 @@ func (h *Handler) HandleHTTPSet(update map[string]any) (any, error) {
 		Updates map[string]any `json:"updates"`
 	}
 
-	existing := h.StateManager.GetStateMap()
+	configUpdate, snapshots, sceneSets, err := h.SplitFeaturePayload(update)
+	if err != nil {
+		return nil, err
+	}
 
-	if reflect.DeepEqual(existing, update) {
+	if err := h.persistFeatureDefinitions(snapshots, sceneSets); err != nil {
+		return nil, err
+	}
+
+	isSnapshotSceneDefProvided := len(snapshots) > 0 || len(sceneSets) > 0
+	isConfigKeysAbsent := len(configUpdate) == 0
+
+	if isConfigKeysAbsent {
+		// Snapshot keys only in the json
+		if isSnapshotSceneDefProvided {
+			return setResponse{
+				Status:  "success",
+				Updates: nil,
+			}, nil
+		}
+		// No keys at all in the json??
 		return setResponse{
 			Status:  "noop",
 			Updates: nil,
 		}, nil
 	}
 
-	if err := h.handleConfigUpdate(update, true); err != nil {
+	existing := h.StateManager.GetStateMap()
+
+	if reflect.DeepEqual(existing, configUpdate) {
+		if isSnapshotSceneDefProvided {
+			return setResponse{
+				Status:  "success",
+				Updates: nil,
+			}, nil
+		}
+		return setResponse{
+			Status:  "noop",
+			Updates: nil,
+		}, nil
+	}
+
+	if err := h.handleConfigUpdate(configUpdate, true); err != nil {
 		return nil, err
 	}
 
 	return setResponse{
 		Status:  "success",
-		Updates: update,
+		Updates: configUpdate,
 	}, nil
 }
 
 // HandleHTTPPatch updates only the specified fields.
 func (h *Handler) HandleHTTPPatch(patch map[string]any) (map[string]any, error) {
+	configPatch, snapshots, sceneSets, err := h.SplitFeaturePayload(patch)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := h.persistFeatureDefinitions(snapshots, sceneSets); err != nil {
+		return nil, err
+	}
+
+	featureUpdated := len(snapshots) > 0 || len(sceneSets) > 0
+	if len(configPatch) == 0 {
+		if featureUpdated {
+			return map[string]any{}, nil
+		}
+		return nil, nil
+	}
 
 	// Get full state before PATCH
 	before := h.StateManager.GetStateMap()
 
 	// Apply internal patch
-	afterPtr, err := h.StateManager.Patch(patch)
+	afterPtr, err := h.StateManager.Patch(configPatch)
 	if err != nil {
 		return nil, err
 	}
 
 	// No changes
 	if afterPtr == nil {
+		if featureUpdated {
+			return map[string]any{}, nil
+		}
 		return nil, nil
 	}
 
@@ -153,6 +213,74 @@ func (h *Handler) HandleHTTPPatch(patch map[string]any) (map[string]any, error) 
 	}
 
 	return diff, nil
+}
+
+func (h *Handler) persistFeatureDefinitions(snapshots []api.SnapshotDefinition, sceneSets []api.SceneSet) error {
+	if len(snapshots) > 0 {
+		if err := h.persistence.UpsertSnapshotDefinitions(snapshots); err != nil {
+			return err
+		}
+
+		msg := api.NewNotifyMessage(
+			api.NotifyOpSnapshotDefsUpsert,
+			h.appConfig.NodeName,
+			api.WithSnapshotDefinitions(snapshots),
+		)
+		if err := h.hub.BroadcastToNodes(msg); err != nil {
+			return fmt.Errorf("failed to broadcast snapshot definitions upsert: %w", err)
+		}
+	}
+
+	if len(sceneSets) > 0 {
+		if err := h.persistence.UpsertSceneSets(sceneSets); err != nil {
+			return err
+		}
+
+		msg := api.NewNotifyMessage(
+			api.NotifyOpSceneSetsUpsert,
+			h.appConfig.NodeName,
+			api.WithSceneSets(sceneSets),
+		)
+		if err := h.hub.BroadcastToNodes(msg); err != nil {
+			return fmt.Errorf("failed to broadcast scene sets upsert: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (h *Handler) SplitFeaturePayload(update map[string]any) (
+	config map[string]any,
+	snapshots []api.SnapshotDefinition,
+	sceneSets []api.SceneSet,
+	err error,
+) {
+	config = make(map[string]any, len(update))
+
+	for key, value := range update {
+		switch key {
+		case "snapshots":
+			raw, marshalErr := json.Marshal(value)
+			if marshalErr != nil {
+				return nil, nil, nil, fmt.Errorf("invalid snapshots payload: %w", marshalErr)
+			}
+			if unmarshalErr := json.Unmarshal(raw, &snapshots); unmarshalErr != nil {
+				return nil, nil, nil, fmt.Errorf("invalid snapshots payload: %w", unmarshalErr)
+			}
+		case "scene_sets":
+			raw, marshalErr := json.Marshal(value)
+			if marshalErr != nil {
+				return nil, nil, nil, fmt.Errorf("invalid scene_sets payload: %w", marshalErr)
+			}
+			if unmarshalErr := json.Unmarshal(raw, &sceneSets); unmarshalErr != nil {
+				return nil, nil, nil, fmt.Errorf("invalid scene_sets payload: %w", unmarshalErr)
+			}
+		default:
+			config[key] = value
+		}
+	}
+
+	return config, snapshots, sceneSets, nil
 }
 
 func (h *Handler) HandleClearAllData() error {
@@ -218,4 +346,96 @@ func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
 	}
 
 	return nil
+}
+
+// Software Update Sync Tracking Methods
+
+// StartSyncTracking creates a new sync tracker for a software update operation
+func (h *Handler) StartSyncTracking(syncID, filename, checksum string, expectedNodes []string, timeout time.Duration) *api.SoftwareUpdateSyncTracker {
+	h.syncTrackersLock.Lock()
+	defer h.syncTrackersLock.Unlock()
+
+	// Create expected nodes map
+	expectedNodesMap := make(map[string]bool)
+	for _, node := range expectedNodes {
+		expectedNodesMap[node] = false
+	}
+
+	tracker := &api.SoftwareUpdateSyncTracker{
+		SyncID:        syncID,
+		Filename:      filename,
+		Checksum:      checksum,
+		StartedAt:     time.Now(),
+		ExpectedNodes: expectedNodesMap,
+		CompletedCh:   make(chan bool, 1),
+		TimeoutCh:     make(chan bool, 1),
+	}
+
+	h.syncTrackers[syncID] = tracker
+
+	// Start timeout timer
+	go func() {
+		time.Sleep(timeout)
+		select {
+		case tracker.TimeoutCh <- true:
+		default:
+		}
+	}()
+
+	return tracker
+}
+
+// HandleSyncAck processes a sync acknowledgment from a cluster node
+func (h *Handler) HandleSyncAck(nodeName string, ack *api.SoftwareUpdateSyncAck) {
+	h.syncTrackersLock.Lock()
+	defer h.syncTrackersLock.Unlock()
+
+	tracker, exists := h.syncTrackers[ack.SyncID]
+	if !exists {
+		return // Tracker not found or already completed
+	}
+
+	// Mark this node as acknowledged
+	if _, expected := tracker.ExpectedNodes[nodeName]; expected {
+		tracker.ExpectedNodes[nodeName] = true
+	}
+
+	// Check if all nodes have acknowledged
+	allAcked := true
+	for _, acked := range tracker.ExpectedNodes {
+		if !acked {
+			allAcked = false
+			break
+		}
+	}
+
+	if allAcked {
+		select {
+		case tracker.CompletedCh <- true:
+		default:
+		}
+		delete(h.syncTrackers, ack.SyncID)
+	}
+}
+
+// WaitForSyncCompletion waits for either all nodes to acknowledge or timeout
+func (h *Handler) WaitForSyncCompletion(syncID string) (bool, error) {
+	h.syncTrackersLock.RLock()
+	tracker, exists := h.syncTrackers[syncID]
+	h.syncTrackersLock.RUnlock()
+
+	if !exists {
+		return false, fmt.Errorf("sync tracker not found for ID: %s", syncID)
+	}
+
+	select {
+	case <-tracker.CompletedCh:
+		return true, nil // All nodes acknowledged
+	case <-tracker.TimeoutCh:
+		// Clean up the tracker on timeout
+		h.syncTrackersLock.Lock()
+		delete(h.syncTrackers, syncID)
+		h.syncTrackersLock.Unlock()
+		return false, fmt.Errorf("sync operation timed out")
+	}
 }

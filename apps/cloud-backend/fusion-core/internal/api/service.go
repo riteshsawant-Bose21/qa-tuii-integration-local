@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -22,11 +21,12 @@ type API struct {
 	product        fusion.Product
 	project        fusion.Project
 	user           fusion.User
-	organization   fusion.Organization
 	auth           fusion.Auth
 	firmware       fusion.Firmware
+	organization   fusion.Organization
 	authMiddleware middleware.AuthMiddleware
 	appLog         *zap.Logger
+	device         fusion.Device
 }
 
 // Config holds the API server configuration settings.
@@ -45,6 +45,7 @@ func New(cfg *Config,
 	authSvc fusion.Auth,
 	firmwareSvc fusion.Firmware,
 	authMiddleware middleware.AuthMiddleware,
+	deviceSvc fusion.Device,
 	loggers *log.Loggers,
 ) (*API, error) {
 
@@ -62,31 +63,35 @@ func New(cfg *Config,
 	engine.Use(middleware.ApplicationLoggerMiddleware(loggers.AppLogger)) // Add app logger to context
 
 	if productSvc == nil {
-		return nil, errors.New("missing product service")
+		return nil, fmt.Errorf("missing product service")
 	}
 
 	if project == nil {
-		return nil, errors.New("missing project service")
+		return nil, fmt.Errorf("missing project service")
 	}
 
 	if userSvc == nil {
-		return nil, errors.New("missing user service")
+		return nil, fmt.Errorf("missing user service")
 	}
 
 	if organizationSvc == nil {
-		return nil, errors.New("missing organization service")
+		return nil, fmt.Errorf("missing organization service")
 	}
 
 	if authSvc == nil {
-		return nil, errors.New("missing auth service")
+		return nil, fmt.Errorf("missing auth service")
 	}
 
 	if firmwareSvc == nil {
-		return nil, errors.New("missing firmware service")
+		return nil, fmt.Errorf("missing firmware service")
 	}
 
 	if authMiddleware == nil {
-		return nil, errors.New("missing auth middleware")
+		return nil, fmt.Errorf("missing auth middleware")
+	}
+
+	if deviceSvc == nil {
+		return nil, fmt.Errorf("missing device service")
 	}
 
 	api := &API{
@@ -99,6 +104,7 @@ func New(cfg *Config,
 		firmware:       firmwareSvc,
 		authMiddleware: authMiddleware,
 		appLog:         loggers.AppLogger,
+		device:         deviceSvc,
 	}
 
 	api.registerRoutes()
@@ -168,7 +174,7 @@ func (s *API) AppLogger() *zap.Logger {
 func corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Methods", "GET, PATCH, POST, PUT, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 
 		if c.Request.Method == "OPTIONS" {

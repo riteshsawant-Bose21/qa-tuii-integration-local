@@ -81,152 +81,150 @@ class _PeqBandSection extends StatelessWidget {
                 }
                 index -= 1;
                 final _PEQDataPoint row = tableData[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: Row(
-                    spacing: 5,
-                    children: <Widget>[
-                      Container(
-                        width: 25,
+                return SemanticHelper.container(
+                  testId: SemanticHelper.createTestId(SemanticTypes.container, "peq_band_row_$index"),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Row(
+                      spacing: 5,
+                      children: <Widget>[
+                        Container(
+                          width: 25,
 
-                        decoration: BoxDecoration(
-                          color: context.colorScheme.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        padding: const EdgeInsets.all(4),
-                        child: Center(
-                          child: Text(
-                            (index + 1).toString(),
-                            style: context.textTheme.bodySmall?.copyWith(
-                              color: Colors.white,
+                          decoration: BoxDecoration(
+                            color: context.colorScheme.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          padding: const EdgeInsets.all(4),
+                          child: Center(
+                            child: Text(
+                              (index + 1).toString(),
+                              style: context.textTheme.bodySmall?.copyWith(
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      Expanded(
-                        flex: 20,
-                        child: PBDropdown<_BandType>(
-                          semanticId: 'peq_band_type_dropdown',
-                          hintText: "Type",
-                          onChanged: (_BandType value) {
-                            controller.updateBandType(index, value.value);
-                          },
-                          items: _BandType.values,
-                          value: row.bandType.label,
-
-                          itemBuilder: (
-                            BuildContext context,
-                            _BandType option,
-                          ) {
-                            return Text(
-                              option.label,
-                              style: context.textTheme.bodySmall,
-                            );
-                          },
-                        ),
-                      ),
-                      Expanded(
-                        flex: 10,
-                        child: FusionContainer(
-                          color: context.colorScheme.elevation2,
-                          child: PBNumberTextField(
-                            semanticId: 'peq_band_frequency_textfield',
-                            value: row.frequency,
-                            onChanged: (num value) {
-                              controller.updateBandFrequency(index, value);
+                        Expanded(
+                          flex: 20,
+                          child: PBDropdown<_BandType>(
+                            semanticId: 'peq_band_type_dropdown',
+                            hintText: "Type",
+                            onChanged: (_BandType value) {
+                              controller.updateBandType(index, value.value);
                             },
-                            min: 20,
-                            max: 20000,
+                            items: _BandType.values,
+                            value: row.bandType.label,
+
+                            itemBuilder: (
+                              BuildContext context,
+                              _BandType option,
+                            ) {
+                              return Text(
+                                option.label,
+                                style: context.textTheme.bodySmall,
+                              );
+                            },
                           ),
                         ),
-                      ),
-                      Expanded(
-                        flex: 10,
-                        child: DisabledWidgetWrapper(
-                          isDisabled: row.isQDisabled,
+                        Expanded(
+                          flex: 10,
                           child: FusionContainer(
                             color: context.colorScheme.elevation2,
                             child: PBNumberTextField(
-                              semanticId: 'peq_band_q_bw_textfield',
-                              value: row.q,
+                              semanticId: 'peq_band_frequency_textfield',
+                              value: row.frequency,
                               onChanged: (num value) {
-                                controller.updateQ(index, value);
+                                controller.updateBandFrequency(index, value);
                               },
-                              min: 0.1,
-                              max: 10,
+                              min: 20,
+                              max: 20000,
                             ),
                           ),
                         ),
-                      ),
-                      Expanded(
-                        flex: 13,
-                        child: DisabledWidgetWrapper(
-                          isDisabled: row.isGainDisabled,
-                          child:
-                              row.isGainDropdown
-                                  ? PBDropdown<_CutType>(
-                                    semanticId: 'peq_band_gain_dropdown',
-                                    hintText: "0.0",
-                                    onChanged: (_CutType value) {
-                                      controller.updateGain(index, value.value);
-                                    },
-                                    items: _CutType.values,
-                                    value:
-                                        row.cutType?.label ??
-                                        row.gain.toString(),
-                                    itemBuilder: (
-                                      BuildContext context,
-                                      _CutType option,
-                                    ) {
-                                      return Text(
-                                        option.label,
-                                        style: context.textTheme.bodySmall,
-                                      );
-                                    },
-                                  )
-                                  : FusionContainer(
-                                    color: context.colorScheme.elevation2,
-                                    child: PBNumberTextField(
-                                      semanticId: 'peq_band_gain_textfield',
-                                      value: row.gain,
-                                      onChanged: (num value) {
-                                        controller.updateGain(index, value);
+                        Expanded(
+                          flex: 10,
+                          child: DisabledWidgetWrapper(
+                            isDisabled: row.isQDisabled,
+                            child: FusionContainer(
+                              color: context.colorScheme.elevation2,
+                              child: PBNumberTextField(
+                                semanticId: 'peq_band_q_bw_textfield',
+                                value: row.q,
+                                onChanged: (num value) {
+                                  controller.updateQ(index, value);
+                                },
+                                min: 0.1,
+                                max: 10,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 13,
+                          child: DisabledWidgetWrapper(
+                            isDisabled: row.isGainDisabled,
+                            child:
+                                row.isGainDropdown
+                                    ? PBDropdown<_CutType>(
+                                      semanticId: 'peq_band_gain_dropdown',
+                                      hintText: "0.0",
+                                      onChanged: (_CutType value) {
+                                        controller.updateGain(index, value.value);
                                       },
-                                      min: -24,
-                                      max: 24,
+                                      items: _CutType.values,
+                                      value: row.cutType?.label ?? row.gain.toString(),
+                                      itemBuilder: (
+                                        BuildContext context,
+                                        _CutType option,
+                                      ) {
+                                        return Text(
+                                          option.label,
+                                          style: context.textTheme.bodySmall,
+                                        );
+                                      },
+                                    )
+                                    : FusionContainer(
+                                      color: context.colorScheme.elevation2,
+                                      child: PBNumberTextField(
+                                        semanticId: 'peq_band_gain_textfield',
+                                        value: row.gain,
+                                        onChanged: (num value) {
+                                          controller.updateGain(index, value);
+                                        },
+                                        min: -24,
+                                        max: 24,
+                                      ),
                                     ),
-                                  ),
+                          ),
                         ),
-                      ),
-                      Expanded(
-                        flex: 7,
-                        child: FusionSwitch(
-                          semanticId: 'peq_band_bypass_switch',
-                          value: row.bypass,
-                          inactiveTrackColor: context.colorScheme.elevation2,
-                          inactiveThumbColor: context.colorScheme.elevation3,
+                        Expanded(
+                          flex: 7,
+                          child: FusionSwitch(
+                            semanticId: 'peq_band_bypass_switch',
+                            value: row.bypass,
+                            inactiveTrackColor: context.colorScheme.elevation2,
+                            inactiveThumbColor: context.colorScheme.elevation3,
 
-                          width: 60,
-                          height: 35,
-                          onChanged: (bool value) {
-                            controller.updateBypass(index, value);
+                            width: 60,
+                            height: 35,
+                            onChanged: (bool value) {
+                              controller.updateBypass(index, value);
+                            },
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () {
+                            controller.removeBand(index);
                           },
+                          child: Icon(
+                            LucideIcons.trash200,
+                            size: 16,
+                            color: controller.canDelete ? context.colorScheme.iconDefault : context.colorScheme.iconDisabled,
+                          ),
                         ),
-                      ),
-                      InkWell(
-                        onTap: () {
-                          controller.removeBand(index);
-                        },
-                        child: Icon(
-                          LucideIcons.trash200,
-                          size: 16,
-                          color:
-                              controller.canDelete
-                                  ? context.colorScheme.iconDefault
-                                  : context.colorScheme.iconDisabled,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },

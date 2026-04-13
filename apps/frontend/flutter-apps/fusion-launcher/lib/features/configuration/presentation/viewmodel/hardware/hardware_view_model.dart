@@ -92,6 +92,19 @@ extension HardwareViewModel on ProjectViewModel {
           );
         }
       }
+
+      // if (hardware is! Speaker && hardware is! HardwareRack) {
+      //   final List<WiringConnectionModel> newConnections = AutoWiringUseCase().autoWireForHardware(
+      //     component: hardware,
+      //     allComponents: hardwareComponents,
+      //     circuits: circuits,
+      //     existingConnections: getAllWiringConnections(),
+      //   );
+
+      //   for (final WiringConnectionModel connection in newConnections) {
+      //     addWiringConnection(connection: connection, autoSave: false);
+      //   }
+      // }
       if (autoSave) {
         saveProject();
       }
@@ -795,6 +808,7 @@ extension HardwareViewModel on ProjectViewModel {
           SourceConnectionType.xlr => PortType.xlrOutput,
           SourceConnectionType.hdmi => PortType.hdmiOut,
           SourceConnectionType.rca => PortType.rcaOutput,
+          SourceConnectionType.endpoint => PortType.endpointOutput,
         };
         return Source(
           locationEntity: locationEntity,
@@ -1041,7 +1055,7 @@ extension HardwareViewModel on ProjectViewModel {
       }
       final List<SpeakerProduct> speaker = serviceLocator<ProductQueryViewModel>().speakers;
       final SpeakerProduct hardware = speaker.firstWhere((SpeakerProduct element) => element.productId == productId);
-      return serviceLocator<ProductQueryViewModel>().getImagePath(hardware.assets.assets.values.first.first);
+      return serviceLocator<ProductQueryViewModel>().getProductImage(hardware.productId);
     } catch (e) {
       return null;
     }

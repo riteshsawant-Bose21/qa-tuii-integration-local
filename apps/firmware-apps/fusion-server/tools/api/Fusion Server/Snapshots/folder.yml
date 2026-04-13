@@ -1,6 +1,4 @@
 info:
   name: Snapshots
   type: folder
-  seq: 12
-
-request: {}
+  seq: 11

@@ -1,23 +1,23 @@
 
-# List snapshots
+# List time machine entries
 curl --request GET \
-     --url http://192.168.2.100:8080/snapshots
+     --url http://192.168.2.100:8080/time-machine
 
-# Delete snapshot
+# Delete time machine entry
 curl --request DELETE \
-     --url http://192.168.2.100:8080/snapshots/:name
+     --url http://192.168.2.100:8080/time-machine/:name
 
-# Create snapshot
+# Create time machine entry
 curl --request POST \
-     --url http://192.168.2.100:8080/snapshots/:name
+     --url http://192.168.2.100:8080/time-machine/:name
 
-# Activate snapshot
+# Activate time machine entry
 curl --request POST \
-  --url http://192.168.2.100:8080/snapshots/activate/:name
+  --url http://192.168.2.100:8080/time-machine/activate/:name
 
-# Get active snapshot
+# Get active time machine entry
 curl --request GET \
-  --url http://192.168.2.100:8080/snapshots/meta/active
+  --url http://192.168.2.100:8080/time-machine/meta/active
 
 # Set data
 curl --request POST \
@@ -25,9 +25,9 @@ curl --request POST \
      --header "Content-Type: application/json" \
      --data-binary @analog_in_config.json
 
-# Get snapshot data
+# Get time machine entry data
 curl --request GET \
-     --url http://192.168.2.100:8080/snapshots/:name | jq .
+     --url http://192.168.2.100:8080/time-machine/:name | jq .
 
 
 devices[0].dsp_static_config.parameter_settings[*]
