@@ -5,12 +5,14 @@ import 'package:fusion_launcher/features/fusion_canvas/state/tools/select_tool_s
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canvas_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_tool_viewmodel.dart';
+import 'package:fusion_launcher/features/projects/presentation/project_work_area.dart';
 import 'package:fusion_launcher/features/wiring_design/algorithm/zone_manager.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../fusion_canvas/view/fusion_canvas.dart';
+import '../../fusion_canvas/viewmodel/fusion_canvas_state_viewmodel.dart';
 import '../usecase/auto_layout_usecase.dart';
 
 class WiringToolBar extends StatelessWidget {
@@ -45,6 +47,9 @@ class WiringToolBar extends StatelessWidget {
             semanticId: "fit_to_screen",
             iconData: Icons.fit_screen,
             onTap: () {
+              context.read<FusionCanvasStateViewModel>().fitToScreen(
+                padding: EdgeInsets.only(top: WorkAreaScope.of(context).appBarHeight + 20, bottom: 20 + 60),
+              );
               // if (painter != null) {
               //   painter.fitToViewport();
               // }
