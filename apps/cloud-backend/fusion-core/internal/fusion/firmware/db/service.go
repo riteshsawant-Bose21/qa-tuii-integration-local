@@ -104,26 +104,28 @@ func (s *Service) InsertBundle(ctx context.Context, payload apiTypes.NotifyBundl
 
 func (s *Service) ApproveBundle(ctx context.Context, bundleID string, approvedBy string, approvalStatus string) error {
 	if bundleID == "" {
-		return errors.New("bundleID cannot be empty")
+		return fmt.Errorf("bundleID cannot be empty")
 	}
 	if approvedBy == "" {
-		return errors.New("approvedBy cannot be empty")
+		return fmt.Errorf("approvedBy cannot be empty")
 	}
 
+	now := time.Now()
 	bundle := &models.Bundle{
 		ID:                      bundleID,
 		ApprovalStatus:          approvalStatus,
 		ApprovalStatusChangedBy: null.StringFrom(approvedBy),
-		ApprovalStatusChangedAt: null.TimeFrom(time.Now()),
+		ApprovalStatusChangedAt: null.TimeFrom(now),
+		UpdatedAt:               now,
 	}
 
-	_, err := bundle.Update(ctx, s.db, boil.Whitelist(models.BundleColumns.ApprovalStatus, models.BundleColumns.ApprovalStatusChangedBy, models.BundleColumns.ApprovalStatusChangedAt))
+	_, err := bundle.Update(ctx, s.db, boil.Whitelist(models.BundleColumns.ApprovalStatus, models.BundleColumns.ApprovalStatusChangedBy, models.BundleColumns.ApprovalStatusChangedAt, models.BundleColumns.UpdatedAt))
 	return err
 }
 
 func (s *Service) GetBundleByID(ctx context.Context, bundleID string) (*models.Bundle, error) {
 	if bundleID == "" {
-		return nil, errors.New("bundleID cannot be empty")
+		return nil, fmt.Errorf("bundleID cannot be empty")
 	}
 
 	bundle, err := models.Bundles(
@@ -141,17 +143,24 @@ func (s *Service) GetBundleByID(ctx context.Context, bundleID string) (*models.B
 }
 
 func (s *Service) GetLatestBundleCompatibleWithFirmware(ctx context.Context, currentFirmwareVersion string, channel string) (*models.Bundle, error) {
-	parsedFirmware, err := s.toVersionArray(currentFirmwareVersion)
+	currentBundleVersionArray, err := s.toVersionArray(currentFirmwareVersion)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse current firmware version: %w", err)
+	}
+
+	parsedVersion, err := validation.ParseSemanticVersion(currentFirmwareVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse current firmware version: %w", err)
 	}
 
 	queryMods := []qm.QueryMod{
 		models.BundleWhere.ApprovalStatus.EQ(models.BundleApprovalStatusEnumAPPROVED),
-		models.BundleWhere.VersionArray.GT(parsedFirmware),
+		// Match bundles with higher version_array, OR same version_array with higher prerelease_num
+		qm.Where("(version_array > ? OR (version_array = ? AND prerelease_num > ?))",
+			currentBundleVersionArray, currentBundleVersionArray, parsedVersion.PrereleaseNum),
 		qm.Expr(
 			models.BundleWhere.MinPrevVersion.EQ("0.0.0"),
-			qm.Or2(models.BundleWhere.MinPrevVersionArray.LTE(parsedFirmware)),
+			qm.Or2(models.BundleWhere.MinPrevVersionArray.LTE(currentBundleVersionArray)),
 		),
 		qm.OrderBy("version_array DESC, prerelease_num DESC NULLS LAST"),
 	}
@@ -176,26 +185,33 @@ func (s *Service) GetLatestBundleCompatibleWithFirmware(ctx context.Context, cur
 }
 
 func (s *Service) GetLatestCompatibleBundle(ctx context.Context, currentFirmwareVersion string, currentDesktopAppVersion string, channel string) (*models.Bundle, error) {
-	parsedCurrentFirmwareVersion, err := s.toVersionArray(currentFirmwareVersion)
+	currentBundleVersionArray, err := s.toVersionArray(currentFirmwareVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse current firmware version: %w", err)
 	}
 
-	parsedCurrentDesktopAppVersion, err := s.toVersionArray(currentDesktopAppVersion)
+	currentDesktopAppVersionArray, err := s.toVersionArray(currentDesktopAppVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse current desktop app version: %w", err)
 	}
 
+	parsedVersion, err := validation.ParseSemanticVersion(currentFirmwareVersion)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse current firmware version: %w", err)
+	}
+
 	queryMods := []qm.QueryMod{
 		models.BundleWhere.ApprovalStatus.EQ(models.BundleApprovalStatusEnumAPPROVED),
-		models.BundleWhere.VersionArray.GT(parsedCurrentFirmwareVersion),
+		// Match bundles with higher version_array, OR same version_array with higher prerelease_num
+		qm.Where("(version_array > ? OR (version_array = ? AND prerelease_num > ?))",
+			currentBundleVersionArray, currentBundleVersionArray, parsedVersion.PrereleaseNum),
 		qm.Expr(
 			models.BundleWhere.MinPrevVersion.EQ("0.0.0"),
-			qm.Or2(models.BundleWhere.MinPrevVersionArray.LTE(parsedCurrentFirmwareVersion)),
+			qm.Or2(models.BundleWhere.MinPrevVersionArray.LTE(currentBundleVersionArray)),
 		),
 		qm.Expr(
 			models.BundleWhere.MinDesktopAppVersion.EQ("0.0.0"),
-			qm.Or2(models.BundleWhere.MinDesktopAppVersionArray.LTE(parsedCurrentDesktopAppVersion)),
+			qm.Or2(models.BundleWhere.MinDesktopAppVersionArray.LTE(currentDesktopAppVersionArray)),
 		),
 		qm.OrderBy("version_array DESC, prerelease_num DESC NULLS LAST"),
 	}
@@ -221,14 +237,14 @@ func (s *Service) GetLatestCompatibleBundle(ctx context.Context, currentFirmware
 
 func (s *Service) InsertBundleUpdateStatus(ctx context.Context, payload *apiTypes.LogBundleUpdateStatusPayload) error {
 	status := &models.BundleUpdateStatus{
-		ID:              uuid.New().String(),
-		UpdateID:        payload.UpdateID,
-		ProjectID:       payload.ProjectID,
-		BundleVersion:   payload.BundleVersion,
-		PreviousVersion: null.NewString(payload.PreviousVersion, payload.PreviousVersion != ""),
-		Status:          payload.Status,
-		LauncherVersion: null.NewString(payload.LauncherVersion, payload.LauncherVersion != ""),
-		InstalledAt:     payload.InstalledAt,
+		ID:                    uuid.New().String(),
+		UpdateID:              payload.UpdateID,
+		ProjectID:             payload.ProjectID,
+		BundleVersion:         payload.BundleVersion,
+		PreviousBundleVersion: null.NewString(payload.PreviousBundleVersion, payload.PreviousBundleVersion != ""),
+		Status:                payload.Status,
+		DesktopAppVersion:     null.NewString(payload.DesktopAppVersion, payload.DesktopAppVersion != ""),
+		InstalledAt:           payload.InstalledAt,
 	}
 
 	return status.Insert(ctx, s.db, boil.Infer())

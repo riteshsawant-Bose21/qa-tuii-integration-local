@@ -1,6 +1,4 @@
 info:
   name: Metrics
   type: folder
-  seq: 9
-
-request: {}
+  seq: 8

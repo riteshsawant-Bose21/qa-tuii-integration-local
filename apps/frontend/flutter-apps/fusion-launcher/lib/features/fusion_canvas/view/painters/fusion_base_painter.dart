@@ -38,6 +38,7 @@ abstract class FusionBasePainter {
     required Rect rect,
     required FusionCanvasPainter painter,
     Paint? paint,
+    Color? color,
   }) {
     final ui.Image? image = imagePath.trim().isNotEmpty ? painter.getImage(imagePath) : null;
     if (image != null) {
@@ -48,7 +49,14 @@ abstract class FusionBasePainter {
         image.height.toDouble(),
       );
 
-      canvas.drawImageRect(image, src, rect, paint ?? Paint());
+      canvas.drawImageRect(
+        image,
+        src,
+        rect,
+        paint ?? Paint()
+          ..colorFilter = color != null ? ColorFilter.mode(color, BlendMode.srcIn) : paint?.colorFilter,
+      );
+
       return true;
     }
     return false;
@@ -181,7 +189,7 @@ abstract class FusionBasePainter {
 
     if (painter.toolState is LayerDraggingState) {
       final LayerDraggingState draggingState = painter.toolState as LayerDraggingState;
-      if (draggingState.layerId == layerId) {
+      if (draggingState.layerIds.contains(layerId)) {
         return point.position + draggingState.delta + _getSnapAdjustment(painter);
       }
     }
@@ -191,13 +199,13 @@ abstract class FusionBasePainter {
   ui.Offset transformOffsetForLayer(Offset offset, FusionCanvasPainter painter, String? layerId) {
     if (painter.toolState is LayerDraggingState) {
       final LayerDraggingState draggingState = painter.toolState as LayerDraggingState;
-      if (draggingState.layerId == layerId) {
+      if (draggingState.layerIds.contains(layerId)) {
         return offset + draggingState.delta + _getSnapAdjustment(painter);
       }
     }
     if (painter.toolState is PointsDraggingState) {
       final PointsDraggingState draggingState = painter.toolState as PointsDraggingState;
-      if (draggingState.layerId == layerId) {
+      if (draggingState.selectedLayerIds.contains(layerId)) {
         return offset + draggingState.delta + _getSnapAdjustment(painter);
       }
     }
