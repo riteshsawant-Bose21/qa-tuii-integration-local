@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+import 'package:fusion_web/features/users/domain/entities/user_entity.dart';
 import 'package:fusion_web/features/devices/data/models/devices_model.dart';
 import 'package:fusion_web/features/devices/presentation/pages/device_detail_page.dart';
 import 'package:fusion_web/features/devices/presentation/pages/devices_page.dart';
@@ -6,6 +8,7 @@ import 'package:fusion_web/features/organizations/presentation/pages/organizatio
 import 'package:fusion_web/features/projects/presentation/pages/project_detail_page.dart';
 import 'package:fusion_web/features/roles/presentation/pages/roles_page.dart';
 import 'package:fusion_web/features/settings/presentation/pages/settings_page.dart';
+import 'package:fusion_web/features/users/presentation/pages/user_profile_page.dart';
 import 'package:fusion_web/features/users/presentation/pages/users_page.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
@@ -52,7 +55,8 @@ final GoRouter appRouter = GoRouter(
     // LOGIN (outside shell)
     GoRoute(
       path: AppConstants.loginRoute,
-      builder: (context, state) => const LoginPage(),
+      pageBuilder: (context, state) =>
+          const NoTransitionPage(child: LoginPage()),
     ),
 
     // SHELL ROUTE
@@ -66,65 +70,70 @@ final GoRouter appRouter = GoRouter(
       routes: [
         GoRoute(
           path: AppConstants.dashboardRoute,
-          builder: (_, __) => const PartnerDashboardPage(),
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: PartnerDashboardPage()),
         ),
 
         GoRoute(
           path: AppConstants.projectsRoute,
-          builder: (_, __) => const ProjectsPage(),
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: ProjectsPage()),
           routes: [
             GoRoute(
               path: ':id',
-              builder: (context, state) {
+              pageBuilder: (context, state) {
                 final id = state.pathParameters['id']!;
-                return ProjectDetailPage(projectId: id);
+                return NoTransitionPage(
+                  child: ProjectDetailPage(projectId: id),
+                );
               },
               routes: [
                 GoRoute(
                   path: AppConstants.devicesRoute + "/:deviceId",
-                  builder: (context, state) {
-                    final id = state.pathParameters['deviceId']!;
+                  pageBuilder: (context, state) {
                     final device = state.extra as Device;
 
-                    return DeviceDetailPage(device: device);
+                    return NoTransitionPage(
+                      child: DeviceDetailPage(device: device),
+                    );
                   },
                 ),
               ],
             ),
-
           ],
         ),
 
-        GoRoute(
-          path: '${AppConstants.projectsRoute}/:id',
-          builder: (context, state) {
-            final id = state.pathParameters['id']!;
-            return ProjectDetailPage(projectId: id);
-          },
-        ),
-
+        //         GoRoute(
+        //   path: '${AppConstants.projectsRoute}/:id',
+        //   pageBuilder: (context, state) {
+        //     final id = state.pathParameters['id']!;
+        //     return NoTransitionPage(
+        //       child: ProjectDetailPage(projectId: id),
+        //     );
+        //   },
+        // ),
         GoRoute(
           path: AppConstants.devicesRoute,
-          builder: (_, __) => const DevicesPage(),
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: DevicesPage()),
           routes: [
             GoRoute(
               name: 'device_detail',
               path: ':deviceId',
-              builder: (context, state) {
-                final id = state.pathParameters['deviceId']!;
+              pageBuilder: (context, state) {
                 final device = state.extra as Device;
 
-                return DeviceDetailPage(device: device);
+                return NoTransitionPage(
+                  child: DeviceDetailPage(device: device),
+                );
               },
-              routes: [],
             ),
           ],
         ),
-
-
         GoRoute(
           path: AppConstants.usersRoute,
-          builder: (_, __) => const UsersPage(),
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: UsersPage()),
         ),
 
         GoRoute(
@@ -133,21 +142,29 @@ final GoRouter appRouter = GoRouter(
         ),
 
         GoRoute(
-          path: '${AppConstants.organizationsRoute}/:id',
-          builder: (context, state) {
-            final id = state.pathParameters['id']!;
-            return OrganizationProfilePage(organizationId: id);
-          },
+          path: AppConstants.organizationsRoute,
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: OrganizationsPage()),
         ),
 
         GoRoute(
           path: AppConstants.rolesRoute,
-          builder: (_, __) => const RolesPage(),
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: RolesPage()),
+        ),
+        GoRoute(
+          path: AppConstants.settingsRoute,
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: SettingsPage()),
         ),
 
         GoRoute(
-          path: AppConstants.settingsRoute,
-          builder: (_, __) => const SettingsPage(),
+          path: '/users/:id',
+          pageBuilder: (context, state) {
+            final user = state.extra as UserEntity;
+
+            return MaterialPage(child: UserProfilePage(user: user));
+          },
         ),
       ],
     ),

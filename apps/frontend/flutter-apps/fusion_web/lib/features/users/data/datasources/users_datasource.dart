@@ -174,7 +174,7 @@ class UsersRemoteDataSource implements UsersDataSource {
             (u) =>
                 u.name.toLowerCase().contains(query.toLowerCase()) ||
                 u.email.toLowerCase().contains(query.toLowerCase()) ||
-                u.role.toLowerCase().contains(query.toLowerCase()),
+                u.roles.any((r) => r.toLowerCase().contains(query.toLowerCase())),
           )
           .toList();
     }
@@ -448,7 +448,7 @@ class UsersLocalDataSource implements UsersDataSource {
             (u) =>
                 u.name.toLowerCase().contains(query.toLowerCase()) ||
                 u.email.toLowerCase().contains(query.toLowerCase()) ||
-                u.role.toLowerCase().contains(query.toLowerCase()),
+                u.roles.any((r) => r.toLowerCase().contains(query.toLowerCase())),
           )
           .toList();
     }

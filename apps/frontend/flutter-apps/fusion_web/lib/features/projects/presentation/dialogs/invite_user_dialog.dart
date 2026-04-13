@@ -442,8 +442,7 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
                                                 ),
                                               ),
                                               child: Text(
-                                                user.role,
-                                                style: const TextStyle(
+user.roles.join(', '),                                                style: const TextStyle(
                                                   fontSize: 11,
                                                   fontWeight: FontWeight.w500,
                                                 ),

@@ -38,12 +38,13 @@ class UsersRepositoryImpl implements UsersRepository {
     try {
       final remoteData = await remoteDataSource.getUsers();
       localDataSource.cacheUsers(remoteData);
-      return remoteData;
+      return remoteData.map((e) => e.toEntity()).toList();
     } catch (e) {
       try {
-        return await localDataSource.getUsers();
+        final local = await localDataSource.getUsers();
+        return local.map((e) => e.toEntity()).toList();
       } catch (e) {
-        return UserModel.mockUsers();
+        return UserModel.mockUsers().map((e) => e.toEntity()).toList();
       }
     }
   }
@@ -51,12 +52,14 @@ class UsersRepositoryImpl implements UsersRepository {
   @override
   Future<UserEntity> getUserById(String id) async {
     try {
-      return await remoteDataSource.getUserById(id);
+      final user = await remoteDataSource.getUserById(id);
+      return user.toEntity();
     } catch (e) {
       try {
-        return await localDataSource.getUserById(id);
+        final user = await localDataSource.getUserById(id);
+        return user.toEntity();
       } catch (e) {
-        return UserModel.mockUsers().first;
+        return UserModel.mockUsers().first.toEntity();
       }
     }
   }
@@ -68,9 +71,10 @@ class UsersRepositoryImpl implements UsersRepository {
     try {
       final result = await remoteDataSource.createUser(userModel);
       await localDataSource.createUser(result);
-      return result;
+      return result.toEntity();
     } catch (e) {
-      return await localDataSource.createUser(userModel);
+      final local = await localDataSource.createUser(userModel);
+      return local.toEntity();
     }
   }
 
@@ -81,9 +85,10 @@ class UsersRepositoryImpl implements UsersRepository {
     try {
       final result = await remoteDataSource.updateUser(userModel);
       await localDataSource.updateUser(result);
-      return result;
+      return result.toEntity();
     } catch (e) {
-      return await localDataSource.updateUser(userModel);
+      final local = await localDataSource.updateUser(userModel);
+return local.toEntity();
     }
   }
 
@@ -100,20 +105,24 @@ class UsersRepositoryImpl implements UsersRepository {
   @override
   Future<List<UserEntity>> searchUsers(String query) async {
     try {
-      return await remoteDataSource.searchUsers(query);
+      final users = await remoteDataSource.searchUsers(query);
+      return users.map((e) => e.toEntity()).toList();
     } catch (e) {
       try {
-        return await localDataSource.searchUsers(query);
+        final users = await localDataSource.searchUsers(query);
+        return users.map((e) => e.toEntity()).toList();
       } catch (e) {
         final users = UserModel.mockUsers();
         return users
-            .where(
-              (u) =>
-                  u.name.toLowerCase().contains(query.toLowerCase()) ||
-                  u.email.toLowerCase().contains(query.toLowerCase()) ||
-                  u.role.toLowerCase().contains(query.toLowerCase()),
-            )
-            .toList();
+    .where(
+      (u) =>
+          u.name.toLowerCase().contains(query.toLowerCase()) ||
+          u.email.toLowerCase().contains(query.toLowerCase()) ||
+          u.roles.any((r) =>
+              r.toLowerCase().contains(query.toLowerCase())),
+    )
+    .map((e) => e.toEntity())
+    .toList();
       }
     }
   }
@@ -121,7 +130,8 @@ class UsersRepositoryImpl implements UsersRepository {
   @override
   Future<UserEntity> inviteUser(InviteUserParams params) async {
     try {
-      return await remoteDataSource.inviteUser(params);
+      final user = await remoteDataSource.inviteUser(params);
+      return user.toEntity();
     } catch (e) {
       // Create a mock invited user for local testing
       final newUser = UserModel(
@@ -138,8 +148,7 @@ class UsersRepositoryImpl implements UsersRepository {
         isActive: false,
       );
       await localDataSource.createUser(newUser);
-      return newUser;
-    }
+return newUser.toEntity();    }
   }
 
   @override
@@ -167,7 +176,8 @@ class UsersRepositoryImpl implements UsersRepository {
   @override
   Future<UserEntity> updateUserRoles(UpdateUserRoleParams params) async {
     try {
-      return await remoteDataSource.updateUserRoles(params);
+final user = await remoteDataSource.updateUserRoles(params);
+return user.toEntity();
     } catch (e) {
       final user = await getUserById(params.userId);
       final updatedUser = user.copyWith(roles: params.roles);
@@ -181,7 +191,8 @@ class UsersRepositoryImpl implements UsersRepository {
     List<String> projectIds,
   ) async {
     try {
-      return await remoteDataSource.assignUserToProjects(userId, projectIds);
+     final user = await remoteDataSource.assignUserToProjects(userId, projectIds);
+     return user.toEntity();
     } catch (e) {
       final user = await getUserById(userId);
       final updatedProjects = [
@@ -199,7 +210,8 @@ class UsersRepositoryImpl implements UsersRepository {
     List<String> projectIds,
   ) async {
     try {
-      return await remoteDataSource.removeUserFromProjects(userId, projectIds);
+      final user = await remoteDataSource.removeUserFromProjects(userId, projectIds);
+      return user.toEntity();
     } catch (e) {
       final user = await getUserById(userId);
       final updatedProjects = user.associatedProjects
@@ -213,7 +225,8 @@ class UsersRepositoryImpl implements UsersRepository {
   @override
   Future<UserEntity> activateUser(String userId) async {
     try {
-      return await remoteDataSource.activateUser(userId);
+      final user = await remoteDataSource.activateUser(userId);
+      return user.toEntity();
     } catch (e) {
       final user = await getUserById(userId);
       final updatedUser = user.copyWith(
@@ -227,7 +240,8 @@ class UsersRepositoryImpl implements UsersRepository {
   @override
   Future<UserEntity> deactivateUser(String userId) async {
     try {
-      return await remoteDataSource.deactivateUser(userId);
+      final user = await remoteDataSource.deactivateUser(userId);
+      return user.toEntity();
     } catch (e) {
       final user = await getUserById(userId);
       final updatedUser = user.copyWith(
@@ -241,7 +255,8 @@ class UsersRepositoryImpl implements UsersRepository {
   @override
   Future<List<UserEntity>> filterUsers(UserFilterParams params) async {
     try {
-      return await remoteDataSource.filterUsers(params);
+     final users = await remoteDataSource.filterUsers(params);
+     return users.map((u) => u.toEntity()).toList();
     } catch (e) {
       final users = await getUsers();
       var filtered = users;

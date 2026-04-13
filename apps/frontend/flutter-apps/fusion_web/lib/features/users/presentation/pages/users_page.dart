@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_web/features/common-widgets/page_header.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:data_table_2/data_table_2.dart';
 import 'package:intl/intl.dart';
@@ -470,7 +471,7 @@ class _UsersPageState extends State<UsersPage> {
                       DataCell(_buildLastLoginCell(user.lastLoginAt)),
                       DataCell(_buildActionsCell(user)),
                     ],
-                    onTap: () => _showUserProfile(user),
+                   onTap: () => _openUserProfile(user),
                   );
                 }).toList(),
               ),
@@ -793,18 +794,12 @@ class _UsersPageState extends State<UsersPage> {
     return email;
   }
 
-  void _showUserProfile(UserEntity user) {
-    showDialog(
-      context: context,
-      builder: (context) => UserProfileDialog(
-        user: user,
-        onEdit: () => _showEditUserDialog(user),
-        onActivate: () => _activateUser(user),
-        onDeactivate: () => _deactivateUser(user),
-        onResendInvite: () => _resendInvite(user),
-      ),
-    );
-  }
+void _openUserProfile(UserEntity user) {
+  context.push(
+    '/users/${user.id}',
+    extra: user,
+  );
+}
 
   void _showEditUserDialog(UserEntity user) {
     showDialog(
@@ -827,7 +822,7 @@ class _UsersPageState extends State<UsersPage> {
   void _handleUserAction(String action, UserEntity user) {
     switch (action) {
       case 'view':
-        _showUserProfile(user);
+        _openUserProfile(user);
         break;
       case 'edit':
         _showEditUserDialog(user);

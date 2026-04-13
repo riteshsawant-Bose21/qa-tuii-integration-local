@@ -1,24 +1,41 @@
 import 'package:fusion_web/features/users/domain/entities/user_entity.dart';
 
 // User Model - Data layer representation
-class UserModel extends UserEntity {
+class UserModel {
+  final String id;
+  final String name;
+  final String email;
+  final List<String> roles;
+  final UserStatus status;
+  final UserType userType;
+  final DateTime createdAt;
+  final DateTime? lastLoginAt;
+  final DateTime? inviteDate;
+  final String? avatar;
+  final List<String> permissions;
+  final List<String> associatedProjects;
+  final String? organizationId;
+  final String? phone;
+  final Map<String, dynamic>? activityHistory;
+  final bool isActive;
+
   const UserModel({
-    required super.id,
-    required super.name,
-    required super.email,
-    required super.roles,
-    required super.status,
-    required super.userType,
-    required super.createdAt,
-    super.lastLoginAt,
-    super.inviteDate,
-    super.avatar,
-    required super.permissions,
-    super.associatedProjects = const [],
-    super.organizationId,
-    super.phone,
-    super.activityHistory,
-    super.isActive = true,
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.roles,
+    required this.status,
+    required this.userType,
+    required this.createdAt,
+    this.lastLoginAt,
+    this.inviteDate,
+    this.avatar,
+    required this.permissions,
+    this.associatedProjects = const [],
+    this.organizationId,
+    this.phone,
+    this.activityHistory,
+    this.isActive = true,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -90,8 +107,10 @@ class UserModel extends UserEntity {
 
     final statusStr = getString(json['status'], 'pending');
     final userTypeStr = getString(json['user_type'] ?? json['type'], 'viewer');
-    final isActiveValue = json['is_active'] ?? json['isActive'] ?? 
-                          (statusStr.toLowerCase() == 'active');
+    final isActiveValue =
+        json['is_active'] ??
+        json['isActive'] ??
+        (statusStr.toLowerCase() == 'active');
 
     return UserModel(
       id: getString(json['id'], ''),
@@ -116,21 +135,61 @@ class UserModel extends UserEntity {
           json['avatar'] as String? ??
           json['profilePicture'] as String? ??
           json['photo'] as String?,
-      permissions: getStringList(
-        json['permissions'] ?? json['scopes'],
-      ),
+      permissions: getStringList(json['permissions'] ?? json['scopes']),
       associatedProjects: getStringList(
         json['associated_projects'] ?? json['projects'] ?? json['project_ids'],
       ),
-      organizationId: json['organization_id'] as String? ?? 
-                      json['org_id'] as String?,
+      organizationId:
+          json['organization_id'] as String? ?? json['org_id'] as String?,
       phone: json['phone'] as String? ?? json['phone_number'] as String?,
       activityHistory: getActivityHistory(json['activity_history']),
-      isActive: isActiveValue is bool ? isActiveValue : 
-                (isActiveValue.toString().toLowerCase() == 'true'),
+      isActive: isActiveValue is bool
+          ? isActiveValue
+          : (isActiveValue.toString().toLowerCase() == 'true'),
     );
   }
 
+  UserEntity toEntity() {
+    return UserEntity(
+      id: id,
+      name: name,
+      email: email,
+      roles: roles,
+      status: status,
+      userType: userType,
+      createdAt: createdAt,
+      lastLoginAt: lastLoginAt,
+      inviteDate: inviteDate,
+      avatar: avatar,
+      permissions: permissions,
+      associatedProjects: associatedProjects,
+      organizationId: organizationId,
+      phone: phone,
+      activityHistory: activityHistory,
+      isActive: isActive,
+    );
+  }
+
+  factory UserModel.fromEntity(UserEntity user) {
+    return UserModel(
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      roles: user.roles,
+      status: user.status,
+      userType: user.userType,
+      createdAt: user.createdAt,
+      lastLoginAt: user.lastLoginAt,
+      inviteDate: user.inviteDate,
+      avatar: user.avatar,
+      permissions: user.permissions,
+      associatedProjects: user.associatedProjects,
+      organizationId: user.organizationId,
+      phone: user.phone,
+      activityHistory: user.activityHistory,
+      isActive: user.isActive,
+    );
+  }
   Map<String, dynamic> toJson() {
     return {
       'id': id,
