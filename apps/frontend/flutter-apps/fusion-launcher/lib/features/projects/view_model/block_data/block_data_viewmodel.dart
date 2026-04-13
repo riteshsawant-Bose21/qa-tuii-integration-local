@@ -38,6 +38,23 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
 
   StreamSubscription<ResponseCallback<dynamic>>? _webSocketSubscription;
 
+  /// Tracks which block+param combos the user is *currently* dragging/typing.
+  /// Key: "$blockId.$parameter"  Value: debounce Timer
+  /// While an entry exists, incoming server values for that key are ignored.
+  final Map<String, Timer> _activeInteractions = <String, Timer>{};
+
+  /// How long after the user's LAST input before we consider them "done"
+  /// and allow server values to flow back in.
+  /// Tune this to be slightly longer than your server round-trip.
+  static const Duration _interactionCooldown = Duration(milliseconds: 10000);
+
+  /// Debounce timers — coalesce rapid updates before sending to server.
+  /// Key: "$blockId.$parameter"  Value: (timer, latest value, dimension)
+  final Map<String, ({Timer timer, dynamic value, int? dimension})> _pendingSends = <String, ({int? dimension, Timer timer, dynamic value})>{};
+
+  /// How long to wait after the last input before actually sending to server.
+  static const Duration _sendDebounce = Duration(milliseconds: 150);
+
   /// Listens to [ProjectViewModel] state changes and reacts to
   /// [isInControlMode] flipping on/off.
   StreamSubscription<dynamic>? _controlModeSubscription;
@@ -239,9 +256,6 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
   void _onDataReceived(ResponseCallback<dynamic> message) {
     _lastDataReceivedAt = DateTime.now();
 
-    print("[BlockData] Received WebSocket message: success=${message.success}, data=${message.data}");
-
-    // If we were in a "disconnected" state, mark as reconnected.
     if (!state.isConnected && !isClosed) {
       emit(state.copyWith(isConnected: true, clearInactiveReason: true));
     }
@@ -252,36 +266,51 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
       final dynamic rawData = message.data;
       if (rawData is! Map<String, dynamic>) return;
 
-      // Only process config-type responses; ignore other message types.
-      // Initial subscription response uses 'config'; live push updates use 'config_update'.
       final String? type = rawData['type'] as String?;
       if (type != 'config' && type != 'config_update') return;
 
-      // Navigate into data → settings → audio.
       final Map<String, dynamic>? data = rawData['data'] as Map<String, dynamic>?;
-      if (data == null) return;
-
-      final Map<String, dynamic>? settings = data['settings'] as Map<String, dynamic>?;
-      if (settings == null) return;
-
-      final Map<String, dynamic>? audio = settings['audio'] as Map<String, dynamic>?;
+      final Map<String, dynamic>? settings = data?['settings'] as Map<String, dynamic>?;
+      final Map<String, dynamic>? audio = settings?['audio'] as Map<String, dynamic>?;
       if (audio == null) return;
 
-      // Merge each block's parameter data into our state map.
       final Map<String, Map<String, dynamic>> updatedBlockData = Map<String, Map<String, dynamic>>.from(state.allBlockData);
+      bool anyAccepted = false;
+
       audio.forEach((String blockId, dynamic value) {
-        if (value is Map<String, dynamic>) {
-          updatedBlockData[blockId] = value;
-        }
+        if (value is! Map<String, dynamic>) return;
+
+        // Merge server data, but only apply to UI for params the user
+        // is NOT actively interacting with.
+        final Map<String, dynamic> merged = Map<String, dynamic>.from(
+          updatedBlockData[blockId] ?? <String, dynamic>{},
+        );
+
+        bool blockHadAcceptedParam = false;
+        value.forEach((String param, dynamic paramValue) {
+          final String key = '$blockId.$param';
+          if (_activeInteractions.containsKey(key)) {
+            // User is still interacting — keep our optimistic value, discard server echo.
+            debugPrint('[BlockData] Suppressing server echo for $key (interaction active)');
+          } else {
+            merged[param] = paramValue;
+            blockHadAcceptedParam = true;
+          }
+        });
+
+        updatedBlockData[blockId] = merged;
+        if (blockHadAcceptedParam) anyAccepted = true;
       });
 
-      emit(
-        state.copyWith(
-          allBlockData: updatedBlockData,
-          isConnected: true,
-          clearInactiveReason: true,
-        ),
-      );
+      if (anyAccepted && !isClosed) {
+        emit(
+          state.copyWith(
+            allBlockData: updatedBlockData,
+            isConnected: true,
+            clearInactiveReason: true,
+          ),
+        );
+      }
     } catch (e) {
       debugPrint('[BlockData] Parse error: $e');
     }
@@ -380,6 +409,20 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
     _heartbeatTimer = null;
     _reconnectDelay = const Duration(seconds: 2);
     _lastDataReceivedAt = null;
+
+    // Clean up new maps
+    for (final Timer e in _activeInteractions.values) {
+      e.cancel();
+    }
+    _activeInteractions.clear();
+    for (final dynamic e in _pendingSends.values) {
+      e.timer.cancel();
+    }
+    _pendingSends.clear();
+
+    // Remove old in-flight map (no longer needed)
+    // _inFlightBlocks.clear();  ← delete _inFlightBlocks entirely
+
     _cancelWebsocket();
     emit(
       BlockDataState(
@@ -443,9 +486,59 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
     return null;
   }
 
-  Future<void> updateBlockParameter({required String blockId, required String parameter, required dynamic value, int? dimension}) async {
+  /// Counter used to generate unique request IDs for WebSocket patch messages.
+  int _patchRequestCounter = 0;
+
+  Future<void> updateBlockParameter({
+    required String blockId,
+    required String parameter,
+    required dynamic value,
+    int? dimension,
+  }) async {
+    final String interactionKey = '$blockId.$parameter';
+
+    // 1. Write optimistically to local state immediately — UI stays snappy.
+    final Map<String, Map<String, dynamic>> optimistic = Map<String, Map<String, dynamic>>.from(state.allBlockData);
+    final Map<String, dynamic> blockCopy = Map<String, dynamic>.from(
+      optimistic[blockId] ?? <String, dynamic>{},
+    );
+    blockCopy[parameter] = value;
+    optimistic[blockId] = blockCopy;
+    if (!isClosed) emit(state.copyWith(allBlockData: optimistic));
+
+    // 2. Mark this param as "user is interacting" — resets on every call.
+    _activeInteractions[interactionKey]?.cancel();
+    _activeInteractions[interactionKey] = Timer(_interactionCooldown, () {
+      _activeInteractions.remove(interactionKey);
+      debugPrint('[BlockData] Interaction released for $interactionKey');
+    });
+
+    // 3. Debounce the actual network send — only fires after user pauses.
+    _pendingSends[interactionKey]?.timer.cancel();
+    _pendingSends[interactionKey] = (
+      value: value,
+      dimension: dimension,
+      timer: Timer(_sendDebounce, () async {
+        _pendingSends.remove(interactionKey);
+        await _flushParameterUpdate(
+          blockId: blockId,
+          parameter: parameter,
+          value: value,
+          dimension: dimension,
+        );
+      }),
+    );
+  }
+
+  /// The actual network call — called after debounce settles.
+  Future<void> _flushParameterUpdate({
+    required String blockId,
+    required String parameter,
+    required dynamic value,
+    int? dimension,
+  }) async {
     try {
-      final Map<String, dynamic> payload =
+      final Map<String, dynamic> dataPayload =
           dimension == null
               ? <String, dynamic>{
                 "settings": <String, dynamic>{
@@ -455,25 +548,91 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
                 },
               }
               : <String, dynamic>{
-                "value": value,
+                "settings": <String, dynamic>{
+                  "audio": <String, dynamic>{
+                    blockId: <String, dynamic>{
+                      parameter: _buildDimensionList(value, dimension),
+                    },
+                  },
+                },
               };
-      final ResponseCallback<dynamic> response = await _networkClient.patch(
-        api: FusionApiEndpoint.fusionValue,
-        isSecure: false,
-        urlParameters:
-            dimension != null
-                ? <String, dynamic>{
-                  "key": "settings.audio.$blockId.$parameter[$dimension]",
-                }
-                : null,
-        baseUrlToOverride: serviceLocator<ProjectViewModel>().virtualIP,
-        data: payload,
-      );
-      if (!response.success) {
-        FusionLogger.log(tag: LogTag.dspConfig, message: "Failed to update block parameter for $blockId.$parameter: ${response.message}");
+
+      if (_networkClient.webSocketService.isConnected) {
+        _sendPatchConfig(dataPayload);
+      } else {
+        await _ensureWebSocketConnected();
+        if (_networkClient.webSocketService.isConnected) {
+          _sendPatchConfig(dataPayload);
+        } else {
+          final ResponseCallback<dynamic> response = await _networkClient.patch(
+            api: FusionApiEndpoint.fusionValue,
+            isSecure: false,
+            urlParameters: dimension != null ? <String, dynamic>{"key": "settings.audio.$blockId.$parameter[$dimension]"} : null,
+            baseUrlToOverride: serviceLocator<ProjectViewModel>().virtualIP,
+            data: dimension != null ? <String, dynamic>{"value": value} : dataPayload,
+          );
+          if (!response.success) {
+            FusionLogger.log(
+              tag: LogTag.dspConfig,
+              message: "Failed to update $blockId.$parameter: ${response.message}",
+            );
+          }
+        }
       }
     } catch (ex) {
-      FusionLogger.log(tag: LogTag.dspConfig, message: "Error updating block parameter for $blockId.$parameter: $ex");
+      FusionLogger.log(
+        tag: LogTag.dspConfig,
+        message: "Error updating $blockId.$parameter: $ex",
+      );
     }
+  }
+
+  /// Sends a `patch_config` WebSocket message with the given data payload.
+  void _sendPatchConfig(Map<String, dynamic> dataPayload) {
+    _patchRequestCounter++;
+    final Map<String, dynamic> wsMessage = <String, dynamic>{
+      "id": "patch-$_patchRequestCounter",
+      "version": 1,
+      "type": "patch_config",
+      "data": dataPayload,
+    };
+    _networkClient.sendWebSocketMessage(wsMessage);
+  }
+
+  /// Tries to establish a WebSocket connection if not already connected.
+  /// Awaits a short delay to allow the connection handshake to complete.
+  Future<void> _ensureWebSocketConnected() async {
+    if (_networkClient.webSocketService.isConnected) return;
+
+    final String? virtualIP = serviceLocator<ProjectViewModel>().virtualIP;
+    if (virtualIP == null || virtualIP.isEmpty) return;
+
+    final String wsHost = virtualIP.contains(':') ? virtualIP : '$virtualIP:8080';
+    final String wsUrl = 'ws://$wsHost/ws';
+
+    try {
+      await _networkClient.connectWebSocket(url: wsUrl);
+      // Give the handshake a moment to complete.
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+
+      if (_networkClient.webSocketService.isConnected) {
+        // Re-subscribe for config updates on the fresh connection.
+        _sendConfigSubscription();
+        // If there's no active listener yet, start one.
+        if (_webSocketSubscription == null) {
+          await startWebsocket();
+        }
+      }
+    } catch (e) {
+      debugPrint('[BlockData] _ensureWebSocketConnected failed: $e');
+    }
+  }
+
+  /// Builds a sparse list with [value] at [dimension] index and null elsewhere,
+  /// used when updating a single dimension of an array parameter.
+  List<dynamic> _buildDimensionList(dynamic value, int dimension) {
+    final List<dynamic> list = List<dynamic>.filled(dimension + 1, null);
+    list[dimension] = value;
+    return list;
   }
 }
