@@ -3,10 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
+
 import 'package:pretty_qr_code/pretty_qr_code.dart';
-import 'package:printing/printing.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -23,77 +21,6 @@ class VirtualControlSection extends StatelessWidget {
     // "controller_id": state.selectedControllerId ?? "No Controller ID",
     "controller_id": "CTRL1762958340064766236",
   });
-
-  /// Builds a PDF with a native vector QR code (no screen capture required)
-  /// and opens the system print-preview dialog.
-  Future<void> _printQrCode() async {
-    final String data = _qrData;
-    final pw.Document pdf = pw.Document();
-
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(40),
-        build: (pw.Context ctx) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: <pw.Widget>[
-              pw.Text(
-                'VIRTUAL CONTROL',
-                style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
-              ),
-              pw.SizedBox(height: 24),
-              pw.Row(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: <pw.Widget>[
-                  // Native vector QR code — black on white, always scannable
-                  pw.Container(
-                    width: 160,
-                    height: 160,
-                    padding: const pw.EdgeInsets.all(8),
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(color: PdfColors.grey400),
-                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
-                    ),
-                    child: pw.BarcodeWidget(
-                      barcode: pw.Barcode.qrCode(),
-                      data: data,
-                      color: PdfColors.black,
-                      backgroundColor: PdfColors.white,
-                    ),
-                  ),
-                  pw.SizedBox(width: 24),
-                  // Description
-                  pw.Expanded(
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: <pw.Widget>[
-                        pw.Text(
-                          'QR CODE',
-                          style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
-                        ),
-                        pw.SizedBox(height: 8),
-                        pw.Text(
-                          'Scan the QR Code with any mobile devices on the same network to access a virtual wall controller.',
-                          style: const pw.TextStyle(fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          );
-        },
-      ),
-    );
-
-    // Open the system print-preview dialog
-    await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) => pdf.save(),
-      name: 'Virtual Control QR Code',
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -165,12 +92,11 @@ class VirtualControlSection extends StatelessWidget {
             showSuffixIcon: true,
             suffixIcon: Icons.print_outlined,
             style: FusionAppButtonStyle.primary,
-            // onPressed: _printQrCode,
             onPressed: () {
-              final WallControllerConfig config = serviceLocator<ProjectViewModel>().getWallControllerConfig();
-              final String prettyJson = const JsonEncoder.withIndent('  ').convert(config.toJson());
-              debugPrint('─── WallControllerConfig JSON ───');
-              debugPrint(prettyJson);
+              // final WallControllerConfig config = serviceLocator<ProjectViewModel>().getWallControllerConfig();
+              // final String prettyJson = const JsonEncoder.withIndent('  ').convert(config.toJson());
+              // debugPrint('─── WallControllerConfig JSON ───');
+              // debugPrint(prettyJson);
             },
           ),
         ],
