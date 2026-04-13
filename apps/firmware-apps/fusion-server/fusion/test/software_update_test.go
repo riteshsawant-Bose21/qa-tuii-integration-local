@@ -769,11 +769,11 @@ func TestSoftwareUpdateTriggerNoBundle(t *testing.T) {
 
 	resp := sendWSRequest(t, conn, api.WSMsgTypeStartUpdate, struct{}{})
 
-	// Server broadcasts the trigger regardless of whether a bundle exists
-	// (swupdate on device handles the actual error). Confirm it doesn't panic
-	// and returns a recognisable code.
-	if resp.Code != api.WSCodeUpdateStarted && resp.Code != api.WSCodeApplicationError {
-		t.Errorf("unexpected code %d", resp.Code)
+	if resp.Code != api.WSCodeUpdateFailed {
+		t.Errorf("expected WSCodeUpdateFailed (%d) when no .swu bundle exists, got %d", api.WSCodeUpdateFailed, resp.Code)
+	}
+	if resp.Status != api.WSStatusError {
+		t.Errorf("expected status %q, got %q", api.WSStatusError, resp.Status)
 	}
 }
 
@@ -790,6 +790,172 @@ func TestSoftwareUpdateTriggerUnknownType(t *testing.T) {
 	}
 	if resp.Status != api.WSStatusError {
 		t.Errorf("expected status %q, got %q", api.WSStatusError, resp.Status)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// sw_update_info WebSocket tests
+// ---------------------------------------------------------------------------
+
+// TestSwUpdateInfoViaWebSocket sends a sw_update_info request and verifies the
+// envelope (type, code, status)
+func TestSwUpdateInfoViaWebSocket(t *testing.T) {
+	conn := dialWebSocket(t, softwareUpdateServerAddr)
+	defer conn.Close()
+
+	resp := sendWSRequest(t, conn, api.WSMsgTypeSwUpdateInfo, struct{}{})
+
+	// Verify envelope
+	if resp.Type != api.WSMsgTypeSwUpdateInfo {
+		t.Errorf("expected type %q, got %q", api.WSMsgTypeSwUpdateInfo, resp.Type)
+	}
+	if resp.Code != api.WSCodeOK {
+		t.Errorf("expected code %d (WSCodeOK), got %d", api.WSCodeOK, resp.Code)
+	}
+	if resp.Status != api.WSStatusSuccess {
+		t.Errorf("expected status %q, got %q", api.WSStatusSuccess, resp.Status)
+	}
+	if resp.Version != api.WSCurrentVersion {
+		t.Errorf("expected version %d, got %d", api.WSCurrentVersion, resp.Version)
+	}
+
+	// Verify data is an array of SwUpdateInfo objects
+	if resp.Data == nil {
+		t.Fatal("response data is nil; expected a (possibly empty) array")
+	}
+	raw, err := json.Marshal(resp.Data)
+	if err != nil {
+		t.Fatalf("marshalling response data failed: %v", err)
+	}
+	var infos []api.SwUpdateInfo
+	if err := json.Unmarshal(raw, &infos); err != nil {
+		t.Fatalf("response data is not a []SwUpdateInfo: %v — raw: %s", err, string(raw))
+	}
+
+	// Each entry must have the expected fields present (even if empty strings on
+	// devices without /etc/swupdate-status).
+	for i, info := range infos {
+		// All fields are strings; we just confirm the struct decoded without
+		// unexpected types by checking at least one field path exists.
+		_ = info.SerialNumber         // string
+		_ = info.CurrentBundleVersion // string
+		_ = info.Status               // string
+		_ = info.BootPartition        // string
+		_ = info.UpdatedAt            // string
+		t.Logf("node[%d]: serial=%q status=%q bundle=%q", i, info.SerialNumber, info.Status, info.CurrentBundleVersion)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// list_sw_update_files WebSocket tests
+// ---------------------------------------------------------------------------
+
+// TestListSoftwareUpdatesViaWebSocket sends a list_sw_update_files request and
+// verifies the envelope
+func TestListSoftwareUpdatesViaWebSocket(t *testing.T) {
+	conn := dialWebSocket(t, softwareUpdateServerAddr)
+	defer conn.Close()
+
+	resp := sendWSRequest(t, conn, api.WSMsgTypeListSoftwareUpdates, struct{}{})
+
+	// Verify envelope
+	if resp.Type != api.WSMsgTypeListSoftwareUpdates {
+		t.Errorf("expected type %q, got %q", api.WSMsgTypeListSoftwareUpdates, resp.Type)
+	}
+	if resp.Code != api.WSCodeOK {
+		t.Errorf("expected code %d (WSCodeOK), got %d", api.WSCodeOK, resp.Code)
+	}
+	if resp.Status != api.WSStatusSuccess {
+		t.Errorf("expected status %q, got %q", api.WSStatusSuccess, resp.Status)
+	}
+	if resp.Version != api.WSCurrentVersion {
+		t.Errorf("expected version %d, got %d", api.WSCurrentVersion, resp.Version)
+	}
+
+	// Verify data is an array (never null — handler coerces nil to [])
+	if resp.Data == nil {
+		t.Fatal("response data is nil; expected a (possibly empty) array")
+	}
+	raw, err := json.Marshal(resp.Data)
+	if err != nil {
+		t.Fatalf("marshalling response data failed: %v", err)
+	}
+	var bundles []api.SoftwareUpdateSync
+	if err := json.Unmarshal(raw, &bundles); err != nil {
+		t.Fatalf("response data is not a []SoftwareUpdateSync: %v — raw: %s", err, string(raw))
+	}
+
+	// If bundles are present, verify required fields are non-empty.
+	for i, b := range bundles {
+		if b.Filename == "" {
+			t.Errorf("bundle[%d]: Filename is empty", i)
+		}
+		if b.Checksum == "" {
+			t.Errorf("bundle[%d]: Checksum is empty", i)
+		}
+		if b.SizeBytes <= 0 {
+			t.Errorf("bundle[%d]: SizeBytes is %d, want > 0", i, b.SizeBytes)
+		}
+		if b.Uploaded.IsZero() {
+			t.Errorf("bundle[%d]: Uploaded timestamp is zero", i)
+		}
+		t.Logf("bundle[%d]: filename=%q checksum=%s size=%d source=%s", i, b.Filename, b.Checksum, b.SizeBytes, b.SourceIP)
+	}
+}
+
+// TestListSoftwareUpdatesViaWebSocketAfterUpload uploads a bundle over HTTP
+// then requests list_sw_update_files via WebSocket and confirms the uploaded
+// bundle appears in the response with matching metadata.
+func TestListSoftwareUpdatesViaWebSocketAfterUpload(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	// Upload a unique bundle via REST
+	timestamp := time.Now().UnixNano()
+	bundleName := fmt.Sprintf("ws-list-test-%d", timestamp)
+	bundleData := makeTestSWUBundle(bundleName, 1024)
+	filename := fmt.Sprintf("ws-list-test-%d.swu", timestamp)
+	checksum := calculateSHA256(bundleData)
+	uploadSoftwareUpdate(t, ctx, softwareUpdateServerAddr, filename, bundleData, checksum, http.StatusCreated)
+
+	// Now request the list via WebSocket
+	conn := dialWebSocket(t, softwareUpdateServerAddr)
+	defer conn.Close()
+
+	resp := sendWSRequest(t, conn, api.WSMsgTypeListSoftwareUpdates, struct{}{})
+
+	if resp.Code != api.WSCodeOK {
+		t.Fatalf("expected code %d (WSCodeOK), got %d — message: %s", api.WSCodeOK, resp.Code, resp.Message)
+	}
+
+	raw, err := json.Marshal(resp.Data)
+	if err != nil {
+		t.Fatalf("marshalling response data failed: %v", err)
+	}
+	var bundles []api.SoftwareUpdateSync
+	if err := json.Unmarshal(raw, &bundles); err != nil {
+		t.Fatalf("response data is not a []SoftwareUpdateSync: %v", err)
+	}
+
+	// The uploaded bundle must appear in the list
+	found := false
+	for _, b := range bundles {
+		if b.Filename == filename {
+			found = true
+			if !strings.EqualFold(b.Checksum, checksum) {
+				t.Errorf("checksum mismatch: got %q want %q", b.Checksum, checksum)
+			}
+			if b.SizeBytes != int64(len(bundleData)) {
+				t.Errorf("size_bytes mismatch: got %d want %d", b.SizeBytes, len(bundleData))
+			}
+			if b.Uploaded.IsZero() {
+				t.Error("Uploaded timestamp is zero")
+			}
+			break
+		}
+	}
+	if !found {
+		t.Errorf("uploaded bundle %q not found in list_sw_update_files WebSocket response", filename)
 	}
 }
 

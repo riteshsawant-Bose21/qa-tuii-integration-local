@@ -89,8 +89,15 @@ func (s *Service) ApproveBundle(ctx context.Context, bundleID string, approvedBy
 }
 
 func (s *Service) CheckForUpdate(ctx context.Context, req *types.FirmwareUpdateRequest, logger *zap.Logger) (*types.FirmwareUpdateResponse, error) {
+	// Auto-infer channel from the current firmware version's prerelease tag
+	parsedVersion, err := validation.ParseSemanticVersion(req.CurrentFirmwareVersion)
+	if err != nil {
+		return nil, fmt.Errorf("invalid current firmware version: %w", err)
+	}
+	channel := parsedVersion.PrereleaseTag // empty string for stable
+
 	// 1. Find the latest approved bundle compatible with the current desktop app version
-	compatibleBundle, err := s.dbService.GetLatestCompatibleBundle(ctx, req.CurrentFirmwareVersion, req.CurrentDesktopAppVersion, req.Channel)
+	compatibleBundle, err := s.dbService.GetLatestCompatibleBundle(ctx, req.CurrentFirmwareVersion, req.CurrentDesktopAppVersion, channel)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get latest compatible bundle: %w", err)
 	}
@@ -102,7 +109,7 @@ func (s *Service) CheckForUpdate(ctx context.Context, req *types.FirmwareUpdateR
 
 	// 2. If no directly compatible bundle is found, or if firmware is too old,
 	// check for the latest bundle that is compatible with the current firmware to see if an app update is required.
-	latestCompatibleBundle, err := s.dbService.GetLatestBundleCompatibleWithFirmware(ctx, req.CurrentFirmwareVersion, req.Channel)
+	latestCompatibleBundle, err := s.dbService.GetLatestBundleCompatibleWithFirmware(ctx, req.CurrentFirmwareVersion, channel)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get latest bundle compatible with firmware: %w", err)
 	}
@@ -163,9 +170,9 @@ func mapBundleToUpdateResponse(b *models.Bundle) *types.FirmwareUpdateResponse {
 	return response
 }
 
-func (s *Service) GetBundleDownloadURL(ctx context.Context, bundleID string, logger *zap.Logger) (*types.DownloadArtifactResponse, error) {
-	// Get bundle by ID
-	bundle, err := s.dbService.GetBundleByID(ctx, bundleID)
+func (s *Service) GetBundleDownloadURL(ctx context.Context, version string, logger *zap.Logger) (*types.DownloadArtifactResponse, error) {
+	// Get bundle by version
+	bundle, err := s.dbService.GetBundleByVersion(ctx, version)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get bundle: %w", err)
 	}
