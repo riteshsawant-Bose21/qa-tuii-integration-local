@@ -8,5 +8,5 @@ import (
 )
 
 type Source interface {
-	GetAllSources(ctx context.Context, logger *zap.Logger) ([]types.SourceItem, error)
+	GetAllSources(ctx context.Context, logger *zap.Logger) ([]types.SourceItemResponse, error)
 }

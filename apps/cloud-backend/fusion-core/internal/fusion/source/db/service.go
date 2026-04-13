@@ -30,7 +30,7 @@ func NewService(db *sql.DB, logger *zap.Logger) *Service {
 }
 
 // SelectAll retrieves all sources from the database.
-func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.SourceItem, error) {
+func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.SourceItemResponse, error) {
 	query := `SELECT id, name, asset_path, type, connection_type, price FROM source ORDER BY name`
 
 	rows, err := s.db.QueryContext(ctx, query)
@@ -41,9 +41,9 @@ func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.So
 
 	defer func() { _ = rows.Close() }()
 
-	var sources []types.SourceItem
+	sources := make([]types.SourceItemResponse, 0)
 	for rows.Next() {
-		var item types.SourceItem
+		var item types.SourceItemResponse
 		if err := rows.Scan(
 			&item.SourceID,
 			&item.Name,

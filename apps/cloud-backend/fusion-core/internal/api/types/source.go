@@ -1,6 +1,6 @@
 package types
 
-type SourceItem struct {
+type SourceItemResponse struct {
 	SourceID       string  `json:"product_id"`
 	Name           string  `json:"name"`
 	AssetPath      string  `json:"asset_path"`

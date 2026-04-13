@@ -39,6 +39,7 @@ func (p *Service) GetAllProducts(ctx context.Context, logger *zap.Logger) (*type
 	sources, err := p.sourceService.GetAllSources(ctx, logger)
 	if err != nil {
 		logger.Warn("failed to fetch sources, continuing without source data", zap.Error(err))
+		products.Source = []types.SourceItemResponse{}
 	} else {
 		products.Source = sources
 	}
