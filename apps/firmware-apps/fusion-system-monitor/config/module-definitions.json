@@ -175,6 +175,11 @@
                     "name": "audio_streams_update",
                     "value_type": "string",
                     "default_value": ""
+                },
+                {
+                    "name": "device_id",
+                    "value_type": "string",
+                    "default_value": ""
                 }
             ]
         },

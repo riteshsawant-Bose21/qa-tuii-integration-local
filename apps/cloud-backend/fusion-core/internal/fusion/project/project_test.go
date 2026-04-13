@@ -12,7 +12,6 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/constants"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/aarondl/null/v8"
 	"github.com/stretchr/testify/assert"
@@ -240,7 +239,7 @@ func TestCreateProject(t *testing.T) {
 			mockID:         "",
 			mockErr:        errDatabaseMsg,
 			expectedID:     "",
-			expectedErr:    fmt.Errorf("failed to insert project: %v", errDatabaseMsg),
+			expectedErr:    errDatabaseMsg,
 			expectResponse: false,
 		},
 		{
@@ -269,7 +268,7 @@ func TestCreateProject(t *testing.T) {
 			mockID:         "123e4567-e89b-12d3-a456-426614174002",
 			mockErr:        nil,
 			expectedID:     "",
-			expectedErr:    fmt.Errorf("failed to generate presign URL: %v", errors.New("put error")),
+			expectedErr:    errors.New("put error"),
 			expectResponse: false,
 			presignFileURL: "",
 			presignFileErr: errors.New("put error"),
@@ -282,7 +281,7 @@ func TestCreateProject(t *testing.T) {
 			mockID:         "123e4567-e89b-12d3-a456-426614174003",
 			mockErr:        nil,
 			expectedID:     "",
-			expectedErr:    fmt.Errorf("failed to insert project: %v", errors.New("user assignment failed")),
+			expectedErr:    errors.New("user assignment failed"),
 			expectResponse: false,
 		},
 	}
@@ -417,7 +416,7 @@ func TestGetAllProjects(t *testing.T) {
 			mockDBErr:      errDatabaseMsg,
 			mockPresignURL: "",
 			mockPresignErr: nil,
-			expectedErr:    errDatabaseMsg,
+			expectedErr:    fmt.Errorf("%w", errDatabaseMsg),
 		},
 		{
 			name:           "presign error",
@@ -426,7 +425,7 @@ func TestGetAllProjects(t *testing.T) {
 			mockDBErr:      nil,
 			mockPresignURL: "",
 			mockPresignErr: fmt.Errorf("presign error"),
-			expectedErr:    fmt.Errorf("failed to generate presign URL for project 1: presign error"),
+			expectedErr:    fmt.Errorf("presign error"),
 		},
 	}
 
@@ -535,7 +534,7 @@ func TestUpdateProject(t *testing.T) {
 			},
 			mockProjectRow: nil,
 			mockErr:        errDatabaseMsg,
-			expectedErr:    errDatabaseMsg,
+			expectedErr:    fmt.Errorf("%w", fmt.Errorf("%w", errDatabaseMsg)),
 		},
 	}
 
@@ -605,7 +604,7 @@ func TestUpdateProjectPresignURLs(t *testing.T) {
 		expectedErr     string
 	}{
 		{name: "dirty flags success", req: &types.ProjectUpdateRequest{IsProjectFileDirty: true, IsProjectThumbnailDirty: true}, presignFileURL: "https://upd-file", presignThumbURL: "https://upd-thumb"},
-		{name: "file presign error", req: &types.ProjectUpdateRequest{IsProjectFileDirty: true}, presignFileErr: errors.New("put error"), expectedErr: "failed to generate presign URL"},
+		{name: "file presign error", req: &types.ProjectUpdateRequest{IsProjectFileDirty: true}, presignFileErr: errors.New("put error"), expectedErr: "put error"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -687,7 +686,7 @@ func TestDeleteProject(t *testing.T) {
 			id:             "1",
 			mockProjectRow: nil,
 			mockErr:        errDatabaseMsg,
-			expectedErr:    errDatabaseMsg,
+			expectedErr:    fmt.Errorf("%w", fmt.Errorf("%w", errDatabaseMsg)),
 		},
 	}
 
@@ -1742,7 +1741,7 @@ func TestValidateUserAssignment(t *testing.T) {
 			mockSetup: func(m *mockDBService) {
 				m.On("IsUserAssigned", mock.Anything, testProjectID1, testUserID1, mock.AnythingOfType("*zap.Logger")).Return(false, errDatabaseMsg)
 			},
-			expectedErr: "failed to check user assignment",
+			expectedErr: databaseErrorMsg,
 		},
 	}
 
@@ -1825,7 +1824,7 @@ func TestValidateProjectNotLockedByOtherUser(t *testing.T) {
 			mockSetup: func(m *mockDBService) {
 				m.On("GetUserEmailByID", mock.Anything, testUserID2).Return("", errDatabaseMsg)
 			},
-			expectedErr: "failed to get user by email",
+			expectedErr: databaseErrorMsg,
 		},
 	}
 
@@ -1890,7 +1889,7 @@ func TestValidateProject_UserAssignmentDBError(t *testing.T) {
 	logger, _ := zap.NewProduction()
 	_, err := service.validateProject(ctx, testProjectID1, ValidationOptions{CheckUserAssigned: true, UserID: testUserID1}, logger)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), errorutil.ErrMsgFailedUserAssignmentCheck)
+	assert.ErrorIs(t, err, errDatabaseMsg)
 	mockDB.AssertExpectations(t)
 }
 

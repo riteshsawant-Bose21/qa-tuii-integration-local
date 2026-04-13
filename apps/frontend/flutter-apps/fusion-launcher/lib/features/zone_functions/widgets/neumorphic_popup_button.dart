@@ -25,6 +25,7 @@ class NeumorphicPopupButton extends StatefulWidget {
   final List<String> options;
   final ValueChanged<String> onSelect;
   final double borderRadius;
+  final String semanticId;
 
   const NeumorphicPopupButton({
     super.key,
@@ -36,6 +37,7 @@ class NeumorphicPopupButton extends StatefulWidget {
     this.options = const <String>[],
     required this.onSelect,
     this.borderRadius = 8,
+    this.semanticId = "undefined"
   });
 
   @override
@@ -76,8 +78,8 @@ class _NeumorphicPopupButtonState extends State<NeumorphicPopupButton> {
         child: Row(
           children: <Widget>[
             Expanded(
-              child: SemanticHelper.button(
-                testId: SemanticHelper.createTestId(SemanticTypes.button, "mix_scenes_textfield"),
+              child: SemanticHelper.textInput(
+                testId: SemanticHelper.createTestId(SemanticTypes.textInput, "mix_scenes_textfield"),
                 child: Center(
                   child: TextField(
                     controller: widget.controller,
