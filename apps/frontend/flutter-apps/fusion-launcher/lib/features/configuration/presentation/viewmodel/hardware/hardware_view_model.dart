@@ -92,6 +92,19 @@ extension HardwareViewModel on ProjectViewModel {
           );
         }
       }
+
+      // if (hardware is! Speaker && hardware is! HardwareRack) {
+      //   final List<WiringConnectionModel> newConnections = AutoWiringUseCase().autoWireForHardware(
+      //     component: hardware,
+      //     allComponents: hardwareComponents,
+      //     circuits: circuits,
+      //     existingConnections: getAllWiringConnections(),
+      //   );
+
+      //   for (final WiringConnectionModel connection in newConnections) {
+      //     addWiringConnection(connection: connection, autoSave: false);
+      //   }
+      // }
       if (autoSave) {
         saveProject();
       }
