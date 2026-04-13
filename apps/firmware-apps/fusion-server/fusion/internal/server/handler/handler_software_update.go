@@ -413,10 +413,8 @@ func (h *Handler) HandleSoftwareUpdateDownload(w http.ResponseWriter, r *http.Re
 	}
 }
 
-// HandleSoftwareUpdateList serves GET /SoftwareUpdate/list.
-// Returns all SoftwareUpdate bundles present in /mnt/ota as []api.SoftwareUpdateSyncUpdate.
-// Called by joining nodes to perform initial SoftwareUpdate sync from a peer.
-func (h *Handler) HandleSoftwareUpdateList(w http.ResponseWriter, r *http.Request) {
+// HandleSoftwareUpdateListLocal serves the admin-port GET /softwareUpdate/list endpoint.
+func (h *Handler) HandleSoftwareUpdateListLocal(w http.ResponseWriter, r *http.Request) {
 	logger := logging.GetLogger()
 
 	entries, err := os.ReadDir(api.SoftwareUpdateOTAPath)
@@ -427,7 +425,7 @@ func (h *Handler) HandleSoftwareUpdateList(w http.ResponseWriter, r *http.Reques
 			w.Write([]byte("[]"))
 			return
 		}
-		logger.Error("SoftwareUpdate list: readdir %s: %v", api.SoftwareUpdateOTAPath, err)
+		logger.Error("SoftwareUpdate list (local): readdir %s: %v", api.SoftwareUpdateOTAPath, err)
 		writeSoftwareUpdateError(w, http.StatusInternalServerError, "server_error", "Failed to list SoftwareUpdate directory")
 		return
 	}
@@ -447,13 +445,13 @@ func (h *Handler) HandleSoftwareUpdateList(w http.ResponseWriter, r *http.Reques
 
 		info, err := entry.Info()
 		if err != nil {
-			logger.Warn("SoftwareUpdate list: stat %s: %v — skipping", fullPath, err)
+			logger.Warn("SoftwareUpdate list (local): stat %s: %v — skipping", fullPath, err)
 			continue
 		}
 
 		checksum, err := utils.FileChecksum(fullPath)
 		if err != nil {
-			logger.Warn("SoftwareUpdate list: checksum %s: %v — skipping", fullPath, err)
+			logger.Warn("SoftwareUpdate list (local): checksum %s: %v — skipping", fullPath, err)
 			continue
 		}
 
@@ -472,7 +470,19 @@ func (h *Handler) HandleSoftwareUpdateList(w http.ResponseWriter, r *http.Reques
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	if err := json.NewEncoder(w).Encode(bundles); err != nil {
-		logger.Error("SoftwareUpdate list: json encode: %v", err)
+		logger.Error("SoftwareUpdate list (local): json encode: %v", err)
+	}
+}
+
+// HandleSoftwareUpdateList serves GET /softwareUpdate/list on the public port.
+func (h *Handler) HandleSoftwareUpdateList(w http.ResponseWriter, r *http.Request) {
+	bundles := h.clusterTransport.GetAllSoftwareUpdateList()
+	if bundles == nil {
+		bundles = []api.SoftwareUpdateSync{}
+	}
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	if err := json.NewEncoder(w).Encode(bundles); err != nil {
+		logging.GetLogger().Error("SoftwareUpdate list: json encode: %v", err)
 	}
 }
 
@@ -540,6 +550,21 @@ func (h *Handler) processSoftwareUpdateStream(part *multipart.Part, origName str
 	return checksum, written, tmpPath, nil
 }
 
+// handleSwUpdateInfo fetches /etc/swupdate from all cluster nodes and returns the aggregated results.
+func (h *Handler) handleSwUpdateInfo(request *api.WebSocketRequest) (*api.WebSocketResponse, error) {
+	infos := h.clusterTransport.GetAllSwUpdateInfo()
+	return createSuccessResponse(&request.ID, api.WSMsgTypeSwUpdateInfo, api.WSCodeOK, "OK", infos), nil
+}
+
+// handleListSoftwareUpdates fetches the OTA bundle list from every cluster node
+func (h *Handler) handleListSoftwareUpdates(request *api.WebSocketRequest) (*api.WebSocketResponse, error) {
+	bundles := h.clusterTransport.GetAllSoftwareUpdateList()
+	if bundles == nil {
+		bundles = []api.SoftwareUpdateSync{}
+	}
+	return createSuccessResponse(&request.ID, api.WSMsgTypeListSoftwareUpdates, api.WSCodeOK, "OK", bundles), nil
+}
+
 // Helper functions for improved error handling and validation
 
 // validateChecksum validates the computed checksum against expected value
@@ -558,7 +583,7 @@ func validateChecksum(actual, expected string) error {
 		return fmt.Errorf("invalid checksum format - not valid hex: %w", err)
 	}
 	if !strings.EqualFold(actual, expected) {
-		return fmt.Errorf("checksum mismatch: computed=%s, expected=%s", actual, expected)
+		return fmt.Errorf("SHA-256 of received bundle does not match X-Checksum-SHA256 header. Bundle discarded.")
 	}
 	return nil
 }
@@ -728,6 +753,86 @@ func checkDiskSpace(uploadSize int64, logger *logging.Logger) error {
 	logger.Info("softwareUpdate upload: disk space validation passed - %.1f MB available in OTA directory",
 		float64(otaAvailable)/(1<<20))
 	return nil
+}
+
+// ensureSWUFilesOnFollowers checks that every follower node has the same .swu files
+// as the leader (by checksum). For any file that is missing or has a differing checksum
+// on a follower, it triggers a gossip-based HTTP-pull sync and waits for all sync acks before returning.
+// Returns the total number of followers in the cluster.
+func (h *Handler) ensureSWUFilesOnFollowers(swuFilePaths []string) (int, error) {
+	logger := logging.GetLogger()
+
+	localNode := h.clusterTransport.LocalNode()
+	if localNode == nil {
+		return 0, fmt.Errorf("local node not available")
+	}
+	localName := localNode.Name
+	localIP := localNode.Addr.String()
+
+	// Step 1: collect all followers (cluster members excluding the local node)
+	var followers []string
+	for _, m := range h.clusterTransport.MemberListMembers() {
+		if m.Name != localName {
+			followers = append(followers, m.Name)
+		}
+	}
+	logger.Info("[StartUpdate] Total followers in cluster: %d — %v", len(followers), followers)
+
+	if len(followers) == 0 {
+		logger.Info("[StartUpdate] No followers in cluster — skipping file sync pre-check")
+		return 0, nil
+	}
+
+	// For each .swu file on the leader, broadcast software_update_available
+	// and wait for all followers to ack. Followers that already have the file with the
+	// same checksum will ack immediately without downloading (handled by handleSoftwareUpdateAvailable).
+	for _, filePath := range swuFilePaths {
+		filename := filepath.Base(filePath)
+
+		checksum, err := utils.FileChecksum(filePath)
+		if err != nil {
+			return len(followers), fmt.Errorf("checksum failed for %s: %w", filename, err)
+		}
+
+		info, err := os.Stat(filePath)
+		if err != nil {
+			return len(followers), fmt.Errorf("stat failed for %s: %w", filename, err)
+		}
+
+		syncID := ulid.Make().String()
+		logger.Info("[StartUpdate] Syncing %s (checksum: %s) to %d follower(s), sync ID: %s",
+			filename, checksum, len(followers), syncID)
+
+		// Register sync tracker — same as upload flow
+		h.StartSyncTracking(syncID, filename, checksum, followers, 5*time.Minute)
+
+		// Broadcast availability gossip so followers HTTP-pull if they don't have it yet
+		update := &api.SoftwareUpdateSync{
+			Filename:  filename,
+			Checksum:  checksum,
+			SizeBytes: info.Size(),
+			Uploaded:  info.ModTime().UTC(),
+			SourceIP:  localIP,
+			SyncID:    syncID,
+		}
+		msg := api.NewNotifyMessage(
+			api.NotifyOpSoftwareUpdateAvailable,
+			localName,
+			api.WithSoftwareUpdate(update),
+		)
+		if err := h.hub.BroadcastToNodes(msg); err != nil {
+			return len(followers), fmt.Errorf("broadcast failed for %s: %w", filename, err)
+		}
+
+		// Wait for all followers to ack sync completion
+		logger.Info("[StartUpdate] Waiting for all followers to confirm %s...", filename)
+		if ok, waitErr := h.WaitForSyncCompletion(syncID); !ok {
+			return len(followers), fmt.Errorf("sync timed out or failed for %s: %w", filename, waitErr)
+		}
+		logger.Info("[StartUpdate] All followers confirmed %s is present and correct", filename)
+	}
+
+	return len(followers), nil
 }
 
 // isMaxBytesError checks if an error is from http.MaxBytesReader exceeding the size limit

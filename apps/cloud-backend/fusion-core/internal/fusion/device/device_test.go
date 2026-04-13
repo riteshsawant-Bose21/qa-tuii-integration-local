@@ -71,13 +71,8 @@ func (m *mockDBService) Insert(ctx context.Context, req *types.DeviceCreateReque
 	return args.Error(0)
 }
 
-func (m *mockDBService) ClaimDevice(ctx context.Context, device models.Device, accountID string, cert types.CertificateInfo, req *types.DeviceCreateRequest, tx model.DBTxExecutor, logger *zap.Logger) error {
+func (m *mockDBService) ClaimDevice(ctx context.Context, device models.Device, accountID string, cert types.CertificateInfo, req *types.DeviceClaimRequest, tx model.DBTxExecutor, logger *zap.Logger) error {
 	args := m.Called(ctx, device, accountID, cert, req, tx, logger)
-	return args.Error(0)
-}
-
-func (m *mockDBService) Claim(ctx context.Context, device models.Device, accountID string, cert types.CertificateInfo, projectID string, tx model.DBTxExecutor, logger *zap.Logger) error {
-	args := m.Called(ctx, device, accountID, cert, projectID, tx, logger)
 	return args.Error(0)
 }
 
@@ -253,10 +248,9 @@ func createTestProject() *models.Project {
 func createUnclaimedDevice() *models.Device {
 	return &models.Device{
 		ID:             testDeviceUUID,
-		ClientDeviceID: testDeviceID,
+		ClientDeviceID: null.NewString(testDeviceID, testDeviceID != ""),
 		SerialNumber:   testSerialNumber,
-		ModelName:      testModelName,
-		ThingName:      testDeviceID,
+		Model:          testModelName,
 		ClaimStatus:    "UNCLAIMED",
 		ClaimedBy:      null.NewString("", false),
 		ProjectID:      null.NewString("", false),
@@ -270,10 +264,9 @@ func createUnclaimedDevice() *models.Device {
 func createClaimedDevice() *models.Device {
 	return &models.Device{
 		ID:             testDeviceUUID,
-		ClientDeviceID: testDeviceID,
+		ClientDeviceID: null.NewString(testDeviceID, testDeviceID != ""),
 		SerialNumber:   testSerialNumber,
-		ModelName:      testModelName,
-		ThingName:      testDeviceID,
+		Model:          testModelName,
 		ClaimStatus:    "CLAIMED",
 		ClaimedBy:      null.NewString(testAccountID, true),
 		ProjectID:      null.NewString(testProjectID, true),
@@ -347,6 +340,15 @@ func TestCreateDevice(t *testing.T) {
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
 		req := createTestRequest()
+		claimReq := &types.DeviceClaimRequest{
+			ProjectID:       req.ProjectID,
+			DeviceName:      req.DeviceName,
+			ClientDeviceID:  req.ClientDeviceID,
+			DeviceZone:      req.DeviceZone,
+			DeviceLocation:  req.DeviceLocation,
+			IsPrimary:       &req.IsPrimary,
+			FirmwareVersion: req.FirmwareVersion,
+		}
 		project := createTestProject()
 		device := createUnclaimedDevice()
 
@@ -369,7 +371,7 @@ func TestCreateDevice(t *testing.T) {
 
 		// Transaction - ClaimDevice for existing unclaimed device
 		sqlMock.ExpectBegin()
-		mockDB.On("ClaimDevice", ctx, *device, testAccountID, types.CertificateInfo{ID: certID, Arn: certArn}, req, mock.AnythingOfType("*sql.Tx"), mock.Anything).Return(nil)
+		mockDB.On("ClaimDevice", ctx, *device, testAccountID, types.CertificateInfo{ID: certID, Arn: certArn}, claimReq, mock.AnythingOfType("*sql.Tx"), mock.Anything).Return(nil)
 		sqlMock.ExpectCommit()
 
 		resp, err := service.CreateDevice(ctx, req, user, logger)
@@ -673,7 +675,7 @@ func TestCreateDevice(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, resp)
-		assert.Contains(t, err.Error(), "failed to begin transaction")
+		assert.Contains(t, err.Error(), "begin transaction:")
 		mockDB.AssertExpectations(t)
 		mockIoT.AssertExpectations(t)
 	})
@@ -769,7 +771,7 @@ func TestCreateDevice(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, resp)
-		assert.Contains(t, err.Error(), "failed to commit transaction")
+		assert.Contains(t, err.Error(), "commit transaction:")
 		mockDB.AssertExpectations(t)
 		mockIoT.AssertExpectations(t)
 	})
@@ -827,7 +829,7 @@ func TestUpdateDevice(t *testing.T) {
 			DeviceName: "Updated Device Name",
 		}
 
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, sql.ErrNoRows)
+		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, errorutil.ErrDeviceNotFound)
 
 		err := service.UpdateDevice(ctx, testDeviceID, updateReq, user, logger)
 
@@ -871,7 +873,7 @@ func TestUpdateDevice(t *testing.T) {
 		// Device owned by different account
 		device := &models.Device{
 			ID:             testDeviceUUID,
-			ClientDeviceID: testDeviceID,
+			ClientDeviceID: null.NewString(testDeviceID, testDeviceID != ""),
 			ClaimStatus:    "CLAIMED",
 			ClaimedBy:      null.NewString("other-account-id", true),
 		}
@@ -915,7 +917,7 @@ func TestUpdateDevice(t *testing.T) {
 		err := service.UpdateDevice(ctx, testDeviceID, updateReq, user, logger)
 
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to begin transaction")
+		assert.Contains(t, err.Error(), "begin transaction:")
 		mockDB.AssertExpectations(t)
 	})
 
@@ -979,7 +981,7 @@ func TestUpdateDevice(t *testing.T) {
 		err := service.UpdateDevice(ctx, testDeviceID, updateReq, user, logger)
 
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to commit transaction")
+		assert.Contains(t, err.Error(), "commit transaction:")
 		mockDB.AssertExpectations(t)
 	})
 }
@@ -1026,7 +1028,7 @@ func TestClaimDevice(t *testing.T) {
 
 		mockDB.On("GetDB", ctx).Return(dbWithTx)
 		sqlMock.ExpectBegin()
-		mockDB.On("Claim", ctx, *device, testAccountID, types.CertificateInfo{ID: certID, Arn: certArn}, testProjectID, mock.AnythingOfType("*sql.Tx"), mock.Anything).Return(nil)
+		mockDB.On("ClaimDevice", ctx, *device, testAccountID, types.CertificateInfo{ID: certID, Arn: certArn}, req, mock.AnythingOfType("*sql.Tx"), mock.Anything).Return(nil)
 		sqlMock.ExpectCommit()
 
 		resp, err := service.ClaimDevice(ctx, testDeviceID, req, user, logger)
@@ -1055,13 +1057,13 @@ func TestClaimDevice(t *testing.T) {
 			ProjectID: testProjectID,
 		}
 
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, sql.ErrNoRows)
+		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, errorutil.ErrDeviceNotFound)
 
 		resp, err := service.ClaimDevice(ctx, testDeviceID, req, user, logger)
 
 		assert.Error(t, err)
 		assert.Nil(t, resp)
-		assert.Equal(t, errorutil.ErrMsgDeviceNotFound, err.Error())
+		assert.ErrorIs(t, err, errorutil.ErrDeviceNotFound)
 		mockDB.AssertExpectations(t)
 	})
 
@@ -1088,7 +1090,7 @@ func TestClaimDevice(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, resp)
-		assert.Equal(t, errorutil.ErrMsgDeviceAlreadyClaimed, err.Error())
+		assert.ErrorIs(t, err, errorutil.ErrDeviceAlreadyClaimed)
 		mockDB.AssertExpectations(t)
 	})
 
@@ -1116,7 +1118,7 @@ func TestClaimDevice(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, resp)
-		assert.Equal(t, errorutil.ErrMsgProjectNotFound, err.Error())
+		assert.ErrorIs(t, err, errorutil.ErrProjectNotFound)
 		mockDB.AssertExpectations(t)
 		mockProject.AssertExpectations(t)
 	})
@@ -1154,7 +1156,7 @@ func TestClaimDevice(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, resp)
-		assert.Equal(t, errorutil.MsgUnauthorized, err.Error())
+		assert.ErrorIs(t, err, errorutil.ErrUnauthorized)
 		mockDB.AssertExpectations(t)
 		mockProject.AssertExpectations(t)
 	})
@@ -1263,13 +1265,13 @@ func TestRotateCertificate(t *testing.T) {
 			CSR: testCSR,
 		}
 
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, sql.ErrNoRows)
+		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, errorutil.ErrDeviceNotFound)
 
 		resp, err := service.RotateCertificate(ctx, testDeviceID, req, user, logger)
 
 		assert.Error(t, err)
 		assert.Nil(t, resp)
-		assert.Equal(t, errorutil.ErrMsgDeviceNotFound, err.Error())
+		assert.ErrorIs(t, err, errorutil.ErrDeviceNotFound)
 		mockDB.AssertExpectations(t)
 	})
 
@@ -1295,7 +1297,7 @@ func TestRotateCertificate(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, resp)
-		assert.Equal(t, errorutil.ErrMsgDeviceNotClaimed, err.Error())
+		assert.ErrorIs(t, err, errorutil.ErrDeviceNotClaimed)
 		mockDB.AssertExpectations(t)
 	})
 
@@ -1313,10 +1315,9 @@ func TestRotateCertificate(t *testing.T) {
 		// Device owned by different account
 		device := &models.Device{
 			ID:             testDeviceUUID,
-			ClientDeviceID: testDeviceID,
+			ClientDeviceID: null.NewString(testDeviceID, testDeviceID != ""),
 			SerialNumber:   testSerialNumber,
-			ModelName:      testModelName,
-			ThingName:      testDeviceID,
+			Model:          testModelName,
 			ClaimStatus:    "CLAIMED",
 			ClaimedBy:      null.NewString("different-account", true),
 			ProjectID:      null.NewString(testProjectID, true),
@@ -1336,7 +1337,7 @@ func TestRotateCertificate(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, resp)
-		assert.Equal(t, errorutil.MsgUnauthorized, err.Error())
+		assert.ErrorIs(t, err, errorutil.ErrUnauthorized)
 		mockDB.AssertExpectations(t)
 	})
 
@@ -1444,7 +1445,7 @@ func TestResetDevice(t *testing.T) {
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
 
-		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, sql.ErrNoRows)
+		mockDB.On("GetDeviceByID", ctx, testDeviceID, mock.Anything).Return(nil, errorutil.ErrDeviceNotFound)
 
 		err := service.ResetDevice(ctx, testDeviceID, user, logger)
 
@@ -1569,7 +1570,7 @@ func TestResetDevice(t *testing.T) {
 		err := service.ResetDevice(ctx, testDeviceID, user, logger)
 
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to begin transaction")
+		assert.Contains(t, err.Error(), "begin transaction:")
 		mockDB.AssertExpectations(t)
 		mockIoT.AssertExpectations(t)
 	})
@@ -1635,7 +1636,7 @@ func TestResetDevice(t *testing.T) {
 		err := service.ResetDevice(ctx, testDeviceID, user, logger)
 
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to commit transaction")
+		assert.Contains(t, err.Error(), "commit transaction:")
 		mockDB.AssertExpectations(t)
 		mockIoT.AssertExpectations(t)
 	})
@@ -1865,7 +1866,7 @@ func TestGetCommandStatus(t *testing.T) {
 				ID:          "db-generated-id",
 				CommandID:   testCommandID,
 				ProjectID:   testProjectID,
-				DeviceID:    testDeviceID,
+				DeviceID:    null.NewString(testDeviceID, testDeviceID != ""),
 				CommandName: "REBOOT",
 				Status:      "COMPLETED",
 				IssuedAt:    issuedAt,

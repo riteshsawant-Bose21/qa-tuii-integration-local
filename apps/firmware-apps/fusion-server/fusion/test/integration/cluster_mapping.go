@@ -39,14 +39,26 @@ func NewTestCluster(t *testing.T, withReset bool) FusionCluster {
 	defer cancel()
 	time.Sleep(5 * time.Second)
 
-	if withReset {
+	needsReset := withReset
+	if !needsReset {
+		healthCtx, healthCancel := context.WithTimeout(ctx, 30*time.Second)
+		defer healthCancel()
+		if err := CheckClusterHealth(healthCtx, env, env.ClusterSize); err != nil {
+			fmt.Printf("[integration] cluster not healthy at test start, restarting: %v\n", err)
+			needsReset = true
+		}
+	}
+
+	if needsReset {
 		// Reset & restart for a clean slate
 		fmt.Printf("[integration] resetting cluster...\n")
 		if err := ResetCluster(ctx, env); err != nil {
 			t.Fatalf("cluster reset failed: %v", err)
 		}
 		fmt.Printf("[integration] restarting cluster...\n")
-		RestartCluster(ctx, env, env.ClusterSize)
+		if err := RestartCluster(ctx, env, env.ClusterSize); err != nil {
+			t.Fatalf("cluster restart failed: %v", err)
+		}
 	}
 
 	fmt.Printf("[integration] building fusion cluster mappings...\n")
@@ -166,7 +178,7 @@ func buildNodeMappings(ctx context.Context, env Env) ([]FusionNode, error) {
 		sort.Strings(instanceToIPs[name])
 	}
 
-	devices, err := GetDevices(ctx, env.BaseURL())
+	devices, err := GetDevicesNodePreferred(ctx, env)
 	if err != nil {
 		return nil, fmt.Errorf("get devices: %w", err)
 	}
@@ -225,7 +237,7 @@ func (fc FusionCluster) Primary() (FusionNode, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	devices, err := GetDevices(ctx, fc.Env.BaseURL())
+	devices, err := GetDevicesNodePreferred(ctx, fc.Env)
 	if err != nil {
 		return FusionNode{}, fmt.Errorf("get devices: %w", err)
 	}
