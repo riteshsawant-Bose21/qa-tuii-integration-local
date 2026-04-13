@@ -11,7 +11,7 @@ class NetworkHardwarePanel extends StatelessWidget {
   final List<FusionNetworkDevice> networkDevices;
   final Function(String) onDragStarted;
   final VoidCallback onDragEnded;
-  final VoidCallback onRegisterDevicesTap;
+  final VoidCallback? onRegisterDevicesTap;
 
   const NetworkHardwarePanel({
     super.key,
@@ -89,7 +89,8 @@ class NetworkHardwarePanel extends StatelessWidget {
           semanticId: "register_devices_btn",
           text: "Register devices",
           height: 48,
-          onTap: onRegisterDevicesTap,
+          enabled: onRegisterDevicesTap != null,
+          onTap: () => onRegisterDevicesTap?.call(),
         ),
       ],
     );

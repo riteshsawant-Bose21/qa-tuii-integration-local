@@ -2,6 +2,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+part 'methods/canvas_input_state_methods.dart';
+
 /// Enum representing mouse button types.
 enum FusionMouseButton {
   left,

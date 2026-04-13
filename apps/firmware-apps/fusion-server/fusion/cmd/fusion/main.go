@@ -41,23 +41,35 @@ func parseFlags() *api.AppConfig {
 	verbose := flag.Bool("verbose", false, "Enable verbose logging")
 	profile := flag.Bool("profile", false, "Enable profile dump")
 	flag.Parse()
+	configUDPDiagnostics := false
 
 	// Read environment overrides
 	if envVal := os.Getenv("FUSION_NET_IFACE"); envVal != "" {
 		*netIface = envVal
 	}
 
-	localIP, err := utils.GetLocalIPByInterface(*netIface)
-	if err != nil {
-		log.Fatalf("Failed to get local IP: %v", err)
+	if *local {
+		*bindAddr = "127.0.0.1"
+	} else {
+		localIP, err := utils.GetLocalIPByInterface(*netIface)
+		if err != nil {
+			log.Fatalf("Failed to get local IP: %v", err)
+		}
+		*bindAddr = localIP
 	}
-	*bindAddr = localIP
 
 	if envVal := os.Getenv("FUSION_PROFILE"); envVal != "" {
 		if envVal == "1" || strings.EqualFold(envVal, "true") {
 			*profile = true
 		} else if envVal == "0" || strings.EqualFold(envVal, "false") {
 			*profile = false
+		}
+	}
+	if envVal := os.Getenv("FUSION_UDP_DIAGNOSTICS"); envVal != "" {
+		if envVal == "1" || strings.EqualFold(envVal, "true") {
+			configUDPDiagnostics = true
+		} else if envVal == "0" || strings.EqualFold(envVal, "false") {
+			configUDPDiagnostics = false
 		}
 	}
 
@@ -68,13 +80,14 @@ func parseFlags() *api.AppConfig {
 	}
 
 	return &api.AppConfig{
-		NodeName: createUniqueNodeName(baseName),
-		BindAddr: *bindAddr,
-		BindPort: *bindPort,
-		NetIface: *netIface,
-		Local:    *local,
-		Verbose:  *verbose,
-		Profile:  *profile,
+		NodeName:       createUniqueNodeName(baseName),
+		BindAddr:       *bindAddr,
+		BindPort:       *bindPort,
+		NetIface:       *netIface,
+		Local:          *local,
+		Verbose:        *verbose,
+		Profile:        *profile,
+		UDPDiagnostics: configUDPDiagnostics,
 	}
 }
 

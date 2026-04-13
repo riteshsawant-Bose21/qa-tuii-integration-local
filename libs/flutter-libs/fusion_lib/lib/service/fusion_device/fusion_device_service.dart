@@ -1,3 +1,4 @@
+import 'dart:developer' show log;
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -88,6 +89,87 @@ class DeviceBulkRegisterResult {
       success: json['success'] as bool? ?? false,
       deviceId: json['device_id'] as String? ?? '',
       error: json['error'] as String? ?? '',
+    );
+  }
+}
+
+class FirmwareUpdateDeviceProgress {
+  final String serialNumber;
+  final String node;
+  final String updateState;
+  final String step;
+  final String currentTask;
+  final int progress;
+  final String handler;
+  final String timestamp;
+
+  const FirmwareUpdateDeviceProgress({
+    required this.serialNumber,
+    required this.node,
+    required this.updateState,
+    required this.step,
+    required this.currentTask,
+    required this.progress,
+    required this.handler,
+    required this.timestamp,
+  });
+
+  factory FirmwareUpdateDeviceProgress.fromJson(Map<String, dynamic> json) {
+    final String rawProgress = json['progress']?.toString() ?? '0';
+    final int parsedProgress = int.tryParse(rawProgress) ?? 0;
+    return FirmwareUpdateDeviceProgress(
+      serialNumber: json['serial_number']?.toString() ?? '',
+      node: json['node']?.toString() ?? '',
+      updateState: json['update_state']?.toString() ?? '',
+      step: json['step']?.toString() ?? '0/0',
+      currentTask: json['current_task']?.toString() ?? '',
+      progress: parsedProgress.clamp(0, 100),
+      handler: json['handler']?.toString() ?? '',
+      timestamp: json['timestamp']?.toString() ?? '',
+    );
+  }
+}
+
+class FirmwareUpdateProgressEvent {
+  final String type;
+  final String status;
+  final int code;
+  final String message;
+  final String timestamp;
+  final Map<String, FirmwareUpdateDeviceProgress> devicesBySerial;
+
+  const FirmwareUpdateProgressEvent({
+    required this.type,
+    required this.status,
+    required this.code,
+    required this.message,
+    required this.timestamp,
+    required this.devicesBySerial,
+  });
+
+  bool get isUpdateProgress => type == 'update_progress';
+
+  factory FirmwareUpdateProgressEvent.fromJson(Map<String, dynamic> json) {
+    final Map<String, FirmwareUpdateDeviceProgress> devicesBySerial = <String, FirmwareUpdateDeviceProgress>{};
+    final dynamic rawData = json['data'];
+    if (rawData is Map<String, dynamic>) {
+      for (final MapEntry<String, dynamic> entry in rawData.entries) {
+        final dynamic value = entry.value;
+        if (value is! Map<String, dynamic>) continue;
+        final FirmwareUpdateDeviceProgress parsed = FirmwareUpdateDeviceProgress.fromJson(value);
+        final String serial = parsed.serialNumber.trim();
+        final String key = serial.isNotEmpty ? serial : entry.key;
+        devicesBySerial[key] = parsed;
+      }
+    }
+
+    return FirmwareUpdateProgressEvent(
+      type: json['type']?.toString() ?? '',
+      status: json['status']?.toString() ?? '',
+      code: json['code'] is int ? json['code'] as int : int.tryParse(json['code']?.toString() ?? '') ?? 0,
+      message: json['message']?.toString() ?? '',
+      timestamp: json['timestamp']?.toString() ?? '',
+      devicesBySerial: devicesBySerial,
     );
   }
 }
@@ -223,22 +305,95 @@ class FusionDeviceService {
     required void Function(int sent, int total) onProgress,
   }) async {
     try {
-      final String host = vip.contains(':') ? vip : '$vip:8080';
+      final String host = _normalizeFusionHost(vip);
       await networkClient.httpClient.dioInstance.post(
         'http://$host/softwareUpdate/upload',
         cancelToken: cancelToken,
         data: FormData.fromMap(
           <String, dynamic>{
             'checksum': checksum,
-            'bundle': await MultipartFile.fromFile(bundleFilePath, filename: p.basename(bundleFilePath)),
+            'bundle': await MultipartFile.fromFile(
+              bundleFilePath,
+              filename: p.basename(bundleFilePath),
+            ),
           },
         ),
         onSendProgress: onProgress,
       );
       return ResponseCallback<void>.success(null);
     } catch (e) {
+      log("Failed to upload firmware bundle to fusion server");
       return ResponseCallback<void>.failure(e.toString());
     }
+  }
+
+  Future<ResponseCallback<void>> connectFirmwareUpdateWebSocket({required String vip}) async {
+    try {
+      final String host = _normalizeFusionHost(vip);
+      final ResponseCallback<void> response = await networkClient.connectWebSocket<void>(url: 'ws://$host/ws');
+      return response;
+    } catch (e) {
+      return ResponseCallback<void>.failure(e.toString());
+    }
+  }
+
+  Future<ResponseCallback<void>> sendStartFirmwareUpdateEvent() async {
+    try {
+      final ResponseCallback<void> response = await networkClient.sendWebSocketMessage<void>(<String, dynamic>{
+        'id': 'sw-update-001',
+        'version': 1,
+        'type': 'start_update',
+      });
+      return response;
+    } catch (e) {
+      return ResponseCallback<void>.failure(e.toString());
+    }
+  }
+
+  Stream<ResponseCallback<FirmwareUpdateProgressEvent>> firmwareUpdateProgressEvents() async* {
+    await for (final ResponseCallback<dynamic> message in networkClient.webSocketMessages) {
+      log('Firmware WS message received: success=${message.success}');
+
+      if (!message.success || message.data == null) {
+        log('Firmware WS invalid message: ${message.message}');
+        yield ResponseCallback<FirmwareUpdateProgressEvent>.failure(message.message);
+        continue;
+      }
+
+      final dynamic payload = message.data;
+      if (payload is! Map<String, dynamic>) {
+        log('Firmware WS ignored non-map payload: ${payload.runtimeType}');
+        continue;
+      }
+
+      final FirmwareUpdateProgressEvent event = FirmwareUpdateProgressEvent.fromJson(payload);
+      if (!event.isUpdateProgress) {
+        log('Firmware WS ignored event type=${event.type}');
+        continue;
+      }
+
+      log('Firmware WS progress event: devices=${event.devicesBySerial.length}, status=${event.status}, code=${event.code}');
+      for (final MapEntry<String, FirmwareUpdateDeviceProgress> entry in event.devicesBySerial.entries) {
+        final FirmwareUpdateDeviceProgress device = entry.value;
+        log('serial=${entry.key}, state=${device.updateState}, step=${device.step}, progress=${device.progress}, task=${device.currentTask}');
+      }
+
+      yield ResponseCallback<FirmwareUpdateProgressEvent>.success(event);
+    }
+  }
+
+  Future<ResponseCallback<void>> disconnectFirmwareUpdateWebSocket() async {
+    try {
+      return await networkClient.disconnectWebSocket<void>();
+    } catch (e) {
+      return ResponseCallback<void>.failure(e.toString());
+    }
+  }
+
+  String _normalizeFusionHost(String vip) {
+    final String trimmed = vip.trim();
+    if (trimmed.isEmpty) return '';
+    return trimmed.contains(':') ? trimmed : '$trimmed:8080';
   }
 
   /// Fetches the cloud registration + claim status for all devices belonging
@@ -253,48 +408,6 @@ class FusionDeviceService {
       return response;
     } catch (e) {
       return ResponseCallback<List<CloudDeviceStatus>>.failure(e.toString());
-    }
-  }
-
-  /// Bulk-registers [HardwareComponent] devices in the cloud via POST /devices/bulk.
-  Future<ResponseCallback<List<DeviceBulkRegisterResult>>> registerHardwareDevicesBulk({
-    required List<HardwareComponent> hardwares,
-    required String projectId,
-  }) async {
-    try {
-      final ResponseCallback<dynamic> response = await networkClient.post(
-        api: FusionApiEndpoint.devicesBulkCloud,
-        data: <String, dynamic>{
-          'devices': [
-            ...hardwares.map(
-              (HardwareComponent hw) {
-                return <String, dynamic>{
-                  'client_device_id': hw.id,
-                  'csr': '', // TODO: SHARATH
-                  'device_location': '', // TODO: SHARATH
-                  'device_name': hw.name,
-                  'device_zone': '', // TODO: SHARATH
-                  'firmware_version': '', // TODO: SHARATH
-                  'is_primary': false,
-                  'mac_address': '', // TODO: SHARATH
-                  'model_name': hw.hardwareName,
-                  'project_id': projectId,
-                  'serial_number': '', // TODO: SHARATH
-                };
-              },
-            ),
-          ],
-        },
-      );
-      if (response.success) {
-        final Map<String, dynamic> data = (response.data as Map<String, dynamic>?) ?? <String, dynamic>{};
-        final List<dynamic> resultsJson = (data['results'] as List<dynamic>?) ?? <dynamic>[];
-        final List<DeviceBulkRegisterResult> results = resultsJson.whereType<Map<String, dynamic>>().map(DeviceBulkRegisterResult.fromJson).toList();
-        return ResponseCallback<List<DeviceBulkRegisterResult>>.success(results);
-      }
-      return ResponseCallback<List<DeviceBulkRegisterResult>>.failure(response.message);
-    } catch (e) {
-      return ResponseCallback<List<DeviceBulkRegisterResult>>.failure(e.toString());
     }
   }
 
@@ -327,10 +440,10 @@ class FusionDeviceService {
                 'csr': '', // TODO: SHARATH
                 'device_location': device.location,
                 'device_name': device.name,
-                'device_zone': '', // TODO: SHARATH
-                'firmware_version': '', // TODO: SHARATH
+                'device_zone': device.location,
+                // 'firmware_version': device.firmwareVersion, // TODO: check this field
                 'is_primary': device.isPrimary,
-                'mac_address': '', // TODO: SHARATH
+                'mac_address': device.macAddress,
                 'model_name': device.modelName,
                 'project_id': projectId,
                 'serial_number': device.serialNumber,
@@ -349,24 +462,6 @@ class FusionDeviceService {
       }
     } catch (e) {
       return ResponseCallback<List<DeviceBulkRegisterResult>>.failure(e.toString());
-    }
-  }
-
-  Future<ResponseCallback<bool>> claimDevice({required String deviceId, required String projectId, required String csr}) async {
-    try {
-      final ResponseCallback<dynamic> response = await networkClient.post(
-        api: FusionApiEndpoint.devicesCloud,
-        additionalPath: '$deviceId/claim',
-        data: <String, dynamic>{
-          'project_id': projectId,
-          'csr': csr,
-        },
-      );
-
-      if (response.success) return ResponseCallback<bool>.success(true);
-      return ResponseCallback<bool>.failure(response.message);
-    } catch (e) {
-      return ResponseCallback<bool>.failure(e.toString());
     }
   }
 

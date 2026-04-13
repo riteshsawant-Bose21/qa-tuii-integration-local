@@ -151,7 +151,7 @@ class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
                       networkDevices: _networkDevices,
                       onDragStarted: (String id) => setState(() => _draggedHardwareId = id),
                       onDragEnded: () => setState(() => _draggedHardwareId = null),
-                      onRegisterDevicesTap: () => showUnregisteredDevicesClaimDialog(context, widget.devices),
+                      onRegisterDevicesTap: widget.devices.isEmpty ? null : () => showUnregisteredDevicesClaimDialog(context, widget.devices),
                     ),
                   ),
                 ],
@@ -198,7 +198,7 @@ class _UnregisteredDevicesDialogState extends State<_UnregisteredDevicesDialog> 
   bool _isChecking = true;
   bool _isRegistering = false;
   String? _errorMessage;
-  List<HardwareComponent> _unregisteredDevices = <HardwareComponent>[];
+  List<FusionNetworkDevice> _unregisteredDevices = <FusionNetworkDevice>[];
 
   @override
   void initState() {
@@ -211,10 +211,7 @@ class _UnregisteredDevicesDialogState extends State<_UnregisteredDevicesDialog> 
 
   Future<void> _checkCloudStatus() async {
     try {
-      final List<HardwareComponent> unregistered = await fusionNetworkDeviceViewModel.getUnregisteredHardware(
-        hardwares: widget.hardwareDevices,
-        projectId: projectId,
-      );
+      final List<FusionNetworkDevice> unregistered = await fusionNetworkDeviceViewModel.getUnregisteredDevices(projectId: projectId);
 
       if (!mounted) return;
 
@@ -233,7 +230,7 @@ class _UnregisteredDevicesDialogState extends State<_UnregisteredDevicesDialog> 
       // On error fall back to showing all hardware so the user can still act.
       setState(() {
         _isChecking = false;
-        _unregisteredDevices = widget.hardwareDevices;
+        _unregisteredDevices = widget.hardwareDevices.cast<FusionNetworkDevice>();
       });
     }
   }
@@ -245,7 +242,7 @@ class _UnregisteredDevicesDialogState extends State<_UnregisteredDevicesDialog> 
     });
 
     try {
-      await fusionNetworkDeviceViewModel.registerAndClaimHardwares(hardwares: _unregisteredDevices, projectId: projectId);
+      await fusionNetworkDeviceViewModel.registerAndClaimDevices(devices: _unregisteredDevices, projectId: projectId);
 
       final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
       if (vip != null && mounted) await fusionNetworkDeviceViewModel.getFusionNetworkDevice(vip: vip);
@@ -344,7 +341,7 @@ class _UnregisteredDevicesDialogState extends State<_UnregisteredDevicesDialog> 
                           physics: const ClampingScrollPhysics(),
                           itemCount: _unregisteredDevices.length,
                           itemBuilder: (BuildContext ctx, int index) {
-                            final HardwareComponent hw = _unregisteredDevices[index];
+                            final FusionNetworkDevice hw = _unregisteredDevices[index];
                             return Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
@@ -368,7 +365,7 @@ class _UnregisteredDevicesDialogState extends State<_UnregisteredDevicesDialog> 
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                         Text(
-                                          hw.hardwareName,
+                                          hw.name,
                                           style: context.textTheme.labelSmall?.copyWith(
                                             color: context.colorScheme.onSurface.withAlpha(140),
                                           ),
