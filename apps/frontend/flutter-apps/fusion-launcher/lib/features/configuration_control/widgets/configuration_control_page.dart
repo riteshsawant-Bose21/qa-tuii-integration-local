@@ -49,38 +49,47 @@ class ConfigurationControlPage extends StatelessWidget {
   }
 }
 
-class _ConfigurationControlBody extends StatelessWidget {
+class _ConfigurationControlBody extends StatefulWidget {
   const _ConfigurationControlBody();
 
   @override
+  State<_ConfigurationControlBody> createState() => _ConfigurationControlBodyState();
+}
+
+class _ConfigurationControlBodyState extends State<_ConfigurationControlBody> {
+  String? _lastLoadedControllerId;
+
+  void _loadSubViewModels(BuildContext context, ConfigControlLoaded state) {
+    if (state.selectedControllerId == null) return;
+    if (state.selectedControllerId == _lastLoadedControllerId) return;
+
+    _lastLoadedControllerId = state.selectedControllerId;
+    final String controllerId = state.selectedControllerId!;
+    final bool isPro = state.isProController;
+
+    // Always reload zone and settings — needed for both LT and Pro controllers.
+    context.read<ZoneControlViewModel>().loadData(controllerId, isProController: isPro);
+    context.read<SettingsViewModel>().loadData(controllerId);
+
+    // Pro-only tabs.
+    if (isPro) {
+      context.read<SnapshotViewModel>().loadData(controllerId);
+      context.read<MessageViewModel>().loadData(controllerId);
+      context.read<ScheduleViewModel>().loadData(controllerId);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return BlocConsumer<ConfigurationControlViewmodel, ConfigurationControlState>(
-      // Only trigger the listener when the selected controller actually changes
-      // (or on the initial transition from non-loaded → loaded).
-      listenWhen: (ConfigurationControlState previous, ConfigurationControlState current) {
-        if (current is ConfigControlLoaded && previous is ConfigControlLoaded) {
-          return previous.selectedControllerId != current.selectedControllerId;
-        }
-        return current is ConfigControlLoaded && previous is! ConfigControlLoaded;
-      },
-      listener: (BuildContext context, ConfigurationControlState state) {
-        if (state is! ConfigControlLoaded || state.selectedControllerId == null) return;
-
-        final String controllerId = state.selectedControllerId!;
-        final bool isPro = state.isProController;
-
-        // Always reload zone and settings — needed for both LT and Pro controllers.
-        context.read<ZoneControlViewModel>().loadData(controllerId, isProController: isPro);
-        context.read<SettingsViewModel>().loadData(controllerId);
-
-        // Pro-only tabs.
-        if (isPro) {
-          context.read<SnapshotViewModel>().loadData(controllerId);
-          context.read<MessageViewModel>().loadData(controllerId);
-          context.read<ScheduleViewModel>().loadData(controllerId);
-        }
-      },
+    return BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
       builder: (BuildContext context, ConfigurationControlState state) {
+        // Trigger sub-viewmodel loads after the frame is built
+        if (state is ConfigControlLoaded && state.selectedControllerId != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _loadSubViewModels(context, state);
+          });
+        }
+
         return Scaffold(
           backgroundColor: context.colorScheme.elevation1,
           body: switch (state) {
