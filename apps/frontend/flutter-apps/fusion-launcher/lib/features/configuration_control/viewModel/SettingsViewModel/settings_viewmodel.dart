@@ -29,6 +29,7 @@ class SettingsViewModel extends Cubit<SettingsState> {
 
     try {
       final ControllerDisplayConfig config = _projectViewModel.getControllerDisplayConfig(controllerId);
+      final List<Zone> zones = _projectViewModel.getAllZones();
 
       emit(
         SettingsLoaded(
@@ -36,6 +37,7 @@ class SettingsViewModel extends Cubit<SettingsState> {
           screenSaver: ScreenSaverOptionX.fromKey(config.screenSaver),
           sleepTime: config.sleepTime,
           controllerId: controllerId,
+          zones: zones,
         ),
       );
     } catch (e) {
@@ -98,5 +100,17 @@ class SettingsViewModel extends Cubit<SettingsState> {
         sleepTime: state.sleepTime,
       ),
     );
+  }
+
+  void setWakeFunction(WakeFunctionOption option) {
+    final SettingsLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    emit(loaded.copyWith(wakeFunction: option, wakeZoneId: option == WakeFunctionOption.zone ? loaded.wakeZoneId : null));
+  }
+
+  void setWakeZone(String? zoneId) {
+    final SettingsLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    emit(loaded.copyWith(wakeFunction: WakeFunctionOption.zone, wakeZoneId: zoneId));
   }
 }

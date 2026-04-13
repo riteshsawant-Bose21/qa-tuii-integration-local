@@ -39,8 +39,8 @@ class ControllerSettingsSection extends StatelessWidget {
                   _buildSleepTimeRow(context, state, vm),
                   const SizedBox(height: 16),
                   _buildDivider(context),
-                  // const SizedBox(height: 16),
-                  // _buildWakeFunction(context, state, vm),
+                  const SizedBox(height: 16),
+                  _buildWakeFunction(context, state, vm),
                 ],
               ),
             ),
@@ -167,69 +167,68 @@ class ControllerSettingsSection extends StatelessWidget {
     );
   }
 
-  // Widget _buildWakeFunction(BuildContext context, SettingsLoaded state, SettingsViewModel vm) {
-  //   final List<WakeFunctionOption> options = WakeFunctionOption.values;
-  //   final List<Zone> zones = state.zones;
-  //   return Column(
-  //     crossAxisAlignment: CrossAxisAlignment.start,
-  //     children: <Widget>[
-  //       FusionAppText(
-  //         text: 'UPON WAKE FUNCTION',
-  //         style: Theme.of(context).textTheme.l1Regular.withColor(
-  //           context.colorScheme.textBody,
-  //         ),
-  //       ),
-  //       const SizedBox(height: 16),
-  //       Row(
-  //         children: <Widget>[
-  //           ...options.map((WakeFunctionOption option) {
-  //             final bool isZone = option == WakeFunctionOption.zone;
-  //             return Row(
-  //               children: <Widget>[
-  //                 _buildRadioOption<WakeFunctionOption>(
-  //                   context: context,
-  //                   label: option.label,
-  //                   value: option,
-  //                   groupValue: state.wakeFunction,
-  //                   onChanged: (WakeFunctionOption? v) {
-  //                     if (v != null) vm.setWakeFunction(v);
-  //                   },
-  //                 ),
-  //                 const SizedBox(
-  //                   width: 8,
-  //                 ),
-  //                 if (isZone)
-  //                   Padding(
-  //                     padding: const EdgeInsets.only(left: 8.0),
-  //                     child: SizedBox(
-  //                       width: 160,
-  //                       child: FusionNeumorphicDropdown<String>(
-  //                         width: 172,
-  //                         color: context.colorScheme.elevation2,
-  //                         value: state.wakeZoneId,
-  //                         hintText: 'Select zone',
-  //                         items: zones.map((Zone z) => z.id).toList(),
-  //                         itemLabelBuilder: (String id) => zones.firstWhere((Zone z) => z.id == id).name,
-  //                         onChanged: (String v) {
-  //                           if (state.wakeFunction == WakeFunctionOption.zone) {
-  //                             vm.setWakeZone(v);
-  //                           }
-  //                         },
-  //                         borderRadius: BorderRadius.circular(8),
-  //                         height: 28,
-  //                         matchChildWidth: true,
-  //                       ),
-  //                     ),
-  //                   ),
-  //                 const SizedBox(width: 32),
-  //               ],
-  //             );
-  //           }).toList(),
-  //         ],
-  //       ),
-  //     ],
-  //   );
-  // }
+  Widget _buildWakeFunction(BuildContext context, SettingsLoaded state, SettingsViewModel vm) {
+    final List<WakeFunctionOption> options = WakeFunctionOption.values;
+    final List<Zone> zones = state.zones;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        FusionAppText(
+          text: 'UPON WAKE FUNCTION',
+          style: Theme.of(context).textTheme.l1Regular.withColor(
+            context.colorScheme.textBody,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: <Widget>[
+            ...options.map((WakeFunctionOption option) {
+              final bool isZone = option == WakeFunctionOption.zone;
+              return Row(
+                children: <Widget>[
+                  _buildRadioOption<WakeFunctionOption>(
+                    context: context,
+                    label: option.label,
+                    value: option,
+                    groupValue: state.wakeFunction,
+                    onChanged: (WakeFunctionOption? v) {
+                      if (v != null) vm.setWakeFunction(v);
+                    },
+                  ),
+                  const SizedBox(
+                    width: 8,
+                  ),
+                  if (isZone && state.wakeFunction == WakeFunctionOption.zone)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: SizedBox(
+                        width: 160,
+                        child: FusionNeumorphicDropdown<String>(
+                          width: 172,
+                          value: state.wakeZoneId,
+                          hintText: 'Select zone',
+                          items: zones.map((Zone z) => z.id).toList(),
+                          itemLabelBuilder: (String id) => zones.firstWhere((Zone z) => z.id == id).name,
+                          onChanged: (String v) {
+                            if (state.wakeFunction == WakeFunctionOption.zone) {
+                              vm.setWakeZone(v);
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          height: 28,
+                          matchChildWidth: true,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(width: 32),
+                ],
+              );
+            }).toList(),
+          ],
+        ),
+      ],
+    );
+  }
 
   // ─── Shared radio option ──────────────────────────────────────────────────────
 
