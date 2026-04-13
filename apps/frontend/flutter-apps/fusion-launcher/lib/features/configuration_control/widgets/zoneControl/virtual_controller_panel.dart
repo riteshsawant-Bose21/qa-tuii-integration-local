@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/zoneControlViewmodel/zone_control_state.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/zoneControlViewmodel/zone_control_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
@@ -20,6 +22,18 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
   String _selectedSource = 'Spotify';
 
   final List<String> _sources = <String>['Spotify', 'AirPlay', 'Bluetooth', 'Line In'];
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    final WallControllerConfig config = serviceLocator<ProjectViewModel>().getWallControllerConfig();
+    context.read<VirtualControllerViewModel>().loadZones(config.zones,
+        serviceLocator<ProjectViewModel>().virtualIP??""
+    );
+
+
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {

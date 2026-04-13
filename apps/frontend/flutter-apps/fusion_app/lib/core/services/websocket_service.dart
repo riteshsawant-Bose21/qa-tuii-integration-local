@@ -198,21 +198,6 @@ class FusionWebSocketService {
     _send(patch);
   }
 
-  /// Sends a source selector update to the server.
-  void sendSourceSelectorPatch(int selectorID, int sourceIndex) {
-    final patch = {
-      "type": "patch",
-      "data": {
-        "settings": {
-          "audio": {
-            selectorID.toString(): {"sourceSelector": sourceIndex}
-          }
-        }
-      }
-    };
-
-    _send(patch);
-  }
 
   void _send(Map<String, dynamic> data) {
     if (_isConnected && _channel != null) {

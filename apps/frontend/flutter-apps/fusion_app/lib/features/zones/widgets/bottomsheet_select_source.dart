@@ -6,9 +6,9 @@ import 'package:fusion_app/features/zones/widgets/source_item.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide Source;
 
 class BottomSheetSelectSource extends StatelessWidget {
-  final ValueNotifier<Source> source;
+  final ValueNotifier<WallZoneSource> source;
   final Function? onSelected;
-  final List<Source> sources;
+  final List<WallZoneSource> sources;
   const BottomSheetSelectSource({super.key,this.sources=const[], required this.source,this.onSelected});
 
   @override
@@ -59,7 +59,7 @@ class BottomSheetSelectSource extends StatelessWidget {
                     itemBuilder: (ctx,i){
 
 
-                      return ValueListenableBuilder<Source>(
+                      return ValueListenableBuilder<WallZoneSource>(
                           valueListenable: source,
                           builder: (context, mode, _) {
                           return GestureDetector(

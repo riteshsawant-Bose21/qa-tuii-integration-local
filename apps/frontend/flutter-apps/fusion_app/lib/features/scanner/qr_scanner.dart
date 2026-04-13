@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:fusion_app/core/router/routes.dart';
+import 'package:fusion_app/core/service_locator.dart';
 import 'package:fusion_app/core/services/loader_service.dart';
 import 'package:fusion_app/features/scanner/view_model/qr_scanner_view_model.dart';
 import 'package:fusion_app/features/scanner/widgets/scan_instruction.dart';
@@ -170,18 +171,20 @@ class _QrScannerScreenState extends State<QrScannerScreen>
   @override
   Widget build(BuildContext context) {
     return BlocListener<QrScannerViewModel, QrScannerState>(
-      listener: (context, state) {
+      listener: (ctx, state) {
         if (state is QrConnecting) {
-          GlobalLoader().show(context);
+          GlobalLoader().show(ctx);
         }
 
         if (state is QrConnected) {
           GlobalLoader().hide();
+          context.read<VirtualControllerViewModel>().loadZones(serviceLocator<QrScannerViewModel>().getZones,context.read<QrScannerViewModel>().vipAddress);
 
           if (loggedInUserId == 0) {
-            Navigator.pushReplacementNamed(context, Routes.passcodePage);
+            Navigator.pushReplacementNamed(ctx, Routes.passcodePage);
           } else {
-            Navigator.pushReplacementNamed(context, Routes.controlPalPage);
+
+            Navigator.pushReplacementNamed(ctx, Routes.controlPalPage);
           }
         }
 
@@ -201,7 +204,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
       },
       child: Scaffold(
         backgroundColor: context.colorScheme.primaryBlack,
-        appBar: CommonAppBar(title: 'Scan QR Code'),
+        appBar: CommonMobileAppBar(title: 'Scan QR Code'),
         body: showErrorState ? _errorState() : _scannerView(),
       ),
     );
@@ -232,7 +235,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
           child: ScanInstruction(
             isFlashOn: _isTorchOn,
             onClickFlash: (value) {
-              context.read<QrScannerViewModel>().onQrScanned("com.bosepro.fusion://connect?vip=192.168.1.100&controller_id=CONTROLLER632721600");
+              context.read<QrScannerViewModel>().onQrScanned("com.bosepro.fusion://connect?vip=192.168.1.111&controller_id=CONTROLLER646795368");
               _isTorchOn.value = value;
               controller?.toggleTorch();
             },

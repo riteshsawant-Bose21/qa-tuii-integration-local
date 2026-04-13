@@ -17,7 +17,7 @@ class FusionQRService {
 
     ResponseCallback<SchemaModel> response  = await networkClient.get(
         api: FusionApiEndpoint.fusionValue,
-      isSecure: false,
+        isSecure: false,
         baseUrlToOverride: vipAddress,
         fromJson: (dynamic json) => SchemaModel.fromJson(json),
     );

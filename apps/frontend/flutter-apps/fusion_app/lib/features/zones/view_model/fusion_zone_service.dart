@@ -10,21 +10,6 @@ class FusionZoneService {
 
   FusionZoneService({required this.networkClient});
 
-
-  // Future<ResponseCallback<SchemaModel>> updateGain(Map<String,dynamic> data) async {
-  //
-  //   ResponseCallback<SchemaModel> response  = await networkClient.patch(
-  //     api: FusionApiEndpoint.fusionValue,
-  //     data: data,
-  //     isSecure: false,
-  //     baseUrlToOverride: "192.168.1.110:8080",
-  //     fromJson: (dynamic json)  => SchemaModel.fromJson(json),
-  //   );
-  //
-  //
-  //   return response;
-  // }
-  //
   Future<ResponseCallback<InputConfig>> getSourceSelect(Map<String,dynamic> pathParams) async {
 
     ResponseCallback<InputConfig> response  = await networkClient.get(

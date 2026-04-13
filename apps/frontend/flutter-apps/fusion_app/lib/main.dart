@@ -109,8 +109,8 @@ class MyApp extends StatelessWidget {
         BlocProvider<ProjectViewModel>(
           create: (BuildContext context) => serviceLocator<ProjectViewModel>(),
         ),
-        BlocProvider<ControlPalZonesViewModel>(
-          create: (BuildContext context) => serviceLocator<ControlPalZonesViewModel>(),
+        BlocProvider<VirtualControllerViewModel>(
+          create: (BuildContext context) => serviceLocator<VirtualControllerViewModel>(),
         ),
         // BlocProvider<ProductQueryCubit>(
         //   create: (BuildContext context) => serviceLocator<ProductQueryCubit>(),

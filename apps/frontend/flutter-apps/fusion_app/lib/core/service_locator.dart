@@ -1,4 +1,4 @@
-
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:fusion_app/core/models/user_profile_model.dart';
@@ -71,8 +71,8 @@ Future<void> setupServiceLocator() async {
     ),
   );
 
-  serviceLocator.registerLazySingleton<FusionZoneService>(
-        () => FusionZoneService(
+  serviceLocator.registerLazySingleton<FusionVirtualControllerService>(
+        () => FusionVirtualControllerService(
       networkClient: serviceLocator<FusionNetworkClient>(),
     ),
   );
@@ -195,9 +195,9 @@ Future<void> setupServiceLocator() async {
   );
 
 
-  serviceLocator.registerLazySingleton<ControlPalZonesViewModel>(
-        () => ControlPalZonesViewModel(
-          service: serviceLocator<FusionZoneService>(),
+  serviceLocator.registerLazySingleton<VirtualControllerViewModel>(
+        () => VirtualControllerViewModel(
+          service: serviceLocator<FusionVirtualControllerService>(),
     ),
   );
 

@@ -1,3 +1,4 @@
+import 'package:fusion_lib/fusion_lib.dart';
 class SchemaModel {
   List<Devices>? devices;
   WallControllerConfig? wallControllerConfig;
@@ -425,188 +426,188 @@ class TaskConnections {
   }
 }
 
-class WallControllerConfig {
-  List<Controllers>? controllers;
-  List<Zones> zones = const [];
-
-
-  WallControllerConfig({this.controllers, this.zones = const []});
-
-  WallControllerConfig.fromJson(Map<String, dynamic> json) {
-    if (json['controllers'] != null) {
-      controllers = <Controllers>[];
-      json['controllers'].forEach((v) {
-        controllers!.add(Controllers.fromJson(v));
-      });
-    }
-    if (json['zones'] != null) {
-      zones = <Zones>[];
-      json['zones'].forEach((v) {
-        zones!.add(Zones.fromJson(v));
-      });
-    }
-
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = Map<String, dynamic>();
-    if (this.controllers != null) {
-      data['controllers'] = this.controllers!.map((v) => v.toJson()).toList();
-    }
-    if (this.zones != null) {
-      data['zones'] = this.zones!.map((v) => v.toJson()).toList();
-    }
-    return data;
-  }
-}
-
-class Controllers {
-  String? id;
-  String? name;
-  List<String>? zoneIds;
-
-  Controllers({this.id, this.name, this.zoneIds});
-
-  Controllers.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    name = json['name'];
-    zoneIds = json['zoneIds'].cast<String>();
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = Map<String, dynamic>();
-    data['id'] = this.id;
-    data['name'] = this.name;
-    data['zoneIds'] = this.zoneIds;
-    return data;
-  }
-}
-
-class Zones {
-  Gain? gain;
-  String? id;
-  String? name;
-  Ono? ono;
-  List<Zones> subZones = const [];
-  List<Source>? sources;
-
-  Zones({this.gain, this.id, this.name, this.ono, this.sources,this.subZones = const []});
-
-  Zones.fromJson(Map<String, dynamic> json) {
-    gain = json['gain'] != null ? Gain.fromJson(json['gain']) : null;
-    id = json['id'];
-    name = json['name'];
-    ono = json['ono'] != null ? Ono.fromJson(json['ono']) : null;
-    if (json['sources'] != null) {
-      sources = <Source>[];
-      json['sources'].forEach((v) {
-        sources!.add(Source.fromJson(v));
-      });
-    }
-    if (json['subZones'] != null) {
-      subZones = <Zones>[];
-      json['subZones'].forEach((v) {
-        subZones!.add(Zones.fromJson(v));
-      });
-    }
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = Map<String, dynamic>();
-    if (this.gain != null) {
-      data['gain'] = this.gain!.toJson();
-    }
-    data['id'] = this.id;
-    data['name'] = this.name;
-    if (this.ono != null) {
-      data['ono'] = this.ono!.toJson();
-    }
-    if (this.sources != null) {
-      data['sources'] = this.sources!.map((v) => v.toJson()).toList();
-    }
-    return data;
-  }
-}
-
-class Gain {
-  String? defaultGainValue;
-  String? defaultMuteValue;
-  String? gainID;
-  String? maxValue;
-  String? minValue;
-
-  Gain(
-      {this.defaultGainValue,
-        this.defaultMuteValue,
-        this.gainID,
-        this.maxValue,
-        this.minValue});
-
-  Gain.fromJson(Map<String, dynamic> json) {
-    defaultGainValue = json['default_gain_value'];
-    defaultMuteValue = json['default_mute_value'];
-    gainID = json['gainID'];
-    maxValue = json['max_value'];
-    minValue = json['min_value'];
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = Map<String, dynamic>();
-    data['default_gain_value'] = this.defaultGainValue;
-    data['default_mute_value'] = this.defaultMuteValue;
-    data['gainID'] = this.gainID;
-    data['max_value'] = this.maxValue;
-    data['min_value'] = this.minValue;
-    return data;
-  }
-}
-
-class Ono {
-  int? gain;
-  int? mute;
-  int? sourceSelector;
-  int? zone;
-
-  Ono({this.gain, this.mute, this.sourceSelector, this.zone});
-
-  Ono.fromJson(Map<String, dynamic> json) {
-    gain = json['gain'];
-    mute = json['mute'];
-    sourceSelector = json['sourceSelector'];
-    zone = json['zone'];
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = Map<String, dynamic>();
-    data['gain'] = this.gain;
-    data['mute'] = this.mute;
-    data['sourceSelector'] = this.sourceSelector;
-    data['zone'] = this.zone;
-    return data;
-  }
-}
-
-class Source {
-  int? index;
-  String? sourceId;
-  String? sourceName;
-
-  Source({this.index, this.sourceId,this.sourceName});
-
-  Source.fromJson(Map<String, dynamic> json) {
-    index = json['index'];
-    sourceId = json['sourceId'];
-    sourceName = json['sourceName'];
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = Map<String, dynamic>();
-    data['index'] = this.index;
-    data['sourceId'] = this.sourceId;
-    data['sourceName'] = this.sourceName;
-    return data;
-  }
-}
+// class WallControllerConfig {
+//   List<Controllers>? controllers;
+//   List<Zones> zones = const [];
+//
+//
+//   WallControllerConfig({this.controllers, this.zones = const []});
+//
+//   WallControllerConfig.fromJson(Map<String, dynamic> json) {
+//     if (json['controllers'] != null) {
+//       controllers = <Controllers>[];
+//       json['controllers'].forEach((v) {
+//         controllers!.add(Controllers.fromJson(v));
+//       });
+//     }
+//     if (json['zones'] != null) {
+//       zones = <Zones>[];
+//       json['zones'].forEach((v) {
+//         zones!.add(Zones.fromJson(v));
+//       });
+//     }
+//
+//   }
+//
+//   Map<String, dynamic> toJson() {
+//     final Map<String, dynamic> data = Map<String, dynamic>();
+//     if (this.controllers != null) {
+//       data['controllers'] = this.controllers!.map((v) => v.toJson()).toList();
+//     }
+//     if (this.zones != null) {
+//       data['zones'] = this.zones!.map((v) => v.toJson()).toList();
+//     }
+//     return data;
+//   }
+// }
+//
+// class Controllers {
+//   String? id;
+//   String? name;
+//   List<String>? zoneIds;
+//
+//   Controllers({this.id, this.name, this.zoneIds});
+//
+//   Controllers.fromJson(Map<String, dynamic> json) {
+//     id = json['id'];
+//     name = json['name'];
+//     zoneIds = json['zoneIds'].cast<String>();
+//   }
+//
+//   Map<String, dynamic> toJson() {
+//     final Map<String, dynamic> data = Map<String, dynamic>();
+//     data['id'] = this.id;
+//     data['name'] = this.name;
+//     data['zoneIds'] = this.zoneIds;
+//     return data;
+//   }
+// }
+//
+// class Zones {
+//   Gain? gain;
+//   String? id;
+//   String? name;
+//   Ono? ono;
+//   List<Zones> subZones = const [];
+//   List<Source>? sources;
+//
+//   Zones({this.gain, this.id, this.name, this.ono, this.sources,this.subZones = const []});
+//
+//   Zones.fromJson(Map<String, dynamic> json) {
+//     gain = json['gain'] != null ? Gain.fromJson(json['gain']) : null;
+//     id = json['id'];
+//     name = json['name'];
+//     ono = json['ono'] != null ? Ono.fromJson(json['ono']) : null;
+//     if (json['sources'] != null) {
+//       sources = <Source>[];
+//       json['sources'].forEach((v) {
+//         sources!.add(Source.fromJson(v));
+//       });
+//     }
+//     if (json['subZones'] != null) {
+//       subZones = <Zones>[];
+//       json['subZones'].forEach((v) {
+//         subZones!.add(Zones.fromJson(v));
+//       });
+//     }
+//   }
+//
+//   Map<String, dynamic> toJson() {
+//     final Map<String, dynamic> data = Map<String, dynamic>();
+//     if (this.gain != null) {
+//       data['gain'] = this.gain!.toJson();
+//     }
+//     data['id'] = this.id;
+//     data['name'] = this.name;
+//     if (this.ono != null) {
+//       data['ono'] = this.ono!.toJson();
+//     }
+//     if (this.sources != null) {
+//       data['sources'] = this.sources!.map((v) => v.toJson()).toList();
+//     }
+//     return data;
+//   }
+// }
+//
+// class Gain {
+//   String? defaultGainValue;
+//   String? defaultMuteValue;
+//   String? gainID;
+//   String? maxValue;
+//   String? minValue;
+//
+//   Gain(
+//       {this.defaultGainValue,
+//         this.defaultMuteValue,
+//         this.gainID,
+//         this.maxValue,
+//         this.minValue});
+//
+//   Gain.fromJson(Map<String, dynamic> json) {
+//     defaultGainValue = json['default_gain_value'];
+//     defaultMuteValue = json['default_mute_value'];
+//     gainID = json['gainID'];
+//     maxValue = json['max_value'];
+//     minValue = json['min_value'];
+//   }
+//
+//   Map<String, dynamic> toJson() {
+//     final Map<String, dynamic> data = Map<String, dynamic>();
+//     data['default_gain_value'] = this.defaultGainValue;
+//     data['default_mute_value'] = this.defaultMuteValue;
+//     data['gainID'] = this.gainID;
+//     data['max_value'] = this.maxValue;
+//     data['min_value'] = this.minValue;
+//     return data;
+//   }
+// }
+//
+// class Ono {
+//   int? gain;
+//   int? mute;
+//   int? sourceSelector;
+//   int? zone;
+//
+//   Ono({this.gain, this.mute, this.sourceSelector, this.zone});
+//
+//   Ono.fromJson(Map<String, dynamic> json) {
+//     gain = json['gain'];
+//     mute = json['mute'];
+//     sourceSelector = json['sourceSelector'];
+//     zone = json['zone'];
+//   }
+//
+//   Map<String, dynamic> toJson() {
+//     final Map<String, dynamic> data = Map<String, dynamic>();
+//     data['gain'] = this.gain;
+//     data['mute'] = this.mute;
+//     data['sourceSelector'] = this.sourceSelector;
+//     data['zone'] = this.zone;
+//     return data;
+//   }
+// }
+//
+// class Source {
+//   int? index;
+//   String? sourceId;
+//   String? sourceName;
+//
+//   Source({this.index, this.sourceId,this.sourceName});
+//
+//   Source.fromJson(Map<String, dynamic> json) {
+//     index = json['index'];
+//     sourceId = json['sourceId'];
+//     sourceName = json['sourceName'];
+//   }
+//
+//   Map<String, dynamic> toJson() {
+//     final Map<String, dynamic> data = Map<String, dynamic>();
+//     data['index'] = this.index;
+//     data['sourceId'] = this.sourceId;
+//     data['sourceName'] = this.sourceName;
+//     return data;
+//   }
+// }
 
 double? toDouble(dynamic value) {
   return (value as num?)?.toDouble();

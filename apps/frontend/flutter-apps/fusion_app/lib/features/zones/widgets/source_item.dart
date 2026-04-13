@@ -4,7 +4,7 @@ import 'package:fusion_app/features/shared/presentation/widgets/common/checkbox_
 import 'package:fusion_app/features/zones/models/zone_source_model.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide Source;
 class SourceCard extends StatelessWidget {
-  final Source source;
+  final WallZoneSource source;
   final bool showCheckbox;
   final bool selected;
   const SourceCard({super.key,required this.source,this.showCheckbox = false,this.selected=false});

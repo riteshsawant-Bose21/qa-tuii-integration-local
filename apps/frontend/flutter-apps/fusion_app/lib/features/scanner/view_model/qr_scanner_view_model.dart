@@ -26,10 +26,10 @@ class QrScannerViewModel extends Cubit<QrScannerState> {
         _networkClient = networkClient,
         super(QrInitial());
 
-  final List<ZoneModel> _zones = [];
+  final List<WallZone> _zones = [];
 
-  List<ZoneModel> get getZones =>_zones;
-
+  List<WallZone> get getZones =>_zones;
+  String vipAddress = "";
   /// Emit scanning
   void startScanning() {
     emit(QrScanning());
@@ -100,22 +100,24 @@ class QrScannerViewModel extends Cubit<QrScannerState> {
           SchemaModel schemaModel = model.data!;
 
 
-          Controllers? controller = schemaModel.wallControllerConfig!
+          WallController? controller = schemaModel.wallControllerConfig!
               .controllers?.firstWhere((ctrl) => ctrl.id == details.configId);
 
           if (controller != null) {
             zoneIds.addAll(controller.zoneIds ?? []);
           }
 
-          for (Zones item in schemaModel.wallControllerConfig?.zones ?? []) {
-            ZoneModel? zone;
+          for (WallZone item in schemaModel.wallControllerConfig?.zones ?? []) {
+            WallZone? zone;
             for (var id in zoneIds) {
               if (id == item.id) {
-                 zone = ZoneModel(
+                 zone = WallZone(
                     id: id,
                     name: item.name!,
                     subZones: [],
                     sources: item.sources ?? [],
+                   gain: item.gain,
+                   ono: item.ono ,
                 );
               }
             }
@@ -124,22 +126,26 @@ class QrScannerViewModel extends Cubit<QrScannerState> {
             print("Subzones found, adding sources directly to parent zone : ${item.subZones.length}");
 
             for(var subZone in item.subZones) {
-              zone!.subZones.add(ZoneSourceModel(
-                  id: subZone.id!,
-                  name: subZone.name!,
-                  gainID: subZone.gain?.gainID ?? "",
-                  icon: Icons.yard_outlined,
-                  volume: AudioUtils.toUiVolume(0)
+              zone!.subZones.add(WallSubZone(
+                  id: subZone.id,
+                  name: subZone.name,
+                  gain: subZone.gain,
+                ono: subZone.ono,
               ));
             }
             _zones.add(zone!);
           }else{
-            zone!.subZones.add(ZoneSourceModel(
-                id: item.id!,
-                name: item.name!,
-                gainID: item.gain?.gainID ?? "",
-                icon: Icons.yard_outlined,
-                volume: AudioUtils.toUiVolume(0)
+            print("Subzones empty, adding sources directly to parent zone : ${item.subZones.length}");
+
+            zone!.subZones.add(WallSubZone(
+              id: item.id,
+              name: item.name,
+              gain: item.gain,
+              ono: WallSubZoneOno.fromJson({
+                'subZone': 0,
+                'gain': 0,
+                'mute': 0,
+              }) ,
             ));
             _zones.add(zone!);
           }

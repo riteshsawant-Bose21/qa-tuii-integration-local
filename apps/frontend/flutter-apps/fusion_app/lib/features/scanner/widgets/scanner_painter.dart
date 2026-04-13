@@ -34,7 +34,7 @@ class ScannerOverlayPainter extends CustomPainter {
 
     canvas.drawPath(path, overlayPaint);
 
-    /// 🔥 OUTSIDE BORDER CONFIG
+    ///  OUTSIDE BORDER CONFIG
     const borderPadding = 12.0;
     const cornerLength = 24.0;
 
@@ -112,11 +112,10 @@ class ScannerOverlayPainter extends CustomPainter {
     canvas.drawPath(bottomRight, framePaint);
 
     /// =====================================
-    /// 🔥 IMPROVED SCANNING LINE
+    ///  IMPROVED SCANNING LINE
     /// =====================================
 
     /// =====================================
-    /// 🔥 SCAN LINE WITH DOWNWARD SHADOW
     /// =====================================
 
     final scanY = scanArea.top + (scanArea.height * scanProgress);
