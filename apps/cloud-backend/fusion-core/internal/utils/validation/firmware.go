@@ -91,6 +91,14 @@ func ValidateMainVersionFormat(version string) error {
 	return nil
 }
 
+// StripBuildMetadata removes the +build suffix from a version string.
+func StripBuildMetadata(version string) string {
+	if idx := strings.Index(version, "+"); idx != -1 {
+		return version[:idx]
+	}
+	return version
+}
+
 // IsVersionGreaterOrEqual compares two semantic versions following SemVer 2.0.0 spec.
 // currently it just compares the major.minor.patch and ignores the prerelease tag, since this is just used to compare the compatibility versions, which do not have prerelease tags
 func IsVersionGreaterOrEqual(v1, v2 *ParsedVersion) bool {
