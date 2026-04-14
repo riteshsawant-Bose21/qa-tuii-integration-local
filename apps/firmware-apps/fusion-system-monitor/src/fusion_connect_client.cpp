@@ -726,6 +726,7 @@ private:
     void join_multicast_group(uint32_t multicast_ip);
     bool process_audio_streams_update();
     void audio_streams_update_func();
+    void device_id_update_func();
     void maybe_retry_audio_streams_update();
     void maybe_start_manager();
     void update_ptp_state();
@@ -764,9 +765,10 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
         enet_iface = "lan1";
     }
 
-    assign_parameter("audio_streams_update", &audio_streams_update, 
+    assign_parameter("audio_streams_update", &audio_streams_update,
                      POST_FUNCTION_SCALAR(audio_streams_update_func));
-    assign_parameter("device_id", &device_id);
+    assign_parameter("device_id", &device_id,
+                     POST_FUNCTION_SCALAR(device_id_update_func));
 
     ptp_last_poll = std::chrono::steady_clock::now();
     ptp_last_role_probe = ptp_last_poll;
@@ -1211,8 +1213,12 @@ bool FusionConnectClient::process_audio_streams_update() {
 
 void FusionConnectClient::audio_streams_update_func() {
     audio_streams_update_pending = true;
-    if (process_audio_streams_update())
-        audio_streams_update_pending = false;
+    audio_update_last_retry = std::chrono::steady_clock::now() - std::chrono::seconds(1);
+}
+
+void FusionConnectClient::device_id_update_func() {
+    audio_streams_update_pending = true;
+    audio_update_last_retry = std::chrono::steady_clock::now() - std::chrono::seconds(1);
 }
 
 void FusionConnectClient::maybe_retry_audio_streams_update() {
