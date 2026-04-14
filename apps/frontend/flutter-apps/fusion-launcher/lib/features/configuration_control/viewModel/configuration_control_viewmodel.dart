@@ -20,9 +20,11 @@ import 'configuration_control_state.dart';
 class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
   late final StreamSubscription<ProjectViewModelState> _projectSubscription;
 
-  ConfigurationControlViewmodel() : super(const ConfigControlInitial()) {
+  ConfigurationControlViewmodel() : super(const ConfigControlInitial());
+
+  Future<void> init() async {
+    await Future<void>.value();
     _loadData();
-    // Re-sync whenever the project changes externally (controllers added / removed / updated)
     _projectSubscription = _projectViewModel.stream.listen((_) => _sync());
   }
 

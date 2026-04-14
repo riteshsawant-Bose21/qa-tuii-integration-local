@@ -169,7 +169,6 @@ class _MessageNameFieldState extends State<_MessageNameField> {
           controller: _controller,
           variant: FusionFieldVariant.neumorphic,
         ),
-
         // FusionContainer(
         //   raised: false,
         //   height: 40,

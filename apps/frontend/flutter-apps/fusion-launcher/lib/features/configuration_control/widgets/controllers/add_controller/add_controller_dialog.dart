@@ -154,7 +154,7 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
                       /// Main content
                       Flexible(
                         child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(20),
+                          padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
@@ -269,7 +269,7 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
         hint: 'Enter controller name',
         controller: _nameController,
         width: double.infinity,
-        height: 30,
+        height: 32,
         borderRadius: 8,
         variant: FusionFieldVariant.neumorphic,
         onChange: (String value) {
@@ -304,7 +304,7 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
         value: state.controllerType,
         displayValue: displayText,
         hintText: 'Select Controller',
-        height: 30,
+        height: 32,
         borderRadius: BorderRadius.circular(8),
         items: ControllerType.values,
         // itemLabelBuilder: (ControllerType type) => type.displayN?ame,
@@ -355,7 +355,7 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
         value: state.locationType,
         displayValue: displayText,
         hintText: 'Select Location',
-        height: 30,
+        height: 32,
         borderRadius: BorderRadius.circular(8),
         items: LocationType.values,
         itemBuilder: (BuildContext ctx, LocationType type) {
@@ -411,7 +411,7 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
             value: selectedItem,
             matchChildWidth: true,
             hintText: 'Select Zone',
-            height: 30,
+            height: 32,
             borderRadius: BorderRadius.circular(8),
             items: selectableItems,
             displayValue: selectedItem?.name,
@@ -455,7 +455,7 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
           child: FusionNeumorphicDropdown<EquipLocation>(
             value: selectedLocation,
             hintText: 'Select equipment location',
-            height: 30,
+            height: 32,
             borderRadius: BorderRadius.circular(8),
             items: equipLocations,
             displayValue: selectedLocation?.name,
@@ -543,7 +543,7 @@ class _AddControllerDialogContentState extends State<_AddControllerDialogContent
     if (selectedItem == null) return null;
 
     return Container(
-      height: 30,
+      height: 32,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: context.colorScheme.elevation1,

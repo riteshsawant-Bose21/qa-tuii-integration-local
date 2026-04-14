@@ -38,8 +38,15 @@ class ScheduledItemsPanel extends StatelessWidget {
                       isChecked: state.showUpcoming,
                       onTap: vm.toggleShowUpcoming,
                     ),
+                    // ── Divder ──────────────────────────────────────────
                     const SizedBox(height: 8),
-
+                    Divider(
+                      color: context.colorScheme.strokeLight,
+                      height: 1,
+                      indent: 12,
+                      endIndent: 12,
+                    ),
+                    const SizedBox(height: 8),
                     // ── Filter mode radio buttons ────────────────────────
                     _RadioRow(
                       label: 'Show none',
@@ -98,13 +105,12 @@ class _CheckboxRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
           children: <Widget>[
-            _FusionCheckbox(isChecked: isChecked),
+            FusionCheckbox(semanticId: 'schedule_item_show_upcoming_checkbox', value: isChecked, onChanged: onTap),
             const SizedBox(width: 10),
             FusionAppText(
               text: label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              style: Theme.of(context).textTheme.l1Regular.copyWith(
                 color: context.colorScheme.textPrimary,
-                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -132,13 +138,17 @@ class _RadioRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           children: <Widget>[
-            _RadioIndicator(isSelected: isSelected),
+            FusionCheckbox(
+              semanticId: 'schedule_item_show_checkbox',
+              value: isSelected,
+              onChanged: onTap,
+              shape: BoxShape.circle,
+            ),
             const SizedBox(width: 10),
             FusionAppText(
               text: label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              style: Theme.of(context).textTheme.l1Regular.copyWith(
                 color: isSelected ? context.colorScheme.textPrimary : context.colorScheme.textSecondary,
-                fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
               ),
             ),
           ],
@@ -166,7 +176,7 @@ class _ScheduleCheckboxRow extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(28, 6, 12, 6),
         child: Row(
           children: <Widget>[
-            _FusionCheckbox(isChecked: isChecked),
+            FusionCheckbox(semanticId: 'schedule_item_checkbox', onChanged: onToggle, value: isChecked),
             const SizedBox(width: 10),
             FusionAppText(
               text: schedule.name,
@@ -177,60 +187,6 @@ class _ScheduleCheckboxRow extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-// ─── Shared widgets ───────────────────────────────────────────────────────────
-
-class _FusionCheckbox extends StatelessWidget {
-  final bool isChecked;
-  const _FusionCheckbox({required this.isChecked});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 16,
-      height: 16,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(3),
-        border: Border.all(
-          color: isChecked ? context.colorScheme.primaryColor : context.colorScheme.iconDefault,
-          width: 1.5,
-        ),
-        color: isChecked ? context.colorScheme.primaryColor : Colors.transparent,
-      ),
-      child: isChecked ? const Icon(Icons.check, size: 11, color: Colors.white) : null,
-    );
-  }
-}
-
-class _RadioIndicator extends StatelessWidget {
-  final bool isSelected;
-  const _RadioIndicator({required this.isSelected});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 16,
-      height: 16,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: isSelected ? context.colorScheme.primaryColor : context.colorScheme.iconDefault,
-          width: 1.5,
-        ),
-      ),
-      child:
-          isSelected
-              ? Center(
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: context.colorScheme.primaryColor),
-                ),
-              )
-              : null,
     );
   }
 }

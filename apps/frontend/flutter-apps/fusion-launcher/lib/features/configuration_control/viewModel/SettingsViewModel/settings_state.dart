@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 /// Screen mode for the controller settings.
 enum ScreenMode { light, dark }
@@ -73,11 +74,22 @@ class SettingsLoaded extends SettingsState {
   /// The controller ID this state belongs to.
   final String? controllerId;
 
+  /// Wake function option for the controller settings tab (per-controller).
+  final WakeFunctionOption wakeFunction;
+
+  /// Selected zone for wake function (if wakeFunction == zone).
+  final String? wakeZoneId;
+
+  final List<Zone> zones;
+
   const SettingsLoaded({
     this.screenMode = ScreenMode.dark,
     this.screenSaver = ScreenSaverOption.qrCode,
     this.sleepTime = 30,
     this.controllerId,
+    this.wakeFunction = WakeFunctionOption.lastScreen,
+    this.wakeZoneId,
+    this.zones = const <Zone>[],
   });
 
   SettingsLoaded copyWith({
@@ -85,17 +97,23 @@ class SettingsLoaded extends SettingsState {
     ScreenSaverOption? screenSaver,
     int? sleepTime,
     Object? controllerId = _sentinel,
+    WakeFunctionOption? wakeFunction,
+    String? wakeZoneId,
+    List<Zone>? zones,
   }) {
     return SettingsLoaded(
       screenMode: screenMode ?? this.screenMode,
       screenSaver: screenSaver ?? this.screenSaver,
       sleepTime: sleepTime ?? this.sleepTime,
       controllerId: identical(controllerId, _sentinel) ? this.controllerId : controllerId as String?,
+      wakeFunction: wakeFunction ?? this.wakeFunction,
+      wakeZoneId: wakeZoneId ?? this.wakeZoneId,
+      zones: zones ?? this.zones,
     );
   }
 
   @override
-  List<Object?> get props => <Object?>[screenMode, screenSaver, sleepTime, controllerId];
+  List<Object?> get props => <Object?>[screenMode, screenSaver, sleepTime, controllerId, wakeFunction, wakeZoneId, zones];
 }
 
 /// Error state - failed to load data.
@@ -110,3 +128,19 @@ class SettingsError extends SettingsState {
 
 /// Sentinel for nullable copyWith parameters.
 const Object _sentinel = Object();
+
+// Wake function options for the controller settings tab.
+enum WakeFunctionOption { lastScreen, homeScreen, zone }
+
+extension WakeFunctionOptionLabel on WakeFunctionOption {
+  String get label {
+    switch (this) {
+      case WakeFunctionOption.lastScreen:
+        return 'Last screen visited';
+      case WakeFunctionOption.homeScreen:
+        return 'Home screen';
+      case WakeFunctionOption.zone:
+        return 'zone';
+    }
+  }
+}

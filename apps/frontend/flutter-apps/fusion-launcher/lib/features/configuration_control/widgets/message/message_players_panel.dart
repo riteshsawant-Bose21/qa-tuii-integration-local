@@ -53,7 +53,7 @@ class _MessagePlayersSection extends StatelessWidget {
                     ? Center(
                       child: FusionAppText(
                         text: 'No message players available',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        style: Theme.of(context).textTheme.l1Regular.copyWith(
                           color: context.colorScheme.textSecondary,
                         ),
                       ),
@@ -92,20 +92,15 @@ class _MessagePlayerItem extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
       child: Row(
         children: <Widget>[
-          GestureDetector(
-            onTap: onToggle,
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 10),
-              child: _FusionCheckbox(isChecked: isChecked),
-            ),
+          Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: FusionCheckbox(semanticId: 'message_player_item_checkbox', onChanged: onToggle, value: isChecked),
           ),
           Expanded(
             child: FusionAppText(
               text: player.name,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              style: Theme.of(context).textTheme.l1Regular.copyWith(
                 color: isChecked ? context.colorScheme.textPrimary : context.colorScheme.textSecondary,
-                fontWeight: isChecked ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
           ),
@@ -139,11 +134,14 @@ class _MessageListSection extends StatelessWidget {
           Expanded(
             child:
                 activePlayers.isEmpty
-                    ? Center(
-                      child: FusionAppText(
-                        text: 'Check a message player to see its messages',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: context.colorScheme.textSecondary,
+                    ? Padding(
+                      padding: const EdgeInsets.all(10.0),
+                      child: Center(
+                        child: FusionAppText(
+                          text: 'Check a message player to see its messages',
+                          style: Theme.of(context).textTheme.l1Regular.copyWith(
+                            color: context.colorScheme.textSecondary,
+                          ),
                         ),
                       ),
                     )
@@ -199,13 +197,20 @@ class _PlayerMessageGroup extends StatelessWidget {
             ),
           ),
         ),
+        Divider(
+          color: context.colorScheme.strokeLight,
+          indent: 12,
+          height: 0,
+          endIndent: 12,
+        ),
+
         // Message list for this player
         if (messages.isEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
             child: FusionAppText(
               text: 'No messages',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              style: Theme.of(context).textTheme.l1Regular.copyWith(
                 color: context.colorScheme.textSecondary,
               ),
             ),
@@ -243,43 +248,27 @@ class _MessageItem extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             child: Padding(
               padding: const EdgeInsets.only(right: 10),
-              child: _FusionCheckbox(isChecked: isChecked),
+              child: Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: FusionCheckbox(
+                  semanticId: 'message_list_item_checkbox',
+                  onChanged: onToggle,
+                  value: isChecked,
+                ),
+              ),
+              // child: _FusionCheckbox(isChecked: isChecked),
             ),
           ),
           Expanded(
             child: FusionAppText(
               text: message.name,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              style: Theme.of(context).textTheme.l1Regular.copyWith(
                 color: isChecked ? context.colorScheme.textPrimary : context.colorScheme.textSecondary,
               ),
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-// ─── Shared checkbox widget ───────────────────────────────────────────────────
-
-class _FusionCheckbox extends StatelessWidget {
-  final bool isChecked;
-  const _FusionCheckbox({required this.isChecked});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 16,
-      height: 16,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(3),
-        border: Border.all(
-          color: isChecked ? context.colorScheme.primaryColor : context.colorScheme.iconDefault,
-          width: 1.5,
-        ),
-        color: isChecked ? context.colorScheme.primaryColor : Colors.transparent,
-      ),
-      child: isChecked ? const Icon(Icons.check, size: 11, color: Colors.white) : null,
     );
   }
 }

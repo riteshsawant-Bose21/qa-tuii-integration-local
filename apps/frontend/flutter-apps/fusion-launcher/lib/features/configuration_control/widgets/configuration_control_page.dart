@@ -26,7 +26,7 @@ class ConfigurationControlPage extends StatelessWidget {
     return MultiBlocProvider(
       providers: <BlocProvider<dynamic>>[
         BlocProvider<ConfigurationControlViewmodel>(
-          create: (_) => ConfigurationControlViewmodel(),
+          create: (_) => ConfigurationControlViewmodel()..init(),
         ),
         BlocProvider<ZoneControlViewModel>(
           create: (_) => ZoneControlViewModel(),
