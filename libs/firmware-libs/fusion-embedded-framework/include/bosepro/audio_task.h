@@ -21,6 +21,7 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -120,6 +121,10 @@ public:
     Algorithm *get_block(const std::string &name);
 
 
+    /// Apply a parameter setting to this task, including composite mappings.
+    bool apply_parameter_setting(const ParameterSetting &setting);
+
+
     /// Start this task after it has been stopped with `stop()`.
     void start();
 
@@ -158,6 +163,10 @@ private:
     std::vector<double> block_timings;
     // A map of blocks, for accessing parameters.
     std::map<std::string, Algorithm *> block_map;
+    std::map<std::string, std::vector<std::pair<std::string, std::string>>> composite_parameter_map;
+    // Composite block names (all expanded composites) and the opaque subset.
+    std::set<std::string> composite_block_names;
+    std::set<std::string> opaque_composite_block_names;
     bool profile_blocks = false;
     int_fast32_t cpu_affinity;
     DspSignalMemory<const float []> empty_signal;
