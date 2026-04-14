@@ -347,8 +347,8 @@ class PathSystemStorage {
     final FusionBasePainter? sourceLayer = painter.getLayerById(connection.deviceId);
     final FusionBasePainter? destLayer = painter.getLayerById(connection.targetDeviceId);
 
-    Offset? start = sourceLayer is PortPainter ? sourceLayer.getPortPosition(connection.portId, painter) : null;
-    Offset? end = destLayer is PortPainter ? destLayer.getPortPosition(connection.targetPortId, painter) : null;
+    Offset? start = sourceLayer is PortPainter ? sourceLayer.getPortPositionWithPadding(connection.portId, painter) : null;
+    Offset? end = destLayer is PortPainter ? destLayer.getPortPositionWithPadding(connection.targetPortId, painter) : null;
 
     if (start != null && end != null) {
       return _ConnectionEndpoints(start: start, end: end);
@@ -358,8 +358,8 @@ class PathSystemStorage {
       if (element is! PortPainter) {
         continue;
       }
-      start ??= element.getPortPosition(connection.portId, painter);
-      end ??= element.getPortPosition(connection.targetPortId, painter);
+      start ??= element.getPortPositionWithPadding(connection.portId, painter);
+      end ??= element.getPortPositionWithPadding(connection.targetPortId, painter);
       if (start != null && end != null) {
         return _ConnectionEndpoints(start: start, end: end);
       }

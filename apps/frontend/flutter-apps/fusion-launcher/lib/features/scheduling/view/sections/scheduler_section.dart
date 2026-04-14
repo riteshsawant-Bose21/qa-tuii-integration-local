@@ -24,14 +24,15 @@ class _SchedulerSection extends StatelessWidget {
             semanticId: 'scheduler_table',
             spacing: 20,
             headers: <FusionTableHeader>[
-              FusionTableHeader(title: "Name", flex: 3),
-              FusionTableHeader(title: "Occurrence", flex: 2),
-              FusionTableHeader(title: "", flex: 4),
-              FusionTableHeader(title: "Time", flex: 2),
-              FusionTableHeader(title: "Status", flex: 1),
-              FusionTableHeader(title: "", flex: 1),
-              FusionTableHeader(title: "", flex: 1),
-              FusionTableHeader(title: "", flex: 1),
+              FusionTableHeader(title: "NAME", flex: 2, aligment: Alignment.centerLeft),
+              FusionTableHeader(title: "OCCURRENCE", flex: 2, aligment: Alignment.centerLeft),
+              FusionTableHeader(title: "DAY", flex: 6, aligment: Alignment.centerLeft),
+              FusionTableHeader(title: "TIME", flex: 2, aligment: Alignment.center),
+              FusionTableHeader(title: "DATE RANGE", flex: 2, aligment: Alignment.center),
+              FusionTableHeader(title: "ACTIVE", flex: 2, aligment: Alignment.center),
+              FusionTableHeader(title: "TEST", flex: 2, aligment: Alignment.center),
+              FusionTableHeader(title: "PROGRAM EVENT", flex: 2, aligment: Alignment.center),
+              FusionTableHeader(title: "", flex: 1, aligment: Alignment.center),
             ],
             itemCount: state.schedules.length,
             onRowTap: (int value) {
@@ -45,110 +46,118 @@ class _SchedulerSection extends StatelessWidget {
               final ScheduleConfig schedule = state.schedules[index];
               return <Widget>[
                 /// Name
-                FusionAppText(semanticId: 'scheduler_table_data_name', text: schedule.name),
+                FusionAppText(
+                  semanticId: 'scheduler_table_data_name',
+                  maxLine: 1,
+                  text: schedule.name,
+                  style: context.textTheme.l1Regular,
+                ),
 
                 /// Occurrence
-                Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: context.colorScheme.primaryWhite),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  height: 32,
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: FusionAppText(
-                          semanticId: 'scheduler_table_data_recurrence',
-                          text: schedule.recurrence.label,
-                          style: context.textTheme.bodySmall,
-                        ),
-                      ),
-                      FusionIcon.icon(semanticId: 'scheduler_table_data_recurrence_icon', Icons.keyboard_arrow_down_rounded, size: 16),
-                    ],
-                  ),
+                FusionAppText(
+                  semanticId: 'scheduler_table_data_recurrence',
+                  text: schedule.recurrence.label,
+                  style: context.textTheme.l1Regular,
                 ),
 
-                /// Dates
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Column(
-                    spacing: 8,
-                    children: <Widget>[
-                      Text.rich(
-                        style: context.textTheme.bodySmall,
-                        TextSpan(
-                          children: <InlineSpan>[
-                            TextSpan(text: DateFormat("MMM dd, yyyy").format(schedule.startDate)),
-                            if (schedule.recurrence != RecurrenceType.none && schedule.endDate != null) ...<InlineSpan>[
-                              const TextSpan(text: " - "),
-                              TextSpan(text: DateFormat("MMM dd, yyyy").format(schedule.endDate!)),
-                            ],
-                          ],
-                        ),
-                      ),
-                      if (RecurrenceType.weekly == schedule.recurrence)
-                        Row(
-                          children: <Widget>[
-                            ...RecurrenceDay.values.map(
-                              (RecurrenceDay e) => Expanded(
-                                child: Column(
-                                  children: <Widget>[
-                                    FusionIcon.icon(
-                                      semanticId: 'scheduler_table_data_recurrence_day_icon',
-                                      schedule.weeklyDays.contains(e.value) ? Icons.check_box : Icons.check_box_outline_blank,
-                                      size: 14,
-                                      color: schedule.weeklyDays.contains(e.value) ? context.colorScheme.primaryWhite : context.colorScheme.primaryWhite,
-                                      // size: 16,
-                                    ),
-                                    FusionAppText(
-                                      semanticId: 'scheduler_table_data_recurrence_day_text',
-                                      text: e.name.substring(0, 3).toUpperCase(),
-                                      style: const TextStyle(fontSize: 10),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                ),
-
-                Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: context.colorScheme.primaryWhite),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  height: 32,
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: FusionAppText(
-                          semanticId: 'scheduler_table_data_time',
-                          text: "${schedule.time.hour.toString().padLeft(2, '0')}:${schedule.time.minute.toString().padLeft(2, '0')}",
-                        ),
-                      ),
-                      const Icon(Icons.keyboard_arrow_down_rounded, size: 16),
-                    ],
-                  ),
-                ),
-                SemanticHelper.container(
-                  testId: SemanticHelper.createTestId(SemanticTypes.container, "scheduler_table_data_status_icon_$index"),
-                  child: Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: schedule.status ? Colors.grey : Colors.blue,
-                      shape: BoxShape.circle,
+                /// day
+                if (RecurrenceType.none == schedule.recurrence)
+                  Text.rich(
+                    style: context.textTheme.l1MediumTight.withColor(context.colorScheme.textBody),
+                    TextSpan(
+                      children: <InlineSpan>[
+                        TextSpan(text: DateFormat("MMM dd, yyyy").format(schedule.startDate)),
+                        if (schedule.recurrence != RecurrenceType.none && schedule.endDate != null) ...<InlineSpan>[
+                          const TextSpan(text: " - "),
+                          TextSpan(text: DateFormat("MMM dd, yyyy").format(schedule.endDate!)),
+                        ],
+                      ],
                     ),
                   ),
+                if (RecurrenceType.weekly == schedule.recurrence)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children:
+                        RecurrenceDay.values
+                            .map(
+                              (RecurrenceDay e) => Column(
+                                spacing: 4,
+                                children: <Widget>[
+                                  Opacity(opacity: 0.3, child: FusionCheckbox(semanticId: "", onChanged: () {}, value: schedule.weeklyDays.contains(e.value))),
+                                  FusionAppText(
+                                    semanticId: 'scheduler_table_data_recurrence_day_text',
+                                    text: e.name.substring(0, 3).toUpperCase(),
+                                    style: context.textTheme.l1MediumTight.withColor(context.colorScheme.textBody),
+                                  ),
+                                ],
+                              ),
+                            )
+                            .toList(),
+                  ),
+
+                if (RecurrenceType.daily == schedule.recurrence)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children:
+                        RecurrenceDay.values
+                            .map(
+                              (RecurrenceDay e) => Column(
+                                spacing: 4,
+                                children: <Widget>[
+                                  Opacity(opacity: 0.3, child: FusionCheckbox(semanticId: "", onChanged: () {}, enabled: false, value: true)),
+                                  FusionAppText(
+                                    semanticId: 'scheduler_table_data_recurrence_day_text',
+                                    text: e.name.substring(0, 3).toUpperCase(),
+                                    style: context.textTheme.l1MediumTight.withColor(context.colorScheme.textBody),
+                                  ),
+                                ],
+                              ),
+                            )
+                            .toList(),
+                  ),
+
+                /// time
+                FusionAppText(
+                  semanticId: 'scheduler_table_data_time',
+                  text: FusionUiUtils.formatTime12h(schedule.time),
+                  style: context.textTheme.b3Regular.withColor(context.colorScheme.textBody),
                 ),
-                FusionButton(label: "Test", accessLabel: 'scheduler_test_button', onTap: () {}),
+
+                /// date range
+                Opacity(
+                  opacity: 0.3,
+                  child: FusionCheckbox(
+                    semanticId: 'scheduler_table_data_date_range_checkbox',
+                    onChanged: () {},
+                    value: schedule.endDate != null,
+                  ),
+                ),
+
+                /// active check box
+                SemanticHelper.container(
+                  testId: SemanticHelper.createTestId(SemanticTypes.container, "scheduler_table_data_status_icon_$index"),
+                  child: FusionSwitch(
+                    height: 22,
+                    width: 36,
+                    value: schedule.status,
+                    onChanged: (bool value) {
+                      context.read<SchedulerViewmodel>().toggleScheduleStatus(schedule);
+                    },
+                  ),
+                ),
+
+                /// test
+                FusionAppButton(
+                  height: 32,
+                  width: 72,
+                  borderRadius: 8,
+                  text: "Test",
+                  style: FusionAppButtonStyle.primary,
+                  semanticId: 'scheduler_test_button',
+                  onPressed: () {},
+                ),
+
+                /// program event
                 SemanticHelper.button(
                   testId: SemanticHelper.createTestId(SemanticTypes.button, "scheduler_run_button_$index"),
                   child: InkWell(
@@ -187,18 +196,18 @@ class _SchedulerSection extends StatelessWidget {
                     ),
                   ),
                 ),
-                SemanticHelper.button(
-                  testId: SemanticHelper.createTestId(SemanticTypes.button, "scheduler_delete_button_$index"),
-                  child: IconButton(
-                    onPressed: () {
-                      context.read<SchedulerViewmodel>().removeSchedule(schedule);
-                    },
-                    icon: FusionIcon.icon(
-                      semanticId: 'scheduler_delete_icon',
-                      LucideIcons.trash200,
-                      color: Colors.grey,
-                    ),
-                  ),
+
+                /// kebab menu for edit/delete
+                FusionKebabPopup(
+                  semanticId: 'scheduler_row_kebab_menu',
+                  popupOffset: const Offset(-70, 4),
+                  onEdit: () {
+                    final ScheduleConfig schedule = state.schedules[index];
+                    SchedulerForm.show(context, context.read<SchedulerViewmodel>(), initial: schedule);
+                  },
+                  onDelete: () {
+                    context.read<SchedulerViewmodel>().removeSchedule(schedule);
+                  },
                 ),
               ];
             },
@@ -237,30 +246,25 @@ class FusionAppTable extends StatelessWidget {
         SemanticHelper.container(
           testId: SemanticHelper.createTestId(SemanticTypes.container, "fusion_table_header_$semanticId"),
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            margin: const EdgeInsets.only(top: 24, left: 16, right: 16),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             decoration: BoxDecoration(
-              color: context.colorScheme.elevation1.withAlpha(120),
+              // color: context.colorScheme.elevation3,
               border: Border(
-                top: BorderSide(color: context.colorScheme.elevation2, width: 1),
-                bottom: BorderSide(color: context.colorScheme.elevation2, width: 1),
+                top: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+                left: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+                right: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+                bottom: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+              ),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(8),
+                topRight: Radius.circular(8),
               ),
             ),
 
             child: Row(
               spacing: spacing,
               children: <Widget>[
-                Visibility(
-                  maintainSize: true,
-                  maintainAnimation: true,
-                  maintainState: true,
-                  visible: false,
-                  child: FusionIcon.icon(
-                    semanticId: 'fusion_table_reorder_icon',
-                    Icons.drag_indicator,
-                    size: 16,
-                    color: context.colorScheme.iconDefault,
-                  ),
-                ),
                 ...headers.map(
                   (final FusionTableHeader e) => Expanded(
                     flex: e.flex,
@@ -269,7 +273,8 @@ class FusionAppTable extends StatelessWidget {
                       child: FusionAppText(
                         semanticId: 'fusion_table_header_text',
                         text: e.title,
-                        style: context.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+                        maxLine: 1,
+                        style: context.textTheme.l1MediumTight.withColor(context.colorScheme.textSecondary),
                       ),
                     ),
                   ),
@@ -278,11 +283,16 @@ class FusionAppTable extends StatelessWidget {
             ),
           ),
         ),
+
+        /// table rows
         Flexible(
           child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: context.colorScheme.elevation1, width: 1),
+                left: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+                right: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+                bottom: BorderSide(color: context.colorScheme.strokeLight, width: 1),
               ),
             ),
             child: ReorderableListView.builder(
@@ -296,50 +306,88 @@ class FusionAppTable extends StatelessWidget {
               itemBuilder: (BuildContext context, int index) {
                 final List<Widget> rowItems = itemBuilder(context, index);
                 final String key = keyExtractor != null ? keyExtractor!(index) : 'fusion_table_row_$index';
-                return Container(
+                return _FusionTableRow(
                   key: ValueKey<String>(key),
-                  padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: context.colorScheme.elevation2, width: 1),
-
-                      // bottom: index != itemCount - 1 ? BorderSide(color: Colors.grey.withOpacity(0.3), width: 1) : BorderSide.none,
-                    ),
-                  ),
-                  child: SemanticHelper.button(
-                    testId: SemanticHelper.createTestId(SemanticTypes.button, "fusion_table_row_$index"),
-                    child: InkWell(
-                      onTap: onRowTap != null ? () => onRowTap!(index) : null,
-                      child: Row(
-                        spacing: spacing,
-                        children: <Widget>[
-                          ReorderableDragStartListener(
-                            key: ValueKey<String>(key),
-                            index: index,
-                            child: FusionIcon.icon(
-                              semanticId: 'fusion_table_reorder_icon',
-                              Icons.drag_indicator,
-                              size: 16,
-                              color: context.colorScheme.iconDefault,
-                            ),
-                          ),
-                          ...List<Widget>.generate(
-                            headers.length,
-                            (int i) => Expanded(
-                              flex: headers[i].flex,
-                              child: Align(alignment: headers[i].aligment, child: rowItems[i]),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  rowKey: key,
+                  index: index,
+                  itemCount: itemCount,
+                  rowItems: rowItems,
+                  headers: headers,
+                  spacing: spacing,
+                  onRowTap: onRowTap,
                 );
               },
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _FusionTableRow extends StatefulWidget {
+  const _FusionTableRow({
+    super.key,
+    required this.rowKey,
+    required this.index,
+    required this.itemCount,
+    required this.rowItems,
+    required this.headers,
+    required this.spacing,
+    required this.onRowTap,
+  });
+
+  final String rowKey;
+  final int index;
+  final int itemCount;
+  final List<Widget> rowItems;
+  final List<FusionTableHeader> headers;
+  final double spacing;
+  final ValueChanged<int>? onRowTap;
+
+  @override
+  State<_FusionTableRow> createState() => _FusionTableRowState();
+}
+
+class _FusionTableRowState extends State<_FusionTableRow> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        decoration: BoxDecoration(
+          color: _isHovered ? context.colorScheme.elevation2 : Colors.transparent,
+          border: Border(
+            bottom: widget.index != widget.itemCount - 1 ? BorderSide(color: Colors.grey.withValues(alpha: 0.3), width: 1) : BorderSide.none,
+          ),
+        ),
+        child: SemanticHelper.button(
+          testId: SemanticHelper.createTestId(SemanticTypes.button, "fusion_table_row_${widget.index}"),
+          child: ReorderableDragStartListener(
+            key: ValueKey<String>(widget.rowKey),
+            index: widget.index,
+            child: InkWell(
+              hoverColor: Colors.transparent,
+              onTap: widget.onRowTap != null ? () => widget.onRowTap!(widget.index) : null,
+              child: Row(
+                spacing: widget.spacing,
+                children: List<Widget>.generate(
+                  widget.headers.length,
+                  (int i) => Expanded(
+                    flex: widget.headers[i].flex,
+                    child: Align(alignment: widget.headers[i].aligment, child: widget.rowItems[i]),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

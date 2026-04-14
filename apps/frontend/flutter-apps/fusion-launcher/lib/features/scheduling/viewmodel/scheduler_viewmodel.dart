@@ -30,4 +30,8 @@ class SchedulerViewmodel extends Cubit<SchedulerState> {
   void reOrderSchedules(int oldIndex, int newIndex) {
     emit(state.reOrderSchedules(oldIndex, newIndex));
   }
+
+  void toggleScheduleStatus(ScheduleConfig schedule) {
+    emit(state.updateSchedule(schedule.copyWith(status: !schedule.status)));
+  }
 }
