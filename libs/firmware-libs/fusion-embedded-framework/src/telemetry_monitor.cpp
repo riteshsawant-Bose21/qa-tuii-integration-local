@@ -154,6 +154,7 @@ void TelemetryMonitor::unregister_all_telemetry()
 {
     meters.clear();
     events.clear();
+    telemetry_alias_map.clear();
 }
 
 
@@ -222,10 +223,34 @@ void TelemetryMonitor::stop()
 }
 
 
+void TelemetryMonitor::register_telemetry_alias(
+    const std::string &internal_qualified,
+    const std::string &composite_qualified)
+{
+    SPDLOG_TRACE("Registering telemetry alias {} -> {}",
+                 internal_qualified, composite_qualified);
+    telemetry_alias_map[internal_qualified] = composite_qualified;
+}
+
+
 void TelemetryMonitor::register_telemetry(std::unique_ptr<Telemetry> telemetry)
 {
     std::string qualified_name = telemetry->get_block_name() + "::" +
         telemetry->get_name();
+
+    // Apply composite telemetry alias if one was registered before the
+    // internal block was instantiated.
+    if (telemetry_alias_map.count(qualified_name) != 0)
+    {
+        const std::string &alias = telemetry_alias_map[qualified_name];
+        const std::size_t sep = alias.find("::");
+        if (sep != std::string::npos)
+        {
+            telemetry->set_block_name(alias.substr(0, sep));
+            telemetry->set_name(alias.substr(sep + 2));
+        }
+        qualified_name = alias;
+    }
 
     if (telemetry->get_telemetry_type() == "meter")
     {
