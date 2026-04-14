@@ -1,0 +1,25 @@
+info:
+  name: Get Current Scene
+  type: http
+  seq: 8
+
+http:
+  method: POST
+  url: "{{api_url}}/scene-sets/current-scene"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "set_id": "scene-set-test-01"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Returns the currently active scene ID for the given scene set.

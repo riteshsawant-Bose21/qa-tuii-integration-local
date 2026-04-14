@@ -219,7 +219,7 @@ class _WidgetDetailsSectionState extends State<WidgetDetailsSection> {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: context.colorScheme.black,
+        color: context.colorScheme.elevation1,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: context.colorScheme.elevation2,
@@ -314,6 +314,8 @@ class _WidgetDetailsSectionState extends State<WidgetDetailsSection> {
         return _buildFusionRow(context);
       case "FusionColumn":
         return _buildFusionColumn(context);
+      case "FusionKebabPopup":
+        return _buildFusionKebabPopup(context);
 
       default:
         return const FusionAppText(
@@ -3695,6 +3697,47 @@ const FusionSvgIcon(
             icon: AssetSvg.broadcast,
             color: context.colorScheme.green,
             size: 40,
+          ),
+''',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFusionKebabPopup(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        _buildWithCopy(
+          context: context,
+          preview: FusionKebabPopup(
+            semanticId: 'example1',
+            onEdit: () => print('edit'),
+            onDuplicate: () => print('duplicate'),
+            onDelete: () => print('delete'),
+          ),
+
+          code: '''
+ FusionKebabPopup(
+            onEdit: () => print('edit'),
+            onDuplicate: () => print('duplicate'),
+            onDelete: () => print('delete'),
+          ),
+''',
+        ),
+        const SizedBox(height: 10),
+        _buildWithCopy(
+          context: context,
+          preview: FusionKebabPopup(
+            semanticId: 'example2',
+            onEdit: () => print('edit'),
+            onDuplicate: () => print('duplicate'),
+          ),
+
+          code: '''
+ FusionKebabPopup(
+            onEdit: () => print('edit'),
+            onDuplicate: () => print('duplicate'),
+            onDelete: () => print('delete'),
           ),
 ''',
         ),

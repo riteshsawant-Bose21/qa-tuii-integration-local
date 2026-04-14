@@ -69,7 +69,7 @@ class FusionNetworkClient {
   }) async {
     try {
       final String url = additionalPath != null
-          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride)}/$additionalPath"
+          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
           : geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure);
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;

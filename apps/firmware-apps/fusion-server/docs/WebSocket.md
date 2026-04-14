@@ -172,13 +172,16 @@ The WebSocket API uses a **Pull-then-Push** pattern where requesting device data
    }
    ```
 
+   **Precondition**: At least one `.swu` bundle must be present in `/mnt/ota` on the server. If the directory contains no `.swu` files the request is rejected immediately with code `4006` (`WSCodeUpdateFailed`) before any cluster message is sent.
+
    **Execution Flow**:
+   - Checks `/mnt/ota` for the presence of at least one `.swu` bundle; returns an error if none are found
    - Broadcasts cluster message to all nodes via gossip protocol
    - Each node's delegate receives the message and executes `systemctl start swupdate-ota-install.service`
    - Uses reliable cluster messaging for coordination across all cluster members
    - After the update starts, the server pushes real-time `update_progress` events to all WebSocket clients (see [Software Update Progress Push Format](#software-update-progress-push-format))
 
-   **Response**:
+   **Success Response** (bundle present):
    ```json
    {
      "id": "sw-update-001",
@@ -191,6 +194,20 @@ The WebSocket API uses a **Pull-then-Push** pattern where requesting device data
        "action": "broadcast_cluster",
        "nodes": [...]
      },
+     "timestamp": "2026-04-01T10:15:30Z"
+   }
+   ```
+
+   **Error Response** (no bundle found — code `4006`):
+   ```json
+   {
+     "id": "sw-update-001",
+     "version": 1,
+     "type": "error",
+     "code": 4006,
+     "status": "error",
+     "message": "No .swu bundle found in /mnt/ota — upload a bundle before triggering an update",
+     "data": null,
      "timestamp": "2026-04-01T10:15:30Z"
    }
    ```
@@ -245,7 +262,7 @@ The WebSocket API uses a **Pull-then-Push** pattern where requesting device data
     }
     ```
 
-    **Data field**: An array of `SwUpdateInfo` objects, one per cluster node. Each object reflects the contents of `/etc/swupdate-status` on that node. If the file cannot be read on a node, an empty object is included so the array always has one entry per cluster member.
+    **Data field**: An array of `SwUpdateInfo` objects, one per cluster node. Each object reflects the contents of `/etc/swupdate-status` on that node. If the file cannot be read on a node, that node's entry contains empty field values so the array always has one entry per cluster member.
 
     | Field | Type | Description |
     |-------|------|-------------|
@@ -261,7 +278,7 @@ The WebSocket API uses a **Pull-then-Push** pattern where requesting device data
     | `error` | string | Error message from last swupdate run, empty if none |
     | `updated_at` | string | RFC3339 timestamp of the last update |
 
-11. **`list_sw_update_files`** - List OTA bundles from **all cluster nodes** (de-duplicated union by filename)
+11. **`list_sw_update_files`** - List OTA bundles from **all cluster nodes** (concatenated across nodes; may contain duplicates if the same filename is present on multiple nodes)
     ```json
     {
       "id": "req-list-001",
@@ -299,7 +316,7 @@ The WebSocket API uses a **Pull-then-Push** pattern where requesting device data
     }
     ```
 
-    **Data field**: An array of `SoftwareUpdateSync` objects representing every OTA bundle present across the cluster.
+    **Data field**: An array of `SoftwareUpdateSync` objects representing OTA bundles collected from all cluster nodes. Results are concatenated in the order nodes are queried — **de-duplication is not currently performed**, so the same filename may appear more than once if it is present on multiple nodes. Clients should de-duplicate by `filename` or `checksum` on their side if needed.
 
     | Field | Type | Description |
     |-------|------|-------------|
@@ -587,7 +604,11 @@ FUSION_TEST_LOCAL=1 go test -v ./test/websocket_test.go -timeout 60s
 - `TestWebsocketPing` - Health check test
 - `TestWebsocketInvalidRequest` - Error handling test
 - `TestSoftwareUpdateTriggerViaWebSocket` - Software update trigger via WebSocket (expects code `3005`)
+- `TestSoftwareUpdateTriggerNoBundle` - Confirms `4006` is returned when no `.swu` bundle exists in `/mnt/ota`
 - `TestSoftwareUpdateTriggerUnknownType` - Invalid type error handling (expects code `4002`)
+- `TestSwUpdateInfoViaWebSocket` - `sw_update_info` envelope (type, code `3000`, status) and `[]SwUpdateInfo` data shape
+- `TestListSoftwareUpdatesViaWebSocket` - `list_sw_update_files` envelope and `[]SoftwareUpdateSync` data shape (empty list is valid)
+- `TestListSoftwareUpdatesViaWebSocketAfterUpload` - Uploads a bundle via REST then confirms it appears in the `list_sw_update_files` WebSocket response with matching filename, checksum, and size
 - `TestSoftwareUpdateProgressReceivedAfterTrigger` - Progress push after trigger (requires `FUSION_SWUPDATE_TEST=1`)
 - `TestSoftwareUpdateProgressMessageFormat` - Progress message format validation (requires `FUSION_SWUPDATE_TEST=1`)
 
@@ -731,7 +752,7 @@ FUSION_TEST_LOCAL=1 go test -v ./test/websocket_test.go -timeout 60s
 | `unsubscribe_devices` | Stop device updates | ❌ No | None |
 | `start_update` | Trigger software update | ❌ No | None |
 | `sw_update_info` | Read `/etc/swupdate-status` from all nodes | ❌ No | None |
-| `list_sw_update_files` | List OTA bundles from all nodes (de-duplicated union) | ❌ No | None |
+| `list_sw_update_files` | List OTA bundles from all nodes (concatenated; no server-side de-duplication) | ❌ No | None |
 
 *Server-initiated push types (cannot be requested by client)*
 
@@ -759,6 +780,6 @@ FUSION_TEST_LOCAL=1 go test -v ./test/websocket_test.go -timeout 60s
 | `start_update` | Response to update trigger | 3005 | Software update coordination |
 | `update_progress` | Push notification | 3004 | Real-time per-node software update progress |
 | `sw_update_info` | Response to sw_update_info request | 3000 | Array of `/etc/swupdate-status` contents from all cluster nodes |
-| `list_sw_update_files` | Response to list_sw_update_files request | 3000 | De-duplicated union of OTA bundles from all cluster nodes |
+| `list_sw_update_files` | Response to list_sw_update_files request | 3000 | Concatenated list of OTA bundles from all cluster nodes (no server-side de-duplication) |
 | `pong` | Response to ping | 3003 | Health check response |
 | `error` | Request processing error | 4xxx | Error details |

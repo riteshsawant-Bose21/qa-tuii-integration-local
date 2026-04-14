@@ -20,7 +20,7 @@ import '../tools/fusion_canvas_tool.dart';
 /// wiring connections.  For all non-port interactions the request is
 /// forwarded to an inner [SelectionToolHelper] so that regular selection
 /// behaviour is preserved.
-class ConnectionToolHelper extends FusionCanvasToolTransformer<SelectToolState> {
+class ConnectionToolHelper extends FusionCanvasToolTransformer<ConnectingToolState> {
   final ConnectionToolParams connectionParams;
   final SelectionToolParams selectionParams;
 
@@ -44,7 +44,25 @@ class ConnectionToolHelper extends FusionCanvasToolTransformer<SelectToolState> 
     if (inputState is FusionCanvasInputTapDownState && inputState.button == FusionMouseButton.left) {
       final FusionCanvasElement? hovered = context.hoverState.hoveredElement;
       if (hovered is WiringPortData) {
-        return _beginConnection(hovered, context);
+        final List<WiringConnectionModel> existinnConnections = connectionParams.getExistingConnectionsForPort(hovered.deviceId, hovered.port.id);
+        if (existinnConnections.isNotEmpty) {
+          final WiringConnectionModel connection = existinnConnections.first;
+          final String otherDeviceId = connection.deviceId == hovered.deviceId ? connection.targetDeviceId : connection.deviceId;
+
+          final FusionBasePainter? otherDevicePainter = context.fusionCanvasPainter.getLayerById(otherDeviceId);
+          if (otherDevicePainter is PortPainter) {
+            final String otherPortId = otherDevicePainter.id == connection.deviceId ? connection.portId : connection.targetPortId;
+            final WiringPortData otherPort = otherDevicePainter
+                .getPorts(Rect.zero, context.fusionCanvasPainter)
+                .firstWhere((WiringPortData port) => port.port.id == otherPortId, orElse: () => hovered);
+
+            return _beginConnection(connection, otherPort, context);
+          }
+
+          return _beginConnection(connection, hovered, context);
+        } else {
+          return _beginConnection(null, hovered, context);
+        }
       }
     }
 
@@ -59,6 +77,7 @@ class ConnectionToolHelper extends FusionCanvasToolTransformer<SelectToolState> 
   // ── Connection lifecycle ─────────────────────────────────────────────────
 
   FusionToolState _beginConnection(
+    WiringConnectionModel? existingConnection,
     WiringPortData sourcePort,
     FusionCanvasInputContext context,
   ) {
@@ -68,6 +87,7 @@ class ConnectionToolHelper extends FusionCanvasToolTransformer<SelectToolState> 
     );
 
     return ConnectingToolState(
+      originalConnection: existingConnection,
       sourcePort: sourcePort,
       sourcePosition: sourcePosition,
       currentPosition: sourcePosition,
@@ -95,12 +115,25 @@ class ConnectionToolHelper extends FusionCanvasToolTransformer<SelectToolState> 
       if (inputState.gestureOrigin == FusionGestureOrigin.drag) {
         final FusionCanvasElement? hovered = context.hoverState.hoveredElement;
         final WiringPortData? destination = (hovered is WiringPortData && hovered.id != current.sourcePort.id) ? hovered : null;
-
-        connectionParams.onConnectionDrop(
-          current.sourcePort,
-          inputState.tapPosition,
-          destination,
-        );
+        if (destination != null) {
+          print("Creating connection from ${current.sourcePort.id} to ${destination.id}");
+          final WiringConnectionModel? existing = current.originalConnection;
+          if ((existing != null && existing.deviceId == current.sourcePort.deviceId && existing.portId == current.sourcePort.port.id) ||
+              (existing != null && existing.targetDeviceId == current.sourcePort.deviceId && existing.targetPortId == current.sourcePort.port.id)) {
+            // This is a reconnection, remove the old connection first
+            connectionParams.onConnectionDrop(existing);
+          }
+          connectionParams.onConnectionCreate(
+            current.sourcePort,
+            inputState.tapPosition,
+            destination,
+          );
+        } else {
+          final WiringConnectionModel? existing = current.originalConnection;
+          if (existing != null) {
+            connectionParams.onConnectionDrop(existing);
+          }
+        }
       }
       // Both drag-drop and click-away return to idle selection
       return IdleSelectToolState();
@@ -122,15 +155,12 @@ class ConnectionToolHelper extends FusionCanvasToolTransformer<SelectToolState> 
     WiringPortData port,
     FusionCanvasInputContext context,
   ) {
-    final String? painterId = context.hoverState.hoveredPainterId;
-    final FusionBasePainter? painter = context.fusionCanvasPainter.layers.cast<FusionBasePainter?>().firstWhere(
-      (FusionBasePainter? p) => p?.id == painterId,
-      orElse: () => null,
-    );
+    final String painterId = port.deviceId;
+    final FusionBasePainter? painter = context.fusionCanvasPainter.getLayerById(painterId);
 
     if (painter is FusionCanvasElementPainter && painter is PortPainter) {
-      final Rect rect = (painter as FusionCanvasElementPainter).getTransformedRect(context.fusionCanvasPainter);
-      return port.position + rect.topLeft;
+      return (painter).getPortPosition(port.id, context.fusionCanvasPainter)?.$1.center ?? context.inputState.mousePosition ?? Offset.zero;
+      // return port.position + rect.topLeft;
     }
 
     // Fallback: use current mouse position

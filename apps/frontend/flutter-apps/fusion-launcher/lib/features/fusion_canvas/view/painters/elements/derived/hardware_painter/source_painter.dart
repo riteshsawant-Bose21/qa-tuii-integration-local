@@ -29,5 +29,5 @@ class SourcePainter extends FusionCanvasElementPainter {
   Offset getOffset() => hardware.pos ?? Offset.zero;
 
   @override
-  Size getSize() => const Size.square(50);
+  Size getSize() => const Size.square(120);
 }

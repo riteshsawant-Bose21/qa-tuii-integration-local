@@ -105,7 +105,7 @@ constexpr uint8_t kIndexAmpB = 0x02;
 constexpr uint8_t kIndexAmpC = 0x04;
 constexpr uint8_t kIndexAmpD = 0x08;
 
-enum class ArgKind { kNone, kIndex, kBool, kIndexBool, kIndexByte };
+enum class ArgKind { kNone, kIndex, kBool, kIndexBool, kIndexByte, kIndexSByte };
 
 struct Spec {
     const char *name;
@@ -128,7 +128,7 @@ static const Spec kSpecs[] = {
     {"platformsmpsnumber",  kPropertyPlatformSMPSNumber,        ArgKind::kNone,  ArgKind::kNone,      ArgKind::kNone},
     {"platformsmpstemp",    kPropertyPlatformSMPSTemp,          ArgKind::kIndex, ArgKind::kIndex,     ArgKind::kIndex},
     {"platformreset",       kPropertyPlatformReset,             ArgKind::kNone,  ArgKind::kBool,      ArgKind::kBool},
-    {"audiovolume",         kPropertyAudioVolume,               ArgKind::kIndex, ArgKind::kIndexByte, ArgKind::kIndexByte},
+    {"audiovolume",         kPropertyAudioVolume,               ArgKind::kIndex, ArgKind::kIndexSByte, ArgKind::kIndexSByte},
     {"audiophantompower",   kPropertyAudioPhantomPower,         ArgKind::kIndex, ArgKind::kIndexBool, ArgKind::kIndexBool},
     {"audioampnumber",      kPropertyAudioAmpNumber,            ArgKind::kNone,  ArgKind::kNone,      ArgKind::kNone},
     {"audioampmute",        kPropertyAudioAmpMute,              ArgKind::kIndex, ArgKind::kIndexBool, ArgKind::kIndexBool},
@@ -915,7 +915,7 @@ void BDIFClient::handle_rx_frame(const std::vector<uint8_t> &frame)
         if (value_valid && value_len >= 2) {
             const int idx = static_cast<int>(value_ptr[0]) - 1;
             if (idx >= 0 && idx < num_amps) {
-                audio_volume[idx] = static_cast<int_fast32_t>(value_ptr[1]);
+                audio_volume[idx] = static_cast<int_fast32_t>(static_cast<int8_t>(value_ptr[1]));
                 SPDLOG_DEBUG("BDIF: ack volume[{}]={}", idx, audio_volume[idx]);
             }
         } else if (value_valid) {
@@ -1246,6 +1246,31 @@ bool BDIFClient::build_named_command(const std::string &name, const std::vector<
         }
         value.push_back(idx);
         value.push_back(byte);
+        break;
+    }
+    case ArgKind::kIndexSByte: {
+        if (args.size() != 2) {
+            SPDLOG_WARN("BDIF: command '{}' expects <index> <dB>", name);
+            return false;
+        }
+        uint8_t idx = 0;
+        if (!parse_index(args[0], idx)) {
+            return false;
+        }
+        int8_t sbyte = 0;
+        try {
+            const auto parsed = std::stol(args[1], nullptr, 0);
+            if (parsed < -128 || parsed > 127) {
+                SPDLOG_WARN("BDIF: command '{}' dB arg '{}' out of range", name, args[1]);
+                return false;
+            }
+            sbyte = static_cast<int8_t>(parsed);
+        } catch (const std::exception &) {
+            SPDLOG_WARN("BDIF: command '{}' expects signed byte arg, got '{}'", name, args[1]);
+            return false;
+        }
+        value.push_back(idx);
+        value.push_back(static_cast<uint8_t>(sbyte));
         break;
     }
     default:
