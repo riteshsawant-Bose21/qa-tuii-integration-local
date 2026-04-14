@@ -7,7 +7,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
-class FirmwareUpdateRebootStatusEvent {
+class FirmwareDeviceRebootEvent {
   final String id;
   final String type;
   final String status;
@@ -15,9 +15,9 @@ class FirmwareUpdateRebootStatusEvent {
   final String message;
   final String timestamp;
 
-  final Map<String, FirmwareDeviceRebootStatusEvent> devicesBySerial;
+  final Map<String, FirmwareDeviceRebootStatus> devicesBySerial;
 
-  const FirmwareUpdateRebootStatusEvent({
+  const FirmwareDeviceRebootEvent({
     required this.id,
     required this.type,
     required this.status,
@@ -27,23 +27,23 @@ class FirmwareUpdateRebootStatusEvent {
     required this.devicesBySerial,
   });
 
-  bool get isAllSuccess => devicesBySerial.values.every((FirmwareDeviceRebootStatusEvent e) => e.isSUCCESS);
+  bool get isAllSuccess => devicesBySerial.values.every((FirmwareDeviceRebootStatus e) => e.isSUCCESS);
 
-  factory FirmwareUpdateRebootStatusEvent.fromJson(Map<String, dynamic> json) {
-    final Map<String, FirmwareDeviceRebootStatusEvent> devicesBySerial = <String, FirmwareDeviceRebootStatusEvent>{};
+  factory FirmwareDeviceRebootEvent.fromJson(Map<String, dynamic> json) {
+    final Map<String, FirmwareDeviceRebootStatus> devicesBySerial = <String, FirmwareDeviceRebootStatus>{};
     final dynamic rawData = json['data'];
     if (rawData is Map<String, dynamic>) {
       for (final MapEntry<String, dynamic> entry in rawData.entries) {
         final dynamic value = entry.value;
         if (value is! Map<String, dynamic>) continue;
-        final FirmwareDeviceRebootStatusEvent parsed = FirmwareDeviceRebootStatusEvent.fromJson(value);
+        final FirmwareDeviceRebootStatus parsed = FirmwareDeviceRebootStatus.fromJson(value);
         final String serial = parsed.serialNumber.trim();
         final String key = serial.isNotEmpty ? serial : entry.key;
         devicesBySerial[key] = parsed;
       }
     }
 
-    return FirmwareUpdateRebootStatusEvent(
+    return FirmwareDeviceRebootEvent(
       id: json['id']?.toString() ?? '',
       type: json['type']?.toString() ?? '',
       status: json['status']?.toString() ?? '',
@@ -55,7 +55,7 @@ class FirmwareUpdateRebootStatusEvent {
   }
 }
 
-class FirmwareDeviceRebootStatusEvent {
+class FirmwareDeviceRebootStatus {
   final String serialNumber;
   final String currentBundleVersion;
   final String previousBundleVersion;
@@ -68,7 +68,7 @@ class FirmwareDeviceRebootStatusEvent {
   final String error;
   final String timestamp;
 
-  const FirmwareDeviceRebootStatusEvent({
+  const FirmwareDeviceRebootStatus({
     required this.serialNumber,
     required this.currentBundleVersion,
     required this.previousBundleVersion,
@@ -84,22 +84,22 @@ class FirmwareDeviceRebootStatusEvent {
 
   bool get isSUCCESS => status.toUpperCase() == 'SUCCESS';
 
-  factory FirmwareDeviceRebootStatusEvent.fromJson(Map<String, dynamic> json) {
-    final Map<String, FirmwareDeviceRebootStatusEvent> devicesBySerial = <String, FirmwareDeviceRebootStatusEvent>{};
+  factory FirmwareDeviceRebootStatus.fromJson(Map<String, dynamic> json) {
+    final Map<String, FirmwareDeviceRebootStatus> devicesBySerial = <String, FirmwareDeviceRebootStatus>{};
 
     final dynamic rawData = json['data'];
     if (rawData is Map<String, dynamic>) {
       for (final MapEntry<String, dynamic> entry in rawData.entries) {
         final dynamic value = entry.value;
         if (value is! Map<String, dynamic>) continue;
-        final FirmwareDeviceRebootStatusEvent parsed = FirmwareDeviceRebootStatusEvent.fromJson(value);
+        final FirmwareDeviceRebootStatus parsed = FirmwareDeviceRebootStatus.fromJson(value);
         final String serial = parsed.serialNumber.trim();
         final String key = serial.isNotEmpty ? serial : entry.key;
         devicesBySerial[key] = parsed;
       }
     }
 
-    return FirmwareDeviceRebootStatusEvent(
+    return FirmwareDeviceRebootStatus(
       serialNumber: json['serial_number']?.toString() ?? '',
       currentBundleVersion: json['current_bundle_version']?.toString() ?? '',
       previousBundleVersion: json['previous_bundle_version']?.toString() ?? '',
@@ -453,8 +453,8 @@ class FusionDeviceService {
     try {
       final ResponseCallback<void> response = await networkClient.sendWebSocketMessage<void>(<String, dynamic>{
         'id': bundleId,
-        'version': 1,
-        'type': 'start_update',
+        "version": 1,
+        "type": "sw_update_info",
       });
       return response;
     } catch (e) {
@@ -483,10 +483,10 @@ class FusionDeviceService {
     }
   }
 
-  Stream<ResponseCallback<FirmwareUpdateRebootStatusEvent>> listenDeviceRebootEvents(String requestId) async* {
+  Stream<ResponseCallback<FirmwareDeviceRebootEvent>> listenDeviceRebootEvents(String requestId) async* {
     await for (final ResponseCallback<dynamic> message in networkClient.webSocketMessages) {
       if (!message.success || message.data == null) {
-        yield ResponseCallback<FirmwareUpdateRebootStatusEvent>.failure(message.message);
+        yield ResponseCallback<FirmwareDeviceRebootEvent>.failure(message.message);
         continue;
       }
 
@@ -495,10 +495,10 @@ class FusionDeviceService {
         continue;
       }
 
-      final FirmwareUpdateRebootStatusEvent event = FirmwareUpdateRebootStatusEvent.fromJson(payload);
+      final FirmwareDeviceRebootEvent event = FirmwareDeviceRebootEvent.fromJson(payload);
       if (event.id.isEmpty) continue;
 
-      yield ResponseCallback<FirmwareUpdateRebootStatusEvent>.success(FirmwareUpdateRebootStatusEvent.fromJson(payload));
+      yield ResponseCallback<FirmwareDeviceRebootEvent>.success(FirmwareDeviceRebootEvent.fromJson(payload));
     }
   }
 
