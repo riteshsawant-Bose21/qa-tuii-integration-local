@@ -345,9 +345,26 @@ CREATE TABLE bundle_update_status (
     update_id UUID NOT null UNIQUE,
     project_id UUID NOT NULL references project(id),
     bundle_version TEXT NOT NULL,      
-    previous_version TEXT,
+    previous_bundle_version TEXT,
     status bundle_update_status_enum NOT NULL,             
-    launcher_version TEXT,    
+    desktop_app_version TEXT,    
     installed_at TIMESTAMPTZ NOT null,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TYPE source_type AS ENUM ('mic', 'media', 'generic');
+
+CREATE TYPE connection_type AS ENUM (
+    'analogInput',
+    'hdmi',
+    'usb'
+);
+
+CREATE TABLE source (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    asset_path TEXT NOT NULL,
+    type source_type NOT NULL,
+    connection_type connection_type NOT NULL,
+    price NUMERIC(10,2) NOT NULL
 );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/devices/presentation/widgets/device_mapping_screen.dart';
 import 'package:fusion_launcher/features/devices/view_model/devices/fusion_network_device_vm.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -11,14 +12,12 @@ class NetworkHardwarePanel extends StatelessWidget {
   final List<FusionNetworkDevice> networkDevices;
   final Function(String) onDragStarted;
   final VoidCallback onDragEnded;
-  final VoidCallback? onRegisterDevicesTap;
 
   const NetworkHardwarePanel({
     super.key,
     required this.networkDevices,
     required this.onDragStarted,
     required this.onDragEnded,
-    required this.onRegisterDevicesTap,
   });
 
   @override
@@ -84,13 +83,25 @@ class NetworkHardwarePanel extends StatelessWidget {
             },
           ),
         ),
-        const SizedBox(height: 16),
-        FusionNeumorphicButton(
-          semanticId: "register_devices_btn",
-          text: "Register devices",
-          height: 48,
-          enabled: onRegisterDevicesTap != null,
-          onTap: () => onRegisterDevicesTap?.call(),
+        Builder(
+          builder: (BuildContext context) {
+            final List<FusionNetworkDevice> unregisteredDevices = context.watch<FusionNetworkDeviceViewModel>().getUnregisteredDevicesForCurrentProject();
+
+            if (unregisteredDevices.isEmpty) return const SizedBox();
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const SizedBox(height: 16),
+                FusionNeumorphicButton(
+                  semanticId: "register_devices_btn",
+                  text: "Register devices",
+                  height: 48,
+                  onTap: () => showUnregisteredDevicesClaimDialog(context, unregisteredDevices),
+                ),
+              ],
+            );
+          },
         ),
       ],
     );
