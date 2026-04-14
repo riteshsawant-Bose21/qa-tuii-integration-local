@@ -77,6 +77,11 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
     }
     print("zoneIds : "+zoneIds.length.toString());
 
+
+    if(zoneIds.isEmpty){
+      return _zones;
+    }
+
     for (WallZone item in config.zones ?? <WallZone>[]) {
       WallZone? zone;
       for (String id in zoneIds) {
