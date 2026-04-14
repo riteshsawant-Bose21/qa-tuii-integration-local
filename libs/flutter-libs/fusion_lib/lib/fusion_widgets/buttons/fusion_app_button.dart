@@ -111,7 +111,7 @@ class FusionAppButton extends StatefulWidget {
     this.height = 48,
     this.onPressed,
     this.color,
-    this.borderRadius = 12,
+    this.borderRadius = 8,
     this.showPrefixIcon = false,
     this.prefixIcon,
     this.showSuffixIcon = false,
@@ -401,7 +401,7 @@ class _FusionAppButtonState extends State<FusionAppButton> {
       return context.textTheme.b2SemiBold.withColor(_textColor);
     }
 
-    return context.textTheme.b2SemiBold.withColor(
+    return context.textTheme.l1Regular.withColor(
       _disabled ? cs.textDisabled : cs.textPrimary,
     );
   }

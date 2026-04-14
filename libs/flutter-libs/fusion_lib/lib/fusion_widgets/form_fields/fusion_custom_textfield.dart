@@ -26,7 +26,7 @@ enum FusionFieldVariant {
 
 class FusionCustomTextField extends StatefulWidget {
   final String? label;
-  final String hint;
+  final String? hint;
   final TextEditingController? controller;
 
   final bool enabled;
@@ -80,7 +80,7 @@ class FusionCustomTextField extends StatefulWidget {
     required this.semanticId,
     this.showRupee = false,
     this.label,
-    required this.hint,
+    this.hint,
     this.controller,
     this.enabled = true,
     this.hasErrorText = false,
@@ -522,12 +522,12 @@ class _FusionCustomTextFieldState extends State<FusionCustomTextField> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           /// LABEL
-          if (widget.showLabel)
+          if (widget.showLabel) ...[
             Row(
               children: [
                 FusionAppText(
                   text: widget.label ?? '',
-                  style: context.textTheme.l1Medium.withColor(
+                  style: context.textTheme.l1Regular.withColor(
                     widget.hasErrorText
                         ? context.colorScheme.errorText
                         : widget.fieldState == FusionFieldState.blocked
@@ -554,8 +554,8 @@ class _FusionCustomTextFieldState extends State<FusionCustomTextField> {
                 ],
               ],
             ),
-
-          const SizedBox(height: 6),
+            const SizedBox(height: 8),
+          ],
 
           /// FIELD
           CompositedTransformTarget(
@@ -683,7 +683,7 @@ class _FusionCustomTextFieldState extends State<FusionCustomTextField> {
                             enabledBorder: InputBorder.none,
                             focusedBorder: InputBorder.none,
 
-                            hintText: widget.hint,
+                            hintText: widget.hint ?? '',
                             hintStyle: context.textTheme.bodySmall?.withColor(context.colorScheme.textPlaceholder),
                             filled: false,
                             isDense: true,
@@ -725,32 +725,37 @@ class _FusionCustomTextFieldState extends State<FusionCustomTextField> {
               ),
             ),
           ),
-          const SizedBox(height: 4),
 
           /// MESSAGES
-          if (widget.hasHelperText)
-            Text(
-              widget.helperText,
+          if (widget.hasHelperText) ...[
+            const SizedBox(height: 4),
+            FusionAppText(
+              text: widget.helperText,
               style: context.textTheme.l1Regular.withColor(
                 context.colorScheme.textPrimary,
               ),
             ),
+          ],
 
-          if (widget.hasErrorText)
-            Text(
-              widget.errorText,
+          if (widget.hasErrorText) ...[
+            const SizedBox(height: 4),
+            FusionAppText(
+              text: widget.errorText,
               style: context.textTheme.l1Regular.withColor(
                 context.colorScheme.errorText,
               ),
             ),
+          ],
 
-          if (widget.hasSuccessText)
-            Text(
-              widget.successText,
+          if (widget.hasSuccessText) ...[
+            const SizedBox(height: 4),
+            FusionAppText(
+              text: widget.successText,
               style: context.textTheme.l1Regular.withColor(
                 context.colorScheme.successText,
               ),
             ),
+          ],
         ],
       ),
     );
