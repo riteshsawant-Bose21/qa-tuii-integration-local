@@ -163,11 +163,10 @@ return newUser.toEntity();    }
 
   @override
   Future<void> inviteUsersToOrganization(
-    String organizationId,
     List<Map<String, dynamic>> users,
   ) async {
     try {
-      await remoteDataSource.inviteUsersToOrganization(organizationId, users);
+      await remoteDataSource.inviteUsersToOrganization(users);
     } catch (e) {
       throw Exception('Failed to invite users to organization: $e');
     }

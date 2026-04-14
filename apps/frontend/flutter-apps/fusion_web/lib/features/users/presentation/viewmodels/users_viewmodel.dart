@@ -3,7 +3,6 @@ import 'package:fusion_web/core/usecases/usecase.dart';
 import 'package:fusion_web/features/users/domain/entities/user_entity.dart';
 import 'package:fusion_web/features/users/domain/repositories/users_repository.dart';
 import 'package:fusion_web/features/users/domain/usecases/users_usecases.dart';
-import 'package:fusion_web/core/permissions/permission_service.dart';
 
 class UsersViewModel extends BaseViewModel<List<UserEntity>> {
   final GetUsersUseCase getUsersUseCase;
@@ -209,21 +208,12 @@ class UsersViewModel extends BaseViewModel<List<UserEntity>> {
     try {
       setLoading();
 
-      // Get organization ID from PermissionService
-      final organizationId = PermissionService.instance.currentUser?.account.id;
-      if (organizationId == null) {
-        throw Exception(
-          'Organization ID not available. Please ensure user is properly authenticated.',
-        );
-      }
-
       final params = InviteUserParams(
         email: email,
         name: name,
         roles: roles,
         projectIds: projectIds,
         userType: userType,
-        organizationId: organizationId,
       );
       await inviteUserUseCase(params);
       await loadUsers();
@@ -242,7 +232,7 @@ class UsersViewModel extends BaseViewModel<List<UserEntity>> {
   }
 
   Future<void> inviteUsersToOrganization(
-    List<Map<String, String>> users,
+    List<Map<String, dynamic>> users,
   ) async {
     try {
       setLoading();
@@ -254,18 +244,7 @@ class UsersViewModel extends BaseViewModel<List<UserEntity>> {
         );
       }
 
-      // Get organization ID from PermissionService
-      final organizationId = PermissionService.instance.currentUser?.account.id;
-      if (organizationId == null) {
-        throw Exception(
-          'Organization ID not available. Please ensure user is properly authenticated.',
-        );
-      }
-
-      final params = InviteUsersToOrganizationParams(
-        organizationId: organizationId,
-        users: users,
-      );
+      final params = InviteUsersToOrganizationParams(users: users);
 
       await inviteUsersToOrganizationUseCase(params);
       await loadUsers();

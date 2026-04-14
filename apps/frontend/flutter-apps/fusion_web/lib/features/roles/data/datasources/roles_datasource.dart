@@ -21,7 +21,7 @@ class RolesDataSource {
       _checkAuthorization();
       print('🔍 [RolesDataSource] Fetching all roles...');
 
-      final response = await _apiService.get('/organization/role-management');
+      final response = await _apiService.get('/organizations/role-management');
       print('✅ [RolesDataSource] Raw API Response: $response');
 
       // Handle both direct response and nested response formats
@@ -71,7 +71,7 @@ class RolesDataSource {
       print('➕ [RolesDataSource] Creating role: $roleData');
 
       final response = await _apiService.post(
-        '/organization/role-management',
+        '/organizations/role-management',
         roleData,
       );
       print('✅ [RolesDataSource] Role creation response: $response');
@@ -99,7 +99,7 @@ class RolesDataSource {
       print('📝 [RolesDataSource] Updating role $roleId: $roleData');
 
       final response = await _apiService.put(
-        '/organization/role-management/$roleId',
+        '/organizations/role-management/$roleId',
         roleData,
       );
       print('✅ [RolesDataSource] Role update response: $response');
@@ -123,7 +123,7 @@ class RolesDataSource {
       _checkAuthorization();
       print('🗑️ [RolesDataSource] Deleting role: $roleId');
 
-      await _apiService.delete('/organization/role-management/$roleId');
+      await _apiService.delete('/organizations/role-management/$roleId');
       print('✅ [RolesDataSource] Role deleted successfully');
 
       return true;
@@ -140,7 +140,7 @@ class RolesDataSource {
       print('🔍 [RolesDataSource] Fetching role by ID: $roleId');
 
       final response = await _apiService.get(
-        '/organization/role-management/$roleId',
+        '/organizations/role-management/$roleId',
       );
       print('✅ [RolesDataSource] Role fetch response: $response');
 
