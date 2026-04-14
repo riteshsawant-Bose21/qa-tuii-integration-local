@@ -71,7 +71,7 @@ class _ConfigurationControlBody extends StatelessWidget {
 
         // Always reload zone and settings — needed for both LT and Pro controllers.
         context.read<ZoneControlViewModel>().loadData(controllerId, isProController: isPro);
-        context.read<SettingsViewModel>().loadData(controllerId);
+        context.read<SettingsViewModel>().loadData(controllerId, isProController: isPro);
 
         // Pro-only tabs.
         if (isPro) {
