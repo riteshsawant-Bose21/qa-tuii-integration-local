@@ -156,7 +156,12 @@ class ProductPortData {
         trs.hashCode;
   }
 
-  List<PortData> getInputPorts(ProductType productType, bool isPSM) {
+  List<PortData> getInputPorts(
+    ProductType productType, {
+    required HardwareComponent hardware,
+    required String modelFamily,
+  }) {
+    final isPSM = modelFamily.toLowerCase().contains("powersmart");
     print(
       " Getting input ports for product type: $productType, isPSM: $isPSM.   RCA: ${analog?.ports?.rcaInput}, Analog: ${analog?.ports?.analogInput}, XLR: ${xlr?.inputs}, Loudspeaker: ${loudspeakerPorts?.inputs}, USB: ${usbIoPorts?.ports}, HDMI: ${hdmiIo?.inputs}, Aux: ${auxPorts?.ports}",
     );
@@ -304,6 +309,18 @@ class ProductPortData {
           // compatibleTypes: [PortType.hdmiOut],
         ),
       ),
+      ...List.generate(
+        bluetoothIo?.inputs ?? 0,
+        (index) => PortData(
+          id: FusionUtils.shortStringUUID(),
+          name: '${index + 1}',
+          type: PortType.bleIn,
+          portNumber: index + 1,
+          description: "${(PortType.bleIn).description} ${index + 1}",
+          position: PortPosition.topLeft,
+          // compatibleTypes: [PortType.bleOut],
+        ),
+      ),
     ];
   }
 
@@ -324,31 +341,6 @@ class ProductPortData {
             ),
           ) ??
           []),
-      // ...List.generate(
-      //   analog?.outputs ?? 0,
-      //   (index) {
-      //     final type = switch (productType) {
-      //       ProductType.speaker => PortType.analogInput,
-      //       ProductType.amplifier => PortType.amplifierOutput,
-      //       ProductType.dsps => PortType.dspAnalogOutput,
-      //       _ => PortType.analogOutput,
-      //     };
-      //     return PortData(
-      //       id: FusionUtils.shortStringUUID(),
-      //       name: '${index + 1}',
-      //       type: type,
-      //       portNumber: index + 1,
-      //       description: "${(type).description} ${index + 1}",
-      //       position: PortPosition.topRight,
-      //       // compatibleTypes: switch (type) {
-      //       //   PortType.analogInput => [PortType.analogOutput],
-      //       //   PortType.amplifierOutput => [PortType.circuitInput],
-      //       //   PortType.dspAnalogOutput => [PortType.amplifierInput],
-      //       //   _ => [],
-      //       // },
-      //     );
-      //   },
-      // ),
       ...List.generate(
         loudspeakerPorts?.outputs ?? 0,
         (index) => PortData(
@@ -372,6 +364,17 @@ class ProductPortData {
           description: "${(PortType.hdmiOut).description} ${index + 1}",
           position: PortPosition.bottomRight,
           // compatibleTypes: [PortType.hdmiIn],
+        ),
+      ),
+      ...List.generate(
+        xlr?.outputs ?? 0,
+        (index) => PortData(
+          id: FusionUtils.shortStringUUID(),
+          name: 'XLR',
+          type: PortType.xlrInput,
+          portNumber: index + 1,
+          description: "${(PortType.xlrInput).description} ${index + 1}",
+          position: PortPosition.bottomRight,
         ),
       ),
     ];
@@ -409,22 +412,22 @@ class ProductPortData {
     //     ),
     //   );
     // }
-    if (bluetoothIo != null) {
-      ports.addAll(
-        List.generate(
-          bluetoothIo?.inputs ?? 0,
-          (index) => PortData(
-            id: FusionUtils.shortStringUUID(),
-            name: 'BT${index + 1}',
-            type: PortType.bleIn,
-            portNumber: ports.length + index + 1,
-            description: "${(PortType.bleIn).description} ${index + 1}",
-            position: PortPosition.footerLeft,
-            // compatibleTypes: [PortType.bleOut],
-          ),
-        ),
-      );
-    }
+    // if (bluetoothIo != null) {
+    //   ports.addAll(
+    //     List.generate(
+    //       bluetoothIo?.inputs ?? 0,
+    //       (index) => PortData(
+    //         id: FusionUtils.shortStringUUID(),
+    //         name: 'BT${index + 1}',
+    //         type: PortType.bleIn,
+    //         portNumber: ports.length + index + 1,
+    //         description: "${(PortType.bleIn).description} ${index + 1}",
+    //         position: PortPosition.footerLeft,
+    //         // compatibleTypes: [PortType.bleOut],
+    //       ),
+    //     ),
+    //   );
+    // }
 
     if (gpio != null) {
       ports.addAll(
@@ -456,7 +459,34 @@ class ProductPortData {
       //   ),
       // );
     }
-
+    if (ethernetPorts != null) {
+      ports.addAll(
+        List.generate(
+          ethernetPorts?.inputs ?? 0,
+          (index) => PortData(
+            id: FusionUtils.shortStringUUID(),
+            name: 'ETH${index + 1}',
+            type: PortType.networkSwitchIn,
+            portNumber: ports.length + index + 1,
+            description: "${(PortType.networkSwitchIn).description} ${index + 1}",
+            position: PortPosition.footerLeft,
+          ),
+        ),
+      );
+      ports.addAll(
+        List.generate(
+          ethernetPorts?.outputs ?? 0,
+          (index) => PortData(
+            id: FusionUtils.shortStringUUID(),
+            name: 'ETH${index + 1}',
+            type: PortType.networkSwitchOut,
+            portNumber: ports.length + index + 1,
+            description: "${(PortType.networkSwitchOut).description} ${index + 1}",
+            position: PortPosition.footerLeft,
+          ),
+        ),
+      );
+    }
     return ports;
   }
 }
