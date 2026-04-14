@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/wiring/port_painter.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 /// Callback invoked when the user completes (drops) a connection drag.
 ///
@@ -12,11 +13,14 @@ typedef OnConnectionDropCallback =
     void Function(
       WiringPortData sourcePort,
       Offset dropPosition,
-      WiringPortData? destinationPort,
+      WiringPortData destinationPort,
     );
 
 class ConnectionToolParams {
-  final OnConnectionDropCallback onConnectionDrop;
+  final OnConnectionDropCallback onConnectionCreate;
 
-  const ConnectionToolParams({required this.onConnectionDrop});
+  final List<WiringConnectionModel> Function(String deviceId, String portId) getExistingConnectionsForPort;
+  final void Function(WiringConnectionModel connection) onConnectionDrop;
+
+  const ConnectionToolParams({required this.onConnectionCreate, required this.getExistingConnectionsForPort, required this.onConnectionDrop});
 }

@@ -11,6 +11,8 @@ import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/endpoints.dart';
 import 'package:fusion_lib/product_data/models/speaker_product.dart';
 
+import '../../../../wiring_design/usecase/auto_wiring.dart';
+
 extension HardwareViewModel on ProjectViewModel {
   //get Hardware by id
   HardwareComponent? getHardware({required String hardwareId}) {
@@ -93,18 +95,18 @@ extension HardwareViewModel on ProjectViewModel {
         }
       }
 
-      // if (hardware is! Speaker && hardware is! HardwareRack) {
-      //   final List<WiringConnectionModel> newConnections = AutoWiringUseCase().autoWireForHardware(
-      //     component: hardware,
-      //     allComponents: hardwareComponents,
-      //     circuits: circuits,
-      //     existingConnections: getAllWiringConnections(),
-      //   );
+      if (hardware is! Speaker && hardware is! HardwareRack) {
+        final List<WiringConnectionModel> newConnections = AutoWiringUseCase().autoWireForHardware(
+          component: hardware,
+          allComponents: hardwareComponents,
+          circuits: circuits,
+          existingConnections: getAllWiringConnections(),
+        );
 
-      //   for (final WiringConnectionModel connection in newConnections) {
-      //     addWiringConnection(connection: connection, autoSave: false);
-      //   }
-      // }
+        for (final WiringConnectionModel connection in newConnections) {
+          addWiringConnection(connection: connection, autoSave: false);
+        }
+      }
       if (autoSave) {
         saveProject();
       }
