@@ -13,14 +13,15 @@ import '../../../core/service_locator.dart';
 import '../../authentication/viewmodel/session_view_model.dart';
 import '../../commission/presentation/pages/network_config_trigger_page.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../../configuration_control/widgets/configuration_control_page.dart';
 import '../../configuration_aes67/view/configuration_aes67.dart';
+import '../../configuration_control/widgets/configuration_control_page.dart';
 import '../../configuration_events/widgets/configuration_events.dart';
 import '../../configuration_page/pages/configuration_processing_page.dart';
 import '../../configuration_snapshot/widgets/configuration_snapshots.dart';
 import '../../control_dashboard/presentation/pages/fusion_control_dashboard.dart';
 import '../../devices/presentation/pages/fusion_devices_page.dart';
 import '../../gpio/view/gpio_page.dart';
+import '../../speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import '../../wiring_design/view/wiring_page.dart';
 import '../view_model/spl_viewmodel.dart';
 import '../widget/configuration/side_panel_widgets/configuration_tab_switcher.dart';
@@ -68,6 +69,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
   @override
   void initState() {
     super.initState();
+    serviceLocator<ProductQueryViewModel>().loadProducts(); // Load products after successful login
+
     // Initialize tab widgets to preserve state
     _createTabWidgets();
     _initController(isInDesignMode);

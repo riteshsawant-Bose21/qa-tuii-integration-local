@@ -115,7 +115,6 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
         ),
       );
 
-      serviceLocator<ProductQueryViewModel>().loadProducts(); // Load products after successful login
     } on Exception catch (e) {
       // Web redirect initiated - this is expected
       if (kIsWeb && e.toString().contains('Web redirect initiated')) {
