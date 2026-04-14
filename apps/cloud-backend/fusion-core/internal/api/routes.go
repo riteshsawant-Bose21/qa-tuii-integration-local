@@ -102,6 +102,21 @@ func (a *API) registerRoutes() {
 		organization.GET(constants.EndpointOrganizationUsers, roleManagementHandler.GetOrganizationUsers)
 	}
 
+	// Device routes with authentication and access control
+	deviceHandler := handler.NewDeviceHandler(a.device)
+	devices := v1.Group(constants.EndpointDevices)
+
+	{
+		devices.Use(middleware.ExtractUserFromHeaders())
+		devices.POST("", deviceHandler.CreateDevice)
+		devices.POST(constants.EndpointDeviceBulkCreate, deviceHandler.BulkCreateDevices)
+		devices.PATCH(constants.EndpointDeviceByID, deviceHandler.UpdateDevice)
+		devices.DELETE(constants.EndpointDeviceReset, deviceHandler.ResetDevice)
+		devices.POST(constants.EndpointDeviceClaim, deviceHandler.ClaimDevice)
+		devices.POST(constants.EndpointDeviceRotateCert, deviceHandler.RotateCertificate)
+		devices.POST(constants.EndpointDeviceCommand, deviceHandler.Command)
+		devices.GET(constants.EndpointCommandStatus, deviceHandler.GetCommandStatus)
+	}
 	firmwareUpdate := v1.Group("")
 	firmwareHandler := handler.NewFirmwareUpdateHandler(a.firmware)
 	{

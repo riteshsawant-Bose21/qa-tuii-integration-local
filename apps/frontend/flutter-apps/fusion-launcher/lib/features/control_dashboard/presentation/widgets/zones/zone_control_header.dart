@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/assets/asset_icons.dart';
@@ -107,11 +106,11 @@ class _ZoneControlHeaderState extends State<ZoneControlHeader> {
                 onPressed: () {},
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
-                icon: FusionImage.asset(
-                  AssetIcons.controllerSettings,
+                icon: FusionImageAuto(
+                  path: AssetIcons.controllerSettings,
                   height: 14,
                   width: 16,
-                  assetColor: context.colorScheme.iconWhite,
+                  color: context.colorScheme.iconWhite,
                 ),
               ),
             ],

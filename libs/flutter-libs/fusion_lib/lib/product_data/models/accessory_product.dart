@@ -30,11 +30,10 @@ class AccessoryProduct {
   });
 
   factory AccessoryProduct.fromJson(Map<String, dynamic> json) {
-    final specs = json;
-    //['specifications'] as Map<String, dynamic>? ?? {};
+    final specs = json['specifications'] as Map<String, dynamic>? ?? {};
 
     return AccessoryProduct(
-      productId: (json['productid'] as num?)?.toInt() ?? 0,
+      productId: (json['product_id'] as num?)?.toInt() ?? 0,
       assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?, productType: 'accessory'),
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
@@ -48,7 +47,7 @@ class AccessoryProduct {
   }
 
   Map<String, dynamic> toJson() => {
-    'productid': productId,
+    'product_id': productId,
     'assets': assets.toAssetList(),
     'model_name': modelName,
     'model_family': modelFamily,

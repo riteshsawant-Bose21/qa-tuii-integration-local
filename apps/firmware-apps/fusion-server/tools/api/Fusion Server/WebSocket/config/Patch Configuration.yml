@@ -1,0 +1,34 @@
+info:
+  name: Patch Configuration
+  type: websocket
+  seq: 1
+
+websocket:
+  url: ws://{{api_url}}/ws
+  message:
+    type: json
+    data: |
+      {
+        "id": "req-5",
+        "version": 1,
+        "type": "patch_config",
+        "data": {
+          "settings": {
+            "audio": {
+              "gain3": {
+                "gain": 13
+              }
+            }
+          }
+        }
+      }
+  auth: inherit
+
+settings:
+  timeout: 0
+  keepAliveInterval: 0
+
+docs: |
+  Apply partial configuration patch with same semantics as HTTP PATCH.
+
+  **Empty patch {} is valid (no-op).**

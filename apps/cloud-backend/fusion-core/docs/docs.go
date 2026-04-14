@@ -74,6 +74,503 @@ const docTemplate = `{
                 }
             }
         },
+        "/devices": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new device in the system",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Create a new device",
+                "parameters": [
+                    {
+                        "description": "Device details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created device",
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceCreateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload or device already exists",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/bulk": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create multiple devices in a single request. Each device is processed independently; partial failures are reported per-device.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Bulk create devices",
+                "parameters": [
+                    {
+                        "description": "List of devices to create",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.BulkDeviceCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "207": {
+                        "description": "Multi-status - results for each device",
+                        "schema": {
+                            "$ref": "#/definitions/types.BulkDeviceCreateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/commands": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Send a command to the device cluster",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Send command to device cluster",
+                "parameters": [
+                    {
+                        "description": "Command details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.CommandRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully sent command",
+                        "schema": {
+                            "$ref": "#/definitions/types.CommandResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/commands/{command_id}/status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the status of a command by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Get command status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Command ID",
+                        "name": "command_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved command status",
+                        "schema": {
+                            "$ref": "#/definitions/types.CommandStatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid command ID",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Command not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/{device_id}": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update device details (non-static fields only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Update a device",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Serial number of the device",
+                        "name": "device_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Device update details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully updated device"
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized to update this device",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Device or project not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/{device_id}/claim": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Claim an unclaimed device for a user and project",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Claim a device",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Serial number of the device",
+                        "name": "device_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Claim details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceClaimRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully claimed device",
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceClaimResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload or device already claimed",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Device or project not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/{device_id}/reset": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Reset a device to factory settings",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Reset a device",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Serial number of the device",
+                        "name": "device_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully reset device"
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized to reset this device",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Device not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/{device_id}/rotate-cert": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a new certificate, attaches it to the device, and marks the old certificate as inactive",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Rotate device certificate",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Serial number of the device",
+                        "name": "device_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Certificate rotation details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceRotateCertRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully rotated certificate",
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceRotateCertResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Device not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/firmware/bundles": {
             "get": {
                 "security": [
@@ -214,6 +711,13 @@ const docTemplate = `{
                         "name": "action",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Unique identifier of the firmware bundle (UUID format)",
+                        "name": "bundleID",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -241,9 +745,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/firmware/bundles/{bundleID}/request-download-url": {
+        "/firmware/bundles/{version}/request-download-url": {
             "get": {
-                "description": "Generates a presigned S3 URL for downloading a specific firmware bundle artifact. The URL is valid for 2 hours and includes the file checksum for integrity verification. Only approved bundles can be downloaded.",
+                "description": "Generates a presigned S3 URL for downloading a specific firmware bundle artifact by version. The URL is valid for 15 minutes and includes the file checksum for integrity verification. Only approved bundles can be downloaded.",
                 "consumes": [
                     "application/json"
                 ],
@@ -257,8 +761,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Unique identifier of the firmware bundle (UUID format)",
-                        "name": "bundleID",
+                        "description": "Semantic version of the firmware bundle (e.g. 1.2.3, 1.0.0-beta.1)",
+                        "name": "version",
                         "in": "path",
                         "required": true
                     }
@@ -271,7 +775,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Missing or invalid bundleID",
+                        "description": "Missing or invalid version",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -299,7 +803,7 @@ const docTemplate = `{
         },
         "/firmware/updates/check": {
             "get": {
-                "description": "Checks for the latest available firmware bundle. Steps performed:\n1. Query for latest approved bundle where: bundle.version \u003e current_firmware_version AND bundle.min_prev_version \u003c= current_firmware_version AND bundle.min_desktop_app_version \u003c= current_desktop_app_version AND (channel matches prerelease OR prerelease IS NULL for stable)\n2. If found and current_firmware_version \u003e= bundle.min_prev_version: return update_available=true with bundle details\n3. If not found or firmware too old: query for latest bundle where bundle is compatible with current firmware (ignoring desktop app version)\n4. If found and current_desktop_app_version \u003c bundle.min_desktop_app_version: return update_available=true, app_update_required=true\n5. Otherwise: return update_available=false\n\n**Response Scenarios:**\n\n**Scenario 1 - Update Available:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\"update_available\": true, \"app_update_required\": false, \"bundle_id\": \"uuid\", \"version\": \"2.5.6\", \"release_notes\": \"...\", \"min_required_prev_version\": \"2.0.0\", \"min_desktop_app_version\": \"1.4.0\", \"manifest_data\": {}, \"created_at\": \"...\"}\n` + "`" + `` + "`" + `` + "`" + `\n\n**Scenario 2 - App Update Required:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\"update_available\": true, \"app_update_required\": true, \"min_desktop_app_version\": \"2.0.0\"}\n` + "`" + `` + "`" + `` + "`" + `\n\n**Scenario 3 - No Update Available:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\"update_available\": false, \"app_update_required\": false}\n` + "`" + `` + "`" + `` + "`" + `",
+                "description": "Checks for the latest available firmware bundle. Steps performed:\n1. The release channel is auto-inferred from the prerelease tag of current_firmware_version (e.g. \"beta\" from 1.2.3-beta.1, empty for stable 1.2.3)\n2. Query for latest approved bundle where: bundle.version \u003e current_firmware_version AND bundle.min_prev_version \u003c= current_firmware_version AND bundle.min_desktop_app_version \u003c= current_desktop_app_version AND (channel matches prerelease OR prerelease IS NULL for stable)\n3. If found and current_firmware_version \u003e= bundle.min_prev_version: return update_available=true with bundle details\n4. If not found or firmware too old: query for latest bundle where bundle is compatible with current firmware (ignoring desktop app version)\n5. If found and current_desktop_app_version \u003c bundle.min_desktop_app_version: return update_available=true, app_update_required=true\n6. Otherwise: return update_available=false\n\n**Response Scenarios:**\n\n**Scenario 1 - Update Available:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\"update_available\": true, \"app_update_required\": false, \"bundle_id\": \"uuid\", \"version\": \"2.5.6\", \"release_notes\": \"...\", \"min_required_prev_version\": \"2.0.0\", \"min_desktop_app_version\": \"1.4.0\", \"manifest_data\": {}, \"created_at\": \"...\"}\n` + "`" + `` + "`" + `` + "`" + `\n\n**Scenario 2 - App Update Required:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\"update_available\": true, \"app_update_required\": true, \"min_desktop_app_version\": \"2.0.0\"}\n` + "`" + `` + "`" + `` + "`" + `\n\n**Scenario 3 - No Update Available:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\"update_available\": false, \"app_update_required\": false}\n` + "`" + `` + "`" + `` + "`" + `",
                 "produces": [
                     "application/json"
                 ],
@@ -310,7 +814,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Current firmware version (semver format)",
+                        "description": "Current firmware version (semver format, e.g. 1.2.3 for stable, 1.2.3-beta.1 for beta channel). The release channel is auto-inferred from the prerelease tag.",
                         "name": "current_firmware_version",
                         "in": "query",
                         "required": true
@@ -321,12 +825,6 @@ const docTemplate = `{
                         "name": "current_desktop_app_version",
                         "in": "query",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Release channel: 'beta', 'alpha', etc. Omit for stable releases (prerelease IS NULL)",
-                        "name": "channel",
-                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -353,7 +851,7 @@ const docTemplate = `{
         },
         "/firmware/updates/status": {
             "post": {
-                "description": "Records the success or failure of a firmware bundle update installation.",
+                "description": "Records the success or failure of a firmware bundle update installation. Allowed values: INSTALL_SUCCESS, INSTALL_FAIL",
                 "consumes": [
                     "application/json"
                 ],
@@ -2603,6 +3101,52 @@ const docTemplate = `{
                 }
             }
         },
+        "types.BulkDeviceCreateRequest": {
+            "type": "object",
+            "required": [
+                "devices"
+            ],
+            "properties": {
+                "devices": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/types.DeviceCreateRequest"
+                    }
+                }
+            }
+        },
+        "types.BulkDeviceCreateResponse": {
+            "type": "object",
+            "properties": {
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.BulkDeviceCreateResult"
+                    }
+                }
+            }
+        },
+        "types.BulkDeviceCreateResult": {
+            "type": "object",
+            "properties": {
+                "certificate": {
+                    "type": "string"
+                },
+                "device_id": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "types.BundleDetails": {
             "type": "object",
             "properties": {
@@ -2659,6 +3203,89 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "types.CommandRequest": {
+            "type": "object",
+            "required": [
+                "command",
+                "project_id"
+            ],
+            "properties": {
+                "command": {
+                    "enum": [
+                        "REBOOT",
+                        "STANDBY"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.CommandType"
+                        }
+                    ],
+                    "example": "REBOOT"
+                },
+                "device_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "project_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.CommandResponse": {
+            "type": "object",
+            "properties": {
+                "command_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.CommandStatusResponse": {
+            "type": "object",
+            "properties": {
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.CommandStatusResult"
+                    }
+                }
+            }
+        },
+        "types.CommandStatusResult": {
+            "type": "object",
+            "properties": {
+                "command_id": {
+                    "type": "string"
+                },
+                "command_name": {
+                    "type": "string"
+                },
+                "device_id": {
+                    "type": "string"
+                },
+                "issued_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.CommandType": {
+            "type": "string",
+            "enum": [
+                "REBOOT",
+                "STANDBY"
+            ],
+            "x-enum-varnames": [
+                "CommandRestart",
+                "CommandStandby"
+            ]
         },
         "types.CreateOrganizationRequest": {
             "type": "object",
@@ -2745,6 +3372,168 @@ const docTemplate = `{
                 "full_name": {
                     "type": "string",
                     "example": "Jane Smith"
+                }
+            }
+        },
+        "types.DeviceClaimRequest": {
+            "type": "object",
+            "required": [
+                "csr",
+                "project_id"
+            ],
+            "properties": {
+                "client_device_id": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "csr": {
+                    "type": "string"
+                },
+                "device_location": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "device_name": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "device_zone": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "firmware_version": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "is_primary": {
+                    "type": "boolean"
+                },
+                "project_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.DeviceClaimResponse": {
+            "type": "object",
+            "properties": {
+                "certificate": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.DeviceCreateRequest": {
+            "type": "object",
+            "required": [
+                "client_device_id",
+                "csr",
+                "device_location",
+                "device_name",
+                "device_zone",
+                "firmware_version",
+                "mac_address",
+                "model_name",
+                "project_id",
+                "serial_number"
+            ],
+            "properties": {
+                "client_device_id": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "csr": {
+                    "type": "string"
+                },
+                "device_location": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "device_name": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "device_zone": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "firmware_version": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "is_primary": {
+                    "type": "boolean"
+                },
+                "mac_address": {
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "model_name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "serial_number": {
+                    "type": "string",
+                    "maxLength": 100
+                }
+            }
+        },
+        "types.DeviceCreateResponse": {
+            "type": "object",
+            "properties": {
+                "certificate": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.DeviceRotateCertRequest": {
+            "type": "object",
+            "required": [
+                "csr"
+            ],
+            "properties": {
+                "csr": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.DeviceRotateCertResponse": {
+            "type": "object",
+            "properties": {
+                "certificate": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.DeviceUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "client_device_id": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "device_location": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "device_name": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "device_zone": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "firmware_version": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "is_primary": {
+                    "type": "boolean"
+                },
+                "project_id": {
+                    "type": "string"
                 }
             }
         },
@@ -2986,13 +3775,13 @@ const docTemplate = `{
                 "bundle_version": {
                     "type": "string"
                 },
+                "desktop_app_version": {
+                    "type": "string"
+                },
                 "installed_at": {
                     "type": "string"
                 },
-                "launcher_version": {
-                    "type": "string"
-                },
-                "previous_version": {
+                "previous_bundle_version": {
                     "type": "string"
                 },
                 "project_id": {
@@ -3042,7 +3831,7 @@ const docTemplate = `{
                 },
                 "version": {
                     "type": "string",
-                    "example": "1.2.3"
+                    "example": "1.2.3-dev.4+build123"
                 }
             }
         },
@@ -3366,6 +4155,12 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/types.ProductItemResponse"
+                    }
+                },
+                "source": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.SourceItem"
                     }
                 },
                 "speaker": {
@@ -3743,6 +4538,29 @@ const docTemplate = `{
                     "$ref": "#/definitions/types.ProductItemResponse"
                 },
                 "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.SourceItem": {
+            "type": "object",
+            "properties": {
+                "asset_path": {
+                    "type": "string"
+                },
+                "connection_type": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "type": {
                     "type": "string"
                 }
             }

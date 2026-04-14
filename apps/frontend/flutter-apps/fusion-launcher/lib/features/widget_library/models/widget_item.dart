@@ -125,6 +125,10 @@ class WidgetLibraryData {
       name: 'FusionColumn',
       category: WidgetCategory.others,
     ),
+    const WidgetItem(
+      name: 'FusionKebabPopup',
+      category: WidgetCategory.popup,
+    ),
   ];
 
   static List<WidgetItem> getWidgetsByCategory(WidgetCategory category) {

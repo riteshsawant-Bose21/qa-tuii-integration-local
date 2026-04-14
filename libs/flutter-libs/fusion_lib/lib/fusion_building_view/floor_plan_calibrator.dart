@@ -160,7 +160,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
   final TextEditingController _distanceController = TextEditingController(
     text: '5.00',
   );
-  MeasurementUnit _selectedUnit = MeasurementUnit.feet;
+  MeasurementUnit _selectedUnit = MeasurementUnit.meters;
   _ToolMode _mode = _ToolMode.measure;
 
   // current image rect on screen (used for conversions)
@@ -2777,21 +2777,13 @@ enum MeasurementUnit {
   final String displayName;
 
   static MeasurementUnit? fromString(String value) {
-    try {
-      return MeasurementUnit.values.firstWhere(
-        (MeasurementUnit element) => element.name == value,
-      );
-    } catch (e) {
-      return null;
-    }
+    return MeasurementUnit.values.firstWhereOrNull(
+      (MeasurementUnit element) => element.name == value,
+    );
   }
 
-  static MeasurementUnit? fromJson(String value) {
-    try {
-      return MeasurementUnit.values.firstWhere((MeasurementUnit element) => element.name == value);
-    } catch (e) {
-      return null;
-    }
+  static MeasurementUnit? fromJson(String? value) {
+    return MeasurementUnit.values.firstWhereOrNull((MeasurementUnit element) => element.name == value);
   }
 
   String toJson() => name;

@@ -18,7 +18,13 @@
 #define FUSION_CN_RTP_HASH_BITS 6
 #define FUSION_CN_NAME_MAX 32
 
-#define EARLY_SLACK_NS 50000
+#define EARLY_SLACK_NS 20000
+#define FUSION_CN_RX_QUEUE_DEPTH 256
+#define FUSION_CN_RX_DRAIN_BUDGET 32
+
+struct fusion_cn_substream;
+struct fusion_cn_manager;
+struct stream_node;
 
 struct fusion_cn_stream_config {
     u64 stream_handle;
@@ -40,9 +46,11 @@ struct fusion_cn_stream_config {
 
 struct fusion_cn_rtp_ops {
     u64  (*get_phc_ns)(void);
-    void *(*get_buffer)(void *alsa_stream);
-    u32  (*get_buffer_size_in_frames)(void *alsa_stream);
-    u32  (*get_buffer_offset)(void *alsa_stream);
+    u64  (*get_tick_ns)(struct fusion_cn_manager *cn_mgr);
+    bool (*get_timing_ready)(struct fusion_cn_manager *cn_mgr);
+    void *(*get_buffer)(struct fusion_cn_substream *alsa_stream);
+    u32  (*get_buffer_size_in_frames)(struct fusion_cn_substream *alsa_stream);
+    u32  (*get_buffer_offset)(struct fusion_cn_substream *alsa_stream);
 };
 
 struct fusion_cn_rtp_header {
@@ -52,6 +60,8 @@ struct fusion_cn_rtp_header {
     u32 timestamp;
     u32 ssrc;
 } __attribute__((packed));
+
+#define FUSION_CN_RX_PAYLOAD_MAX_BYTES (ETH_DATA_LEN - sizeof(struct iphdr) - sizeof(struct udphdr) - sizeof(struct fusion_cn_rtp_header))
 
 struct fusion_cn_rtp_packet {
     struct ethhdr eth;
@@ -67,26 +77,39 @@ struct fusion_cn_rtp_stream {
     struct fusion_cn_stream_config info;
     struct fusion_cn_rtp_packet rtp_packet_base __aligned(64);
     atomic_t is_running;
+    atomic_t playback_armed;
     u32 buf_size_in_frames;
     u32 buf_size_in_packets;
     u32 ssrc;
     u16 outgoing_seq_num;
     u16 current_seq_num;
     u64 next_action_time;
+    u64 played_action_time;
     u64 *next_action_times;
-    u32 playback_index; 
+    u32 playback_slot; 
     u64 packet_time;
     u64 ns_per_sample;
     bool rtp_phc_offset_valid;
 
     struct fusion_cn_stream_metrics *metrics;
-    void *stream_node;
+    struct stream_node *stream_node;
 };
 
-// map from dest_ip and dest_port to stream_handle for incoming packets
+// queued RX work item for deferred sink processing
+struct fusion_cn_rx_packet {
+    u64 stream_handle;
+    u64 rx_phc_ns;
+    u32 rtp_timestamp;
+    u32 ssrc;
+    u16 seq_num;
+    u16 payload_len;
+    u8 payload_type;
+    u8 payload[FUSION_CN_RX_PAYLOAD_MAX_BYTES];
+};
+
 struct fusion_cn_packet_map {
     struct hlist_node hnode;
-    void *alsa_stream;
+    struct fusion_cn_substream *alsa_stream;
     u32 source_ip;
     u32 dest_ip;
     u16 source_port;
@@ -100,19 +123,28 @@ struct fusion_cn_rtp_manager {
     rwlock_t lock;
     struct fusion_cn_netfilter *nf;
     struct fusion_cn_rtp_ops *ops;
-    void *cn_mgr;
+    struct fusion_cn_manager *cn_mgr;
+    spinlock_t rx_queue_lock;
+    u32 rx_queue_head;
+    u32 rx_queue_tail;
+    u32 rx_queue_count;
+    struct fusion_cn_rx_packet *rx_queue;
+    struct fusion_cn_rx_packet *rx_scratch;
     bool debug;
+    bool trace_debug;
 };
 
 /* Function prototypes */
 int fusion_cn_rtp_init(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_netfilter *nf,
-                    struct fusion_cn_rtp_ops *ops, void *cn_mgr);
+                    struct fusion_cn_rtp_ops *ops, struct fusion_cn_manager *cn_mgr);
 void fusion_cn_rtp_destroy(struct fusion_cn_rtp_manager *rtp_mgr);
 int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_stream_config *info,
-                             void *alsa_stream, struct fusion_cn_rtp_stream **rtp_stream);
+                             struct fusion_cn_substream *alsa_stream, struct fusion_cn_rtp_stream **rtp_stream);
 int fusion_cn_rtp_remove_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_stream *stream);
-int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_packet *packet);
-void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_stream *stream, void *alsa_stream);
+bool fusion_cn_rtp_lookup_packet_handle(struct fusion_cn_rtp_manager *rtp_mgr, const struct fusion_cn_rtp_packet *packet, u64 *stream_handle);
+int fusion_cn_rtp_enqueue_packet(struct fusion_cn_rtp_manager *rtp_mgr, u64 stream_handle, const struct fusion_cn_rtp_packet *packet, u32 packet_len);
+u32 fusion_cn_rtp_drain_rx_queue(struct fusion_cn_rtp_manager *rtp_mgr, u32 budget);
+void fusion_cn_rtp_send_packet(struct fusion_cn_rtp_manager *rtp_mgr, struct fusion_cn_rtp_stream *stream, struct fusion_cn_substream *alsa_stream);
 struct fusion_cn_rtp_stream *fusion_cn_rtp_get_stream(struct fusion_cn_rtp_manager *rtp_mgr, u64 handle);
 void fusion_cn_rtp_stream_release(struct kref *kref);
-int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, u64 handle, bool running, void *alsa_stream);
+int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, u64 handle, bool running, struct fusion_cn_substream *alsa_stream);

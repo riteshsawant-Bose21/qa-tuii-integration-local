@@ -1,0 +1,23 @@
+info:
+  name: Unsubscribe from Config
+  type: websocket
+  seq: 1
+
+websocket:
+  url: ws://{{api_url}}/ws
+  message:
+    type: json
+    data: |
+      {
+        "id": "unsub-config-001",
+        "version": 1,
+        "type": "unsubscribe_config"
+      }
+  auth: inherit
+
+settings:
+  timeout: 0
+  keepAliveInterval: 0
+
+docs: |
+  Stop receiving configuration update push notifications.
