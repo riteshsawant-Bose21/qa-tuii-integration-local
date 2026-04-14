@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fusion/internal/api"
 	"net"
 	"os"
 	"runtime"
@@ -51,11 +50,7 @@ func TestFusionUDP_BasicRoundTrip(t *testing.T) {
 	}
 	defer conn.Close()
 
-	msg := api.NotifyMessage{
-		ID:        "fusion-test-basic",
-		Operation: api.NotifyOpValueGet,
-	}
-	data, _ := json.Marshal(msg)
+	data := []byte(`{"action":"get"}`)
 
 	if _, err := conn.Write(data); err != nil {
 		t.Fatalf("write: %v", err)
@@ -69,41 +64,60 @@ func TestFusionUDP_BasicRoundTrip(t *testing.T) {
 	}
 
 	out := string(buf[:n])
-	if !contains(out, "status") {
-		t.Fatalf("expected JSON response, got: %q", out)
+	if !contains(out, `"status":"success"`) {
+		t.Fatalf("expected successful get response, got: %q", out)
 	}
 }
 
 func TestFusionUDP_BroadcastPropagation(t *testing.T) {
-	// Prepare UDP listener to act as a "client"
-	listenerAddr, err := net.ResolveUDPAddr("udp4", "0.0.0.0:0")
+	serverAddr, err := net.ResolveUDPAddr("udp4", getFusionUDPAddr())
 	if err != nil {
-		t.Fatalf("resolve: %v", err)
+		t.Fatalf("resolve server: %v", err)
 	}
-	listenerConn, err := net.ListenUDP("udp4", listenerAddr)
+	clientConn, err := net.DialUDP("udp4", nil, serverAddr)
 	if err != nil {
-		t.Fatalf("listen: %v", err)
+		t.Fatalf("dial client: %v", err)
 	}
-	defer listenerConn.Close()
+	defer clientConn.Close()
 
-	// Send an initial registration message to server
-	serverAddr, _ := net.ResolveUDPAddr("udp4", getFusionUDPAddr())
-	initMsg := []byte(`{"action":"get"}`)
-	if _, err := listenerConn.WriteToUDP(initMsg, serverAddr); err != nil {
+	// Send an initial registration message to server.
+	if _, err := clientConn.Write([]byte(`{"action":"get"}`)); err != nil {
 		t.Fatalf("register: %v", err)
 	}
 
-	// Now wait to receive broadcast messages
 	buf := make([]byte, 4096)
-	listenerConn.SetReadDeadline(time.Now().Add(3 * time.Second))
-	n, _, err := listenerConn.ReadFromUDP(buf)
+	clientConn.SetReadDeadline(time.Now().Add(1 * time.Second))
+	if _, err := clientConn.Read(buf); err != nil {
+		t.Fatalf("read registration response: %v", err)
+	}
+
+	update := map[string]any{
+		"action": "put",
+		"payload": map[string]any{
+			"udp_broadcast_test": time.Now().UnixNano(),
+		},
+	}
+	updateData, err := json.Marshal(update)
+	if err != nil {
+		t.Fatalf("marshal update: %v", err)
+	}
+	if _, err := clientConn.Write(updateData); err != nil {
+		t.Fatalf("write update: %v", err)
+	}
+
+	buf = make([]byte, 4096)
+	clientConn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	n, err := clientConn.Read(buf)
 	if err != nil {
 		t.Fatalf("read broadcast: %v", err)
 	}
 
-	out := string(buf[:n])
-	if !contains(out, "vip") && !contains(out, "config") && !contains(out, "status") {
-		t.Fatalf("unexpected broadcast payload: %s", out)
+	msg, err := parseJSON(buf[:n])
+	if err != nil {
+		t.Fatalf("parse broadcast: %v", err)
+	}
+	if _, ok := msg["udp_broadcast_test"]; !ok {
+		t.Fatalf("unexpected broadcast payload: %s", string(buf[:n]))
 	}
 }
 
@@ -128,7 +142,7 @@ func TestFusionUDP_BroadcastAckStopsRetries(t *testing.T) {
 	serverAddr, _ := net.ResolveUDPAddr("udp4", getFusionUDPAddr())
 
 	update := map[string]any{
-		"action": "set",
+		"action": "put",
 		"payload": map[string]any{
 			"udp_ack_test": time.Now().UnixNano(),
 		},
@@ -196,7 +210,7 @@ func TestFusionUDP_BroadcastRetriesWithoutAck(t *testing.T) {
 	serverAddr, _ := net.ResolveUDPAddr("udp4", getFusionUDPAddr())
 
 	update := map[string]any{
-		"action": "set",
+		"action": "put",
 		"payload": map[string]any{
 			"udp_retry_test": time.Now().UnixNano(),
 		},
@@ -264,7 +278,7 @@ func TestFusionUDP_StaleClientPruned(t *testing.T) {
 	time.Sleep(12 * time.Second)
 
 	update := map[string]any{
-		"action": "set",
+		"action": "put",
 		"payload": map[string]any{
 			"udp_stale_test": time.Now().UnixNano(),
 		},
