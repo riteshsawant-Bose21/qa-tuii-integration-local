@@ -20,6 +20,7 @@ class _ToolBarIcon extends StatelessWidget {
         toolTip: label,
         semanticsId: "canvas_tool_${label.toLowerCase()}",
         color: isSelected ? context.colorScheme.elevation3 : Colors.transparent,
+        isSelected: isSelected ,
         padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 12),
         borderColor: Colors.transparent,
         child: FusionImage.asset(

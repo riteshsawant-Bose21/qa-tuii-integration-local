@@ -56,6 +56,7 @@ class SemanticHelper {
     String? label,
     String? value,
     bool? isChecked,
+    bool? isSelected,
   }) {
     return Semantics(
       value: value,
@@ -65,6 +66,7 @@ class SemanticHelper {
       label: label,
       child: child,
       checked: isChecked,
+      selected: isSelected,
     );
   }
 
