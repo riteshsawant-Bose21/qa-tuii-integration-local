@@ -120,6 +120,7 @@ func (c *Cluster) getDeviceInfoLocal() api.DeviceInfo {
 		FusionMonorepoBranch:     utils.GetBranchName(),
 		FusionMonorepoCommitHash: utils.GetCommitHash(),
 		JenkinsBuildNumber:       utils.GetJenkinsBuildNumber(),
+		PreReleaseTag:            utils.GetPreReleaseTag(),
 	}
 
 	return deviceInfo
