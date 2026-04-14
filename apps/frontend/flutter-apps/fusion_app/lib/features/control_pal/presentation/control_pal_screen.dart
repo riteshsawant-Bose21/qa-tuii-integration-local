@@ -81,7 +81,7 @@ class _ControlPalScreenState<T> extends State<ControlPalScreen> {
   Widget _buildTabContent() {
     switch (_selectedTab.value) {
       case ControlPalTab.zones:
-        return  ControllerZones(onSelected: (){
+        return  VirtualController(onSelected: (){
 
           Navigator.pushNamed(
             context,

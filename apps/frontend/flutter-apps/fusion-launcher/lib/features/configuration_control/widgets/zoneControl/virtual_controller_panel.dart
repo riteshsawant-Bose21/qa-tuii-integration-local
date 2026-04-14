@@ -103,34 +103,39 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
               width: 1,
             ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              /// Zone title
-              FusionAppText(
-                text: selectedZone.name,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 16),
+          child: VirtualController(onSelected: (){
 
-              /// Source dropdown
-              _buildSourceDropdown(context),
-              const SizedBox(height: 24),
+          })
 
-              /// Volume dial
-              _buildVolumeDial(context),
-              const SizedBox(height: 24),
 
-              /// Volume slider
-              _buildVolumeSlider(context),
-              const SizedBox(height: 16),
-
-              /// Mute button
-              _buildMuteButton(context),
-            ],
-          ),
+          // Column(
+          //   mainAxisSize: MainAxisSize.min,
+          //   children: <Widget>[
+          //     /// Zone title
+          //     FusionAppText(
+          //       text: selectedZone.name,
+          //       style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          //         fontWeight: FontWeight.w600,
+          //       ),
+          //     ),
+          //     const SizedBox(height: 16),
+          //
+          //     /// Source dropdown
+          //     _buildSourceDropdown(context),
+          //     const SizedBox(height: 24),
+          //
+          //     /// Volume dial
+          //     _buildVolumeDial(context),
+          //     const SizedBox(height: 24),
+          //
+          //     /// Volume slider
+          //     _buildVolumeSlider(context),
+          //     const SizedBox(height: 16),
+          //
+          //     /// Mute button
+          //     _buildMuteButton(context),
+          //   ],
+          // ),
         ),
       ),
     );

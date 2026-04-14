@@ -8,15 +8,15 @@ import 'package:fusion_lib/fusion_widgets/virtual_controllers/zone_source_card.d
 import 'package:fusion_lib/models/controller_config/controller_config.dart';
 import 'package:fusion_lib/service/websocket/websocket_service.dart';
 
-class ControllerZones extends StatefulWidget {
+class VirtualController extends StatefulWidget {
   final Function? onSelected;
-  const ControllerZones({super.key,this.onSelected});
+  const VirtualController({super.key,this.onSelected});
 
   @override
-  State<ControllerZones> createState() => _ControllerZonesState();
+  State<VirtualController> createState() => _VirtualControllerState();
 }
 
-class _ControllerZonesState extends State<ControllerZones> {
+class _VirtualControllerState extends State<VirtualController> {
   final Map<String, WallSubZone> _cache = {};
   final Map<String, WallZone> _cacheZone = {};
 
