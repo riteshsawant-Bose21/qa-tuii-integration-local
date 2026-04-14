@@ -1,5 +1,5 @@
 {
-    "version": "0.1.17",
+    "version": "0.1.18",
     "algorithms": [
         {
             "name": "alsa_in",
@@ -2752,7 +2752,6 @@
         {
             "name": "meter",
             "terminals": [
-                
                 {
                     "name": "in",
                     "signal_type": "audio",
@@ -2768,7 +2767,9 @@
                     "value_type": "float",
                     "default_value": -60.0,
                     "minimum_value": -60.0,
-                    "maximum_value": 0.0
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 }
             ]
         } 
