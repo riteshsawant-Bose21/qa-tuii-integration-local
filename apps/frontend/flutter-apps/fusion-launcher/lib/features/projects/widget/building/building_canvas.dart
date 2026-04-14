@@ -948,7 +948,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
       final CalibrationData? calibrationData = await showDialog<CalibrationData>(
         context: context,
-        barrierDismissible: true,
+        barrierDismissible: false,
         builder: (_) {
           return Dialog(
             insetPadding: const EdgeInsets.all(100),
