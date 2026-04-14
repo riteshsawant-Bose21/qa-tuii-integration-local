@@ -80,12 +80,12 @@
     { .reg_addr = 0x99, .data = 0x00 }, \
     { .reg_addr = 0x9A, .data = 0x00 }, \
     { .reg_addr = 0x9B, .data = 0x00 }, \
-    { .reg_addr = 0xA2, .data = 0x40 }, \
-    { .reg_addr = 0xA3, .data = 0x9C }, \
-    { .reg_addr = 0xA4, .data = 0x00 }, \
-    { .reg_addr = 0xA6, .data = 0xE3 }, \
-    { .reg_addr = 0xA7, .data = 0xE3 }, \
-    { .reg_addr = 0xAA, .data = 0xE7 }, \
+    { .reg_addr = 0xA2, .data = 0x99 }, \
+    { .reg_addr = 0xA3, .data = 0x61 }, \
+    { .reg_addr = 0xA4, .data = 0x11 }, \
+    { .reg_addr = 0xA6, .data = 0x00 }, \
+    { .reg_addr = 0xA7, .data = 0x00 }, \
+    { .reg_addr = 0xAA, .data = 0x00 }, \
     { .reg_addr = 0xB7, .data = 0x12 }, \
     { .reg_addr = 0xB1, .data = 0xAC }, \
     { .reg_addr = 0x03, .data = 0x00 }
@@ -201,6 +201,54 @@ const struct base_device bd_fusion_powersmart = {
     }
 };
 
+const struct base_device bd_fusion_powersmart_rev2 = {
+    .data = {
+        .model = "powersmart-rev2",
+        .sn = "tbd",
+        .type = BD_TYPE_FUSION_POWERSMART_REV2
+    },
+    .num_eps = 1,
+    .endpoints = (struct endpoint[]) {
+        SI5351B_ENDPOINT_INIT
+    },
+    .num_gpios = 3,
+    .gpios = (struct endpoint_gpio[]) {
+        {
+            .name = "gpio_amp_mute",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .num = 14 // GPIO1_IO14
+        },
+        {
+            .name = "gpio_ui_rstn",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .default_val = EP_GPIO_VAL_HI,
+            .num = 7 // GPIO1_IO7
+        },
+        {
+            .name = "gpio_ui_boot0",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .num = 8 // GPIO1_IO8
+        }
+    },
+    .cfg_seq = {
+        .num_pwrup_cmds = 1,
+        .pwrup_cmds = (struct config_sequence_cmd[]) {
+            {
+                .name = "si5351b_config",
+                .parent_ep_name = "ep_clk_si5351b",
+                .num_msgs = SI5351B_NUM_MSGS,
+                .msgs = (struct endpoint_cmd_msg[]) {
+                    SI5351B_CONFIG_MSGS
+                },
+                .seq_delay_ms = SI5351B_SEQ_DELAY_MS
+            }
+        }
+    }
+};
+
 const struct base_device bd_fusion_c1_evk = {
     .data = {
         .model = "c1-evk",
@@ -291,7 +339,7 @@ const struct base_device bd_fusion_fm6 = {
         .uv_warn_gpio_name = "gpio_uv_warn",
         .dac_mute_gpio_name = "gpio_dac_mute",
     },
-    .num_gpios = 4,
+    .num_gpios = 5,
     .gpios = (struct endpoint_gpio[]) {
         {
             .name = "gpio_a_mute_out",
@@ -299,13 +347,13 @@ const struct base_device bd_fusion_fm6 = {
             .num = 5, // GPIO1_IO5
             .dir = EP_GPIO_DIR_I
         },
-        // {
-        //     .name = "gpio_tca9544_int",
-        //     .type = EP_GPIO_TYPE_PHYS,
-        //     .is_irq = true,
-        //     .num = 6, // GPIO1_IO6
-        //     .trigger_type = IRQ_TYPE_LEVEL_LOW
-        // },
+        {
+            .name = "gpio_tca9544_int",
+            .type = EP_GPIO_TYPE_PHYS,
+            .is_irq = true,
+            .num = 6, // GPIO1_IO6
+            .trigger_type = IRQ_TYPE_LEVEL_LOW
+        },
         {
             .name = "gpio_ui_rstn",
             .type = EP_GPIO_TYPE_PHYS,
@@ -1207,7 +1255,7 @@ const struct base_device bd_fusion_fm8y = {
         .uv_warn_gpio_name = "gpio_uv_warn",
         .dac_mute_gpio_name = "gpio_dac_mute",
     },
-    .num_gpios = 4,
+    .num_gpios = 5,
     .gpios = (struct endpoint_gpio[]) {
         {
             .name = "gpio_a_mute_out",
@@ -1215,13 +1263,13 @@ const struct base_device bd_fusion_fm8y = {
             .num = 5, // GPIO1_IO5
             .dir = EP_GPIO_DIR_I
         },
-        // {
-        //     .name = "gpio_tca9544_int",
-        //     .type = EP_GPIO_TYPE_PHYS,
-        //     .is_irq = true,
-        //     .num = 6, // GPIO1_IO6
-        //     .trigger_type = IRQ_TYPE_LEVEL_LOW
-        // },
+        {
+            .name = "gpio_tca9544_int",
+            .type = EP_GPIO_TYPE_PHYS,
+            .is_irq = true,
+            .num = 6, // GPIO1_IO6
+            .trigger_type = IRQ_TYPE_LEVEL_LOW
+        },
         {
             .name = "gpio_ui_rstn",
             .type = EP_GPIO_TYPE_PHYS,
@@ -2200,6 +2248,7 @@ const struct base_device bd_fusion_blue_pal = {
 
 const enum base_device_type default_bd_types[] = {
     BD_TYPE_FUSION_POWERSMART,
+    BD_TYPE_FUSION_POWERSMART_REV2,
     BD_TYPE_FUSION_C1_EVK,
     BD_TYPE_FUSION_FM6,
     BD_TYPE_FUSION_FM8Y,
@@ -2210,6 +2259,7 @@ const enum base_device_type default_bd_types[] = {
 
 const struct base_device *default_bds[] = {
     &bd_fusion_powersmart,
+    &bd_fusion_powersmart_rev2,
     &bd_fusion_c1_evk,
     &bd_fusion_fm6,
     &bd_fusion_fm8y,
