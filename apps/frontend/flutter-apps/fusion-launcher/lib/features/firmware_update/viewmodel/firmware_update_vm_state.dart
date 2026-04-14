@@ -17,7 +17,6 @@ class FirmwareUpdateViewModelState extends Equatable {
   final FirmwareUpdateUiState uiState;
   final FirmwareUpdateCheckResult? updateCheckResult;
   final BundleDownloadUrlResult? bundleDownloadUrlResult;
-  final String inUseVersion;
   final String availableVersion;
   final String downloadedFilePath;
   final bool isProgressExpanded;
@@ -29,12 +28,13 @@ class FirmwareUpdateViewModelState extends Equatable {
   final bool isUploadInProgress;
   final bool isSocketTrackingInProgress;
   final List<FusionNetworkDevice> networkDevices;
+  final bool isWaitingForSocketResponse;
+  final bool isRebootTrackingInProgress;
 
   const FirmwareUpdateViewModelState({
     this.uiState = FirmwareUpdateUiState.checking,
     this.updateCheckResult,
     this.bundleDownloadUrlResult,
-    this.inUseVersion = '',
     this.availableVersion = '',
     this.downloadedFilePath = '',
     this.isProgressExpanded = true,
@@ -46,13 +46,14 @@ class FirmwareUpdateViewModelState extends Equatable {
     this.isUploadInProgress = false,
     this.isSocketTrackingInProgress = false,
     this.networkDevices = const <FusionNetworkDevice>[],
+    this.isWaitingForSocketResponse = false,
+    this.isRebootTrackingInProgress = false,
   });
 
   FirmwareUpdateViewModelState copyWith({
     FirmwareUpdateUiState? uiState,
     FirmwareUpdateCheckResult? updateCheckResult,
     BundleDownloadUrlResult? bundleDownloadUrlResult,
-    String? inUseVersion,
     String? availableVersion,
     String? downloadedFilePath,
     bool? isProgressExpanded,
@@ -64,12 +65,13 @@ class FirmwareUpdateViewModelState extends Equatable {
     bool? isUploadInProgress,
     bool? isSocketTrackingInProgress,
     List<FusionNetworkDevice>? networkDevices,
+    bool? isWaitingForSocketResponse,
+    bool? isRebootTrackingInProgress,
   }) {
     return FirmwareUpdateViewModelState(
       uiState: uiState ?? this.uiState,
       updateCheckResult: updateCheckResult ?? this.updateCheckResult,
       bundleDownloadUrlResult: bundleDownloadUrlResult ?? this.bundleDownloadUrlResult,
-      inUseVersion: inUseVersion ?? this.inUseVersion,
       availableVersion: availableVersion ?? this.availableVersion,
       downloadedFilePath: downloadedFilePath ?? this.downloadedFilePath,
       networkDevices: networkDevices ?? this.networkDevices,
@@ -83,6 +85,8 @@ class FirmwareUpdateViewModelState extends Equatable {
       installTrackingCompleted: installTrackingCompleted ?? this.installTrackingCompleted,
       isUploadInProgress: isUploadInProgress ?? this.isUploadInProgress,
       isSocketTrackingInProgress: isSocketTrackingInProgress ?? this.isSocketTrackingInProgress,
+      isWaitingForSocketResponse: isWaitingForSocketResponse ?? this.isWaitingForSocketResponse,
+      isRebootTrackingInProgress: isRebootTrackingInProgress ?? this.isRebootTrackingInProgress,
     );
   }
 
@@ -91,7 +95,6 @@ class FirmwareUpdateViewModelState extends Equatable {
     uiState,
     updateCheckResult,
     bundleDownloadUrlResult,
-    inUseVersion,
     availableVersion,
     downloadedFilePath,
     isProgressExpanded,
@@ -103,6 +106,8 @@ class FirmwareUpdateViewModelState extends Equatable {
     isUploadInProgress,
     isSocketTrackingInProgress,
     networkDevices,
+    isWaitingForSocketResponse,
+    isRebootTrackingInProgress,
   ];
 }
 

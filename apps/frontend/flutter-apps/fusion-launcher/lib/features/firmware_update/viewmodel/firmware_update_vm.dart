@@ -25,6 +25,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
   StreamSubscription<FileTransferState>? _downloadSubscription;
   StreamSubscription<FileTransferState>? _uploadSubscription;
   StreamSubscription<ResponseCallback<FirmwareUpdateProgressEvent>>? _firmwareInstallSocketSubscription;
+  StreamSubscription<ResponseCallback<FirmwareUpdateProgressEvent>>? _deviceRebootSocketSubscription;
 
   final TransferManagerCubit downloadManager = serviceLocator<TransferManagerCubit>();
   String? _persistedBundleId;
@@ -135,7 +136,6 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
           errorShortText: _shortError(nextErrorText),
           errorText: nextErrorText,
           updateCheckResult: updateCheckResult,
-          inUseVersion: primaryFusionDeviceVersion,
           availableVersion: updateAvailableVersion,
           downloadedFilePath: nextDownloadedPath,
           progress: nextProgress,
@@ -428,6 +428,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
 
           if (fileUploadState.status == TransferStatus.completed) {
             _markInstallUploadCompleted();
+            _emitIfOpen(state.copyWith(isWaitingForSocketResponse: true));
             _listenToSoftwareInstallationProgress();
             return;
           }
@@ -530,19 +531,17 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
       }
 
       final ResponseCallback<void> startResponse = await fusionDeviceService.sendStartFirmwareUpdateEvent(bundleId: targetBundleId);
-      if (!startResponse.success) {
-        throw Exception(startResponse.message.isEmpty ? 'Failed to send start firmware update event.' : startResponse.message);
-      }
+      if (!startResponse.success) throw Exception(startResponse.message.isEmpty ? 'Failed to send start firmware update event.' : startResponse.message);
 
       await _firmwareInstallSocketSubscription?.cancel();
       _firmwareInstallSocketSubscription = fusionDeviceService.listenFirmwareUpdateProgressEvents().listen(
         (ResponseCallback<FirmwareUpdateProgressEvent> response) {
+          if (state.isWaitingForSocketResponse) _emitIfOpen(state.copyWith(isWaitingForSocketResponse: false));
+
           if (!response.success || response.data == null) return;
 
           final FirmwareUpdateProgressEvent event = response.data!;
           if (event.devicesBySerial.isEmpty) return;
-
-          log("FW update : ${event.status}");
 
           final Map<String, FirmwareInstallDeviceProgress> mergedBySerial = <String, FirmwareInstallDeviceProgress>{
             for (final FirmwareInstallDeviceProgress item in state.deviceInstallProgress) item.serialNumber: item,
@@ -623,7 +622,6 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
           errorShortText: '',
           installTrackingCompleted: true,
           isSocketTrackingInProgress: false,
-          inUseVersion: state.availableVersion, // Update in-use version to the newly installed version
           downloadedFilePath: '', // Clear the file path since we deleted the bundle
         ),
       );

@@ -248,7 +248,8 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
   }
 
   Widget _buildHeading(BuildContext context, FirmwareUpdateViewModelState state) {
-    final String version = state.availableVersion.isEmpty ? state.inUseVersion : state.availableVersion;
+    final String version = state.availableVersion.isEmpty ? serviceLocator<FirmwareUpdateViewModel>().primaryFusionDeviceVersion : state.availableVersion;
+
     final String stateText;
     switch (state.uiState) {
       case FirmwareUpdateUiState.updateAvailable:
@@ -554,7 +555,7 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
           ),
           const Spacer(),
           FusionAppText(
-            text: 'v ${state.inUseVersion}',
+            text: 'v ${serviceLocator<FirmwareUpdateViewModel>().primaryFusionDeviceVersion}',
             style: context.textTheme.b3Bold,
           ),
         ],
@@ -565,56 +566,76 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
   Widget _buildDeviceProgressTable(BuildContext context, FirmwareUpdateViewModelState state) {
     final List<FirmwareInstallDeviceProgress> devices = state.deviceInstallProgress;
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF2F2F2F), width: 1),
-      ),
-      child: Column(
-        children: <Widget>[
-          if (devices.isEmpty) ...<Widget>[
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                // Downloaded file is uploaded message
-                child: _TableValueText('Firmware software file is uploading...'),
+    return Column(
+      children: <Widget>[
+        if (serviceLocator<FirmwareUpdateViewModel>().state.isWaitingForSocketResponse) ...<Widget>[
+          Row(
+            spacing: 12,
+            children: <Widget>[
+              const Flexible(child: FusionAppText(text: "Waiting for udpate progress from devices")),
+              SizedBox(
+                width: 200,
+                child: LinearProgressIndicator(
+                  color: context.colorScheme.primaryColor,
+                  borderRadius: BorderRadius.circular(100),
+                ),
               ),
-            ),
-          ] else ...<Widget>[
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(
-                children: <Widget>[
-                  Expanded(flex: 2, child: _TableHeaderText('STATUS')),
-                  Expanded(flex: 3, child: _TableHeaderText('SERIAL NUMBER')),
-                  Expanded(flex: 3, child: _TableHeaderText('NODE')),
-                  Expanded(flex: 2, child: _TableHeaderText('STEP')),
-                  Expanded(flex: 3, child: _TableHeaderText('TASK')),
-                  Expanded(flex: 4, child: _TableHeaderText('INSTALLATION PROGRESS')),
-                ],
-              ),
-            ),
-            Builder(
-              builder: (BuildContext context) {
-                final List<FusionNetworkDevice> networkDevices = serviceLocator<FirmwareUpdateViewModel>().state.networkDevices;
-
-                return Column(
-                  children: <Widget>[
-                    ...networkDevices.map((FusionNetworkDevice networkDevice) {
-                      final FirmwareInstallDeviceProgress? device = devices.firstWhereOrNull(
-                        (FirmwareInstallDeviceProgress d) => d.serialNumber == networkDevice.serialNumber,
-                      );
-
-                      return _buildDeviceRow(networkDevice, device);
-                    }),
-                  ],
-                );
-              },
-            ),
-          ],
+            ],
+          ),
+          const SizedBox(height: 14),
         ],
-      ),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFF2F2F2F), width: 1),
+          ),
+          child: Column(
+            children: <Widget>[
+              if (devices.isEmpty) ...<Widget>[
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    // Downloaded file is uploaded message
+                    child: _TableValueText('Firmware software file is uploading...'),
+                  ),
+                ),
+              ] else ...<Widget>[
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(flex: 2, child: _TableHeaderText('STATUS')),
+                      Expanded(flex: 3, child: _TableHeaderText('SERIAL NUMBER')),
+                      Expanded(flex: 3, child: _TableHeaderText('NODE')),
+                      Expanded(flex: 2, child: _TableHeaderText('STEP')),
+                      Expanded(flex: 3, child: _TableHeaderText('TASK')),
+                      Expanded(flex: 4, child: _TableHeaderText('INSTALLATION PROGRESS')),
+                    ],
+                  ),
+                ),
+                Builder(
+                  builder: (BuildContext context) {
+                    final List<FusionNetworkDevice> networkDevices = serviceLocator<FirmwareUpdateViewModel>().state.networkDevices;
+
+                    return Column(
+                      children: <Widget>[
+                        ...networkDevices.map((FusionNetworkDevice networkDevice) {
+                          final FirmwareInstallDeviceProgress? device = devices.firstWhereOrNull(
+                            (FirmwareInstallDeviceProgress d) => d.serialNumber == networkDevice.serialNumber,
+                          );
+
+                          return _buildDeviceRow(networkDevice, device);
+                        }),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 
