@@ -91,9 +91,10 @@ class ConfigSyncViewModel extends Cubit<ConfigSyncState> {
 
     final Map<String, dynamic> config = <String, dynamic>{
       "devices": droResponseData.result!.devices,
-      // "settings": <String, Map<String, dynamic>>{
-      //   "audio": blocksData,
-      // },
+      "audio_streams": droResponseData.result!.audio_streams,
+      "settings": <String, Map<String, dynamic>>{
+        "audio": blocksData,
+      },
     };
 
     //add wall controller config to settings if not null

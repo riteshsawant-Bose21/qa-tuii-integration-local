@@ -66,7 +66,7 @@ class DroResponseData {
 }
 
 class DroResultData {
-  final List<Map<String, dynamic>>? aes67Streams;
+  final List<Map<String, dynamic>>? audio_streams;
   final List<Map<String, dynamic>>? deviceConnections;
   final List<Map<String, dynamic>>? devices;
   final String? imageInput;
@@ -76,7 +76,7 @@ class DroResultData {
   final int? totalCost;
 
   DroResultData({
-    this.aes67Streams,
+    this.audio_streams,
     this.devices,
     this.deviceConnections,
     this.imageInput,
@@ -88,7 +88,7 @@ class DroResultData {
 
   factory DroResultData.fromJson(Map<String, dynamic> json) {
     return DroResultData(
-      aes67Streams: (json['aes67_streams'] as List<dynamic>?)?.map((dynamic e) => Map<String, dynamic>.from(e as Map<String, dynamic>)).toList(),
+      audio_streams: (json['audio_streams'] as List<dynamic>?)?.map((dynamic e) => Map<String, dynamic>.from(e as Map<String, dynamic>)).toList(),
       devices: (json['devices'] as List<dynamic>?)?.map((dynamic e) => Map<String, dynamic>.from(e as Map<String, dynamic>)).toList(),
       deviceConnections: (json['device_connections'] as List<dynamic>?)?.map((dynamic e) => Map<String, dynamic>.from(e as Map<String, dynamic>)).toList(),
       imageInput: json['image_input'] as String?,
@@ -101,7 +101,7 @@ class DroResultData {
 
   Map<String, dynamic> toJson() {
     return {
-      'aes67_streams': aes67Streams,
+      'audio_streams': audio_streams,
       'devices': devices,
       'image_input': imageInput,
       'image_output': imageOutput,
@@ -113,7 +113,7 @@ class DroResultData {
 
   //copy with
   DroResultData copyWith({
-    List<Map<String, dynamic>>? aes67Streams,
+    List<Map<String, dynamic>>? audio_streams,
     List<Map<String, dynamic>>? devices,
     List<Map<String, dynamic>>? deviceConnections,
     String? imageInput,
@@ -123,7 +123,7 @@ class DroResultData {
     int? totalCost,
   }) {
     return DroResultData(
-      aes67Streams: aes67Streams ?? this.aes67Streams,
+      audio_streams: audio_streams ?? this.audio_streams,
       devices: devices ?? this.devices,
       deviceConnections: deviceConnections ?? this.deviceConnections,
       imageInput: imageInput ?? this.imageInput,

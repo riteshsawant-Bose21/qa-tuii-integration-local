@@ -100,11 +100,11 @@ class _ConfigZoneControlHeaderState extends State<ConfigZoneControlHeader> {
                 onPressed: () {},
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
-            icon: FusionImageAuto(
-              path: AssetIcons.controllerSettings,
+                icon: FusionImageAuto(
+                  path: AssetIcons.controllerSettings,
                   height: 14,
                   width: 16,
-              color: context.colorScheme.iconWhite,
+                  color: context.colorScheme.iconWhite,
                 ),
               ),
             ],
