@@ -56,9 +56,6 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
   final FusionNetworkClient networkClient;
   final AppCacheService cacheService;
   ProductQueryViewModel({required this.networkClient, required this.cacheService}) : super(ProductQueryViewModelState.initial()) {
-    final AuthViewModel authViewModel = serviceLocator<AuthViewModel>();
-    final bool isAuthenticated = authViewModel.state is Authenticated;
-
     _productsApi = Products(
       baseUrl: AppConfig.awsApiBaseUrl,
       networkClient: networkClient,
@@ -81,8 +78,11 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
   late String localProductDirPath;
 
   bool get hasCloudAccess => serviceLocator<SessionViewModel>().hasCloudAccess();
+  bool get isAuthenticated => serviceLocator<AuthViewModel>().state is Authenticated;
 
   Future<void> loadProducts({int attempt = 1, bool refresh = false}) async {
+    if (!isAuthenticated) return; // no need to attempt loading products if user is not authenticated
+
     try {
       if (state.isRefreshing) return;
       if (!refresh && _hasLoadedProducts && state.products != null) return;

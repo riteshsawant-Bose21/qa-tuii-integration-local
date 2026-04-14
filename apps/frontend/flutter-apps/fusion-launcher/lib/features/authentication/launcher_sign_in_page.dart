@@ -143,10 +143,8 @@ class _LauncherSignInPageView extends StatelessWidget {
                                   final bool isIntegrationTest = serviceLocator<AuthViewModel>().isIntegrationTest;
 
                                   if (isIntegrationTest) {
-                                    serviceLocator<AuthViewModel>().login();
+                                    serviceLocator<AuthViewModel>().skipLoginByPassForAutomation();
                                   } else {
-                                    serviceLocator<SessionViewModel>().skipLogin();
-                                    _handleAuthAction(context, isAuthenticated);
                                     serviceLocator<SessionViewModel>().skipLogin();
                                     Navigator.pushNamedAndRemoveUntil(
                                       context,
