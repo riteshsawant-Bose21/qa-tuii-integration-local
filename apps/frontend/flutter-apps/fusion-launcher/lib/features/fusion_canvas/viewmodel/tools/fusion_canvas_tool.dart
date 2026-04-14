@@ -41,7 +41,7 @@ class FusionCanvasTool<T extends FusionToolState> {
   ///
   /// Behaves like a normal selection tool but intercepts drag gestures that
   /// start on a [WiringPortData] to draw an orthogonal wiring connection.
-  /// When the user releases the pointer, [ConnectionToolParams.onConnectionDrop]
+  /// When the user releases the pointer, [ConnectionToolParams.onConnectionCreate]
   /// is called with the source port, drop position, and optional destination port.
   ///
   /// Replace [multiSelectionTool] / [singleSelectionTool] with this in your

@@ -199,16 +199,28 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
               //   (FusionBasePainter p) => p.id == state.layerId,
               //   orElse: () => throw Exception('Painter with id ${state.layerId} not found'),
               // );
-              for (final FusionBasePainter basePainter in painters) {
-                if (!state.layerIds.contains(basePainter.id)) continue;
-                toolbarEvents?.onMovePoints?.call(
-                  basePainter,
-                  // basePainter is FusionPolygonPainter
-                  //     ? basePainter.polygon.points.where((FusionCanvasPoint p) => state.pointIds.contains(p.id)).toList()
-                  //     :
-                  state.pointIds,
-                  state.delta,
-                );
+              if (state.pointIds.isNotEmpty) {
+                for (final FusionBasePainter basePainter in painters) {
+                  if (!state.layerIds.contains(basePainter.id)) continue;
+                  toolbarEvents?.onMovePoints?.call(
+                    basePainter,
+                    // basePainter is FusionPolygonPainter
+                    //     ? basePainter.polygon.points.where((FusionCanvasPoint p) => state.pointIds.contains(p.id)).toList()
+                    //     :
+                    state.pointIds,
+                    state.delta,
+                  );
+                }
+              } else {
+                for (final String layerId in state.layerIds) {
+                  toolbarEvents?.onMoveLayer?.call(
+                    painters.firstWhere(
+                      (FusionBasePainter p) => p.id == layerId,
+                      orElse: () => throw Exception('Painter with id $layerId not found'),
+                    ),
+                    state.delta,
+                  );
+                }
               }
             } else if (state is LayerDragStartState) {
               toolbarEvents?.onLayerSelected?.call(
