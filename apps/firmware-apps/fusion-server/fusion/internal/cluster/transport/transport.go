@@ -17,6 +17,8 @@ type ClusterInterface interface {
 	DoGenericToTargetDevice(deviceID, endpointTemplate string, payload []byte, localFn func(payload []byte) error, remoteFn func(payload []byte, url string) error) error
 	GetAllDevicesInfo() []api.DeviceInfo
 	GetDeviceInfoLocal() api.DeviceInfo
+	GetAllSwUpdateInfo() []api.SwUpdateInfo
+	GetAllSoftwareUpdateList() []api.SoftwareUpdateSync
 
 	//device_id is the id for which the patch needs to be applied.
 	//device_id is also a field in the patch and can be updated.

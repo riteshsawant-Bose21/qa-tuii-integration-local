@@ -28,6 +28,7 @@ function show_help() {
     echo "  --udp-chaos         Run UDP chaos mesh test (multi-node virtual devices + fault injection)"
     echo "  --udp-latency       Run UDP observer latency diagnostic"
     echo "  --vip-api           Run VIP REST API tests"
+    echo "  --vip-bootstrap     Run VIP bootstrap tests (resets VIP on all nodes)"
     echo "  --vip-convergence   Run VIP/mDNS convergence tests"
     echo "  --websocket         Run only websocket tests"
     exit 1
@@ -60,7 +61,8 @@ while [[ $# -gt 0 ]]; do
         --udp)              test_type="udp"; shift ;;
         --udp-latency)      test_type="udp-latency"; shift ;;
         --udp-chaos)        test_type="udp-chaos"; shift ;;
-        --vip-api)          test_type="vip-api"; shift ;;
+        --vip-api)          test_type="vip-api"; shift ;;       
+        --vip-bootstrap)    test_type="vip-bootstrap"; shift ;;        
         --vip-convergence)  test_type="vip-convergence"; shift ;;
         --websocket)        test_type="websocket"; shift ;;
         --integration)      test_type="integration"; shift ;;
@@ -168,28 +170,31 @@ function list_all() {
 # Determine the file for a given category
 function test_file_for_type() {
     case "$test_type" in
-        audio)              echo "audio_test.go" ;;
-        bluetooth)          echo "bluetooth_test.go" ;;
-        certs)              echo "cluster_certs_test.go" ;;
-        cluster)            echo "cluster_test.go" ;;
-        controllers)        echo "controllers_test.go" ;;
-        fusion)             echo "fusion_test.go" ;;
-        logger)             echo "logger_test.go" ;;
-        persistence)        echo "persistence_test.go" ;;
-        sap)                echo "sap_test.go" ;;
-        scheduler)          echo "scheduler_test.go" ;;
-        snapshot)           echo "snapshot_test.go" ;;
-        software-update)    echo "software_update_test.go" ;;
-        state)              echo "state_test.go" ;;
-        tasks)              echo "tasks_test.go" ;;
-        udp)                echo "udp_test.go" ;;
+
+        audio)        echo "audio_test.go" ;;
+        bluetooth)    echo "bluetooth_test.go" ;;
+        certs)        echo "cluster_certs_test.go" ;;
+        cluster)      echo "cluster_test.go" ;;
+        controllers)  echo "controllers_test.go" ;;
+        fusion)       echo "fusion_test.go" ;;
+        logger)       echo "logger_test.go" ;;
+        persistence)  echo "persistence_test.go" ;;
+        sap)          echo "sap_test.go" ;;
+        scheduler)    echo "scheduler_test.go" ;;
+        snapshot)     echo "snapshot_test.go" ;;
+        software-update) echo "software_update_test.go" ;;
+        state)        echo "state_test.go" ;;
+        tasks)        echo "tasks_test.go" ;;
+        udp)          echo "udp_test.go" ;;
+        udp-observer-latency) echo "udp_observer_latency_test.go" ;;
         udp-latency)        echo "udp_observer_latency_test.go" ;;
-        udp-chaos)          echo "udp_chaos_test.go" ;;
-        vip-api)            echo "vip_endpoints_test.go" ;;
-        vip-convergence)    echo "setup_vip_test.go" ;;
-        websocket)          echo "websocket_test.go" ;;
-        integration)        echo "integration tests" ;;
-        all)                echo "" ;;
+        udp-chaos)    echo "udp_chaos_test.go" ;;
+        vip-api)      echo "vip_endpoints_test.go" ;;
+        vip-bootstrap)   echo "bootstrap_vip_test.go" ;;
+        vip-convergence) echo "setup_vip_test.go" ;;
+        websocket)    echo "websocket_test.go" ;;
+        integration)  echo "integration tests" ;;
+        all)          echo "" ;;
     esac
 }
 
@@ -294,6 +299,10 @@ case "$test_type" in
         export FUSION_UDP_ADDR="${udp_ip}:7947"
         run_package_tests "$(regex_for_test_file ./udp_test.go)"
         ;;
+
+    vip-api)      run_package_tests "$(regex_for_test_file ./vip_endpoints_test.go)" ;;
+    vip-bootstrap)   run_package_tests "$(regex_for_test_file ./bootstrap_vip_test.go)" ;;
+    vip-convergence) run_package_tests "$(regex_for_test_file ./setup_vip_test.go)" ;;
     udp-chaos)
         export FUSION_UDP_CHAOS_TEST=1
         # Run package mode (not single-file mode) so shared TestMain/helpers are available.

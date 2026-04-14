@@ -19,3 +19,7 @@ ALTER TABLE bundle
 ALTER TABLE bundle
     DROP COLUMN min_desktop_app_version_array,
     ADD COLUMN min_desktop_app_version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(split_part(min_desktop_app_version, '+', 1), '-', 1), '.' )::INT[] ) STORED;
+
+-- Rename columns in bundle_update_status to match updated payload field names
+ALTER TABLE bundle_update_status RENAME COLUMN previous_version TO previous_bundle_version;
+ALTER TABLE bundle_update_status RENAME COLUMN launcher_version TO desktop_app_version;

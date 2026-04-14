@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/wiring_design/model/circuit_port.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 class PortWidget extends StatelessWidget {
@@ -10,12 +11,12 @@ class PortWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final String? image2 = port.data.image;
     if (image2 != null) {
-      return Image.asset(
-        image2,
+      return FusionImageAuto(
+        path: image2,
         fit: BoxFit.fitHeight,
         width: 20,
         height: 20,
-      );
+       );
     }
     return Container(
       decoration: BoxDecoration(

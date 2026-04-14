@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
@@ -7,24 +6,30 @@ import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.d
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/connection_tool_params.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/wiring/port_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart' show FusionBasePainter;
+import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canvas_painter.dart';
+import 'package:fusion_launcher/features/projects/presentation/project_work_area.dart';
 import 'package:fusion_launcher/features/wiring_design/algorithm/intersection_manager.dart';
 import 'package:fusion_launcher/features/wiring_design/algorithm/path_system_storage.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/circuit_controller.dart';
-import 'package:fusion_launcher/features/wiring_design/controller/helpers/initialization_handler_mixin.dart';
-import 'package:fusion_launcher/features/wiring_design/controller/helpers/project_manager_methods.dart';
 import 'package:fusion_launcher/features/wiring_design/usecase/connection_usecase.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_toolbar.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/controller.dart';
+import 'package:fusion_lib/models/project_entities/endpoints.dart';
 
 import '../../fusion_canvas/view/fusion_canvas.dart';
 import '../../fusion_canvas/view/painters/elements/wiring/wiring_connection_painter.dart';
+import '../../fusion_canvas/view/painters/elements/wiring/wiring_controller_painter.dart' show WiringControllerPainter;
 import '../../fusion_canvas/view/painters/elements/wiring/wiring_devices_painter.dart';
 import '../../fusion_canvas/view/painters/elements/wiring/wiring_source_painter.dart' show WiringSourcePainter;
 import '../../fusion_canvas/view/painters/elements/wiring/wiring_zone_painter.dart';
+import '../../fusion_canvas/viewmodel/fusion_canvas_state_viewmodel.dart';
 import '../../fusion_canvas/viewmodel/tools/fusion_canvas_tool.dart';
 import '../algorithm/connection_manager.dart';
 import '../algorithm/zone_manager.dart';
-import 'circuit_view.dart';
+import 'port_connection/wiring_connection_overlay.dart';
+import 'widgets/overlay_container.dart';
+import 'wiring_legend.dart';
 
 class WiringPage extends StatefulWidget {
   const WiringPage({super.key});
@@ -41,6 +46,9 @@ class _WiringPageState extends State<WiringPage> {
   final IntersectionManager intersectionManager = IntersectionManager();
   final WiringZoneManager zoneManager = WiringZoneManager();
   final ConnectionManager connectionManager = ConnectionManager();
+
+  WiringPortData? portId;
+  String? layerId;
   @override
   void initState() {
     super.initState();
@@ -51,19 +59,19 @@ class _WiringPageState extends State<WiringPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (!kDebugMode) {
-      return BlocListener<ProjectViewModel, ProjectViewModelState>(
-        listener: (BuildContext context, ProjectViewModelState state) {
-          if (state is DeviceSelectionChanged) {
-            controller.selectElementFromPM(state.selectedDevice?.id);
-          }
-          if (state is ProjectUpdated) {
-            controller.loadFromPM();
-          }
-        },
-        child: CircuitView(controller: controller),
-      );
-    }
+    // if (!kDebugMode) {
+    //   return BlocListener<ProjectViewModel, ProjectViewModelState>(
+    //     listener: (BuildContext context, ProjectViewModelState state) {
+    //       if (state is DeviceSelectionChanged) {
+    //         controller.selectElementFromPM(state.selectedDevice?.id);
+    //       }
+    //       if (state is ProjectUpdated) {
+    //         controller.loadFromPM();
+    //       }
+    //     },
+    //     child: CircuitView(controller: controller),
+    //   );
+    // }
     return BlocConsumer<ProjectViewModel, ProjectViewModelState>(
       listener: (BuildContext context, ProjectViewModelState state) {
         pathStorage.removeKeysExcept(
@@ -81,13 +89,26 @@ class _WiringPageState extends State<WiringPage> {
             FusionCanvasTool.dragTool,
             FusionCanvasTool.connectionTool(
               connectionParams: ConnectionToolParams(
-                onConnectionDrop: (WiringPortData source, Offset pos, WiringPortData? dest) {
-                  if (dest == null) {
+                onConnectionDrop: (WiringConnectionModel connection) {
+                  // showDialog(context: context, builder: builder)
+                  projectViewModel.removeWiringConnection(connectionId: connection.id);
+                },
+                getExistingConnectionsForPort: (String deviceId, String portId) {
+                  return projectViewModel.getAllWiringConnections().where((WiringConnectionModel connection) {
+                    return (connection.deviceId == deviceId && connection.portId == portId) ||
+                        (connection.targetDeviceId == deviceId && connection.targetPortId == portId);
+                  }).toList();
+                },
+                onConnectionCreate: (WiringPortData source, Offset pos, WiringPortData dest) {
+                  final ConnectionUseCase connectionUseCase = ConnectionUseCase();
+                  final WiringConnectionModel? existingConnection = projectViewModel.getAllWiringConnections().firstWhereOrNull(
+                    (WiringConnectionModel connection) =>
+                        (connection.deviceId == source.deviceId && connection.portId == source.port.id) ||
+                        (connection.targetDeviceId == source.deviceId && connection.targetPortId == source.port.id),
+                  );
+                  if (existingConnection != null) {
                     return;
                   }
-
-                  final ConnectionUseCase connectionUseCase = ConnectionUseCase();
-
                   if (connectionUseCase.isCompatible(source.port.type, dest.port.type)) {
                     projectViewModel.addWiringConnection(
                       connection: connectionUseCase.createConnection(
@@ -108,6 +129,8 @@ class _WiringPageState extends State<WiringPage> {
             for (HardwareComponent source in projectViewModel.hardwareComponents)
               if (source is Source)
                 WiringSourcePainter(source: source, connectionManager: connectionManager)
+              else if (source is FusionController || source is FusionEndpoints)
+                WiringControllerPainter(device: source, connectionManager: connectionManager)
               else if (source is! Speaker && source is! HardwareRack)
                 WiringDevicesPainter(device: source, connectionManager: connectionManager),
 
@@ -120,14 +143,95 @@ class _WiringPageState extends State<WiringPage> {
                 intersectionManager: intersectionManager,
               ),
           ],
-          builder:
-              (BuildContext context) => Align(
-                alignment: Alignment.bottomCenter,
-                child: WiringToolBar(
-                  onMoveLayer: moveLayer,
-                ),
-              ),
+          builder: (BuildContext context) {
+            return LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                final FusionCanvasPainter? painter = FusionCanvasPainterProvider.of(context)?.value;
+                Offset? position;
+                if (painter != null && layerId != null && portId != null) {
+                  final FusionBasePainter? layer = painter.getLayerById(layerId!);
+                  if (layer != null && layer is PortPainter) {
+                    position = context.read<FusionCanvasStateViewModel>().transformPosition(
+                      layer.getPortPositionWithPadding(portId!.id, painter) ?? Offset.zero,
+                    );
+                  }
+                }
+                final Offset resultedPosition = position ?? Offset.zero;
+                final double width = 250; //* controller.canvasScale;
+                // final double padding = 30 * controller.canvasState.scale;
+                // if (port.relativePosition.dx < port.parent.size.width * 0.1) {
+                //   resultedPosition = position! + Offset(-width - padding, 0);
+                // } else if (port.relativePosition.dx > port.parent.size.width * 0.7) {
+                //   resultedPosition = position! + Offset(padding, 0);
+                // }
+                final Rect currentViewPortRect = controller.canvasState.offset & (constraints.biggest);
+
+                return Stack(
+                  children: <Widget>[
+                    if (position != null)
+                      Positioned.fill(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              portId = null;
+                              layerId = null;
+                            });
+                          },
+                          child: Container(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            child: const Center(),
+                          ),
+                        ),
+                      ),
+                    Align(
+                      alignment: Alignment.bottomCenter,
+                      child: WiringToolBar(
+                        onMoveLayer: moveLayer,
+                      ),
+                    ),
+                    if (position != null)
+                      OverlayContainer(
+                        viewPort: currentViewPortRect,
+                        position: resultedPosition,
+                        tipPosition: position,
+                        width: width,
+                        child: WiringConnectionOverlay(
+                          deviceId: portId!.deviceId,
+                          fromPortData: portId!.port,
+                          onPortTap: (PortData fromPort, PortData toPort, String toDeviceId) {
+                            projectViewModel.addWiringConnection(
+                              connection: ConnectionUseCase().createConnection(
+                                fromDeviceId: portId!.deviceId,
+                                fromPort: fromPort,
+                                toDeviceId: toDeviceId,
+                                toPort: toPort,
+                              ),
+                            );
+                            setState(() {
+                              portId = null;
+                              layerId = null;
+                            });
+                          },
+                        ),
+                      ),
+
+                    const Align(alignment: Alignment.topRight, child: WorkSafeAreaContent(child: WiringLegend())),
+                  ],
+                );
+              },
+            );
+          },
           toolbarEvents: FusionCanvasEvents(
+            onElementClicked: (FusionBasePainter painter, FusionCanvasElement? element) {
+              if (element is! WiringPortData) {
+                return false;
+              }
+              setState(() {
+                portId = element;
+                layerId = painter.id;
+              });
+              return false;
+            },
             onDeleteLayer: (FusionBasePainter painter) {
               if (painter is WiringConnectionPainter) {
                 final WiringConnectionModel connection = painter.connection;
@@ -142,19 +246,9 @@ class _WiringPageState extends State<WiringPage> {
             },
             onMovePoints: (FusionBasePainter painter, List<String> points, Offset delta) {
               if (painter is WiringConnectionPainter) {
-                print(" Moving points for connection ${painter.connection.id}, delta=$delta ");
                 final WiringConnectionModel connection = painter.connection;
-                // final List<FusionCanvasPoint>? allPoints = painter.pathPoints;
-                // if (allPoints == null) return;
-                // final List<FusionCanvasLine> lines = <FusionCanvasLine>[];
-                // for (int i = 0; i < allPoints.length - 1; i++) {
-                //   if (points.contains(allPoints[i].id) && points.contains(allPoints[i + 1].id)) {
-                //     lines.add(FusionCanvasLine(start: allPoints[i], end: allPoints[i + 1]));
-                //   }
-                // }
                 final List<AxisLock> axisLocks = painter.axisLocks ?? <AxisLock>[];
 
-                print("Calculated axis locks: $axisLocks");
                 projectViewModel.updateWiringConnection(
                   connection: connection.copyWith(
                     axisLocks: axisLocks,
