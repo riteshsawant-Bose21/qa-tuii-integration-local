@@ -88,7 +88,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                           ),
                         ),
                       ),
-                  
+
                       // CLOSE BUTTON
                       Positioned(
                         top: 0,
@@ -114,12 +114,12 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                           ),
                         ),
                       ),
-                  
+
                       /// --------------------------------------------------------------------------------
                       ///                             MAIN CONTENT
                       /// --------------------------------------------------------------------------------
                       Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 50.0).copyWith(bottom: hasPriority ? null : 0),
+                        padding: const EdgeInsets.symmetric(vertical: 50.0).copyWith(bottom: hasPriority ? null : null),
                         child: SemanticHelper.container(
                           testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_main_container"),
                           child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
@@ -204,7 +204,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                   ),
                                                 ),
                                                 Divider(color: context.colorScheme.strokeLight, height: 0),
-                                                              
+
                                                 Expanded(
                                                   child: Builder(
                                                     builder: (BuildContext context) {
@@ -218,7 +218,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                           ),
                                                         );
                                                       }
-                                                              
+
                                                       final bool anyOneSelected = sources.any((Source source) => source.id == zoneFunction?.selectedSourceId);
                                                       if (!anyOneSelected && zoneFunction != null) {
                                                         // If nothing is selected, select the first one by default.
@@ -227,7 +227,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                           sourceId: sources.first.id,
                                                         );
                                                       }
-                                                              
+
                                                       return ListView.separated(
                                                         padding: const EdgeInsets.symmetric(horizontal: 8),
                                                         physics: const ClampingScrollPhysics(),
@@ -235,9 +235,9 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                         separatorBuilder: (_, __) => Divider(color: context.colorScheme.strokeLight, height: 0),
                                                         itemBuilder: (BuildContext context, int index) {
                                                           final Source source = sources[index];
-                                                              
+
                                                           final bool isSelected = source.id == zoneFunction?.selectedSourceId;
-                                                              
+
                                                           return MouseRegion(
                                                             cursor: SystemMouseCursors.click,
                                                             child: GestureDetector(
@@ -288,13 +288,18 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                                             );
                                                                           },
                                                                           child: SemanticHelper.toggle(
-                                                                            testId: SemanticHelper.createTestId(SemanticTypes.toggle, "source_select_radio_$index"),
+                                                                            testId: SemanticHelper.createTestId(
+                                                                              SemanticTypes.toggle,
+                                                                              "source_select_radio_$index",
+                                                                            ),
                                                                             value: isSelected,
                                                                             child: Icon(
                                                                               Icons.radio_button_checked,
                                                                               size: 16,
                                                                               color:
-                                                                                  isSelected ? context.colorScheme.textPrimary : context.colorScheme.iconDisabled,
+                                                                                  isSelected
+                                                                                      ? context.colorScheme.textPrimary
+                                                                                      : context.colorScheme.iconDisabled,
                                                                             ),
                                                                           ),
                                                                         ),
@@ -315,9 +320,9 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                           ),
                                         ),
                                         VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
-                  
+
                                         PrioritySelectionWidget(zoneId: widget.zoneID),
-                  
+
                                         // RIGHT COLUMN (Static)
                                         Flexible(flex: 3, child: ZoneControlSliderBuilder(zoneID: widget.zoneID)),
                                       ],
@@ -329,52 +334,50 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                           ),
                         ),
                       ),
-                      if (hasPriority) ...<Widget>[
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Material(
-                            color: Colors.transparent,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              child: InkWell(
-                                onTap: () {
-                                  SourceSelectAdditionalSettingsDialog.showDialog(
-                                    context,
-                                    zoneID: widget.zoneID,
-                                  );
-                                },
-                                borderRadius: BorderRadius.circular(8),
-                                splashColor: Colors.transparent,
-                                child: Ink(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: context.colorScheme.elevation2,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: <Widget>[
-                                      Flexible(
-                                        child: FusionAppText(
-                                          text: "Additional Settings",
-                                          style: Theme.of(context).textTheme.labelSmall,
-                                        ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            child: InkWell(
+                              onTap: () {
+                                SourceSelectAdditionalSettingsDialog.showDialog(
+                                  context,
+                                  zoneID: widget.zoneID,
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(8),
+                              splashColor: Colors.transparent,
+                              child: Ink(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: context.colorScheme.elevation2,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    Flexible(
+                                      child: FusionAppText(
+                                        text: "Additional Settings",
+                                        style: Theme.of(context).textTheme.labelSmall,
                                       ),
-                                      const SizedBox(width: 8),
-                                      Icon(
-                                        LucideIcons.arrowUpRight200,
-                                        size: 16,
-                                        color: context.colorScheme.iconDefault,
-                                      ),
-                                    ],
-                                  ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Icon(
+                                      LucideIcons.arrowUpRight200,
+                                      size: 16,
+                                      color: context.colorScheme.iconDefault,
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ],
+                      ),
                     ],
                   ),
                 ),

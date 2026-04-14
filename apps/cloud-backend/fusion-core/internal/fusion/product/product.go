@@ -34,6 +34,17 @@ func (p *Service) GetAllProducts(ctx context.Context, logger *zap.Logger) (*type
 	if err != nil {
 		return nil, fmt.Errorf("error getting products from DB: %w", err)
 	}
+
+	// Fetch sources and attach to response
+	sources, err := p.sourceService.GetAllSources(ctx, logger)
+
+	if err != nil {
+		logger.Warn("failed to fetch sources, continuing without source data", zap.Error(err))
+		products.Source = []types.SourceItemResponse{}
+	} else {
+		products.Source = sources
+	}
+
 	return products, nil
 }
 

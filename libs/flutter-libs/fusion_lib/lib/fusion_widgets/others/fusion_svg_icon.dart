@@ -110,7 +110,7 @@ class FusionIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String semanticsLabel = "fusion_icon_${semanticId ?? ''}";
+    final String semanticsLabel = semanticId ?? '';
 
     Widget iconWidget;
 
