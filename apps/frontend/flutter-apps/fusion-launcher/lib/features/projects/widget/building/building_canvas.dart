@@ -172,11 +172,18 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       testId: SemanticHelper.createTestId(SemanticTypes.container, "building_floor_canvas"),
                                       child: Builder(
                                         builder: (BuildContext context) {
+                                          final List<HardwareComponent> hardwareInFloorWithPosition = serviceLocator<ProjectViewModel>()
+                                              .getHardwareInFloorWithPosition(floorId: floor.id);
+
+                                          final bool isAcousticsMode = context.watch<BuildingPageViewModel>().state.toolbarMode == ToolbarMode.acoustics;
+
                                           final List<ListeningAreaPainter> listeningAreaPainters = <ListeningAreaPainter>[
-                                            for (final ListeningArea area in serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
-                                              floorId: floor.id,
-                                            ))
-                                              ListeningAreaPainter(listeningArea: area, isShowingSpl: buildingPageViewModel.isSplMode),
+                                            for (final ListeningArea area in serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floorId: floor.id))
+                                              ListeningAreaPainter(
+                                                backgoundColor: serviceLocator<ProjectViewModel>().getZonesForListeningArea(areaId: area.id)?.color,
+                                                listeningArea: area,
+                                                isShowingSpl: buildingPageViewModel.isSplMode,
+                                              ),
                                           ];
 
                                           return FusionCanvas(
@@ -204,12 +211,11 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 showSpl: true,
                                               ),
                                               ...listeningAreaPainters,
-                                              for (final HardwareComponent hw in serviceLocator<ProjectViewModel>().getHardwareInFloorWithPosition(
-                                                floorId: floor.id,
-                                              ))
-                                                HardwareComponentPainter(
-                                                  hardware: hw,
-                                                ),
+                                              for (final HardwareComponent hw in hardwareInFloorWithPosition)
+                                                if (isAcousticsMode && hw is Speaker)
+                                                  HardwareComponentPainter(hardware: hw)
+                                                else if (!isAcousticsMode)
+                                                  HardwareComponentPainter(hardware: hw),
                                             ],
                                             toolbarEvents: FusionCanvasEvents(
                                               onLayerSelected: (List<FusionBasePainter>? values) {
