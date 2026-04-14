@@ -734,8 +734,10 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  Speaker fromSpeakerProductModel(String assetImagePath, SpeakerProduct product, LocationModel locationEntity, bool isFromBuildingPage) {
+  Speaker fromSpeakerProductModel(SpeakerProduct product, LocationModel locationEntity, bool isFromBuildingPage) {
     final MountingType? mountingType = MountingType.fromJson(product.mountType);
+
+    final String? image = serviceLocator<ProductQueryViewModel>().getProductImage(product.productId);
 
     final double pitch = mountingType == MountingType.pendant || mountingType == MountingType.ceiling ? 90.0 : 0.0;
     final double yaw = mountingType == MountingType.surface ? 90.0 : 0.0;
@@ -750,7 +752,7 @@ extension HardwareViewModel on ProjectViewModel {
       speakerSKU: product.modelName,
       gain: 0.0,
       addedFromBuildingPage: isFromBuildingPage,
-      assetImagePath: assetImagePath,
+      image: image ?? '',
       type: OutputType.analogOutput,
       price: 0,
       mountingType: mountingType,
@@ -783,7 +785,7 @@ extension HardwareViewModel on ProjectViewModel {
           speakerSKU: product.sku,
           gain: 0.0,
           addedFromBuildingPage: isFromBuildingPage,
-          assetImagePath: product.image,
+          image: product.image,
           type: OutputType.analogOutput,
           price: product.price,
           pitch: product.mountingType == "pendant" || product.mountingType == "ceiling" ? 90.0 : 0.0,
@@ -817,7 +819,7 @@ extension HardwareViewModel on ProjectViewModel {
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
-          assetImagePath: product.image,
+          image: product.image,
           sku: product.sku,
           price: product.price,
           addedFromBuildingPage: isFromBuildingPage,
@@ -853,7 +855,7 @@ extension HardwareViewModel on ProjectViewModel {
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
-          assetImagePath: product.image,
+          image: product.image,
           sku: product.sku,
           price: product.price,
           addedFromBuildingPage: isFromBuildingPage,
@@ -890,7 +892,7 @@ extension HardwareViewModel on ProjectViewModel {
           locationEntity: locationEntity,
           name: product.name,
           pos: listeningArea?.getCenterPositionOfVertices(),
-          assetImagePath: product.image,
+          image: product.image,
           sku: product.sku,
           addedFromBuildingPage: isFromBuildingPage,
           price: product.price,
@@ -947,7 +949,7 @@ extension HardwareViewModel on ProjectViewModel {
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
-          assetImagePath: product.image,
+          image: product.image,
           sku: product.sku,
           addedFromBuildingPage: isFromBuildingPage,
           price: product.price,
@@ -1000,7 +1002,7 @@ extension HardwareViewModel on ProjectViewModel {
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
-          assetImagePath: product.image,
+          image: product.image,
           sku: product.sku,
           addedFromBuildingPage: isFromBuildingPage,
           price: product.price,
@@ -1033,7 +1035,7 @@ extension HardwareViewModel on ProjectViewModel {
           name: product.name,
           pos: pos,
           addedFromBuildingPage: isFromBuildingPage,
-          assetImagePath: product.image,
+          image: product.image,
           price: product.price,
           hardwareName: product.name,
         );

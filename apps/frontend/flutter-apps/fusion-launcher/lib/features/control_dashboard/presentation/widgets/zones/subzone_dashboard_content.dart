@@ -129,11 +129,11 @@ class _SubzoneDashboardContentState extends State<SubzoneDashboardContent> {
                                   widget.subZone,
                                 );
                               },
-                              child: FusionImage.asset(
-                                Assets.processingBlocksFilledIcon,
+                              child: FusionImageAuto(
+                                path: Assets.processingBlocksFilledIcon,
                                 width: 24,
                                 height: 24,
-                                assetColor: context.colorScheme.primaryWhite,
+                                color: context.colorScheme.primaryWhite,
                                 fit: BoxFit.contain,
                               ),
                             ),
