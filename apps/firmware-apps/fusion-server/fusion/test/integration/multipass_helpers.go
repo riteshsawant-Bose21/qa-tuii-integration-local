@@ -7,10 +7,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -19,7 +22,9 @@ const (
 	// From fusion/test/integration -> ../../../scripts/multipass (repo root scripts)
 	defaultScriptsDir        = "../../../scripts/multipass"
 	defaultClearConfigScript = "clear-config.sh"
+	defaultRestartPrefix     = "fusion"
 	defaultRestartScript     = "restart-fusion.sh"
+	defaultResetVIPScript    = "reset-vip.sh"
 )
 
 // MultipassInstance represents an instance entry from `multipass list --format json`.
@@ -44,11 +49,91 @@ func ResetCluster(ctx context.Context, env Env) error {
 func RestartCluster(ctx context.Context, env Env, expected int) error {
 	rctx, cancel := context.WithTimeout(ctx, 4*time.Minute)
 	defer cancel()
-	if err := runScript(rctx, resolveScriptPath(defaultRestartScript)); err != nil {
+
+	names, err := getMultipassInstanceNamesByPrefix(rctx, defaultRestartPrefix)
+	if err != nil {
+		return err
+	}
+	if len(names) == 0 {
+		return fmt.Errorf("no multipass instances found with prefix %q", defaultRestartPrefix)
+	}
+
+	if err := StopInstancesParallel(rctx, names, 3); err != nil {
+		fmt.Printf("[integration] warning: stop errors during restart (continuing): %v\n", err)
+	}
+
+	if err := StartInstancesParallel(rctx, names, 3); err != nil {
 		return err
 	}
 	// Allow convergence under the parent ctx
-	return WaitForClusterSizeFromVIP(ctx, env, expected)
+	return (FusionCluster{Env: env}).WaitForClusterSize(ctx, expected)
+}
+
+func getMultipassInstanceNamesByPrefix(ctx context.Context, prefix string) ([]string, error) {
+	cmd := exec.CommandContext(ctx, "multipass", "list", "--format", "json")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("multipass list failed: %v; output: %s", err, string(out))
+	}
+
+	var payload struct {
+		List []struct {
+			Name string `json:"name"`
+		} `json:"list"`
+	}
+	if err := json.Unmarshal(out, &payload); err != nil {
+		return nil, fmt.Errorf("parse multipass list json failed: %v", err)
+	}
+
+	names := make([]string, 0, len(payload.List))
+	for _, inst := range payload.List {
+		if inst.Name == "" {
+			continue
+		}
+		if strings.HasPrefix(inst.Name, prefix) {
+			names = append(names, inst.Name)
+		}
+	}
+
+	sort.Strings(names)
+	return names, nil
+}
+
+// ResetVIPInCluster resets keepalived VIP to placeholder for Multipass instances.
+func ResetVIPInCluster(ctx context.Context) error {
+	rctx, cancel := context.WithTimeout(ctx, 4*time.Minute)
+	defer cancel()
+
+	return runScriptWithInput(rctx, resolveScriptPath(defaultResetVIPScript), "y\n")
+}
+
+// FindReachableNodeURL returns a direct node URL (non-VIP) suitable for initial VIP API calls.
+func FindReachableNodeURL(ctx context.Context, env Env) (string, error) {
+	ipToInstance, err := GetMultipassInstances(ctx)
+	if err != nil {
+		return "", fmt.Errorf("get multipass instances: %w", err)
+	}
+
+	ips := make([]string, 0, len(ipToInstance))
+	for ip := range ipToInstance {
+		ips = append(ips, ip)
+	}
+	sort.Strings(ips)
+
+	var errs []string
+	for _, ip := range ips {
+		base := fmt.Sprintf("http://%s:%s", ip, env.Port)
+		if _, err := GetDevices(ctx, base); err == nil {
+			return base, nil
+		} else {
+			errs = append(errs, fmt.Sprintf("%s (%v)", base, err))
+		}
+	}
+
+	if len(errs) == 0 {
+		return "", fmt.Errorf("no multipass instance IPs found")
+	}
+	return "", fmt.Errorf("no reachable node URL found; attempts: %s", strings.Join(errs, "; "))
 }
 
 // StopInstancesParallel stops instances concurrently up to maxParallel.
@@ -144,7 +229,109 @@ func StartInstance(ctx context.Context, name string) error {
 	if err != nil {
 		return fmt.Errorf("multipass start %s failed: %v; output: %s", name, err, string(out))
 	}
+
+	env := LoadEnv()
+	if err := waitForInstanceReady(ctx, name, env); err != nil {
+		return fmt.Errorf("instance %s did not become ready after start: %w", name, err)
+	}
 	return nil
+}
+
+func waitForInstanceReady(ctx context.Context, name string, env Env) error {
+	var instanceIPs []string
+
+	if err := PollUntil(ctx, 1*time.Second, func() (bool, error) {
+		ips, err := getRunningInstanceIPv4(ctx, name)
+		if err != nil {
+			return false, nil
+		}
+		if len(ips) == 0 {
+			return false, nil
+		}
+		instanceIPs = prioritizeNodeIPs(ips, env.VIP)
+		return true, nil
+	}); err != nil {
+		return fmt.Errorf("timed out waiting for running state/IP: %w", err)
+	}
+
+	if err := PollUntil(ctx, 1*time.Second, func() (bool, error) {
+		for _, ip := range instanceIPs {
+			ok, err := isNodeServiceReady(ctx, ip, env.Port)
+			if err == nil && ok {
+				return true, nil
+			}
+		}
+		return false, nil
+	}); err != nil {
+		return fmt.Errorf("timed out waiting for node service health on %v: %w", instanceIPs, err)
+	}
+
+	return nil
+}
+
+func getRunningInstanceIPv4(ctx context.Context, name string) ([]string, error) {
+	cmd := exec.CommandContext(ctx, "multipass", "info", name, "--format", "json")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("multipass info %s failed: %v; output: %s", name, err, string(out))
+	}
+
+	var payload struct {
+		Info map[string]struct {
+			State string   `json:"state"`
+			IPv4  []string `json:"ipv4"`
+		} `json:"info"`
+	}
+
+	if err := json.Unmarshal(out, &payload); err != nil {
+		return nil, fmt.Errorf("parse multipass info for %s failed: %w", name, err)
+	}
+
+	entry, ok := payload.Info[name]
+	if !ok {
+		return nil, fmt.Errorf("instance %s not found in multipass info", name)
+	}
+
+	if !strings.EqualFold(entry.State, "running") {
+		return nil, fmt.Errorf("instance %s state=%s", name, entry.State)
+	}
+
+	return entry.IPv4, nil
+}
+
+func prioritizeNodeIPs(ips []string, vip string) []string {
+	out := make([]string, 0, len(ips))
+	for _, ip := range ips {
+		if ip == "" || ip == vip {
+			continue
+		}
+		out = append(out, ip)
+	}
+	if len(out) == 0 {
+		for _, ip := range ips {
+			if ip != "" {
+				out = append(out, ip)
+			}
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+func isNodeServiceReady(ctx context.Context, ip, port string) (bool, error) {
+	url := fmt.Sprintf("http://%s:%s/cluster/status", ip, port)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return false, err
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	return resp.StatusCode == http.StatusOK, nil
 }
 
 // GetMultipassInstances returns map from IP -> instance name for quick resolution.
@@ -199,7 +386,10 @@ func GetMultipassInstances(ctx context.Context) (map[string]string, error) {
 }
 
 func runScript(ctx context.Context, script string) error {
+	return runScriptWithInput(ctx, script, "")
+}
 
+func runScriptWithInput(ctx context.Context, script, stdin string, args ...string) error {
 	// Ensure absolute path and existence
 	abs, err := filepath.Abs(script)
 	if err != nil {
@@ -208,7 +398,15 @@ func runScript(ctx context.Context, script string) error {
 	if _, statErr := os.Stat(abs); statErr != nil {
 		return fmt.Errorf("script not found: %s (%v)", abs, statErr)
 	}
-	cmd := exec.CommandContext(ctx, "/bin/bash", abs)
+
+	cmdArgs := make([]string, 0, len(args)+1)
+	cmdArgs = append(cmdArgs, abs)
+	cmdArgs = append(cmdArgs, args...)
+	cmd := exec.CommandContext(ctx, "/bin/bash", cmdArgs...)
+	if stdin != "" {
+		cmd.Stdin = strings.NewReader(stdin)
+	}
+
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("script failed: %s: %v; output: %s", abs, err, string(out))

@@ -4,13 +4,12 @@ package integration
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 )
 
 func TestPrimaryRestart(t *testing.T) {
-	fc := NewTestCluster(t)
+	fc := NewTestCluster(t, false)
 
 	ctx, cancel := context.WithTimeout(context.Background(), fc.Env.MaxWait)
 	defer cancel()
@@ -20,24 +19,9 @@ func TestPrimaryRestart(t *testing.T) {
 	if err != nil {
 		t.Fatalf("primary not found: %v", err)
 	}
-	t.Logf("Stopping primary instance: %s addr=%s", primary.MultipassName, primary.FusionAddr)
+	t.Logf("Stopping primary instance: %s addr=%s", primary.MultipassName, primary.Device.Address)
 	if err := StopInstance(ctx, primary.MultipassName); err != nil {
 		t.Fatalf("stop primary failed: %v", err)
-	}
-
-	// Refresh non-primary node URLs
-	if err := fc.Refresh(ctx); err != nil {
-		t.Fatalf("refresh after stop failed: %v", err)
-	}
-	var otherURLs []string
-	for _, n := range fc.Nodes {
-		if n.FusionAddr == primary.FusionAddr {
-			continue
-		}
-		otherURLs = append(otherURLs, fmt.Sprintf("http://%s:%s", n.FusionAddr, fc.Env.Port))
-	}
-	if len(otherURLs) == 0 {
-		t.Fatalf("no other nodes to query")
 	}
 
 	// Expect cluster size to be at least size-1
@@ -67,10 +51,13 @@ func TestPrimaryRestart(t *testing.T) {
 	if err := CheckClusterHealth(ctx, fc.Env, fc.Env.ClusterSize); err != nil {
 		t.Fatalf("post-recovery health failed: %v", err)
 	}
+	if err := WaitForPerNodeClusterAgreement(ctx, fc.Env, fc.Env.ClusterSize); err != nil {
+		t.Fatalf("post-recovery cluster agreement failed: %v", err)
+	}
 }
 
 func TestPrimaryCascadeShutdownRestart(t *testing.T) {
-	fc := NewTestCluster(t)
+	fc := NewTestCluster(t, true)
 	ctx, cancel := context.WithTimeout(context.Background(), fc.Env.MaxWait)
 	defer cancel()
 	if err := CheckClusterHealth(ctx, fc.Env, fc.Env.ClusterSize); err != nil {
@@ -88,7 +75,7 @@ func TestPrimaryCascadeShutdownRestart(t *testing.T) {
 		if err != nil {
 			t.Fatalf("primary not found (remaining %d): %v", remaining, err)
 		}
-		t.Logf("Stopping VIP holder: %s addr=%s remaining_before=%d", primary.MultipassName, primary.FusionAddr, remaining)
+		t.Logf("Stopping VIP holder: %s addr=%s remaining_before=%d", primary.MultipassName, primary.Device.Address, remaining)
 		shutdownOrder = append(shutdownOrder, primary.MultipassName)
 		if err := StopInstance(ctx, primary.MultipassName); err != nil {
 			t.Fatalf("stop primary %s failed: %v", primary.MultipassName, err)
@@ -126,6 +113,9 @@ func TestPrimaryCascadeShutdownRestart(t *testing.T) {
 	if err := CheckClusterHealth(ctx, fc.Env, fc.Env.ClusterSize); err != nil {
 		t.Fatalf("health after simultaneous start failed: %v", err)
 	}
+	if err := WaitForPerNodeClusterAgreement(ctx, fc.Env, fc.Env.ClusterSize); err != nil {
+		t.Fatalf("cluster agreement after simultaneous start failed: %v", err)
+	}
 
 	// Full shutdown again
 	t.Logf("Shutting down all nodes again (parallel, max=3)")
@@ -152,6 +142,9 @@ func TestPrimaryCascadeShutdownRestart(t *testing.T) {
 		}
 		if err := CheckClusterHealth(ctx, fc.Env, expected); err != nil {
 			t.Fatalf("health after starting %s failed: %v", name, err)
+		}
+		if err := WaitForPerNodeClusterAgreement(ctx, fc.Env, expected); err != nil {
+			t.Fatalf("cluster agreement after starting %s failed: %v", name, err)
 		}
 	}
 	t.Logf("Sequential bring-up complete; cluster size=%d", fc.Env.ClusterSize)

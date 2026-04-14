@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/routes"
 
 	json "github.com/goccy/go-json"
@@ -358,7 +358,7 @@ func TestScheduledSnapshotActivationThroughAPI(t *testing.T) {
 
 	// Create a new snapshot to activate
 	snapName := fmt.Sprintf("scheduled_snap_%d", time.Now().UnixNano())
-	snapURL := taskServerURL + routes.SnapshotsEndpoint + "/" + snapName
+	snapURL := taskServerURL + routes.TimeMachineEndpoint + "/" + snapName
 
 	resp, err := http.Post(snapURL, api.JsonMIMEType, nil)
 	require.NoError(t, err)
@@ -387,7 +387,7 @@ func TestScheduledSnapshotActivationThroughAPI(t *testing.T) {
 	time.Sleep(3500 * time.Millisecond) // 3.5 seconds = 3 ticks worst case
 
 	// Query active snapshot
-	activeResp, err := http.Get(taskServerURL + routes.SnapshotsActiveEndpoint)
+	activeResp, err := http.Get(taskServerURL + routes.TimeMachineActiveEndpoint)
 	require.NoError(t, err)
 	defer activeResp.Body.Close()
 

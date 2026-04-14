@@ -1,7 +1,7 @@
 info:
   name: Sessions
   type: folder
-  seq: 11
+  seq: 10
 
 request:
   auth: inherit
