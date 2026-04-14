@@ -105,7 +105,16 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
       final Credentials credentials = await _authService.loginByPassForIntegrationTest();
       await serviceLocator<SharedPreferencesHandler>().setBool(SharedPreferenceKeys.skipLogin, false);
 
-      await _handleLoginSuccess(credentials);
+      emit(Authenticated());
+
+      // ==== TEMPORARY IMPLEMENTATION ====
+      UserSessionManager().saveUserProfile(
+        UserModel(
+          account: UserAccount(id: credentials.user.sub, description: credentials.user.email, name: credentials.user.name, type: 'test@gmail.com'),
+          user: UserData(id: credentials.user.sub, email: credentials.user.email),
+        ),
+      );
+
       serviceLocator<ProductQueryViewModel>().loadProducts(); // Load products after successful login
     } on Exception catch (e) {
       // Web redirect initiated - this is expected
