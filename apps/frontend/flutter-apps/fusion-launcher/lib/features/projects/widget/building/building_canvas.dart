@@ -180,7 +180,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                           final List<ListeningAreaPainter> listeningAreaPainters = <ListeningAreaPainter>[
                                             for (final ListeningArea area in serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floorId: floor.id))
                                               ListeningAreaPainter(
-                                                backgoundColor: serviceLocator<ProjectViewModel>().getZonesForListeningArea(areaId: area.id)?.color,
+                                                backgoundColor: serviceLocator<ProjectViewModel>().getZoneColorForLA(areaId: area.id),
                                                 listeningArea: area,
                                                 isShowingSpl: buildingPageViewModel.isSplMode,
                                               ),

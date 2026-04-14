@@ -12,6 +12,26 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/widgets/color_selector_popup.dart';
 
+/// Get listening areas that are completely unassigned (not in any zone or subzone)
+List<ListeningArea> getCompletelyUnassignedListeningAreas() {
+  final List<ListeningArea> allListeningAreas = serviceLocator<ProjectViewModel>().getAllListeningAreas();
+  final Set<String> assignedIds = <String>{};
+
+  // Collect all LAs assigned to any zone
+  for (final Zone z in serviceLocator<ProjectViewModel>().getAllZones()) {
+    final List<ListeningArea> zoneAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: z.id);
+    assignedIds.addAll(zoneAreas.map((ListeningArea la) => la.id));
+  }
+
+  // Collect all LAs assigned to any subzone
+  for (final SubZone sz in serviceLocator<ProjectViewModel>().getAllSubZones()) {
+    final List<ListeningArea> subZoneAreas = serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(subZoneId: sz.id);
+    assignedIds.addAll(subZoneAreas.map((ListeningArea la) => la.id));
+  }
+
+  return allListeningAreas.where((ListeningArea la) => !assignedIds.contains(la.id)).toList();
+}
+
 class ZoneAndListeningAreaPanel extends StatefulWidget {
   final FloorCanvasController floorCanvasController;
 
@@ -370,14 +390,16 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                 ),
                                 tooltip: 'Zone actions',
                                 onSelected: (String value) {
-                                  if (value == 'add_subzone') {
-                                    _addSubZoneToZone(zone.id);
-                                  } else if (value == 'delete') {
-                                    _showDeleteConfirmation(zone);
-                                  } else if (value.startsWith('LA_')) {
-                                    // Listening area selected
-                                    final String listeningAreaId = value.substring(3);
-                                    serviceLocator<ProjectViewModel>().addListeningAreaToZone(listeningAreaId: listeningAreaId, zoneId: zone.id);
+                                  switch (value) {
+                                    case 'add_subzone':
+                                      _addSubZoneToZone(zone.id);
+                                      break;
+                                    case 'add_listening_area':
+                                      // serviceLocator<ProjectViewModel>().enterZoneSelectionMode(zone);
+                                      break;
+                                    case 'delete':
+                                      _showDeleteConfirmation(zone);
+                                      break;
                                   }
                                 },
                                 itemBuilder: (BuildContext context) {
@@ -412,64 +434,18 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
 
                                   final List<SubZone> subZones = serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id);
                                   if (subZones.isEmpty) {
-                                    // Get only completely unassigned listening areas (not in any zone or subzone)
-                                    final List<ListeningArea> availableListeningAreas = _getCompletelyUnassignedListeningAreas();
-
-                                    // Add header for listening areas section
                                     items.add(
                                       PopupMenuItem<String>(
                                         enabled: false,
-                                        height: 40,
-                                        child: FusionAppText(
-                                          text: 'Select Listening Area',
-                                          style: context.textTheme.bodySmall,
+                                        padding: const EdgeInsets.only(),
+                                        child: SemanticHelper.container(
+                                          testId: SemanticHelper.createTestId(SemanticTypes.container, "add_listening_area_menu_item_$index"),
+                                          child: SelectListeningAreaPopupButton(
+                                            zoneId: zone.id,
+                                          ),
                                         ),
                                       ),
                                     );
-
-                                    if (availableListeningAreas.isEmpty) {
-                                      items.add(
-                                        PopupMenuItem<String>(
-                                          enabled: false,
-                                          height: 40,
-                                          child: FusionAppText(
-                                            text: 'No available listening areas',
-                                            style: context.textTheme.l1Medium.copyWith(
-                                              color: context.colorScheme.textSecondary,
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    } else {
-                                      // Add individual listening area items
-                                      for (final ListeningArea listeningArea in availableListeningAreas) {
-                                        items.add(
-                                          PopupMenuItem<String>(
-                                            value: 'LA_${listeningArea.id}',
-                                            height: 40,
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: <Widget>[
-                                                Icon(
-                                                  Icons.room_outlined,
-                                                  size: 14,
-                                                  color: context.colorScheme.textSecondary,
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Flexible(
-                                                  child: FusionAppText(
-                                                    text: listeningArea.name,
-                                                    style: context.textTheme.bodySmall,
-                                                    maxLine: 1,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    }
-                                    items.add(const PopupMenuDivider(height: 0));
                                   }
                                   items.add(const PopupMenuDivider(height: 0));
                                   items.add(
@@ -1645,102 +1621,44 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                 ),
                                 tooltip: 'Subzone actions',
                                 onSelected: (String value) {
-                                  if (value == 'delete') {
-                                    _showDeleteSubZoneConfirmation(subZone);
-                                  } else if (value.startsWith('LA_')) {
-                                    // Listening area selected
-                                    final String listeningAreaId = value.substring(3);
-                                    serviceLocator<ProjectViewModel>().addListeningAreaToSubZone(
-                                      areaId: listeningAreaId,
-                                      subZoneId: subZone.id,
-                                    );
+                                  switch (value) {
+                                    case 'select_listening_areas_subzone':
+                                      serviceLocator<ProjectViewModel>().enterSubZoneSelectionMode(subZone);
+                                      break;
+                                    case 'delete':
+                                      _showDeleteSubZoneConfirmation(subZone);
+                                      break;
                                   }
                                 },
-                                itemBuilder: (BuildContext context) {
-                                  final List<PopupMenuEntry<String>> items = <PopupMenuEntry<String>>[];
-
-                                  // Get only completely unassigned listening areas (not in any zone or subzone)
-                                  final List<ListeningArea> availableListeningAreas = _getCompletelyUnassignedListeningAreas();
-
-                                  // Add header for listening areas section
-                                  items.add(
-                                    PopupMenuItem<String>(
-                                      enabled: false,
-                                      height: 40,
-                                      child: FusionAppText(
-                                        text: 'Select Listening Area',
-                                        style: context.textTheme.bodySmall,
-                                      ),
-                                    ),
-                                  );
-
-                                  if (availableListeningAreas.isEmpty) {
-                                    items.add(
+                                itemBuilder:
+                                    (BuildContext context) => <PopupMenuEntry<String>>[
                                       PopupMenuItem<String>(
                                         enabled: false,
-                                        height: 40,
-                                        child: FusionAppText(
-                                          text: 'No available listening areas',
-                                          style: context.textTheme.l1Medium.copyWith(
-                                            color: context.colorScheme.textSecondary,
-                                          ),
+                                        child: SelectListeningAreaPopupButton(
+                                          zoneId: zone.id,
+                                          subZoneId: subZone.id,
                                         ),
                                       ),
-                                    );
-                                  } else {
-                                    // Add individual listening area items
-                                    for (final ListeningArea listeningArea in availableListeningAreas) {
-                                      items.add(
-                                        PopupMenuItem<String>(
-                                          value: 'LA_${listeningArea.id}',
-                                          height: 40,
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: <Widget>[
-                                              Icon(
-                                                Icons.room_outlined,
-                                                size: 14,
-                                                color: context.colorScheme.textSecondary,
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Flexible(
-                                                child: FusionAppText(
-                                                  text: listeningArea.name,
-                                                  style: context.textTheme.bodySmall,
-                                                  maxLine: 1,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
+                                      const PopupMenuDivider(height: 0),
+                                      PopupMenuItem<String>(
+                                        value: 'delete',
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: <Widget>[
+                                            const Icon(
+                                              LucideIcons.trash200,
+                                              size: 16,
+                                              color: Colors.red,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            FusionAppText(
+                                              text: 'Delete Subzone',
+                                              style: context.textTheme.bodySmall?.copyWith(color: Colors.red),
+                                            ),
+                                          ],
                                         ),
-                                      );
-                                    }
-                                  }
-                                  items.add(const PopupMenuDivider(height: 0));
-
-                                  items.add(
-                                    PopupMenuItem<String>(
-                                      value: 'delete',
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: <Widget>[
-                                          const Icon(
-                                            LucideIcons.trash200,
-                                            size: 16,
-                                            color: Colors.red,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          FusionAppText(
-                                            text: 'Delete Subzone',
-                                            style: context.textTheme.bodySmall?.copyWith(color: Colors.red),
-                                          ),
-                                        ],
                                       ),
-                                    ),
-                                  );
-
-                                  return items;
-                                },
+                                    ],
                               ),
                             ),
                           ],
@@ -1989,26 +1907,6 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     return null;
   }
 
-  /// Get listening areas that are completely unassigned (not in any zone or subzone)
-  List<ListeningArea> _getCompletelyUnassignedListeningAreas() {
-    final List<ListeningArea> allListeningAreas = serviceLocator<ProjectViewModel>().getAllListeningAreas();
-    final Set<String> assignedIds = <String>{};
-
-    // Collect all LAs assigned to any zone
-    for (final Zone z in serviceLocator<ProjectViewModel>().getAllZones()) {
-      final List<ListeningArea> zoneAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: z.id);
-      assignedIds.addAll(zoneAreas.map((ListeningArea la) => la.id));
-    }
-
-    // Collect all LAs assigned to any subzone
-    for (final SubZone sz in serviceLocator<ProjectViewModel>().getAllSubZones()) {
-      final List<ListeningArea> subZoneAreas = serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(subZoneId: sz.id);
-      assignedIds.addAll(subZoneAreas.map((ListeningArea la) => la.id));
-    }
-
-    return allListeningAreas.where((ListeningArea la) => !assignedIds.contains(la.id)).toList();
-  }
-
   /// Helper methods for zone/subzone validation
   String? _getZoneIdForSpeaker(Speaker speaker) {
     // Find the listening area that contains this speaker
@@ -2222,6 +2120,67 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
             ),
           ],
         );
+      },
+    );
+  }
+}
+
+class SelectListeningAreaPopupButton extends StatelessWidget {
+  final String zoneId;
+  final String? subZoneId;
+  const SelectListeningAreaPopupButton({
+    super.key,
+    required this.zoneId,
+    this.subZoneId,
+  });
+  @override
+  Widget build(BuildContext context) {
+    assert(subZoneId != null || zoneId.isNotEmpty, "Either subZoneId or zoneId must be provided");
+    assert(subZoneId == null || (subZoneId != null && zoneId.isNotEmpty), "If subZoneId is provided, zoneId must also be provided");
+
+    // Get only completely unassigned listening areas (not in any zone or subzone)
+    final List<ListeningArea> availableListeningAreas = getCompletelyUnassignedListeningAreas();
+
+    return PopupMenuButton<String>(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(
+            Icons.add,
+            size: 16,
+            color: context.colorScheme.iconWhite,
+          ),
+          const SizedBox(width: 8),
+          FusionAppText(
+            text: 'Select Listening Areas',
+            style: context.textTheme.bodySmall?.copyWith(
+              color: context.colorScheme.textPrimary,
+            ),
+          ),
+        ],
+      ),
+      itemBuilder: (BuildContext context) {
+        return availableListeningAreas.map(
+          (ListeningArea area) {
+            return PopupMenuItem<String>(
+              onTap: () {
+                if (subZoneId != null) {
+                  serviceLocator<ProjectViewModel>().addListeningAreaToSubZone(
+                    areaId: area.id,
+                    subZoneId: subZoneId!,
+                  );
+                } else {
+                  serviceLocator<ProjectViewModel>().addListeningAreaToZone(
+                    listeningAreaId: area.id,
+                    zoneId: zoneId,
+                  );
+                }
+                Navigator.of(context).pop();
+              },
+              child: Text(area.name),
+            );
+          },
+        ).toList();
       },
     );
   }
