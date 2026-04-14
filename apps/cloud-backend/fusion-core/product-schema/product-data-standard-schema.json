@@ -181,7 +181,10 @@
             "properties": {
               "reference_db": {
                 "type": "number",
-                "enum": [-10, -3]
+                "enum": [
+                  -10,
+                  -3
+                ]
               },
               "unit": {
                 "type": "string",
@@ -368,8 +371,8 @@
             },
             "accessories": {
               "type": "array",
-              "items": {
-                "$ref": "#/$defs/accessory"
+              "skus": {
+                "$ref": "#/$defs/skus"
               }
             }
           },
@@ -876,6 +879,12 @@
             "type": "string"
           }
         },
+        "accessories": {
+          "type": "array",
+          "skus": {
+            "$ref": "#/$defs/skus"
+          }
+        },
         "updated_at": {
           "type": "string",
           "format": "epoch",
@@ -988,6 +997,12 @@
           "type": "string",
           "description": "Path to rear panel image"
         },
+        "accessories": {
+          "type": "array",
+          "skus": {
+            "$ref": "#/$defs/skus"
+          }
+        },
         "updated_at": {
           "type": "string",
           "format": "epoch",
@@ -1083,6 +1098,12 @@
             "type": "string"
           }
         },
+        "accessories": {
+          "type": "array",
+          "skus": {
+            "$ref": "#/$defs/skus"
+          }
+        },
         "updated_at": {
           "type": "string",
           "format": "epoch",
@@ -1133,6 +1154,12 @@
         },
         "images": {
           "$ref": "#/$defs/productImages"
+        },
+        "accessories": {
+          "type": "array",
+          "skus": {
+            "$ref": "#/$defs/skus"
+          }
         },
         "updated_at": {
           "type": "string",
