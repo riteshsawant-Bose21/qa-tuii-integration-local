@@ -1,14 +1,16 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Panel displaying the virtual controller emulator
 class VirtualControllerPanel extends StatefulWidget {
-  const VirtualControllerPanel({super.key});
+  final String controllerID;
+  final String vipAddress;
+  final bool isDesignMode;
+  final WallControllerConfig config;
+  const VirtualControllerPanel({super.key,this.isDesignMode = true, required this.controllerID, required this.vipAddress,required this.config});
 
   @override
   State<VirtualControllerPanel> createState() => _VirtualControllerPanelState();
@@ -24,14 +26,17 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
   @override
   void initState() {
     // TODO: implement initState
-    final WallControllerConfig config = serviceLocator<ProjectViewModel>().getWallControllerConfig();
-    context.read<VirtualControllerViewModel>().loadZones(config.zones, serviceLocator<ProjectViewModel>().virtualIP ?? "");
 
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
+
+    context.read<VirtualControllerViewModel>().loadZones(getZones(),widget.vipAddress);
+
+
+
     return Container(
       decoration: BoxDecoration(
         color: context.colorScheme.elevation1,
@@ -55,6 +60,96 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
       ),
     );
   }
+
+
+  getZones(){
+    print("WallControllerConfig");
+    final WallControllerConfig config = widget.config!;
+    print(config.toJson());
+    print("controllerID : "+widget.controllerID);
+    final List<WallZone> _zones = <WallZone>[];
+    final List<String> zoneIds = <String>[];
+    final WallController? controller = config
+        .controllers.firstWhere((WallController ctrl) => ctrl.id == widget.controllerID);
+
+    if (controller != null) {
+      zoneIds.addAll(controller.zoneIds ?? <String>[]);
+    }
+    print("zoneIds : "+zoneIds.length.toString());
+
+    for (WallZone item in config.zones ?? <WallZone>[]) {
+      WallZone? zone;
+      for (String id in zoneIds) {
+        if (id == item.id) {
+          zone = WallZone(
+            id: id,
+            name: item.name,
+            subZones: <WallSubZone>[],
+            sources: item.sources ?? <WallZoneSource>[],
+            gain: item.gain,
+            ono: item.ono ,
+          );
+        }
+      }
+
+      if(item.subZones.isNotEmpty) {
+        print("Subzones found, adding sources directly to parent zone : ${item.subZones.length}");
+
+        for(WallSubZone subZone in item.subZones) {
+          zone!.subZones.add(WallSubZone(
+            id: subZone.id,
+            name: subZone.name,
+            gain: subZone.gain,
+            ono: subZone.ono,
+          ));
+        }
+        _zones.add(zone!);
+      }else{
+        print("Subzones empty, adding sources directly to parent zone : ${item.subZones.length}");
+
+        zone!.subZones.add(WallSubZone(
+          id: item.id,
+          name: item.name,
+          gain: item.gain,
+          ono: WallSubZoneOno.fromJson(<String, dynamic>{
+            'subZone': 0,
+            'gain': 0,
+            'mute': 0,
+          }) ,
+        ));
+        _zones.add(zone);
+      }
+
+
+      return _zones;
+      // for (var id in zoneIds) {
+      //   if (id == item.id) {
+      //     zones.add(
+      //         ZoneModel(id: id,
+      //             name: item.name!,
+      //             sources:
+      //             item.sources!.map((src) =>
+      //                 ZoneSourceModel(
+      //                     id: src.sourceId!,
+      //                     name: src.sourceName!,
+      //                     gainID: item.gain!.gainID ?? "",
+      //                     icon: Icons.yard_outlined,
+      //                     volume: AudioUtils.toUiVolume(0)
+      //                 )).toList()
+      //         ));
+      //   }
+      // }
+      //
+      // for (Zones item in item.subZones) {
+      //
+      // }
+
+
+
+
+    }
+  }
+
 
   Widget _buildContent(BuildContext context) {
     // final Zone? selectedZone =
@@ -90,7 +185,9 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
               width: 1,
             ),
           ),
-          child: VirtualController(onSelected: () {}),
+          child: VirtualController(
+              isDesignMode: widget.isDesignMode,
+              onSelected: () {}),
 
           // Column(
           //   mainAxisSize: MainAxisSize.min,

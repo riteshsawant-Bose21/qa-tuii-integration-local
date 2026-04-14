@@ -10,7 +10,8 @@ import 'package:fusion_lib/service/websocket/websocket_service.dart';
 
 class VirtualController extends StatefulWidget {
   final Function? onSelected;
-  const VirtualController({super.key,this.onSelected});
+  final bool isDesignMode;
+  const VirtualController({super.key,this.onSelected,required this.isDesignMode});
 
   @override
   State<VirtualController> createState() => _VirtualControllerState();
@@ -176,10 +177,8 @@ class _VirtualControllerState extends State<VirtualController> {
                 builder: (context, AsyncSnapshot<WallZone> snapshot) {
 
                   zone.sourceSelected = snapshot.data?.sourceSelected ?? 0;
-                  print("zone.subZones.length");
-                  print(zone.subZones.length);
+                
 
-                  //final WallZone zone =  snapshot.data!;
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

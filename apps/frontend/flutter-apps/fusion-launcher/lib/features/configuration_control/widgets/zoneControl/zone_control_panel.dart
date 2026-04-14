@@ -44,7 +44,7 @@ class ZoneControlPanel extends StatelessWidget {
               /// Virtual controller emulator
               const Expanded(
                 flex: 8,
-                child: VirtualControllerPanel(),
+                child: VirtualControllerPanel(controllerID: '', vipAddress: '', config: WallControllerConfig(),),
               ),
             ],
           ),
