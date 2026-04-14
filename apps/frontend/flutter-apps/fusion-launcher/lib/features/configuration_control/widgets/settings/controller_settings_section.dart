@@ -37,10 +37,14 @@ class ControllerSettingsSection extends StatelessWidget {
                   _buildDivider(context),
                   const SizedBox(height: 16),
                   _buildSleepTimeRow(context, state, vm),
-                  const SizedBox(height: 16),
-                  _buildDivider(context),
-                  const SizedBox(height: 16),
-                  _buildWakeFunction(context, state, vm),
+
+                  // only if it is pro version
+                  if (state.isPro) ...<Widget>[
+                    const SizedBox(height: 16),
+                    _buildDivider(context),
+                    const SizedBox(height: 16),
+                    _buildWakeFunction(context, state, vm),
+                  ],
                 ],
               ),
             ),

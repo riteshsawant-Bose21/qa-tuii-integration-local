@@ -82,6 +82,9 @@ class SettingsLoaded extends SettingsState {
 
   final List<Zone> zones;
 
+  /// Whether the controller is a Pro controller.
+  final bool isPro;
+
   const SettingsLoaded({
     this.screenMode = ScreenMode.dark,
     this.screenSaver = ScreenSaverOption.qrCode,
@@ -90,6 +93,7 @@ class SettingsLoaded extends SettingsState {
     this.wakeFunction = WakeFunctionOption.lastScreen,
     this.wakeZoneId,
     this.zones = const <Zone>[],
+    this.isPro = false,
   });
 
   SettingsLoaded copyWith({
@@ -100,6 +104,7 @@ class SettingsLoaded extends SettingsState {
     WakeFunctionOption? wakeFunction,
     String? wakeZoneId,
     List<Zone>? zones,
+    bool? isPro,
   }) {
     return SettingsLoaded(
       screenMode: screenMode ?? this.screenMode,
@@ -109,11 +114,12 @@ class SettingsLoaded extends SettingsState {
       wakeFunction: wakeFunction ?? this.wakeFunction,
       wakeZoneId: wakeZoneId ?? this.wakeZoneId,
       zones: zones ?? this.zones,
+      isPro: isPro ?? this.isPro,
     );
   }
 
   @override
-  List<Object?> get props => <Object?>[screenMode, screenSaver, sleepTime, controllerId, wakeFunction, wakeZoneId, zones];
+  List<Object?> get props => <Object?>[screenMode, screenSaver, sleepTime, controllerId, wakeFunction, wakeZoneId, zones, isPro];
 }
 
 /// Error state - failed to load data.
