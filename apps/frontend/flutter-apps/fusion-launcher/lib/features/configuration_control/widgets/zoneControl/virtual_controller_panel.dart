@@ -1,14 +1,16 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/zoneControlViewmodel/zone_control_state.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/zoneControlViewmodel/zone_control_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Panel displaying the virtual controller emulator
 class VirtualControllerPanel extends StatefulWidget {
-  const VirtualControllerPanel({super.key});
+  final String controllerID;
+  final String vipAddress;
+  final bool isDesignMode;
+  final WallControllerConfig config;
+  const VirtualControllerPanel({super.key,this.isDesignMode = true, required this.controllerID, required this.vipAddress,required this.config});
 
   @override
   State<VirtualControllerPanel> createState() => _VirtualControllerPanelState();
@@ -22,58 +24,152 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
   final List<String> _sources = <String>['Spotify', 'AirPlay', 'Bluetooth', 'Line In'];
 
   @override
+  void initState() {
+    // TODO: implement initState
+
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ZoneControlViewModel, ZoneControlState>(
-      builder: (BuildContext context, ZoneControlState state) {
-        if (state is! ZoneControlLoaded) {
-          return const SizedBox.shrink();
-        }
 
-        return Container(
-          decoration: BoxDecoration(
-            color: context.colorScheme.elevation1,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: context.colorScheme.strokeLight,
-              width: 1,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              /// Header
-              const PanelSectionHeader(title: 'VIRTUAL CONTROLLER'),
+    context.read<VirtualControllerViewModel>().loadZones(getZones(),widget.vipAddress);
 
-              /// Content
-              Expanded(
-                child: _buildContent(context, state),
-              ),
-            ],
+
+
+    return Container(
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation1,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: context.colorScheme.strokeLight,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          /// Header
+          const PanelSectionHeader(title: 'VIRTUAL CONTROLLER'),
+
+          /// Content
+          Expanded(
+            child: _buildContent(context),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
-  Widget _buildContent(BuildContext context, ZoneControlLoaded state) {
-    final Zone? selectedZone =
-        state.selectedZoneId != null
-            ? state.zones.firstWhere(
-              (Zone z) => z.id == state.selectedZoneId,
-              orElse: () => state.zones.isNotEmpty ? state.zones.first : Zone(name: 'No Zone'),
-            )
-            : (state.zones.isNotEmpty ? state.zones.first : null);
 
-    if (selectedZone == null) {
-      return Center(
-        child: FusionAppText(
-          text: 'No zone selected',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: context.colorScheme.textSecondary,
-          ),
-        ),
-      );
+  getZones(){
+    print("WallControllerConfig");
+    final WallControllerConfig config = widget.config!;
+    print(config.toJson());
+    print("controllerID : "+widget.controllerID);
+    final List<WallZone> _zones = <WallZone>[];
+    final List<String> zoneIds = <String>[];
+    final WallController? controller = config
+        .controllers.firstWhere((WallController ctrl) => ctrl.id == widget.controllerID);
+
+    if (controller != null) {
+      zoneIds.addAll(controller.zoneIds ?? <String>[]);
     }
+    print("zoneIds : "+zoneIds.length.toString());
+
+    for (WallZone item in config.zones ?? <WallZone>[]) {
+      WallZone? zone;
+      for (String id in zoneIds) {
+        if (id == item.id) {
+          zone = WallZone(
+            id: id,
+            name: item.name,
+            subZones: <WallSubZone>[],
+            sources: item.sources ?? <WallZoneSource>[],
+            gain: item.gain,
+            ono: item.ono ,
+          );
+        }
+      }
+
+      if(item.subZones.isNotEmpty) {
+        print("Subzones found, adding sources directly to parent zone : ${item.subZones.length}");
+
+        for(WallSubZone subZone in item.subZones) {
+          zone!.subZones.add(WallSubZone(
+            id: subZone.id,
+            name: subZone.name,
+            gain: subZone.gain,
+            ono: subZone.ono,
+          ));
+        }
+        _zones.add(zone!);
+      }else{
+        print("Subzones empty, adding sources directly to parent zone : ${item.subZones.length}");
+
+        zone!.subZones.add(WallSubZone(
+          id: item.id,
+          name: item.name,
+          gain: item.gain,
+          ono: WallSubZoneOno.fromJson(<String, dynamic>{
+            'subZone': 0,
+            'gain': 0,
+            'mute': 0,
+          }) ,
+        ));
+        _zones.add(zone);
+      }
+
+
+      return _zones;
+      // for (var id in zoneIds) {
+      //   if (id == item.id) {
+      //     zones.add(
+      //         ZoneModel(id: id,
+      //             name: item.name!,
+      //             sources:
+      //             item.sources!.map((src) =>
+      //                 ZoneSourceModel(
+      //                     id: src.sourceId!,
+      //                     name: src.sourceName!,
+      //                     gainID: item.gain!.gainID ?? "",
+      //                     icon: Icons.yard_outlined,
+      //                     volume: AudioUtils.toUiVolume(0)
+      //                 )).toList()
+      //         ));
+      //   }
+      // }
+      //
+      // for (Zones item in item.subZones) {
+      //
+      // }
+
+
+
+
+    }
+  }
+
+
+  Widget _buildContent(BuildContext context) {
+    // final Zone? selectedZone =
+    //     state.selectedZoneId != null
+    //         ? state.zones.firstWhere(
+    //           (Zone z) => z.id == state.selectedZoneId,
+    //           orElse: () => state.zones.isNotEmpty ? state.zones.first : Zone(name: 'No Zone'),
+    //         )
+    //         : (state.zones.isNotEmpty ? state.zones.first : null);
+    //
+    // if (selectedZone == null) {
+    //   return Center(
+    //     child: FusionAppText(
+    //       text: 'No zone selected',
+    //       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+    //         color: context.colorScheme.textSecondary,
+    //       ),
+    //     ),
+    //   );
+    // }
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -89,34 +185,38 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
               width: 1,
             ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              /// Zone title
-              FusionAppText(
-                text: selectedZone.name,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 16),
+          child: VirtualController(
+              isDesignMode: widget.isDesignMode,
+              onSelected: () {}),
 
-              /// Source dropdown
-              _buildSourceDropdown(context),
-              const SizedBox(height: 24),
-
-              /// Volume dial
-              _buildVolumeDial(context),
-              const SizedBox(height: 24),
-
-              /// Volume slider
-              _buildVolumeSlider(context),
-              const SizedBox(height: 16),
-
-              /// Mute button
-              _buildMuteButton(context),
-            ],
-          ),
+          // Column(
+          //   mainAxisSize: MainAxisSize.min,
+          //   children: <Widget>[
+          //     /// Zone title
+          //     FusionAppText(
+          //       text: selectedZone.name,
+          //       style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          //         fontWeight: FontWeight.w600,
+          //       ),
+          //     ),
+          //     const SizedBox(height: 16),
+          //
+          //     /// Source dropdown
+          //     _buildSourceDropdown(context),
+          //     const SizedBox(height: 24),
+          //
+          //     /// Volume dial
+          //     _buildVolumeDial(context),
+          //     const SizedBox(height: 24),
+          //
+          //     /// Volume slider
+          //     _buildVolumeSlider(context),
+          //     const SizedBox(height: 16),
+          //
+          //     /// Mute button
+          //     _buildMuteButton(context),
+          //   ],
+          // ),
         ),
       ),
     );

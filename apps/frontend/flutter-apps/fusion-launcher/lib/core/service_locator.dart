@@ -70,6 +70,20 @@ Future<void> setupServiceLocator() async {
 
   serviceLocator.registerSingleton<WebSocketService>(WebSocketService());
 
+  /// Common Virtual Controller Service
+  serviceLocator.registerLazySingleton<FusionVirtualControllerService>(
+    () => FusionVirtualControllerService(
+      networkClient: serviceLocator<FusionNetworkClient>(),
+    ),
+  );
+
+  /// Common Virtual Controller ViewModel
+  serviceLocator.registerLazySingleton<VirtualControllerViewModel>(
+    () => VirtualControllerViewModel(
+      service: serviceLocator<FusionVirtualControllerService>(),
+    ),
+  );
+
   serviceLocator.registerLazySingleton<FusionSecureStorage>(
     () => FusionSecureStorageImpl(serviceLocator<FlutterSecureStorage>()),
   );

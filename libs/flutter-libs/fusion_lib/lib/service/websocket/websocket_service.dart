@@ -1,7 +1,9 @@
 import 'dart:async';
-import 'package:flutter/cupertino.dart';
+import 'dart:convert';
+import 'dart:developer';
+import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:web_socket_channel/status.dart' as status;
+
 
 class WebSocketService {
   // Singleton pattern to ensure one instance across the app
@@ -11,38 +13,128 @@ class WebSocketService {
 
   WebSocketChannel? _channel;
 
-  // Broadcaster to allow multiple listeners
+
+
+  String _host = '';
+  String get host => _host;
+
+  /// Calculates the correct WebSocket URL based on the platform.
+  Uri get _url {
+    return Uri.parse('ws://$_host:8080/ws');
+  }
+
+
+  // final _audioUpdateController =
+  // StreamController<Map<String, dynamic>>.broadcast();
+  // Stream<Map<String, dynamic>> get audioUpdateStream =>
+  //     _audioUpdateController.stream;
+
   final StreamController _controller = StreamController.broadcast();
   Stream get stream => _controller.stream;
 
+
+  final _connectionStatusController = StreamController<bool>.broadcast();
+  Stream<bool> get connectionStatusStream => _connectionStatusController.stream;
+
   bool _isConnected = false;
   bool get isConnected => _isConnected;
+  bool _isConnecting = false;
+  bool _shouldReconnect = true;
 
-  void connect(String url) {
-    if (_isConnected) return;
+  void subscribe(String key){
+    _channel!.sink.add(jsonEncode({
+      "id": key,
+      "version": 1,
+      "type": "config"
+    }
+    ));
+  }
+
+
+
+  Future<void> connect(String? url) async {
+    if (_isConnected || _isConnecting) return;
+    _isConnecting = true;
+    _shouldReconnect = true;
+
+    if (host != null) {
+      _host = host;
+    }
 
     try {
-      _channel = WebSocketChannel.connect(Uri.parse(url));
+      print('Connecting to Fusion WebSocket: $_url');
+      _channel = WebSocketChannel.connect(_url);
+
+      // Wait for the connection to be established
+      await _channel!.ready;
+
       _isConnected = true;
+      _isConnecting = false;
+
+      _connectionStatusController.add(true);
+      print('Connected to Fusion WebSocket: $_url');
 
       _channel!.stream.listen(
-        (message) {
+            (message) {
+          print("Fusion Web Service : Received");
           _controller.add(message);
         },
         onDone: () {
           _isConnected = false;
-          debugPrint("Disconnected from server.");
+
+          _connectionStatusController.add(false);
+          print('Fusion WebSocket connection closed');
+          // Reconnection delay if intentional
+          if (_shouldReconnect) {
+            Future.delayed(const Duration(seconds: 5), () => connect(url));
+          }
         },
         onError: (error) {
           _isConnected = false;
-          debugPrint("WS Error: $error");
+          _connectionStatusController.add(false);
+          print('Fusion WebSocket error: $error');
+          // Reconnection is handled by onDone usually, but sometimes onError
+          // fires without onDone.
         },
       );
     } catch (e) {
       _isConnected = false;
-      debugPrint("Connection failed: $e");
+      _isConnecting = false;
+      _connectionStatusController.add(false);
+      print('Failed to connect to Fusion WebSocket: $e');
+      // Retry after delay if initial connection fails
+      if (_shouldReconnect) {
+        Future.delayed(const Duration(seconds: 5), () => connect(url));
+      }
     }
   }
+  // void _handleMessage(dynamic message) {
+  //   try {
+  //     final Map<String, dynamic> data = jsonDecode(message);
+  //     log(data['type'].toString());
+  //     if(data['type']=="error"){
+  //       log(data.toString());
+  //     }
+  //
+  //     //  log(data['data']!['settings']!['audio'].toString());
+  //
+  //     // Handle config_update (Full state sync)
+  //     if (data['type'] == 'config_update') {
+  //       final audioSettings =
+  //       data['data']?['settings']?['audio'];
+  //       if (audioSettings != null) {
+  //         _audioUpdateController.add(audioSettings);
+  //       }
+  //     }
+  //
+  //     // Handle patch_success (Optional confirmation)
+  //     if (data['type'] == 'patch_success') {
+  //       print('Server Patch Successful');
+  //     }
+  //   } catch (e) {
+  //     print('Error parsing message from Fusion server: $e');
+  //   }
+  // }
 
   void sendMessage(dynamic message) {
     if (_channel != null && _isConnected) {
@@ -51,14 +143,16 @@ class WebSocketService {
       debugPrint("Cannot send message: Not connected.");
     }
   }
-
   void disconnect() {
-    _channel?.sink.close(status.goingAway);
+    _shouldReconnect = false;
+    _channel?.sink.close();
     _isConnected = false;
+    _isConnecting = false;
+    _connectionStatusController.add(false);
   }
-
   void dispose() {
+    _channel?.sink.close();
     _controller.close();
-    disconnect();
+    _connectionStatusController.close();
   }
 }

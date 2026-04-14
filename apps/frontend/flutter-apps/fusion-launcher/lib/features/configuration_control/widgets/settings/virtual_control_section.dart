@@ -17,6 +17,7 @@ import 'package:printing/printing.dart';
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 
+/// Virtual Control section — shows a QR code for mobile virtual wall controller access
 class VirtualControlSection extends StatelessWidget {
   final String? controllerUrl;
   final String? controllerId;
@@ -25,6 +26,7 @@ class VirtualControlSection extends StatelessWidget {
 
   String get _qrData => jsonEncode(<String, String>{
     "vip": serviceLocator<ProjectViewModel>().virtualIP ?? "192.168.1.110",
+    // "controller_id": state.selectedControllerId ?? "No Controller ID",
     "controller_id": "CTRL1762958340064766236",
   });
 
@@ -99,7 +101,10 @@ class VirtualControlSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
+        /// Section header — shared PanelSectionHeader widget
         const PanelSectionHeader(title: 'VIRTUAL CONTROL'),
+
+        /// QR + description row
         Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
