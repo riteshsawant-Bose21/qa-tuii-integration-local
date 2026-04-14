@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -194,6 +195,28 @@ std::vector<AlsaDevice::AlsaFormat> AlsaDevice::alsa_formats = {
 
 pthread_mutex_t AlsaDevice::open_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+std::mutex bluealsa_error_handler_mutex;
+
+void ignore_alsa_error(const char *file, int line, const char *function,
+                       int err, const char *fmt, ...)
+{
+}
+
+int open_pcm(snd_pcm_t **alsa, const std::string &full_device_name,
+             snd_pcm_stream_t stream, int mode)
+{
+    if (full_device_name.compare(0, 9, "bluealsa:") != 0)
+    {
+        return snd_pcm_open(alsa, full_device_name.c_str(), stream, mode);
+    }
+
+    std::lock_guard<std::mutex> lock(bluealsa_error_handler_mutex);
+    snd_lib_error_set_handler(ignore_alsa_error);
+    int error = snd_pcm_open(alsa, full_device_name.c_str(), stream, mode);
+    snd_lib_error_set_handler(nullptr);
+    return error;
+}
+
 class AlsaIn : public bosepro::Algorithm {
 public:
     AlsaIn(const bosepro::BlockConfiguration &configuration);
@@ -299,10 +322,10 @@ void AlsaDevice::open_device()
     }
 
     SPDLOG_DEBUG("Opening: {}", full_device_name);
-    int error = snd_pcm_open(&alsa, full_device_name.c_str(),
-                             is_input ? SND_PCM_STREAM_CAPTURE
-                                      : SND_PCM_STREAM_PLAYBACK,
-                             SND_PCM_NONBLOCK);
+    int error = open_pcm(&alsa, full_device_name,
+                         is_input ? SND_PCM_STREAM_CAPTURE
+                                  : SND_PCM_STREAM_PLAYBACK,
+                         SND_PCM_NONBLOCK);
 
     if (error < 0)
     {

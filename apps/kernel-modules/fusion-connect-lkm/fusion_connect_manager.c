@@ -988,16 +988,17 @@ static int handle_remove_stream(struct fusion_cn_manager *mgr,
     rtp_stream = fusion_cn_rtp_get_stream(&mgr->rtp, handle);
     if (!rtp_stream) {
         read_unlock_irqrestore(&mgr->rtp.lock, flags);
-        pr_err("fusion_cn: handle_remove_stream: rtp stream %llu not found\n", handle);
-        return (reply->err = -ENOENT);
+        pr_debug("fusion_cn: handle_remove_stream: rtp stream %llu already gone\n", handle);
+        return (reply->err = 0);
     }
     strscpy(stream_name, rtp_stream->info.stream_name, sizeof(stream_name));
     read_unlock_irqrestore(&mgr->rtp.lock, flags);
 
     alsa_stream = fusion_cn_find_substream(stream_name);
     if (!alsa_stream) {
-        pr_warn("fusion_cn: handle_remove_stream: alsa stream %s not found\n", stream_name);
-        return (reply->err = -ENOENT);
+        pr_debug("fusion_cn: handle_remove_stream: alsa stream %s already gone\n", stream_name);
+        kref_put(&rtp_stream->ref, fusion_cn_rtp_stream_release);
+        return (reply->err = 0);
     }
 
     reply->err = remove_stream(mgr, handle, stream_name, rtp_stream, alsa_stream);

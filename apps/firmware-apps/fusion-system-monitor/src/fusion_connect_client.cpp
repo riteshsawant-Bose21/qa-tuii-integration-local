@@ -477,17 +477,6 @@ static bool nl_set_phc_anchor(NetlinkClient& c, uint64_t phc_ns_at_pps) {
 //     return reply.err == 0;
 // }
 
-static bool nl_set_eth_iface(NetlinkClient& c, const std::string& iface) {
-    fusion_cn_ctrl_msg reply{};
-    if (iface.empty()) return false;
-    std::array<char, IFNAMSIZ> buf{};
-    std::strncpy(buf.data(), iface.c_str(), buf.size() - 1);
-    if (!c.send_message(FUSION_CN_CTRL_CMD_SET_ETH_IFACE, buf.data(), buf.size(), &reply)) return false;
-    if (reply.err != 0) SPDLOG_ERROR("SET_ETH_IFACE({}) err={}", iface, reply.err);
-    if (reply.data) free(reply.data);
-    return reply.err == 0;
-}
-
 static bool nl_get_timing_status(NetlinkClient& c, fc_get_timing_status_reply *out)
 {
     if (!out) return false;
@@ -708,7 +697,6 @@ private:
     int_fast32_t period_ms;
     bool debug_enabled;
     bool debug_sent;
-    bool iface_sent;
     bool gpt_discipline_ready_logged;
     SAPAnnouncer sap_announcer;
 
@@ -753,7 +741,7 @@ MODULE_REGISTER(FusionConnectClient, "fusion_connect_client");
 FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &configuration)
     : bosepro::Module(configuration), mgr_started(false), device_id(""),
       enet_iface("lan1"), period_ms(1000), debug_enabled(false),
-      debug_sent(false), iface_sent(false),
+      debug_sent(false),
       gpt_discipline_ready_logged(false), sap_announcer(""),
       audio_streams_update_pending(false),
       ptp_sync_good(false), ptp_anchor_pending(false), ptp_good_streak(0),
@@ -846,17 +834,22 @@ int FusionConnectClient::remove_stream(uint64_t stream_handle) {
         return -1;
     }
 
-    if (reply.err != 0) {
-        SPDLOG_ERROR("Remove RTP Stream: Failed for stream_handle={}, err={}", stream_handle, reply.err);
-        return reply.err;
-    }
-
-    SPDLOG_DEBUG("Remove RTP Stream: Success for stream_handle={}", stream_handle);
-
+    const int err = reply.err;
     if (reply.data) {
         free(reply.data);
     }
 
+    if (err == -ENOENT) {
+        SPDLOG_DEBUG("Remove RTP Stream: stream_handle={} already gone", stream_handle);
+        return 0;
+    }
+
+    if (err != 0) {
+        SPDLOG_ERROR("Remove RTP Stream: Failed for stream_handle={}, err={}", stream_handle, err);
+        return err;
+    }
+
+    SPDLOG_DEBUG("Remove RTP Stream: Success for stream_handle={}", stream_handle);
     return 0;
 }
 
@@ -1240,14 +1233,6 @@ void FusionConnectClient::maybe_start_manager()
     const auto now = std::chrono::steady_clock::now();
     if (now - mgr_last_start_attempt < std::chrono::seconds(1)) return;
     mgr_last_start_attempt = now;
-
-    if (!iface_sent) {
-        if (!nl_set_eth_iface(client, enet_iface)) {
-            SPDLOG_ERROR("Failed to set ETH iface '{}' before manager start", enet_iface);
-            return;
-        }
-        iface_sent = true;
-    }
 
     fusion_cn_ctrl_msg reply{};
     if (!client.send_message(FUSION_CN_CTRL_CMD_START_MANAGER, nullptr, 0, &reply)) {
