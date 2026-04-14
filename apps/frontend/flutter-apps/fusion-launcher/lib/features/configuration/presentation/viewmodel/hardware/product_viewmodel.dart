@@ -14,7 +14,7 @@ extension ProductViewModel on ProjectViewModel {
     hardware.outputPortsData.clear();
     hardware.communicationPorts.clear();
     hardware.inputPortsData.addAll(
-      portData.getInputPorts(type, modelFamily.toLowerCase().contains("powersmart")),
+      portData.getInputPorts(type, hardware: hardware, modelFamily: modelFamily),
     );
     hardware.outputPortsData.addAll(portData.getOutputPorts(type));
     hardware.communicationPorts.addAll(portData.comPorts);
