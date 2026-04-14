@@ -39,7 +39,7 @@ class ConnectionUseCase {
 
   bool isCompatible(PortType fromPort, PortType toPort) {
     final PossibleConnection? possibleConnection = PossibleConnection.findConnection(fromPort, toPort);
-    print(" Checking compatibility between $fromPort and $toPort: ${possibleConnection != null}");
+
     return possibleConnection != null;
   }
 }

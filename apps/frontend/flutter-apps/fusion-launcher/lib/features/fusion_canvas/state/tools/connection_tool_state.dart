@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/wiring/port_painter.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../fusion_tool_state.dart';
 import 'select_tool_state.dart';
@@ -29,6 +30,8 @@ class IdleConnectionToolState extends ConnectionToolState {
 
 /// Active – the user is currently dragging from [sourcePort].
 class ConnectingToolState extends ConnectionToolState {
+
+  WiringConnectionModel? originalConnection;
   /// The port the user started dragging from.
   final WiringPortData sourcePort;
 
@@ -42,6 +45,7 @@ class ConnectingToolState extends ConnectionToolState {
   final List<Offset> path;
 
   ConnectingToolState({
+    required this.originalConnection,
     required this.sourcePort,
     required this.sourcePosition,
     required this.currentPosition,
@@ -49,12 +53,14 @@ class ConnectingToolState extends ConnectionToolState {
   });
 
   ConnectingToolState copyWith({
+    WiringConnectionModel? originalConnection,
     WiringPortData? sourcePort,
     Offset? sourcePosition,
     Offset? currentPosition,
     List<Offset>? path,
   }) {
     return ConnectingToolState(
+      originalConnection: originalConnection ?? this.originalConnection,
       sourcePort: sourcePort ?? this.sourcePort,
       sourcePosition: sourcePosition ?? this.sourcePosition,
       currentPosition: currentPosition ?? this.currentPosition,
