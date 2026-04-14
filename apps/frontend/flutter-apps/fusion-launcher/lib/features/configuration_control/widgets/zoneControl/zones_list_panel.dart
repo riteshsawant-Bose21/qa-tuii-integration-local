@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/zoneControlViewmodel/zone_control_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/zoneControl/zone_item_widget.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -85,16 +85,16 @@ class ZonesListPanel extends StatelessWidget {
           selectedSubZoneIds: selectedSubZoneIds,
           activeSubZoneId: activeSubZoneId,
           onToggleSelection: () {
-            context.read<ConfigurationControlViewmodel>().toggleZoneSelection(zone.id);
+            context.read<ZoneControlViewModel>().toggleZoneSelection(zone.id);
           },
           onSelectZone: () {
-            context.read<ConfigurationControlViewmodel>().selectZone(zone.id);
+            context.read<ZoneControlViewModel>().selectZone(zone.id);
           },
           onToggleSubZoneSelection: (String subZoneId) {
-            context.read<ConfigurationControlViewmodel>().toggleSubZoneSelection(subZoneId);
+            context.read<ZoneControlViewModel>().toggleSubZoneSelection(subZoneId);
           },
           onSelectSubZone: (String subZoneId) {
-            context.read<ConfigurationControlViewmodel>().selectSubZone(subZoneId);
+            context.read<ZoneControlViewModel>().selectSubZone(subZoneId);
           },
         );
       },

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-class FusionPopupMenu<T> extends StatelessWidget {
+class FusionPopupMenu<T> extends StatefulWidget {
   const FusionPopupMenu({
     super.key,
     required this.items,
@@ -9,7 +9,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
     this.itemBuilder,
     this.popupwidth,
     this.itemLabels,
-    bool? matchChildWidth, // make nullable input
+    bool? matchChildWidth,
     required this.child,
     this.tooltip,
     this.popupOffset = const Offset(10, 10),
@@ -31,59 +31,107 @@ class FusionPopupMenu<T> extends StatelessWidget {
   final String? semanticsId;
   final bool Function(T)? isItemEnabled;
   final EdgeInsets? itemPadding;
-
-  /// Optional size constraints forwarded to [CustomPopupMenuButton].
-  /// Use [BoxConstraints.tightFor] or [BoxConstraints(maxHeight: …)] to cap
-  /// popup height and enable scrolling.
   final BoxConstraints? constraints;
+
+  @override
+  State<FusionPopupMenu<T>> createState() => _FusionPopupMenuState<T>();
+}
+
+class _FusionPopupMenuState<T> extends State<FusionPopupMenu<T>> {
+  final GlobalKey _childKey = GlobalKey(); // stable across rebuilds
+  double? _measuredChildWidth;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleChildMeasurement();
+  }
+
+  @override
+  void didUpdateWidget(covariant FusionPopupMenu<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Re-measure if child might have changed size
+    _scheduleChildMeasurement();
+  }
+
+  void _scheduleChildMeasurement() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final RenderBox? box = _childKey.currentContext?.findRenderObject() as RenderBox?;
+      if (box != null && box.hasSize) {
+        final double w = box.size.width;
+        if (w != _measuredChildWidth) {
+          setState(() => _measuredChildWidth = w);
+        }
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final childKey = GlobalKey();
-    var createTestId =
-        semanticsId ??
+    // ── Compute effective constraints ──
+    // When matchChildWidth is true, override Flutter's default popup
+    // constraints (min 112, max 280) with the actual child width.
+    BoxConstraints? effectiveConstraints = widget.constraints;
+    if (widget.matchChildWidth && _measuredChildWidth != null && effectiveConstraints == null) {
+      // Clamp to available screen width so it doesn't overflow on small screens
+      final double screenWidth = MediaQuery.of(context).size.width;
+      final double maxAvailable = screenWidth - 32; // 16px padding on each side
+      final double clampedWidth = _measuredChildWidth!.clamp(0, maxAvailable);
+
+      effectiveConstraints = BoxConstraints(
+        minWidth: clampedWidth,
+        maxWidth: clampedWidth,
+      );
+    }
+
+    final createTestId =
+        widget.semanticsId ??
         SemanticHelper.createTestId(
           SemanticTypes.dropdown,
-          tooltip ?? 'popup_menu',
+          widget.tooltip ?? 'popup_menu',
         );
+
     return SemanticHelper.button(
       testId: createTestId,
       child: CustomPopupMenuButton<T>(
-        tooltip: tooltip,
+        tooltip: widget.tooltip,
         menuSemanticLabel: "${createTestId}_container",
         position: PopupMenuPosition.under,
         menuPadding: EdgeInsets.zero,
-        offset: popupOffset,
-        constraints: constraints,
+        offset: widget.popupOffset,
+        constraints: effectiveConstraints, // ← uses measured width
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.0),
           side: BorderSide(color: context.colorScheme.strokeLight, width: 1),
         ),
         color: context.colorScheme.elevation2,
         itemBuilder: (context) => List<PopupMenuEntry<T>>.generate(
-          items.length,
+          widget.items.length,
           (index) {
-            final T item = items[index];
-            var findRenderObject = (childKey.currentContext?.findRenderObject() as RenderBox?);
-            var width2 = matchChildWidth ? findRenderObject?.size.width : popupwidth;
-            final bool enabled = isItemEnabled?.call(item) ?? true;
+            final T item = widget.items[index];
+            final RenderBox? renderBox = _childKey.currentContext?.findRenderObject() as RenderBox?;
+            final double? width2 = widget.matchChildWidth ? renderBox?.size.width : widget.popupwidth;
+            final bool enabled = widget.isItemEnabled?.call(item) ?? true;
+
             return PopupMenuItem<T>(
               value: item,
               enabled: enabled,
-              padding: EdgeInsets.all(0),
+              padding: EdgeInsets.zero,
               child: SemanticHelper.dropdown(
                 testId: SemanticHelper.createTestId(
                   SemanticTypes.dropdown,
-                  tooltip ?? 'popup_menu_item_$index',
+                  widget.tooltip ?? 'popup_menu_item_$index',
                 ),
-                value: tooltip,
+                value: widget.tooltip,
                 child: SizedBox(
                   width: width2,
                   child: Padding(
-                    padding: itemPadding ?? EdgeInsets.all(8.0),
-                    child: itemBuilder != null
-                        ? itemBuilder!(context, item)
+                    padding: widget.itemPadding ?? const EdgeInsets.all(6),
+                    child: widget.itemBuilder != null
+                        ? widget.itemBuilder!(context, item)
                         : FusionAppText(
-                            text: itemLabels != null && itemLabels!.containsKey(item) ? itemLabels![item]! : item.toString(),
+                            text: widget.itemLabels != null && widget.itemLabels!.containsKey(item) ? widget.itemLabels![item]! : item.toString(),
                             style: context.textTheme.bodySmall,
                           ),
                   ),
@@ -92,8 +140,8 @@ class FusionPopupMenu<T> extends StatelessWidget {
             );
           },
         ),
-        onSelected: onSelected,
-        child: Container(key: childKey, child: child),
+        onSelected: widget.onSelected,
+        child: Container(key: _childKey, child: widget.child),
       ),
     );
   }

@@ -1,24 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/SettingsViewModel/settings_state.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/SettingsViewModel/settings_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Controller Settings section — Screen Mode, Screen Saver, and Sleep Time.
 ///
-/// All state is driven by [ConfigControlLoaded] in the BLoC so each controller
-/// has independent, persisted settings.
+/// All state is driven by [SettingsLoaded] from [SettingsViewModel].
 class ControllerSettingsSection extends StatelessWidget {
   const ControllerSettingsSection({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
-      builder: (BuildContext context, ConfigurationControlState state) {
-        if (state is! ConfigControlLoaded) return const SizedBox.shrink();
+    return BlocBuilder<SettingsViewModel, SettingsState>(
+      builder: (BuildContext context, SettingsState state) {
+        if (state is! SettingsLoaded) return const SizedBox.shrink();
 
-        final ConfigurationControlViewmodel vm = context.read<ConfigurationControlViewmodel>();
+        final SettingsViewModel vm = context.read<SettingsViewModel>();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -38,6 +37,14 @@ class ControllerSettingsSection extends StatelessWidget {
                   _buildDivider(context),
                   const SizedBox(height: 16),
                   _buildSleepTimeRow(context, state, vm),
+
+                  // only if it is pro version
+                  if (state.isPro) ...<Widget>[
+                    const SizedBox(height: 16),
+                    _buildDivider(context),
+                    const SizedBox(height: 16),
+                    _buildWakeFunction(context, state, vm),
+                  ],
                 ],
               ),
             ),
@@ -53,19 +60,13 @@ class ControllerSettingsSection extends StatelessWidget {
 
   // ─── Screen Mode ─────────────────────────────────────────────────────────────
 
-  Widget _buildScreenModeRow(
-    BuildContext context,
-    ConfigControlLoaded state,
-    ConfigurationControlViewmodel vm,
-  ) {
+  Widget _buildScreenModeRow(BuildContext context, SettingsLoaded state, SettingsViewModel vm) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         FusionAppText(
           text: 'SCREEN MODE',
-          style: Theme.of(context).textTheme.l1Regular.withColor(
-            context.colorScheme.textBody,
-          ),
+          style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textBody),
         ),
         const SizedBox(height: 16),
         Row(
@@ -97,19 +98,13 @@ class ControllerSettingsSection extends StatelessWidget {
 
   // ─── Screen Saver ─────────────────────────────────────────────────────────────
 
-  Widget _buildScreenSaverRow(
-    BuildContext context,
-    ConfigControlLoaded state,
-    ConfigurationControlViewmodel vm,
-  ) {
+  Widget _buildScreenSaverRow(BuildContext context, SettingsLoaded state, SettingsViewModel vm) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         FusionAppText(
           text: 'SCREEN SAVER',
-          style: Theme.of(context).textTheme.l1Regular.withColor(
-            context.colorScheme.textBody,
-          ),
+          style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textBody),
         ),
         const SizedBox(height: 16),
         Wrap(
@@ -139,26 +134,18 @@ class ControllerSettingsSection extends StatelessWidget {
   static const int _minSleep = 5;
   static const int _maxSleep = 300;
 
-  Widget _buildSleepTimeRow(
-    BuildContext context,
-    ConfigControlLoaded state,
-    ConfigurationControlViewmodel vm,
-  ) {
+  Widget _buildSleepTimeRow(BuildContext context, SettingsLoaded state, SettingsViewModel vm) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         FusionAppText(
           text: 'SCREEN SLEEP TIME AFTER',
-          style: Theme.of(context).textTheme.l1Regular.withColor(
-            context.colorScheme.textBody,
-          ),
+          style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textBody),
         ),
         const SizedBox(height: 2),
         FusionAppText(
           text: 'Note: Enter the time in seconds, allowed range $_minSleep-$_maxSleep seconds.',
-          style: Theme.of(context).textTheme.l2Regular.withColor(
-            context.colorScheme.textBody,
-          ),
+          style: Theme.of(context).textTheme.l2Regular.withColor(context.colorScheme.textBody),
         ),
         const SizedBox(height: 16),
         _buildSleepDropdown(context, state, vm),
@@ -166,15 +153,8 @@ class ControllerSettingsSection extends StatelessWidget {
     );
   }
 
-  Widget _buildSleepDropdown(
-    BuildContext context,
-    ConfigControlLoaded state,
-    ConfigurationControlViewmodel vm,
-  ) {
-    final List<int> values = List<int>.generate(
-      _maxSleep - _minSleep + 1,
-      (int i) => _minSleep + i,
-    );
+  Widget _buildSleepDropdown(BuildContext context, SettingsLoaded state, SettingsViewModel vm) {
+    final List<int> values = List<int>.generate(_maxSleep - _minSleep + 1, (int i) => _minSleep + i);
 
     return FusionNeumorphicDropdown<int>(
       value: state.sleepTime,
@@ -188,6 +168,69 @@ class ControllerSettingsSection extends StatelessWidget {
       itemPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       constraints: const BoxConstraints(maxHeight: 400),
       onChanged: (int v) => vm.setSleepTime(v),
+    );
+  }
+
+  Widget _buildWakeFunction(BuildContext context, SettingsLoaded state, SettingsViewModel vm) {
+    final List<WakeFunctionOption> options = WakeFunctionOption.values;
+    final List<Zone> zones = state.zones;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        FusionAppText(
+          text: 'UPON WAKE FUNCTION',
+          style: Theme.of(context).textTheme.l1Regular.withColor(
+            context.colorScheme.textBody,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: <Widget>[
+            ...options.map((WakeFunctionOption option) {
+              final bool isZone = option == WakeFunctionOption.zone;
+              return Row(
+                children: <Widget>[
+                  _buildRadioOption<WakeFunctionOption>(
+                    context: context,
+                    label: option.label,
+                    value: option,
+                    groupValue: state.wakeFunction,
+                    onChanged: (WakeFunctionOption? v) {
+                      if (v != null) vm.setWakeFunction(v);
+                    },
+                  ),
+                  const SizedBox(
+                    width: 8,
+                  ),
+                  if (isZone && state.wakeFunction == WakeFunctionOption.zone)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: SizedBox(
+                        width: 160,
+                        child: FusionNeumorphicDropdown<String>(
+                          width: 172,
+                          value: state.wakeZoneId,
+                          hintText: 'Select zone',
+                          items: zones.map((Zone z) => z.id).toList(),
+                          itemLabelBuilder: (String id) => zones.firstWhere((Zone z) => z.id == id).name,
+                          onChanged: (String v) {
+                            if (state.wakeFunction == WakeFunctionOption.zone) {
+                              vm.setWakeZone(v);
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          height: 28,
+                          matchChildWidth: true,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(width: 32),
+                ],
+              );
+            }).toList(),
+          ],
+        ),
+      ],
     );
   }
 
@@ -208,29 +251,11 @@ class ControllerSettingsSection extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Container(
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isSelected ? activeColor : context.colorScheme.elevation4,
-                width: 2,
-              ),
-            ),
-            child:
-                isSelected
-                    ? Center(
-                      child: Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: activeColor,
-                        ),
-                      ),
-                    )
-                    : null,
+          FusionCheckbox(
+            semanticId: '',
+            onChanged: () => onChanged(value),
+            value: isSelected,
+            shape: BoxShape.circle,
           ),
           const SizedBox(width: 6),
           FusionAppText(

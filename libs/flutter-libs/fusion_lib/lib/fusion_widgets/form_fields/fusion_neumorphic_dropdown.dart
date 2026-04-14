@@ -15,14 +15,15 @@ class FusionNeumorphicDropdown<T> extends StatefulWidget {
     this.displayValue,
     this.height = 40,
     this.popupWidth,
-    this.matchChildWidth = true,
+    bool? matchChildWidth,
     this.borderRadius,
     this.child,
     this.popupOffset = const Offset(-1, 6),
     this.isItemEnabled,
     this.itemPadding,
     this.constraints,
-  });
+    this.color,
+  }) : matchChildWidth = matchChildWidth ?? (popupWidth == null);
 
   final String? displayValue;
   final Offset popupOffset;
@@ -42,6 +43,7 @@ class FusionNeumorphicDropdown<T> extends StatefulWidget {
   final Widget? child;
   final bool Function(T)? isItemEnabled;
   final EdgeInsets? itemPadding;
+  final Color? color;
 
   /// Optional constraints forwarded to the popup menu (e.g. max height for scrolling).
   final BoxConstraints? constraints;
@@ -107,7 +109,7 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
       popupOffset: widget.popupOffset,
       matchChildWidth: widget.matchChildWidth,
       isItemEnabled: widget.isItemEnabled,
-      itemPadding: widget.itemPadding ?? EdgeInsets.all(8.0),
+      itemPadding: widget.itemPadding,
       constraints: widget.constraints,
       itemBuilder: (context, item) {
         final bool isSelected = item == _selectedValue;
@@ -119,23 +121,18 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
           return Container(child: widget.itemBuilder!(context, item));
         }
 
-        return Center(
-          child: Container(
-            width: widget.width,
-            height: widget.height,
-            decoration: BoxDecoration(
-              color: isSelected ? context.colorScheme.primary.withAlpha(100) : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14,
-              ),
-              child: FusionAppText(
-                text: _getLabel(item),
-                style: context.textTheme.bodyMedium?.copyWith(
-                  color: isSelected ? context.colorScheme.primary : context.colorScheme.textPlaceholder,
-                ),
+        return Container(
+          width: widget.width,
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: FusionAppText(
+              text: _getLabel(item),
+              style: context.textTheme.bodyMedium?.copyWith(
+                color: isSelected ? context.colorScheme.primary : context.colorScheme.textPlaceholder,
               ),
             ),
           ),
@@ -149,7 +146,7 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
             height: widget.height,
             padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
-              color: context.colorScheme.elevation1,
+              color: widget.color ?? context.colorScheme.elevation1,
               borderRadius: widget.borderRadius ?? BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(color: context.colorScheme.elevation2, blurRadius: 1, offset: const Offset(-2, -3)),

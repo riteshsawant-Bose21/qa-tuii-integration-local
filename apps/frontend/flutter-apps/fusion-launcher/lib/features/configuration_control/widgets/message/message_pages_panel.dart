@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/MessageViewModel/message_state.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/MessageViewModel/message_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -15,9 +15,9 @@ class MessagePagesPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
-      builder: (BuildContext context, ConfigurationControlState state) {
-        if (state is! ConfigControlLoaded) return const SizedBox.shrink();
+    return BlocBuilder<MessageViewModel, MessageState>(
+      builder: (BuildContext context, MessageState state) {
+        if (state is! MessageLoaded) return const SizedBox.shrink();
 
         // Only checked players appear as pages
         final List<Source> pageItems = state.messagePlayers.where((Source s) => state.selectedMessagePlayerIds.contains(s.id)).toList();
@@ -51,7 +51,7 @@ class MessagePagesPanel extends StatelessWidget {
                                 return _PageRow(
                                   label: s.name,
                                   isActive: isActive,
-                                  onTap: () => context.read<ConfigurationControlViewmodel>().selectMessagePage(s.id),
+                                  onTap: () => context.read<MessageViewModel>().selectMessagePage(s.id),
                                 );
                               }).toList(),
                         ),
@@ -94,26 +94,18 @@ class _PageRow extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
-            Icon(
-              Icons.drag_indicator,
-              size: 14,
-              color: isActive ? context.colorScheme.primaryWhite : context.colorScheme.iconDefault,
-            ),
-            const SizedBox(width: 2),
-            Text(
-              ':',
-              style: TextStyle(
-                fontSize: 11,
-                color: isActive ? context.colorScheme.primaryWhite : context.colorScheme.textSecondary,
-              ),
+            FusionIcon.svg(
+              semanticId: 'message_page_row_icon',
+              "assets/svg/Four_Dots.svg",
+              size: 11,
+              color: context.colorScheme.iconWhite,
             ),
             const SizedBox(width: 6),
             Expanded(
               child: FusionAppText(
                 text: label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                style: Theme.of(context).textTheme.l1SemiBold.copyWith(
                   color: isActive ? context.colorScheme.primaryWhite : context.colorScheme.textPrimary,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
             ),

@@ -4,24 +4,26 @@ import 'package:fusion_launcher/features/configuration_control/widgets/schedule/
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Schedule tab — two-column layout.
-/// State is owned by [ConfigurationControlViewmodel] so it survives tab switches.
 class SchedulePanel extends StatelessWidget {
-  const SchedulePanel({super.key});
+  /// The name of the currently selected controller, shown as event subtitle.
+  final String controllerName;
+
+  const SchedulePanel({super.key, this.controllerName = ''});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       color: context.colorScheme.elevation1,
       padding: const EdgeInsets.all(16),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           /// Left: SCHEDULED ITEMS filter panel
-          Expanded(flex: 3, child: ScheduledItemsPanel()),
-          SizedBox(width: 16),
+          const Expanded(flex: 3, child: ScheduledItemsPanel()),
+          const SizedBox(width: 16),
 
           /// Right: VIRTUAL CONTROLLER events card
-          Expanded(flex: 5, child: ScheduleVcPanel()),
+          Expanded(flex: 5, child: ScheduleVcPanel(controllerName: controllerName)),
         ],
       ),
     );

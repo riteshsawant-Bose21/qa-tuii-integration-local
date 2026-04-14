@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/MessageViewModel/message_state.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/MessageViewModel/message_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -13,9 +13,9 @@ class MessagePlayersPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
-      builder: (BuildContext context, ConfigurationControlState state) {
-        if (state is! ConfigControlLoaded) return const SizedBox.shrink();
+    return BlocBuilder<MessageViewModel, MessageState>(
+      builder: (BuildContext context, MessageState state) {
+        if (state is! MessageLoaded) return const SizedBox.shrink();
 
         return Column(
           children: <Widget>[
@@ -32,7 +32,7 @@ class MessagePlayersPanel extends StatelessWidget {
 // ─── MESSAGE PLAYERS section ──────────────────────────────────────────────────
 
 class _MessagePlayersSection extends StatelessWidget {
-  final ConfigControlLoaded state;
+  final MessageLoaded state;
   const _MessagePlayersSection({required this.state});
 
   @override
@@ -53,7 +53,7 @@ class _MessagePlayersSection extends StatelessWidget {
                     ? Center(
                       child: FusionAppText(
                         text: 'No message players available',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        style: Theme.of(context).textTheme.l1Regular.copyWith(
                           color: context.colorScheme.textSecondary,
                         ),
                       ),
@@ -67,7 +67,7 @@ class _MessagePlayersSection extends StatelessWidget {
                         return _MessagePlayerItem(
                           player: player,
                           isChecked: isChecked,
-                          onToggle: () => context.read<ConfigurationControlViewmodel>().toggleMessagePlayerSelection(player.id),
+                          onToggle: () => context.read<MessageViewModel>().toggleMessagePlayerSelection(player.id),
                         );
                       },
                     ),
@@ -83,11 +83,7 @@ class _MessagePlayerItem extends StatelessWidget {
   final bool isChecked;
   final VoidCallback onToggle;
 
-  const _MessagePlayerItem({
-    required this.player,
-    required this.isChecked,
-    required this.onToggle,
-  });
+  const _MessagePlayerItem({required this.player, required this.isChecked, required this.onToggle});
 
   @override
   Widget build(BuildContext context) {
@@ -96,20 +92,15 @@ class _MessagePlayerItem extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
       child: Row(
         children: <Widget>[
-          GestureDetector(
-            onTap: onToggle,
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 10),
-              child: _FusionCheckbox(isChecked: isChecked),
-            ),
+          Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: FusionCheckbox(semanticId: 'message_player_item_checkbox', onChanged: onToggle, value: isChecked),
           ),
           Expanded(
             child: FusionAppText(
               text: player.name,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              style: Theme.of(context).textTheme.l1Regular.copyWith(
                 color: isChecked ? context.colorScheme.textPrimary : context.colorScheme.textSecondary,
-                fontWeight: isChecked ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
           ),
@@ -122,13 +113,13 @@ class _MessagePlayerItem extends StatelessWidget {
 // ─── MESSAGE LIST section ─────────────────────────────────────────────────────
 
 class _MessageListSection extends StatelessWidget {
-  final ConfigControlLoaded state;
+  final MessageLoaded state;
   const _MessageListSection({required this.state});
 
   @override
   Widget build(BuildContext context) {
     // Only show message lists for checked players
-    final List<Source> activePlayers = state.messagePlayers.where((Source s) => state.selectedMessagePlayerIds.contains(s.id)).toList();
+    final List<Source> activePlayers = state.checkedPlayers;
 
     return Container(
       decoration: BoxDecoration(
@@ -143,11 +134,14 @@ class _MessageListSection extends StatelessWidget {
           Expanded(
             child:
                 activePlayers.isEmpty
-                    ? Center(
-                      child: FusionAppText(
-                        text: 'Check a message player to see its messages',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: context.colorScheme.textSecondary,
+                    ? Padding(
+                      padding: const EdgeInsets.all(10.0),
+                      child: Center(
+                        child: FusionAppText(
+                          text: 'Check a message player to see its messages',
+                          style: Theme.of(context).textTheme.l1Regular.copyWith(
+                            color: context.colorScheme.textSecondary,
+                          ),
                         ),
                       ),
                     )
@@ -156,13 +150,13 @@ class _MessageListSection extends StatelessWidget {
                       itemCount: activePlayers.length,
                       itemBuilder: (BuildContext context, int index) {
                         final Source player = activePlayers[index];
-                        final List<MessageModel> messages = state.messagesPerPlayer[player.id] ?? <MessageModel>[];
-                        final Set<String> selectedIds = state.selectedMessageIdsPerPlayer[player.id] ?? <String>{};
+                        final List<MessageModel> messages = state.getMessagesForPlayer(player.id);
+                        final Set<String> selectedIds = state.getSelectedMessagesForPlayer(player.id);
                         return _PlayerMessageGroup(
                           player: player,
                           messages: messages,
                           selectedMessageIds: selectedIds,
-                          onToggle: (String messageId) => context.read<ConfigurationControlViewmodel>().toggleMessageSelection(player.id, messageId),
+                          onToggle: (String messageId) => context.read<MessageViewModel>().toggleMessageSelection(player.id, messageId),
                         );
                       },
                     ),
@@ -203,13 +197,20 @@ class _PlayerMessageGroup extends StatelessWidget {
             ),
           ),
         ),
+        Divider(
+          color: context.colorScheme.strokeLight,
+          indent: 12,
+          height: 0,
+          endIndent: 12,
+        ),
+
         // Message list for this player
         if (messages.isEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
             child: FusionAppText(
               text: 'No messages',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              style: Theme.of(context).textTheme.l1Regular.copyWith(
                 color: context.colorScheme.textSecondary,
               ),
             ),
@@ -233,11 +234,7 @@ class _MessageItem extends StatelessWidget {
   final bool isChecked;
   final VoidCallback onToggle;
 
-  const _MessageItem({
-    required this.message,
-    required this.isChecked,
-    required this.onToggle,
-  });
+  const _MessageItem({required this.message, required this.isChecked, required this.onToggle});
 
   @override
   Widget build(BuildContext context) {
@@ -251,43 +248,27 @@ class _MessageItem extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             child: Padding(
               padding: const EdgeInsets.only(right: 10),
-              child: _FusionCheckbox(isChecked: isChecked),
+              child: Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: FusionCheckbox(
+                  semanticId: 'message_list_item_checkbox',
+                  onChanged: onToggle,
+                  value: isChecked,
+                ),
+              ),
+              // child: _FusionCheckbox(isChecked: isChecked),
             ),
           ),
           Expanded(
             child: FusionAppText(
               text: message.name,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              style: Theme.of(context).textTheme.l1Regular.copyWith(
                 color: isChecked ? context.colorScheme.textPrimary : context.colorScheme.textSecondary,
               ),
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-// ─── Shared checkbox widget ───────────────────────────────────────────────────
-
-class _FusionCheckbox extends StatelessWidget {
-  final bool isChecked;
-  const _FusionCheckbox({required this.isChecked});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 16,
-      height: 16,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(3),
-        border: Border.all(
-          color: isChecked ? context.colorScheme.primaryColor : context.colorScheme.iconDefault,
-          width: 1.5,
-        ),
-        color: isChecked ? context.colorScheme.primaryColor : Colors.transparent,
-      ),
-      child: isChecked ? const Icon(Icons.check, size: 11, color: Colors.white) : null,
     );
   }
 }

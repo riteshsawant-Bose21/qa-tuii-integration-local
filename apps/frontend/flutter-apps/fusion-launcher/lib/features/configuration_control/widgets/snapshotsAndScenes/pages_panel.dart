@@ -1,26 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/snapshotViewModel/snapshot_state.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/snapshotViewModel/snapshot_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-/// Middle panel — PAGES:
-///
-/// • Checked scene sets → appear as page rows (row tap drives SNAPSHOT PAGE + VC).
-/// • Snapshot pages from the active scene set → ALWAYS shown regardless of checkbox state.
-/// • One item can be active at a time:
-///     - Scene-set row active only when selectedSnapshotPageId == null.
-///     - Snapshot-page row active when selectedSnapshotPageId matches.
-/// • Newly created snapshot page is auto-selected (via selectedSnapshotPageId in state).
+/// Middle panel — PAGES (snapshot/scene tab).
 class PagesPanel extends StatelessWidget {
   const PagesPanel({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
-      builder: (BuildContext context, ConfigurationControlState state) {
-        if (state is! ConfigControlLoaded) return const SizedBox.shrink();
+    return BlocBuilder<SnapshotViewModel, SnapshotState>(
+      builder: (BuildContext context, SnapshotState state) {
+        if (state is! SnapshotLoaded) return const SizedBox.shrink();
 
         // Checked scene sets (only these appear as scene-set rows)
         final List<SceneSetModel> selectedSets = state.sceneSets.where((SceneSetModel s) => state.selectedSceneSetIds.contains(s.id)).toList();
@@ -61,7 +54,7 @@ class PagesPanel extends StatelessWidget {
                               return _PageRow(
                                 label: s.name,
                                 isActive: isActive,
-                                onTap: () => context.read<ConfigurationControlViewmodel>().selectSceneSet(s.id),
+                                onTap: () => context.read<SnapshotViewModel>().selectSceneSet(s.id),
                               );
                             }),
 
@@ -71,7 +64,7 @@ class PagesPanel extends StatelessWidget {
                               return _PageRow(
                                 label: page.name,
                                 isActive: isActive,
-                                onTap: () => context.read<ConfigurationControlViewmodel>().selectSnapshotPage(page.id),
+                                onTap: () => context.read<SnapshotViewModel>().selectSnapshotPage(page.id),
                               );
                             }),
                           ],
@@ -118,24 +111,17 @@ class _PageRow extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
-            Icon(
-              Icons.drag_indicator,
-              size: 14,
-              color: isActive ? context.colorScheme.primaryWhite : context.colorScheme.iconDefault,
-            ),
-            const SizedBox(width: 2),
-            Text(
-              ':',
-              style: TextStyle(
-                fontSize: 11,
-                color: isActive ? context.colorScheme.primaryWhite : context.colorScheme.textSecondary,
-              ),
+            FusionIcon.svg(
+              semanticId: 'snapshot_and_scenes_page_row_icon',
+              "assets/svg/Four_Dots.svg",
+              size: 11,
+              color: context.colorScheme.iconWhite,
             ),
             const SizedBox(width: 6),
             Expanded(
               child: FusionAppText(
                 text: label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                style: Theme.of(context).textTheme.l1SemiBold.copyWith(
                   color: isActive ? context.colorScheme.primaryWhite : context.colorScheme.textPrimary,
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                 ),

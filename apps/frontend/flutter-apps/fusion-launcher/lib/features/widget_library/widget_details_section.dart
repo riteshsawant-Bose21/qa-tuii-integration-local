@@ -218,7 +218,6 @@ class _WidgetDetailsSectionState extends State<WidgetDetailsSection> {
   ) {
     return Container(
       width: double.infinity,
-      height: 500,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: context.colorScheme.elevation1,
@@ -3714,6 +3713,7 @@ const FusionSvgIcon(
         _buildWithCopy(
           context: context,
           preview: FusionKebabPopup(
+            semanticId: 'example1',
             onEdit: () => print('edit'),
             onDuplicate: () => print('duplicate'),
             onDelete: () => print('delete'),
@@ -3731,6 +3731,7 @@ const FusionSvgIcon(
         _buildWithCopy(
           context: context,
           preview: FusionKebabPopup(
+            semanticId: 'example2',
             onEdit: () => print('edit'),
             onDuplicate: () => print('duplicate'),
           ),

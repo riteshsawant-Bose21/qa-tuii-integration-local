@@ -56,6 +56,21 @@ extension ControllerService on ProjectService {
 
   void unassignZoneFromController({required String controllerId, required String zoneId}) =>
       relationships.unlink(RelationshipType.controllerAssignedZones, controllerId, zoneId);
+  // get assigned zone IDs for a controller, via controllerAssignedZones relationship
+  void getAssignedZonesForController(String controllerId) => relationships.getChildren(RelationshipType.controllerAssignedZones, controllerId);
+
+  // update assigned zones for a controller, replacing all existing assignments
+  void setAssignedZonesForController({required String controllerId, required Set<String> zoneIds}) {
+    final Set<String> existingZoneIds = Set<String>.from(
+      relationships.getChildren(RelationshipType.controllerAssignedZones, controllerId),
+    );
+    for (final String zoneId in existingZoneIds) {
+      relationships.unlink(RelationshipType.controllerAssignedZones, controllerId, zoneId);
+    }
+    for (final String zoneId in zoneIds) {
+      relationships.link(RelationshipType.controllerAssignedZones, controllerId, zoneId);
+    }
+  }
 
   // ─── Pages (controllerPages repo + controllerPages relationship) ───────────
 

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../../zone_function_settings/matrix_settings/matrix_settings.dart';
+import '../../../zone_function_settings/mix_settings/mix_settings.dart';
 import '../../../zone_function_settings/select_settings/select_settings.dart';
 
 class ZoneItemWidget extends StatefulWidget {
@@ -64,6 +68,8 @@ class _ZoneItemWidgetState extends State<ZoneItemWidget> {
   }
 
   Widget _buildZoneRow(BuildContext context) {
+    final ZoneFunctions? zoneFunction = serviceLocator<ProjectViewModel>().getZoneFunctionForZone(zoneId: widget.zone.id);
+
     return GestureDetector(
       onTap: _hasSubZones ? null : widget.onSelectZone,
       child: Container(
@@ -105,25 +111,34 @@ class _ZoneItemWidgetState extends State<ZoneItemWidget> {
             if (!_hasSubZones) const SizedBox(width: 8),
 
             /// Settings icon
+            /// Only show if it's a source select/mix/matrix function, as those have additional settings to configure
             GestureDetector(
               onTap: () {
-                showGeneralDialog(
-                  context: context,
-                  barrierDismissible: true,
-                  barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-                  barrierColor: Colors.black54,
-                  transitionDuration: const Duration(milliseconds: 200),
-                  pageBuilder: (BuildContext buildContext, _, __) {
-                    return SourceSelectAdditionalSettingsDialog(
-                      zoneID: widget.zone.id,
-                    );
-                  },
-                );
+                if (zoneFunction != null &&
+                    (zoneFunction.type == ZoneFunctionsType.sourceSelect || zoneFunction.type == ZoneFunctionsType.sourceSelectWithPriority)) {
+                  return SourceSelectAdditionalSettingsDialog.showDialog(
+                    context,
+                    zoneID: widget.zone.id,
+                  );
+                } else if (zoneFunction != null &&
+                    (zoneFunction.type == ZoneFunctionsType.sourceMix || zoneFunction.type == ZoneFunctionsType.sourceMixWithPriority)) {
+                  return SourceMixAdditionalSettingsDialog.showDialog(
+                    context,
+                    zoneID: widget.zone.id,
+                  );
+                } else if (zoneFunction != null &&
+                    (zoneFunction.type == ZoneFunctionsType.sourceMatrix || zoneFunction.type == ZoneFunctionsType.sourceMatrixWithPriority)) {
+                  return SourceMatrixAdditionalSettingsDialog.showDialog(
+                    context,
+                    zoneID: widget.zone.id,
+                  );
+                }
               },
-              child: FusionIcon.icon(
-                Icons.settings_outlined,
+              child: FusionIcon.svg(
+                semanticId: 'zone_item_setting_icon',
+                "assets/svg/Settings.svg",
                 size: 16,
-                color: context.colorScheme.iconDefault,
+                color: context.colorScheme.iconWhite,
               ),
             ),
           ],
@@ -134,49 +149,21 @@ class _ZoneItemWidgetState extends State<ZoneItemWidget> {
 
   Widget _buildZoneSelectionControl(BuildContext context) {
     if (widget.isProController) {
-      return GestureDetector(
-        onTap: widget.onToggleSelection,
-        child: Container(
-          width: 16,
-          height: 16,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(3),
-            border: Border.all(
-              color: widget.isSelected ? context.colorScheme.iconWhite : context.colorScheme.iconDefault,
-              width: 2,
-            ),
-            color: widget.isSelected ? context.colorScheme.iconWhite : Colors.transparent,
-          ),
-          child: widget.isSelected ? Icon(Icons.check, size: 12, color: context.colorScheme.black) : null,
-        ),
+      return FusionCheckbox(
+        semanticId: '',
+        value: widget.isSelected,
+        onChanged: () {
+          widget.onToggleSelection?.call();
+        },
       );
     } else {
-      return GestureDetector(
-        onTap: widget.onSelectZone,
-        child: Container(
-          width: 16,
-          height: 16,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: widget.isActiveZone ? context.colorScheme.iconWhite : context.colorScheme.iconDefault,
-              width: 2,
-            ),
-          ),
-          child:
-              widget.isActiveZone
-                  ? Center(
-                    child: Container(
-                      width: 9,
-                      height: 9,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: context.colorScheme.iconWhite,
-                      ),
-                    ),
-                  )
-                  : null,
-        ),
+      return FusionCheckbox(
+        semanticId: 'zone_control_item_checkbox',
+        value: widget.isSelected,
+        shape: BoxShape.circle,
+        onChanged: () {
+          widget.onSelectZone?.call();
+        },
       );
     }
   }
@@ -244,50 +231,18 @@ class _ZoneItemWidgetState extends State<ZoneItemWidget> {
   ) {
     if (widget.isProController) {
       /// checkbox style selection for pro controllers
-      return GestureDetector(
-        onTap: () => widget.onToggleSubZoneSelection?.call(subZone.id),
-        child: Container(
-          width: 16,
-          height: 16,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(3),
-            border: Border.all(
-              color: isSelected ? context.colorScheme.iconWhite : context.colorScheme.iconDefault,
-              width: 2,
-            ),
-            color: isSelected ? context.colorScheme.iconWhite : Colors.transparent,
-          ),
-          child: isSelected ? Icon(Icons.check, size: 12, color: context.colorScheme.textPrimary) : null,
-        ),
+      return FusionCheckbox(
+        value: isSelected,
+        semanticId: 'zone_item_subzone_checkbox',
+        onChanged: () => widget.onToggleSubZoneSelection?.call(subZone.id),
       );
     } else {
       /// radio style selection for non-pro controllers
-      return GestureDetector(
-        onTap: () => widget.onSelectSubZone?.call(subZone.id),
-        child: Container(
-          width: 16,
-          height: 16,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: isActive ? context.colorScheme.iconWhite : context.colorScheme.iconDefault,
-              width: 2,
-            ),
-          ),
-          child:
-              isActive
-                  ? Center(
-                    child: Container(
-                      width: 9,
-                      height: 9,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: context.colorScheme.iconWhite,
-                      ),
-                    ),
-                  )
-                  : null,
-        ),
+      return FusionCheckbox(
+        value: isActive,
+        shape: BoxShape.circle,
+        semanticId: 'zone_item_subzone_checkbox',
+        onChanged: () => widget.onSelectSubZone?.call(subZone.id),
       );
     }
   }

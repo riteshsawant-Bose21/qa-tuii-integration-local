@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/snapshotViewModel/snapshot_state.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/snapshotViewModel/snapshot_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 class ScenesSection extends StatelessWidget {
-  final ConfigControlLoaded state;
+  final SnapshotLoaded state;
   const ScenesSection({super.key, required this.state});
 
   @override
@@ -41,8 +41,7 @@ class ScenesSection extends StatelessWidget {
                         return _SceneSetItem(
                           sceneSet: sceneSet,
                           isChecked: isChecked,
-                          // Checkbox tap → toggles PAGES-panel membership only
-                          onToggle: () => context.read<ConfigurationControlViewmodel>().toggleSceneSetSelection(sceneSet.id),
+                          onToggle: () => context.read<SnapshotViewModel>().toggleSceneSetSelection(sceneSet.id),
                         );
                       },
                     ),
@@ -71,13 +70,9 @@ class _SceneSetItem extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
       child: Row(
         children: <Widget>[
-          GestureDetector(
-            onTap: onToggle,
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 10),
-              child: _FusionCheckbox(isChecked: isChecked),
-            ),
+          Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: FusionCheckbox(semanticId: 'scene_section_item_checkbox', value: isChecked, onChanged: onToggle),
           ),
           Expanded(
             child: FusionAppText(
@@ -90,28 +85,6 @@ class _SceneSetItem extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _FusionCheckbox extends StatelessWidget {
-  final bool isChecked;
-  const _FusionCheckbox({required this.isChecked});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 16,
-      height: 16,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(3),
-        border: Border.all(
-          color: isChecked ? context.colorScheme.primaryColor : context.colorScheme.iconDefault,
-          width: 1.5,
-        ),
-        color: isChecked ? context.colorScheme.primaryColor : Colors.transparent,
-      ),
-      child: isChecked ? Icon(Icons.check, size: 11, color: context.colorScheme.primaryWhite) : null,
     );
   }
 }

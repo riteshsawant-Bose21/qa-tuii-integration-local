@@ -10,6 +10,7 @@ class ControllerCard extends StatelessWidget {
   final bool isSelected;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
+  final VoidCallback? onEdit;
 
   const ControllerCard({
     super.key,
@@ -17,6 +18,7 @@ class ControllerCard extends StatelessWidget {
     this.isSelected = false,
     this.onTap,
     this.onDelete,
+    this.onEdit,
   });
 
   @override
@@ -76,40 +78,14 @@ class ControllerCard extends StatelessWidget {
                 ],
               ),
             ),
-            _buildMenuButton(context),
+            FusionKebabPopup(
+              semanticId: 'controller_card_kebab_menu',
+              onEdit: () => onEdit?.call(),
+              onDelete: () => onDelete?.call(),
+            ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildMenuButton(BuildContext context) {
-    return PopupMenuButton<String>(
-      icon: FusionIcon.icon(
-        Icons.more_vert,
-        size: 16,
-        color: context.colorScheme.iconDefault,
-      ),
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(),
-      itemBuilder:
-          (BuildContext context) => <PopupMenuEntry<String>>[
-            PopupMenuItem<String>(
-              value: 'delete',
-              child: Row(
-                children: <Widget>[
-                  Icon(Icons.delete_outline, size: 16, color: context.colorScheme.error),
-                  const SizedBox(width: 8),
-                  Text('Delete', style: TextStyle(color: context.colorScheme.error)),
-                ],
-              ),
-            ),
-          ],
-      onSelected: (String value) {
-        if (value == 'delete') {
-          onDelete?.call();
-        }
-      },
     );
   }
 

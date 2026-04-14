@@ -1,23 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/ScheduleViewModel/schedule_state.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/ScheduleViewModel/schedule_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Left panel — SCHEDULED ITEMS.
 ///
-/// Reads from and writes to [ConfigurationControlViewmodel] so state
-/// survives tab switches and is persisted on the controller model.
+/// Reads from and writes to [ScheduleViewModel].
 class ScheduledItemsPanel extends StatelessWidget {
   const ScheduledItemsPanel({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
-      builder: (BuildContext context, ConfigurationControlState state) {
-        if (state is! ConfigControlLoaded) return const SizedBox.shrink();
-        final ConfigurationControlViewmodel vm = context.read<ConfigurationControlViewmodel>();
+    return BlocBuilder<ScheduleViewModel, ScheduleState>(
+      builder: (BuildContext context, ScheduleState state) {
+        if (state is! ScheduleLoaded) return const SizedBox.shrink();
+        final ScheduleViewModel vm = context.read<ScheduleViewModel>();
 
         return Container(
           decoration: BoxDecoration(
@@ -39,34 +38,41 @@ class ScheduledItemsPanel extends StatelessWidget {
                       isChecked: state.showUpcoming,
                       onTap: vm.toggleShowUpcoming,
                     ),
+                    // ── Divder ──────────────────────────────────────────
                     const SizedBox(height: 8),
-
+                    Divider(
+                      color: context.colorScheme.strokeLight,
+                      height: 1,
+                      indent: 12,
+                      endIndent: 12,
+                    ),
+                    const SizedBox(height: 8),
                     // ── Filter mode radio buttons ────────────────────────
                     _RadioRow(
                       label: 'Show none',
-                      isSelected: state.scheduleDisplayMode == ScheduleDisplayMode.none,
-                      onTap: () => vm.setScheduleDisplayMode(ScheduleDisplayMode.none),
+                      isSelected: state.filterMode == ScheduleFilterMode.none,
+                      onTap: () => vm.setFilterMode(ScheduleFilterMode.none),
                     ),
                     _RadioRow(
                       label: 'Show all',
-                      isSelected: state.scheduleDisplayMode == ScheduleDisplayMode.all,
-                      onTap: () => vm.setScheduleDisplayMode(ScheduleDisplayMode.all),
+                      isSelected: state.filterMode == ScheduleFilterMode.all,
+                      onTap: () => vm.setFilterMode(ScheduleFilterMode.all),
                     ),
                     _RadioRow(
                       label: 'Show selected',
-                      isSelected: state.scheduleDisplayMode == ScheduleDisplayMode.selected,
-                      onTap: () => vm.setScheduleDisplayMode(ScheduleDisplayMode.selected),
+                      isSelected: state.filterMode == ScheduleFilterMode.selected,
+                      onTap: () => vm.setFilterMode(ScheduleFilterMode.selected),
                     ),
 
                     // ── Schedule checklist (only for "Show selected") ────
-                    if (state.scheduleDisplayMode == ScheduleDisplayMode.selected) ...<Widget>[
+                    if (state.filterMode == ScheduleFilterMode.selected) ...<Widget>[
                       const SizedBox(height: 4),
                       ...state.allSchedules.map((ScheduleConfig schedule) {
                         final bool isChecked = state.selectedScheduleIds.contains(schedule.id);
                         return _ScheduleCheckboxRow(
                           schedule: schedule,
                           isChecked: isChecked,
-                          onToggle: () => vm.toggleScheduleItemSelection(schedule.id),
+                          onToggle: () => vm.toggleScheduleSelection(schedule.id),
                         );
                       }),
                     ],
@@ -99,13 +105,12 @@ class _CheckboxRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
           children: <Widget>[
-            _FusionCheckbox(isChecked: isChecked),
+            FusionCheckbox(semanticId: 'schedule_item_show_upcoming_checkbox', value: isChecked, onChanged: onTap),
             const SizedBox(width: 10),
             FusionAppText(
               text: label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              style: Theme.of(context).textTheme.l1Regular.copyWith(
                 color: context.colorScheme.textPrimary,
-                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -133,13 +138,17 @@ class _RadioRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           children: <Widget>[
-            _RadioIndicator(isSelected: isSelected),
+            FusionCheckbox(
+              semanticId: 'schedule_item_show_checkbox',
+              value: isSelected,
+              onChanged: onTap,
+              shape: BoxShape.circle,
+            ),
             const SizedBox(width: 10),
             FusionAppText(
               text: label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              style: Theme.of(context).textTheme.l1Regular.copyWith(
                 color: isSelected ? context.colorScheme.textPrimary : context.colorScheme.textSecondary,
-                fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
               ),
             ),
           ],
@@ -167,7 +176,7 @@ class _ScheduleCheckboxRow extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(28, 6, 12, 6),
         child: Row(
           children: <Widget>[
-            _FusionCheckbox(isChecked: isChecked),
+            FusionCheckbox(semanticId: 'schedule_item_checkbox', onChanged: onToggle, value: isChecked),
             const SizedBox(width: 10),
             FusionAppText(
               text: schedule.name,
@@ -178,60 +187,6 @@ class _ScheduleCheckboxRow extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-// ─── Shared widgets ───────────────────────────────────────────────────────────
-
-class _FusionCheckbox extends StatelessWidget {
-  final bool isChecked;
-  const _FusionCheckbox({required this.isChecked});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 16,
-      height: 16,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(3),
-        border: Border.all(
-          color: isChecked ? context.colorScheme.primaryColor : context.colorScheme.iconDefault,
-          width: 1.5,
-        ),
-        color: isChecked ? context.colorScheme.primaryColor : Colors.transparent,
-      ),
-      child: isChecked ? const Icon(Icons.check, size: 11, color: Colors.white) : null,
-    );
-  }
-}
-
-class _RadioIndicator extends StatelessWidget {
-  final bool isSelected;
-  const _RadioIndicator({required this.isSelected});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 16,
-      height: 16,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: isSelected ? context.colorScheme.primaryColor : context.colorScheme.iconDefault,
-          width: 1.5,
-        ),
-      ),
-      child:
-          isSelected
-              ? Center(
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: context.colorScheme.primaryColor),
-                ),
-              )
-              : null,
     );
   }
 }

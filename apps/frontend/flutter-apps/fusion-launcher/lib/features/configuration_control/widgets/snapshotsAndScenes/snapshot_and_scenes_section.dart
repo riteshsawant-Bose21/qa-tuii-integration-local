@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_state.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/configuration_control_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/snapshotViewModel/snapshot_state.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/snapshotViewModel/snapshot_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/snapshotsAndScenes/scenes_section.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/snapshotsAndScenes/snapshot_page_section.dart';
 
@@ -16,9 +16,9 @@ class SnapshotAndScenesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
-      builder: (BuildContext context, ConfigurationControlState state) {
-        if (state is! ConfigControlLoaded) return const SizedBox.shrink();
+    return BlocBuilder<SnapshotViewModel, SnapshotState>(
+      builder: (BuildContext context, SnapshotState state) {
+        if (state is! SnapshotLoaded) return const SizedBox.shrink();
 
         return Column(
           children: <Widget>[
