@@ -104,7 +104,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   String? currentSelectedSubZoneId;
 
   /// Listening area selection mode flag
-  bool isInListeningAreaMode = false;
+  // bool isInListeningAreaMode = false;
   bool isInZoneSelectionMode = false;
 
   int currentDeviceTypeIndex = -1;
@@ -365,7 +365,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   }
 
   void exitSelectionModes() {
-    isInListeningAreaMode = false;
+    // isInListeningAreaMode = false;
     isInZoneSelectionMode = false;
     currentSelectedListeningAreaId = null;
     currentSelectedZoneId = null;
@@ -373,18 +373,18 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     updateProject();
   }
 
-  void enterZoneSelectionMode(Zone zone) {
-    isInListeningAreaMode = false;
-    isInZoneSelectionMode = true;
-    currentSelectedZoneId = zone.id;
-    currentSelectedListeningAreaId = null;
-    currentSelectedSubZoneId = null;
-    resetDeviceTypeIndex();
-    emit(ZoneSelectionMode(zone));
-  }
+  // void enterZoneSelectionMode(Zone zone) {
+  //   // isInListeningAreaMode = false;
+  //   isInZoneSelectionMode = true;
+  //   currentSelectedZoneId = zone.id;
+  //   currentSelectedListeningAreaId = null;
+  //   currentSelectedSubZoneId = null;
+  //   resetDeviceTypeIndex();
+  //   emit(ZoneSelectionMode(zone));
+  // }
 
   void enterSubZoneSelectionMode(SubZone subZone) {
-    isInListeningAreaMode = false;
+    // isInListeningAreaMode = false;
     isInZoneSelectionMode = true;
     currentSelectedSubZoneId = subZone.id;
     currentSelectedZoneId = null;
@@ -395,7 +395,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   void enterListeningAreaMode() {
     isInZoneSelectionMode = false;
-    isInListeningAreaMode = true;
+    // isInListeningAreaMode = true;
     currentSelectedZoneId = null;
     currentSelectedSubZoneId = null;
     resetDeviceTypeIndex();
@@ -431,7 +431,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   void changeDeviceTypeIndex(int index) {
     currentDeviceTypeIndex = index;
     isInZoneSelectionMode = false;
-    isInListeningAreaMode = false;
+    // isInListeningAreaMode = false;
     currentSelectedZoneId = null;
     currentSelectedSubZoneId = null;
     print("Device type index changed to $index");

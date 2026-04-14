@@ -266,19 +266,9 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
     return null;
   }
 
-  // set Listening area selection mode
-  void setListeningAreaSelectionMode(bool isInSelectionMode) {
-    isInListeningAreaMode = isInSelectionMode;
-    isInZoneSelectionMode = false;
-    currentSelectedZoneId = null;
-    resetDeviceTypeIndex();
-    updateProject();
-  }
-
   // set Zone selection mode
   void setZoneSelectionMode(bool isInSelectionMode) {
     isInZoneSelectionMode = isInSelectionMode;
-    isInListeningAreaMode = false;
     currentSelectedZoneId = null;
     resetDeviceTypeIndex();
     updateProject();

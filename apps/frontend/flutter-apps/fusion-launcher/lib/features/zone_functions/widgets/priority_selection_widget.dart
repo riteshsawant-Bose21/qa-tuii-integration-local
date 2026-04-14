@@ -59,30 +59,33 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
 
     final SizedBox child = SizedBox(
       width: 400,
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Container(
-                  padding: const EdgeInsets.all(16.0),
-                  width: double.infinity,
-                  alignment: Alignment.center,
-                  child: FusionAppText(
-                    text: "PRIORITY",
-                    style: Theme.of(context).textTheme.labelSmall,
+      child: SemanticHelper.container(
+        testId: SemanticHelper.createTestId(SemanticTypes.container, 'priority_selection'),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Container(
+                    padding: const EdgeInsets.all(16.0),
+                    width: double.infinity,
+                    alignment: Alignment.center,
+                    child: FusionAppText(
+                      text: "PRIORITY",
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
                   ),
-                ),
-
-                Divider(color: context.colorScheme.strokeLight, height: 0),
-
-                _buildReorderablePriorityWidgets(),
-              ],
+        
+                  Divider(color: context.colorScheme.strokeLight, height: 0),
+        
+                  _buildReorderablePriorityWidgets(),
+                ],
+              ),
             ),
-          ),
-          VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
-        ],
+            VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+          ],
+        ),
       ),
     );
 
