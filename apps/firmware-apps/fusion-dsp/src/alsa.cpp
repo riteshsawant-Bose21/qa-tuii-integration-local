@@ -200,6 +200,11 @@ std::mutex bluealsa_error_handler_mutex;
 void ignore_alsa_error(const char *file, int line, const char *function,
                        int err, const char *fmt, ...)
 {
+    (void)file;
+    (void)line;
+    (void)function;
+    (void)err;
+    (void)fmt;
 }
 
 int open_pcm(snd_pcm_t **alsa, const std::string &full_device_name,
