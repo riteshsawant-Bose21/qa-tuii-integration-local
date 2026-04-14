@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canvas_painter.dart';
 
-import '../fusion_image_painter.dart';
+import '../../fusion_image_painter.dart';
 
 class FloorPlanPainter extends FusionImagePainter {
   final bool showSpl;

@@ -93,6 +93,7 @@ class _MixScenesState extends State<MixScenes> {
                 onSelect: widget.onMixSceneSelect,
                 height: 32,
                 borderRadius: 8,
+                semanticId: 'scene_name',
               ),
             ),
 
