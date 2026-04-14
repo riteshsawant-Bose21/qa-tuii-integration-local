@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"fusion/internal/api"
 	"fusion/internal/persistence"
@@ -14,16 +13,6 @@ import (
 
 	json "github.com/goccy/go-json"
 )
-
-type taskPatchRequest struct {
-	Description *string              `json:"description,omitempty"`
-	CronExpr    *string              `json:"cron_expr,omitempty"`
-	StartAt     *time.Time           `json:"start_at,omitempty"`
-	EndAt       *time.Time           `json:"end_at,omitempty"`
-	Recurrence  *api.RecurringWindow `json:"recurrence,omitempty"`
-	Params      map[string]any       `json:"params,omitempty"`
-	Snapshot    *string              `json:"snapshot,omitempty"`
-}
 
 func (tm *TaskManager) CreateTask(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequirePost(w, r) {
@@ -108,7 +97,7 @@ func (tm *TaskManager) UpdateTaskHandler(w http.ResponseWriter, r *http.Request)
 	}
 	defer r.Body.Close()
 
-	var patch taskPatchRequest
+	var patch api.TaskPatchRequest
 	if err := json.Unmarshal(body, &patch); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 		return
