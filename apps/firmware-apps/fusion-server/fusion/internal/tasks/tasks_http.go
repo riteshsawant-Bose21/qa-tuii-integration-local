@@ -37,6 +37,10 @@ func (tm *TaskManager) CreateTask(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
+	task.ID = strings.TrimSpace(task.ID)
+	task.CronExpr = strings.TrimSpace(task.CronExpr)
+	task.Description = strings.TrimSpace(task.Description)
+
 	if task.ID == "" || task.CronExpr == "" || task.Description == "" {
 		http.Error(w, "Task ID, cron expression and description are required", http.StatusBadRequest)
 		return
