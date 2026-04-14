@@ -6,6 +6,8 @@ import 'package:fusion_launcher/features/configuration_control/widgets/zoneContr
 import 'package:fusion_launcher/features/configuration_control/widgets/zoneControl/virtual_controller_panel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../../../core/service_locator.dart';
+
 /// Panel displaying zone control content with zones and virtual controller
 class ZoneControlPanel extends StatelessWidget {
   const ZoneControlPanel({super.key});

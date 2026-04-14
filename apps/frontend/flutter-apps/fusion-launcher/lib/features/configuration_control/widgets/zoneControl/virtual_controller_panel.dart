@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/zoneControlViewmodel/zone_control_state.dart';
-import 'package:fusion_launcher/features/configuration_control/viewModel/zoneControlViewmodel/zone_control_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -27,67 +25,56 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
   void initState() {
     // TODO: implement initState
     final WallControllerConfig config = serviceLocator<ProjectViewModel>().getWallControllerConfig();
-    context.read<VirtualControllerViewModel>().loadZones(config.zones,
-        serviceLocator<ProjectViewModel>().virtualIP??""
-    );
-
+    context.read<VirtualControllerViewModel>().loadZones(config.zones, serviceLocator<ProjectViewModel>().virtualIP ?? "");
 
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ZoneControlViewModel, ZoneControlState>(
-      builder: (BuildContext context, ZoneControlState state) {
-        if (state is! ZoneControlLoaded) {
-          return const SizedBox.shrink();
-        }
+    return Container(
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation1,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: context.colorScheme.strokeLight,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          /// Header
+          const PanelSectionHeader(title: 'VIRTUAL CONTROLLER'),
 
-        return Container(
-          decoration: BoxDecoration(
-            color: context.colorScheme.elevation1,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: context.colorScheme.strokeLight,
-              width: 1,
-            ),
+          /// Content
+          Expanded(
+            child: _buildContent(context),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              /// Header
-              const PanelSectionHeader(title: 'VIRTUAL CONTROLLER'),
-
-              /// Content
-              Expanded(
-                child: _buildContent(context, state),
-              ),
-            ],
-          ),
-        );
-      },
+        ],
+      ),
     );
   }
 
-  Widget _buildContent(BuildContext context, ZoneControlLoaded state) {
-    final Zone? selectedZone =
-        state.selectedZoneId != null
-            ? state.zones.firstWhere(
-              (Zone z) => z.id == state.selectedZoneId,
-              orElse: () => state.zones.isNotEmpty ? state.zones.first : Zone(name: 'No Zone'),
-            )
-            : (state.zones.isNotEmpty ? state.zones.first : null);
-
-    if (selectedZone == null) {
-      return Center(
-        child: FusionAppText(
-          text: 'No zone selected',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: context.colorScheme.textSecondary,
-          ),
-        ),
-      );
-    }
+  Widget _buildContent(BuildContext context) {
+    // final Zone? selectedZone =
+    //     state.selectedZoneId != null
+    //         ? state.zones.firstWhere(
+    //           (Zone z) => z.id == state.selectedZoneId,
+    //           orElse: () => state.zones.isNotEmpty ? state.zones.first : Zone(name: 'No Zone'),
+    //         )
+    //         : (state.zones.isNotEmpty ? state.zones.first : null);
+    //
+    // if (selectedZone == null) {
+    //   return Center(
+    //     child: FusionAppText(
+    //       text: 'No zone selected',
+    //       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+    //         color: context.colorScheme.textSecondary,
+    //       ),
+    //     ),
+    //   );
+    // }
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -103,10 +90,7 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
               width: 1,
             ),
           ),
-          child: VirtualController(onSelected: (){
-
-          })
-
+          child: VirtualController(onSelected: () {}),
 
           // Column(
           //   mainAxisSize: MainAxisSize.min,

@@ -93,10 +93,10 @@ class VirtualControlSection extends StatelessWidget {
             suffixIcon: Icons.print_outlined,
             style: FusionAppButtonStyle.primary,
             onPressed: () {
-              // final WallControllerConfig config = serviceLocator<ProjectViewModel>().getWallControllerConfig();
-              // final String prettyJson = const JsonEncoder.withIndent('  ').convert(config.toJson());
-              // debugPrint('─── WallControllerConfig JSON ───');
-              // debugPrint(prettyJson);
+              final WallControllerConfig config = serviceLocator<ProjectViewModel>().getWallControllerConfig();
+              final String prettyJson = const JsonEncoder.withIndent('  ').convert(config.toJson());
+              debugPrint('─── WallControllerConfig JSON ───');
+              debugPrint(prettyJson);
             },
           ),
         ],
