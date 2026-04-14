@@ -19,15 +19,14 @@ import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 
 /// Virtual Control section — shows a QR code for mobile virtual wall controller access
 class VirtualControlSection extends StatelessWidget {
-  final String? controllerUrl;
   final String? controllerId;
 
-  const VirtualControlSection({super.key, this.controllerUrl, this.controllerId});
+  const VirtualControlSection({super.key, this.controllerId});
 
   String get _qrData => jsonEncode(<String, String>{
     "vip": serviceLocator<ProjectViewModel>().virtualIP ?? "192.168.1.110",
-    // "controller_id": state.selectedControllerId ?? "No Controller ID",
-    "controller_id": "CTRL1762958340064766236",
+    "controller_id": controllerId ?? "",
+    // "controller_id": "CTRL1762958340064766236",
   });
 
   Future<void> _printQr(BuildContext context) async {
