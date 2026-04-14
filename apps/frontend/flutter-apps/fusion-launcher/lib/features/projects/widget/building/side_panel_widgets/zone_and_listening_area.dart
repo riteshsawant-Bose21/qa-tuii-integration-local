@@ -12,6 +12,26 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/widgets/color_selector_popup.dart';
 
+/// Get listening areas that are completely unassigned (not in any zone or subzone)
+List<ListeningArea> getCompletelyUnassignedListeningAreas() {
+  final List<ListeningArea> allListeningAreas = serviceLocator<ProjectViewModel>().getAllListeningAreas();
+  final Set<String> assignedIds = <String>{};
+
+  // Collect all LAs assigned to any zone
+  for (final Zone z in serviceLocator<ProjectViewModel>().getAllZones()) {
+    final List<ListeningArea> zoneAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: z.id);
+    assignedIds.addAll(zoneAreas.map((ListeningArea la) => la.id));
+  }
+
+  // Collect all LAs assigned to any subzone
+  for (final SubZone sz in serviceLocator<ProjectViewModel>().getAllSubZones()) {
+    final List<ListeningArea> subZoneAreas = serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(subZoneId: sz.id);
+    assignedIds.addAll(subZoneAreas.map((ListeningArea la) => la.id));
+  }
+
+  return allListeningAreas.where((ListeningArea la) => !assignedIds.contains(la.id)).toList();
+}
+
 class ZoneAndListeningAreaPanel extends StatefulWidget {
   final FloorCanvasController floorCanvasController;
 
@@ -417,27 +437,11 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                     items.add(
                                       PopupMenuItem<String>(
                                         enabled: false,
+                                        padding: const EdgeInsets.only(),
                                         child: SemanticHelper.container(
                                           testId: SemanticHelper.createTestId(SemanticTypes.container, "add_listening_area_menu_item_$index"),
                                           child: SelectListeningAreaPopupButton(
                                             zoneId: zone.id,
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: <Widget>[
-                                                Icon(
-                                                  Icons.add,
-                                                  size: 16,
-                                                  color: context.colorScheme.iconWhite,
-                                                ),
-                                                const SizedBox(width: 8),
-                                                FusionAppText(
-                                                  text: 'Select Listening Areas',
-                                                  style: context.textTheme.bodySmall?.copyWith(
-                                                    color: context.colorScheme.textPrimary,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
                                           ),
                                         ),
                                       ),
@@ -1627,27 +1631,12 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                   }
                                 },
                                 itemBuilder:
-                                    (
-                                      BuildContext context,
-                                    ) => <PopupMenuEntry<String>>[
+                                    (BuildContext context) => <PopupMenuEntry<String>>[
                                       PopupMenuItem<String>(
-                                        value: 'select_listening_areas_subzone',
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: <Widget>[
-                                            Icon(
-                                              Icons.add,
-                                              size: 16,
-                                              color: context.colorScheme.textPrimary,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            FusionAppText(
-                                              text: 'Select Listening Areas',
-                                              style: context.textTheme.bodySmall?.copyWith(
-                                                color: context.colorScheme.textPrimary,
-                                              ),
-                                            ),
-                                          ],
+                                        enabled: false,
+                                        child: SelectListeningAreaPopupButton(
+                                          zoneId: zone.id,
+                                          subZoneId: subZone.id,
                                         ),
                                       ),
                                       const PopupMenuDivider(height: 0),
@@ -2137,12 +2126,10 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
 }
 
 class SelectListeningAreaPopupButton extends StatelessWidget {
-  final Widget child;
   final String zoneId;
   final String? subZoneId;
   const SelectListeningAreaPopupButton({
     super.key,
-    required this.child,
     required this.zoneId,
     this.subZoneId,
   });
@@ -2151,10 +2138,29 @@ class SelectListeningAreaPopupButton extends StatelessWidget {
     assert(subZoneId != null || zoneId.isNotEmpty, "Either subZoneId or zoneId must be provided");
     assert(subZoneId == null || (subZoneId != null && zoneId.isNotEmpty), "If subZoneId is provided, zoneId must also be provided");
 
+    // Get only completely unassigned listening areas (not in any zone or subzone)
+    final List<ListeningArea> availableListeningAreas = getCompletelyUnassignedListeningAreas();
+
     return PopupMenuButton<String>(
-      child: child,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(
+            Icons.add,
+            size: 16,
+            color: context.colorScheme.iconWhite,
+          ),
+          const SizedBox(width: 8),
+          FusionAppText(
+            text: 'Select Listening Areas',
+            style: context.textTheme.bodySmall?.copyWith(
+              color: context.colorScheme.textPrimary,
+            ),
+          ),
+        ],
+      ),
       itemBuilder: (BuildContext context) {
-        return serviceLocator<ProjectViewModel>().getAllListeningAreas().map(
+        return availableListeningAreas.map(
           (ListeningArea area) {
             return PopupMenuItem<String>(
               onTap: () {
@@ -2169,14 +2175,12 @@ class SelectListeningAreaPopupButton extends StatelessWidget {
                     zoneId: zoneId,
                   );
                 }
+                Navigator.of(context).pop();
               },
               child: Text(area.name),
             );
           },
         ).toList();
-      },
-      onSelected: (String areaId) {
-        // Handle selection
       },
     );
   }
