@@ -5,6 +5,10 @@
 
 set -euo pipefail
 
+log_step() {
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
+}
+
 ############################################
 # Help
 ############################################
@@ -60,27 +64,41 @@ if [[ -z "$instances" ]]; then
     exit 0
 fi
 
-echo "Restarting fusion-server on instances with prefix '$PREFIX'..."
+log_step "Step 1/2: Found matching instances for prefix '$PREFIX'"
+for instance in $instances; do
+    echo "  - $instance"
+done
+echo
+log_step "Step 2/2: Restarting fusion-server on each instance"
 echo
 
 ############################################
 # Restart service on each instance
 ############################################
 for instance in $instances; do
-    echo "→ Instance: $instance"
+    log_step "Instance '$instance': starting"
 
-    multipass exec "$instance" -- sudo bash -c "
-        set -e
-        echo '  Stopping fusion-server...'
-        systemctl stop fusion-server || true
+    multipass exec "$instance" -- bash -c "
+        set -euo pipefail
+        echo '  [1/4] Verifying passwordless sudo access'
+        if ! sudo -n true 2>/dev/null; then
+            echo '  ERROR: passwordless sudo is not configured for this user.'
+            echo '  Run: sudo visudo -f /etc/sudoers.d/99-fusion-nopasswd'
+            echo '  Add: <username> ALL=(ALL) NOPASSWD: /bin/systemctl, /usr/bin/systemctl'
+            exit 1
+        fi
 
-        echo '  Starting fusion-server...'
-        systemctl start fusion-server
+        echo '  [2/4] Stopping fusion-server (ignore if already stopped)'
+        sudo -n systemctl stop fusion-server || true
 
-        echo '  Checking status:'
-        systemctl status fusion-server --no-pager || true
+        echo '  [3/4] Starting fusion-server'
+        sudo -n systemctl start fusion-server
+
+        echo '  [4/4] Checking status'
+        sudo -n systemctl status fusion-server --no-pager || true
     "
 
+    log_step "Instance '$instance': completed"
     echo
 done
 

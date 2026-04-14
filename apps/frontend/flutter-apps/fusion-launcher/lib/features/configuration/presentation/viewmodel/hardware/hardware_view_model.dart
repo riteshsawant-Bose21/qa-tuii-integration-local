@@ -11,6 +11,8 @@ import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/endpoints.dart';
 import 'package:fusion_lib/product_data/models/speaker_product.dart';
 
+import '../../../../wiring_design/usecase/auto_wiring.dart';
+
 extension HardwareViewModel on ProjectViewModel {
   //get Hardware by id
   HardwareComponent? getHardware({required String hardwareId}) {
@@ -90,6 +92,19 @@ extension HardwareViewModel on ProjectViewModel {
             sourceId: hardware.id,
             autoSave: false,
           );
+        }
+      }
+
+      if (hardware is! Speaker && hardware is! HardwareRack) {
+        final List<WiringConnectionModel> newConnections = AutoWiringUseCase().autoWireForHardware(
+          component: hardware,
+          allComponents: hardwareComponents,
+          circuits: circuits,
+          existingConnections: getAllWiringConnections(),
+        );
+
+        for (final WiringConnectionModel connection in newConnections) {
+          addWiringConnection(connection: connection, autoSave: false);
         }
       }
       if (autoSave) {
@@ -368,7 +383,7 @@ extension HardwareViewModel on ProjectViewModel {
       final int? productId = speaker.productId;
       if (productId == null) return true;
 
-      final SpeakerProduct? product = catalogSpeakers.where((SpeakerProduct p) => p.id == productId).firstOrNull;
+      final SpeakerProduct? product = catalogSpeakers.where((SpeakerProduct p) => p.productId == productId).firstOrNull;
       return !(product?.isSubwoofer ?? false);
     }).toList();
   }
@@ -392,7 +407,7 @@ extension HardwareViewModel on ProjectViewModel {
 
     final Speaker referenceSpeaker = targetSpeakers.first;
 
-    final SpeakerProduct? speakerProduct = catalogSpeakers.where((SpeakerProduct p) => p.id == referenceSpeaker.productId).firstOrNull;
+    final SpeakerProduct? speakerProduct = catalogSpeakers.where((SpeakerProduct p) => p.productId == referenceSpeaker.productId).firstOrNull;
     final double coverageAngle = _resolveCoverageAngle(speakerProduct);
 
     final ListeningAreaRoomBounds bounds = listeningArea.getBoundsForVertices();
@@ -729,7 +744,7 @@ extension HardwareViewModel on ProjectViewModel {
     return Speaker(
       locationEntity: locationEntity,
       name: product.modelName,
-      productId: product.id,
+      productId: product.productId,
       pos: null,
       zAxis: 300.0,
       speakerSKU: product.modelName,
@@ -1041,8 +1056,8 @@ extension HardwareViewModel on ProjectViewModel {
         return currentImagePath;
       }
       final List<SpeakerProduct> speaker = serviceLocator<ProductQueryViewModel>().speakers;
-      final SpeakerProduct hardware = speaker.firstWhere((SpeakerProduct element) => element.id == productId);
-      return serviceLocator<ProductQueryViewModel>().getImagePath(hardware.assets.assets.values.first.first);
+      final SpeakerProduct hardware = speaker.firstWhere((SpeakerProduct element) => element.productId == productId);
+      return serviceLocator<ProductQueryViewModel>().getProductImage(hardware.productId);
     } catch (e) {
       return null;
     }

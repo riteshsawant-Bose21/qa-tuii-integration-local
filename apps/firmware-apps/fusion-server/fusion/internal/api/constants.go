@@ -1,5 +1,7 @@
 package api
 
+import "os"
+
 import "time"
 
 const (
@@ -16,6 +18,7 @@ const (
 	FusionVersion   = "_fusion_version"
 	FusionMessageID = "_fusion_msg_id"
 	FusionOperation = "_fusion_op"
+	FusionSentAtNS  = "_fusion_sent_at_ns"
 
 	HTTPTimeout       = 5 * time.Second
 	HTTPUploadTimeout = 30 * time.Second
@@ -34,19 +37,28 @@ const (
 
 	SnapshotIDKey = "snapshot_id"
 
+	VIPHighPriority        = "high"
+	VIPvrrpHighPriority    = 120
+	VIPDefaultPriority     = "default"
+	VIPvrrpDefaultPriority = 100
+	VIPLowPriority         = "low"
+	VIPvrrpLowPriority     = 90
+
 	// WS Request types (client -> server)
-	WSMsgTypeDevices            = "devices"
-	WSMsgTypeDeviceByID         = "device_by_id"
-	WSMsgTypeUpdateDeviceInfo   = "update_device_info"
-	WSMsgTypeConfiguration      = "config"
-	WSMsgTypePatchConfiguration = "patch_config"
-	WSMsgTypeUnsubscribeConfig  = "unsubscribe_config"
-	WSMsgTypeUnsubscribeDevices = "unsubscribe_devices"
-	WSMsgTypePing               = "ping"
-	WSMsgTypePong               = "pong"
-	WSMsgTypeError              = "error"
-	WSMsgTypeStartUpdate        = "start_update"
-	WSMsgTypeUpdateProgress     = "update_progress"
+	WSMsgTypeDevices             = "devices"
+	WSMsgTypeDeviceByID          = "device_by_id"
+	WSMsgTypeUpdateDeviceInfo    = "update_device_info"
+	WSMsgTypeConfiguration       = "config"
+	WSMsgTypePatchConfiguration  = "patch_config"
+	WSMsgTypeUnsubscribeConfig   = "unsubscribe_config"
+	WSMsgTypeUnsubscribeDevices  = "unsubscribe_devices"
+	WSMsgTypePing                = "ping"
+	WSMsgTypePong                = "pong"
+	WSMsgTypeError               = "error"
+	WSMsgTypeStartUpdate         = "start_update"
+	WSMsgTypeUpdateProgress      = "update_progress"
+	WSMsgTypeSwUpdateInfo        = "sw_update_info"
+	WSMsgTypeListSoftwareUpdates = "list_sw_update_files"
 
 	// WS event types (server -> client)
 	WSMsgTypeDeviceUpdate = "device_update"
@@ -106,16 +118,24 @@ const (
 	UDPPort            = "7947"
 )
 
-const (
-	AudioFilesLocation      = "/var/lib/fusion/audio"
-	DefaultIdentityFilePath = "/var/lib/device-identity/"
+var (
+	AudioFilesLocation      = getenvDefault("FUSION_AUDIO_DIR", "/var/lib/fusion/audio")
+	DefaultIdentityFilePath = getenvDefault("FUSION_IDENTITY_DIR", "/var/lib/device-identity/")
 	DefaultCAFileName       = "AmazonRootCA1.pem"
 	DefaultCSRFileName      = "device.csr"
 	DefaultCertFileName     = "device.x509.cert"
 	DefaultKeyFileName      = "device.key"
 	SoftwareUpdateInfoPath  = "/etc/buildinfo"
+	SwUpdateInfoPath        = "/etc/swupdate-status"
 	SerialPath              = "/sys/firmware/devicetree/base/serial-number"
 )
+
+func getenvDefault(key string, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
 
 // RECOVERY_STATUS enum values from SWUpdate
 const (

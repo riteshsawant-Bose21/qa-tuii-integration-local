@@ -107,10 +107,10 @@ func (c *Cluster) getDeviceInfoLocal() api.DeviceInfo {
 	}
 
 	deviceInfo := api.DeviceInfo{
-		Id:                       id,
-		Name:                     name,
-		Location:                 location,
 		Address:                  c.appConfig.BindAddr,
+		Id:                       id,
+		Location:                 location,
+		Name:                     name,
 		ModelName:                utils.GetModelName(),
 		SerialNumber:             utils.GetSerialNumber(),
 		SoftwareUpdateVersion:    utils.GetSoftwareUpdateVersion(),
@@ -121,6 +121,7 @@ func (c *Cluster) getDeviceInfoLocal() api.DeviceInfo {
 		FusionMonorepoCommitHash: utils.GetCommitHash(),
 		JenkinsBuildNumber:       utils.GetJenkinsBuildNumber(),
 		PreReleaseTag:            utils.GetPreReleaseTag(),
+		VrrpPriority:             c.getKeepalivedPriority(),
 	}
 
 	return deviceInfo

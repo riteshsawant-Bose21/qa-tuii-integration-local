@@ -5,7 +5,7 @@ import 'product_asset.dart';
 /// Represents an accessory product from the product catalog API.
 /// Field names follow the README specification.
 class AccessoryProduct {
-  final int id;
+  final int productId;
   final ProductAsset assets;
   final String modelName;
   final String modelFamily;
@@ -17,7 +17,7 @@ class AccessoryProduct {
   final bool isFusionCompatible;
 
   const AccessoryProduct({
-    required this.id,
+    required this.productId,
     required this.assets,
     required this.modelName,
     required this.modelFamily,
@@ -30,11 +30,10 @@ class AccessoryProduct {
   });
 
   factory AccessoryProduct.fromJson(Map<String, dynamic> json) {
-    final specs = json;
-    //['specifications'] as Map<String, dynamic>? ?? {};
+    final specs = json['specifications'] as Map<String, dynamic>? ?? {};
 
     return AccessoryProduct(
-      id: (json['id'] as num?)?.toInt() ?? 0,
+      productId: (json['product_id'] as num?)?.toInt() ?? 0,
       assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?, productType: 'accessory'),
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
@@ -48,7 +47,7 @@ class AccessoryProduct {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
+    'product_id': productId,
     'assets': assets.toAssetList(),
     'model_name': modelName,
     'model_family': modelFamily,
@@ -63,5 +62,5 @@ class AccessoryProduct {
   };
 
   @override
-  String toString() => 'AccessoryProduct(id: $id, modelName: $modelName)';
+  String toString() => 'AccessoryProduct(productId: $productId, modelName: $modelName)';
 }

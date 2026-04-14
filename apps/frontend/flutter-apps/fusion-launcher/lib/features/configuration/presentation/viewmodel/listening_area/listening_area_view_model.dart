@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart' show Color;
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../project_view_model.dart';
@@ -80,6 +81,17 @@ extension ListeningAreaViewModel on ProjectViewModel {
   Zone? getZonesForListeningArea({required String areaId}) {
     try {
       return projectManager.getZoneForListeningArea(areaId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get zones for listening area: $e");
+      return null;
+    }
+  }
+
+  Color? getZoneColorForLA({required String areaId}) {
+    try {
+      final SubZone? subZone = projectManager.getSubZoneForListeningArea(areaId);
+      if (subZone != null) return projectManager.getZoneForSubZone(subZoneId: subZone.id).color;
+      return projectManager.getZoneForListeningArea(areaId)?.color;
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to get zones for listening area: $e");
       return null;

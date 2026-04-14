@@ -21,7 +21,6 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
   }) {
     isFromBuildingPage = fromBuildingPage;
     this.onSaved = onSaved;
-
     if (isFromBuildingPage) {
       final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
       final ListeningArea? currentSelectedListeningArea = projectViewModel.getCurrentSelectedListeningArea();
@@ -29,6 +28,22 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
         emit(state.copyWith(selectedListeningArea: currentSelectedListeningArea));
       }
     }
+  }
+
+  void setSelectedStream(Aes67Config stream) {
+    emit(state.copyWith(selectedStream: stream));
+  }
+
+  void setSelectedMonoChannel(int channel) {
+    emit(state.copyWith(selectedMonoChannel: channel));
+  }
+
+  void setSelectedLeftChannel(int channel) {
+    emit(state.copyWith(selectedLeftChannel: channel));
+  }
+
+  void setSelectedRightChannel(int channel) {
+    emit(state.copyWith(selectedRightChannel: channel));
   }
 
   void setSourceSectionType(SourceSectionType sourceSectionType) {
@@ -48,7 +63,9 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
   void setSelectedListeningArea(ListeningArea listeningArea) => emit(state.copyWith(selectedListeningArea: listeningArea));
 
   void setSelectedConnectionType(SourceConnectionType type) => emit(state.copyWith(selectedConnectionType: type));
+
   void setSignalType(SignalType signalType) => emit(state.copyWith(selectedSignalType: signalType));
+
   void setSelectedSourceName(String sourceName) => emit(state.copyWith(selectedSourceName: sourceName));
 
   List<SignalType> get signalTypes {
@@ -128,7 +145,9 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
     if (state.selectedListeningArea == null) return FusionToast.error(context, message: "Please select a location");
 
     // if connection location is not selected
-    if (state.selectedConnectionType == null) return FusionToast.error(context, message: "Please select a connection type");
+    if (selectedSources.first == SourceType.paging && state.selectedConnectionType == null) {
+      return FusionToast.error(context, message: "Please select a connection type");
+    }
 
     // Save: add selected sources to chosen listening areas
     final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
