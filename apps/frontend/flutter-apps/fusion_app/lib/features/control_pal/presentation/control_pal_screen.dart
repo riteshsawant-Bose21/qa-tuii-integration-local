@@ -87,7 +87,7 @@ class _ControlPalScreenState<T> extends State<ControlPalScreen> {
             context,
             Routes.zoneVolumeControlPage,
           );
-        });
+        }, isDesignMode: false,);
       case ControlPalTab.snapshots:
         return   SnapshotsScreen();
       case ControlPalTab.events:

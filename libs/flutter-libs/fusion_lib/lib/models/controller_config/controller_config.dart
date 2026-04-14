@@ -26,10 +26,10 @@ class WallControllerConfig {
   };
 
   factory WallControllerConfig.fromJson(Map<String, dynamic> json) {
-  //  final Map<String, dynamic> inner = Map<String, dynamic>.from(json['wall_controller_config'] as Map);
+   final Map<String, dynamic> inner = Map<String, dynamic>.from(json['wall_controller_config'] as Map);
     return WallControllerConfig(
-      controllers: (json['controllers'] as List<dynamic>?)?.map((e) => WallController.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
-      zones: (json['zones'] as List<dynamic>?)?.map((e) => WallZone.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
+      controllers: (inner['controllers'] as List<dynamic>?)?.map((e) => WallController.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
+      zones: (inner['zones'] as List<dynamic>?)?.map((e) => WallZone.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
     );
   }
 }

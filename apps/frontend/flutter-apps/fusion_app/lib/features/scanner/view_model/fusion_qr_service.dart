@@ -13,13 +13,13 @@ class FusionQRService {
 
 
   /// Login
-  Future<ResponseCallback<SchemaModel>> getSchema(vipAddress) async {
+  Future<ResponseCallback<WallControllerConfig>> getSchema(vipAddress) async {
 
-    ResponseCallback<SchemaModel> response  = await networkClient.get(
+    ResponseCallback<WallControllerConfig> response  = await networkClient.get(
         api: FusionApiEndpoint.fusionValue,
         isSecure: false,
         baseUrlToOverride: vipAddress,
-        fromJson: (dynamic json) => SchemaModel.fromJson(json),
+        fromJson: (dynamic json) => WallControllerConfig.fromJson(json),
     );
     return response;
   }

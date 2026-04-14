@@ -88,26 +88,25 @@ class QrScannerViewModel extends Cubit<QrScannerState> {
 
 
       emit(QrConnecting());
-        ResponseCallback<SchemaModel> model = await _qrService.getSchema(details.vip);
+        ResponseCallback<WallControllerConfig> model = await _qrService.getSchema(details.vip);
 
         if(model.success) {
           FusionLogger.log(
             tag: LogTag.debug,
-            message: 'Schema retrieved: ${model.data!}',
+            message: 'Schema retrieved: ${model.data!.toJson()!}',
           );
           final List<String> zoneIds = [];
 
-          SchemaModel schemaModel = model.data!;
+          WallControllerConfig schemaModel = model.data!;
 
 
-          WallController? controller = schemaModel.wallControllerConfig!
-              .controllers?.firstWhere((ctrl) => ctrl.id == details.configId);
+          WallController? controller = schemaModel.controllers.firstWhere((ctrl) => ctrl.id == details.configId);
 
           if (controller != null) {
             zoneIds.addAll(controller.zoneIds ?? []);
           }
 
-          for (WallZone item in schemaModel.wallControllerConfig?.zones ?? []) {
+          for (WallZone item in schemaModel.zones ?? []) {
             WallZone? zone;
             for (var id in zoneIds) {
               if (id == item.id) {

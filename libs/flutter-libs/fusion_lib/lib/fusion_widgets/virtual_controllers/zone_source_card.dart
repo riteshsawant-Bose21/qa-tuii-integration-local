@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_widgets/virtual_controllers/controller_meter_painter.dart';
+import 'package:fusion_lib/fusion_widgets/virtual_controllers/volume_meter_painter.dart';
 
 class ZoneSourceCard extends StatelessWidget {
   final String title;
@@ -102,12 +103,24 @@ class ZoneSourceCard extends StatelessWidget {
                   child: Container(
                     height: 30,
                     child :CustomPaint(
-                      painter: ControllerAudioMeterPainter(
+                      painter:
+                    // VolumeMeterPainterBG(
+                    //   value: volume.toDouble(),
+                    //   trackColor: context.colorScheme.elevation2,
+                    //   gradientColors: [
+                    //   context.colorScheme.primary,
+                    //   context.colorScheme.iconWhite,
+                    //   ],
+                    //   )
+
+
+                      ControllerAudioMeterPainter(
                       currentValue: volume.toDouble(),
                       minDb: 0,
                       maxDb: 100,
                       trackColor:context.colorScheme.elevation2
-                    )),
+                    )
+                     ),
                   ),
                 ),
 
