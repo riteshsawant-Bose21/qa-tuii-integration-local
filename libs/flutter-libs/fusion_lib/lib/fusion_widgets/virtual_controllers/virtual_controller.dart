@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -21,18 +22,31 @@ class _VirtualControllerState extends State<VirtualController> {
   final Map<String, WallSubZone> _cache = {};
   final Map<String, WallZone> _cacheZone = {};
 
-  final _wsService = WebSocketService();
+  final WebSocketService _wsService = WebSocketService();
   StreamSubscription? _wsSubscription;
   bool _isInteracting = false;
 
   @override
   void initState() {
-    // TODO: implement initState
-
-
     // Listen for server-side updates
-    _wsSubscription = _wsService.stream.listen((audioSettings) {
-      _processAudioUpdate(audioSettings);
+
+    //_wsService.connect(context.read<VirtualControllerViewModel>().vipAddress);
+
+    _wsSubscription = _wsService.stream.listen((data) {
+
+      log(data['type'].toString());
+      if(data['type']=="error"){
+        log(data.toString());
+      }
+
+      if (data['type'] == 'config_update') {
+        final audioSettings =
+        data['data']?['settings']?['audio'];
+        if (audioSettings != null) {
+          _processAudioUpdate(audioSettings);
+        }
+      }
+   
     });
 
     super.initState();
@@ -143,7 +157,11 @@ class _VirtualControllerState extends State<VirtualController> {
     if (!_cache.containsKey(gainId)) {
 
       WallSubZone sourceModel = await context.read<VirtualControllerViewModel>().getGain(zoneIndex,subzoneIndex,src);
-     // WebSocketService().subscribe(gainId);
+      try {
+        WebSocketService().subscribe(gainId);
+      }catch(e){
+        log("Error subscribing to gainId $gainId: $e");
+      }
       _cache[gainId] = sourceModel;
 
       return sourceModel;
@@ -169,7 +187,7 @@ class _VirtualControllerState extends State<VirtualController> {
           itemCount: zones.length,
           itemBuilder: (context, zoneIndex) {
             WallZone zone = zones[zoneIndex];
-            // _cacheZone.addEntries({zone.id: zone.});
+     
 
             return FutureBuilder(
                 key: Key(zone.id),
@@ -201,7 +219,7 @@ class _VirtualControllerState extends State<VirtualController> {
                                 return Container(height: 50,width: 100,color: Colors.green,);
                               }
                               WallSubZone source = snapshot.data!;
-                             print(source.gain.gainID);
+
                               return ZoneSourceCard(
                                 onTap: () {
                                   context.read<VirtualControllerViewModel>().selectZone(

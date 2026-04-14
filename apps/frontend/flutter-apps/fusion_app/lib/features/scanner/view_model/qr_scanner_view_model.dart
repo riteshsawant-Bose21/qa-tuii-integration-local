@@ -84,7 +84,7 @@ class QrScannerViewModel extends Cubit<QrScannerState> {
   /// Connect to device/server
   Future<void> _connect(QRConnectionDetails details) async {
     print("Attempting connection with VIP: ${details.vip}, Controller ID: ${details.configId}");
-    await FusionWebSocketService().connect(host:details.vip);
+    await WebSocketService().connect(details.vip);
 
 
       emit(QrConnecting());

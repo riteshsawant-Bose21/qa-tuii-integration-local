@@ -52,7 +52,7 @@ class WebSocketService {
 
 
 
-  Future<void> connect(String? url) async {
+  Future<void> connect(String? host) async {
     if (_isConnected || _isConnecting) return;
     _isConnecting = true;
     _shouldReconnect = true;
@@ -62,7 +62,7 @@ class WebSocketService {
     }
 
     try {
-      print('Connecting to Fusion WebSocket: $_url');
+      print('Connecting to Fusion WebSocket: $host');
       _channel = WebSocketChannel.connect(_url);
 
       // Wait for the connection to be established
@@ -72,7 +72,7 @@ class WebSocketService {
       _isConnecting = false;
 
       _connectionStatusController.add(true);
-      print('Connected to Fusion WebSocket: $_url');
+      print('Connected to Fusion WebSocket: $host');
 
       _channel!.stream.listen(
             (message) {
@@ -86,7 +86,7 @@ class WebSocketService {
           print('Fusion WebSocket connection closed');
           // Reconnection delay if intentional
           if (_shouldReconnect) {
-            Future.delayed(const Duration(seconds: 5), () => connect(url));
+            Future.delayed(const Duration(seconds: 5), () => connect(host!));
           }
         },
         onError: (error) {
@@ -104,37 +104,11 @@ class WebSocketService {
       print('Failed to connect to Fusion WebSocket: $e');
       // Retry after delay if initial connection fails
       if (_shouldReconnect) {
-        Future.delayed(const Duration(seconds: 5), () => connect(url));
+        Future.delayed(const Duration(seconds: 5), () => connect(host!));
       }
     }
   }
-  // void _handleMessage(dynamic message) {
-  //   try {
-  //     final Map<String, dynamic> data = jsonDecode(message);
-  //     log(data['type'].toString());
-  //     if(data['type']=="error"){
-  //       log(data.toString());
-  //     }
-  //
-  //     //  log(data['data']!['settings']!['audio'].toString());
-  //
-  //     // Handle config_update (Full state sync)
-  //     if (data['type'] == 'config_update') {
-  //       final audioSettings =
-  //       data['data']?['settings']?['audio'];
-  //       if (audioSettings != null) {
-  //         _audioUpdateController.add(audioSettings);
-  //       }
-  //     }
-  //
-  //     // Handle patch_success (Optional confirmation)
-  //     if (data['type'] == 'patch_success') {
-  //       print('Server Patch Successful');
-  //     }
-  //   } catch (e) {
-  //     print('Error parsing message from Fusion server: $e');
-  //   }
-  // }
+
 
   void sendMessage(dynamic message) {
     if (_channel != null && _isConnected) {
