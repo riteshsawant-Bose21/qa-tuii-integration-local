@@ -711,6 +711,13 @@ const docTemplate = `{
                         "name": "action",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Unique identifier of the firmware bundle (UUID format)",
+                        "name": "bundleID",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -738,9 +745,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/firmware/bundles/{bundleID}/request-download-url": {
+        "/firmware/bundles/{version}/request-download-url": {
             "get": {
-                "description": "Generates a presigned S3 URL for downloading a specific firmware bundle artifact. The URL is valid for 2 hours and includes the file checksum for integrity verification. Only approved bundles can be downloaded.",
+                "description": "Generates a presigned S3 URL for downloading a specific firmware bundle artifact by version. The URL is valid for 15 minutes and includes the file checksum for integrity verification. Only approved bundles can be downloaded.",
                 "consumes": [
                     "application/json"
                 ],
@@ -754,8 +761,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Unique identifier of the firmware bundle (UUID format)",
-                        "name": "bundleID",
+                        "description": "Semantic version of the firmware bundle (e.g. 1.2.3, 1.0.0-beta.1)",
+                        "name": "version",
                         "in": "path",
                         "required": true
                     }
@@ -768,7 +775,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Missing or invalid bundleID",
+                        "description": "Missing or invalid version",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -796,7 +803,7 @@ const docTemplate = `{
         },
         "/firmware/updates/check": {
             "get": {
-                "description": "Checks for the latest available firmware bundle. Steps performed:\n1. Query for latest approved bundle where: bundle.version \u003e current_firmware_version AND bundle.min_prev_version \u003c= current_firmware_version AND bundle.min_desktop_app_version \u003c= current_desktop_app_version AND (channel matches prerelease OR prerelease IS NULL for stable)\n2. If found and current_firmware_version \u003e= bundle.min_prev_version: return update_available=true with bundle details\n3. If not found or firmware too old: query for latest bundle where bundle is compatible with current firmware (ignoring desktop app version)\n4. If found and current_desktop_app_version \u003c bundle.min_desktop_app_version: return update_available=true, app_update_required=true\n5. Otherwise: return update_available=false\n\n**Response Scenarios:**\n\n**Scenario 1 - Update Available:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\"update_available\": true, \"app_update_required\": false, \"bundle_id\": \"uuid\", \"version\": \"2.5.6\", \"release_notes\": \"...\", \"min_required_prev_version\": \"2.0.0\", \"min_desktop_app_version\": \"1.4.0\", \"manifest_data\": {}, \"created_at\": \"...\"}\n` + "`" + `` + "`" + `` + "`" + `\n\n**Scenario 2 - App Update Required:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\"update_available\": true, \"app_update_required\": true, \"min_desktop_app_version\": \"2.0.0\"}\n` + "`" + `` + "`" + `` + "`" + `\n\n**Scenario 3 - No Update Available:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\"update_available\": false, \"app_update_required\": false}\n` + "`" + `` + "`" + `` + "`" + `",
+                "description": "Checks for the latest available firmware bundle. Steps performed:\n1. The release channel is auto-inferred from the prerelease tag of current_firmware_version (e.g. \"beta\" from 1.2.3-beta.1, empty for stable 1.2.3)\n2. Query for latest approved bundle where: bundle.version \u003e current_firmware_version AND bundle.min_prev_version \u003c= current_firmware_version AND bundle.min_desktop_app_version \u003c= current_desktop_app_version AND (channel matches prerelease OR prerelease IS NULL for stable)\n3. If found and current_firmware_version \u003e= bundle.min_prev_version: return update_available=true with bundle details\n4. If not found or firmware too old: query for latest bundle where bundle is compatible with current firmware (ignoring desktop app version)\n5. If found and current_desktop_app_version \u003c bundle.min_desktop_app_version: return update_available=true, app_update_required=true\n6. Otherwise: return update_available=false\n\n**Response Scenarios:**\n\n**Scenario 1 - Update Available:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\"update_available\": true, \"app_update_required\": false, \"bundle_id\": \"uuid\", \"version\": \"2.5.6\", \"release_notes\": \"...\", \"min_required_prev_version\": \"2.0.0\", \"min_desktop_app_version\": \"1.4.0\", \"manifest_data\": {}, \"created_at\": \"...\"}\n` + "`" + `` + "`" + `` + "`" + `\n\n**Scenario 2 - App Update Required:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\"update_available\": true, \"app_update_required\": true, \"min_desktop_app_version\": \"2.0.0\"}\n` + "`" + `` + "`" + `` + "`" + `\n\n**Scenario 3 - No Update Available:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\"update_available\": false, \"app_update_required\": false}\n` + "`" + `` + "`" + `` + "`" + `",
                 "produces": [
                     "application/json"
                 ],
@@ -807,7 +814,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Current firmware version (semver format)",
+                        "description": "Current firmware version (semver format, e.g. 1.2.3 for stable, 1.2.3-beta.1 for beta channel). The release channel is auto-inferred from the prerelease tag.",
                         "name": "current_firmware_version",
                         "in": "query",
                         "required": true
@@ -818,12 +825,6 @@ const docTemplate = `{
                         "name": "current_desktop_app_version",
                         "in": "query",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Release channel: 'beta', 'alpha', etc. Omit for stable releases (prerelease IS NULL)",
-                        "name": "channel",
-                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -850,7 +851,7 @@ const docTemplate = `{
         },
         "/firmware/updates/status": {
             "post": {
-                "description": "Records the success or failure of a firmware bundle update installation.",
+                "description": "Records the success or failure of a firmware bundle update installation. Allowed values: INSTALL_SUCCESS, INSTALL_FAIL",
                 "consumes": [
                     "application/json"
                 ],
@@ -3774,13 +3775,13 @@ const docTemplate = `{
                 "bundle_version": {
                     "type": "string"
                 },
+                "desktop_app_version": {
+                    "type": "string"
+                },
                 "installed_at": {
                     "type": "string"
                 },
-                "launcher_version": {
-                    "type": "string"
-                },
-                "previous_version": {
+                "previous_bundle_version": {
                     "type": "string"
                 },
                 "project_id": {

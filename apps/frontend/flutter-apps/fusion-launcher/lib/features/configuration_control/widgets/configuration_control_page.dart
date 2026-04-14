@@ -28,7 +28,7 @@ class ConfigurationControlPage extends StatelessWidget {
     return MultiBlocProvider(
       providers: <BlocProvider<dynamic>>[
         BlocProvider<ConfigurationControlViewmodel>(
-          create: (_) => ConfigurationControlViewmodel(),
+          create: (_) => ConfigurationControlViewmodel()..init(),
         ),
         BlocProvider<ZoneControlViewModel>(
           create: (_) => ZoneControlViewModel(),
@@ -76,7 +76,7 @@ class _ConfigurationControlBody extends StatelessWidget {
 
         // Always reload zone and settings — needed for both LT and Pro controllers.
         context.read<ZoneControlViewModel>().loadData(controllerId, isProController: isPro);
-        context.read<SettingsViewModel>().loadData(controllerId);
+        context.read<SettingsViewModel>().loadData(controllerId, isProController: isPro);
 
         // Pro-only tabs.
         if (isPro) {

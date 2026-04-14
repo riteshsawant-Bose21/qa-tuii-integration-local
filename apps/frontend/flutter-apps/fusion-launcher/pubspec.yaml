@@ -71,7 +71,7 @@ dependencies:
   audioplayers: ^6.5.1
   package_info_plus: ^8.1.2
   printing: ^5.14.3
-
+  qr: ^3.0.1
 
   # Authentication
   auth0_flutter: ^1.14.0

@@ -4,9 +4,10 @@ import 'package:flutter_svg/svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/scheduling/view/widgets/calender_view.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_widgets/form_fields/fusion_custom_textfield.dart';
 import 'package:intl/intl.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/utils/fusion_utils.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../state/scheduler_state.dart';
 import '../state/timeline_state.dart';
@@ -37,6 +38,7 @@ class _SchedulingPageState extends State<SchedulingPage> {
       testId: SemanticHelper.createTestId(SemanticTypes.container, 'scheduling_page'),
       child: Container(
         decoration: BoxDecoration(
+          color: context.colorScheme.elevation1,
           border: Border.all(width: 1, color: context.colorScheme.elevation2),
           borderRadius: BorderRadius.circular(12),
         ),
@@ -53,76 +55,28 @@ class _SchedulingPageState extends State<SchedulingPage> {
               SemanticHelper.container(
                 testId: SemanticHelper.createTestId(SemanticTypes.container, 'scheduling_page_header'),
                 child: Container(
-                  color: context.colorScheme.elevation1,
-                  padding: const EdgeInsets.all(10.0),
+                  decoration: BoxDecoration(
+                    color: context.colorScheme.elevation2,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: context.colorScheme.strokeLight,
+                        width: 1,
+                      ),
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      topRight: Radius.circular(12),
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     spacing: 10,
                     children: <Widget>[
-                      AnimatedSize(
-                        duration: const Duration(milliseconds: 200),
-                        child: FusionAppText(
-                          semanticId: 'scheduling_page_header_title',
-                          text: switch (_currentPage) {
-                            _PageType.timeline => "Timeline",
-                            _PageType.scheduler => "Scheduler",
-                          },
-                          style: context.textTheme.bodyLarge,
-                        ),
-                      ),
-                      // const StatusChip(),
-                      const Spacer(),
-                      // OutlinedButton(onPressed: () {}, child: const Text("Share")),
-                      // FusionOutlinedButton(label: "Share", onTap: () {}),
-                      BlocBuilder<SchedulerViewmodel, SchedulerState>(
-                        builder: (BuildContext context, SchedulerState state) {
-                          return InkWell(
-                            child: FusionIcon.icon(
-                              semanticId: 'scheduling_header_add_icon',
-                              Icons.add,
-                              color: Colors.grey,
-                            ),
-                            onTap: () {
-                              SchedulerForm.show(
-                                context,
-                                context.read<SchedulerViewmodel>(),
-                              );
-                            },
-                          );
-                        },
-                      ),
-                      const SizedBox(width: 10),
-                    ],
-                  ),
-                ),
-              ),
-
-              ///--------------------------------------------------------------------------------------------
-              ///
-              /// Tabbar Header
-              ///
-              ///--------------------------------------------------------------------------------------------
-              SemanticHelper.container(
-                testId: SemanticHelper.createTestId(SemanticTypes.container, 'scheduling_page_tabbar'),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: context.colorScheme.elevation1.withAlpha(120),
-                    border: Border(
-                      top: BorderSide(
-                        color: context.colorScheme.elevation2,
-                        width: 1,
-                      ),
-                    ),
-                  ),
-                  child: Row(
-                    spacing: 10,
-                    children: <Widget>[
+                      ///  tabs for scheduler and timeline
                       Row(
                         spacing: 10,
                         children: <Widget>[
-                          const SizedBox(
-                            width: 20,
-                          ),
                           SemanticHelper.button(
                             testId: SemanticHelper.createTestId(
                               SemanticTypes.button,
@@ -176,20 +130,25 @@ class _SchedulingPageState extends State<SchedulingPage> {
                                   semanticFieldId: 'scheduler_search_field',
                                   hintText: "Search",
                                   autofocus: true,
-                                  prefixIcon: FusionIcon.icon(
+                                  prefixIcon: Icon(
                                     Icons.search,
                                     size: 20,
-                                    color: Colors.black,
+                                    color: context.colorScheme.iconWhite,
                                   ),
-                                  suffixIcon: InkWell(
-                                    onTap: () {
-                                      context.read<SchedulerViewmodel>().idle();
-                                    },
-                                    child: FusionIcon.icon(
-                                      semanticId: "search_close_button",
-                                      Icons.close,
-                                      size: 20,
-                                      color: Colors.black,
+                                  suffixIcon: SemanticHelper.button(
+                                    testId: SemanticHelper.createTestId(
+                                      SemanticTypes.button,
+                                      "search_close_button",
+                                    ),
+                                    child: InkWell(
+                                      onTap: () {
+                                        context.read<SchedulerViewmodel>().idle();
+                                      },
+                                      child: Icon(
+                                        Icons.close,
+                                        size: 20,
+                                        color: context.colorScheme.iconWhite,
+                                      ),
                                     ),
                                   ),
                                   onChanged: (String query) {
@@ -235,12 +194,25 @@ class _SchedulingPageState extends State<SchedulingPage> {
                         ),
                       ),
 
-                      //
-                      // Right Side Actions
-                      //
-                      const SizedBox(
-                        width: 10,
+                      /// Add new schedule button
+                      BlocBuilder<SchedulerViewmodel, SchedulerState>(
+                        builder: (BuildContext context, SchedulerState state) {
+                          return InkWell(
+                            child: FusionIcon.icon(
+                              semanticId: 'scheduling_header_add_icon',
+                              Icons.add,
+                              color: Colors.grey,
+                            ),
+                            onTap: () {
+                              SchedulerForm.show(
+                                context,
+                                context.read<SchedulerViewmodel>(),
+                              );
+                            },
+                          );
+                        },
                       ),
+                      const SizedBox(width: 10),
                     ],
                   ),
                 ),
@@ -285,13 +257,13 @@ class _TabHeader extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: isSelected ? fgColor : Colors.transparent,
-            width: 2,
+            color: isSelected ? context.colorScheme.primary : Colors.transparent,
+            width: 3,
           ),
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 0),
+        padding: const EdgeInsets.only(bottom: 8.0, top: 24),
         child: Row(
           spacing: 5,
           children: <Widget>[
@@ -299,17 +271,10 @@ class _TabHeader extends StatelessWidget {
               semanticsLabel: 'scheduler_tab_header_icon',
               icon,
               colorFilter: ColorFilter.mode(fgColor, BlendMode.srcIn),
-              width: 16,
-              height: 16,
+              width: 12,
+              height: 12,
             ),
-            FusionAppText(
-              semanticId: 'scheduler_tab_header_text',
-              text: title,
-              style: context.textTheme.bodyMedium?.copyWith(
-                color: fgColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            FusionAppText(semanticId: 'scheduler_tab_header_text', text: title, style: context.textTheme.l1Medium),
           ],
         ),
       ),

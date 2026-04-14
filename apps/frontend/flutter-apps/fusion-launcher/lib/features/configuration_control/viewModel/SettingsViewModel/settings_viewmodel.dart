@@ -24,11 +24,12 @@ class SettingsViewModel extends Cubit<SettingsState> {
   // ─── Data Loading ──────────────────────────────────────────────────────────
 
   /// Loads settings data for the specified controller.
-  void loadData(String controllerId) {
+  void loadData(String controllerId, {bool isProController = false}) {
     emit(const SettingsLoading());
 
     try {
       final ControllerDisplayConfig config = _projectViewModel.getControllerDisplayConfig(controllerId);
+      final List<Zone> zones = _projectViewModel.getAllZones();
 
       emit(
         SettingsLoaded(
@@ -36,6 +37,8 @@ class SettingsViewModel extends Cubit<SettingsState> {
           screenSaver: ScreenSaverOptionX.fromKey(config.screenSaver),
           sleepTime: config.sleepTime,
           controllerId: controllerId,
+          zones: zones,
+          isPro: isProController,
         ),
       );
     } catch (e) {
@@ -98,5 +101,17 @@ class SettingsViewModel extends Cubit<SettingsState> {
         sleepTime: state.sleepTime,
       ),
     );
+  }
+
+  void setWakeFunction(WakeFunctionOption option) {
+    final SettingsLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    emit(loaded.copyWith(wakeFunction: option, wakeZoneId: option == WakeFunctionOption.zone ? loaded.wakeZoneId : null));
+  }
+
+  void setWakeZone(String? zoneId) {
+    final SettingsLoaded? loaded = _loaded;
+    if (loaded == null) return;
+    emit(loaded.copyWith(wakeFunction: WakeFunctionOption.zone, wakeZoneId: zoneId));
   }
 }

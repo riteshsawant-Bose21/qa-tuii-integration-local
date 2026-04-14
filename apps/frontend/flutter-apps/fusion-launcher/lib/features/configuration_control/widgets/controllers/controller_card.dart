@@ -79,6 +79,7 @@ class ControllerCard extends StatelessWidget {
               ),
             ),
             FusionKebabPopup(
+              semanticId: 'controller_card_kebab_menu',
               onEdit: () => onEdit?.call(),
               onDelete: () => onDelete?.call(),
             ),

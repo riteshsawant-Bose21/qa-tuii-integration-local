@@ -13,6 +13,6 @@ type Firmware interface {
 	ListBundles(ctx context.Context, approvalStatus *string, page, limit int) (*types.BundleListResponse, error)
 	ApproveBundle(ctx context.Context, bundleID string, approvedBy string, approvalStatus string, logger *zap.Logger) error
 	CheckForUpdate(ctx context.Context, request *types.FirmwareUpdateRequest, logger *zap.Logger) (*types.FirmwareUpdateResponse, error)
-	GetBundleDownloadURL(ctx context.Context, bundleID string, logger *zap.Logger) (*types.DownloadArtifactResponse, error)
+	GetBundleDownloadURL(ctx context.Context, version string, logger *zap.Logger) (*types.DownloadArtifactResponse, error)
 	InsertBundleUpdateStatus(ctx context.Context, payload *types.LogBundleUpdateStatusPayload, logger *zap.Logger) error
 }

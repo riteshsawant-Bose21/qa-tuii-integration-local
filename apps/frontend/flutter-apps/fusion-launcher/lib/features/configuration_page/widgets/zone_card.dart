@@ -874,11 +874,9 @@ class _ZoneCardState extends State<ZoneCard> {
           _initializeTempSelection();
 
           return FusionMultiSelectPopupMenu<dynamic>(
-            maxHeight: 450,
             semanticsId: FusionTestKeys.instance.selectsrc,
             saveButtonLabel: "ADD",
             tooltip: "Select Sources",
-
             items: <dynamic>[
               _HeaderItem('SOURCES_BLOCK'),
               _HeaderItem('DIVIDER'),
