@@ -242,12 +242,15 @@ extension ControllerService on ProjectService {
         (ProcessingBlockModel block) => block.algorithmId == "gain" && block.isforUser,
       );
 
+      final String? functionId = getZoneFunction(zoneOrSubZoneId: zoneId)?.id;
+
       wallZones.add(
         WallZone(
           id: zone.id,
           name: zone.name,
           gain: WallGainConfig(gainID: processingBlockModel?.id ?? ""),
           ono: zoneOno,
+          functionId: functionId,
           sources: wallSources,
           subZones: wallSubZones,
         ),

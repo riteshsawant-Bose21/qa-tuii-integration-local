@@ -287,11 +287,11 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                                               functionId: zoneFunction!.id,
                                                                               sourceId: source.id,
                                                                             );
-                                                                        serviceLocator<BlockDataViewmodel>().updateBlockParameter(
-                                                                          blockId: "${zoneFunction!.id}/selector",
-                                                                          parameter: 'input',
-                                                                          value: index + 1,
-                                                                        );
+                                                                            serviceLocator<BlockDataViewmodel>().updateBlockParameter(
+                                                                              blockId: "${zoneFunction!.id}/selector",
+                                                                              parameter: 'input',
+                                                                              value: index + 1,
+                                                                            );
                                                                           },
                                                                           child: SemanticHelper.toggle(
                                                                             testId: SemanticHelper.createTestId(

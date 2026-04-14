@@ -83,6 +83,7 @@ class WallZone {
   final String name;
   final WallGainConfig gain;
   final WallZoneOno ono;
+  final String? functionId;
   final List<WallZoneSource> sources;
   final List<WallSubZone> subZones;
 
@@ -91,6 +92,7 @@ class WallZone {
     required this.name,
     required this.gain,
     required this.ono,
+    required this.functionId,
     this.sources = const [],
     this.subZones = const [],
   });
@@ -100,6 +102,7 @@ class WallZone {
     String? name,
     WallGainConfig? gain,
     WallZoneOno? ono,
+    String? functionId,
     List<WallZoneSource>? sources,
     List<WallSubZone>? subZones,
   }) {
@@ -108,6 +111,7 @@ class WallZone {
       name: name ?? this.name,
       gain: gain ?? this.gain,
       ono: ono ?? this.ono,
+      functionId: functionId ?? this.functionId,
       sources: sources ?? this.sources,
       subZones: subZones ?? this.subZones,
     );
@@ -118,6 +122,7 @@ class WallZone {
     'name': name,
     'gain': gain.toJson(),
     'ono': ono.toJson(),
+    'functionId': functionId,
     'sources': sources.map((s) => s.toJson()).toList(),
     'subZones': subZones.map((sz) => sz.toJson()).toList(),
   };
@@ -127,6 +132,7 @@ class WallZone {
     name: json['name'] as String,
     gain: WallGainConfig.fromJson(Map<String, dynamic>.from(json['gain'] as Map)),
     ono: WallZoneOno.fromJson(Map<String, dynamic>.from(json['ono'] as Map)),
+    functionId: json['functionId'] as String?,
     sources: (json['sources'] as List<dynamic>?)?.map((e) => WallZoneSource.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
     subZones: (json['subZones'] as List<dynamic>?)?.map((e) => WallSubZone.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
   );
