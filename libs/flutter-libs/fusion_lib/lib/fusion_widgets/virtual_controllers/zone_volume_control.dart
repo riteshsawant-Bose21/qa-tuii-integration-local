@@ -37,10 +37,10 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
       bottom: false,
       child: BlocBuilder<VirtualControllerViewModel, VirtualControllerState>(
           buildWhen: (previous, current) {
-            return current is ZoneSelected;
+            return current is VirtualZoneSelected;
           },
           builder: (context, state) {
-            if(state is ZoneSelected) {
+            if(state is VirtualZoneSelected) {
               WallZone selectedZone = state.zone;
 
               WallZoneSource? selectedSource = selectedZone.sources?[selectedZone.sourceSelected] ?? null;

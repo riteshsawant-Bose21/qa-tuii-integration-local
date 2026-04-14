@@ -4,21 +4,21 @@ part of 'controller_zone_view_model.dart';
 @immutable
 sealed class VirtualControllerState {}
 
-final class ZonesInitial extends VirtualControllerState {}
+final class VirtualZonesInitial extends VirtualControllerState {}
 
-final class ZonesLoaded extends VirtualControllerState {
+final class VirtualZonesLoaded extends VirtualControllerState {
   final List<WallZone> zones;
 
-  ZonesLoaded({
+  VirtualZonesLoaded({
     required this.zones,
   });
 
-  ZonesLoaded copyWith({
+  VirtualZonesLoaded copyWith({
     List<WallZone>? zones,
     int? currentZoneIndex,
     int? currentSourceIndex,
   }) {
-    return ZonesLoaded(
+    return VirtualZonesLoaded(
       zones: zones ?? this.zones
     );
   }
@@ -56,26 +56,26 @@ final class SourceSelected extends VirtualControllerState {
   }
 }
 
-final class ZoneSelected extends VirtualControllerState {
+final class VirtualZoneSelected extends VirtualControllerState {
   final WallZone zone;
   final int currentSourceIndex;
   final int zoneIndex;
   final int currentSubzoneIndex;
 
-  ZoneSelected({
+  VirtualZoneSelected({
     required this.zone,
     required this.zoneIndex,
     required this.currentSourceIndex,
     required this.currentSubzoneIndex,
   });
 
-  ZoneSelected copyWith({
+  VirtualZoneSelected copyWith({
     WallZone? zone,
     int? zoneIndex,
     int? currentSubzoneIndex,
     int? currentSourceIndex,
   }) {
-    return ZoneSelected(
+    return VirtualZoneSelected(
       zone: zone ?? this.zone,
       zoneIndex: zoneIndex ?? this.zoneIndex,
       currentSubzoneIndex: currentSubzoneIndex ?? this.currentSubzoneIndex,

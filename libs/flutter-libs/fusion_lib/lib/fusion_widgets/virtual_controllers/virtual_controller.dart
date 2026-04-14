@@ -156,10 +156,10 @@ class _VirtualControllerState extends State<VirtualController> {
   Widget build(BuildContext context) {
     return BlocBuilder<VirtualControllerViewModel, VirtualControllerState>(
       buildWhen: (previous, current) {
-        return current is ZonesLoaded;
+        return current is VirtualZonesLoaded;
       },
       builder: (context, state) {
-        if (state is! ZonesLoaded) return SizedBox();
+        if (state is! VirtualZonesLoaded) return SizedBox();
 
         final zones = state.zones;
 

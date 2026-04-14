@@ -19,7 +19,7 @@ class VirtualControllerViewModel extends Cubit<VirtualControllerState> {
   VirtualControllerViewModel({
     required FusionVirtualControllerService service,
   }) : _service = service,
-        super(ZonesInitial());
+        super(VirtualZonesInitial());
 
   final _throttler = Throttler(milliseconds: 100);
 
@@ -28,14 +28,14 @@ class VirtualControllerViewModel extends Cubit<VirtualControllerState> {
     _zones.clear();
     _zones.addAll(zones);
     vipAddress = address;
-    emit(ZonesLoaded(
+    emit(VirtualZonesLoaded(
       zones: zones,
     ));
   }
 
   void selectZone(WallZone zone,int zoneIndex,{int currentSubzoneIndex=0,int sourceIndex=0}) {
     activeZone = zone;
-    emit(ZoneSelected(
+    emit(VirtualZoneSelected(
       zone: zone,
       zoneIndex: zoneIndex,
       currentSubzoneIndex: currentSubzoneIndex,
@@ -127,7 +127,7 @@ class VirtualControllerViewModel extends Cubit<VirtualControllerState> {
 
       emit(GainUpdated(zoneSourceModel: zoneSourceModel));
 
-      emit(ZonesLoaded(zones: _zones));
+      emit(VirtualZonesLoaded(zones: _zones));
     } else {
       print("Could not find zone or subzone for sourceModel id: ${sourceModel.id}");
       return;
