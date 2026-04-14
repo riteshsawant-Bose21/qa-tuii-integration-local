@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/models/fusion_models.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/constants.dart';
 import '../../../../../core/service_locator.dart';
@@ -294,8 +294,8 @@ class OutputWidgetState extends State<OutputWidget> {
       padding: const EdgeInsets.all(8),
       child: Row(
         children: <Widget>[
-          Image.asset(
-            widget.speaker.assetImagePath,
+          FusionImageAuto(
+            path: widget.speaker.image,
             height: 24,
           ),
           const SizedBox(width: 6),

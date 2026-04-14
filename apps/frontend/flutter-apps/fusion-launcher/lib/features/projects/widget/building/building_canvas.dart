@@ -501,8 +501,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
               Theme.of(context).colorScheme.primaryWhite,
               BlendMode.srcIn,
             ),
-            child: const FusionImage.asset(
-              "assets/images/upload_floor_plan.png",
+            child: const FusionImageAuto(
+              path: "assets/images/upload_floor_plan.png",
               width: 64,
               height: 64,
             ),
@@ -755,13 +755,13 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   Widget _buildFloorPlanImage(String imagePath) {
     if (imagePath.startsWith('assets/')) {
-      return Image.asset(
-        imagePath,
+      return FusionImageAuto(
+        path: imagePath,
         fit: BoxFit.cover,
       );
     } else {
-      return Image.file(
-        File(imagePath),
+      return FusionImageAuto(
+        path: imagePath,
         fit: BoxFit.cover,
         errorBuilder: (
           BuildContext context,
