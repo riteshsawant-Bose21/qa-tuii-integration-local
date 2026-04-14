@@ -8,12 +8,16 @@ import '../fusion_rect_painter.dart';
 import '../mixin/fusion_canvas_interactable_mixin.dart';
 
 class ListeningAreaPainter extends FusionPolygonPainter {
+  final Color? backgoundColor;
   final ListeningArea listeningArea;
   final bool isShowingSpl;
-  ListeningAreaPainter({required this.listeningArea, this.isShowingSpl = false})
-    : super(
-        polygon: FusionCanvasPolygon(points: listeningArea.vertices, id: listeningArea.id),
-      );
+  ListeningAreaPainter({
+    required this.backgoundColor,
+    required this.listeningArea,
+    this.isShowingSpl = false,
+  }) : super(
+         polygon: FusionCanvasPolygon(points: listeningArea.vertices, id: listeningArea.id),
+       );
 
   bool _isSelected(FusionCanvasPainter painter) {
     final FusionToolState toolState = painter.toolState;
@@ -46,7 +50,7 @@ class ListeningAreaPainter extends FusionPolygonPainter {
     return null;
   }
 
-  Color getColor(FusionCanvasPainter painter) => painter.context.colorScheme.elevation4;
+  Color getColor(FusionCanvasPainter painter) => backgoundColor?.withAlpha(100) ?? painter.context.colorScheme.elevation4;
 
   @override
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter) {
