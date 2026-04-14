@@ -5,6 +5,7 @@ import 'package:fusion_web/features/users/domain/entities/user_entity.dart';
 import 'package:fusion_web/features/users/presentation/widgets/edit_user_dialog.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:fusion_web/features/users/presentation/widgets/user_ui_helpers.dart';
 
 enum UserTab { projects, permissions, activity }
 
@@ -170,22 +171,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
               const SizedBox(height: 4),
               Row(
                 children: [
-                  FusionAppText(text: user.userType.displayName),
+                  buildRoleChips(user.roles, context),
                   const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: FusionAppText(
-                      text: user.status.displayName,
-                      style: const TextStyle(color: Colors.green),
-                    ),
-                  ),
+                  buildStatusChip(user.status),
                 ],
               ),
               const SizedBox(height: 6),
@@ -195,39 +183,38 @@ class _UserProfilePageState extends State<UserProfilePage> {
           ),
         ),
 
-        if (!_user.roles.contains("Guest"))
-          ElevatedButton.icon(
-            onPressed: () async {
-              final updatedUser = await showDialog<UserEntity>(
-                context: context,
-                builder: (context) => EditUserDialog(
-                  user: _user,
-                  onUpdate: (updatedUser) {
-                    Navigator.pop(context, updatedUser);
-                  },
-                ),
-              );
-
-              if (updatedUser != null) {
-                setState(() {
-                  _user = updatedUser;
-                });
-              }
-            },
-            icon: const Icon(Icons.edit),
-            label: Text(
-              'Edit User',
-              style: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: context.colorScheme.primaryColor,
-              foregroundColor: context.colorScheme.textPrimary,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+        ElevatedButton.icon(
+          onPressed: () async {
+            final updatedUser = await showDialog<UserEntity>(
+              context: context,
+              builder: (context) => EditUserDialog(
+                user: _user,
+                onUpdate: (updatedUser) {
+                  Navigator.pop(context, updatedUser);
+                },
               ),
+            );
+
+            if (updatedUser != null) {
+              setState(() {
+                _user = updatedUser;
+              });
+            }
+          },
+          icon: const Icon(Icons.edit),
+          label: Text(
+            'Edit User',
+            style: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: context.colorScheme.primaryColor,
+            foregroundColor: context.colorScheme.textPrimary,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
+        ),
       ],
     );
   }
@@ -251,7 +238,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
   }
 
   Widget _buildActivityCard() {
-    final user = _user;
 
     return _card(
       title: "Activity Overview",
@@ -480,38 +466,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
-  Widget _permissionsGrid(List<String> permissions) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: permissions.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 4,
-      ),
-      itemBuilder: (context, index) {
-        final p = permissions[index];
-
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: context.colorScheme.elevation2,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.check, size: 16, color: Colors.green),
-              const SizedBox(width: 8),
-              Expanded(child: FusionAppText(text: p)),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
+  
   Widget _activitySection() {
     return _card(
       title: "Recent Activity",
@@ -582,33 +537,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
-  Widget _activityItem(String title, String date, IconData icon, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: color.withOpacity(0.1),
-            child: Icon(icon, size: 16, color: color),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              FusionAppText(text: title),
-              const SizedBox(height: 4),
-              FusionAppText(
-                text: date,
-                style: const TextStyle(color: Colors.grey),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  
 
   Widget _permissionsSection() {
     return _card(
