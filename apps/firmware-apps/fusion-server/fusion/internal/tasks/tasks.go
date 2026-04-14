@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 
@@ -554,39 +555,48 @@ func (tm *TaskManager) GetTask(id string) (*api.Task, error) {
 }
 
 func (tm *TaskManager) makeTaskFunc(task *api.Task) (TaskFunc, error) {
+	requiredStringParam := func(key string) error {
+		value, ok := task.Params[key]
+		if !ok {
+			return fmt.Errorf("missing '%s'", key)
+		}
+
+		stringValue, ok := value.(string)
+		if !ok || strings.TrimSpace(stringValue) == "" {
+			return fmt.Errorf("missing '%s'", key)
+		}
+
+		return nil
+	}
+
 	switch task.Type {
 
 	case api.TaskTypeMessage:
-		id := task.Params[api.MessageIDKey]
-		if id == "" {
-			return nil, fmt.Errorf("missing '%s'", api.MessageIDKey)
+		if err := requiredStringParam(api.MessageIDKey); err != nil {
+			return nil, err
 		}
 
 		return tm.taskTriggerMessageFunc(task), nil
 
 	case api.TaskTypeSnapshot:
-		id := task.Params[api.SnapshotIDKey]
-		if id == "" {
-			return nil, fmt.Errorf("missing '%s'", api.SnapshotIDKey)
+		if err := requiredStringParam(api.SnapshotIDKey); err != nil {
+			return nil, err
 		}
 		return tm.taskActivateSnapshotFunc(task), nil
 
 	case api.TaskTypeSceneSnapshot:
-		id := task.Params[api.SnapshotDefinitionIDKey]
-		if id == "" {
-			return nil, fmt.Errorf("missing '%s'", api.SnapshotDefinitionIDKey)
+		if err := requiredStringParam(api.SnapshotDefinitionIDKey); err != nil {
+			return nil, err
 		}
 		return tm.taskActivateSceneSnapshotFunc(task), nil
 
 	case api.TaskTypeSceneActivate:
-		setID := task.Params[api.SceneSetIDKey]
-		if setID == "" {
-			return nil, fmt.Errorf("missing '%s'", api.SceneSetIDKey)
+		if err := requiredStringParam(api.SceneSetIDKey); err != nil {
+			return nil, err
 		}
 
-		sceneID := task.Params[api.SceneIDKey]
-		if sceneID == "" {
-			return nil, fmt.Errorf("missing '%s'", api.SceneIDKey)
+		if err := requiredStringParam(api.SceneIDKey); err != nil {
+			return nil, err
 		}
 		return tm.taskActivateSceneFunc(task), nil
 
