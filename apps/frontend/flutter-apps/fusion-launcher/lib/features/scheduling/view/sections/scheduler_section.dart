@@ -199,7 +199,7 @@ class _SchedulerSection extends StatelessWidget {
 
                 /// kebab menu for edit/delete
                 FusionKebabPopup(
-                  semanticsId: 'scheduler_row_kebab_menu',
+                  semanticId: 'scheduler_row_kebab_menu',
                   popupOffset: const Offset(-70, 4),
                   onEdit: () {
                     final ScheduleConfig schedule = state.schedules[index];
@@ -359,7 +359,7 @@ class _FusionTableRowState extends State<_FusionTableRow> {
       onExit: (_) => setState(() => _isHovered = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         decoration: BoxDecoration(
           color: _isHovered ? context.colorScheme.elevation2 : Colors.transparent,
           border: Border(
