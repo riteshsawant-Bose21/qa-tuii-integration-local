@@ -81,8 +81,8 @@ class SortDropdownContent extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           child: Row(
             children: <Widget>[
-              Image.asset(
-                image,
+              FusionImageAuto(
+                path: image,
                 width: 24,
                 height: 24,
               ),

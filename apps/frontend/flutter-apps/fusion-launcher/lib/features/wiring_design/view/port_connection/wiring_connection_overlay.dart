@@ -160,7 +160,7 @@ class WiringPortWidget extends StatelessWidget {
         spacing: 10,
         children: <Widget>[
           imageForPort != null
-              ? FusionImage.asset(imageForPort, width: 20, height: 20)
+              ? FusionImageAuto(path: imageForPort, width: 20, height: 20)
               : Container(
                 decoration: BoxDecoration(
                   border: Border.all(
