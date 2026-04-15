@@ -7,6 +7,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/assets/asset_svg.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../../home/presentation/widgets/algorithms/ceiling_pendant_speaker_layout_widget.dart';
 
 class AutoPlaceDialog extends StatefulWidget {
   const AutoPlaceDialog({super.key, this.result});
@@ -69,6 +70,29 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
                       coveragePreference: algorithmResult!.coveragePreference,
                       width: algorithmResult!.width,
                       length: algorithmResult!.length,
+                    );
+                  },
+                  child: const Icon(
+                    Icons.info_outline,
+                    color: Colors.greenAccent,
+                    size: 18,
+                  ),
+                ),
+              if (algorithmResult?.placementResult != null)
+                InkWell(
+                  onTap: () {
+                    CeilingPlacementResult.show(
+                      context: context,
+                      result: algorithmResult!.placementResult!,
+                      coverageAngle: algorithmResult!.coverageAngle,
+                      roomWidth: algorithmResult!.width,
+                      roomLength: algorithmResult!.length,
+                      selectedCoveragePreference: algorithmResult!.coveragePreference,
+                      selectedLayoutPattern: algorithmResult!.ceilingPlacementParams!.selectedLayoutPattern,
+                      boundaryOverlapThreshold: algorithmResult!.ceilingPlacementParams!.boundaryOverlapThreshold,
+                      selectedSpeakerType: algorithmResult!.ceilingPlacementParams!.selectedSpeakerType,
+                      selectedRoomType: algorithmResult!.ceilingPlacementParams!.selectedRoomType,
+                      customGeometry: algorithmResult!.ceilingPlacementParams!.customGeometry ?? <Point2D>[],
                     );
                   },
                   child: const Icon(

@@ -298,6 +298,7 @@ class SpeakerPlacementAlgorithmResult {
   final CoveragePreference coveragePreference;
   final double width;
   final double length;
+  final CeilingPlacementParams? ceilingPlacementParams;
 
   SpeakerPlacementAlgorithmResult({
     required this.positions,
@@ -308,6 +309,7 @@ class SpeakerPlacementAlgorithmResult {
     required this.coveragePreference,
     required this.width,
     required this.length,
+    this.ceilingPlacementParams,
   });
 }
 
@@ -776,4 +778,25 @@ class _Edge {
   final Offset a, b;
 
   _Edge(this.a, this.b);
+}
+
+class CeilingPlacementParams {
+  final Room room;
+  final LayoutPattern selectedLayoutPattern;
+  final double boundaryOverlapThreshold;
+  final CoveragePreference selectedCoveragePreference;
+  final SpeakerType selectedSpeakerType;
+  final RoomType selectedRoomType;
+  final double coverageAngle;
+  final List<Point2D>? customGeometry;
+  CeilingPlacementParams({
+    required this.room,
+    required this.selectedLayoutPattern,
+    required this.boundaryOverlapThreshold,
+    required this.selectedCoveragePreference,
+    required this.selectedSpeakerType,
+    required this.selectedRoomType,
+    required this.coverageAngle,
+    this.customGeometry,
+  });
 }
