@@ -178,6 +178,8 @@ struct fusion_gpt
 
 	/* Servo readiness and diagnostics. */
 	bool discipline_ready;
+	bool discipline_ready_recheck_pending;
+	u64 discipline_ready_recheck_cap64;
 	u32 lock_streak;
 	unsigned long pps_diag_next_jiffies;
 };
@@ -188,7 +190,9 @@ static DEFINE_MUTEX(gpt_singleton_lock);
 static struct fusion_gpt *fusion_gpt_get_locked(void);
 static void fusion_gpt_put_locked(struct fusion_gpt *g);
 static void gpt_init_dac_baseline_locked(struct fusion_gpt *g);
-static void gpt_reset_servo_state_locked(struct fusion_gpt *g, bool preserve_dac);
+static void gpt_reset_servo_state_locked(struct fusion_gpt *g, bool preserve_dac,
+					 bool preserve_ready_for_recheck,
+					 bool last_pps_valid, u64 last_pps_cap64);
 static void gpt_reset_jump_model_locked(struct fusion_gpt *g);
 
 static inline u32 rdl(struct fusion_gpt *g, u32 off) { return readl_relaxed(g->base + off); }
@@ -232,19 +236,25 @@ static void gpt_reset_jump_model_locked(struct fusion_gpt *g)
 	g->model_jump_consumed = false;
 }
 
-static void gpt_reset_servo_state_locked(struct fusion_gpt *g, bool preserve_dac)
+static void gpt_reset_servo_state_locked(struct fusion_gpt *g, bool preserve_dac,
+					 bool preserve_ready_for_recheck,
+					 bool last_pps_valid, u64 last_pps_cap64)
 {
 	int preserved_dac = (g->current_dac_value >= DAC_MIN_VALUE &&
 			     g->current_dac_value <= DAC_MAX_VALUE) ?
 		g->current_dac_value : clamp(g->dac_target, DAC_MIN_VALUE,
 					       DAC_MAX_VALUE);
+	bool keep_ready = preserve_ready_for_recheck &&
+		READ_ONCE(g->discipline_ready) && last_pps_valid;
 
 	g->latest_freq_error = 0;
 	g->error_integrator = 0;
 	g->sq_err_sum = 0;
 	g->err_count = 0;
-	WRITE_ONCE(g->discipline_ready, false);
-	g->lock_streak = 0;
+	g->discipline_ready_recheck_pending = keep_ready;
+	g->discipline_ready_recheck_cap64 = keep_ready ? last_pps_cap64 : 0;
+	WRITE_ONCE(g->discipline_ready, keep_ready);
+	g->lock_streak = keep_ready ? max_t(u32, 1, DISCIPLINE_LOCK_CONSECUTIVE) : 0;
 	g->pps_diag_next_jiffies = jiffies + HZ;
 	gpt_reset_jump_model_locked(g);
 
@@ -511,6 +521,8 @@ int fusion_gpt_reset_timing_state(void)
 	long prev_freq_error;
 	int baseline_dac;
 	bool prev_epoch_valid, prev_aligned, prev_ready, prev_pending;
+	bool prev_pps_valid;
+	u64 prev_pps_cap64;
 	bool changed;
 
 	g = fusion_gpt_get_locked();
@@ -525,12 +537,14 @@ int fusion_gpt_reset_timing_state(void)
 	prev_aligned = g->phc_aligned;
 	prev_ready = READ_ONCE(g->discipline_ready);
 	prev_pending = g->pending_future_anchor;
+	prev_pps_valid = g->pps_valid;
+	prev_pps_cap64 = g->pps_icr1_last64;
 	changed = g->pps_valid || g->if2_valid || g->phc_epoch_valid ||
 		g->pending_future_anchor || g->pps_seq ||
 		prev_ready || g->lock_streak || g->latest_freq_error ||
 		g->error_integrator;
 	gpt_reset_timing_state_locked(g);
-	gpt_reset_servo_state_locked(g, true);
+	gpt_reset_servo_state_locked(g, true, true, prev_pps_valid, prev_pps_cap64);
 	baseline_dac = clamp(g->dac_target, DAC_MIN_VALUE, DAC_MAX_VALUE);
 	raw_spin_unlock(&g->ctrl_lock);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
@@ -665,11 +679,34 @@ static long gpt_compute_freq_error(u64 cap64, u64 prev_cap64)
 	return (long)(cap64 - prev_cap64) - (long)PPS_TICKS;
 }
 
-static void gpt_update_discipline_ready_locked(struct fusion_gpt *g, long freq_error)
+static void gpt_update_discipline_ready_locked(struct fusion_gpt *g, u64 cap64,
+					       bool have_freq_error,
+					       long freq_error)
 {
-	long abs_err = abs(freq_error);
 	u32 thresh = READ_ONCE(error_thresh_param);
 	u32 needed = max_t(u32, 1, DISCIPLINE_LOCK_CONSECUTIVE);
+	long abs_err;
+
+	if (g->discipline_ready_recheck_pending) {
+		long recheck_error =
+			gpt_compute_freq_error(cap64, g->discipline_ready_recheck_cap64);
+
+		g->discipline_ready_recheck_pending = false;
+		if (abs(recheck_error) < thresh) {
+			g->lock_streak = needed;
+			return;
+		}
+
+		g->lock_streak = 0;
+		if (g->discipline_ready)
+			WRITE_ONCE(g->discipline_ready, false);
+		return;
+	}
+
+	if (!have_freq_error)
+		return;
+
+	abs_err = abs(freq_error);
 
 	if (abs_err >= thresh) {
 		g->lock_streak = 0;
@@ -945,44 +982,53 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 
 		had_prev = gpt_handle_pps_capture(g, &cap64, &prev_cap64,
 						  &if2_offset_ns, &rebase_ready);
-		if (had_prev) {
-			diff = cap64 - prev_cap64;
-			freq_error = gpt_compute_freq_error(cap64, prev_cap64);
+		if (had_prev || READ_ONCE(g->discipline_ready_recheck_pending)) {
+			bool have_freq_error = had_prev;
 
 			raw_spin_lock(&g->ctrl_lock);
-			rms_jitter = gpt_update_jitter_stats_locked(g, freq_error);
-			observed_dac = gpt_get_observed_dac_locked(g);
-			gpt_pi_step_locked(g, freq_error, &p_term_log,
-					   &i_term_log, &integrator_log);
-			model_jump_log = gpt_maybe_apply_model_jump_locked(g,
-							observed_dac,
-							freq_error);
-			integrator_log = g->error_integrator;
-			g->latest_freq_error = freq_error;
-			gpt_update_discipline_ready_locked(g, freq_error);
-			dac_target = g->dac_target;
-			model_valid_log = g->model_valid;
-			model_jump_consumed_log = g->model_jump_consumed;
-			model_mean_abs_residual_log = g->model_mean_abs_residual;
-			model_dac_span_log = g->model_dac_span;
-			model_predicted_dac_log = g->model_predicted_dac;
-			do_pps_log = READ_ONCE(pps_debug_param);
-			need_dac_work = gpt_should_schedule_dac_work_locked(g);
-			gpt_maybe_reset_diag_window_locked(g);
+			if (had_prev) {
+				diff = cap64 - prev_cap64;
+				freq_error = gpt_compute_freq_error(cap64, prev_cap64);
+
+				rms_jitter = gpt_update_jitter_stats_locked(g, freq_error);
+				observed_dac = gpt_get_observed_dac_locked(g);
+				gpt_pi_step_locked(g, freq_error, &p_term_log,
+						   &i_term_log, &integrator_log);
+				model_jump_log = gpt_maybe_apply_model_jump_locked(g,
+								observed_dac,
+								freq_error);
+				integrator_log = g->error_integrator;
+				g->latest_freq_error = freq_error;
+				dac_target = g->dac_target;
+				model_valid_log = g->model_valid;
+				model_jump_consumed_log = g->model_jump_consumed;
+				model_mean_abs_residual_log = g->model_mean_abs_residual;
+				model_dac_span_log = g->model_dac_span;
+				model_predicted_dac_log = g->model_predicted_dac;
+				need_dac_work = gpt_should_schedule_dac_work_locked(g);
+			}
+			gpt_update_discipline_ready_locked(g, cap64, have_freq_error,
+							   freq_error);
+			if (had_prev) {
+				do_pps_log = READ_ONCE(pps_debug_param);
+				gpt_maybe_reset_diag_window_locked(g);
+			}
 			raw_spin_unlock(&g->ctrl_lock);
 
-			if (do_pps_log)
-				pr_info("fusion_gpt: [PPS] diff=%llu ticks err=%ld ticks rms=%u ticks 48k_off=%ldns dac=%d obs_dac=%d p=%ld i=%ld integ=%ld model_valid=%u jump_used=%u jump=%u pred_dac=%d resid=%u span=%u rebase=%d\n",
-					diff, freq_error, rms_jitter, if2_offset_ns,
-					dac_target, observed_dac, p_term_log, i_term_log,
-					integrator_log, model_valid_log ? 1U : 0U,
-					model_jump_consumed_log ? 1U : 0U,
-					model_jump_log ? 1U : 0U, model_predicted_dac_log,
-					model_mean_abs_residual_log, model_dac_span_log,
-					rebase_ready);
+			if (had_prev) {
+				if (do_pps_log)
+					pr_info("fusion_gpt: [PPS] diff=%llu ticks err=%ld ticks rms=%u ticks 48k_off=%ldns dac=%d obs_dac=%d p=%ld i=%ld integ=%ld model_valid=%u jump_used=%u jump=%u pred_dac=%d resid=%u span=%u rebase=%d\n",
+						diff, freq_error, rms_jitter, if2_offset_ns,
+						dac_target, observed_dac, p_term_log, i_term_log,
+						integrator_log, model_valid_log ? 1U : 0U,
+						model_jump_consumed_log ? 1U : 0U,
+						model_jump_log ? 1U : 0U, model_predicted_dac_log,
+						model_mean_abs_residual_log, model_dac_span_log,
+						rebase_ready);
 
-			if (need_dac_work)
-				schedule_work(&g->dac_work);
+				if (need_dac_work)
+					schedule_work(&g->dac_work);
+			}
 		}
 
 		clr |= SR_IF1;
@@ -1091,7 +1137,7 @@ static int gpt_start(struct fusion_gpt *g)
 	raw_spin_lock_irqsave(&g->pps_lock, flags);
 	raw_spin_lock(&g->ctrl_lock);
 	gpt_reset_timing_state_locked(g);
-	gpt_reset_servo_state_locked(g, false);
+	gpt_reset_servo_state_locked(g, false, false, false, 0);
 	raw_spin_unlock(&g->ctrl_lock);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
