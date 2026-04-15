@@ -121,7 +121,6 @@ func (c *Cluster) getDeviceInfoLocal() api.DeviceInfo {
 		FusionMonorepoCommitHash: utils.GetCommitHash(),
 		JenkinsBuildNumber:       utils.GetJenkinsBuildNumber(),
 		VrrpPriority:             c.getKeepalivedPriority(),
-
 	}
 
 	return deviceInfo
@@ -174,8 +173,6 @@ func (c *Cluster) broadcastDeviceUpdate(deviceData *api.DeviceInfo) {
 	} else {
 		logging.GetLogger().Info("[DeviceUpdate] Broadcasted device update for device %s via gossip", deviceData.Id)
 	}
-
-	c.delegate.hub.BroadcastToObservers(notifyMsg)
 
 }
 
