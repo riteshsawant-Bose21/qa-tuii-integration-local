@@ -112,7 +112,7 @@ class GenericHardwareComponent extends HardwareComponent {
       pos: json['pos'] != null ? Offset((json['pos']['dx'] as num).toDouble(), (json['pos']['dy'] as num).toDouble()) : null,
       wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['dx'] as num).toDouble(), (json['wiringPos']['dy'] as num).toDouble()) : null,
       type: productType,
-      image: json['image'] as String,
+      image: json['image'] ?? json["assetImagePath"] ?? "",
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       hardwareName: json['hardwareName'],
