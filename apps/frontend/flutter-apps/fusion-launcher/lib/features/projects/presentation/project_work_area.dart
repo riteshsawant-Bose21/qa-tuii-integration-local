@@ -21,6 +21,7 @@ import '../../configuration_snapshot/widgets/configuration_snapshots.dart';
 import '../../control_dashboard/presentation/pages/fusion_control_dashboard.dart';
 import '../../devices/presentation/pages/fusion_devices_page.dart';
 import '../../gpio/view/gpio_page.dart';
+import '../../speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import '../../wiring_design/view/wiring_page.dart';
 import '../view_model/spl_viewmodel.dart';
 import '../widget/configuration/side_panel_widgets/configuration_tab_switcher.dart';
@@ -68,6 +69,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
   @override
   void initState() {
     super.initState();
+    serviceLocator<ProductQueryViewModel>().loadProducts(); // Load products after successful login
+
     // Initialize tab widgets to preserve state
     _createTabWidgets();
     _initController(isInDesignMode);
