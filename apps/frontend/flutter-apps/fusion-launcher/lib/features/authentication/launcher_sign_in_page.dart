@@ -140,18 +140,12 @@ class _LauncherSignInPageView extends StatelessWidget {
                               testId: SemanticHelper.createTestId(SemanticTypes.button, "skip_login_button"),
                               child: TextButton(
                                 onPressed: () async {
-                                  final bool isIntegrationTest = serviceLocator<AuthViewModel>().isIntegrationTest;
-
-                                  if (isIntegrationTest) {
-                                    serviceLocator<AuthViewModel>().skipLoginByPassForAutomation();
-                                  } else {
-                                    serviceLocator<SessionViewModel>().skipLogin();
-                                    Navigator.pushNamedAndRemoveUntil(
-                                      context,
-                                      Routes.launcherHomePage,
-                                      (Route<dynamic> route) => false,
-                                    );
-                                  }
+                                  serviceLocator<SessionViewModel>().skipLogin();
+                                  Navigator.pushNamedAndRemoveUntil(
+                                    context,
+                                    Routes.launcherHomePage,
+                                    (Route<dynamic> route) => false,
+                                  );
                                 },
                                 child: FusionAppText(
                                   text: 'Skip login',
