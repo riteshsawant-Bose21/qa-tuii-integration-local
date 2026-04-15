@@ -269,6 +269,9 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                               penToolEvents: FusionPenToolEvents(
                                                 onPathClosed: (List<FusionCanvasPoint> value) {
                                                   final ProjectViewModel projectVM = serviceLocator<ProjectViewModel>();
+                                                  if (value.last == value.first) {
+                                                    value.removeLast();
+                                                  }
                                                   final ListeningArea listeningArea = ListeningArea(
                                                     vertices: value,
                                                     name: "Listening Area ${projectVM.listeningAreas.length + 1}",

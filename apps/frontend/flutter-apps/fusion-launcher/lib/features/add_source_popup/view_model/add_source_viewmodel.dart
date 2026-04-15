@@ -166,14 +166,15 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
     /// Sources [onTapAddDevice]
     final SourceConnectionType connectType = state.selectedConnectionType ?? SourceData.getSourceConnectionType(selectedItem.id);
     final PortType portType = switch (connectType) {
-      SourceConnectionType.analogInput || SourceConnectionType.aes67input => PortType.analogOutput,
+      SourceConnectionType.analogInput => PortType.analogOutput,
+      SourceConnectionType.aes67input => PortType.networkSwitchOut,
       SourceConnectionType.bluetooth => PortType.bleOut,
       SourceConnectionType.usb => PortType.usbOut,
       SourceConnectionType.audioJack => PortType.audioJackOutput,
       SourceConnectionType.xlr => PortType.xlrOutput,
       SourceConnectionType.hdmi => PortType.hdmiOut,
       SourceConnectionType.rca => PortType.rcaOutput,
-      SourceConnectionType.endpoint => PortType.endpointOutput,
+      SourceConnectionType.endpoint => PortType.analogOutput, // TODO: Check this
     };
 
     final Source source = Source(

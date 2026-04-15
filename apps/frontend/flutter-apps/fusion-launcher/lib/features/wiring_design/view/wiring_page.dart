@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/fusion_canvas/state/fusion_hover_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/connection_tool_params.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/wiring/port_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart' show FusionBasePainter;
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canvas_painter.dart';
+import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_hover_viewmodel.dart';
 import 'package:fusion_launcher/features/projects/presentation/project_work_area.dart';
 import 'package:fusion_launcher/features/wiring_design/algorithm/intersection_manager.dart';
 import 'package:fusion_launcher/features/wiring_design/algorithm/path_system_storage.dart';
@@ -120,9 +122,9 @@ class _WiringPageState extends State<WiringPage> {
           elements: <FusionBasePainter>[
             // FusionDottedBgPainter(color: Colors.grey.withValues(alpha: 0.2)),
             for (HardwareComponent source in projectViewModel.hardwareComponents)
-              if (source is Source)
-                WiringSourcePainter(source: source, connectionManager: connectionManager)
-              else if (source is FusionController || source is FusionEndpoints)
+              if (source is Source) ...<WiringSourcePainter>{
+                if (source.type != SourceType.paging) WiringSourcePainter(source: source, connectionManager: connectionManager),
+              } else if (source is FusionController || source is FusionEndpoints)
                 WiringControllerPainter(device: source, connectionManager: connectionManager)
               else if (source is! Speaker && source is! HardwareRack)
                 WiringDevicesPainter(device: source, connectionManager: connectionManager),
@@ -192,6 +194,11 @@ class _WiringPageState extends State<WiringPage> {
                           deviceId: portId!.deviceId,
                           fromPortData: portId!.port,
                           onPortTap: (PortData fromPort, PortData toPort, String toDeviceId) {
+                            final WiringConnectionModel? existing = connectionManager.getConnectionForPort(fromPort.id);
+                            if (existing != null) {
+                              projectViewModel.removeWiringConnection(connectionId: existing.id);
+                            }
+
                             projectViewModel.addWiringConnection(
                               connection: ConnectionUseCase().createConnection(
                                 fromDeviceId: portId!.deviceId,
@@ -213,6 +220,20 @@ class _WiringPageState extends State<WiringPage> {
                 );
               },
             );
+          },
+          cursorBuilder: (BuildContext context) {
+            final FusionHoverState hoverState = context.watch<FusionCanvasHoverViewModel>().state;
+            if (hoverState.hoveredElement is WiringPortData) {
+              return (
+                Alignment.center,
+                const FusionImageAuto(
+                  path: 'assets/icons/canvas_cursor/hand-grab.png',
+                  width: 24,
+                  height: 24,
+                ),
+              );
+            }
+            return null;
           },
           toolbarEvents: FusionCanvasEvents(
             inputEvents: FusionCanvasInputEvents(

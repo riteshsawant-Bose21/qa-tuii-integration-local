@@ -155,11 +155,8 @@ class WiringToolBar extends StatelessWidget {
                 icon: 'assets/icons/building_page/fit_to_screen.png',
                 onTap: () {
                   context.read<FusionCanvasStateViewModel>().fitToScreen(
-                    padding: EdgeInsets.only(top: WorkAreaScope.of(context).appBarHeight + 20, bottom: 20 + 60),
+                    padding: EdgeInsets.only(top: WorkAreaScope.of(context).appBarHeight + 20, bottom: 20 + 60, left: 50, right: 50),
                   );
-                  // if (painter != null) {
-                  //   painter.fitToViewport();
-                  // }
                 },
               ),
 
