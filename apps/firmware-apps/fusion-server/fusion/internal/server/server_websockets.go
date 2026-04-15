@@ -288,6 +288,10 @@ func (s *FusionServer) BroadcastMessage(message *api.NotifyMessage) error {
 	return s.broadcastGenericNotification(message)
 }
 
+func (s *FusionServer) BroadcastToClusterObservers(message *api.NotifyMessage) error {
+	return s.BroadcastMessage(message)
+}
+
 func (s *FusionServer) broadcastConfigUpdate(message *api.NotifyMessage) error {
 	configUpdateMessage := &api.WebSocketResponse{
 		ID:        nil,

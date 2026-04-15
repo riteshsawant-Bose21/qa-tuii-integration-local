@@ -336,7 +336,7 @@ func (d *ClusterDelegate) handleDeviceUpdate(message *api.NotifyMessage) {
 	logger.Info("[DeviceUpdate] Received device update from %s for device %s",
 		message.Node, message.DeviceInfo.Id)
 
-	d.hub.BroadcastToObservers(message)
+	d.hub.BroadcastToClusterObservers(message)
 }
 
 // handleSoftwareUpdate processes software update trigger notifications

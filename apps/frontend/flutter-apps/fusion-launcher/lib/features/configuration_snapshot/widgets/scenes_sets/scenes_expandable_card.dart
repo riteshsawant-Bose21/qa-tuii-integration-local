@@ -224,12 +224,12 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                                             ),
                                       );
                                     },
-                                    child: FusionImage.asset(
+                                    child: FusionImageAuto(
+                                      path: Assets.deleteIcon,
                                       semanticId: "${FusionTestKeys.instance.scenesetsectiondataheaderdeleteicn}_${widget.index}",
-                                      Assets.deleteIcon,
                                       width: 17,
                                       height: 17,
-                                      assetColor: context.colorScheme.iconWhite,
+                                      color: context.colorScheme.iconWhite,
                                       fit: BoxFit.contain,
                                     ),
                                   ),
@@ -246,12 +246,12 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                                         widget.onSceneSetDuplicate!(widget.sceneSetData.id);
                                       }
                                     },
-                                    child: FusionImage.asset(
+                                    child: FusionImageAuto(
                                       semanticId: "${FusionTestKeys.instance.scenesetsectiondataheaderduplicateicon}_${widget.index}",
-                                      Assets.duplicateIcon,
+                                      path: Assets.duplicateIcon,
                                       width: 16,
                                       height: 16,
-                                      assetColor: context.colorScheme.iconWhite,
+                                      color: context.colorScheme.iconWhite,
                                       fit: BoxFit.contain,
                                     ),
                                   ),

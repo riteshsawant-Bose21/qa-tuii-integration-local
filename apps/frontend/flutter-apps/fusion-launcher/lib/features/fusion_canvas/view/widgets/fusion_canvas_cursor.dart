@@ -89,8 +89,8 @@ class FusionCanvasCursor extends StatelessWidget {
   }
 
   Widget _buildCursor(_CanvasCursorType cursorType) {
-    return Image.asset(
-      cursorType.image,
+    return FusionImageAuto(
+      path: cursorType.image,
       width: 24,
       height: 24,
     );

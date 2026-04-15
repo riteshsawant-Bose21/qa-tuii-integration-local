@@ -97,6 +97,9 @@ class SelectionToolHelper extends FusionCanvasToolTransformer<SelectToolState> {
         if (draggableLayerIds.isEmpty) {
           return currentState;
         }
+        // print(
+        //   "Is Shift pressed: ${context.inputState.isShiftPressed}, multiSelectEnabled: $multiSelectEnabled, draggedLayerIds: $draggedLayerIds, draggableLayerIds: $draggableLayerIds",
+        // );
         return PointsDragStartState(layerIds: draggableLayerIds, elements: elements);
       } else {
         final Set<String> draggableLayerIds =
