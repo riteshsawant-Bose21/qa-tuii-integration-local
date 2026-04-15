@@ -154,9 +154,10 @@ class WiringPortWidget extends StatelessWidget {
       PortType.rcaInput || PortType.rcaOutput => 'assets/icons/wiring_ports/stereo.png',
       _ => null,
     };
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
       child: Row(
+        mainAxisSize: MainAxisSize.max,
         spacing: 10,
         children: <Widget>[
           imageForPort != null
