@@ -1,0 +1,246 @@
+{
+    "composite_algorithms": [
+        {
+            "name": "composite_basic",
+            "is_opaque": false,
+            "properties": [
+                {
+                    "name": "bool_property",
+                    "default_value": false
+                }
+            ],
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "channels": 1
+                },
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "minimum_channels": 0,
+                    "maximum_channels": 8
+                }
+            ],
+            "parameters": [],
+            "implementation": {
+                "blocks": [
+                    {
+                        "name": "inner_a",
+                        "algorithm": "test_configuration",
+                        "property_settings": [
+                            { "name": "bool_property", "value": "$bool_property" }
+                        ],
+                        "terminal_channels": [
+                            { "name": "out", "channels": 1 }
+                        ]
+                    },
+                    {
+                        "name": "inner_b",
+                        "algorithm": "test_configuration",
+                        "property_settings": [
+                            { "name": "bool_property", "value": true }
+                        ],
+                        "terminal_channels": [
+                            { "name": "out", "channels": 1 }
+                        ]
+                    }
+                ],
+                "block_connections": [
+                    {
+                        "source_block": "$in",
+                        "output_terminal": "in",
+                        "destination_block": "inner_a",
+                        "input_terminal": "in",
+                        "output_channel": 1,
+                        "input_channel": 1
+                    },
+                    {
+                        "source_block": "inner_a",
+                        "output_terminal": "out",
+                        "destination_block": "inner_b",
+                        "input_terminal": "in",
+                        "output_channel": 1,
+                        "input_channel": 1
+                    },
+                    {
+                        "source_block": "inner_b",
+                        "output_terminal": "out",
+                        "destination_block": "$out",
+                        "input_terminal": "out",
+                        "output_channel": 1,
+                        "input_channel": 1
+                    }
+                ],
+                "parameter_map": [],
+                "telemetry_map": []
+            }
+        },
+        {
+            "name": "composite_with_params",
+            "is_opaque": false,
+            "properties": [],
+            "terminals": [],
+            "parameters": [
+                {
+                    "name": "bool_scalar",
+                    "value_type": "bool",
+                    "default_value": false
+                },
+                {
+                    "name": "float_scalar",
+                    "value_type": "float",
+                    "default_value": 0.0,
+                    "minimum_value": -12.0,
+                    "maximum_value": 12.0
+                }
+            ],
+            "implementation": {
+                "blocks": [
+                    {
+                        "name": "ps_block",
+                        "algorithm": "test_parameter_settings"
+                    }
+                ],
+                "block_connections": [],
+                "parameter_settings": [
+                    {
+                        "target": "ps_block",
+                        "name": "integer_scalar",
+                        "value": 7
+                    }
+                ],
+                "parameter_map": [
+                    {
+                        "composite_parameter": "bool_scalar",
+                        "block_name": "ps_block",
+                        "block_parameter": "bool_scalar"
+                    },
+                    {
+                        "composite_parameter": "float_scalar",
+                        "block_name": "ps_block",
+                        "block_parameter": "float_scalar"
+                    }
+                ],
+                "telemetry_map": []
+            }
+        },
+        {
+            "name": "composite_opaque",
+            "is_opaque": true,
+            "properties": [],
+            "terminals": [],
+            "parameters": [
+                {
+                    "name": "bool_scalar",
+                    "value_type": "bool",
+                    "default_value": false
+                }
+            ],
+            "implementation": {
+                "blocks": [
+                    {
+                        "name": "ps_block",
+                        "algorithm": "test_parameter_settings"
+                    }
+                ],
+                "block_connections": [],
+                "parameter_map": [
+                    {
+                        "composite_parameter": "bool_scalar",
+                        "block_name": "ps_block",
+                        "block_parameter": "bool_scalar"
+                    }
+                ],
+                "telemetry_map": []
+            }
+        },
+        {
+            "name": "composite_fanout",
+            "is_opaque": false,
+            "properties": [],
+            "terminals": [],
+            "parameters": [
+                {
+                    "name": "bool_scalar",
+                    "value_type": "bool",
+                    "default_value": false
+                }
+            ],
+            "implementation": {
+                "blocks": [
+                    {
+                        "name": "ps_a",
+                        "algorithm": "test_parameter_settings"
+                    },
+                    {
+                        "name": "ps_b",
+                        "algorithm": "test_parameter_settings"
+                    }
+                ],
+                "block_connections": [],
+                "parameter_map": [
+                    {
+                        "composite_parameter": "bool_scalar",
+                        "block_name": "ps_a",
+                        "block_parameter": "bool_scalar"
+                    },
+                    {
+                        "composite_parameter": "bool_scalar",
+                        "block_name": "ps_b",
+                        "block_parameter": "bool_scalar"
+                    }
+                ],
+                "telemetry_map": []
+            }
+        },
+        {
+            "name": "composite_terminal_inherit",
+            "is_opaque": false,
+            "properties": [
+                {
+                    "name": "channels",
+                    "default_value": 2,
+                    "minimum_value": 1,
+                    "maximum_value": 8
+                }
+            ],
+            "terminals": [
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "minimum_channels": 0,
+                    "maximum_channels": 8
+                }
+            ],
+            "parameters": [],
+            "implementation": {
+                "blocks": [
+                    {
+                        "name": "inner",
+                        "algorithm": "test_configuration",
+                        "property_settings": [],
+                        "terminal_channels": [
+                            { "name": "out", "channels": "$channels" }
+                        ]
+                    }
+                ],
+                "block_connections": [
+                    {
+                        "source_block": "inner",
+                        "output_terminal": "out",
+                        "destination_block": "$out",
+                        "input_terminal": "out",
+                        "output_channel": 1,
+                        "input_channel": 1
+                    }
+                ],
+                "parameter_map": [],
+                "telemetry_map": []
+            }
+        }
+    ]
+}

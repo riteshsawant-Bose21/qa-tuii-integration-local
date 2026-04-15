@@ -15,6 +15,13 @@ type Broadcaster interface {
 	BroadcastMessage(msg *api.NotifyMessage) error
 }
 
+// ClusterObserverBroadcaster is implemented by observer transports that
+// should receive events originating from another cluster node.
+// WebSockets should receive these updates; local-only transports such as UDP should not.
+type ClusterObserverBroadcaster interface {
+	BroadcastToClusterObservers(msg *api.NotifyMessage) error
+}
+
 type LocalBroadcaster func(*api.NotifyMessage)
 
 type Hub struct {
@@ -52,6 +59,18 @@ func (h *Hub) BroadcastToObservers(msg *api.NotifyMessage) {
 	for _, bc := range h.broadcasters {
 		if err := bc.BroadcastMessage(msg); err != nil {
 			logging.GetLogger().Error("local broadcast failed: %v", err)
+		}
+	}
+}
+
+func (h *Hub) BroadcastToClusterObservers(msg *api.NotifyMessage) {
+	for _, bc := range h.broadcasters {
+		clusterBroadcaster, ok := bc.(ClusterObserverBroadcaster)
+		if !ok {
+			continue
+		}
+		if err := clusterBroadcaster.BroadcastToClusterObservers(msg); err != nil {
+			logging.GetLogger().Error("cluster observer broadcast failed: %v", err)
 		}
 	}
 }

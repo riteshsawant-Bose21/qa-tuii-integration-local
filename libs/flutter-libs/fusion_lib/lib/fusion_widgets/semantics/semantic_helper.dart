@@ -202,6 +202,7 @@ class SemanticHelper {
       value: value,
       child: child,
       liveRegion: live,
+      container: true,
     );
   }
 
@@ -214,6 +215,7 @@ class SemanticHelper {
       button: true,
       identifier: testId,
       value: value,
+      container: true,
       child: child,
     );
   }
@@ -245,6 +247,7 @@ class SemanticHelper {
       button: true,
       identifier: testId,
       enabled: enabled,
+      container: true,
       child: child,
       value: value,
       focusable: blur,

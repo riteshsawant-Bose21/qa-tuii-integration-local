@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../core/service_locator.dart';
-import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../util/canvas_util.dart';
 
 part 'component_port.dart';
@@ -56,7 +56,7 @@ class DeviceSchematicComponentData extends ComponentData {
 
   static DeviceSchematicComponentData from(HardwareComponent hardware) {
     return DeviceSchematicComponentData(
-      image: hardware.assetImagePath,
+      image: hardware.image,
       label: hardware.name,
       comPorts:
           hardware.communicationPorts
@@ -210,7 +210,7 @@ class SourceComponentData extends ComponentData {
 
   static SourceComponentData from(Source source) {
     return SourceComponentData(
-      image: source.assetImagePath,
+      image: source.image,
       label: source.name,
       comPorts: <ComponentPort>[],
       inputPorts: <ComponentPort>[],
@@ -262,7 +262,7 @@ class ZoneComponentData extends ComponentData {
 
   static ZoneComponentData from(Zone zone) {
     return ZoneComponentData(
-      // image: source.assetImagePath,
+      // image: source.imageCachePath,
       label: zone.name,
       comPorts: <ComponentPort>[],
       inputPorts: <ComponentPort>[],
@@ -306,7 +306,7 @@ class SubZoneComponentData extends ComponentData {
 
   static SubZoneComponentData from(SubZone zone) {
     return SubZoneComponentData(
-      // image: source.assetImagePath,
+      // image: source.imageCachePath,
       label: zone.name,
       comPorts: <ComponentPort>[],
       inputPorts: <ComponentPort>[],
@@ -355,7 +355,7 @@ class CircuitComponentData extends ComponentData {
     List<ComponentData> speakers,
   ) {
     return CircuitComponentData(
-      // image: source.assetImagePath,
+      // image: source.imageCachePath,
       label: zone.name,
       comPorts: <ComponentPort>[],
       inputPorts: <ComponentPort>[
@@ -402,10 +402,7 @@ class SpeakerComponentData extends ComponentData {
 
   static SpeakerComponentData from(Speaker speaker) {
     return SpeakerComponentData(
-      image: serviceLocator<ProjectViewModel>().getHardwareImage(
-        productId: speaker.productId ?? 0,
-        currentImagePath: speaker.assetImagePath,
-      ),
+      image: serviceLocator<ProductQueryViewModel>().getProductImage(speaker.productId) ?? "",
       label: speaker.name,
       comPorts: <ComponentPort>[],
       inputPorts:

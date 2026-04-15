@@ -33,9 +33,10 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
       final String key = element.assets.assets.keys.firstOrNull ?? '';
       allProducts.add(
         EQLProduct(
+          productId: element.productId,
           name: element.modelName,
           modelFamily: element.modelFamily ?? '',
-          assetPath: datasource.getProductImage(element.productId),
+          image: datasource.getProductImage(element.productId),
           description: element.modelFamily,
           data: element,
           searchingFields: '${element.modelName} ${element.modelFamily}',
@@ -54,12 +55,13 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
       );
     }
     for (final IoEndpointProduct element in datasource.ioEndpoints) {
-      final String key = element.assets.assets.keys.firstOrNull ?? '';
+      // final String key = element.assets.assets.keys.firstOrNull ?? '';
       allProducts.add(
         EQLProduct(
+          productId: element.productId,
           name: element.modelName,
           modelFamily: element.modelFamily ?? '',
-          assetPath: datasource.getProductImage(element.productId),
+          image: datasource.getProductImage(element.productId),
           data: element,
           //TODO: Check Endpoint Port Data
           portData: element.numberOfInputsAndOutputs ?? ProductPortData(),
@@ -82,9 +84,10 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
 
       allProducts.add(
         EQLProduct(
+          productId: element.productId,
           portData: element.numberOfInputsAndOutputs ?? ProductPortData(),
           name: element.modelName,
-          assetPath: datasource.getProductImage(element.productId),
+          image: datasource.getProductImage(element.productId),
           modelFamily: element.modelFamily,
           data: element,
           searchingFields: '${element.modelName} ${element.modelFamily}',
@@ -202,7 +205,7 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
     return ProductQueryModel(
       name: product.name,
       price: product.price,
-      image: product.assetPath ?? '',
+      image: product.image ?? '',
       type: switch (product.deviceType) {
         EQLDeviceType.amplifier => ProductType.amplifier,
         EQLDeviceType.endpoint => ProductType.endpoints,

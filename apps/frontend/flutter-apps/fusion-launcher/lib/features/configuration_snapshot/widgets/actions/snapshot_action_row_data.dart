@@ -3,15 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/viewModel/actions_viewmodel/config_snapshot_actions_state.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/viewModel/actions_viewmodel/config_snapshot_actions_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/widgets/snapshots/snapshot_value_widget.dart';
-import 'package:fusion_lib/constants/fusion_constants.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/snapshots/SnapshotsKeys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
-import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
-import 'package:fusion_lib/models/project_entities/non_processing/snapshot_model.dart';
 
 import '../../../../core/constants/assets_constants.dart';
 import '../../../../core/widgets/configuration_widgets/action_drop_down.dart';
@@ -270,12 +263,12 @@ class _SnapshotActionRowContent extends StatelessWidget {
               cubit.deleteAction(actionId: action.id);
               FusionToast.success(context, message: "Action deleted successfully");
             },
-            child: FusionImage.asset(
+            child: FusionImageAuto(
+              path: Assets.deleteIcon,
               semanticId: '${FusionTestKeys.instance.actionlistpanelrowdataitemdeleteicon}_$index',
-              Assets.deleteIcon,
               width: 20,
               height: 20,
-              assetColor: context.colorScheme.iconWhite,
+              color: context.colorScheme.iconWhite,
               fit: BoxFit.contain,
             ),
           ),
@@ -285,13 +278,12 @@ class _SnapshotActionRowContent extends StatelessWidget {
               cubit.duplicateAction(actionId: action.id);
               FusionToast.success(context, message: "Action duplicated successfully");
             },
-            child: FusionImage.asset(
+            child: FusionImageAuto(
               semanticId: '${FusionTestKeys.instance.actionlistpanelrowdataitemnduplicateicon}_$index',
-              Assets.duplicateIcon,
+              path: Assets.duplicateIcon,
               width: 20,
               height: 20,
-              assetColor: context.colorScheme.iconWhite,
-
+              color: context.colorScheme.iconWhite,
               fit: BoxFit.contain,
             ),
           ),

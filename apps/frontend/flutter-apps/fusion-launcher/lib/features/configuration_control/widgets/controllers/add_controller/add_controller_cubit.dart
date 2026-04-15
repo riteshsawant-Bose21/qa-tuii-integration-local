@@ -276,7 +276,7 @@ class AddControllerCubit extends Cubit<AddControllerState> {
 
     return FusionController(
       name: state.name.trim().isEmpty ? 'Untitled Controller' : state.name.trim(),
-      assetImagePath: assetImagePath,
+      image: assetImagePath,
       locationEntity: locationEntity,
       price: price,
       sku: state.controllerType?.displayName ?? 'Controller',
@@ -416,7 +416,7 @@ class AddControllerCubit extends Cubit<AddControllerState> {
 
       final FusionController updated = existing.copyWith(
         name: state.name.trim().isEmpty ? 'Untitled Controller' : state.name.trim(),
-        assetImagePath: assetImagePath,
+        image: assetImagePath,
         locationEntity: locationEntity,
         price: price,
         sku: state.controllerType?.displayName ?? 'Controller',

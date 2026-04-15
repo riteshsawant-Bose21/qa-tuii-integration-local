@@ -51,6 +51,7 @@ def create_tarball():
 
     config_files = [
         'config/algorithm-definitions.json',
+        'config/composite-algorithm-definitions.json',
         'config/configuration.json',
         'config/prototype1_demo.json',
         'config/telemetry-configuration.json',

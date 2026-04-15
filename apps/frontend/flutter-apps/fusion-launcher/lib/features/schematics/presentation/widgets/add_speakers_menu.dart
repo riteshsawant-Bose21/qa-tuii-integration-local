@@ -124,23 +124,15 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(4),
                                     border: Border.all(
-                                      color:
-                                          speakerData?.sku == item.sku
-                                              ? Colors.black
-                                              : context
-                                                  .colorScheme
-                                                  .primaryBlack,
+                                      color: speakerData?.sku == item.sku ? Colors.black : context.colorScheme.primaryBlack,
                                       width: 1,
                                     ),
-                                    color:
-                                        speakerData?.sku == item.sku
-                                            ? context.colorScheme.primaryBlack
-                                            : null,
+                                    color: speakerData?.sku == item.sku ? context.colorScheme.primaryBlack : null,
                                   ),
                                   child: Row(
                                     children: <Widget>[
-                                      FusionImage.asset(
-                                        item.image.isNotEmpty ? item.image : '',
+                                      FusionImageAuto(
+                                        path: item.image.isNotEmpty ? item.image : '',
                                         height: 14,
                                         width: 14,
                                         fit: BoxFit.contain,
@@ -153,10 +145,7 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                                             context,
                                           ).textTheme.bodySmall?.copyWith(
                                             fontSize: 11,
-                                            fontWeight:
-                                                speakerData?.sku == item.sku
-                                                    ? FontWeight.w600
-                                                    : null,
+                                            fontWeight: speakerData?.sku == item.sku ? FontWeight.w600 : null,
                                           ),
                                         ),
                                       ),
@@ -234,48 +223,38 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                           const SizedBox(height: 6),
                           SizedBox(
                             width: double.infinity,
-                            child: BlocBuilder<
-                              ProjectViewModel,
-                              ProjectViewModelState
-                            >(
+                            child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
                               builder: (
                                 BuildContext context,
                                 ProjectViewModelState state,
                               ) {
                                 if (widget.subZoneId != null) {
-                                  listeningAreas =
-                                      serviceLocator<ProjectViewModel>()
-                                          .getListeningAreasInSubZone(
-                                            subZoneId: widget.subZoneId!,
-                                          );
+                                  listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(
+                                    subZoneId: widget.subZoneId!,
+                                  );
                                 } else {
-                                  listeningAreas =
-                                      serviceLocator<ProjectViewModel>()
-                                          .getListeningAreasForZone(
-                                            zoneId: widget.zoneId,
-                                          );
+                                  listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(
+                                    zoneId: widget.zoneId,
+                                  );
                                 }
                                 return ListeningAreaDropdownWidget(
                                   listeningAreas: listeningAreas,
-                                  selectedListeningAreaIds:
-                                      _selectedListeningAreaIds,
+                                  selectedListeningAreaIds: _selectedListeningAreaIds,
                                   onSelectionChanged: (
                                     List<String> selectedIds,
                                     String floorId,
                                   ) {
                                     /// Add listening area to zone/subzone if not already added
                                     if (widget.subZoneId != null) {
-                                      serviceLocator<ProjectViewModel>()
-                                          .addListeningAreaToSubZone(
-                                            areaId: selectedIds.first,
-                                            subZoneId: widget.subZoneId!,
-                                          );
+                                      serviceLocator<ProjectViewModel>().addListeningAreaToSubZone(
+                                        areaId: selectedIds.first,
+                                        subZoneId: widget.subZoneId!,
+                                      );
                                     } else {
-                                      serviceLocator<ProjectViewModel>()
-                                          .addListeningAreaToZone(
-                                            listeningAreaId: selectedIds.first,
-                                            zoneId: widget.zoneId,
-                                          );
+                                      serviceLocator<ProjectViewModel>().addListeningAreaToZone(
+                                        listeningAreaId: selectedIds.first,
+                                        zoneId: widget.zoneId,
+                                      );
                                     }
 
                                     _selectedListeningAreaIds = selectedIds;
@@ -295,10 +274,7 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                                   width: double.infinity,
                                   label: "Cancel",
                                   accessLabel: "add_speakers_cancel_button",
-                                  textStyle: Theme.of(context)
-                                      .textTheme
-                                      .labelLarge
-                                      ?.copyWith(fontSize: 10),
+                                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
                                   onTap: () {
                                     Navigator.of(context).pop();
                                     // remove speakerData
@@ -326,34 +302,25 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                                     ),
 
                                     label: "Save",
-                                    isActive:
-                                        speakerData != null &&
-                                        _selectedListeningAreaIds.isNotEmpty,
+                                    isActive: speakerData != null && _selectedListeningAreaIds.isNotEmpty,
                                     onTap: () {
-                                      if (speakerData != null &&
-                                          _selectedListeningAreaIds
-                                              .isNotEmpty) {
-                                        serviceLocator<ProjectViewModel>()
-                                            .createCircuitWithSpeakers(
-                                              speakerData: speakerData!,
-                                              listeningAreaId:
-                                                  _selectedListeningAreaIds
-                                                      .first,
-                                              speakerCount:
-                                                  int.tryParse(
-                                                    numberOfSpeakers.text,
-                                                  ) ??
-                                                  1,
-                                              zoneId: widget.zoneId,
-                                              subZoneId: widget.subZoneId,
-                                              isFromBuildingPage: false,
-                                              circuitName:
-                                                  "${speakerData!.name} Circuit",
-                                            );
+                                      if (speakerData != null && _selectedListeningAreaIds.isNotEmpty) {
+                                        serviceLocator<ProjectViewModel>().createCircuitWithSpeakers(
+                                          speakerData: speakerData!,
+                                          listeningAreaId: _selectedListeningAreaIds.first,
+                                          speakerCount:
+                                              int.tryParse(
+                                                numberOfSpeakers.text,
+                                              ) ??
+                                              1,
+                                          zoneId: widget.zoneId,
+                                          subZoneId: widget.subZoneId,
+                                          isFromBuildingPage: false,
+                                          circuitName: "${speakerData!.name} Circuit",
+                                        );
                                         FusionToast.success(
                                           context,
-                                          message:
-                                              "Speakers added to circuit successfully",
+                                          message: "Speakers added to circuit successfully",
                                         );
                                         if (widget.onSpeakerAdded != null) {
                                           widget.onSpeakerAdded!();
