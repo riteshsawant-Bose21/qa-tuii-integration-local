@@ -25,7 +25,6 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
   StreamSubscription<FileTransferState>? _downloadSubscription;
   StreamSubscription<FileTransferState>? _uploadSubscription;
   StreamSubscription<ResponseCallback<FirmwareUpdateProgressEvent>>? _firmwareInstallSocketSubscription;
-  StreamSubscription<ResponseCallback<FirmwareDeviceRebootEvent>>? _deviceRebootSocketSubscription;
 
   final TransferManagerCubit downloadManager = serviceLocator<TransferManagerCubit>();
   String? _persistedBundleId;
@@ -445,7 +444,14 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
           }
 
           if (fileUploadState.status == TransferStatus.failed) {
-            _setInstallFailed('Upload failed.', fileUploadState.errorMessage);
+            if (fileUploadState.error != null) log("FILE UPLOAD ERROR ========== : ${fileUploadState.error}");
+            if (fileUploadState.error == "already_exists") {
+              _markInstallUploadCompleted();
+              _emitIfOpen(state.copyWith(isWaitingForSocketResponse: true));
+              _listenToSoftwareInstallationProgress();
+            } else {
+              _setInstallFailed('Upload failed.', fileUploadState.errorMessage ?? "Unknown error");
+            }
           }
         },
         onError: (Object error) {
@@ -601,31 +607,43 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
         },
         onError: (Object error) {
           if (!completer.isCompleted) {
-            completer.completeError(Exception('Firmware install websocket error: $error'));
+            // Check if installation was actually completed before treating as error
+            final bool wasCompleted = state.installTrackingCompleted;
+            if (wasCompleted) {
+              completer.complete(); // Devices completed, socket error is expected during reboot
+            } else {
+              completer.completeError(Exception('Firmware install websocket error: $error'));
+            }
           }
         },
         onDone: () {
-          if (!completer.isCompleted && !state.installTrackingCompleted) {
-            completer.completeError(Exception('Firmware install websocket closed before completion.'));
+          if (!completer.isCompleted) {
+            // Check if installation was completed before socket closed
+            final bool wasCompleted = state.installTrackingCompleted;
+            if (wasCompleted) {
+              log('Socket closed after installation completed - devices starting reboot');
+              completer.complete(); // Expected: devices going offline to reboot
+            } else {
+              completer.completeError(Exception('Firmware install websocket closed before completion.'));
+            }
           }
         },
       );
 
       await completer.future;
 
-      final bool allCompleted = state.deviceInstallProgress.every((FirmwareInstallDeviceProgress e) => e.isCompleted);
-
-      if (allCompleted) {
-        // Installation successful - delete the downloaded bundle file but keep metadata for rollback
-        final String bundlePathToDelete = state.downloadedFilePath.trim();
-        if (bundlePathToDelete.isNotEmpty) {
-          await _deleteCachedBundleIfExists(bundlePathToDelete);
-        }
-      }
-
+      // Proceed to reboot tracking regardless of how completer completed
+      // (as long as no exception was thrown)
       await listenToDeviceRebootEvents();
     } catch (e) {
-      _setInstallFailed('Installation failed', "Error details: $e");
+      // Only fail if devices didn't complete installation
+      final bool wasCompleted = state.installTrackingCompleted;
+      if (wasCompleted) {
+        log('Installation completed despite error: $e - proceeding to reboot tracking');
+        await listenToDeviceRebootEvents();
+      } else {
+        _setInstallFailed('Installation failed', "Error details: $e");
+      }
     } finally {
       await cancelSoftwareUpdateProgressListening();
       _emitIfOpen(state.copyWith(isSocketTrackingInProgress: false));
@@ -633,77 +651,78 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
   }
 
   Future<void> listenToDeviceRebootEvents() async {
-    emit(state.copyWith(isRebootTrackingInProgress: true));
-    await Future<void>.delayed(const Duration(minutes: 1));
-
-
+    log("REBOOTING:::: Waiting for devices to reboot...");
+    _emitIfOpen(state.copyWith(isRebootTrackingInProgress: true));
+    // await Future<void>.delayed(const Duration(minutes: 1));
+    log("REBOOTING:::: Starting device polling...");
 
     _emitIfOpen(state.copyWith(isSocketTrackingInProgress: true));
-    final Completer<void> completer = Completer<void>();
+
     try {
-      final ResponseCallback<void> connectResponse = await fusionDeviceService.connectFirmwareUpdateWebSocket(vip: vip!);
-      if (!connectResponse.success) throw Exception(connectResponse.message.isEmpty ? 'Unable to connect firmware update websocket.' : connectResponse.message);
+      final List<FusionNetworkDevice> expectedDevices = state.networkDevices;
+      final Set<String> expectedSerials = expectedDevices.map((FusionNetworkDevice d) => d.serialNumber).toSet();
 
-      final String socketRequestId = "$bundleId-reboot-listener";
+      const int maxAttempts = 60; // 10 minutes max (60 attempts * 10 seconds)
+      int attempts = 0;
+      bool allDevicesOnline = false;
 
-      final ResponseCallback<void> startResponse = await fusionDeviceService.sendStartFirmwareUpdateEvent(bundleId: socketRequestId);
-      if (!startResponse.success) throw Exception(startResponse.message.isEmpty ? 'Failed to send start firmware update event.' : startResponse.message);
+      while (attempts < maxAttempts) {
+        attempts++;
+        log("REBOOTING:::: Polling devices... attempt $attempts/$maxAttempts");
 
-      await _deviceRebootSocketSubscription?.cancel();
-      _deviceRebootSocketSubscription = fusionDeviceService
-          .listenDeviceRebootEvents(socketRequestId)
-          .listen(
-            (ResponseCallback<FirmwareDeviceRebootEvent> response) {
-              if (!response.success || response.data == null) return;
+        try {
+          final ResponseCallback<List<FusionNetworkDevice>> response = await fusionDeviceService.getAvailableDevicesOnNetwork(ip: vip!);
 
-              final FirmwareDeviceRebootEvent event = response.data!;
-              if (event.devicesBySerial.isEmpty) return;
+          if (response.success && response.data != null) {
+            final List<FusionNetworkDevice> currentDevices = response.data!;
+            final Set<String> currentSerials = currentDevices.map((FusionNetworkDevice d) => d.serialNumber).toSet();
 
-              final Map<String, FirmwareDeviceRebootStatus> mergedBySerial = <String, FirmwareDeviceRebootStatus>{
-                for (final FirmwareDeviceRebootStatus item in state.devicesRebootStatus) item.serialNumber: item,
-              };
+            // Update reboot status for tracking
+            final List<FirmwareDeviceRebootStatus> rebootStatuses =
+                expectedDevices.map((FusionNetworkDevice device) {
+                  final bool isOnline = currentSerials.contains(device.serialNumber);
 
-              for (final MapEntry<String, FirmwareDeviceRebootStatus> entry in event.devicesBySerial.entries) {
-                final FirmwareDeviceRebootStatus device = entry.value;
-                final String serialNumber = device.serialNumber.trim();
-                final String serial = serialNumber.isNotEmpty ? serialNumber : entry.key;
-                mergedBySerial[serial] = device;
-              }
+                  // Use fresh device data from API if online, otherwise use expected device data
+                  final FusionNetworkDevice? currentDevice =
+                      isOnline ? currentDevices.firstWhereOrNull((FusionNetworkDevice d) => d.serialNumber == device.serialNumber) : null;
 
-              final List<FirmwareDeviceRebootStatus> mergedDevices = <FirmwareDeviceRebootStatus>[...mergedBySerial.values];
-              mergedDevices.sort((FirmwareDeviceRebootStatus a, FirmwareDeviceRebootStatus b) => a.serialNumber.compareTo(b.serialNumber));
+                  return FirmwareDeviceRebootStatus(
+                    serialNumber: device.serialNumber,
+                    currentBundleVersion: currentDevice?.softwareUpdateVersion ?? device.softwareUpdateVersion,
+                    status: isOnline ? 'SUCCESS' : 'REBOOTING',
+                    currentState: isOnline ? 'ONLINE' : 'OFFLINE',
+                  );
+                }).toList();
 
-              _emitIfOpen(
-                state.copyWith(
-                  devicesRebootStatus: mergedDevices,
-                  isSocketTrackingInProgress: !state.isAllDevicesRebooted,
-                ),
-              );
+            _emitIfOpen(state.copyWith(devicesRebootStatus: rebootStatuses));
 
-              if (state.isAllDevicesRebooted && !completer.isCompleted) completer.complete();
-            },
-            onError: (Object error) {
-              if (!completer.isCompleted) {
-                completer.completeError(Exception('Firmware install websocket error: $error'));
-              }
-            },
-            onDone: () {
-              if (!completer.isCompleted && !state.installTrackingCompleted) {
-                completer.completeError(Exception('Firmware install websocket closed before completion.'));
-              }
-            },
-          );
+            // Check if all expected devices are back online
+            allDevicesOnline = expectedSerials.every((String serial) => currentSerials.contains(serial)) && currentDevices.length >= expectedDevices.length;
 
-      await completer.future;
-
-      final bool allCompleted = state.deviceInstallProgress.every((FirmwareInstallDeviceProgress e) => e.isCompleted);
-
-      if (allCompleted) {
-        // Installation successful - delete the downloaded bundle file but keep metadata for rollback
-        final String bundlePathToDelete = state.downloadedFilePath.trim();
-        if (bundlePathToDelete.isNotEmpty) {
-          await _deleteCachedBundleIfExists(bundlePathToDelete);
+            if (allDevicesOnline) {
+              log("REBOOTING:::: All devices are back online! (${currentDevices.length}/${expectedDevices.length})");
+              break;
+            } else {
+              log("REBOOTING:::: Devices online: ${currentDevices.length}/${expectedDevices.length}");
+            }
+          }
+        } catch (e) {
+          log("REBOOTING:::: Error polling devices: $e");
         }
+
+        if (!allDevicesOnline) {
+          await Future<void>.delayed(const Duration(seconds: 10));
+        }
+      }
+
+      if (!allDevicesOnline) {
+        throw Exception('Device reboot timeout: Not all devices came back online within 10 minutes');
+      }
+
+      // Delete the bundle file after successful completion
+      final String bundlePathToDelete = state.downloadedFilePath.trim();
+      if (bundlePathToDelete.isNotEmpty) {
+        await _deleteCachedBundleIfExists(bundlePathToDelete);
       }
 
       _emitIfOpen(
@@ -714,14 +733,15 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
           errorShortText: '',
           installTrackingCompleted: true,
           isSocketTrackingInProgress: false,
-          
+          isRebootTrackingInProgress: false,
         ),
       );
     } catch (e) {
+      log("REBOOTING ERROR :::: ${e.toString()}");
       _setInstallFailed('Installation failed', "Error details: $e");
     } finally {
       await cancelSoftwareUpdateProgressListening();
-      _emitIfOpen(state.copyWith(isSocketTrackingInProgress: false));
+      _emitIfOpen(state.copyWith(isSocketTrackingInProgress: false, isRebootTrackingInProgress: false));
     }
   }
 
@@ -752,9 +772,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
 
   Future<void> cancelSoftwareUpdateProgressListening() async {
     await _firmwareInstallSocketSubscription?.cancel();
-    await _deviceRebootSocketSubscription?.cancel();
     _firmwareInstallSocketSubscription = null;
-    _deviceRebootSocketSubscription = null;
   }
 
   void _emitIfOpen(FirmwareUpdateViewModelState nextState) {

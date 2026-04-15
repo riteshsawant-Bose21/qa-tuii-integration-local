@@ -146,19 +146,24 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
       builder: (BuildContext context) {
         final bool isDownloading = state.uiState == FirmwareUpdateUiState.downloading;
         final bool isInstalling = state.uiState == FirmwareUpdateUiState.installing;
+        final bool isUploading = isInstalling && state.isUploadInProgress;
         final bool isRebooting = state.isRebootTrackingInProgress;
         final int totalDevices = state.networkDevices.length;
         final int completedDevices = state.devicesRebootStatus.where((FirmwareDeviceRebootStatus d) => d.isSUCCESS).length;
 
         String title() {
           if (isDownloading) return "Firmware is downloading";
+          if (isUploading) return "Firmware is uploading";
+          if (isRebooting) return "Devices are rebooting";
           if (isInstalling) return "Firmware is installing";
           return "Devices are rebooting";
         }
 
         String description() {
-          if (isDownloading) return 'Firmware is being downloaded to your devices. Please do not close the launcher or disconnect your devices.';
-          if (isInstalling) return 'Firmware is being installed on your devices. Please do not close the launcher or disconnect your devices.';
+          if (isDownloading) return 'Firmware bundle is being downloaded to your devices. Please do not close the launcher or disconnect your devices.';
+          if (isUploading) return 'Firmware bundle is being uploaded to your devices. Please do not close the launcher or disconnect your devices.';
+          if (isRebooting) return 'Devices are rebooting with new firmware. Please do not close the launcher or disconnect your devices.';
+          if (isInstalling) return 'Firmware bundle is being installed on your devices. Please do not close the launcher or disconnect your devices.';
           return 'Devices are rebooting with new firmware. Please do not close the launcher or disconnect your devices.';
         }
 
@@ -194,15 +199,15 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      if (isRebooting && totalDevices > 0 && completedDevices > 0) ...<Widget>[
-                        const SizedBox(height: 16),
-                        FusionAppText(
-                          text: '$completedDevices of $totalDevices devices completed',
-                          style: context.textTheme.b2Medium.copyWith(
-                            color: const Color(0xFF27B177),
-                          ),
-                        ),
-                      ],
+                      // if (isRebooting && totalDevices > 0 && completedDevices > 0) ...<Widget>[
+                      //   const SizedBox(height: 16),
+                      //   FusionAppText(
+                      //     text: '$completedDevices of $totalDevices devices rebooted',
+                      //     style: context.textTheme.b2Medium.copyWith(
+                      //       color: const Color(0xFF27B177),
+                      //     ),
+                      //   ),
+                      // ],
                     ],
                   ),
                 ),
@@ -226,7 +231,9 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
     return BlocConsumer<FirmwareUpdateViewModel, FirmwareUpdateViewModelState>(
       bloc: _firmwareUpdateViewModel,
       listenWhen: (FirmwareUpdateViewModelState previous, FirmwareUpdateViewModelState current) {
-        return previous.uiState != current.uiState || previous.isRebootTrackingInProgress != current.isRebootTrackingInProgress;
+        return previous.uiState != current.uiState ||
+            previous.isRebootTrackingInProgress != current.isRebootTrackingInProgress ||
+            previous.isUploadInProgress != current.isUploadInProgress;
       },
       listener: (BuildContext context, FirmwareUpdateViewModelState state) {
         _syncGlobalInstallBlocker(state);
