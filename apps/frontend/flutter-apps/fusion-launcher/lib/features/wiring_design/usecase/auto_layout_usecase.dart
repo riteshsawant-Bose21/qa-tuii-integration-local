@@ -20,20 +20,25 @@ class WiringAutoLayoutUseCase {
   static const double _horizontalGroupGap = 300;
   static const double _verticalGroupGap = 100;
   static const double _topRowDeviceGap = 120;
-  Map<String, HardwareComponent> deviceById = <String, HardwareComponent>{};
-  Map<String, CircuitModel> circuitById = <String, CircuitModel>{};
-  final List<CircuitModel> circuits = <CircuitModel>[];
-  Map<String, Zone> zoneForCircuitId = <String, Zone>{};
-  Map<String, List<CircuitModel>> circuitsByZoneId = <String, List<CircuitModel>>{};
 
-  Map<String, Size> sizeById = <String, Size>{};
-  List<WiringLayoutResult> execute({
-    required List<HardwareComponent> devices,
-    required List<WiringConnectionModel> connections,
-    required List<Zone> zones,
-    required WiringZoneManager zoneManager,
+  final List<HardwareComponent> devices;
+  final List<WiringConnectionModel> connections;
+  final List<Zone> zones;
+  final WiringZoneManager zoneManager;
+  WiringAutoLayoutUseCase({
+    required this.devices,
+    required this.connections,
+    required this.zones,
+    required this.zoneManager,
   }) {
-    final ConnectionManager connectionManager = ConnectionManager();
+    _initialize();
+  }
+
+  ///
+  ///
+  ///
+  ///
+  void _initialize() {
     connectionManager.syncWithProjectManager(serviceLocator.get<ProjectViewModel>());
     final List<WiringZonePainter> zonePainters =
         zones.map((Zone zone) => WiringZonePainter(zone: zone, zoneManager: zoneManager, connectionManager: connectionManager)).toList();
@@ -89,22 +94,50 @@ class WiringAutoLayoutUseCase {
       for (final WiringControllerPainter painter in otherPainters) painter.device.id: painter.getSize(),
       for (final WiringZonePainter painter in zonePainters) painter.zone.id: painter.getSize(),
     };
-    final Map<String, PortPainter> painterById = <String, PortPainter>{
+    painterById = <String, PortPainter>{
       for (final WiringSourcePainter painter in sourcePainters) painter.source.id: painter,
       for (final WiringDevicesPainter painter in dspPainters) painter.device.id: painter,
       for (final WiringDevicesPainter painter in amplifierPainters) painter.device.id: painter,
       for (final WiringControllerPainter painter in otherPainters) painter.device.id: painter,
       for (final WiringZonePainter painter in zonePainters) painter.zone.id: painter,
     };
+    zoneById = <String, Zone>{
+      for (final WiringZonePainter painter in zonePainters) painter.zone.id: painter.zone,
+    };
 
-    final List<Source> sources = sourcePainters.map((WiringSourcePainter painter) => painter.source).toList();
-    final List<FusionDsp> dsps = dspPainters.map((WiringDevicesPainter painter) => painter.device).whereType<FusionDsp>().toList();
-    final List<Amplifier> amplifiers = amplifierPainters.map((WiringDevicesPainter painter) => painter.device).whereType<Amplifier>().toList();
-    final List<HardwareComponent> others = otherPainters.map((WiringControllerPainter painter) => painter.device).toList();
-
+    sources.clear();
+    sources.addAll(sourcePainters.map((WiringSourcePainter painter) => painter.source));
+    dsps.clear();
+    dsps.addAll(dspPainters.map((WiringDevicesPainter painter) => painter.device).whereType<FusionDsp>());
+    amplifiers.clear();
+    amplifiers.addAll(amplifierPainters.map((WiringDevicesPainter painter) => painter.device).whereType<Amplifier>());
+    others.clear();
+    others.addAll(otherPainters.map((WiringControllerPainter painter) => painter.device));
     deviceById = <String, HardwareComponent>{
       for (final HardwareComponent device in devices) device.id: device,
     };
+  }
+
+  Map<String, HardwareComponent> deviceById = <String, HardwareComponent>{};
+  Map<String, CircuitModel> circuitById = <String, CircuitModel>{};
+  final List<CircuitModel> circuits = <CircuitModel>[];
+  Map<String, Zone> zoneForCircuitId = <String, Zone>{};
+  Map<String, List<CircuitModel>> circuitsByZoneId = <String, List<CircuitModel>>{};
+
+  Map<String, Size> sizeById = <String, Size>{};
+  final ConnectionManager connectionManager = ConnectionManager();
+  Map<String, PortPainter> painterById = <String, PortPainter>{};
+  Map<String, Zone> zoneById = <String, Zone>{};
+
+  final List<Source> sources = <Source>[];
+  final List<FusionDsp> dsps = <FusionDsp>[];
+  final List<Amplifier> amplifiers = <Amplifier>[];
+  final List<HardwareComponent> others = <HardwareComponent>[];
+
+  ///
+  ///
+  ///
+  List<WiringLayoutResult> execute() {
     final List<_PlacementGroup> dspPlacements = <_PlacementGroup>[];
 
     for (FusionDsp dsp in dsps) {
@@ -253,9 +286,7 @@ class WiringAutoLayoutUseCase {
       circuitById: circuitById,
       painterById: painterById,
       zoneForCircuitId: zoneForCircuitId,
-      zoneById: <String, Zone>{
-        for (final WiringZonePainter painter in zonePainters) painter.zone.id: painter.zone,
-      },
+      zoneById: zoneById,
     );
 
     return placements;
@@ -273,7 +304,7 @@ class WiringAutoLayoutUseCase {
     if (lastDeviceRect != null) {
       return offsetFromSameType(lastDeviceRect);
     }
-    final Rect? dspRect = layoutGrid.getLastPlacedRectForPainter((PortPainter painter) => painter is WiringDevicesPainter && painter.device is FusionDsp);
+    final Rect? dspRect = layoutGrid.getFirstPlacedRectForPainter((PortPainter painter) => painter is WiringDevicesPainter && painter.device is FusionDsp);
     if (dspRect != null) {
       return offsetFromDSP(dspRect);
     }

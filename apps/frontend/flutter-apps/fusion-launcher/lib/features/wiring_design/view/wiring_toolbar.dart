@@ -170,12 +170,13 @@ class WiringToolBar extends StatelessWidget {
                 icon: 'assets/icons/wiring_page/auto_layout.png',
                 onTap: () {
                   final WiringZoneManager zoneManager = WiringZoneManager()..syncWithProjectManager(projectViewModel);
-                  final List<WiringLayoutResult> layouts = WiringAutoLayoutUseCase().execute(
-                    devices: projectViewModel.getAllHardware(),
-                    connections: projectViewModel.getAllWiringConnections(),
-                    zones: projectViewModel.getAllZones(),
-                    zoneManager: zoneManager,
-                  );
+                  final List<WiringLayoutResult> layouts =
+                      WiringAutoLayoutUseCase(
+                        devices: projectViewModel.getAllHardware(),
+                        connections: projectViewModel.getAllWiringConnections(),
+                        zones: projectViewModel.getAllZones(),
+                        zoneManager: zoneManager,
+                      ).execute();
                   for (final WiringConnectionModel element in projectViewModel.getAllWiringConnections()) {
                     projectViewModel.updateWiringConnection(connection: element.copyWith(axisLocks: <AxisLock>[]));
                   }

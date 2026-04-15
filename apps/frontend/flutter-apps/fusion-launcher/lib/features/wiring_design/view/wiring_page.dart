@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/connection_tool_params.dart';
@@ -10,7 +10,6 @@ import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canv
 import 'package:fusion_launcher/features/projects/presentation/project_work_area.dart';
 import 'package:fusion_launcher/features/wiring_design/algorithm/intersection_manager.dart';
 import 'package:fusion_launcher/features/wiring_design/algorithm/path_system_storage.dart';
-import 'package:fusion_launcher/features/wiring_design/controller/circuit_controller.dart';
 import 'package:fusion_launcher/features/wiring_design/usecase/connection_usecase.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_toolbar.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -39,9 +38,6 @@ class WiringPage extends StatefulWidget {
 }
 
 class _WiringPageState extends State<WiringPage> {
-  late CircuitController controller = CircuitController(
-    serviceLocator<ProjectViewModel>(),
-  );
   final PathSystemStorage pathStorage = PathSystemStorage();
   final IntersectionManager intersectionManager = IntersectionManager();
   final WiringZoneManager zoneManager = WiringZoneManager();
@@ -53,25 +49,22 @@ class _WiringPageState extends State<WiringPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      controller.fitToViewPort();
+      _correctPositionOfNewHardware();
     });
+  }
+
+  void _correctPositionOfNewHardware() {
+    for (final HardwareComponent hardware in context.read<ProjectViewModel>().hardwareComponents) {
+      if (hardware.wiringPos == null) {
+        context.read<ProjectViewModel>().updateHardware(
+          hardware: hardware.copyWith(),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // if (!kDebugMode) {
-    //   return BlocListener<ProjectViewModel, ProjectViewModelState>(
-    //     listener: (BuildContext context, ProjectViewModelState state) {
-    //       if (state is DeviceSelectionChanged) {
-    //         controller.selectElementFromPM(state.selectedDevice?.id);
-    //       }
-    //       if (state is ProjectUpdated) {
-    //         controller.loadFromPM();
-    //       }
-    //     },
-    //     child: CircuitView(controller: controller),
-    //   );
-    // }
     return BlocConsumer<ProjectViewModel, ProjectViewModelState>(
       listener: (BuildContext context, ProjectViewModelState state) {
         pathStorage.removeKeysExcept(
@@ -164,7 +157,7 @@ class _WiringPageState extends State<WiringPage> {
                 // } else if (port.relativePosition.dx > port.parent.size.width * 0.7) {
                 //   resultedPosition = position! + Offset(padding, 0);
                 // }
-                final Rect currentViewPortRect = controller.canvasState.offset & (constraints.biggest);
+                final Rect currentViewPortRect = context.read<FusionCanvasStateViewModel>().state.offset & (constraints.biggest);
 
                 return Stack(
                   children: <Widget>[
@@ -222,6 +215,17 @@ class _WiringPageState extends State<WiringPage> {
             );
           },
           toolbarEvents: FusionCanvasEvents(
+            inputEvents: FusionCanvasInputEvents(
+              onKeyEvent: (KeyEvent event) {
+                if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+                  setState(() {
+                    portId = null;
+                    layerId = null;
+                  });
+                }
+                return false;
+              },
+            ),
             onElementClicked: (FusionBasePainter painter, FusionCanvasElement? element) {
               if (element is! WiringPortData) {
                 return false;
