@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:collection/collection.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/connection_tool_params.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/connection_tool_state.dart';
@@ -46,16 +47,25 @@ class ConnectionToolHelper extends FusionCanvasToolTransformer<ConnectingToolSta
       if (hovered is WiringPortData) {
         final List<WiringConnectionModel> existinnConnections = connectionParams.getExistingConnectionsForPort(hovered.deviceId, hovered.port.id);
         if (existinnConnections.isNotEmpty) {
+          print("Has existing connections: ${existinnConnections.length}");
           final WiringConnectionModel connection = existinnConnections.first;
           final String otherDeviceId = connection.deviceId == hovered.deviceId ? connection.targetDeviceId : connection.deviceId;
+          final String otherPortId = otherDeviceId == connection.deviceId ? connection.portId : connection.targetPortId;
 
-          final FusionBasePainter? otherDevicePainter = context.fusionCanvasPainter.getLayerById(otherDeviceId);
+          final FusionBasePainter? otherDevicePainter =
+              context.fusionCanvasPainter.getLayerById(otherDeviceId) ??
+              context.fusionCanvasPainter.layers.whereType<PortPainter>().firstWhereOrNull(
+                (PortPainter painter) => painter.getPorts(Rect.zero, context.fusionCanvasPainter).any((WiringPortData port) => port.port.id == otherPortId),
+              );
+          print(
+            "Other device painter for  $otherDeviceId: ${otherDevicePainter != null ? "found" : "not found"}.   Hovered Device ID: ${hovered.deviceId}, Hovered Port ID: ${hovered.port.id}, Connection device ID: ${connection.deviceId}, Connection port ID: ${connection.portId}",
+          );
+
           if (otherDevicePainter is PortPainter) {
-            final String otherPortId = otherDevicePainter.id == connection.deviceId ? connection.portId : connection.targetPortId;
             final WiringPortData otherPort = otherDevicePainter
                 .getPorts(Rect.zero, context.fusionCanvasPainter)
                 .firstWhere((WiringPortData port) => port.port.id == otherPortId, orElse: () => hovered);
-
+            print("Other port for $otherPortId: ${otherPort.id}");
             return _beginConnection(connection, otherPort, context);
           }
 
@@ -116,7 +126,6 @@ class ConnectionToolHelper extends FusionCanvasToolTransformer<ConnectingToolSta
         final FusionCanvasElement? hovered = context.hoverState.hoveredElement;
         final WiringPortData? destination = (hovered is WiringPortData && hovered.id != current.sourcePort.id) ? hovered : null;
         if (destination != null) {
-          print("Creating connection from ${current.sourcePort.id} to ${destination.id}");
           final WiringConnectionModel? existing = current.originalConnection;
           if ((existing != null && existing.deviceId == current.sourcePort.deviceId && existing.portId == current.sourcePort.port.id) ||
               (existing != null && existing.targetDeviceId == current.sourcePort.deviceId && existing.targetPortId == current.sourcePort.port.id)) {
@@ -156,7 +165,11 @@ class ConnectionToolHelper extends FusionCanvasToolTransformer<ConnectingToolSta
     FusionCanvasInputContext context,
   ) {
     final String painterId = port.deviceId;
-    final FusionBasePainter? painter = context.fusionCanvasPainter.getLayerById(painterId);
+    final FusionBasePainter? painter =
+        context.fusionCanvasPainter.getLayerById(painterId) ??
+        context.fusionCanvasPainter.layers.whereType<PortPainter>().firstWhereOrNull(
+          (PortPainter painter) => painter.getPorts(Rect.zero, context.fusionCanvasPainter).any((WiringPortData p) => p.port.id == port.id),
+        );
 
     if (painter is FusionCanvasElementPainter && painter is PortPainter) {
       return (painter).getPortPosition(port.id, context.fusionCanvasPainter)?.$1.center ?? context.inputState.mousePosition ?? Offset.zero;

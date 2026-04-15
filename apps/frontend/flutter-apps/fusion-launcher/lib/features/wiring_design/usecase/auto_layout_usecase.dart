@@ -20,20 +20,25 @@ class WiringAutoLayoutUseCase {
   static const double _horizontalGroupGap = 300;
   static const double _verticalGroupGap = 100;
   static const double _topRowDeviceGap = 120;
-  Map<String, HardwareComponent> deviceById = <String, HardwareComponent>{};
-  Map<String, CircuitModel> circuitById = <String, CircuitModel>{};
-  final List<CircuitModel> circuits = <CircuitModel>[];
-  Map<String, Zone> zoneForCircuitId = <String, Zone>{};
-  Map<String, List<CircuitModel>> circuitsByZoneId = <String, List<CircuitModel>>{};
 
-  Map<String, Size> sizeById = <String, Size>{};
-  List<WiringLayoutResult> execute({
-    required List<HardwareComponent> devices,
-    required List<WiringConnectionModel> connections,
-    required List<Zone> zones,
-    required WiringZoneManager zoneManager,
+  final List<HardwareComponent> devices;
+  final List<WiringConnectionModel> connections;
+  final List<Zone> zones;
+  final WiringZoneManager zoneManager;
+  WiringAutoLayoutUseCase({
+    required this.devices,
+    required this.connections,
+    required this.zones,
+    required this.zoneManager,
   }) {
-    final ConnectionManager connectionManager = ConnectionManager();
+    _initialize();
+  }
+
+  ///
+  ///
+  ///
+  ///
+  void _initialize() {
     connectionManager.syncWithProjectManager(serviceLocator.get<ProjectViewModel>());
     final List<WiringZonePainter> zonePainters =
         zones.map((Zone zone) => WiringZonePainter(zone: zone, zoneManager: zoneManager, connectionManager: connectionManager)).toList();
@@ -89,22 +94,53 @@ class WiringAutoLayoutUseCase {
       for (final WiringControllerPainter painter in otherPainters) painter.device.id: painter.getSize(),
       for (final WiringZonePainter painter in zonePainters) painter.zone.id: painter.getSize(),
     };
-    final Map<String, PortPainter> painterById = <String, PortPainter>{
+    painterById = <String, PortPainter>{
       for (final WiringSourcePainter painter in sourcePainters) painter.source.id: painter,
       for (final WiringDevicesPainter painter in dspPainters) painter.device.id: painter,
       for (final WiringDevicesPainter painter in amplifierPainters) painter.device.id: painter,
       for (final WiringControllerPainter painter in otherPainters) painter.device.id: painter,
       for (final WiringZonePainter painter in zonePainters) painter.zone.id: painter,
     };
+    zoneById = <String, Zone>{
+      for (final WiringZonePainter painter in zonePainters) painter.zone.id: painter.zone,
+    };
 
-    final List<Source> sources = sourcePainters.map((WiringSourcePainter painter) => painter.source).toList();
-    final List<FusionDsp> dsps = dspPainters.map((WiringDevicesPainter painter) => painter.device).whereType<FusionDsp>().toList();
-    final List<Amplifier> amplifiers = amplifierPainters.map((WiringDevicesPainter painter) => painter.device).whereType<Amplifier>().toList();
-    final List<HardwareComponent> others = otherPainters.map((WiringControllerPainter painter) => painter.device).toList();
-
+    sources.clear();
+    sources.addAll(sourcePainters.map((WiringSourcePainter painter) => painter.source));
+    dsps.clear();
+    dsps.addAll(dspPainters.map((WiringDevicesPainter painter) => painter.device).whereType<FusionDsp>());
+    amplifiers.clear();
+    amplifiers.addAll(amplifierPainters.map((WiringDevicesPainter painter) => painter.device).whereType<Amplifier>());
+    others.clear();
+    others.addAll(otherPainters.map((WiringControllerPainter painter) => painter.device));
     deviceById = <String, HardwareComponent>{
       for (final HardwareComponent device in devices) device.id: device,
     };
+  }
+
+  Map<String, HardwareComponent> deviceById = <String, HardwareComponent>{};
+  Map<String, CircuitModel> circuitById = <String, CircuitModel>{};
+  final List<CircuitModel> circuits = <CircuitModel>[];
+  Map<String, Zone> zoneForCircuitId = <String, Zone>{};
+  Map<String, List<CircuitModel>> circuitsByZoneId = <String, List<CircuitModel>>{};
+
+  Map<String, Size> sizeById = <String, Size>{};
+  final ConnectionManager connectionManager = ConnectionManager();
+  Map<String, PortPainter> painterById = <String, PortPainter>{};
+  Map<String, Zone> zoneById = <String, Zone>{};
+
+  final List<Source> sources = <Source>[];
+  final List<FusionDsp> dsps = <FusionDsp>[];
+  final List<Amplifier> amplifiers = <Amplifier>[];
+  final List<HardwareComponent> others = <HardwareComponent>[];
+
+  ///
+  ///Algorithm:
+  ///     1. Find all groups of connected devices to DSPs. Each group will have a DSP as the center, with its connected devices as left and right elements based on input/output.
+  ///     2. Place each group on the layout grid, starting from the top-left corner and moving right and down as needed.
+  ///     3. For any remaining unplaced devices, attempt to place them near their connected DSP if they have one, otherwise place them in the next available spot on the grid.
+  ///
+  List<WiringLayoutResult> execute() {
     final List<_PlacementGroup> dspPlacements = <_PlacementGroup>[];
 
     for (FusionDsp dsp in dsps) {
@@ -141,8 +177,6 @@ class WiringAutoLayoutUseCase {
 
     final _LayoutGrid layoutGrid = _LayoutGrid();
 
-    // Map<
-
     Offset currentOffset = Offset.zero;
     for (final _PlacementGroup group in dspPlacements) {
       final Rect rect = _placeGroup(
@@ -154,7 +188,6 @@ class WiringAutoLayoutUseCase {
       );
       currentOffset = Offset(0, rect.bottom + _topRowDeviceGap);
     }
-    print("Placing Unplaced Sources : ${unplacedSourcesGroup.length}");
 
     for (final _PlacementGroup group in unplacedSourcesGroup) {
       _placeGroup(
@@ -171,7 +204,6 @@ class WiringAutoLayoutUseCase {
         painterById: painterById,
       );
     }
-    print("Placing Unplaced Amplifiers : ${unplacedAmplifiersGroup.length}");
     for (final _PlacementGroup group in unplacedAmplifiersGroup) {
       _placeGroup(
         centerPosition: _offsetForUnplacedDevice(
@@ -190,7 +222,7 @@ class WiringAutoLayoutUseCase {
         painterById: painterById,
       );
     }
-    print("Placing Unplaced Others : ${unplacedOthersGroup.length}");
+
     for (final _PlacementGroup group in unplacedOthersGroup) {
       _placeGroup(
         centerPosition: _offsetForUnplacedDevice(
@@ -215,8 +247,6 @@ class WiringAutoLayoutUseCase {
         painterById: painterById,
       );
     }
-
-    print("Placing Unplaced Zones : ${unplacedZonesGroup.length}");
     for (final _PlacementGroup group in unplacedZonesGroup) {
       _placeGroup(
         centerPosition: _offsetForUnplacedDevice(
@@ -253,9 +283,7 @@ class WiringAutoLayoutUseCase {
       circuitById: circuitById,
       painterById: painterById,
       zoneForCircuitId: zoneForCircuitId,
-      zoneById: <String, Zone>{
-        for (final WiringZonePainter painter in zonePainters) painter.zone.id: painter.zone,
-      },
+      zoneById: zoneById,
     );
 
     return placements;
@@ -273,7 +301,7 @@ class WiringAutoLayoutUseCase {
     if (lastDeviceRect != null) {
       return offsetFromSameType(lastDeviceRect);
     }
-    final Rect? dspRect = layoutGrid.getLastPlacedRectForPainter((PortPainter painter) => painter is WiringDevicesPainter && painter.device is FusionDsp);
+    final Rect? dspRect = layoutGrid.getFirstPlacedRectForPainter((PortPainter painter) => painter is WiringDevicesPainter && painter.device is FusionDsp);
     if (dspRect != null) {
       return offsetFromDSP(dspRect);
     }
@@ -349,7 +377,7 @@ class WiringAutoLayoutUseCase {
     );
 
     return _PlacementGroup(
-      center: _PlacementElement(id: zone.id, position: Offset.zero, size: sizeById[zone.id] ?? const Size(100, 100)),
+      center: _PlacementElement(id: zone.id, size: sizeById[zone.id] ?? const Size(100, 100)),
       leftElements: leftElements,
       rightElements: <_PlacingElement>[],
       bottomElements: <_PlacingElement>[],
@@ -363,7 +391,7 @@ class WiringAutoLayoutUseCase {
     final List<_PlacingElement> bottomElements = _constructGroup(_inputConnectedDevices(component.communicationPorts, connectionManager), connectionManager);
 
     return _PlacementGroup(
-      center: _PlacementElement(id: component.id, position: Offset.zero, size: sizeById[component.id] ?? const Size(100, 100)),
+      center: _PlacementElement(id: component.id, size: sizeById[component.id] ?? const Size(100, 100)),
       leftElements: leftElements,
       rightElements: rightElements,
       bottomElements: bottomElements,
@@ -388,8 +416,11 @@ class WiringAutoLayoutUseCase {
       if (circuit != null) {
         final Zone? zone = zoneForCircuitId[circuit.id];
         if (zone != null) {
+          if (_placedDeviceMap[zone.id] == true) {
+            continue;
+          }
           _placedDeviceMap[zone.id] = true;
-          leftElements.add(_PlacementElement(id: zone.id, position: Offset.zero, size: sizeById[zone.id] ?? const Size(100, 100)));
+          leftElements.add(_PlacementElement(id: zone.id, size: sizeById[zone.id] ?? const Size(100, 100)));
           continue;
         }
       }
@@ -401,18 +432,29 @@ class WiringAutoLayoutUseCase {
 
   final Map<String, bool> _placedDeviceMap = <String, bool>{};
 
+  ///
+  ///
+  /// Returns all the connected Unplaced devices to given port.
+  ///
+  ///
   List<_PlacementElement> _inputConnectedDevices(List<PortData> ports, ConnectionManager connectionManager) {
     final List<_PlacementElement> elements = <_PlacementElement>[];
     double yPos = 0;
     for (final PortData port in ports) {
       final WiringConnectionModel? connection = connectionManager.getConnectionForPort(port.id);
+
       if (connection == null) continue;
       final String otherDeviceId = connection.portId == port.id ? connection.targetDeviceId : connection.deviceId;
+
+      ///
+      /// If Already Placed, then Skip the device.
+      ///
       if (_placedDeviceMap[otherDeviceId] == true) {
         continue;
       }
+
       _placedDeviceMap[otherDeviceId] = true;
-      final _PlacementElement element = _PlacementElement(id: otherDeviceId, position: Offset(0, yPos), size: sizeById[otherDeviceId] ?? const Size(100, 100));
+      final _PlacementElement element = _PlacementElement(id: otherDeviceId, size: sizeById[otherDeviceId] ?? const Size(100, 100));
       yPos++;
 
       if (!elements.any((_PlacementElement element) => element.id == otherDeviceId)) {
@@ -421,6 +463,134 @@ class WiringAutoLayoutUseCase {
     }
 
     return elements;
+  }
+
+  ///
+  ///
+  ///
+  ///
+
+  List<WiringLayoutResult> placeTheseDevices({
+    required List<HardwareComponent> newDevices,
+    required List<Zone> newZones,
+  }) {
+    final _LayoutGrid grid = _LayoutGrid();
+
+    for (final HardwareComponent device in devices) {
+      _placedDeviceMap[device.id] = true;
+      final PortPainter? painter = painterById[device.id];
+      if (painter == null) continue;
+      final Size size = sizeById[device.id] ?? const Size(100, 100);
+      final Offset? offset = device.wiringPos;
+      if (offset == null) continue;
+      final Rect rect = Rect.fromLTWH(offset.dx, offset.dy, size.width, size.height);
+      grid.addPlacement(rect, painter);
+    }
+
+    for (final Zone zone in zones) {
+      _placedDeviceMap[zone.id] = true;
+
+      final PortPainter? painter = painterById[zone.id];
+      if (painter == null) continue;
+      final Size size = sizeById[zone.id] ?? const Size(100, 100);
+      final Offset? offset = zone.wiringPos;
+      if (offset == null) continue;
+      final Rect rect = Rect.fromLTWH(offset.dx, offset.dy, size.width, size.height);
+      grid.addPlacement(rect, painter);
+    }
+    final List<String> newIds = <String>[];
+    for (final HardwareComponent device in newDevices) {
+      newIds.add(device.id);
+      final _PlacementGroup group = _getPlacementGroupForHardwareComponent(device, connectionManager);
+
+      _placeGroup(centerPosition: getOffsetForNewDevice(grid, group), layoutGrid: grid, element: group, sizeById: sizeById, painterById: painterById);
+    }
+    for (final Zone zone in newZones) {
+      newIds.add(zone.id);
+      final _PlacementGroup group = _getPlacementGroupForZone(zone, connectionManager);
+      _placeGroup(centerPosition: getOffsetForNewDevice(grid, group), layoutGrid: grid, element: group, sizeById: sizeById, painterById: painterById);
+    }
+
+    return grid
+        .getPlacements(
+          deviceById: deviceById,
+          circuitById: circuitById,
+          painterById: painterById,
+          zoneForCircuitId: zoneForCircuitId,
+          zoneById: zoneById,
+        )
+        .where((WiringLayoutResult result) => (newIds.contains(result.hardwareComponent?.id)) || (newIds.contains(result.zone?.id)))
+        .toList();
+  }
+
+  bool Function(PortPainter) _buildTypeCheckFor(dynamic device) {
+    if (device is Source) {
+      return (PortPainter painter) => painter is WiringSourcePainter;
+    } else if (device is Amplifier) {
+      return (PortPainter painter) => painter is WiringDevicesPainter && painter.device is Amplifier;
+    } else if (device is FusionDsp) {
+      return (PortPainter painter) => painter is WiringDevicesPainter && painter.device is FusionDsp;
+    } else if (device is Zone) {
+      return (PortPainter painter) => painter is WiringZonePainter;
+    } else if (device is FusionController || device is FusionEndpoints) {
+      return (PortPainter painter) => painter is WiringControllerPainter && (painter.device is FusionController || painter.device is FusionEndpoints);
+    }
+    return (PortPainter painter) => painter is WiringControllerPainter && (painter.device is FusionController || painter.device is FusionEndpoints);
+  }
+
+  Offset _getOffsetFromDSP(Rect rect, dynamic device, _LayoutGrid layoutGrid) {
+    if (device is Source) {
+      return rect.topLeft - Offset(_horizontalGroupGap + (sizeById[device.id]?.width ?? 100), 0);
+    } else if (device is Amplifier) {
+      return rect.topRight + const Offset(_horizontalGroupGap, 0);
+    } else if (device is Zone) {
+      return rect.topRight + const Offset(_horizontalGroupGap, 0);
+    } else if (device is FusionController || device is FusionEndpoints) {
+      return layoutGrid.getNextAvilablePosVertically(Rect.fromLTWH(rect.left, -500, sizeById[device.id]?.width ?? 100, sizeById[device.id]?.height ?? 100));
+    } else if (device is FusionDsp) {
+      return rect.bottomLeft + const Offset(0, _verticalGroupGap);
+    }
+    return rect.topRight + const Offset(_horizontalGroupGap, 0);
+  }
+
+  Offset getOffsetForNewDevice(_LayoutGrid layoutGrid, _PlacementGroup group) {
+    return _offsetForUnplacedDevice(
+      group: group,
+      lastPlacedRectForType: () {
+        final HardwareComponent? device = deviceById[group.center.id];
+        if (device != null) {
+          return layoutGrid.getLastPlacedRectForPainter(_buildTypeCheckFor(device));
+        }
+        final Zone? zone = zoneById[group.center.id];
+        if (zone != null) {
+          final Rect? lastPlacedRectForPainter = layoutGrid.getLastPlacedRectForPainter(
+            (PortPainter painter) => painter is WiringZonePainter,
+          );
+          if (lastPlacedRectForPainter != null) {
+            return lastPlacedRectForPainter;
+          }
+          final Rect? amplifierRect = layoutGrid.getFirstPlacedRectForPainter(
+            (PortPainter painter) => painter is WiringDevicesPainter && painter.device is Amplifier,
+          );
+          if (amplifierRect != null) {
+            return Rect.fromLTWH(amplifierRect.right + _horizontalGroupGap, amplifierRect.top - group.size.height, amplifierRect.width, amplifierRect.height);
+          }
+        }
+        return layoutGrid.getLastPlacedRectForPainter(_buildTypeCheckFor(deviceById[group.center.id]));
+      },
+      offsetFromDSP: (Rect rect) => _getOffsetFromDSP(rect, deviceById[group.center.id] ?? zoneById[group.center.id], layoutGrid),
+      offsetFromSameType: (Rect rect) {
+        final HardwareComponent? device = deviceById[group.center.id];
+        if (device is FusionEndpoints || device is FusionController) {
+          final Offset offset = rect.topRight + const Offset(_horizontalGroupGap / 2, 0);
+          return layoutGrid.getNextAvilablePosHorizontally(
+            Rect.fromCenter(center: offset, width: group.size.width, height: group.size.height),
+          );
+        }
+        return rect.bottomLeft + const Offset(0, _verticalGroupGap);
+      },
+      layoutGrid: layoutGrid,
+    );
   }
 }
 
@@ -444,12 +614,10 @@ abstract class _PlacingElement {
 
 class _PlacementElement extends _PlacingElement {
   final String id;
-  Offset position;
   @override
   final Size size;
   _PlacementElement({
     required this.id,
-    required this.position,
     required this.size,
   });
 }
@@ -496,11 +664,11 @@ class _LayoutGrid {
     placements[painter] = rect;
   }
 
-  Offset getNextAvilablePosVertically(Rect rect) {
+  Offset getNextAvilablePosVertically(Rect rect, {double gap = 50}) {
     final double x = rect.left;
     double y = rect.top;
     while (placements.values.any((Rect r) => r.overlaps(Rect.fromLTWH(x, y, rect.width, rect.height)))) {
-      y += 50;
+      y += gap;
     }
     return Offset(x, y);
   }
@@ -508,7 +676,7 @@ class _LayoutGrid {
   Offset getNextAvilablePosHorizontally(Rect rect) {
     double x = rect.right + 50;
     final double y = rect.top;
-    while (placements.values.any((Rect r) => r.overlaps(Rect.fromLTWH(x, y, rect.width, rect.height)))) {
+    while (placements.values.any((Rect r) => r.overlaps(Rect.fromCenter(center: Offset(x, y), width: rect.width, height: rect.height)))) {
       x += 50;
     }
     return Offset(x, y);
