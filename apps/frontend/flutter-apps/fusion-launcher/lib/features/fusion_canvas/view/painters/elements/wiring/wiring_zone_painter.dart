@@ -339,7 +339,7 @@ class _SubZonePainter extends FusionBasePainter {
             previousValue.height + element.height,
           ),
         );
-    return (Size(fold.width + 40, fold.height + 50));
+    return (Size(fold.width + 40, fold.height + 100));
   }
 
   void updatePainters() {
@@ -374,7 +374,7 @@ class _SubZonePainter extends FusionBasePainter {
     // canvas.drawRect(headerRect, Paint()..color = Colors.red);
 
     final RRect rrect = RRect.fromRectAndRadius(
-      headerRect.topLeft & Size.square(headerHeight * 0.5),
+      headerRect.topLeft & Size.square(headerHeight * 0.4),
       const Radius.circular(10),
     );
 
@@ -382,7 +382,7 @@ class _SubZonePainter extends FusionBasePainter {
     canvas.drawRRect(rrect, Paint()..color = zoneColor);
     drawText(
       canvas: canvas,
-      text: zone.name,
+      text: subZone.name,
       position: headerRect.topLeft + const Offset(20, 0) + Offset(rrect.width, 0),
       style: painter.context.textTheme.b2Bold.copyWith(
         fontSize: headerHeight * 0.3,

@@ -83,7 +83,9 @@ class SelectionToolHelper extends FusionCanvasToolTransformer<SelectToolState> {
           context.hoverState.hoveredElement != null ? <FusionCanvasElement>[context.hoverState.hoveredElement!] : <FusionCanvasElement>[];
 
       final Set<String> draggedLayerIds =
-          (multiSelectEnabled && context.inputState.isShiftPressed) ? <String>{...currentState.selectedLayerIds, hoveredPainterId} : <String>{hoveredPainterId};
+          (multiSelectEnabled && (currentState.selectedLayerIds.length >= 2 || context.inputState.isShiftPressed))
+              ? <String>{...currentState.selectedLayerIds, hoveredPainterId}
+              : <String>{hoveredPainterId};
       if (elements.isNotEmpty) {
         final Set<String> draggableLayerIds =
             draggedLayerIds.where(
