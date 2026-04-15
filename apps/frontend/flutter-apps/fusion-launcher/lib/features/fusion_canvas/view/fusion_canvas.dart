@@ -153,16 +153,9 @@ class FusionCanvas extends StatelessWidget {
                             // print(
                             //   "Hover state updated: hoveredPainterId=${hoverState.hoveredPainterId}, hoveredElement=${hoverState.hoveredElement}, hoveredElement interaction=${hoverState.hoveredElementInteractions}",
                             // );
-                            if (inputState is FusionCanvasInputTapUpState &&
-                                inputState.gestureOrigin == FusionGestureOrigin.click &&
-                                hoverState.isCenterHandleHovered &&
-                                hoverState.hoveredElement is FusionCanvasLine) {
-                              final FusionBasePainter? hoveredPainter = fusionCanvasPainter.layers.cast<FusionBasePainter?>().firstWhere(
-                                (FusionBasePainter? layer) => layer?.id == hoverState.hoveredPainterId,
-                                orElse: () => null,
-                              );
-
-                              if (hoveredPainter != null) {
+                            if (inputState is FusionCanvasInputTapUpState && inputState.gestureOrigin == FusionGestureOrigin.click) {
+                              final FusionBasePainter? hoveredPainter = fusionCanvasPainter.getLayerById(hoverState.hoveredPainterId ?? "");
+                              if (hoverState.isCenterHandleHovered && hoverState.hoveredElement is FusionCanvasLine && hoveredPainter != null) {
                                 final Offset center = LineCenterHandlePainter.getLineCenter(
                                   hoverState.hoveredElement! as FusionCanvasLine,
                                   hoveredPainter,
@@ -175,6 +168,11 @@ class FusionCanvas extends StatelessWidget {
                                   hoverState.hoveredElement as FusionCanvasLine,
                                 );
                                 return;
+                              } else if (hoverState.hoveredElement != null) {
+                                final bool isHandled = toolbarEvents?.onElementClicked?.call(hoveredPainter!, hoverState.hoveredElement) ?? false;
+                                if (isHandled) {
+                                  return;
+                                }
                               }
                             }
 
@@ -290,6 +288,7 @@ class FusionCanvasEvents {
   final FusionCanvasInputEvents? inputEvents;
   final ValueChanged<List<FusionBasePainter>?>? onLayerSelected;
   final void Function(FusionBasePainter painter, Offset offset)? onMoveLayer;
+  final bool Function(FusionBasePainter painter, FusionCanvasElement? element)? onElementClicked;
 
   final void Function(FusionBasePainter painter, List<FusionCanvasPoint> points, FusionCanvasLine line)? onAddPoints;
 
@@ -306,6 +305,7 @@ class FusionCanvasEvents {
     this.onRemovePoints,
     this.onDeleteLayer,
     this.onMovePoints,
+    this.onElementClicked,
     this.inputEvents,
   });
 }

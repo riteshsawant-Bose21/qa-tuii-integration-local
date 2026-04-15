@@ -247,10 +247,14 @@ class _FusionExpansionPanelState extends State<FusionExpansionPanel> {
         curve: Curves.easeInOut,
         alignment: Alignment.topCenter,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            InkWell(
-              onTap: toggleExpanded,
-              child: widget.titleBuilder(context, isExpanded),
+            SemanticHelper.container(
+              testId: "${widget.semanticsId}_title",
+              child: InkWell(
+                onTap: toggleExpanded,
+                child: widget.titleBuilder(context, isExpanded),
+              ),
             ),
             if (isExpanded) SemanticHelper.container(testId: "${widget.semanticsId}_content", child: widget.content),
           ],

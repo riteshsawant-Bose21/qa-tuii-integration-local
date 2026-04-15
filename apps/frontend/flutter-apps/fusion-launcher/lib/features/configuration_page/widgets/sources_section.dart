@@ -28,6 +28,7 @@ class _SourcesSectionState extends State<SourcesSection> {
   ConfigSourcesViewmodel get _sourcesViewmodel => context.read<ConfigSourcesViewmodel>();
   ConfigSourceSetsViewmodel get _sourceSetsViewmodel => context.read<ConfigSourceSetsViewmodel>();
   ProjectViewModel get _projectViewModel => context.read<ProjectViewModel>();
+  bool _isSearching = false;
 
   @override
   Widget build(BuildContext context) {
@@ -37,22 +38,58 @@ class _SourcesSectionState extends State<SourcesSection> {
         children: <Widget>[
           SectionHeader(
             semanticLabel: FusionTestKeys.instance.sourcehead,
-            title: 'Sources',
             assetPath: 'assets/images/source_icon.png',
+
+            title: 'Sources',
+            trailing: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _isSearching = !_isSearching;
+                });
+
+                if (!_isSearching) {
+                  searchController.clear();
+                  _sourcesViewmodel.clearSearch();
+                }
+              },
+              child: FusionIcon.icon(
+                size: 16,
+                _isSearching ? CupertinoIcons.clear : CupertinoIcons.search,
+              ),
+            ),
+          ),
+
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            child:
+                _isSearching
+                    ? SearchBarSources(
+                      searchController: searchController,
+                      hasActiveFilters: () => false,
+                      onClearSearch: () {
+                        searchController.clear();
+                        _sourcesViewmodel.clearSearch();
+                      },
+                      onSearchChanged: (String value) {
+                        _sourcesViewmodel.filterSources(value);
+                      },
+                    )
+                    : const SizedBox(),
           ),
 
           /// Search bar with filters and sorting
-          SearchBarSources(
-            searchController: searchController,
-            hasActiveFilters: () => false,
-            onClearSearch: () {
-              searchController.clear();
-              _sourcesViewmodel.clearSearch();
-            },
-            onSearchChanged: (String value) {
-              _sourcesViewmodel.filterSources(value);
-            },
-          ),
+          // SearchBarSources(
+          //   searchController: searchController,
+          //   hasActiveFilters: () => false,
+          //   onClearSearch: () {
+          //     searchController.clear();
+          //     _sourcesViewmodel.clearSearch();
+          //   },
+          //   onSearchChanged: (String value) {
+          //     _sourcesViewmodel.filterSources(value);
+          //   },
+          // ),
 
           /// Sources list with controlled height
           SemanticHelper.container(
@@ -73,7 +110,7 @@ class _SourcesSectionState extends State<SourcesSection> {
                 return BlocBuilder<ConfigSourcesViewmodel, ConfigSourcesState>(
                   builder: (BuildContext context, ConfigSourcesState state) {
                     return Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(16),
                       height: state.sourcesHeight,
                       decoration: BoxDecoration(
                         color: isHovered ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : Colors.transparent,
