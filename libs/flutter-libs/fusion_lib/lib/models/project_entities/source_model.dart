@@ -15,7 +15,8 @@ enum SourceConnectionType {
   rca("RCA"),
   endpoint("Endpoint"),
   xlr("XLR"),
-  hdmi("HDMI");
+  hdmi("HDMI"),
+  messagePlayer("Message Player");
 
   const SourceConnectionType(this.displayName);
 
@@ -43,6 +44,8 @@ extension SourceConnectionTypeExtension on SourceConnectionType {
         return 'analog';
       case SourceConnectionType.hdmi:
         return 'hdmi';
+      case SourceConnectionType.messagePlayer:
+        return 'playback';
     }
   }
 }
@@ -151,7 +154,7 @@ class Source extends HardwareComponent {
           (e) => e.name == json['type'],
         ), //throw FormatException('Unknown SourceConnectionType in JSON: ${json['connectionType']}'),
       ),
-      image: json['image'] as String,
+      image: json['image'] ?? json["assetImagePath"] ?? "",
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
       ipAddress: json['ipAddress'] as String?,
       sku: json['sku'] as String? ?? '',

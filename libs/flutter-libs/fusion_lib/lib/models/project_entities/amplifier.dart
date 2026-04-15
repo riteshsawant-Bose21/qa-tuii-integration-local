@@ -89,7 +89,7 @@ class Amplifier extends HardwareComponent {
       channels: json['channels'] as int,
       powerPerChannel: (json['powerPerChannel'] as num).toDouble(),
       color: _materialColorFromHex(json['color'] as String),
-      image: json['image'] as String,
+      image: json['image'] ?? json["assetImagePath"] ?? "",
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       id: json['id'] as String?,
       hardwareName: json['hardwareName'] as String?,

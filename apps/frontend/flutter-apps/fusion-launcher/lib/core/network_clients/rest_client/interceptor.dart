@@ -4,7 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
 
-import '../../utils/fusion_utils.dart';
+// import '../../utils/fusion_utils.dart';
 
 class AppInterceptors extends Interceptor {
   // bool _isRefreshing = false;
@@ -33,7 +33,7 @@ class AppInterceptors extends Interceptor {
 
     // Show error dialog for non-success responses
     // if(!err.requestOptions.path.isBackendServerEndpoint() || err.requestOptions.path.isTokenRequired()) {
-    FusionUiUtils.showErrorDialog(err, fromError: true);
+    // FusionUiUtils.showErrorDialog(err, fromError: true);
     // }
 
     // Handle other errors as before

@@ -54,7 +54,6 @@ class FusionDsp extends HardwareComponent {
                    portNumber: index + 3,
                    description: "${(portData?.inputPortType ?? PortType.analogInput).description} ${index + 3}",
                    position: portData?.portPosition ?? PortPosition.topLeft,
-
                  );
                },
              ),
@@ -134,7 +133,7 @@ class FusionDsp extends HardwareComponent {
       zAxis: (json['zAxis'] as num?)?.toDouble() ?? 0.0,
       pos: json['pos'] != null ? Offset((json['pos']['dx'] as num).toDouble(), (json['pos']['dy'] as num).toDouble()) : null,
       wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['dx'] as num).toDouble(), (json['wiringPos']['dy'] as num).toDouble()) : null,
-      image: json['image'] as String? ?? '',
+      image: json['image'] ?? json["assetImagePath"] ?? "",
       lockListeningArea: json['lockListeningArea'] as bool? ?? false,
       communicationPorts:
           (json['communicationPorts'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
