@@ -21,7 +21,7 @@ extension FloorViewModel on ProjectViewModel {
         if (autoSave) {
           saveProject();
         }
-        updateProject();
+        updateFloorPlan();
       } else {
         FusionLogger.log(tag: LogTag.project, message: "Failed to update floor: ${responseCallback.message}");
         throwError(responseCallback.message);
@@ -38,7 +38,7 @@ extension FloorViewModel on ProjectViewModel {
       }
       final ResponseCallback<bool> responseCallback = projectManager.addFloor(floor);
       if (responseCallback.success) {
-        emitFloorUpdated();
+        updateFloorPlan();
         if (autoSave) {
           saveProject();
         }
@@ -60,7 +60,7 @@ extension FloorViewModel on ProjectViewModel {
       final ResponseCallback<bool> responseCallback = projectManager.removeFloor(floorId);
       if (responseCallback.success) {
         setCurrentFloorIndex(0);
-        emitFloorUpdated();
+        updateFloorPlan();
         if (autoSave) {
           saveProject();
         }
