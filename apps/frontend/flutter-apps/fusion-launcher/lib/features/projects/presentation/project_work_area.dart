@@ -192,7 +192,11 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
     _controlWidgets = <Widget>[
       WorkSafeAreaContent(child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionControlDashboardPage()),
       WorkSafeAreaContent(child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionDevicesPage()),
-      WorkSafeAreaContent(child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : buildingPage),
+      serviceLocator<ProjectViewModel>().virtualIP == null
+          ? const WorkSafeAreaContent(
+            child: NetworkConfigTrigger(),
+          )
+          : buildingPage,
       WorkSafeAreaContent(child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : configurationPage),
     ];
   }

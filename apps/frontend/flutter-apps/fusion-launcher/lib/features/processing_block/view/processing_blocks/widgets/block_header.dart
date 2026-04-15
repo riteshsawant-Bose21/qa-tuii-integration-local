@@ -105,8 +105,8 @@ class BlockHeader extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 padding: const EdgeInsets.all(10),
-                child: Image.asset(
-                  pb.iconAsset,
+                child: FusionImageAuto(
+                  path: pb.iconAsset,
                   color: context.colorScheme.iconDefault,
                   height: 18,
                   width: 18,

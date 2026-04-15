@@ -32,7 +32,7 @@ public:
         value_type = definition.get_value_type();
         telemetry_type = definition.get_telemetry_type(); // telemetry type is unsed internally--meter or event
         period_type = definition.get_period_type(); // period_type is HI, MED, or LO
-        
+
         num_rows = 1;
         num_columns = 1;
 
@@ -331,6 +331,15 @@ public:
     void set_block_name(const std::string &name)
     {
         block_name = name;
+    }
+
+
+    /// Set the telemetry item name (used to remap composite telemetry).
+    ///
+    /// @param  new_name  The new telemetry item name.
+    void set_name(const std::string &new_name)
+    {
+        name = new_name;
     }
 
 

@@ -22,10 +22,10 @@ class _ToolBarIcon extends StatelessWidget {
         color: isSelected ? context.colorScheme.elevation3 : Colors.transparent,
         padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 12),
         borderColor: Colors.transparent,
-        child: FusionImage.asset(
-          "assets/icons/building_page/$icon",
+        child: FusionImageAuto(
+          path: "assets/icons/building_page/$icon",
           width: 24,
-          assetColor: context.colorScheme.primaryWhite,
+          color: context.colorScheme.primaryWhite,
         ),
       ),
     );
