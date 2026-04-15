@@ -1,7 +1,6 @@
 import 'dart:ui';
 
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/models/project_entities/controller_page_model.dart';
 
 /// A wall-controller hardware component.
 ///
@@ -138,7 +137,8 @@ class FusionController extends HardwareComponent {
       pos: json['pos'] != null ? Offset((json['pos']['dx'] as num).toDouble(), (json['pos']['dy'] as num).toDouble()) : null,
       wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['x'] as num).toDouble(), (json['wiringPos']['y'] as num).toDouble()) : null,
       zAxis: (json['zAxis'] as num?)?.toDouble() ?? 0.0,
-      image: json['image'] ?? json["assetImagePath"] ?? "",
+      image:
+          DeserializationUtil.stringDeserializer.deserialize(json['image']) ?? DeserializationUtil.stringDeserializer.deserialize(json['assetImagePath']) ?? '',
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       hardwareName: json['hardwareName'] as String? ?? json['name'] as String,

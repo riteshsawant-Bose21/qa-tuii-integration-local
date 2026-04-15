@@ -345,7 +345,10 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
     final FusionPath? path = fusionPath ?? pathStorage.getPath(connection, painter); //this.fusionPath ??
     if (path == null) return null;
 
-    final List<FusionCanvasPoint> vertices = _buildPathPoints(path);
+    final List<FusionCanvasPoint> vertices =
+        _buildPathPoints(path)
+          ..removeAt(0)
+          ..removeLast();
 
     final double hitThreshold = nonScaling(8, painter);
 

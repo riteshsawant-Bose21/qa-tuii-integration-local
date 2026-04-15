@@ -70,6 +70,17 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
 
     _emitIfOpen(state.copyWith(uiState: FirmwareUpdateUiState.checking, errorShortText: '', errorText: ''));
 
+    if (!HAS_CLOUD_ACCESS) {
+      _emitIfOpen(
+        state.copyWith(
+          uiState: FirmwareUpdateUiState.noUpdate,
+          errorShortText: 'Cloud access is not available.',
+          errorText: 'Cloud access is not available. Please ensure you are signed in.',
+        ),
+      );
+      return;
+    }
+
     try {
       final FirmwareUpdateCheckResult updateCheckResult = await checkForUpdates();
       _persistedBundleId = (updateCheckResult.bundleId ?? '').trim().isEmpty ? null : (updateCheckResult.bundleId ?? '').trim();
@@ -505,7 +516,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
   String get primaryFusionDeviceVersion {
     final List<FusionNetworkDevice> fustionNetworkDevices = state.networkDevices;
     final FusionNetworkDevice? primaryDevice = fustionNetworkDevices.firstWhereOrNull((FusionNetworkDevice? d) => d?.isPrimary == true);
-    return primaryDevice?.softwareUpdateVersion ?? '';
+    return primaryDevice?.primaryDeviceVersion ?? '';
   }
 
   String get primaryFusionDevicejenkinsBuildNumber {
