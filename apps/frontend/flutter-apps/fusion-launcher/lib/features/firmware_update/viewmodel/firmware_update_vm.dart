@@ -505,7 +505,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
   String get primaryFusionDeviceVersion {
     final List<FusionNetworkDevice> fustionNetworkDevices = state.networkDevices;
     final FusionNetworkDevice? primaryDevice = fustionNetworkDevices.firstWhereOrNull((FusionNetworkDevice? d) => d?.isPrimary == true);
-    return primaryDevice?.softwareUpdateVersion ?? '';
+    return primaryDevice?.primaryDeviceVersion ?? '';
   }
 
   String get primaryFusionDevicejenkinsBuildNumber {
