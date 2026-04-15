@@ -1,6 +1,6 @@
 {
-  "version": "1.0.4",
-  "date": "23-03-2026",
+  "version": "1.0.5",
+  "date": "15-04-2026",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://boseprofessional.com/schemas/project-data-schema",
   "title": "Bose Professional Product Data Schema",
@@ -10,11 +10,14 @@
     "version": {
       "type": "string",
       "description": "Data schema version",
-      "pattern": "^\\d+\\.\\d+$",
+      "pattern": "^v?\\d+\\.\\d+(\\.\\d+)?$",
       "examples": [
         "1.0",
         "1.1",
-        "2.0"
+        "2.0",
+        "v1.0.0",
+        "v1.1.0",
+        "v2.0.0"
       ]
     },
     "title": {
@@ -371,7 +374,7 @@
             },
             "accessories": {
               "type": "array",
-              "skus": {
+              "items": {
                 "$ref": "#/$defs/skus"
               }
             }
@@ -881,7 +884,7 @@
         },
         "accessories": {
           "type": "array",
-          "skus": {
+          "items": {
             "$ref": "#/$defs/skus"
           }
         },
@@ -999,7 +1002,7 @@
         },
         "accessories": {
           "type": "array",
-          "skus": {
+          "items": {
             "$ref": "#/$defs/skus"
           }
         },
@@ -1100,7 +1103,7 @@
         },
         "accessories": {
           "type": "array",
-          "skus": {
+          "items": {
             "$ref": "#/$defs/skus"
           }
         },
@@ -1157,7 +1160,7 @@
         },
         "accessories": {
           "type": "array",
-          "skus": {
+          "items": {
             "$ref": "#/$defs/skus"
           }
         },
