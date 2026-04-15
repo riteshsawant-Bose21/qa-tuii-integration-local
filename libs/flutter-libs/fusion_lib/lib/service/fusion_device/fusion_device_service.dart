@@ -216,7 +216,7 @@ class FusionDeviceService {
       final ResponseCallback<FirmwareUpdateCheckResult> response = await networkClient.get<FirmwareUpdateCheckResult>(
         api: FusionApiEndpoint.firmwareUpdateCheck,
         urlParameters: <String, dynamic>{
-          'current_firmware_version': "$currentFirmwareVersion-dev.$jenkinsBuildNumber",
+          'current_firmware_version': currentFirmwareVersion,
           'current_desktop_app_version': currentDesktopAppVersion,
         },
         fromJson: (dynamic json) {
