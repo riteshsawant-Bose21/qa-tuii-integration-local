@@ -416,6 +416,9 @@ class WiringAutoLayoutUseCase {
       if (circuit != null) {
         final Zone? zone = zoneForCircuitId[circuit.id];
         if (zone != null) {
+          if (_placedDeviceMap[zone.id] == true) {
+            continue;
+          }
           _placedDeviceMap[zone.id] = true;
           leftElements.add(_PlacementElement(id: zone.id, size: sizeById[zone.id] ?? const Size(100, 100)));
           continue;
@@ -460,6 +463,125 @@ class WiringAutoLayoutUseCase {
     }
 
     return elements;
+  }
+
+  ///
+  ///
+  ///
+  ///
+
+  List<WiringLayoutResult> placeTheseDevices({
+    required List<HardwareComponent> newDevices,
+    required List<Zone> newZones,
+  }) {
+    final _LayoutGrid grid = _LayoutGrid();
+
+    for (final HardwareComponent device in devices) {
+      _placedDeviceMap[device.id] = true;
+      final PortPainter? painter = painterById[device.id];
+      if (painter == null) continue;
+      final Size size = sizeById[device.id] ?? const Size(100, 100);
+      final Offset? offset = device.wiringPos;
+      if (offset == null) continue;
+      final Rect rect = Rect.fromLTWH(offset.dx, offset.dy, size.width, size.height);
+      grid.addPlacement(rect, painter);
+    }
+
+    for (final Zone zone in zones) {
+      _placedDeviceMap[zone.id] = true;
+
+      final PortPainter? painter = painterById[zone.id];
+      if (painter == null) continue;
+      final Size size = sizeById[zone.id] ?? const Size(100, 100);
+      final Offset? offset = zone.wiringPos;
+      if (offset == null) continue;
+      final Rect rect = Rect.fromLTWH(offset.dx, offset.dy, size.width, size.height);
+      grid.addPlacement(rect, painter);
+    }
+    final List<String> newIds = <String>[];
+    for (final HardwareComponent device in newDevices) {
+      newIds.add(device.id);
+      final _PlacementGroup group = _getPlacementGroupForHardwareComponent(device, connectionManager);
+
+      _placeGroup(centerPosition: getOffsetForNewDevice(grid, group), layoutGrid: grid, element: group, sizeById: sizeById, painterById: painterById);
+    }
+    for (final Zone zone in newZones) {
+      newIds.add(zone.id);
+      final _PlacementGroup group = _getPlacementGroupForZone(zone, connectionManager);
+      _placeGroup(centerPosition: getOffsetForNewDevice(grid, group), layoutGrid: grid, element: group, sizeById: sizeById, painterById: painterById);
+    }
+
+    return grid
+        .getPlacements(
+          deviceById: deviceById,
+          circuitById: circuitById,
+          painterById: painterById,
+          zoneForCircuitId: zoneForCircuitId,
+          zoneById: zoneById,
+        )
+        .where((WiringLayoutResult result) => (newIds.contains(result.hardwareComponent?.id)) || (newIds.contains(result.zone?.id)))
+        .toList();
+  }
+
+  bool Function(PortPainter) _buildTypeCheckFor(dynamic device) {
+    if (device is Source) {
+      return (PortPainter painter) => painter is WiringSourcePainter;
+    } else if (device is Amplifier) {
+      return (PortPainter painter) => painter is WiringDevicesPainter && painter.device is Amplifier;
+    } else if (device is FusionDsp) {
+      return (PortPainter painter) => painter is WiringDevicesPainter && painter.device is FusionDsp;
+    } else if (device is Zone) {
+      return (PortPainter painter) => painter is WiringZonePainter;
+    } else if (device is FusionController || device is FusionEndpoints) {
+      return (PortPainter painter) => painter is WiringControllerPainter && (painter.device is FusionController || painter.device is FusionEndpoints);
+    }
+    return (PortPainter painter) => painter is WiringControllerPainter && (painter.device is FusionController || painter.device is FusionEndpoints);
+  }
+
+  Offset _getOffsetFromDSP(Rect rect, dynamic device) {
+    if (device is Source) {
+      return rect.topLeft - Offset(_horizontalGroupGap + (sizeById[device.id]?.width ?? 100), 0);
+    } else if (device is Amplifier) {
+      return rect.topRight + const Offset(_horizontalGroupGap, 0);
+    } else if (device is Zone) {
+      return rect.topRight + const Offset(_horizontalGroupGap, 0);
+    } else if (device is FusionController || device is FusionEndpoints) {
+      return Offset(-500, -(sizeById[device.id]?.height ?? 100) - _verticalGroupGap * 2);
+    } else if (device is FusionDsp) {
+      return rect.bottomLeft + const Offset(0, _verticalGroupGap);
+    }
+    return rect.topRight + const Offset(_horizontalGroupGap, 0);
+  }
+
+  Offset getOffsetForNewDevice(_LayoutGrid layoutGrid, _PlacementGroup group) {
+    return _offsetForUnplacedDevice(
+      group: group,
+      lastPlacedRectForType: () {
+        final HardwareComponent? device = deviceById[group.center.id];
+        if (device != null) {
+          return layoutGrid.getLastPlacedRectForPainter(_buildTypeCheckFor(device));
+        }
+        final Zone? zone = zoneById[group.center.id];
+        if (zone != null) {
+          final Rect? lastPlacedRectForPainter = layoutGrid.getLastPlacedRectForPainter(
+            (PortPainter painter) => painter is WiringZonePainter,
+          );
+          if (lastPlacedRectForPainter != null) {
+            return lastPlacedRectForPainter;
+          }
+          final Rect? amplifierRect = layoutGrid.getFirstPlacedRectForPainter(
+            (PortPainter painter) => painter is WiringDevicesPainter && painter.device is Amplifier,
+          );
+          if (amplifierRect != null) {
+            return Rect.fromLTWH(amplifierRect.right + _horizontalGroupGap, amplifierRect.top - group.size.height, amplifierRect.width, amplifierRect.height);
+          }
+        }
+        return layoutGrid.getLastPlacedRectForPainter(_buildTypeCheckFor(deviceById[group.center.id]));
+      },
+      offsetFromDSP: (Rect rect) => _getOffsetFromDSP(rect, deviceById[group.center.id] ?? zoneById[group.center.id]),
+      offsetFromSameType: (Rect rect) => rect.bottomLeft + const Offset(0, _verticalGroupGap),
+      layoutGrid: layoutGrid,
+    );
   }
 }
 

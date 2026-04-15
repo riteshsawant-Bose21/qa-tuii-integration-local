@@ -38,6 +38,7 @@ class FusionCanvas extends StatelessWidget {
     this.toolbarEvents,
     this.selectedIds,
     this.cursorBuilder,
+    this.onCanvasPainterReady,
     this.tools = const <FusionCanvasTool<FusionToolState>>[
       FusionCanvasTool.measureTool,
       FusionCanvasTool.penTool,
@@ -49,6 +50,7 @@ class FusionCanvas extends StatelessWidget {
   final Widget Function(BuildContext context)? builder;
   final FusionCanvasEvents? toolbarEvents;
   final List<FusionCanvasTool<FusionToolState>> tools;
+  final ValueChanged<FusionCanvasPainter>? onCanvasPainterReady;
 
   final CursorBuilder? cursorBuilder;
 
@@ -125,6 +127,7 @@ class FusionCanvas extends StatelessWidget {
                         );
 
                         context.read<FusionCanvasStateViewModel>().updateContentSize(elements, fusionCanvasPainter);
+                        onCanvasPainterReady?.call(fusionCanvasPainter);
                         return BlocListener<FusionCanvasInputViewModel, FusionCanvasInputState>(
                           listener: (
                             BuildContext context,
