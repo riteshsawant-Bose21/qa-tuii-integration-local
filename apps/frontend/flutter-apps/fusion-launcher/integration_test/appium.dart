@@ -30,7 +30,7 @@ void main() {
         );
       }
 
-      await tester.pumpWidget(const MyApp(isIntegrationTest: true));
+      await tester.pumpWidget(const MyApp());
     },
   );
 }

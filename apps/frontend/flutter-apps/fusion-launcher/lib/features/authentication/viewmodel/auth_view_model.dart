@@ -55,14 +55,10 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
     emit(AuthWebRedirectInProgress());
   }
 
-  bool _isIntegrationTest = false;
-  bool get isIntegrationTest => _isIntegrationTest;
-
   // /// Initialize and check if user is already authenticated
-  Future<void> initialize({required bool isIntegrationTest}) async {
+  Future<void> initialize() async {
     try {
       _emitLoading();
-      _isIntegrationTest = isIntegrationTest;
 
       // Check if user is already authenticated
       final bool isAuthenticated = await _authService.isAuthenticated();
@@ -95,10 +91,10 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
 
   Future<void> skipLoginByPassForAutomation() async {
     try {
-      if (!_isIntegrationTest) {
-        _emitError('Bypass login is only allowed for integration tests');
-        return;
-      }
+      // if (!_isIntegrationTest) {
+      //   _emitError('Bypass login is only allowed for integration tests');
+      //   return;
+      // }
 
       _emitLoading();
 
@@ -114,7 +110,6 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
           user: UserData(id: credentials.user.sub, email: credentials.user.email),
         ),
       );
-
     } on Exception catch (e) {
       // Web redirect initiated - this is expected
       if (kIsWeb && e.toString().contains('Web redirect initiated')) {

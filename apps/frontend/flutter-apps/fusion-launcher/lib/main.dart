@@ -67,8 +67,7 @@ Future<void> reportCrash(Object exception, StackTrace stack) async {
   try {
     FusionLogger.log(
       tag: LogTag.exceptions,
-      message:
-          "Exception: ${exception.toString()} \n, StackTrace: ${stack.toString()} ",
+      message: "Exception: ${exception.toString()} \n, StackTrace: ${stack.toString()} ",
     );
     // FirebaseCrashlytics.instance.recordError(exception, stack);
   } catch (ex) {
@@ -96,8 +95,7 @@ void _setupMacOSDeepLinkListener() {
 }
 
 class MyApp extends StatelessWidget {
-  final bool isIntegrationTest;
-  const MyApp({super.key, this.isIntegrationTest = false});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -112,7 +110,7 @@ class MyApp extends StatelessWidget {
         ),
 
         BlocProvider<AuthViewModel>.value(
-          value: serviceLocator<AuthViewModel>()..initialize(isIntegrationTest: isIntegrationTest),
+          value: serviceLocator<AuthViewModel>()..initialize(),
           // lazy: false,
         ),
 
@@ -123,16 +121,13 @@ class MyApp extends StatelessWidget {
           create: (BuildContext context) => serviceLocator<ProjectViewModel>(),
         ),
         BlocProvider<ProjectSyncViewModel>(
-          create:
-              (BuildContext context) => serviceLocator<ProjectSyncViewModel>(),
+          create: (BuildContext context) => serviceLocator<ProjectSyncViewModel>(),
         ),
         BlocProvider<ProductQueryCubit>(
           create: (BuildContext context) => serviceLocator<ProductQueryCubit>(),
         ),
         BlocProvider<GuideShowCaseController>(
-          create:
-              (BuildContext context) =>
-                  serviceLocator<GuideShowCaseController>(),
+          create: (BuildContext context) => serviceLocator<GuideShowCaseController>(),
         ),
         BlocProvider<ConfigSyncViewModel>(
           create: (BuildContext context) => serviceLocator<ConfigSyncViewModel>(),
@@ -187,9 +182,7 @@ class MyApp extends StatelessWidget {
                     navigatorObservers: <NavigatorObserver>[
                       AppNavigatorObserver(),
                     ],
-                    onGenerateRoute:
-                        (RouteSettings settings) =>
-                            Routes.onGenerateRoute(settings),
+                    onGenerateRoute: (RouteSettings settings) => Routes.onGenerateRoute(settings),
                   );
                 },
               );
