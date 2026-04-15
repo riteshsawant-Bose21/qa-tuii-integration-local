@@ -62,7 +62,9 @@ enum PortType {
   fusionConnectOutput('Output'),
 
   xlrInput('Input'),
-  xlrOutput('Output');
+  xlrOutput('Output'),
+
+  messagePlayer("MessagePlayer");
 
   const PortType(this.description);
 

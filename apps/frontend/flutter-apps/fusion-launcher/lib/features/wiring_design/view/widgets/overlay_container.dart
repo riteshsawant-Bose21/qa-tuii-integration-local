@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 class OverlayContainer extends StatefulWidget {
   const OverlayContainer({
@@ -68,18 +67,8 @@ class _OverlayContainerState extends State<OverlayContainer> {
         Positioned(
           left: widget.position.dx - leftPadding,
           top: widget.position.dy - topPadding,
-          child: Container(
+          child: SizedBox(
             key: key,
-            decoration: BoxDecoration(
-              color: context.colorScheme.componentBG,
-              boxShadow: <BoxShadow>[
-                const BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 5,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
             width: widget.width,
 
             child: widget.child,

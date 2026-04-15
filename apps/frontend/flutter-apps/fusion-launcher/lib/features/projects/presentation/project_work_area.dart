@@ -13,12 +13,15 @@ import '../../../core/service_locator.dart';
 import '../../authentication/viewmodel/session_view_model.dart';
 import '../../commission/presentation/pages/network_config_trigger_page.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../configuration_aes67/view/configuration_aes67.dart';
+import '../../configuration_control/widgets/configuration_control_page.dart';
 import '../../configuration_events/widgets/configuration_events.dart';
 import '../../configuration_page/pages/configuration_processing_page.dart';
 import '../../configuration_snapshot/widgets/configuration_snapshots.dart';
 import '../../control_dashboard/presentation/pages/fusion_control_dashboard.dart';
 import '../../devices/presentation/pages/fusion_devices_page.dart';
 import '../../gpio/view/gpio_page.dart';
+import '../../speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import '../../wiring_design/view/wiring_page.dart';
 import '../view_model/spl_viewmodel.dart';
 import '../widget/configuration/side_panel_widgets/configuration_tab_switcher.dart';
@@ -66,6 +69,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
   @override
   void initState() {
     super.initState();
+    serviceLocator<ProductQueryViewModel>().loadProducts(); // Load products after successful login
+
     // Initialize tab widgets to preserve state
     _createTabWidgets();
     _initController(isInDesignMode);
@@ -146,6 +151,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
               create: (_) => MediaFilesViewModel(),
               child: const ConfigurationMediaFilesPage(),
             ),
+            ConfigurationMenuMode.aes67 => const ConfigurationAes67Screen(),
+
+            ConfigurationMenuMode.controllers => const ConfigurationControlPage(),
           };
         },
       ),
@@ -184,7 +192,11 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
     _controlWidgets = <Widget>[
       WorkSafeAreaContent(child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionControlDashboardPage()),
       WorkSafeAreaContent(child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionDevicesPage()),
-      WorkSafeAreaContent(child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : buildingPage),
+      serviceLocator<ProjectViewModel>().virtualIP == null
+          ? const WorkSafeAreaContent(
+            child: NetworkConfigTrigger(),
+          )
+          : buildingPage,
       WorkSafeAreaContent(child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : configurationPage),
     ];
   }
@@ -214,6 +226,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
           },
           builder: (BuildContext context, ProjectViewModelState state) {
             return WorkAreaScope(
+              tabController: _tabController,
               appBarHeight: appBarHeight,
               child: Scaffold(
                 backgroundColor: context.colorScheme.primaryBlack,
@@ -248,9 +261,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
 }
 
 class WorkAreaScope extends InheritedWidget {
-  const WorkAreaScope({super.key, required this.appBarHeight, required super.child});
+  const WorkAreaScope({super.key, required this.appBarHeight, required this.tabController, required super.child});
 
   final double appBarHeight;
+  final TabController tabController;
 
   static WorkAreaScope of(BuildContext context) {
     final WorkAreaScope? scope = context.dependOnInheritedWidgetOfExactType<WorkAreaScope>();
@@ -275,5 +289,51 @@ class WorkSafeAreaContent extends StatelessWidget {
       minimum: EdgeInsets.only(top: appBarHeight),
       child: child,
     );
+  }
+}
+
+class WorkAreaTabListener extends StatefulWidget {
+  const WorkAreaTabListener({super.key, required this.tabIndex, this.onTabActive, this.onTabInactive, required this.child});
+  final int tabIndex;
+  final void Function()? onTabActive;
+  final void Function()? onTabInactive;
+  final Widget child;
+
+  @override
+  State<WorkAreaTabListener> createState() => _WorkAreaTabListenerState();
+}
+
+class _WorkAreaTabListenerState extends State<WorkAreaTabListener> {
+  final int _currentTabIndex = 0;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      tabController = WorkAreaScope.of(context).tabController;
+      tabController!.addListener(_tabListener);
+      // Call the listener once to set the initial state
+      _tabListener();
+    });
+  }
+
+  TabController? tabController;
+  void _tabListener() {
+    tabController = WorkAreaScope.of(context).tabController;
+    if (tabController!.index == widget.tabIndex) {
+      widget.onTabActive?.call();
+    } else {
+      widget.onTabInactive?.call();
+    }
+  }
+
+  @override
+  void dispose() {
+    tabController?.removeListener(_tabListener);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
   }
 }

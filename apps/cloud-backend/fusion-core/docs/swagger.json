@@ -708,6 +708,13 @@
                         "name": "action",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Unique identifier of the firmware bundle (UUID format)",
+                        "name": "bundleID",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -735,9 +742,9 @@
                 }
             }
         },
-        "/firmware/bundles/{bundleID}/request-download-url": {
+        "/firmware/bundles/{version}/request-download-url": {
             "get": {
-                "description": "Generates a presigned S3 URL for downloading a specific firmware bundle artifact. The URL is valid for 2 hours and includes the file checksum for integrity verification. Only approved bundles can be downloaded.",
+                "description": "Generates a presigned S3 URL for downloading a specific firmware bundle artifact by version. The URL is valid for 15 minutes and includes the file checksum for integrity verification. Only approved bundles can be downloaded.",
                 "consumes": [
                     "application/json"
                 ],
@@ -751,8 +758,8 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Unique identifier of the firmware bundle (UUID format)",
-                        "name": "bundleID",
+                        "description": "Semantic version of the firmware bundle (e.g. 1.2.3, 1.0.0-beta.1)",
+                        "name": "version",
                         "in": "path",
                         "required": true
                     }
@@ -765,7 +772,7 @@
                         }
                     },
                     "400": {
-                        "description": "Missing or invalid bundleID",
+                        "description": "Missing or invalid version",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -793,7 +800,7 @@
         },
         "/firmware/updates/check": {
             "get": {
-                "description": "Checks for the latest available firmware bundle. Steps performed:\n1. Query for latest approved bundle where: bundle.version \u003e current_firmware_version AND bundle.min_prev_version \u003c= current_firmware_version AND bundle.min_desktop_app_version \u003c= current_desktop_app_version AND (channel matches prerelease OR prerelease IS NULL for stable)\n2. If found and current_firmware_version \u003e= bundle.min_prev_version: return update_available=true with bundle details\n3. If not found or firmware too old: query for latest bundle where bundle is compatible with current firmware (ignoring desktop app version)\n4. If found and current_desktop_app_version \u003c bundle.min_desktop_app_version: return update_available=true, app_update_required=true\n5. Otherwise: return update_available=false\n\n**Response Scenarios:**\n\n**Scenario 1 - Update Available:**\n```json\n{\"update_available\": true, \"app_update_required\": false, \"bundle_id\": \"uuid\", \"version\": \"2.5.6\", \"release_notes\": \"...\", \"min_required_prev_version\": \"2.0.0\", \"min_desktop_app_version\": \"1.4.0\", \"manifest_data\": {}, \"created_at\": \"...\"}\n```\n\n**Scenario 2 - App Update Required:**\n```json\n{\"update_available\": true, \"app_update_required\": true, \"min_desktop_app_version\": \"2.0.0\"}\n```\n\n**Scenario 3 - No Update Available:**\n```json\n{\"update_available\": false, \"app_update_required\": false}\n```",
+                "description": "Checks for the latest available firmware bundle. Steps performed:\n1. The release channel is auto-inferred from the prerelease tag of current_firmware_version (e.g. \"beta\" from 1.2.3-beta.1, empty for stable 1.2.3)\n2. Query for latest approved bundle where: bundle.version \u003e current_firmware_version AND bundle.min_prev_version \u003c= current_firmware_version AND bundle.min_desktop_app_version \u003c= current_desktop_app_version AND (channel matches prerelease OR prerelease IS NULL for stable)\n3. If found and current_firmware_version \u003e= bundle.min_prev_version: return update_available=true with bundle details\n4. If not found or firmware too old: query for latest bundle where bundle is compatible with current firmware (ignoring desktop app version)\n5. If found and current_desktop_app_version \u003c bundle.min_desktop_app_version: return update_available=true, app_update_required=true\n6. Otherwise: return update_available=false\n\n**Response Scenarios:**\n\n**Scenario 1 - Update Available:**\n```json\n{\"update_available\": true, \"app_update_required\": false, \"bundle_id\": \"uuid\", \"version\": \"2.5.6\", \"release_notes\": \"...\", \"min_required_prev_version\": \"2.0.0\", \"min_desktop_app_version\": \"1.4.0\", \"manifest_data\": {}, \"created_at\": \"...\"}\n```\n\n**Scenario 2 - App Update Required:**\n```json\n{\"update_available\": true, \"app_update_required\": true, \"min_desktop_app_version\": \"2.0.0\"}\n```\n\n**Scenario 3 - No Update Available:**\n```json\n{\"update_available\": false, \"app_update_required\": false}\n```",
                 "produces": [
                     "application/json"
                 ],
@@ -804,7 +811,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Current firmware version (semver format)",
+                        "description": "Current firmware version (semver format, e.g. 1.2.3 for stable, 1.2.3-beta.1 for beta channel). The release channel is auto-inferred from the prerelease tag.",
                         "name": "current_firmware_version",
                         "in": "query",
                         "required": true
@@ -815,12 +822,6 @@
                         "name": "current_desktop_app_version",
                         "in": "query",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Release channel: 'beta', 'alpha', etc. Omit for stable releases (prerelease IS NULL)",
-                        "name": "channel",
-                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -847,7 +848,7 @@
         },
         "/firmware/updates/status": {
             "post": {
-                "description": "Records the success or failure of a firmware bundle update installation.",
+                "description": "Records the success or failure of a firmware bundle update installation. Allowed values: INSTALL_SUCCESS, INSTALL_FAIL",
                 "consumes": [
                     "application/json"
                 ],
@@ -883,364 +884,6 @@
                         "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/organization/role-management": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get comprehensive role management data including roles, features, access levels, and users for the organization",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "role-management"
-                ],
-                "summary": "Get organization role management data",
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved role management data",
-                        "schema": {
-                            "$ref": "#/definitions/types.RoleManagementResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized - User email not found in token",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden - Insufficient permissions for role management",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/organization/roles": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Create a new role with the specified name and description in the organization",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "role-management"
-                ],
-                "summary": "Create a new role",
-                "parameters": [
-                    {
-                        "description": "Role creation details",
-                        "name": "role",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/types.CreateRoleRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Successfully created role",
-                        "schema": {
-                            "$ref": "#/definitions/types.RoleWithPermissions"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad request - Invalid JSON payload",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized - User email not found in token",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden - Insufficient permissions to create roles",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/organization/roles/{roleID}/permissions": {
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Update the permissions assigned to a specific role within the organization",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "role-management"
-                ],
-                "summary": "Update role permissions",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Role ID",
-                        "name": "roleID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Permission updates",
-                        "name": "permissions",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/types.PermissionUpdateRequest"
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully updated role permissions",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad request - Invalid JSON payload or invalid role ID",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized - User email not found in token",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden - Insufficient permissions to update role permissions",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/organization/users": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get all users within the organization along with their role information",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "role-management"
-                ],
-                "summary": "Get organization users",
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved organization users",
-                        "schema": {
-                            "$ref": "#/definitions/types.OrganizationUsersResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized - User email not found in token",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden - Insufficient permissions to view organization users",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/organization/users/{userID}/role": {
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Update the role assignment for a specific user within the organization",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "role-management"
-                ],
-                "summary": "Update user role",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "User ID",
-                        "name": "userID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Role assignment details",
-                        "name": "roleAssignment",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/types.AssignRoleRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully updated user role",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad request - Invalid JSON payload or missing user ID",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized - User email not found in token",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden - Insufficient permissions to update user roles",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
                         }
                     }
                 }
@@ -1402,6 +1045,448 @@
                     },
                     "403": {
                         "description": "Forbidden - Insufficient permissions to create organizations",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/organizations/invite-users": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Invite multiple users to join an organization with specified roles. Organization ID is taken from the authenticated user's account.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "organizations"
+                ],
+                "summary": "Invite users to organization",
+                "parameters": [
+                    {
+                        "description": "User invitations",
+                        "name": "invitations",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.InviteUsersToOrganizationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully processed invitations",
+                        "schema": {
+                            "$ref": "#/definitions/types.InviteUsersToOrganizationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid JSON payload",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions to invite users",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found - Organization not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/organizations/role-management": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get comprehensive role management data including roles, features, access levels, and users for the organization",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "role-management"
+                ],
+                "summary": "Get organization role management data",
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved role management data",
+                        "schema": {
+                            "$ref": "#/definitions/types.RoleManagementResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions for role management",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/organizations/roles": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new role with the specified name and description in the organization",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "role-management"
+                ],
+                "summary": "Create a new role",
+                "parameters": [
+                    {
+                        "description": "Role creation details",
+                        "name": "role",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.CreateRoleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created role",
+                        "schema": {
+                            "$ref": "#/definitions/types.RoleWithPermissions"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid JSON payload",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions to create roles",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/organizations/roles/{roleID}/permissions": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update the permissions assigned to a specific role within the organization",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "role-management"
+                ],
+                "summary": "Update role permissions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Role ID",
+                        "name": "roleID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Permission updates",
+                        "name": "permissions",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/types.PermissionUpdateRequest"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated role permissions",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid JSON payload or invalid role ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions to update role permissions",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/organizations/users": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get all users within the organization along with their role information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "role-management"
+                ],
+                "summary": "Get organization users",
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved organization users",
+                        "schema": {
+                            "$ref": "#/definitions/types.OrganizationUsersResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions to view organization users",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/organizations/users/{userID}/role": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update the role assignment for a specific user within the organization",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "role-management"
+                ],
+                "summary": "Update user role",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "userID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Role assignment details",
+                        "name": "roleAssignment",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.AssignRoleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated user role",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid JSON payload or missing user ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions to update user roles",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -1647,97 +1732,6 @@
                     },
                     "403": {
                         "description": "Forbidden - Insufficient permissions to delete organizations",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Not found - Organization not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/organizations/{organizationId}/invite-users": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Invite multiple users to join an organization with specified roles",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "organizations"
-                ],
-                "summary": "Invite users to organization",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Organization ID",
-                        "name": "organizationId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "User invitations",
-                        "name": "invitations",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/types.InviteUsersToOrganizationRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully processed invitations",
-                        "schema": {
-                            "$ref": "#/definitions/types.InviteUsersToOrganizationResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad request - Invalid organization ID or JSON payload",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized - User email not found in token",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden - Insufficient permissions to invite users",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3703,19 +3697,22 @@
         "types.InviteUserToOrganizationRequest": {
             "type": "object",
             "required": [
-                "email",
-                "role"
+                "account_type_role_id",
+                "email"
             ],
             "properties": {
+                "account_type_role_id": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 3
+                },
                 "email": {
                     "type": "string",
                     "example": "john.doe@example.com"
                 },
-                "role": {
+                "full_name": {
                     "type": "string",
-                    "maxLength": 50,
-                    "minLength": 3,
-                    "example": "Partner Admin"
+                    "example": "John Doe"
                 }
             }
         },
@@ -3771,13 +3768,13 @@
                 "bundle_version": {
                     "type": "string"
                 },
+                "desktop_app_version": {
+                    "type": "string"
+                },
                 "installed_at": {
                     "type": "string"
                 },
-                "launcher_version": {
-                    "type": "string"
-                },
-                "previous_version": {
+                "previous_bundle_version": {
                     "type": "string"
                 },
                 "project_id": {
@@ -4151,6 +4148,12 @@
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/types.ProductItemResponse"
+                    }
+                },
+                "source": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.SourceItem"
                     }
                 },
                 "speaker": {
@@ -4528,6 +4531,29 @@
                     "$ref": "#/definitions/types.ProductItemResponse"
                 },
                 "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.SourceItem": {
+            "type": "object",
+            "properties": {
+                "asset_path": {
+                    "type": "string"
+                },
+                "connection_type": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "type": {
                     "type": "string"
                 }
             }

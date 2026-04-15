@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/constants/semantics/features/configuration/snapshots/SnapshotsKeys.dart';
-import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/snapshots/SnapshotsKeys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/constants/assets_constants.dart';
@@ -83,12 +82,12 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                FusionImage.asset(
+                FusionImageAuto(
+                  path: Assets.playIcon,
                   semanticId: "${FusionTestKeys.instance.snplistitmplayicon}_${widget.index}",
-                  Assets.playIcon,
                   width: 24,
                   height: 24,
-                  assetColor: context.colorScheme.iconWhite,
+                  color: context.colorScheme.iconWhite,
                   fit: BoxFit.contain,
                 ),
                 const SizedBox(width: 12),
@@ -139,12 +138,12 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                                 ),
                           );
                         },
-                        child: FusionImage.asset(
+                        child: FusionImageAuto(
                           semanticId: "${FusionTestKeys.instance.snplistitmdeleteicon}_${widget.index}",
-                          Assets.deleteIcon,
+                          path: Assets.deleteIcon,
                           width: 17,
                           height: 17,
-                          assetColor: context.colorScheme.iconWhite,
+                          color: context.colorScheme.iconWhite,
                           fit: BoxFit.contain,
                         ),
                       ),
@@ -161,12 +160,12 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                             widget.onDuplicate!();
                           }
                         },
-                        child: FusionImage.asset(
+                        child: FusionImageAuto(
                           semanticId: "${FusionTestKeys.instance.snplistitmduplicateicon}_${widget.index}",
-                          Assets.duplicateIcon,
+                          path: Assets.duplicateIcon,
                           width: 16,
                           height: 16,
-                          assetColor: context.colorScheme.iconWhite,
+                          color: context.colorScheme.iconWhite,
                           fit: BoxFit.contain,
                         ),
                       ),

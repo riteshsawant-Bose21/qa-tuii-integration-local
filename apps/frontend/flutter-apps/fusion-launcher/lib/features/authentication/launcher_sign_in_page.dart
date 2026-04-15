@@ -139,7 +139,7 @@ class _LauncherSignInPageView extends StatelessWidget {
                             child: SemanticHelper.button(
                               testId: SemanticHelper.createTestId(SemanticTypes.button, "skip_login_button"),
                               child: TextButton(
-                                onPressed: () {
+                                onPressed: () async {
                                   serviceLocator<SessionViewModel>().skipLogin();
                                   Navigator.pushNamedAndRemoveUntil(
                                     context,

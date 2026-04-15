@@ -6,7 +6,7 @@ import 'package:fusion_launcher/features/devices/presentation/widgets/settings/d
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'device_mapping_screen.dart';
-import 'device_updates_tab.dart';
+import '../../../firmware_update/views/device_updates_tab.dart';
 
 enum DeviceMappingDialogTab {
   mapping("Mapping"),

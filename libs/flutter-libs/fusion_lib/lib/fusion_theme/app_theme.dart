@@ -837,7 +837,7 @@ extension FusionTextStyle on TextTheme {
     labelLarge!,
     size: 12,
     lineHeight: 16,
-    letterSpacing: -3,
+    // letterSpacing: -3,
     weight: FontWeight.w500,
     fontFamily: 'Inter',
   );
