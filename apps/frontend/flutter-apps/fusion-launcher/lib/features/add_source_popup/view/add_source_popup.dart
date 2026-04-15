@@ -141,6 +141,7 @@ class AddSourcePopup extends StatelessWidget {
                                                   borderRadius: 8,
                                                   variant: FusionFieldVariant.neumorphic,
                                                   semanticId: '',
+                                                  showLabel: false,
                                                   hint: 'Enter name',
                                                   charlimit: 24,
                                                   onChange: (String value) {
