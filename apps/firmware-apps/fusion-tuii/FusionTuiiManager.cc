@@ -19,6 +19,8 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <atomic>
+#include <csignal>
 
 #include <json/json.h>
 #include <spdlog/cfg/env.h>
@@ -197,8 +199,28 @@ bool SendNackWithRetry(const std::string &failedAction, int zoneIndex);
 void HandleClientSetCommand(const std::string &action, const Json::Value &msg);
 }
 
+namespace {
+
+static std::atomic<bool> g_shutdownRequested{false};
+
+extern "C" void OnSignal(int signo)
+{
+    (void)signo;
+    g_shutdownRequested.store(true, std::memory_order_relaxed);
+}
+
+static void InstallSignalHandlers()
+{
+    std::signal(SIGINT,  OnSignal);
+    std::signal(SIGTERM, OnSignal);
+}
+
+} // namespace
+
 int main(int argc, const char *argv[])
 {
+    InstallSignalHandlers();
+
     spdlog::set_level(spdlog::level::info);
     spdlog::cfg::load_env_levels();
 
@@ -320,9 +342,12 @@ int main(int argc, const char *argv[])
 
     spdlog::info("FusionTUIIManager started successfully");
 
-    // Block until terminated (e.g. SIGINT)
-    spdlog::info("Press Enter to exit...");
-    std::getchar();
+    spdlog::info("Running. Send SIGINT (Ctrl+C) or SIGTERM to exit.");
+
+    while (!g_shutdownRequested.load(std::memory_order_relaxed))
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
 
     ShutdownSerial();
     return 0;
@@ -714,6 +739,7 @@ void QueueZoneConfigForProtocol(const std::vector<TuiiZoneConfig> &zoneConfigs)
         g_pendingZoneConfig    = true;
     }
     g_protocolCv.notify_all();
+    spdlog::info("[QueueZoneConfigForProtocol] Queued");
 }
 
 void QueueAudioSettingsForProtocol(const Json::Value &newSettings)
@@ -817,35 +843,40 @@ bool PerformInitializationCycle(Json::Value &deviceSnapshot,
         }
     }
 
-    Json::Value zoneEndPacket(Json::objectValue);
-    zoneEndPacket["action"] = "zoneEnd";
-    zoneEndPacket["payload"]["zones"] = static_cast<int>(zoneSnapshot.size());
+    if (zoneIndex > 0)
     {
-        std::lock_guard<std::mutex> lock(g_protocolMutex);
-        g_zoneEndWaitResult = ZoneEndWaitResult::none;
-    }
-    if (!SendJsonPacket(zoneEndPacket))
-    {
-        spdlog::warn("[Protocol] Failed to send zoneEnd packet");
+        Json::Value zoneEndPacket(Json::objectValue);
+        zoneEndPacket["action"] = "zoneEnd";
+        zoneEndPacket["payload"]["zones"] = static_cast<int>(zoneSnapshot.size());
+        {
+            std::lock_guard<std::mutex> lock(g_protocolMutex);
+            g_zoneEndWaitResult = ZoneEndWaitResult::none;
+        }
+        if (!SendJsonPacket(zoneEndPacket))
+        {
+            spdlog::warn("[Protocol] Failed to send zoneEnd packet");
+            return false;
+        }
+
+        const ZoneEndWaitResult zoneEndResult = WaitForZoneEndResult();
+        if (zoneEndResult == ZoneEndWaitResult::ack)
+        {
+            spdlog::info("[Protocol] zoneEnd acknowledged");
+            return true;
+        }
+
+        if (zoneEndResult == ZoneEndWaitResult::nack)
+        {
+            spdlog::warn("[Protocol] zoneEndNack received; restarting initialization");
+        }
+        else
+        {
+            spdlog::warn("[Protocol] zoneEnd timeout; restarting initialization");
+        }
         return false;
     }
 
-    const ZoneEndWaitResult zoneEndResult = WaitForZoneEndResult();
-    if (zoneEndResult == ZoneEndWaitResult::ack)
-    {
-        spdlog::info("[Protocol] zoneEnd acknowledged");
-        return true;
-    }
-
-    if (zoneEndResult == ZoneEndWaitResult::nack)
-    {
-        spdlog::warn("[Protocol] zoneEndNack received; restarting initialization");
-    }
-    else
-    {
-        spdlog::warn("[Protocol] zoneEnd timeout; restarting initialization");
-    }
-    return false;
+    return true;
 }
 
 std::string MakeRealtimeCommandKey(const std::string &action, int zoneIndex)
@@ -948,6 +979,7 @@ bool ApplyQueuedAudioCommands()
 
         const int zoneIndex = zoneIt->second;
         const Json::Value &settings = audioSnapshot[settingID];
+
         if (!settings.isObject())
         {
             continue;
@@ -980,26 +1012,31 @@ bool ApplyQueuedAudioCommands()
             {
                 return false;
             }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
 
         if (settings.isMember("mute") && settings["mute"].isBool())
         {
             Json::Value payload(Json::objectValue);
             payload["state"] = settings["mute"].asBool();
+
             if (!SendRealtimeCommand("setMute", payload, zoneIndex))
             {
                 return false;
             }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
 
         if (settings.isMember("input") && settings["input"].isInt())
         {
             Json::Value payload(Json::objectValue);
             payload["index"] = settings["input"].asInt();
+
             if (!SendRealtimeCommand("setSource", payload, zoneIndex))
             {
                 return false;
             }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
     }
 
@@ -1092,8 +1129,6 @@ void ProtocolWorkerLoop()
             {
                 std::lock_guard<std::mutex> lock(g_protocolMutex);
                 g_initialSyncDone = true;
-                g_pendingDeviceConfig = false;
-                g_pendingZoneConfig = false;
             }
 
             while (true)
@@ -1114,12 +1149,16 @@ void ProtocolWorkerLoop()
                     {
                         if (g_pendingDeviceConfig || g_pendingZoneConfig)
                         {
+                            g_pendingDeviceConfig = false;
+                            g_pendingZoneConfig = false;
                             break;
                         }
                     }
                     g_protocolCv.wait_for(lock, std::chrono::milliseconds(50));
                     if (g_pendingDeviceConfig || g_pendingZoneConfig)
                     {
+                        g_pendingDeviceConfig = false;
+                        g_pendingZoneConfig = false;
                         break;
                     }
                 }

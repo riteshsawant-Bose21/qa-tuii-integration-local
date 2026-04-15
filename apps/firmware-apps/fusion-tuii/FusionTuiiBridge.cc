@@ -256,7 +256,7 @@ bool FusionTUIIBridge::sendMessageToFusion(const std::string &jsonMessage)
 std::string FusionTUIIBridge::createGainMessage(const std::string &gainID, double value)
 {
     std::ostringstream jsonStream;
-    jsonStream << "{\"action\":\"set\",\"payload\":{\"settings\":{\"audio\":{\""
+    jsonStream << "{\"action\":\"patch\",\"payload\":{\"settings\":{\"audio\":{\""
                << gainID << "\":{\"" << JSON_FIELD_GAIN << "\":" << std::fixed << std::setprecision(6) << value
                << "}}}}}";
     return jsonStream.str();
@@ -265,7 +265,7 @@ std::string FusionTUIIBridge::createGainMessage(const std::string &gainID, doubl
 std::string FusionTUIIBridge::createMuteMessage(const std::string &gainID, bool muteState)
 {
     std::ostringstream jsonStream;
-    jsonStream << "{\"action\":\"set\",\"payload\":{\"settings\":{\"audio\":{\""
+    jsonStream << "{\"action\":\"patch\",\"payload\":{\"settings\":{\"audio\":{\""
                << gainID << "\":{\"" << JSON_FIELD_MUTE << "\":" << (muteState ? "true" : "false") << "}}}}}";
     return jsonStream.str();
 }
@@ -273,8 +273,8 @@ std::string FusionTUIIBridge::createMuteMessage(const std::string &gainID, bool 
 std::string FusionTUIIBridge::createSourceMessage(const std::string &zoneID, uint16_t sourceIndex)
 {
     std::ostringstream jsonStream;
-    jsonStream << "{\"action\":\"set\",\"payload\":{\"settings\":{\"audio\":{\""
-               << zoneID << "\":{\"" << JSON_FIELD_INPUT << "\":" << sourceIndex + 1 << "}}}}}";
+    jsonStream << "{\"action\":\"patch\",\"payload\":{\"settings\":{\"audio\":{\""
+               << zoneID << "\":{\"" << JSON_FIELD_INPUT << "\":" << sourceIndex << "}}}}}";
     return jsonStream.str();
 }
 
@@ -487,25 +487,17 @@ bool FusionTUIIBridge::processSourceUpdate(const std::string &zoneID, uint16_t s
         return false;
     }
 
-    if (sourceIndex == 0)
-    {
-        spdlog::error("[FusionTUIIBridge] Source update failed: input {} is invalid for key '{}' (expected 1-based index)",
-                      sourceIndex, zoneID);
-        return false;
-    }
-
-    const int newZeroBasedIndex = static_cast<int>(sourceIndex) - 1;
     TuiiZoneConfig &zone = m_zoneConfigs[idx];
 
-    if (newZeroBasedIndex < 0 || static_cast<size_t>(newZeroBasedIndex) >= zone.sources.size())
+    if (sourceIndex < 0 || static_cast<size_t>(sourceIndex) >= zone.sources.size())
     {
         spdlog::error("[FusionTUIIBridge] Source update failed: input {} (0-based {}) out of range for key '{}' (sources={})",
-                      sourceIndex, newZeroBasedIndex, zoneID, zone.sources.size());
+                      sourceIndex, sourceIndex, zoneID, zone.sources.size());
         return false;
     }
 
     const int oldSourceIndex = zone.sourceIndex;
-    zone.sourceIndex = newZeroBasedIndex;
+    zone.sourceIndex = sourceIndex;
 
     spdlog::debug("[FusionTUIIBridge] Source updated for key '{}': old={}, new={} (from input={})",
                   zoneID, oldSourceIndex, zone.sourceIndex, sourceIndex);
