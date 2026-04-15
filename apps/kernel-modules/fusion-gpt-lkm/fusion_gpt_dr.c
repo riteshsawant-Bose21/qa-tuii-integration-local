@@ -64,6 +64,7 @@
 #define DAC_INVALID_VALUE -1
 
 #define DISCIPLINE_LOCK_CONSECUTIVE 5U
+#define MODEL_MAX_SAMPLES 16U
 
 static bool pps_debug_param;
 module_param(pps_debug_param, bool, 0644);
@@ -88,6 +89,26 @@ MODULE_PARM_DESC(pi_i_gain_q16_param, "PI I-term gain in Q16 fixed-point DAC-cou
 static uint pi_integrator_clamp_param = 5;
 module_param(pi_integrator_clamp_param, uint, 0644);
 MODULE_PARM_DESC(pi_integrator_clamp_param, "Absolute clamp applied to the PI error integrator state");
+
+static uint model_window_size_param = 8;
+module_param(model_window_size_param, uint, 0644);
+MODULE_PARM_DESC(model_window_size_param, "Rolling sample window size for DAC/error linear fit");
+
+static uint model_min_samples_param = 5;
+module_param(model_min_samples_param, uint, 0644);
+MODULE_PARM_DESC(model_min_samples_param, "Minimum PI samples required before allowing a model-driven jump");
+
+static uint model_min_dac_span_param = 256;
+module_param(model_min_dac_span_param, uint, 0644);
+MODULE_PARM_DESC(model_min_dac_span_param, "Minimum DAC span required across model samples");
+
+static uint model_max_mean_residual_param = 10;
+module_param(model_max_mean_residual_param, uint, 0644);
+MODULE_PARM_DESC(model_max_mean_residual_param, "Maximum mean absolute residual in PPS ticks for a valid jump model");
+
+static uint model_jump_min_error_param = 40;
+module_param(model_jump_min_error_param, uint, 0644);
+MODULE_PARM_DESC(model_jump_min_error_param, "Minimum absolute PPS error in ticks before taking a model-driven jump");
 
 struct fusion_gpt
 {
@@ -142,6 +163,18 @@ struct fusion_gpt
 	u64 sq_err_sum;
 	u32 err_count;
 	bool baseline_restore_pending;
+	int model_dac_samples[MODEL_MAX_SAMPLES];
+	long model_error_samples[MODEL_MAX_SAMPLES];
+	u32 model_sample_count;
+	u32 model_sample_head;
+	s32 model_slope_q16;
+	s32 model_intercept_q16;
+	u32 model_mean_abs_residual;
+	u32 model_dac_span;
+	int model_predicted_dac;
+	bool model_valid;
+	bool model_jump_ready;
+	bool model_jump_consumed;
 
 	/* Servo readiness and diagnostics. */
 	bool discipline_ready;
@@ -156,6 +189,7 @@ static struct fusion_gpt *fusion_gpt_get_locked(void);
 static void fusion_gpt_put_locked(struct fusion_gpt *g);
 static void gpt_init_dac_baseline_locked(struct fusion_gpt *g);
 static void gpt_reset_servo_state_locked(struct fusion_gpt *g, bool preserve_dac);
+static void gpt_reset_jump_model_locked(struct fusion_gpt *g);
 
 static inline u32 rdl(struct fusion_gpt *g, u32 off) { return readl_relaxed(g->base + off); }
 static inline void wrl(struct fusion_gpt *g, u32 v, u32 off) { writel_relaxed(v, g->base + off); }
@@ -184,6 +218,20 @@ static void gpt_init_dac_baseline_locked(struct fusion_gpt *g)
 	g->current_dac_value = DAC_INVALID_VALUE; /* force next DAC write */
 }
 
+static void gpt_reset_jump_model_locked(struct fusion_gpt *g)
+{
+	g->model_sample_count = 0;
+	g->model_sample_head = 0;
+	g->model_slope_q16 = 0;
+	g->model_intercept_q16 = 0;
+	g->model_mean_abs_residual = 0;
+	g->model_dac_span = 0;
+	g->model_predicted_dac = DAC_INVALID_VALUE;
+	g->model_valid = false;
+	g->model_jump_ready = false;
+	g->model_jump_consumed = false;
+}
+
 static void gpt_reset_servo_state_locked(struct fusion_gpt *g, bool preserve_dac)
 {
 	int preserved_dac = (g->current_dac_value >= DAC_MIN_VALUE &&
@@ -198,6 +246,7 @@ static void gpt_reset_servo_state_locked(struct fusion_gpt *g, bool preserve_dac
 	WRITE_ONCE(g->discipline_ready, false);
 	g->lock_streak = 0;
 	g->pps_diag_next_jiffies = jiffies + HZ;
+	gpt_reset_jump_model_locked(g);
 
 	if (preserve_dac) {
 		g->dac_target = preserved_dac;
@@ -692,6 +741,147 @@ static u32 gpt_update_jitter_stats_locked(struct fusion_gpt *g, long freq_error)
 	return int_sqrt(g->sq_err_sum / g->err_count);
 }
 
+static int gpt_get_observed_dac_locked(const struct fusion_gpt *g)
+{
+	if (g->current_dac_value >= DAC_MIN_VALUE &&
+	    g->current_dac_value <= DAC_MAX_VALUE)
+		return g->current_dac_value;
+
+	return clamp(g->dac_target, DAC_MIN_VALUE, DAC_MAX_VALUE);
+}
+
+static void gpt_store_model_sample_locked(struct fusion_gpt *g, int observed_dac,
+					  long freq_error)
+{
+	u32 idx = g->model_sample_head;
+
+	g->model_dac_samples[idx] = observed_dac;
+	g->model_error_samples[idx] = freq_error;
+	g->model_sample_head = (idx + 1) % MODEL_MAX_SAMPLES;
+	if (g->model_sample_count < MODEL_MAX_SAMPLES)
+		g->model_sample_count++;
+}
+
+static bool gpt_fit_jump_model_locked(struct fusion_gpt *g)
+{
+	u32 window_size = clamp_t(u32, READ_ONCE(model_window_size_param), 2,
+				  MODEL_MAX_SAMPLES);
+	u32 min_samples = clamp_t(u32, READ_ONCE(model_min_samples_param), 2,
+				  MODEL_MAX_SAMPLES);
+	u32 max_mean_residual = READ_ONCE(model_max_mean_residual_param);
+	u32 min_dac_span = READ_ONCE(model_min_dac_span_param);
+	u32 sample_count = min(g->model_sample_count, window_size);
+	s64 sum_x = 0;
+	s64 sum_y = 0;
+	s64 sum_xx = 0;
+	s64 sum_xy = 0;
+	s64 denom;
+	s64 slope_q16;
+	s64 intercept_q16;
+	s64 residual_sum = 0;
+	int min_dac = DAC_MAX_VALUE;
+	int max_dac = DAC_MIN_VALUE;
+	u32 i;
+
+	g->model_valid = false;
+	g->model_jump_ready = false;
+	g->model_slope_q16 = 0;
+	g->model_intercept_q16 = 0;
+	g->model_mean_abs_residual = 0;
+	g->model_dac_span = 0;
+	g->model_predicted_dac = DAC_INVALID_VALUE;
+
+	if (sample_count < min_samples || min_samples > window_size)
+		return false;
+
+	for (i = 0; i < sample_count; i++) {
+		u32 idx = (g->model_sample_head + MODEL_MAX_SAMPLES - sample_count + i) %
+			  MODEL_MAX_SAMPLES;
+		s64 x = g->model_dac_samples[idx];
+		s64 y = g->model_error_samples[idx];
+
+		sum_x += x;
+		sum_y += y;
+		sum_xx += x * x;
+		sum_xy += x * y;
+		min_dac = min_t(int, min_dac, (int)x);
+		max_dac = max_t(int, max_dac, (int)x);
+	}
+
+	g->model_dac_span = max_dac - min_dac;
+	if (g->model_dac_span < min_dac_span)
+		return false;
+
+	denom = (s64)sample_count * sum_xx - sum_x * sum_x;
+	if (denom <= 0)
+		return false;
+
+	slope_q16 = div_s64((((s64)sample_count * sum_xy) - (sum_x * sum_y)) << 16,
+			    denom);
+	if (slope_q16 <= 0)
+		return false;
+
+	intercept_q16 = div_s64((sum_y << 16) - slope_q16 * sum_x, sample_count);
+
+	for (i = 0; i < sample_count; i++) {
+		u32 idx = (g->model_sample_head + MODEL_MAX_SAMPLES - sample_count + i) %
+			  MODEL_MAX_SAMPLES;
+		s64 x = g->model_dac_samples[idx];
+		s64 pred_q16 = slope_q16 * x + intercept_q16;
+		s64 pred = pred_q16 >> 16;
+		s64 err = (s64)g->model_error_samples[idx] - pred;
+
+		residual_sum += (err < 0) ? -err : err;
+	}
+
+	g->model_mean_abs_residual = (u32)div_s64(residual_sum, sample_count);
+	if (g->model_mean_abs_residual > max_mean_residual)
+		return false;
+
+	{
+		s64 predicted_dac = div_s64(-intercept_q16, slope_q16);
+
+		if (predicted_dac < DAC_MIN_VALUE || predicted_dac > DAC_MAX_VALUE)
+			return false;
+
+		g->model_slope_q16 = (s32)slope_q16;
+		g->model_intercept_q16 = (s32)intercept_q16;
+		g->model_predicted_dac = (int)predicted_dac;
+		g->model_valid = true;
+		return true;
+	}
+}
+
+static bool gpt_maybe_apply_model_jump_locked(struct fusion_gpt *g,
+					      int observed_dac, long freq_error)
+{
+	long abs_error = abs(freq_error);
+	u32 jump_min_error = READ_ONCE(model_jump_min_error_param);
+
+	gpt_store_model_sample_locked(g, observed_dac, freq_error);
+	if (!gpt_fit_jump_model_locked(g))
+		return false;
+
+	if (g->model_jump_consumed || abs_error < jump_min_error)
+		return false;
+
+	g->model_jump_ready = true;
+
+	if (g->model_predicted_dac == g->dac_target)
+		return false;
+
+	g->dac_target = g->model_predicted_dac;
+	g->error_integrator = 0;
+	g->model_jump_consumed = true;
+	g->model_jump_ready = false;
+
+	pr_info("fusion_gpt: model jump applied dac=%d from=%d err=%ld slope_q16=%d residual=%u span=%u\n",
+		g->dac_target, observed_dac, freq_error, g->model_slope_q16,
+		g->model_mean_abs_residual, g->model_dac_span);
+
+	return true;
+}
+
 static bool gpt_should_schedule_dac_work_locked(const struct fusion_gpt *g)
 {
 	return g->baseline_restore_pending ||
@@ -744,6 +934,13 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 		long p_term_log = 0;
 		long i_term_log = 0;
 		long integrator_log = 0;
+		bool model_jump_log = false;
+		int observed_dac = DAC_INVALID_VALUE;
+		bool model_valid_log = false;
+		bool model_jump_consumed_log = false;
+		u32 model_mean_abs_residual_log = 0;
+		u32 model_dac_span_log = 0;
+		int model_predicted_dac_log = DAC_INVALID_VALUE;
 		int dac_target = 0;
 
 		had_prev = gpt_handle_pps_capture(g, &cap64, &prev_cap64,
@@ -754,20 +951,34 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 
 			raw_spin_lock(&g->ctrl_lock);
 			rms_jitter = gpt_update_jitter_stats_locked(g, freq_error);
+			observed_dac = gpt_get_observed_dac_locked(g);
 			gpt_pi_step_locked(g, freq_error, &p_term_log,
 					   &i_term_log, &integrator_log);
+			model_jump_log = gpt_maybe_apply_model_jump_locked(g,
+							observed_dac,
+							freq_error);
+			integrator_log = g->error_integrator;
 			g->latest_freq_error = freq_error;
 			gpt_update_discipline_ready_locked(g, freq_error);
 			dac_target = g->dac_target;
+			model_valid_log = g->model_valid;
+			model_jump_consumed_log = g->model_jump_consumed;
+			model_mean_abs_residual_log = g->model_mean_abs_residual;
+			model_dac_span_log = g->model_dac_span;
+			model_predicted_dac_log = g->model_predicted_dac;
 			do_pps_log = READ_ONCE(pps_debug_param);
 			need_dac_work = gpt_should_schedule_dac_work_locked(g);
 			gpt_maybe_reset_diag_window_locked(g);
 			raw_spin_unlock(&g->ctrl_lock);
 
 			if (do_pps_log)
-				pr_info("fusion_gpt: [PPS] diff=%llu ticks err=%ld ticks rms=%u ticks 48k_off=%ldns dac=%d p=%ld i=%ld integ=%ld rebase=%d\n",
+				pr_info("fusion_gpt: [PPS] diff=%llu ticks err=%ld ticks rms=%u ticks 48k_off=%ldns dac=%d obs_dac=%d p=%ld i=%ld integ=%ld model_valid=%u jump_used=%u jump=%u pred_dac=%d resid=%u span=%u rebase=%d\n",
 					diff, freq_error, rms_jitter, if2_offset_ns,
-					dac_target, p_term_log, i_term_log, integrator_log,
+					dac_target, observed_dac, p_term_log, i_term_log,
+					integrator_log, model_valid_log ? 1U : 0U,
+					model_jump_consumed_log ? 1U : 0U,
+					model_jump_log ? 1U : 0U, model_predicted_dac_log,
+					model_mean_abs_residual_log, model_dac_span_log,
 					rebase_ready);
 
 			if (need_dac_work)
@@ -1037,4 +1248,4 @@ module_platform_driver(drv);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Bose Pro");
 MODULE_DESCRIPTION("GPT1 SHIM EXPORTING 1/3MS TICKS");
-MODULE_VERSION("1.0.1-Debug-Param");
+MODULE_VERSION("1.0.1-linear-model");
