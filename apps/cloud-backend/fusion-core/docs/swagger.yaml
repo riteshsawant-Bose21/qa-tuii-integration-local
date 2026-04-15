@@ -65,6 +65,36 @@ definitions:
     required:
     - currency
     type: object
+  types.BulkDeviceCreateRequest:
+    properties:
+      devices:
+        items:
+          $ref: '#/definitions/types.DeviceCreateRequest'
+        minItems: 1
+        type: array
+    required:
+    - devices
+    type: object
+  types.BulkDeviceCreateResponse:
+    properties:
+      results:
+        items:
+          $ref: '#/definitions/types.BulkDeviceCreateResult'
+        type: array
+    type: object
+  types.BulkDeviceCreateResult:
+    properties:
+      certificate:
+        type: string
+      device_id:
+        type: string
+      error:
+        type: string
+      project_id:
+        type: string
+      success:
+        type: boolean
+    type: object
   types.BundleDetails:
     properties:
       approval_status:
@@ -102,6 +132,60 @@ definitions:
       id:
         type: string
     type: object
+  types.CommandRequest:
+    properties:
+      command:
+        allOf:
+        - $ref: '#/definitions/types.CommandType'
+        enum:
+        - REBOOT
+        - STANDBY
+        example: REBOOT
+      device_ids:
+        items:
+          type: string
+        type: array
+      project_id:
+        type: string
+    required:
+    - command
+    - project_id
+    type: object
+  types.CommandResponse:
+    properties:
+      command_id:
+        type: string
+    type: object
+  types.CommandStatusResponse:
+    properties:
+      results:
+        items:
+          $ref: '#/definitions/types.CommandStatusResult'
+        type: array
+    type: object
+  types.CommandStatusResult:
+    properties:
+      command_id:
+        type: string
+      command_name:
+        type: string
+      device_id:
+        type: string
+      issued_at:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  types.CommandType:
+    enum:
+    - REBOOT
+    - STANDBY
+    type: string
+    x-enum-varnames:
+    - CommandRestart
+    - CommandStandby
   types.CreateOrganizationRequest:
     properties:
       description:
@@ -166,6 +250,121 @@ definitions:
     - account_type_role_id
     - email
     - full_name
+    type: object
+  types.DeviceClaimRequest:
+    properties:
+      client_device_id:
+        maxLength: 100
+        type: string
+      csr:
+        type: string
+      device_location:
+        maxLength: 255
+        type: string
+      device_name:
+        maxLength: 255
+        type: string
+      device_zone:
+        maxLength: 100
+        type: string
+      firmware_version:
+        maxLength: 50
+        type: string
+      is_primary:
+        type: boolean
+      project_id:
+        type: string
+    required:
+    - csr
+    - project_id
+    type: object
+  types.DeviceClaimResponse:
+    properties:
+      certificate:
+        type: string
+    type: object
+  types.DeviceCreateRequest:
+    properties:
+      client_device_id:
+        maxLength: 100
+        type: string
+      csr:
+        type: string
+      device_location:
+        maxLength: 255
+        type: string
+      device_name:
+        maxLength: 255
+        type: string
+      device_zone:
+        maxLength: 100
+        type: string
+      firmware_version:
+        maxLength: 50
+        type: string
+      is_primary:
+        type: boolean
+      mac_address:
+        maxLength: 20
+        type: string
+      model_name:
+        maxLength: 100
+        type: string
+      project_id:
+        type: string
+      serial_number:
+        maxLength: 100
+        type: string
+    required:
+    - client_device_id
+    - csr
+    - device_location
+    - device_name
+    - device_zone
+    - firmware_version
+    - mac_address
+    - model_name
+    - project_id
+    - serial_number
+    type: object
+  types.DeviceCreateResponse:
+    properties:
+      certificate:
+        type: string
+    type: object
+  types.DeviceRotateCertRequest:
+    properties:
+      csr:
+        type: string
+    required:
+    - csr
+    type: object
+  types.DeviceRotateCertResponse:
+    properties:
+      certificate:
+        type: string
+    type: object
+  types.DeviceUpdateRequest:
+    properties:
+      client_device_id:
+        maxLength: 100
+        type: string
+      device_location:
+        maxLength: 255
+        type: string
+      device_name:
+        maxLength: 255
+        type: string
+      device_zone:
+        maxLength: 100
+        type: string
+      firmware_version:
+        maxLength: 50
+        type: string
+      is_primary:
+        type: boolean
+      project_id:
+        type: string
     type: object
   types.DownloadArtifactResponse:
     properties:
@@ -287,17 +486,19 @@ definitions:
     type: object
   types.InviteUserToOrganizationRequest:
     properties:
+      account_type_role_id:
+        example: 3
+        minimum: 1
+        type: integer
       email:
         example: john.doe@example.com
         type: string
-      role:
-        example: Partner Admin
-        maxLength: 50
-        minLength: 3
+      full_name:
+        example: John Doe
         type: string
     required:
+    - account_type_role_id
     - email
-    - role
     type: object
   types.InviteUsersToOrganizationRequest:
     properties:
@@ -330,11 +531,11 @@ definitions:
     properties:
       bundle_version:
         type: string
+      desktop_app_version:
+        type: string
       installed_at:
         type: string
-      launcher_version:
-        type: string
-      previous_version:
+      previous_bundle_version:
         type: string
       project_id:
         type: string
@@ -369,7 +570,7 @@ definitions:
         example: bundles/stable/bundle-1.2.3.zip
         type: string
       version:
-        example: 1.2.3
+        example: 1.2.3-dev.4+build123
         type: string
     required:
     - checksum
@@ -601,6 +802,10 @@ definitions:
       io_endpoint:
         items:
           $ref: '#/definitions/types.ProductItemResponse'
+        type: array
+      source:
+        items:
+          $ref: '#/definitions/types.SourceItem'
         type: array
       speaker:
         items:
@@ -860,6 +1065,21 @@ definitions:
       speaker:
         $ref: '#/definitions/types.ProductItemResponse'
       version:
+        type: string
+    type: object
+  types.SourceItem:
+    properties:
+      asset_path:
+        type: string
+      connection_type:
+        type: string
+      name:
+        type: string
+      price:
+        type: number
+      product_id:
+        type: string
+      type:
         type: string
     type: object
   types.StatusOkForCreateUserProfile:
@@ -1172,6 +1392,325 @@ paths:
       summary: Get Auth0 tokens for automation testing
       tags:
       - auth
+  /devices:
+    post:
+      consumes:
+      - application/json
+      description: Create a new device in the system
+      parameters:
+      - description: Device details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.DeviceCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Successfully created device
+          schema:
+            $ref: '#/definitions/types.DeviceCreateResponse'
+        "400":
+          description: Bad request - Invalid payload or device already exists
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: Unauthorized - User not authorized
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new device
+      tags:
+      - devices
+  /devices/{device_id}:
+    patch:
+      consumes:
+      - application/json
+      description: Update device details (non-static fields only)
+      parameters:
+      - description: Serial number of the device
+        in: path
+        name: device_id
+        required: true
+        type: string
+      - description: Device update details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.DeviceUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Successfully updated device
+        "400":
+          description: Bad request - Invalid payload
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: Unauthorized - User not authorized to update this device
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Device or project not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a device
+      tags:
+      - devices
+  /devices/{device_id}/claim:
+    post:
+      consumes:
+      - application/json
+      description: Claim an unclaimed device for a user and project
+      parameters:
+      - description: Serial number of the device
+        in: path
+        name: device_id
+        required: true
+        type: string
+      - description: Claim details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.DeviceClaimRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Successfully claimed device
+          schema:
+            $ref: '#/definitions/types.DeviceClaimResponse'
+        "400":
+          description: Bad request - Invalid payload or device already claimed
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: Unauthorized - User not authorized
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Device or project not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Claim a device
+      tags:
+      - devices
+  /devices/{device_id}/reset:
+    delete:
+      consumes:
+      - application/json
+      description: Reset a device to factory settings
+      parameters:
+      - description: Serial number of the device
+        in: path
+        name: device_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Successfully reset device
+        "401":
+          description: Unauthorized - User not authorized to reset this device
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Device not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Reset a device
+      tags:
+      - devices
+  /devices/{device_id}/rotate-cert:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new certificate, attaches it to the device, and marks
+        the old certificate as inactive
+      parameters:
+      - description: Serial number of the device
+        in: path
+        name: device_id
+        required: true
+        type: string
+      - description: Certificate rotation details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.DeviceRotateCertRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully rotated certificate
+          schema:
+            $ref: '#/definitions/types.DeviceRotateCertResponse'
+        "400":
+          description: Bad request - Invalid payload
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: Unauthorized - User not authorized
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Device not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Rotate device certificate
+      tags:
+      - devices
+  /devices/bulk:
+    post:
+      consumes:
+      - application/json
+      description: Create multiple devices in a single request. Each device is processed
+        independently; partial failures are reported per-device.
+      parameters:
+      - description: List of devices to create
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.BulkDeviceCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "207":
+          description: Multi-status - results for each device
+          schema:
+            $ref: '#/definitions/types.BulkDeviceCreateResponse'
+        "400":
+          description: Bad request - Invalid payload
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: Unauthorized - User not authorized
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Bulk create devices
+      tags:
+      - devices
+  /devices/commands:
+    post:
+      consumes:
+      - application/json
+      description: Send a command to the device cluster
+      parameters:
+      - description: Command details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.CommandRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully sent command
+          schema:
+            $ref: '#/definitions/types.CommandResponse'
+        "400":
+          description: Bad request - Invalid payload
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: Unauthorized - User not authorized
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Send command to device cluster
+      tags:
+      - devices
+  /devices/commands/{command_id}/status:
+    get:
+      consumes:
+      - application/json
+      description: Get the status of a command by its ID
+      parameters:
+      - description: Command ID
+        in: path
+        name: command_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved command status
+          schema:
+            $ref: '#/definitions/types.CommandStatusResponse'
+        "400":
+          description: Bad request - Invalid command ID
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Command not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get command status
+      tags:
+      - devices
   /firmware/bundles:
     get:
       consumes:
@@ -1261,6 +1800,11 @@ paths:
         name: action
         required: true
         type: string
+      - description: Unique identifier of the firmware bundle (UUID format)
+        in: path
+        name: bundleID
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -1283,17 +1827,17 @@ paths:
       summary: Approve Firmware Bundle
       tags:
       - Firmware Update - Management API
-  /firmware/bundles/{bundleID}/request-download-url:
+  /firmware/bundles/{version}/request-download-url:
     get:
       consumes:
       - application/json
       description: Generates a presigned S3 URL for downloading a specific firmware
-        bundle artifact. The URL is valid for 2 hours and includes the file checksum
-        for integrity verification. Only approved bundles can be downloaded.
+        bundle artifact by version. The URL is valid for 15 minutes and includes the
+        file checksum for integrity verification. Only approved bundles can be downloaded.
       parameters:
-      - description: Unique identifier of the firmware bundle (UUID format)
+      - description: Semantic version of the firmware bundle (e.g. 1.2.3, 1.0.0-beta.1)
         in: path
-        name: bundleID
+        name: version
         required: true
         type: string
       produces:
@@ -1304,7 +1848,7 @@ paths:
           schema:
             $ref: '#/definitions/types.DownloadArtifactResponse'
         "400":
-          description: Missing or invalid bundleID
+          description: Missing or invalid version
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "403":
@@ -1327,11 +1871,12 @@ paths:
     get:
       description: |-
         Checks for the latest available firmware bundle. Steps performed:
-        1. Query for latest approved bundle where: bundle.version > current_firmware_version AND bundle.min_prev_version <= current_firmware_version AND bundle.min_desktop_app_version <= current_desktop_app_version AND (channel matches prerelease OR prerelease IS NULL for stable)
-        2. If found and current_firmware_version >= bundle.min_prev_version: return update_available=true with bundle details
-        3. If not found or firmware too old: query for latest bundle where bundle is compatible with current firmware (ignoring desktop app version)
-        4. If found and current_desktop_app_version < bundle.min_desktop_app_version: return update_available=true, app_update_required=true
-        5. Otherwise: return update_available=false
+        1. The release channel is auto-inferred from the prerelease tag of current_firmware_version (e.g. "beta" from 1.2.3-beta.1, empty for stable 1.2.3)
+        2. Query for latest approved bundle where: bundle.version > current_firmware_version AND bundle.min_prev_version <= current_firmware_version AND bundle.min_desktop_app_version <= current_desktop_app_version AND (channel matches prerelease OR prerelease IS NULL for stable)
+        3. If found and current_firmware_version >= bundle.min_prev_version: return update_available=true with bundle details
+        4. If not found or firmware too old: query for latest bundle where bundle is compatible with current firmware (ignoring desktop app version)
+        5. If found and current_desktop_app_version < bundle.min_desktop_app_version: return update_available=true, app_update_required=true
+        6. Otherwise: return update_available=false
 
         **Response Scenarios:**
 
@@ -1350,7 +1895,9 @@ paths:
         {"update_available": false, "app_update_required": false}
         ```
       parameters:
-      - description: Current firmware version (semver format)
+      - description: Current firmware version (semver format, e.g. 1.2.3 for stable,
+          1.2.3-beta.1 for beta channel). The release channel is auto-inferred from
+          the prerelease tag.
         in: query
         name: current_firmware_version
         required: true
@@ -1359,11 +1906,6 @@ paths:
         in: query
         name: current_desktop_app_version
         required: true
-        type: string
-      - description: 'Release channel: ''beta'', ''alpha'', etc. Omit for stable releases
-          (prerelease IS NULL)'
-        in: query
-        name: channel
         type: string
       produces:
       - application/json
@@ -1387,7 +1929,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Records the success or failure of a firmware bundle update installation.
+      description: 'Records the success or failure of a firmware bundle update installation.
+        Allowed values: INSTALL_SUCCESS, INSTALL_FAIL'
       parameters:
       - description: Bundle update status details
         in: body
@@ -1411,238 +1954,6 @@ paths:
       summary: Log Bundle Update Status
       tags:
       - Firmware Update - Client API
-  /organization/role-management:
-    get:
-      consumes:
-      - application/json
-      description: Get comprehensive role management data including roles, features,
-        access levels, and users for the organization
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully retrieved role management data
-          schema:
-            $ref: '#/definitions/types.RoleManagementResponse'
-        "401":
-          description: Unauthorized - User email not found in token
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Forbidden - Insufficient permissions for role management
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get organization role management data
-      tags:
-      - role-management
-  /organization/roles:
-    post:
-      consumes:
-      - application/json
-      description: Create a new role with the specified name and description in the
-        organization
-      parameters:
-      - description: Role creation details
-        in: body
-        name: role
-        required: true
-        schema:
-          $ref: '#/definitions/types.CreateRoleRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Successfully created role
-          schema:
-            $ref: '#/definitions/types.RoleWithPermissions'
-        "400":
-          description: Bad request - Invalid JSON payload
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Unauthorized - User email not found in token
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Forbidden - Insufficient permissions to create roles
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Create a new role
-      tags:
-      - role-management
-  /organization/roles/{roleID}/permissions:
-    put:
-      consumes:
-      - application/json
-      description: Update the permissions assigned to a specific role within the organization
-      parameters:
-      - description: Role ID
-        in: path
-        name: roleID
-        required: true
-        type: string
-      - description: Permission updates
-        in: body
-        name: permissions
-        required: true
-        schema:
-          items:
-            $ref: '#/definitions/types.PermissionUpdateRequest'
-          type: array
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully updated role permissions
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad request - Invalid JSON payload or invalid role ID
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Unauthorized - User email not found in token
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Forbidden - Insufficient permissions to update role permissions
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Update role permissions
-      tags:
-      - role-management
-  /organization/users:
-    get:
-      consumes:
-      - application/json
-      description: Get all users within the organization along with their role information
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully retrieved organization users
-          schema:
-            $ref: '#/definitions/types.OrganizationUsersResponse'
-        "401":
-          description: Unauthorized - User email not found in token
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Forbidden - Insufficient permissions to view organization users
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get organization users
-      tags:
-      - role-management
-  /organization/users/{userID}/role:
-    put:
-      consumes:
-      - application/json
-      description: Update the role assignment for a specific user within the organization
-      parameters:
-      - description: User ID
-        in: path
-        name: userID
-        required: true
-        type: string
-      - description: Role assignment details
-        in: body
-        name: roleAssignment
-        required: true
-        schema:
-          $ref: '#/definitions/types.AssignRoleRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully updated user role
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad request - Invalid JSON payload or missing user ID
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Unauthorized - User email not found in token
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Forbidden - Insufficient permissions to update user roles
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Update user role
-      tags:
-      - role-management
   /organizations:
     get:
       consumes:
@@ -1925,17 +2236,13 @@ paths:
       summary: Update organization
       tags:
       - organizations
-  /organizations/{organizationId}/invite-users:
+  /organizations/invite-users:
     post:
       consumes:
       - application/json
-      description: Invite multiple users to join an organization with specified roles
+      description: Invite multiple users to join an organization with specified roles.
+        Organization ID is taken from the authenticated user's account.
       parameters:
-      - description: Organization ID
-        in: path
-        name: organizationId
-        required: true
-        type: string
       - description: User invitations
         in: body
         name: invitations
@@ -1950,13 +2257,13 @@ paths:
           schema:
             $ref: '#/definitions/types.InviteUsersToOrganizationResponse'
         "400":
-          description: Bad request - Invalid organization ID or JSON payload
+          description: Bad request - Invalid JSON payload
           schema:
             additionalProperties:
               type: string
             type: object
         "401":
-          description: Unauthorized - User email not found in token
+          description: Unauthorized - User not authenticated
           schema:
             additionalProperties:
               type: string
@@ -1984,6 +2291,238 @@ paths:
       summary: Invite users to organization
       tags:
       - organizations
+  /organizations/role-management:
+    get:
+      consumes:
+      - application/json
+      description: Get comprehensive role management data including roles, features,
+        access levels, and users for the organization
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved role management data
+          schema:
+            $ref: '#/definitions/types.RoleManagementResponse'
+        "401":
+          description: Unauthorized - User email not found in token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Insufficient permissions for role management
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get organization role management data
+      tags:
+      - role-management
+  /organizations/roles:
+    post:
+      consumes:
+      - application/json
+      description: Create a new role with the specified name and description in the
+        organization
+      parameters:
+      - description: Role creation details
+        in: body
+        name: role
+        required: true
+        schema:
+          $ref: '#/definitions/types.CreateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Successfully created role
+          schema:
+            $ref: '#/definitions/types.RoleWithPermissions'
+        "400":
+          description: Bad request - Invalid JSON payload
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized - User email not found in token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Insufficient permissions to create roles
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new role
+      tags:
+      - role-management
+  /organizations/roles/{roleID}/permissions:
+    put:
+      consumes:
+      - application/json
+      description: Update the permissions assigned to a specific role within the organization
+      parameters:
+      - description: Role ID
+        in: path
+        name: roleID
+        required: true
+        type: string
+      - description: Permission updates
+        in: body
+        name: permissions
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/types.PermissionUpdateRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated role permissions
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad request - Invalid JSON payload or invalid role ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized - User email not found in token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Insufficient permissions to update role permissions
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update role permissions
+      tags:
+      - role-management
+  /organizations/users:
+    get:
+      consumes:
+      - application/json
+      description: Get all users within the organization along with their role information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved organization users
+          schema:
+            $ref: '#/definitions/types.OrganizationUsersResponse'
+        "401":
+          description: Unauthorized - User email not found in token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Insufficient permissions to view organization users
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get organization users
+      tags:
+      - role-management
+  /organizations/users/{userID}/role:
+    put:
+      consumes:
+      - application/json
+      description: Update the role assignment for a specific user within the organization
+      parameters:
+      - description: User ID
+        in: path
+        name: userID
+        required: true
+        type: string
+      - description: Role assignment details
+        in: body
+        name: roleAssignment
+        required: true
+        schema:
+          $ref: '#/definitions/types.AssignRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated user role
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad request - Invalid JSON payload or missing user ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized - User email not found in token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Insufficient permissions to update user roles
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update user role
+      tags:
+      - role-management
   /products:
     get:
       consumes:

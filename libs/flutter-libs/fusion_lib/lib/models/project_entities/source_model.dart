@@ -15,7 +15,8 @@ enum SourceConnectionType {
   rca("RCA"),
   endpoint("Endpoint"),
   xlr("XLR"),
-  hdmi("HDMI");
+  hdmi("HDMI"),
+  messagePlayer("Message Player");
 
   const SourceConnectionType(this.displayName);
 
@@ -30,19 +31,21 @@ extension SourceConnectionTypeExtension on SourceConnectionType {
       case SourceConnectionType.aes67input:
         return 'aes67';
       case SourceConnectionType.bluetooth:
-        return 'analog';
+        return 'bluetooth';
       case SourceConnectionType.usb:
+        return 'usb';
+      case SourceConnectionType.rca:
         return 'analog';
       case SourceConnectionType.audioJack:
-        return 'analog';
-      case SourceConnectionType.rca:
         return 'analog';
       case SourceConnectionType.endpoint:
         return 'endpoint';
       case SourceConnectionType.xlr:
         return 'analog';
       case SourceConnectionType.hdmi:
-        return 'analog';
+        return 'hdmi';
+      case SourceConnectionType.messagePlayer:
+        return 'playback';
     }
   }
 }
@@ -66,7 +69,7 @@ class Source extends HardwareComponent {
     super.zAxis,
     required this.type,
     required this.connectionType,
-    required super.assetImagePath,
+    required super.image,
     this.ipAddress,
     List<int>? portNumbers,
     required this.sku,
@@ -95,7 +98,7 @@ class Source extends HardwareComponent {
     double? zAxis,
     SourceType? type,
     SourceConnectionType? connectionType,
-    String? assetImagePath,
+    String? image,
     LocationModel? locationEntity,
     String? ipAddress,
     String? sku,
@@ -118,7 +121,7 @@ class Source extends HardwareComponent {
       zAxis: zAxis ?? this.zAxis,
       type: type ?? this.type,
       connectionType: connectionType ?? this.connectionType,
-      assetImagePath: assetImagePath ?? this.assetImagePath,
+      image: image ?? this.image,
       locationEntity: locationEntity ?? this.locationEntity,
       ipAddress: ipAddress ?? this.ipAddress,
       sku: sku ?? this.sku,
@@ -151,7 +154,8 @@ class Source extends HardwareComponent {
           (e) => e.name == json['type'],
         ), //throw FormatException('Unknown SourceConnectionType in JSON: ${json['connectionType']}'),
       ),
-      assetImagePath: json['assetImagePath'] as String,
+      image:
+          DeserializationUtil.stringDeserializer.deserialize(json['image']) ?? DeserializationUtil.stringDeserializer.deserialize(json['assetImagePath']) ?? '',
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
       ipAddress: json['ipAddress'] as String?,
       sku: json['sku'] as String? ?? '',
@@ -183,7 +187,7 @@ class Source extends HardwareComponent {
       'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
       'type': type.name,
       'connectionType': connectionType.name,
-      'assetImagePath': assetImagePath,
+      'image': image,
       'componentType': 'source',
       'locationEntity': locationEntity.toJson(),
       'ipAddress': ipAddress,

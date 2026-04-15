@@ -33,18 +33,19 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
       final String key = element.assets.assets.keys.firstOrNull ?? '';
       allProducts.add(
         EQLProduct(
+          productId: element.productId,
           name: element.modelName,
           modelFamily: element.modelFamily ?? '',
-          assetPath: datasource.getImagePath(element.assets.assets[key]?.firstOrNull ?? ''),
-          description: element.description,
+          image: datasource.getProductImage(element.productId),
+          description: element.modelFamily,
           data: element,
-          searchingFields: '${element.modelName} ${element.description}',
+          searchingFields: '${element.modelName} ${element.modelFamily}',
           deviceType: EQLDeviceType.amplifier,
           portData: element.numberOfInputsAndOutputs ?? ProductPortData(),
-          price: datasource.getPrice(element.id),
+          price: datasource.getPrice(element.productId),
           specifications: <String, String>{
-            "Power ": element.power?.at.map((AmplifierMeasurementValue e) => "${e.value} ${e.unit}").join(", ") ?? "",
-            "No.Of Loudspeaker Input": element.numberOfLoudspeakerInputs.toString(),
+            // "Power ": element.power?.at.map((AmplifierMeasurementValue e) => "${e.value} ${e.unit}").join(", ") ?? "",
+            // "No.Of Loudspeaker Input": element.numberOfLoudspeakerInputs.toString(),
             "Analog input": element.numberOfInputsAndOutputs?.analog?.inputs.toString() ?? "0",
             "Analog output": element.numberOfInputsAndOutputs?.analog?.outputs.toString() ?? "0",
             "FusionConnect input": element.numberOfInputsAndOutputs?.fusionConnect?.maxInputs.toString() ?? "0",
@@ -54,19 +55,20 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
       );
     }
     for (final IoEndpointProduct element in datasource.ioEndpoints) {
-      final String key = element.assets.assets.keys.firstOrNull ?? '';
+      // final String key = element.assets.assets.keys.firstOrNull ?? '';
       allProducts.add(
         EQLProduct(
+          productId: element.productId,
           name: element.modelName,
           modelFamily: element.modelFamily ?? '',
-          assetPath: datasource.getImagePath(element.assets.assets[key]?.firstOrNull ?? ''),
+          image: datasource.getProductImage(element.productId),
           data: element,
           //TODO: Check Endpoint Port Data
-          portData: element.numberOfInputsAndOutputs,
-          searchingFields: '${element.modelName} ${element.description}',
+          portData: element.numberOfInputsAndOutputs ?? ProductPortData(),
+          searchingFields: '${element.modelName} ${element.modelFamily}',
           deviceType: EQLDeviceType.endpoint,
-          description: element.shortDescription ?? element.description,
-          price: datasource.getPrice(element.id),
+          description: element.modelFamily,
+          price: datasource.getPrice(element.productId),
           specifications: <String, String>{
             // "Input Type": element.inputs?.type ?? "-",
             // "no.Of inputs": element.inputs?.quantity.toString() ?? "-",
@@ -82,20 +84,21 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
 
       allProducts.add(
         EQLProduct(
+          productId: element.productId,
           portData: element.numberOfInputsAndOutputs ?? ProductPortData(),
           name: element.modelName,
-          assetPath: datasource.getImagePath(element.assets.assets[key]?.firstOrNull ?? ''),
+          image: datasource.getProductImage(element.productId),
           modelFamily: element.modelFamily,
           data: element,
-          searchingFields: '${element.modelName} ${element.description}',
+          searchingFields: '${element.modelName} ${element.modelFamily}',
           deviceType: EQLDeviceType.processor,
-          price: datasource.getPrice(element.id),
-          description: element.shortDescription ?? element.description,
+          price: datasource.getPrice(element.productId),
+          description: element.modelFamily,
           specifications: <String, String>{
-            "Max Analog Control": element.maxNumberOfAnalogControl.toString() ?? "0",
-            "Max Digital Control": element.maxNumberOfDigitalControl.toString() ?? "0",
-            "GPIO Logic Ports":
-                element.gpioLogicPorts != null ? "${element.gpioLogicPorts!.inputs} in / ${element.gpioLogicPorts!.outputs} out" : "0 in / 0 out",
+            // "Max Analog Control": element.maxNumberOfAnalogControl.toString() ?? "0",
+            // "Max Digital Control": element.maxNumberOfDigitalControl.toString() ?? "0",
+            // "GPIO Logic Ports":
+            //     element.gpioLogicPorts != null ? "${element.gpioLogicPorts!.inputs} in / ${element.gpioLogicPorts!.outputs} out" : "0 in / 0 out",
             "Analog Inputs": element.numberOfInputsAndOutputs?.analog?.inputs.toString() ?? "0",
             "Analog Outputs": element.numberOfInputsAndOutputs?.analog?.outputs.toString() ?? "0",
             "FusionConnect Inputs": element.numberOfInputsAndOutputs?.fusionConnect?.maxInputs.toString() ?? "0",
@@ -202,7 +205,7 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
     return ProductQueryModel(
       name: product.name,
       price: product.price,
-      image: product.assetPath ?? '',
+      image: product.image ?? '',
       type: switch (product.deviceType) {
         EQLDeviceType.amplifier => ProductType.amplifier,
         EQLDeviceType.endpoint => ProductType.endpoints,

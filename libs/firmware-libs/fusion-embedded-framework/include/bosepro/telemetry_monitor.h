@@ -63,6 +63,21 @@ public:
     void register_telemetry(std::unique_ptr<Telemetry> telemetry);
 
 
+    /// Register an alias mapping from an internal composite block's telemetry
+    /// qualified name to the externally-visible composite telemetry name.
+    ///
+    /// The qualified names follow the pattern "block_name::telemetry_name".
+    /// When a telemetry item is registered with the internal qualified name,
+    /// it will be stored and surfaced under the composite qualified name.
+    ///
+    /// @param  internal_qualified  The internal qualified name
+    ///                             (e.g. "comp/peq::level_meter").
+    /// @param  composite_qualified  The composite-facing qualified name
+    ///                              (e.g. "comp::level_meter").
+    void register_telemetry_alias(const std::string &internal_qualified,
+                                  const std::string &composite_qualified);
+
+
     /// Unregister all telemetry items associated with a block.
     ///
     /// @param block_name  The name of the block to unregister telemetry
@@ -245,6 +260,11 @@ private:
 
     std::map<std::string, std::unique_ptr<Telemetry>> meters;
     std::map<std::string, std::unique_ptr<Telemetry>> events;
+
+    /// Maps internal composite block telemetry qualified names to the
+    /// externally-visible composite qualified names.
+    /// e.g.  "comp/peq::level_meter" -> "comp::level_meter"
+    std::map<std::string, std::string> telemetry_alias_map;
 
     std::map<std::string, std::string> msg_in_flight;
 };

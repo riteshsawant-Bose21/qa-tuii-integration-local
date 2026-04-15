@@ -1,4 +1,5 @@
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/endpoints.dart';
 
 extension DroInputMapperService on ProjectService {
   DroInputModel getDroInputData() {
@@ -81,7 +82,12 @@ extension DroInputMapperService on ProjectService {
           serverLocation: locationName,
           ioType: source.connectionType.connectionType,
           ioProperties: IoProperties(
-            channels: 1,
+            channels:
+                (source.connectionType == SourceConnectionType.bluetooth ||
+                    source.connectionType == SourceConnectionType.usb ||
+                    source.connectionType == SourceConnectionType.hdmi)
+                ? 2
+                : 1, // assuming bluetooth sources are stereo and others are mono, need to update this when we have more source types
           ),
           processingBlocks: getProcessingBlocksData(source.id),
         ),
@@ -513,34 +519,136 @@ extension DroInputMapperService on ProjectService {
       List<WiringConnectionModel> wiringConnections = getConnectionForDevice(dsp.id) ?? [];
       for (WiringConnectionModel connection in wiringConnections) {
         List<PortData> inputPorts = dsp.inputPortsData;
-        List<PortData> outPutPorts = dsp.outputPortsData;
         List<PortData> comPorts = dsp.communicationPorts;
-        //check if the connection port id is in the input ports of the dsp
-        bool isInputConnect = (inputPorts.any((port) => port.id == connection.portId || port.id == connection.targetPortId));
-        if (isInputConnect) {
-          PortData portData = inputPorts.firstWhere((port) => port.id == connection.portId || port.id == connection.targetPortId);
+
+        // Find matching port from input or communication ports
+        PortData? matchedPort = _findMatchingPort(
+          inputPorts: inputPorts,
+          comPorts: comPorts,
+          connection: connection,
+        );
+
+        // if (matchedPort == null) {
+        //   FusionLogger.log(tag: LogTag.dro, message: "No matching port found for connection ${connection.id} on device ${dsp.name}");
+        //
+        //   // for(PortData port in inputPorts) {
+        //   //   FusionLogger.log(tag: LogTag.dro, message: "Input Port - id: ${port.id}, number: ${port.portNumber}, type: ${port.type}");
+        //   // }
+        //   for (PortData port in comPorts) {
+        //     FusionLogger.log(tag: LogTag.dro, message: "Communication Port - id: ${port.id}, number: ${port.portNumber}, type: ${port.type}");
+        //   }
+        // }
+
+        if (matchedPort != null) {
           droIoPorts.add(
             DroIoPorts(
               ioId: dsp.id == connection.deviceId ? connection.targetDeviceId : connection.deviceId,
               deviceId: dsp.id,
-              portType: "io_in_analog",
+              portType: connection.type.type,
               portNums: [
-                portData.portNumber,
+                matchedPort.portNumber,
               ],
             ),
           );
-        }
+        } else {
+          if (connection.type == ConnectionType.amplifier) {
+            String amplifierId = dsp.id == connection.deviceId ? connection.targetDeviceId : connection.deviceId;
 
-        bool isCommunicationConnect = (comPorts.any((port) => port.id == connection.portId));
-        if (isCommunicationConnect) {
-          PortData portData = comPorts.firstWhere((port) => port.id == connection.portId);
+            HardwareComponent? amplifier = getHardwareById(amplifierId);
+            if (amplifier != null) {
+              PortData? matchedAmpPort = amplifier.inputPortsData.firstWhereOrNull(
+                (port) => (port.id == connection.portId || port.id == connection.targetPortId),
+              );
+              if (matchedAmpPort != null) {
+                int portNum = matchedAmpPort.portNumber;
+
+                //get corresponding output port from dsp which is connected to this amplifier
+
+                List<PortData> outPutPorts = amplifier.outputPortsData;
+
+                PortData? ampOutputPort = outPutPorts.firstWhereOrNull(
+                  (port) => (port.portNumber == portNum),
+                );
+
+                if (ampOutputPort != null) {
+                  PortData? dspOutputPort = dsp.outputPortsData.firstWhereOrNull(
+                    (port) => (port.id == connection.portId || port.id == connection.targetPortId),
+                  );
+
+                  List<WiringConnectionModel>? wiringConnections = getConnectionForDevice(amplifierId);
+
+                  if (wiringConnections != null) {
+                    WiringConnectionModel? circuitConnection = wiringConnections.firstWhereOrNull(
+                      (conn) => conn.type == ConnectionType.circuit && (conn.portId == ampOutputPort.id || conn.targetPortId == ampOutputPort.id),
+                    );
+
+                    if (circuitConnection != null) {
+                      final String circuitId = circuitConnection.deviceId == amplifierId ? circuitConnection.targetDeviceId : circuitConnection.deviceId;
+
+                      if (dspOutputPort != null) {
+                        droIoPorts.add(
+                          DroIoPorts(
+                            ioId: circuitId,
+                            deviceId: dsp.id,
+                            portType: connection.type.type,
+                            portNums: [
+                              dspOutputPort.portNumber,
+                            ],
+                          ),
+                        );
+                      }
+                    }
+                  }
+                }
+              } else {
+                FusionLogger.log(tag: LogTag.dro, message: "No matching port found for connection ${connection.id} on amplifier ${amplifier.name}");
+              }
+            }
+          }
+        }
+      }
+    }
+
+    //endpoints
+    for (FusionEndpoints endpoint in getAllHardware().whereType<FusionEndpoints>()) {
+      DroMaxDevice droMaxDevice = DroMaxDevice(
+        deviceId: endpoint.id,
+        deviceType: endpoint.sku.toLowerCase(),
+        deviceLocation: "",
+      );
+      droMaxDevices.add(droMaxDevice);
+
+      List<WiringConnectionModel> wiringConnections = getConnectionForDevice(endpoint.id) ?? [];
+
+      for (WiringConnectionModel connection in wiringConnections) {
+        List<PortData> inputPorts = endpoint.inputPortsData;
+        List<PortData> comPorts = endpoint.communicationPorts;
+
+        // Find matching port from input or communication ports
+        PortData? matchedPort = _findMatchingPort(
+          inputPorts: inputPorts,
+          comPorts: comPorts,
+          connection: connection,
+        );
+
+        // if (matchedPort == null) {
+        //   FusionLogger.log(tag: LogTag.dro, message: "No matching port found for connection ${connection.id} on endpoint ${endpoint.name}");
+        //   for (PortData port in inputPorts) {
+        //     FusionLogger.log(tag: LogTag.dro, message: "Input Port - id: ${port.id}, number: ${port.portNumber}, type: ${port.type}");
+        //   }
+        //   for (PortData port in comPorts) {
+        //     FusionLogger.log(tag: LogTag.dro, message: "Communication Port - id: ${port.id}, number: ${port.portNumber}, type: ${port.type}");
+        //   }
+        // }
+
+        if (matchedPort != null) {
           droIoPorts.add(
             DroIoPorts(
-              ioId: connection.targetDeviceId,
-              deviceId: dsp.id,
-              portType: portData.type.name,
+              ioId: endpoint.id == connection.deviceId ? connection.targetDeviceId : connection.deviceId,
+              deviceId: endpoint.id,
+              portType: connection.type.type,
               portNums: [
-                portData.portNumber,
+                matchedPort.portNumber,
               ],
             ),
           );
@@ -548,7 +656,6 @@ extension DroInputMapperService on ProjectService {
       }
     }
 
-    // todo: confirm if we need to add amps or not
     // for (Amplifier amps in getAllHardware().whereType<Amplifier>()) {
     //   DroMaxDevice droMaxDevice = DroMaxDevice(
     //     deviceId: amps.id,
@@ -561,7 +668,7 @@ extension DroInputMapperService on ProjectService {
     DroUserSetting droUserSetting = DroUserSetting(
       maxDevices: droMaxDevices,
       ioPorts: droIoPorts,
-      deviceCapacity: 90,
+      deviceCapacity: 70,
       maxSolveTime: 60,
       maxDeviceHopCount: 10,
       maxNetworkLatency: 50,
@@ -579,5 +686,26 @@ extension DroInputMapperService on ProjectService {
 
   String getZoneProcessingId(String parentId) {
     return "p$parentId";
+  }
+
+  /// Helper method to find matching port from input or communication ports
+  PortData? _findMatchingPort({
+    required List<PortData> inputPorts,
+    required List<PortData> comPorts,
+    required WiringConnectionModel connection,
+  }) {
+    // Check input ports first (matches portId OR targetPortId)
+    for (PortData port in inputPorts) {
+      if (port.id == connection.portId || port.id == connection.targetPortId) {
+        return port;
+      }
+    }
+    // Check communication ports (matches only portId)
+    for (PortData port in comPorts) {
+      if (port.id == connection.portId || port.id == connection.targetPortId) {
+        return port;
+      }
+    }
+    return null;
   }
 }

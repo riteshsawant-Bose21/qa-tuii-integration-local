@@ -12,13 +12,14 @@ import (
 
 // AppConfig represents application configuration data
 type AppConfig struct {
-	NodeName string
-	BindAddr string
-	BindPort int
-	NetIface string
-	Local    bool
-	Profile  bool
-	Verbose  bool
+	NodeName       string
+	BindAddr       string
+	BindPort       int
+	NetIface       string
+	Local          bool
+	Profile        bool
+	UDPDiagnostics bool
+	Verbose        bool
 }
 
 func (a *AppConfig) SelfUrl() string {
@@ -104,6 +105,27 @@ type SoftwareUpdateSyncTracker struct {
 	TimeoutCh     chan bool       `json:"-"`              // Channel for timeout
 }
 
+// SWUpdateStatus represents the RECOVERY_STATUS enum values from SWUpdate.
+type SWUpdateStatus int32
+
+// SoftwareUpdateProgress represents real-time progress information from SWUpdate
+type SoftwareUpdateProgress struct {
+	NodeName     string         `json:"node_name"`
+	APIVersion   uint32         `json:"api_version"`
+	Status       SWUpdateStatus `json:"status"`                  // RECOVERY_STATUS enum
+	Source       int32          `json:"source"`                  // sourcetype enum
+	DwlPercent   uint32         `json:"dwl_percent"`             // Download percentage
+	DwlBytes     uint64         `json:"dwl_bytes"`               // Download bytes
+	NSteps       uint32         `json:"n_steps"`                 // Total number of steps
+	CurStep      uint32         `json:"cur_step"`                // Current step number
+	CurPercent   uint32         `json:"cur_percent"`             // Current step percentage
+	CurImage     string         `json:"cur_image"`               // Current image name
+	HndName      string         `json:"hnd_name"`                // Handler name
+	Info         string         `json:"info,omitempty"`          // Optional info message
+	SerialNumber string         `json:"serial_number,omitempty"` // API v2.1.0+ (string to preserve uint64 precision)
+	Timestamp    time.Time      `json:"timestamp"`               // When this progress was captured
+}
+
 // VersionUpdate represents version information to sync across nodes
 type VersionUpdate struct {
 	Version Version `json:"version"`
@@ -166,6 +188,8 @@ type DeviceInfo struct {
 	FusionMonorepoBranch     string `json:"fusion_monorepo_branch,omitempty"`
 	FusionMonorepoCommitHash string `json:"fusion_monorepo_commit_hash,omitempty"`
 	JenkinsBuildNumber       string `json:"jenkins_build_number,omitempty"`
+	PreReleaseTag            string `json:"pre_release_tag,omitempty"`
+	VrrpPriority             int    `json:"vrrp_priority"`
 }
 
 // DevicePatch represents patchable device configuration data.
@@ -216,6 +240,73 @@ type RemoteStateSnapshot struct {
 type SnapshotOperation struct {
 	Name      string    `json:"name"`
 	Timestamp time.Time `json:"timestamp"`
+}
+
+// SnapshotDefinition represents a stored Snapshot definition.
+type SnapshotDefinition struct {
+	ID   string         `json:"id"`
+	Name string         `json:"name,omitempty"`
+	Data map[string]any `json:"data"`
+}
+
+// Scene represents a stored Scene definition.
+type Scene struct {
+	ID   string         `json:"id"`
+	Name string         `json:"name,omitempty"`
+	Data map[string]any `json:"data"`
+}
+
+// SceneSet represents a set of scenes and current/default scene tracking.
+type SceneSet struct {
+	SetID          string  `json:"set_id"`
+	Name           string  `json:"name,omitempty"`
+	DefaultSceneID string  `json:"default_scene,omitempty"`
+	CurrentSceneID string  `json:"current_scene_id,omitempty"`
+	Scenes         []Scene `json:"scenes"`
+}
+
+// ActivateSnapshotRequest is the request body for snapshot activation.
+type ActivateSnapshotRequest struct {
+	ID string `json:"id"`
+}
+
+// ActivateSceneSetRequest is the request body for scene activation in a set.
+type ActivateSceneSetRequest struct {
+	SetID   string `json:"set_id"`
+	SceneID string `json:"scene_id"`
+}
+
+// CurrentSceneResponse is the response body for current scene lookup.
+type CurrentSceneResponse struct {
+	SetID        string               `json:"set_id"`
+	CurrentScene CurrentSceneMetadata `json:"current_scene"`
+}
+
+// CurrentSceneMetadata identifies the active scene details for a scene set.
+type CurrentSceneMetadata struct {
+	SceneID string `json:"scene_id"`
+	Name    string `json:"name,omitempty"`
+}
+
+// SnapshotListResponse is the response body for listing stored snapshots.
+type SnapshotListResponse struct {
+	Snapshots []SnapshotDefinition `json:"snapshots"`
+}
+
+// SceneListResponse is the response body for listing stored scenes.
+type SceneListResponse struct {
+	Scenes []Scene `json:"scenes"`
+}
+
+// SceneSetListResponse is the response body for listing stored scene sets.
+type SceneSetListResponse struct {
+	SceneSets []SceneSet `json:"scene_sets"`
+}
+
+// SceneCatalogListResponse is the response body for listing all stored scene data.
+type SceneCatalogListResponse struct {
+	Snapshots []SnapshotDefinition `json:"snapshots"`
+	SceneSets []SceneSet           `json:"scene_sets"`
 }
 
 // TaskType represents scheduled task
@@ -331,12 +422,39 @@ type WebSocketStats struct {
 	MessagesByType map[string]int64 `json:"messages_by_type,omitempty"` // Messages by type
 }
 
+// SoftwareUpdateProgressResponse is the JSON body for software update progress events.
+type SoftwareUpdateProgressResponse struct {
+	UpdateState  string `json:"update_state"`
+	Step         string `json:"step"`
+	CurrentTask  string `json:"current_task"`
+	Progress     string `json:"progress"`
+	Node         string `json:"node"`
+	Handler      string `json:"handler"`
+	Timestamp    string `json:"timestamp"`
+	SerialNumber string `json:"serial_number,omitempty"`
+}
+
 // SoftwareUpdateUploadResponse is the JSON body returned after a successful bundle upload.
 type SoftwareUpdateUploadResponse struct {
 	Filename  string    `json:"filename"`
 	Checksum  string    `json:"checksum"`
 	SizeBytes int64     `json:"size_bytes"`
 	Uploaded  time.Time `json:"uploaded"`
+}
+
+// SwUpdateInfo represents the contents of the /etc/swupdate file.
+type SwUpdateInfo struct {
+	SerialNumber          string `json:"serial_number"`
+	CurrentBundleVersion  string `json:"current_bundle_version"`
+	PreviousBundleVersion string `json:"previous_bundle_version"`
+	Mount                 string `json:"mount"`
+	PreviousMount         string `json:"previous_mount"`
+	Status                string `json:"status"`
+	CurrentState          string `json:"current_state"`
+	BootPartition         string `json:"boot_partition"`
+	PreviousBootPartition string `json:"previous_boot_partition"`
+	Error                 string `json:"error"`
+	UpdatedAt             string `json:"updated_at"`
 }
 
 // softwareUpdateErrorResponse is the JSON body returned on bundle upload errors.
@@ -351,5 +469,6 @@ type SoftwareUpdateInfo struct {
 		FusionMonorepoBranch        string `json:"FUSION_MONOREPO_BRANCH"`
 		FusionMonorepoCommitHash    string `json:"FUSION_MONOREPO_COMMIT_HASH"`
 		JenkinsBuildNumber          string `json:"JENKINS_BUILD_NUMBER"`
+		PreReleaseTag               string `json:"PRE_RELEASE_TAG"`
 	} `json:"build_configuration"`
 }

@@ -2,11 +2,14 @@ import 'dart:io';
 
 import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/projects/view_model/meter_data/meter_data_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/project_manger/dro/dro_input_mapper.dart';
 
 export 'circuit/circuit_viewmodel.dart';
+export 'controller/controller_view_model.dart';
 export 'equip_location/equip_location_view_model.dart';
 export 'events/events_view_model.dart';
 
@@ -28,6 +31,7 @@ export 'subzones/subzone_view_model.dart';
 export 'undo_redo/undo_redo_view_model.dart';
 export 'wiring_connection/wiring_connection_view_model.dart';
 export 'zone/zone_view_model.dart';
+export 'aes67/aes67_view_model.dart';
 
 part 'project_view_model_state.dart';
 
@@ -42,7 +46,7 @@ enum ProjectMode {
 
 enum ToolbarMode { acoustics, system }
 
-enum ConfigurationMenuMode { processing, snapshots, events, gpio, scheduling, mediaFiles }
+enum ConfigurationMenuMode { processing, snapshots, events, gpio, scheduling, mediaFiles, aes67, controllers }
 
 enum SelectedItemType {
   source,
@@ -100,7 +104,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   String? currentSelectedSubZoneId;
 
   /// Listening area selection mode flag
-  bool isInListeningAreaMode = false;
+  // bool isInListeningAreaMode = false;
   bool isInZoneSelectionMode = false;
 
   int currentDeviceTypeIndex = -1;
@@ -321,9 +325,18 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     return projectManager.getDroInputData();
   }
 
+  Map<String, dynamic> getAllProcessingBlocksData() {
+    return projectManager.getAllProcessingBlockData();
+  }
+
+  WallControllerConfig get wallControllerConfig {
+    return projectManager.getWallControllerConfig();
+  }
+
   /// Clears the current project selection.
   void closeProject() {
     if (state is ProjectLoaded) {
+      serviceLocator<MeterDataViewModel>().stopTelemetry(reason: MeterInactiveReason.projectClosed);
       final ProjectLoaded currentState = state as ProjectLoaded;
       _currentProject = null;
       emit(
@@ -337,6 +350,11 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
       emit(ProjectUpdated(projectId: _currentProject!.id));
     }
   }
+  void updateFloorPlan() {
+    if (_currentProject != null) {
+      emit(FloorsUpdated(projectId: _currentProject!.id));
+    }
+  }
 
   void emitVipUpdated(String? vip) {
     emit(VipUpdated(vip: vip));
@@ -346,9 +364,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     emit(TabChanged(tab: tabIndex));
   }
 
-  void emitFloorUpdated() {
-    emit(FloorsUpdated());
-  }
+
 
   void throwError(String message) {
     FusionLogger.log(tag: LogTag.project, message: message);
@@ -356,7 +372,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   }
 
   void exitSelectionModes() {
-    isInListeningAreaMode = false;
+    // isInListeningAreaMode = false;
     isInZoneSelectionMode = false;
     currentSelectedListeningAreaId = null;
     currentSelectedZoneId = null;
@@ -364,18 +380,18 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     updateProject();
   }
 
-  void enterZoneSelectionMode(Zone zone) {
-    isInListeningAreaMode = false;
-    isInZoneSelectionMode = true;
-    currentSelectedZoneId = zone.id;
-    currentSelectedListeningAreaId = null;
-    currentSelectedSubZoneId = null;
-    resetDeviceTypeIndex();
-    emit(ZoneSelectionMode(zone));
-  }
+  // void enterZoneSelectionMode(Zone zone) {
+  //   // isInListeningAreaMode = false;
+  //   isInZoneSelectionMode = true;
+  //   currentSelectedZoneId = zone.id;
+  //   currentSelectedListeningAreaId = null;
+  //   currentSelectedSubZoneId = null;
+  //   resetDeviceTypeIndex();
+  //   emit(ZoneSelectionMode(zone));
+  // }
 
   void enterSubZoneSelectionMode(SubZone subZone) {
-    isInListeningAreaMode = false;
+    // isInListeningAreaMode = false;
     isInZoneSelectionMode = true;
     currentSelectedSubZoneId = subZone.id;
     currentSelectedZoneId = null;
@@ -386,7 +402,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   void enterListeningAreaMode() {
     isInZoneSelectionMode = false;
-    isInListeningAreaMode = true;
+    // isInListeningAreaMode = true;
     currentSelectedZoneId = null;
     currentSelectedSubZoneId = null;
     resetDeviceTypeIndex();
@@ -422,7 +438,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   void changeDeviceTypeIndex(int index) {
     currentDeviceTypeIndex = index;
     isInZoneSelectionMode = false;
-    isInListeningAreaMode = false;
+    // isInListeningAreaMode = false;
     currentSelectedZoneId = null;
     currentSelectedSubZoneId = null;
     print("Device type index changed to $index");

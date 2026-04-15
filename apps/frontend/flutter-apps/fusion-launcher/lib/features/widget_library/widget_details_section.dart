@@ -25,7 +25,6 @@ import 'package:flutter/services.dart';
 import 'package:fusion_launcher/features/widget_library/models/widget_item.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_custom_textfield.dart';
-import 'package:fusion_lib/fusion_widgets/others/fusion_flat_container.dart';
 import 'package:fusion_lib/models/dock_item_config.dart';
 import 'package:fusion_lib/models/fusion_dock_item.dart';
 import 'package:provider/provider.dart';
@@ -220,7 +219,7 @@ class _WidgetDetailsSectionState extends State<WidgetDetailsSection> {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: context.colorScheme.black,
+        color: context.colorScheme.elevation1,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: context.colorScheme.elevation2,
@@ -315,6 +314,8 @@ class _WidgetDetailsSectionState extends State<WidgetDetailsSection> {
         return _buildFusionRow(context);
       case "FusionColumn":
         return _buildFusionColumn(context);
+      case "FusionKebabPopup":
+        return _buildFusionKebabPopup(context);
 
       default:
         return const FusionAppText(
@@ -2176,8 +2177,8 @@ const FusionContainer(
           context: context,
           preview: const FusionHorizontalResizableWidget(
             semanticId: "drag_left",
-            child: Text("Drag Left"),
             dragLeft: true,
+            child: Text("Drag Left"),
           ),
 
           code: '''
@@ -2746,18 +2747,18 @@ FusionExpandableTileWidget(
       children: <Widget>[
         _buildWithCopy(
           context: context,
-          preview: FusionImage.network(
+          preview: FusionImageAuto(
+            path: "https://picsum.photos/200",
             semanticId: "network_image",
-            "https://picsum.photos/200",
             width: 120,
             height: 120,
             borderRadius: BorderRadius.circular(12),
           ),
 
           code: '''
-FusionImage.network(
+FusionImageAuto(
+            path: "https://picsum.photos/200",
             semanticId: "network_image",
-            "https://picsum.photos/200",
             width: 120,
             height: 120,
             borderRadius: BorderRadius.circular(12),
@@ -2769,17 +2770,15 @@ FusionImage.network(
         ),
         _buildWithCopy(
           context: context,
-          preview: const FusionImage.circle(
+          preview: const FusionImageAuto(
+            path: "assets/images/launcher_hero.png",
             semanticId: "circle_image",
-            asset: "assets/images/launcher_hero.png",
-            size: 100,
           ),
 
           code: '''
-const FusionImage.circle(
+const FusionImageAuto(
+            path: "assets/images/launcher_hero.png",
             semanticId: "circle_image",
-            asset: "",
-            size: 100,
           ),
           ''',
         ),
@@ -3698,6 +3697,47 @@ const FusionSvgIcon(
             icon: AssetSvg.broadcast,
             color: context.colorScheme.green,
             size: 40,
+          ),
+''',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFusionKebabPopup(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        _buildWithCopy(
+          context: context,
+          preview: FusionKebabPopup(
+            semanticId: 'example1',
+            onEdit: () => print('edit'),
+            onDuplicate: () => print('duplicate'),
+            onDelete: () => print('delete'),
+          ),
+
+          code: '''
+ FusionKebabPopup(
+            onEdit: () => print('edit'),
+            onDuplicate: () => print('duplicate'),
+            onDelete: () => print('delete'),
+          ),
+''',
+        ),
+        const SizedBox(height: 10),
+        _buildWithCopy(
+          context: context,
+          preview: FusionKebabPopup(
+            semanticId: 'example2',
+            onEdit: () => print('edit'),
+            onDuplicate: () => print('duplicate'),
+          ),
+
+          code: '''
+ FusionKebabPopup(
+            onEdit: () => print('edit'),
+            onDuplicate: () => print('duplicate'),
+            onDelete: () => print('delete'),
           ),
 ''',
         ),

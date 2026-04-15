@@ -3,7 +3,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/config/app_config.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
-import 'package:fusion_lib/fusion_widgets/fusion_widgets.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/product_data.dart';
 import 'package:fusion_lib/product_data/products.dart';
 
@@ -52,64 +52,80 @@ class ProductQueryViewModelState extends Equatable {
 }
 
 class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
-  ProductQueryViewModel() : super(ProductQueryViewModelState.initial());
+  final FusionNetworkClient networkClient;
+  final AppCacheService cacheService;
+  ProductQueryViewModel({required this.networkClient, required this.cacheService}) : super(ProductQueryViewModelState.initial()) {
+    _productsApi = Products(
+      baseUrl: AppConfig.awsApiBaseUrl,
+      networkClient: networkClient,
+      cacheService: cacheService,
+      fusionOnly: true,
+      loadFromZip: true,
+    );
+
+    loadProducts();
+  }
 
   static const int _maxRetries = 1;
-  final Products _productsApi = Products(baseUrl: AppConfig.awsApiBaseUrl, fusionOnly: true);
+  static const Duration _pricesCacheTtl = Duration(hours: 24);
+
+  bool _hasLoadedProducts = false;
+  final AppCacheService _cacheService = serviceLocator<AppCacheService>();
+
+  late final Products _productsApi;
 
   late String localProductDirPath;
 
   bool get hasCloudAccess => serviceLocator<SessionViewModel>().hasCloudAccess();
 
-  Future<void> loadProducts({int attempt = 1, bool refresh = false}) async {
+  Future<void> loadProducts({bool refresh = false}) async {
     try {
       if (state.isRefreshing) return;
+      if (!refresh && _hasLoadedProducts && state.products != null) return;
 
-      if (refresh) emit(state.copyWith(isRefreshing: true));
+      emit(state.copyWith(isLoading: !refresh, isRefreshing: refresh, errorMessage: null));
+
       await (refresh ? _productsApi.refresh() : _productsApi.initialize());
+
+      _hasLoadedProducts = true;
+
       emit(state.copyWith(products: _productsApi, isLoading: false, isRefreshing: false));
 
-      if (hasCloudAccess) {
-        for (SpeakerProduct element in speakers) {
-          _fetchProductPrices(element.id);
-        }
-        for (AmplifierProduct element in amplifiers) {
-          _fetchProductPrices(element.id);
-        }
-        for (IoEndpointProduct element in ioEndpoints) {
-          _fetchProductPrices(element.id);
-        }
-        for (DspProduct element in dsps) {
-          _fetchProductPrices(element.id);
-        }
-        for (ControllerProduct element in controllers) {
-          _fetchProductPrices(element.id);
-        }
-        for (AccessoryProduct element in accessories) {
-          _fetchProductPrices(element.id);
-        }
-      }
+      if (hasCloudAccess) _fetchAllProductPrices(forceRefresh: refresh);
     } catch (e) {
-      if (attempt < _maxRetries) {
-        // optional small delay before retry
-        await Future<void>.delayed(const Duration(milliseconds: 500));
-        return loadProducts(attempt: attempt + 1);
-      }
+      emit(state.copyWith(isLoading: false, isRefreshing: false, errorMessage: 'Failed to load products'));
+    }
+  }
 
-      // failed after 3 attempts
-      emit(state.copyWith(products: null, isLoading: false, errorMessage: 'Failed to load products'));
+  void _fetchAllProductPrices({bool forceRefresh = false}) {
+    if (hasCloudAccess) {
+      for (SpeakerProduct element in speakers) {
+        _fetchProductPrices(element.productId, forceRefresh: forceRefresh);
+      }
+      for (AmplifierProduct element in amplifiers) {
+        _fetchProductPrices(element.productId, forceRefresh: forceRefresh);
+      }
+      for (IoEndpointProduct element in ioEndpoints) {
+        _fetchProductPrices(element.productId, forceRefresh: forceRefresh);
+      }
+      for (DspProduct element in dsps) {
+        _fetchProductPrices(element.productId, forceRefresh: forceRefresh);
+      }
+      for (ControllerProduct element in controllers) {
+        _fetchProductPrices(element.productId, forceRefresh: forceRefresh);
+      }
+      for (AccessoryProduct element in accessories) {
+        _fetchProductPrices(element.productId, forceRefresh: forceRefresh);
+      }
     }
   }
 
   void refresh() => loadProducts(refresh: true);
 
-  // ---------- get image ----------
-  String getImagePath(String imageUrl) => _productsApi.getImagePath(imageUrl);
-
-  // ---------- get image name ----------
-  String getImageName(String imageUrl) => _productsApi.getImageName(imageUrl);
+  String? getProductImage(int? productId) => productId != null ? _productsApi.imageFor(productId: productId)?.firstPath : null;
 
   bool get isLoading => state.isLoading;
+
   String get errorMessage => state.errorMessage;
 
   // ---------- Convenience getters ----------
@@ -126,7 +142,26 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
   }
 
   // get prices call api
-  Future<void> _fetchProductPrices(int productId) async {
+  Future<void> _fetchProductPrices(int productId, {bool forceRefresh = false}) async {
+    final String cacheKey = _priceCacheKey(productId);
+
+    if (!forceRefresh) {
+      final List<ProductPriceModel>? cachedPrices = await _cacheService.getJson<List<ProductPriceModel>>(
+        cacheKey,
+        (Object? json) {
+          final List<dynamic> raw = (json as List<dynamic>? ?? <dynamic>[]);
+          return raw.map((dynamic item) => ProductPriceModel.fromJson(item as Map<String, dynamic>)).toList();
+        },
+      );
+
+      if (cachedPrices != null && cachedPrices.isNotEmpty) {
+        final Map<int, List<ProductPriceModel>> updatedPrices = Map<int, List<ProductPriceModel>>.from(state.prices);
+        updatedPrices[productId] = cachedPrices;
+        emit(state.copyWith(prices: updatedPrices));
+        return;
+      }
+    }
+
     try {
       final Dio dio = Dio();
       final Response<dynamic> response = await dio.get(
@@ -136,7 +171,7 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
       if (response.statusCode == 200) {
         final List<ProductPriceModel> pricesVarientMap = <ProductPriceModel>[];
 
-        for (final dynamic priceJson in response.data["prices"] ?? <dynamic>[]) {
+        for (final dynamic priceJson in (response.data as Map<String, dynamic>)['prices'] ?? <dynamic>[]) {
           final ProductPriceModel price = ProductPriceModel.fromJson(priceJson as Map<String, dynamic>);
           pricesVarientMap.add(price);
         }
@@ -144,11 +179,19 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
         final Map<int, List<ProductPriceModel>> updatedPrices = Map<int, List<ProductPriceModel>>.from(state.prices);
         updatedPrices[productId] = pricesVarientMap;
         emit(state.copyWith(prices: updatedPrices));
+
+        await _cacheService.setJson(
+          cacheKey,
+          pricesVarientMap.map((ProductPriceModel item) => item.toJson()).toList(),
+          ttl: _pricesCacheTtl,
+        );
       }
     } catch (e) {
       //
     }
   }
+
+  String _priceCacheKey(int productId) => 'product_prices_usd_$productId';
 }
 
 class ProductPriceModel extends Equatable {
@@ -164,6 +207,14 @@ class ProductPriceModel extends Equatable {
       currency: json['currency'] as String,
       price: (json['price'] as num).toDouble(),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'variant': variant,
+      'currency': currency,
+      'price': price,
+    };
   }
 
   @override

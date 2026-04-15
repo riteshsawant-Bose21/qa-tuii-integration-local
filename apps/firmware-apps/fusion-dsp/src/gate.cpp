@@ -67,6 +67,8 @@ Gate::Gate(const bosepro::BlockConfiguration &configuration)
     assign_parameter("decay", &decay_time,
                      POST_FUNCTION_SCALAR(update_decay));
 
+    assign_telemetry("open", &is_open);
+
     level_attack_coeff = 0.341f;
     current_gain = 1.0f;
 }
@@ -96,9 +98,7 @@ void Gate::process()
             ((level > smoothed_level) ? level_attack_coeff
                                       : level_release_coeff);
 
-        is_open = smoothed_level >= threshold;
-
-        if (is_open)
+        if (smoothed_level >= threshold)
         {
             hold_counter = hold_count;
         }
@@ -107,7 +107,7 @@ void Gate::process()
             hold_counter--;
         }
 
-        if (is_open || hold_counter > 0)
+        if (hold_counter > 0)
         {
             g += (1.0 - g) * attack_coeff;
         }
@@ -121,6 +121,8 @@ void Gate::process()
             out[channel][sample] = in[channel][sample] * g;
         }
     }
+
+    is_open = hold_counter > 0;
 
     current_gain = g;
 }

@@ -318,7 +318,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
     final ImageLoaderService loader = fusionLibLocator<ImageLoaderService>();
     for (final HardwareComponent comp in widget.hardwareComponents) {
       if (comp is! Speaker) {
-        final String path = comp.assetImagePath;
+        final String path = comp.image;
         if (!_hardwareImages.containsKey(path)) {
           loader.loadImage(path).then((ui.Image img) {
             setState(() {

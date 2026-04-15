@@ -107,10 +107,10 @@ func (c *Cluster) getDeviceInfoLocal() api.DeviceInfo {
 	}
 
 	deviceInfo := api.DeviceInfo{
-		Id:                       id,
-		Name:                     name,
-		Location:                 location,
 		Address:                  c.appConfig.BindAddr,
+		Id:                       id,
+		Location:                 location,
+		Name:                     name,
 		ModelName:                utils.GetModelName(),
 		SerialNumber:             utils.GetSerialNumber(),
 		SoftwareUpdateVersion:    utils.GetSoftwareUpdateVersion(),
@@ -120,6 +120,8 @@ func (c *Cluster) getDeviceInfoLocal() api.DeviceInfo {
 		FusionMonorepoBranch:     utils.GetBranchName(),
 		FusionMonorepoCommitHash: utils.GetCommitHash(),
 		JenkinsBuildNumber:       utils.GetJenkinsBuildNumber(),
+		PreReleaseTag:            utils.GetPreReleaseTag(),
+		VrrpPriority:             c.getKeepalivedPriority(),
 	}
 
 	return deviceInfo
@@ -172,8 +174,6 @@ func (c *Cluster) broadcastDeviceUpdate(deviceData *api.DeviceInfo) {
 	} else {
 		logging.GetLogger().Info("[DeviceUpdate] Broadcasted device update for device %s via gossip", deviceData.Id)
 	}
-
-	c.delegate.hub.BroadcastToObservers(notifyMsg)
 
 }
 

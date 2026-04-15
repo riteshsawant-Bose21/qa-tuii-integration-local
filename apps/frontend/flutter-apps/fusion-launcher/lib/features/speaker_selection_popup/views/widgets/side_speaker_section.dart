@@ -125,7 +125,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                         bool isSubwooferSpeaker(Speaker sp) {
                           final int? productId = sp.productId;
                           if (productId == null) return false;
-                          final SpeakerProduct? product = pq.speakers.where((SpeakerProduct s) => s.id == productId).firstOrNull;
+                          final SpeakerProduct? product = pq.speakers.where((SpeakerProduct s) => s.productId == productId).firstOrNull;
                           return product?.isSubwoofer ?? false;
                         }
 
@@ -179,11 +179,11 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                           color: Colors.white,
                                           borderRadius: BorderRadius.circular(6),
                                         ),
-                                        child: FusionImage.asset(
-                                          serviceLocator<ProjectViewModel>().getHardwareImage(
-                                            productId: representative.productId ?? 0,
-                                            currentImagePath: representative.assetImagePath,
-                                          ),
+                                        child: FusionImageAuto(
+                                          path: serviceLocator<ProductQueryViewModel>().getProductImage(representative.productId) ?? "",
+                                          height: 24,
+                                          width: 24,
+                                          fit: BoxFit.contain,
                                         ),
                                       )
                                     else

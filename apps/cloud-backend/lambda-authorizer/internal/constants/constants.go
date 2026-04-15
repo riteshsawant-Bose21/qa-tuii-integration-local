@@ -34,6 +34,15 @@ const (
 	UserSettingsCreate = "users.settings.create"
 	UserSettingsUpdate = "users.settings.update"
 
+	// Device permissions
+	DeviceCreate        = "device.create"
+	DeviceUpdate        = "device.update"
+	DeviceDelete        = "device.delete"
+	DeviceClaim         = "device.claim"
+	DeviceRotateCert    = "device.rotate_cert"
+	DeviceCommand       = "device.command"
+	DeviceCommandStatus = "device.command_status"
+
 	// Admin permissions
 	AdminFull = "admin"
 	AdminUser = "user.manage"

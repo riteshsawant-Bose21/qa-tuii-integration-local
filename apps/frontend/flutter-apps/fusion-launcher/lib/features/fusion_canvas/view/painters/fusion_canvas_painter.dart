@@ -10,7 +10,6 @@ import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_t
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_snap_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../../wiring_design/view/painters/dotted_grid_painter.dart';
 import '../../state/fusion_canvas_input_state.dart';
 import '../../state/fusion_canvas_state.dart';
 import '../../state/fusion_snap_state.dart';
@@ -33,11 +32,16 @@ class FusionCanvasPainter extends CustomPainter {
   final List<FusionBasePainter> layers;
   final BuildContext context;
 
+  final Map<String?, FusionBasePainter> _layerMap = <String?, FusionBasePainter>{};
   FusionCanvasPainter({
     required this.state,
     this.layers = const <FusionBasePainter>[],
     required this.context,
-  });
+  }) {
+    for (final FusionBasePainter layer in layers) {
+      _layerMap[layer.id] = layer;
+    }
+  }
   @override
   void paint(Canvas canvas, Size size) {
     context.read<FusionCanvasStateViewModel>().setCanvasSize(size);
@@ -47,12 +51,12 @@ class FusionCanvasPainter extends CustomPainter {
     canvas.translate(offset.dx, offset.dy);
     canvas.scale(state.scale);
 
-    DottedGridPainter(color: Colors.grey.shade300).paint(
-      canvas,
-      size,
-      offset,
-      state.scale,
-    );
+    // DottedGridPainter(color: Colors.grey.shade300).paint(
+    //   canvas,
+    //   size,
+    //   offset,
+    //   state.scale,
+    // );
 
     for (final FusionBasePainter painter in layers) {
       painter.paint(canvas, size, this);
@@ -108,17 +112,27 @@ class FusionCanvasPainter extends CustomPainter {
     )?.painter;
   }
 
+  FusionBasePainter? getLayerById(String? id) {
+    return _layerMap[id];
+  }
+
   Offset getBoundedDeltaForLayer(String layerId, Offset delta) {
-    final FusionBasePainter? painter = layers.cast<FusionBasePainter?>().firstWhere(
-      (FusionBasePainter? p) => p?.id == layerId,
-      orElse: () => null,
-    );
+    final FusionBasePainter? painter = getLayerById(layerId);
 
     if (painter is FusionCanvasBoundedMovement) {
       return painter.getBoundedDelta(delta, this);
     }
 
     return delta;
+  }
+
+  bool supportsLayerInteraction(
+    String layerId,
+    FusionCanvasLayerInteraction interaction,
+  ) {
+    final FusionBasePainter? painter = getLayerById(layerId);
+
+    return painter is FusionCanvasInteractibleMixin && painter.supportsInteraction(interaction);
   }
 
   FusionCanvasInputState get inputViewModel => context.read<FusionCanvasInputViewModel>().state;

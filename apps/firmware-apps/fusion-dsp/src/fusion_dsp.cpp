@@ -20,6 +20,7 @@
 #include <signal.h>
 #include <atomic>
 #include <iostream>
+#include <memory>
 
 static std::string device_id = "";
 
@@ -324,6 +325,7 @@ int main(int argc, char *argv[])
     desc.add_options()
         ("configuration,c", boost::program_options::value<std::string>()->default_value(config_path + "/configuration.json"), "configuration file")
         ("definitions,d", boost::program_options::value<std::string>()->default_value(config_path + "/algorithm-definitions.json"), "algorithm definition file")
+        ("composite-definitions,x", boost::program_options::value<std::string>()->default_value(config_path + "/composite-algorithm-definitions.json"), "composite algorithm definition file")
         ("time,t", boost::program_options::value<int>(), "time to run (seconds)")
         ("telemetry-messages,m", boost::program_options::value<std::string>()->default_value(config_path + "/telemetry-messages.json"), "telemetry commands file")
         ("telemetry-configuration,p", boost::program_options::value<std::string>()->default_value(config_path + "/telemetry-configuration.json"), "telemetry configuration file")
@@ -373,7 +375,21 @@ int main(int argc, char *argv[])
 
     bosepro::Configuration configuration(vm["configuration"].as<std::string>());
     bosepro::Definition definitions(vm["definitions"].as<std::string>());
-    bosepro::Session session(configuration.get_session(), definitions);
+
+    std::unique_ptr<bosepro::CompositeDefinition> composite_definitions;
+    try
+    {
+        composite_definitions = std::make_unique<bosepro::CompositeDefinition>(
+            vm["composite-definitions"].as<std::string>());
+    }
+    catch (const std::exception &e)
+    {
+        SPDLOG_WARN("Composite definitions unavailable: {}", e.what());
+    }
+
+    bosepro::Session session(configuration.get_session(),
+                            definitions,
+                            composite_definitions.get());
 
     auto& telemetry_monitor = bosepro::TelemetryMonitor::get_instance();
 
@@ -425,13 +441,15 @@ int main(int argc, char *argv[])
         {
             SPDLOG_INFO("server ip {}", vm["serverip"].as<std::string>());
             client = new UDPValueMonitor(vm["serverip"].as<std::string>(),
-                                         7947);
+                                         7947,
+                                         false);
 
             client->watchDeviceID(handle_device_id);
             client->watchPattern("devices[*]", handle_devices);
             client->watchPattern("settings.audio.*.*[*][*]", handle_parameter);
             client->watchPattern("settings.audio.*.*[*]", handle_parameter);
             client->watchPattern("settings.audio.*.*", handle_parameter);
+            client->start();
         }
 
         // if we boot up on empty config, no need to start up telemetry

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	"path/filepath"
 	"time"
 
 	json "github.com/goccy/go-json"
@@ -77,6 +78,12 @@ func (h *Handler) routeWebSocketMessageWithConn(request *api.WebSocketRequest, c
 		return h.handleUnsubscribeDevices(request, conn, server)
 	case api.WSMsgTypePing:
 		return h.handlePing(request)
+	case api.WSMsgTypeStartUpdate:
+		return h.handleStartUpdate(request)
+	case api.WSMsgTypeSwUpdateInfo:
+		return h.handleSwUpdateInfo(request)
+	case api.WSMsgTypeListSoftwareUpdates:
+		return h.handleListSoftwareUpdates(request)
 	default:
 		return createErrorResponse(&request.ID, api.WSCodeInvalidType, fmt.Sprintf("Unknown message type: %s", request.Type)), nil
 	}
@@ -213,6 +220,59 @@ func (h *Handler) handleUnsubscribeDevices(request *api.WebSocketRequest, conn *
 // handlePing handles ping requests
 func (h *Handler) handlePing(request *api.WebSocketRequest) (*api.WebSocketResponse, error) {
 	return createSuccessResponse(&request.ID, api.WSMsgTypePong, api.WSCodePong, "pong", nil), nil
+}
+
+// handleStartUpdate handles software update trigger requests
+func (h *Handler) handleStartUpdate(request *api.WebSocketRequest) (*api.WebSocketResponse, error) {
+	logger := logging.GetLogger()
+
+	logger.Info("Received software update start request - broadcasting to cluster")
+
+	// Check that at least one .swu file is present in the OTA directory before triggering an update
+	swuFiles, err := filepath.Glob(filepath.Join(api.SoftwareUpdateOTAPath, "*.swu"))
+	if err != nil {
+		logger.Error("Failed to check OTA directory for .swu files: %v", err)
+		return createErrorResponse(&request.ID, api.WSCodeApplicationError, fmt.Sprintf("Failed to check OTA directory: %v", err)), nil
+	}
+	if len(swuFiles) == 0 {
+		logger.Warn("Software update requested but no .swu files found in %s", api.SoftwareUpdateOTAPath)
+		return createErrorResponse(&request.ID, api.WSCodeUpdateFailed, fmt.Sprintf("No .swu bundle found in %s — upload a bundle before triggering an update", api.SoftwareUpdateOTAPath)), nil
+	}
+	logger.Info("Found %d .swu file(s) in %s, proceeding with update", len(swuFiles), api.SoftwareUpdateOTAPath)
+
+	// Count followers and ensure every .swu file is present on all followers
+	// before triggering the update. And gossip + HTTP-pull sync as the upload API.
+	// Followers that already have the file with a matching checksum ack immediately (no re-download).
+	followerCount, syncErr := h.ensureSWUFilesOnFollowers(swuFiles)
+	if syncErr != nil {
+		logger.Error("[StartUpdate] SWU file sync to followers failed: %v", syncErr)
+		return createErrorResponse(&request.ID, api.WSCodeApplicationError,
+			fmt.Sprintf("Failed to sync SWU files to cluster before triggering update: %v", syncErr)), nil
+	}
+	logger.Info("[StartUpdate] %d follower(s) confirmed — all SWU files present on all nodes, proceeding with trigger", followerCount)
+
+	// All nodes have the files — broadcast the update trigger
+	// Create a cluster message to broadcast the software update trigger to all nodes
+	// This will call the delegate's handleSoftwareUpdate method on each node
+	msg := api.NewNotifyMessage(
+		api.NotifyOpSoftwareUpdate,
+		h.clusterTransport.LocalNode().Name,
+		func(m *api.NotifyMessage) {
+			// No additional data needed for software update trigger
+		},
+	)
+
+	// Broadcast to all nodes in the cluster (this calls delegate.handleSoftwareUpdate)
+	if err := h.hub.BroadcastToNodes(msg); err != nil {
+		logger.Error("Failed to broadcast software update to cluster: %v", err)
+		return createErrorResponse(&request.ID, api.WSCodeApplicationError, fmt.Sprintf("Failed to broadcast software update: %v", err)), nil
+	}
+
+	logger.Info("Successfully broadcasted software update trigger to cluster")
+	return createSuccessResponse(&request.ID, api.WSMsgTypeStartUpdate, api.WSCodeUpdateStarted, "Software update broadcasted to all cluster nodes", map[string]interface{}{
+		"action": "broadcast_cluster",
+		"nodes":  h.clusterTransport.MemberListMembers(),
+	}), nil
 }
 
 // Helper functions for creating responses in the new format

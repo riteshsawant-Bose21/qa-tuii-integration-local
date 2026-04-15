@@ -264,6 +264,15 @@ Status Code: ${statusCode ?? 'None'}
     // Navigator.of(context).pop();
   }
 
+  /// Formats a [DateTime] into a 12-hour time string, e.g. "09:30 AM".
+  static String formatTime12h(DateTime time) {
+    final int hour = time.hour;
+    final int minute = time.minute;
+    final String period = hour < 12 ? 'AM' : 'PM';
+    final int hour12 = hour % 12 == 0 ? 12 : hour % 12;
+    return "${hour12.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $period";
+  }
+
   static Widget _buildErrorSection(BuildContext context, String title, String content) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

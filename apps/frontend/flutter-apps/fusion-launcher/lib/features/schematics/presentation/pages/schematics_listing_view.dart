@@ -12,8 +12,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/models/products_data.dart';
 import '../../../../core/service_locator.dart';
-import '../../../add_source_popup/view/add_source_popup.dart'
-    show AddSourcePopup;
+import '../../../add_source_popup/view/add_source_popup.dart' show AddSourcePopup;
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../create_zone_popup/view/create_zone_popup.dart';
 import '../../../product_query/presentation/pages/product_query.dart';
@@ -74,10 +73,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   child: SchematicListingSection(
                     sectionTitle: "Sources & Endpoints",
                     sections: <Widget>[
-                      SchematicHardwareListing<
-                        Source,
-                        SchematicSourcesViewModel
-                      >(
+                      SchematicHardwareListing<Source, SchematicSourcesViewModel>(
                         create: (BuildContext context) {
                           return SchematicSourcesViewModel();
                         },
@@ -94,10 +90,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
 
                       const SizedBox(height: 12),
 
-                      SchematicHardwareListing<
-                        FusionEndpoints,
-                        SchematicEndpointsViewModel
-                      >(
+                      SchematicHardwareListing<FusionEndpoints, SchematicEndpointsViewModel>(
                         create: (BuildContext context) {
                           return SchematicEndpointsViewModel();
                         },
@@ -129,13 +122,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   child: SchematicListingSection(
                     sectionTitle: "Processors & Amplifiers",
                     sections: <Widget>[
-                      SchematicHardwareListing<
-                        FusionDsp,
-                        SchematicFusionDeviceViewModel
-                      >(
-                        create: (BuildContext context) {
-                          return SchematicFusionDeviceViewModel();
-                        },
+                      SchematicHardwareListing<FusionDsp, SchematicFusionDeviceViewModel>(
+                        create: (BuildContext context) => SchematicFusionDeviceViewModel(),
                         title: "Fusion Devices",
                         addAction: FusionArrowPopup(
                           semanticId: 'add_fusion_device_popup',
@@ -152,10 +140,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
 
                       const SizedBox(height: 12),
 
-                      SchematicHardwareListing<
-                        Amplifier,
-                        SchematicAmplifiersViewModel
-                      >(
+                      SchematicHardwareListing<Amplifier, SchematicAmplifiersViewModel>(
                         create: (BuildContext context) {
                           return SchematicAmplifiersViewModel();
                         },
@@ -207,8 +192,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                                 context,
                               ).textTheme.bodySmall?.copyWith(
                                 fontSize: 8,
-                                color:
-                                    Theme.of(context).colorScheme.textPrimary,
+                                color: Theme.of(context).colorScheme.textPrimary,
                               ),
                             ),
                             const SizedBox(width: 6),
@@ -225,8 +209,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                           BuildContext context,
                           DeviceListingState<Zone> state,
                         ) {
-                          final SearchResultsViewModel read =
-                              context.read<SearchResultsViewModel>();
+                          final SearchResultsViewModel read = context.read<SearchResultsViewModel>();
                           read.updateResults(
                             state.devices.map((Zone e) => e.id).toList(),
                           );
@@ -239,10 +222,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                               ),
                               child: Center(
                                 child: FusionAppText(
-                                  text:
-                                      state is DeviceSearchingState
-                                          ? "No matching zones found"
-                                          : "No zones added",
+                                  text: state is DeviceSearchingState ? "No matching zones found" : "No zones added",
                                   textAlign: TextAlign.center,
                                   style: context.textTheme.bodySmall?.copyWith(
                                     fontSize: FusionSizes.fontSize12,
@@ -267,8 +247,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                                 zoneId: zone.id,
                                 bgColor: zone.color,
                                 initiallyExpanded: true,
-                                zoneCircuits: _projectViewModel
-                                    .getCircuitsInZone(zone.id),
+                                zoneCircuits: _projectViewModel.getCircuitsInZone(zone.id),
                                 subZones: _projectViewModel.getSubZonesForZone(
                                   parentZoneId: zone.id,
                                 ),
@@ -311,16 +290,14 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                           String floorId,
                           ProductQueryModel device,
                         ) {
-                          final HardwareComponent hardware =
-                              serviceLocator<ProjectViewModel>()
-                                  .fromProductQueryModel(
-                                    device,
-                                    locationEntity: LocationModel(
-                                      listeningAreaId: areaId,
-                                      floorId: floorId,
-                                    ),
-                                    isFromBuildingPage: false,
-                                  );
+                          final HardwareComponent hardware = serviceLocator<ProjectViewModel>().fromProductQueryModel(
+                            device,
+                            locationEntity: LocationModel(
+                              listeningAreaId: areaId,
+                              floorId: floorId,
+                            ),
+                            isFromBuildingPage: false,
+                          );
 
                           serviceLocator<ProjectViewModel>().addHardware(
                             hardware: hardware,
@@ -346,10 +323,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                       ),
                     ),
                     sections: <Widget>[
-                      SchematicHardwareListing<
-                        FusionController,
-                        SchematicFusionControllerViewModel
-                      >(
+                      SchematicHardwareListing<FusionController, SchematicFusionControllerViewModel>(
                         create: (BuildContext context) {
                           return SchematicFusionControllerViewModel();
                         },
@@ -385,7 +359,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                               floorId: floorId,
                             ),
                             name: item.name,
-                            assetImagePath: item.assetPath,
+                            image: item.assetPath,
                             price: item.price,
                             hardwareName: item.name,
                             addedFromBuildingPage: false,
@@ -405,7 +379,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                             ),
                             addedFromBuildingPage: false,
                             name: item.name,
-                            assetImagePath: item.assetPath,
+                            image: item.assetPath,
                             price: item.price,
                             hardwareName: item.name,
                           );
@@ -420,10 +394,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                       },
                     ),
                     sections: <Widget>[
-                      SchematicHardwareListing<
-                        HardwareRack,
-                        SchematicHardwareRacksViewModel
-                      >(
+                      SchematicHardwareListing<HardwareRack, SchematicHardwareRacksViewModel>(
                         create: (BuildContext context) {
                           return SchematicHardwareRacksViewModel();
                         },
@@ -431,10 +402,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                       ),
 
                       const SizedBox(height: 12),
-                      SchematicHardwareListing<
-                        NetworkSwitch,
-                        SchematicNetworkSwitchesViewModel
-                      >(
+                      SchematicHardwareListing<NetworkSwitch, SchematicNetworkSwitchesViewModel>(
                         create: (BuildContext context) {
                           return SchematicNetworkSwitchesViewModel();
                         },

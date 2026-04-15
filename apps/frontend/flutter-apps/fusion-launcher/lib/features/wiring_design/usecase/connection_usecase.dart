@@ -39,7 +39,7 @@ class ConnectionUseCase {
 
   bool isCompatible(PortType fromPort, PortType toPort) {
     final PossibleConnection? possibleConnection = PossibleConnection.findConnection(fromPort, toPort);
-    print(" Checking compatibility between $fromPort and $toPort: ${possibleConnection != null}");
+
     return possibleConnection != null;
   }
 }
@@ -56,7 +56,6 @@ class PossibleConnection {
 
   static List<PossibleConnection> getPossibleConnections() {
     return <PossibleConnection>[
-      PossibleConnection(fromPortType: PortType.analogInput, toPortType: PortType.analogOutput, connectionType: ConnectionType.analog),
       PossibleConnection(fromPortType: PortType.dspAnalogInput, toPortType: PortType.analogOutput, connectionType: ConnectionType.dsp),
       PossibleConnection(fromPortType: PortType.endpointInput, toPortType: PortType.analogOutput, connectionType: ConnectionType.endpoint),
 
@@ -81,6 +80,8 @@ class PossibleConnection {
       PossibleConnection(fromPortType: PortType.speakerInput, toPortType: PortType.amplifierOutput, connectionType: ConnectionType.speaker),
 
       PossibleConnection(fromPortType: PortType.networkSwitchOut, toPortType: PortType.networkSwitchIn, connectionType: ConnectionType.ethernet),
+
+      PossibleConnection(fromPortType: PortType.analogInput, toPortType: PortType.analogOutput, connectionType: ConnectionType.analog),
     ];
   }
 

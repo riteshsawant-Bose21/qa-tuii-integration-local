@@ -11,6 +11,8 @@ import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/endpoints.dart';
 import 'package:fusion_lib/product_data/models/speaker_product.dart';
 
+import '../../../../wiring_design/usecase/auto_wiring.dart';
+
 extension HardwareViewModel on ProjectViewModel {
   //get Hardware by id
   HardwareComponent? getHardware({required String hardwareId}) {
@@ -90,6 +92,19 @@ extension HardwareViewModel on ProjectViewModel {
             sourceId: hardware.id,
             autoSave: false,
           );
+        }
+      }
+
+      if (hardware is! Speaker && hardware is! HardwareRack) {
+        final List<WiringConnectionModel> newConnections = AutoWiringUseCase().autoWireForHardware(
+          component: hardware,
+          allComponents: hardwareComponents,
+          circuits: circuits,
+          existingConnections: getAllWiringConnections(),
+        );
+
+        for (final WiringConnectionModel connection in newConnections) {
+          addWiringConnection(connection: connection, autoSave: false);
         }
       }
       if (autoSave) {
@@ -383,7 +398,7 @@ extension HardwareViewModel on ProjectViewModel {
       final int? productId = speaker.productId;
       if (productId == null) return true;
 
-      final SpeakerProduct? product = catalogSpeakers.where((SpeakerProduct p) => p.id == productId).firstOrNull;
+      final SpeakerProduct? product = catalogSpeakers.where((SpeakerProduct p) => p.productId == productId).firstOrNull;
       return !(product?.isSubwoofer ?? false);
     }).toList();
   }
@@ -407,7 +422,7 @@ extension HardwareViewModel on ProjectViewModel {
 
     final Speaker referenceSpeaker = targetSpeakers.first;
 
-    final SpeakerProduct? speakerProduct = catalogSpeakers.where((SpeakerProduct p) => p.id == referenceSpeaker.productId).firstOrNull;
+    final SpeakerProduct? speakerProduct = catalogSpeakers.where((SpeakerProduct p) => p.productId == referenceSpeaker.productId).firstOrNull;
     final double coverageAngle = _resolveCoverageAngle(speakerProduct);
 
     final ListeningAreaRoomBounds bounds = listeningArea.getBoundsForVertices();
@@ -734,8 +749,10 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  Speaker fromSpeakerProductModel(String assetImagePath, SpeakerProduct product, LocationModel locationEntity, bool isFromBuildingPage) {
+  Speaker fromSpeakerProductModel(SpeakerProduct product, LocationModel locationEntity, bool isFromBuildingPage) {
     final MountingType? mountingType = MountingType.fromJson(product.mountType);
+
+    final String? image = serviceLocator<ProductQueryViewModel>().getProductImage(product.productId);
 
     final double pitch = mountingType == MountingType.pendant || mountingType == MountingType.ceiling ? 90.0 : 0.0;
     final double yaw = mountingType == MountingType.surface ? 90.0 : 0.0;
@@ -744,13 +761,13 @@ extension HardwareViewModel on ProjectViewModel {
     return Speaker(
       locationEntity: locationEntity,
       name: product.modelName,
-      productId: product.id,
+      productId: product.productId,
       pos: null,
       zAxis: 300.0,
       speakerSKU: product.modelName,
       gain: 0.0,
       addedFromBuildingPage: isFromBuildingPage,
-      assetImagePath: assetImagePath,
+      image: image ?? '',
       type: OutputType.analogOutput,
       price: 0,
       mountingType: mountingType,
@@ -783,7 +800,7 @@ extension HardwareViewModel on ProjectViewModel {
           speakerSKU: product.sku,
           gain: 0.0,
           addedFromBuildingPage: isFromBuildingPage,
-          assetImagePath: product.image,
+          image: product.image,
           type: OutputType.analogOutput,
           price: product.price,
           pitch: product.mountingType == "pendant" || product.mountingType == "ceiling" ? 90.0 : 0.0,
@@ -811,12 +828,13 @@ extension HardwareViewModel on ProjectViewModel {
           SourceConnectionType.hdmi => PortType.hdmiOut,
           SourceConnectionType.rca => PortType.rcaOutput,
           SourceConnectionType.endpoint => PortType.endpointOutput,
+          SourceConnectionType.messagePlayer => PortType.messagePlayer,
         };
         return Source(
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
-          assetImagePath: product.image,
+          image: product.image,
           sku: product.sku,
           price: product.price,
           addedFromBuildingPage: isFromBuildingPage,
@@ -852,7 +870,7 @@ extension HardwareViewModel on ProjectViewModel {
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
-          assetImagePath: product.image,
+          image: product.image,
           sku: product.sku,
           price: product.price,
           addedFromBuildingPage: isFromBuildingPage,
@@ -889,7 +907,7 @@ extension HardwareViewModel on ProjectViewModel {
           locationEntity: locationEntity,
           name: product.name,
           pos: listeningArea?.getCenterPositionOfVertices(),
-          assetImagePath: product.image,
+          image: product.image,
           sku: product.sku,
           addedFromBuildingPage: isFromBuildingPage,
           price: product.price,
@@ -946,7 +964,7 @@ extension HardwareViewModel on ProjectViewModel {
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
-          assetImagePath: product.image,
+          image: product.image,
           sku: product.sku,
           addedFromBuildingPage: isFromBuildingPage,
           price: product.price,
@@ -999,7 +1017,7 @@ extension HardwareViewModel on ProjectViewModel {
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
-          assetImagePath: product.image,
+          image: product.image,
           sku: product.sku,
           addedFromBuildingPage: isFromBuildingPage,
           price: product.price,
@@ -1032,7 +1050,7 @@ extension HardwareViewModel on ProjectViewModel {
           name: product.name,
           pos: pos,
           addedFromBuildingPage: isFromBuildingPage,
-          assetImagePath: product.image,
+          image: product.image,
           price: product.price,
           hardwareName: product.name,
         );
@@ -1056,8 +1074,8 @@ extension HardwareViewModel on ProjectViewModel {
         return currentImagePath;
       }
       final List<SpeakerProduct> speaker = serviceLocator<ProductQueryViewModel>().speakers;
-      final SpeakerProduct hardware = speaker.firstWhere((SpeakerProduct element) => element.id == productId);
-      return serviceLocator<ProductQueryViewModel>().getImagePath(hardware.assets.assets.values.first.first);
+      final SpeakerProduct hardware = speaker.firstWhere((SpeakerProduct element) => element.productId == productId);
+      return serviceLocator<ProductQueryViewModel>().getProductImage(hardware.productId);
     } catch (e) {
       return null;
     }

@@ -225,7 +225,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
       // setShouldPlaceNonPlacedSpeakers(false);
 
       projectManager.setCurrentFloorIndex(index);
-      updateProject();
+      updateFloorPlan();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to set current floor index: $e");
       throwError("Failed to set current floor index: $e");
@@ -239,7 +239,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
 
   void setCurrentSelectedListeningArea(String? area) {
     currentSelectedListeningAreaId = area;
-    
+
     // if (area == null) setShouldPlaceNonPlacedSpeakers(false);
     updateProject();
   }
@@ -266,19 +266,9 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
     return null;
   }
 
-  // set Listening area selection mode
-  void setListeningAreaSelectionMode(bool isInSelectionMode) {
-    isInListeningAreaMode = isInSelectionMode;
-    isInZoneSelectionMode = false;
-    currentSelectedZoneId = null;
-    resetDeviceTypeIndex();
-    updateProject();
-  }
-
   // set Zone selection mode
   void setZoneSelectionMode(bool isInSelectionMode) {
     isInZoneSelectionMode = isInSelectionMode;
-    isInListeningAreaMode = false;
     currentSelectedZoneId = null;
     resetDeviceTypeIndex();
     updateProject();
