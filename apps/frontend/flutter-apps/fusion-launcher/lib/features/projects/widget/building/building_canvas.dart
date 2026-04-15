@@ -222,7 +222,11 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 if (painter is ListeningAreaPainter) {
                                                   final ListeningArea area = painter.listeningArea;
                                                   final List<FusionCanvasPoint> updatedPoints =
-                                                      area.vertices.where((FusionCanvasPoint v) => points.every((String p) => p != v.id)).toList();
+                                                      area.vertices.where((FusionCanvasPoint v) => points.every((String p) => !p.contains(v.id))).toList();
+                                                  if (updatedPoints.length < 3) {
+                                                    FusionToast.error(context, message: "Listening area should have minimum 3 points");
+                                                    return;
+                                                  }
                                                   serviceLocator<ProjectViewModel>().updateListeningArea(
                                                     area: area.copyWith(vertices: updatedPoints),
                                                   );

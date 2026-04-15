@@ -199,7 +199,7 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
               //   (FusionBasePainter p) => p.id == state.layerId,
               //   orElse: () => throw Exception('Painter with id ${state.layerId} not found'),
               // );
-              if (state.pointIds.isNotEmpty ) {
+              if (state.pointIds.isNotEmpty) {
                 for (final FusionBasePainter basePainter in painters) {
                   if (!state.layerIds.contains(basePainter.id)) continue;
                   toolbarEvents?.onMovePoints?.call(

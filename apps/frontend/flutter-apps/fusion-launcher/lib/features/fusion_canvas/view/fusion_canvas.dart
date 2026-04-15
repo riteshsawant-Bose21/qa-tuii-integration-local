@@ -268,10 +268,7 @@ class FusionCanvas extends StatelessWidget {
 
     final Set<String> selectedElementIds = toolVm.selectedElementIds;
     if (selectedPainter is FusionPolygonPainter && selectedElementIds.isNotEmpty) {
-      // final List<FusionCanvasPoint> selectedPoints =
-      //     selectedPainter.polygon.points.where((FusionCanvasPoint point) => selectedElementIds.contains(point.id)).toList();
-
-      if (selectedElementIds.isNotEmpty) {
+      if (selectedElementIds.any((String e) => e != selectedPainter.id)) {
         toolbarEvents?.onRemovePoints?.call(selectedPainter, selectedElementIds.toList());
         toolVm.syncSelection(<String>{layerId});
         return;
