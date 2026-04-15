@@ -82,7 +82,7 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
                                               context
                                                   .read<
                                                   VirtualControllerViewModel>()
-                                                  .selectSource(source,selectSubZone.id,selectedZone.id,sendToService: true);
+                                                  .selectSource(source,selectSubZone.id,"${selectedZone.functionId!}/selector",sendToService: true);
 
                                             },
                                           )

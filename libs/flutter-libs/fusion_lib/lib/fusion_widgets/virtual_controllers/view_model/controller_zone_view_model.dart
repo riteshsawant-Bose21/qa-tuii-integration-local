@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide Source;
@@ -43,7 +45,7 @@ class VirtualControllerViewModel extends Cubit<VirtualControllerState> {
     ));
   }
 
-  void selectSource(WallZoneSource source,String zoneID,String subzoneID,{bool sendToService=false}) {
+  void selectSource(WallZoneSource source,String zoneID,String funcID,{bool sendToService=false}) {
     if(sendToService) {
 
       final patch = {
@@ -53,13 +55,13 @@ class VirtualControllerViewModel extends Cubit<VirtualControllerState> {
         "data": {
           "settings": {
             "audio": {
-              subzoneID: {"input": source.index}
+              funcID: {"input": source.index}
             }
           }
         }
       };
 
-      WebSocketService().sendMessage(patch);
+      WebSocketService().sendMessage(jsonEncode(patch));
     }
     print("selectSource: EMIT ${source.sourceName}");
     emit(SourceSelected(
@@ -113,15 +115,14 @@ class VirtualControllerViewModel extends Cubit<VirtualControllerState> {
             "data": {
               "settings": {
                 "audio": {
-                  gainID: {"gain": dbGain,"mute": false,"timestamp":timestamp}
+                  gainID: {"gain": dbGain,"mute": false,
+                   // "timestamp":timestamp
+                  }
                 }
               }
             }
           };
-
-
-
-          WebSocketService().sendMessage(patch);
+          WebSocketService().sendMessage(jsonEncode(patch));
         });
       }
 

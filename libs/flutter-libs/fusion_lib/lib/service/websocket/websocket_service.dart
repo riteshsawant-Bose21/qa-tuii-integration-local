@@ -23,12 +23,6 @@ class WebSocketService {
     return Uri.parse('ws://$_host:8080/ws');
   }
 
-
-  // final _audioUpdateController =
-  // StreamController<Map<String, dynamic>>.broadcast();
-  // Stream<Map<String, dynamic>> get audioUpdateStream =>
-  //     _audioUpdateController.stream;
-
   final StreamController _controller = StreamController.broadcast();
   Stream get stream => _controller.stream;
 
@@ -42,6 +36,7 @@ class WebSocketService {
   bool _shouldReconnect = true;
 
   void subscribe(String key){
+    print('Subscribing to Fusion WebSocket: $key');
     _channel!.sink.add(jsonEncode({
       "id": key,
       "version": 1,
@@ -62,7 +57,7 @@ class WebSocketService {
     }
 
     try {
-      print('Connecting to Fusion WebSocket: $host');
+      print('Connecting to Fusion WebSocket URI: $_url');
       _channel = WebSocketChannel.connect(_url);
 
       // Wait for the connection to be established
@@ -76,7 +71,7 @@ class WebSocketService {
 
       _channel!.stream.listen(
             (message) {
-          print("Fusion Web Service : Received");
+          print("Fusion Web Service : Received :");
           _controller.add(message);
         },
         onDone: () {
@@ -112,6 +107,7 @@ class WebSocketService {
 
   void sendMessage(dynamic message) {
     if (_channel != null && _isConnected) {
+      debugPrint("Send message: $message");
       _channel!.sink.add(message);
     } else {
       debugPrint("Cannot send message: Not connected.");

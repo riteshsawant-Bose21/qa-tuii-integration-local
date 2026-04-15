@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
@@ -32,16 +33,18 @@ class _VirtualControllerState extends State<VirtualController> {
 
     //_wsService.connect(context.read<VirtualControllerViewModel>().vipAddress);
 
-    _wsSubscription = _wsService.stream.listen((data) {
+    _wsSubscription = _wsService.stream.listen((encoded) {
+      final Map<String, dynamic> data = jsonDecode(encoded);
 
-      log(data['type'].toString());
       if(data['type']=="error"){
         log(data.toString());
       }
-
+      log(data['type'].toString());
+      log(data['data']['settings'].toString());
       if (data['type'] == 'config_update') {
         final audioSettings =
         data['data']?['settings']?['audio'];
+
         if (audioSettings != null) {
           _processAudioUpdate(audioSettings);
         }
@@ -54,6 +57,7 @@ class _VirtualControllerState extends State<VirtualController> {
 
   void _processAudioUpdate(Map<String, dynamic> audioSettings) {
     print("_processAudioUpdate");
+    print(audioSettings);
     if (!mounted) return;
 
     // Only update from server if user is NOT interacting
@@ -61,7 +65,7 @@ class _VirtualControllerState extends State<VirtualController> {
 
 
       for(var zone in _cacheZone.keys.toList()){
-        print("Zone-key : "+zone);
+        print("Zone-key : $zone");
         if(_cacheZone.containsKey(zone)) {
           print("ZONE Key exists");
           for (var entry in audioSettings.entries) {
@@ -137,17 +141,17 @@ class _VirtualControllerState extends State<VirtualController> {
     }
   }
 
-  Future<WallZone> getSelectSource(String zoneID) async{
-    if (!_cacheZone.containsKey(zoneID)) {
+  Future<WallZone> getSelectSource(String funcID) async{
+    if (!_cacheZone.containsKey(funcID)) {
 
-      WallZone sourceModel = await context.read<VirtualControllerViewModel>().getSelectSource(zoneID); // only once per item
-      WebSocketService().subscribe(zoneID);
-      _cacheZone[zoneID] = sourceModel;
+      WallZone sourceModel = await context.read<VirtualControllerViewModel>().getSelectSource(funcID); // only once per item
+      WebSocketService().subscribe(funcID);
+      _cacheZone[funcID] = sourceModel;
 
       return sourceModel;
     }
 
-    return Future.value(_cacheZone[zoneID]);
+    return Future.value(_cacheZone[funcID]);
 
   }
 
@@ -191,7 +195,7 @@ class _VirtualControllerState extends State<VirtualController> {
 
             return FutureBuilder(
                 key: Key(zone.id),
-                future: getSelectSource(zone.id),
+                future: getSelectSource("${zone.functionId ?? ""}/selector"),
                 builder: (context, AsyncSnapshot<WallZone> snapshot) {
 
                   zone.sourceSelected = snapshot.data?.sourceSelected ?? 0;
@@ -216,7 +220,7 @@ class _VirtualControllerState extends State<VirtualController> {
                             builder: (context, AsyncSnapshot<WallSubZone> snapshot) {
                               if (!snapshot.hasData) {
 
-                                return Container(height: 50,width: 100,color: Colors.green,);
+                                return Container(height: 50,width: 100);
                               }
                               WallSubZone source = snapshot.data!;
 

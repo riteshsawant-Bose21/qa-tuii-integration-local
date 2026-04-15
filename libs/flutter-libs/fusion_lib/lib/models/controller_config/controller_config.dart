@@ -80,6 +80,7 @@ class WallController {
 
 class WallZone {
   final String id;
+  final String? functionId;
   final String name;
   final WallGainConfig gain;
   final WallZoneOno ono;
@@ -87,6 +88,7 @@ class WallZone {
   final List<WallSubZone> subZones;
 
    WallZone({
+     this.functionId,
     required this.id,
     required this.name,
     required this.gain,
@@ -96,6 +98,7 @@ class WallZone {
   });
 
   WallZone copyWith({
+    String? functionId,
     String? id,
     String? name,
     WallGainConfig? gain,
@@ -104,6 +107,7 @@ class WallZone {
     List<WallSubZone>? subZones,
   }) {
     return WallZone(
+      functionId: functionId ?? this.functionId,
       id: id ?? this.id,
       name: name ?? this.name,
       gain: gain ?? this.gain,
@@ -116,6 +120,7 @@ class WallZone {
   int sourceSelected = 0;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
+    'functionId': functionId,
     'id': id,
     'name': name,
     'gain': gain.toJson(),
@@ -125,8 +130,9 @@ class WallZone {
   };
 
   factory WallZone.fromJson(Map<String, dynamic> json) {
-    print(json);
+
     return WallZone(
+      functionId: json['functionId'] as String,
       id: json['id'] as String,
       name: json['name'] as String,
       gain: WallGainConfig.fromJson(Map<String, dynamic>.from(json['gain'] as Map)),
