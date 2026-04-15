@@ -58,7 +58,7 @@ class FusionDrawer extends StatelessWidget {
               child: SemanticHelper.container(
                 testId: SemanticHelper.createTestId(SemanticTypes.container, '${semanticId}_drawer_content'),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                   child: content,
                 ),
               ),
@@ -98,16 +98,16 @@ class FusionDrawer extends StatelessWidget {
         padding: const EdgeInsets.only(
           top: 24,
           bottom: 16,
-          right: 24,
-          left: 24,
+          right: 16,
+          left: 16,
         ),
         child: Row(
           children: <Widget>[
             Expanded(
               child: FusionAppText(
-                text: title,
+                text: title.toUpperCase(),
                 semanticId: '${semanticId}_drawer_header_title',
-                style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textBody),
+                style: Theme.of(context).textTheme.l1MediumTight.withColor(context.colorScheme.textBody),
               ),
             ),
             GestureDetector(
@@ -126,7 +126,7 @@ class FusionDrawer extends StatelessWidget {
     required String semanticId,
     required String title,
     required Widget content,
-    double width = 340,
+    double width = 406,
     String? buttonLabel,
     VoidCallback? onButtonPressed,
     Color? backgroundColor,
@@ -135,7 +135,7 @@ class FusionDrawer extends StatelessWidget {
       context: context,
       barrierDismissible: true,
       barrierLabel: title,
-      barrierColor: Colors.black87,
+      barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 250),
       pageBuilder: (BuildContext ctx, _, __) {
         return Align(
