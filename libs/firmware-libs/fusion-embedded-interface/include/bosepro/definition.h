@@ -10,11 +10,17 @@ namespace bosepro {
 
 
 class AlgorithmDefinition;
+class CompositeAlgorithmDefinition;
+class CompositeImplementationDefinition;
 class ModuleDefinition;
+class ParameterMapDefinition;
+class ParameterMapEntryDefinition;
 class PropertyDefinition;
+class TelemetryDefinition;
+class TelemetryMapDefinition;
+class TelemetryMapEntryDefinition;
 class TerminalDefinition;
 class ParameterDefinition;
-class TelemetryDefinition;
 
 
 /// A definition of an interface or set of definitions.
@@ -275,6 +281,107 @@ public:
 /// The interface definitions for an algorithm.
 class AlgorithmDefinition : public ProcessorDefinition {
 
+};
+
+
+/// A single entry in a composite algorithm's parameter map.
+class ParameterMapEntryDefinition : public Definition {
+public:
+    /// Get the name of the parameter defined on the composite algorithm.
+    ///
+    /// @return  The composite parameter name.
+    const std::string &get_composite_parameter() const;
+
+    /// Get the name of the internal component block.
+    ///
+    /// @return  The internal block name.
+    const std::string &get_block_name() const;
+
+    /// Get the name of the parameter on the internal component block.
+    ///
+    /// @return  The internal block parameter name.
+    const std::string &get_block_parameter() const;
+};
+
+
+/// A single entry in a composite algorithm's telemetry map.
+class TelemetryMapEntryDefinition : public Definition {
+public:
+    /// Get the name of the telemetry defined on the composite algorithm.
+    ///
+    /// @return  The composite telemetry name.
+    const std::string &get_composite_telemetry() const;
+
+    /// Get the name of the internal component block.
+    ///
+    /// @return  The internal block name.
+    const std::string &get_block_name() const;
+
+    /// Get the name of the telemetry on the internal component block.
+    ///
+    /// @return  The internal block telemetry name.
+    const std::string &get_block_telemetry() const;
+};
+
+
+/// The parameter map list from a composite algorithm's implementation.
+class ParameterMapDefinition : public Definition {
+};
+
+
+/// The telemetry map list from a composite algorithm's implementation.
+class TelemetryMapDefinition : public Definition {
+};
+
+
+/// The interface definitions for a composite algorithm implementation.
+class CompositeImplementationDefinition : public Definition {
+public:
+    bool has_blocks() const;
+    const Definition &get_blocks() const;
+
+    bool has_block_connections() const;
+    const Definition &get_block_connections() const;
+
+    bool has_parameter_settings() const;
+    const Definition &get_parameter_settings() const;
+
+    bool has_parameter_map() const;
+    const ParameterMapDefinition &get_parameter_map() const;
+
+    bool has_telemetry_map() const;
+    const TelemetryMapDefinition &get_telemetry_map() const;
+};
+
+
+/// The interface definitions for a composite algorithm.
+class CompositeAlgorithmDefinition : public ProcessorDefinition {
+public:
+    /// Test whether this is an opaque composite algorithm.
+    bool is_opaque() const;
+
+
+    /// Test whether this composite algorithm has an implementation specified.
+    bool has_implementation() const;
+
+
+    /// Get the implementation of this composite algorithm.
+    const CompositeImplementationDefinition &get_implementation() const;
+};
+
+
+/// A set of definitions for composite algorithms.
+class CompositeDefinition : public Definition {
+public:
+    CompositeDefinition(const std::string &filename);
+
+
+    /// Test whether we have a composite algorithm of the given name.
+    bool has_composite_algorithm(const std::string &name) const;
+
+
+    /// Get the definition of a composite algorithm with the given name.
+    const CompositeAlgorithmDefinition &get_composite_algorithm(const std::string &name) const;
 };
 
 

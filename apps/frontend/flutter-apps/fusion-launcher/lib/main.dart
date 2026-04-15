@@ -107,7 +107,7 @@ class MyApp extends StatelessWidget {
         ),
 
         BlocProvider<ProductQueryViewModel>.value(
-          value: serviceLocator<ProductQueryViewModel>()..loadProducts(),
+          value: serviceLocator<ProductQueryViewModel>(),
         ),
 
         BlocProvider<AuthViewModel>.value(

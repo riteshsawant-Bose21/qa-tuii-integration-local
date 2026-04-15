@@ -21,7 +21,6 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
   }) {
     isFromBuildingPage = fromBuildingPage;
     this.onSaved = onSaved;
-
     if (isFromBuildingPage) {
       final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
       final ListeningArea? currentSelectedListeningArea = projectViewModel.getCurrentSelectedListeningArea();
@@ -31,17 +30,51 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
     }
   }
 
+  void setSelectedStream(Aes67Config stream) {
+    emit(state.copyWith(selectedStream: stream));
+  }
+
+  void setSelectedMonoChannel(int channel) {
+    emit(state.copyWith(selectedMonoChannel: channel));
+  }
+
+  void setSelectedLeftChannel(int channel) {
+    emit(state.copyWith(selectedLeftChannel: channel));
+  }
+
+  void setSelectedRightChannel(int channel) {
+    emit(state.copyWith(selectedRightChannel: channel));
+  }
+
   void setSourceSectionType(SourceSectionType sourceSectionType) {
     final bool isSrouceSectionTypeSame = state.selectedSourceSectionType == sourceSectionType;
     if (isSrouceSectionTypeSame) return;
-    emit(state.copyWith(selectedSourceSectionType: sourceSectionType, selectedSources: <SourceData?>[null]));
+
+    AddSourceViewModelState updated = state.copyWith(
+      selectedSourceSectionType: sourceSectionType,
+      selectedSources: <SourceData?>[null],
+      selectedSignalType: SignalType.mono,
+      selectedConnectionType: null,
+    );
+    updated = updated.resetConnectionType();
+    emit(updated);
   }
 
   void setSelectedListeningArea(ListeningArea listeningArea) => emit(state.copyWith(selectedListeningArea: listeningArea));
 
   void setSelectedConnectionType(SourceConnectionType type) => emit(state.copyWith(selectedConnectionType: type));
+
   void setSignalType(SignalType signalType) => emit(state.copyWith(selectedSignalType: signalType));
+
   void setSelectedSourceName(String sourceName) => emit(state.copyWith(selectedSourceName: sourceName));
+
+  List<SignalType> get signalTypes {
+    return switch (state.selectedSourceSectionType) {
+      SourceSectionType.microPhone => <SignalType>[SignalType.mono],
+      SourceSectionType.mediaSources => <SignalType>[SignalType.mono, SignalType.stereo],
+      SourceSectionType.paging => <SignalType>[SignalType.mono],
+    };
+  }
 
   (String? zoneName, String? subZoneName) get getZonesForListeningArea {
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
@@ -97,7 +130,7 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
     emit(
       state.copyWith(
         selectedSources: sources.toList(),
-        selectedConnectionType: source.connectionType,
+        // selectedConnectionType: source.connectionType,
       ),
     );
   }
@@ -112,7 +145,9 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
     if (state.selectedListeningArea == null) return FusionToast.error(context, message: "Please select a location");
 
     // if connection location is not selected
-    if (state.selectedConnectionType == null) return FusionToast.error(context, message: "Please select a connection type");
+    if (selectedSources.first == SourceType.paging && state.selectedConnectionType == null) {
+      return FusionToast.error(context, message: "Please select a connection type");
+    }
 
     // Save: add selected sources to chosen listening areas
     final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
@@ -138,6 +173,7 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
       SourceConnectionType.xlr => PortType.xlrOutput,
       SourceConnectionType.hdmi => PortType.hdmiOut,
       SourceConnectionType.rca => PortType.rcaOutput,
+      SourceConnectionType.endpoint => PortType.endpointOutput,
     };
 
     final Source source = Source(
@@ -146,7 +182,7 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
       type: selectedItem.type,
       addedFromBuildingPage: false,
       connectionType: connectType,
-      assetImagePath: selectedItem.assetPath,
+      image: selectedItem.assetPath,
       locationEntity: LocationModel(listeningAreaId: selectedAreaId, floorId: floorId),
       sku: selectedItem.id,
       price: selectedItem.price,
@@ -156,19 +192,19 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
         outputPorts: 1,
         inputPortType: PortType.analogInput,
         outputPortType: portType,
-        compatibleInputTypes: <PortType>[],
-        compatibleOutputTypes: switch (connectType) {
-          SourceConnectionType.analogInput || SourceConnectionType.aes67input => <PortType>[
-            PortType.dspAnalogInput,
-            PortType.endpointInput,
-          ],
-          SourceConnectionType.bluetooth => <PortType>[PortType.bleIn],
-          SourceConnectionType.usb => <PortType>[PortType.usbIn],
-          SourceConnectionType.audioJack => <PortType>[PortType.audioJackInput],
-          SourceConnectionType.xlr => <PortType>[PortType.xlrInput],
-          SourceConnectionType.hdmi => <PortType>[PortType.hdmiIn],
-          SourceConnectionType.rca => <PortType>[PortType.rcaInput],
-        },
+        // compatibleInputTypes: <PortType>[],
+        // compatibleOutputTypes: switch (connectType) {
+        //   SourceConnectionType.analogInput || SourceConnectionType.aes67input => <PortType>[
+        //     PortType.dspAnalogInput,
+        //     PortType.endpointInput,
+        //   ],
+        //   SourceConnectionType.bluetooth => <PortType>[PortType.bleIn],
+        //   SourceConnectionType.usb => <PortType>[PortType.usbIn],
+        //   SourceConnectionType.audioJack => <PortType>[PortType.audioJackInput],
+        //   SourceConnectionType.xlr => <PortType>[PortType.xlrInput],
+        //   SourceConnectionType.hdmi => <PortType>[PortType.hdmiIn],
+        //   SourceConnectionType.rca => <PortType>[PortType.rcaInput],
+        // },
         portPosition: PortPosition.topLeft,
       ),
     );

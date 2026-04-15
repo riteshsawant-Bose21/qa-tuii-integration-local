@@ -98,6 +98,48 @@ You can directly call all REST endpoints via `curl`.
 A prebuilt Bruno API client collection is also available.  
 If you want an updated Bruno collection, ask and it can be generated.
 
+## UDP Control API
+
+The UDP control channel listens on port `7947` and supports the following actions:
+
+- `get` - retrieve the full state, or a keyed value
+- `put` - replace state using full-replacement semantics
+- `patch` - apply partial update semantics matching HTTP `PATCH /value`
+
+Examples:
+
+Get the full state:
+
+```bash
+echo '{"action":"get"}' | nc -4 -u -w1 localhost 7947
+```
+
+Get a specific key:
+
+```bash
+echo '{"action":"get","key":"settings.audio.gain"}' | nc -4 -u -w1 localhost 7947
+```
+
+Put a new state fragment:
+
+```bash
+echo '{"action":"put","payload":{"settings":{"audio":{"gain":1}}}}' | nc -4 -u -w1 localhost 7947
+```
+
+Patch a keyed value:
+
+```bash
+echo '{"action":"patch","key":"settings.audio.gain","value":5}' | nc -4 -u -w1 localhost 7947
+```
+
+Patch using an object payload:
+
+```bash
+echo '{"action":"patch","payload":{"settings":{"audio":{"gain":5}}}}' | nc -4 -u -w1 localhost 7947
+```
+
+For backward compatibility, UDP `set` is currently accepted as an alias for `put`, but new clients should use `put`.
+
 ## Uploading Audio Files
 
 Upload WAV or similar audio:
@@ -154,6 +196,112 @@ Triggered messages display a JSON structure:
   "timestamp": 1761844571
 }
 ```
+
+## Software Update Management
+
+`fusion-server` includes REST endpoints for managing over-the-air (OTA) software update bundles.
+
+### Uploading Software Update Bundles
+
+Upload `.swu` bundle files with SHA-256 checksum validation:
+
+```bash
+curl --request POST \
+  --url 'http://localhost:8080/softwareUpdate/upload?=' \
+  --header 'content-type: multipart/form-data' \
+  --form bundle=@/path/to/update.swu
+  --form checksum=abc123def456...
+```
+
+Features:
+- **Size limit**: 300MB maximum
+- **Checksum validation**: SHA-256 integrity checking
+- **Duplicate detection**: Prevents uploading identical bundles
+- **Cluster sync**: Automatic distribution across fusion nodes
+
+Uploaded bundles are stored in:
+
+```
+/mnt/ota
+```
+
+### Listing Software Updates
+
+```bash
+curl http://localhost:8080/softwareUpdate/list
+```
+
+Returns JSON array with bundle metadata:
+
+```json
+[
+  {
+    "filename": "firmware-v1.2.3.swu",
+    "checksum": "abc123...",
+    "size_bytes": 12345678,
+    "uploaded": "2026-03-30T12:34:56Z",
+    "source_ip": "192.168.2.100"
+  }
+]
+```
+
+### Downloading Software Updates
+
+```bash
+curl -O http://localhost:8080/softwareUpdate/download/firmware-v1.2.3.swu
+```
+
+Downloads the specified bundle file. Returns 404 if the file doesn't exist.
+
+### Testing Software Update Functionality
+
+Run comprehensive integration tests for software update endpoints:
+
+```bash
+# From fusion/ directory
+cd fusion
+
+# Test against remote cluster
+FUSION_TEST_VIP=192.168.2.100:8080 \
+FUSION_TEST_NODES=192.168.2.100:8080 \
+go test -v ./test -run TestSoftwareUpdate
+
+# Test specific scenarios
+FUSION_TEST_VIP=192.168.2.100:8080 \
+FUSION_TEST_NODES=192.168.2.100:8080 \
+go test -v ./test -run TestSoftwareUpdateUploadAndListSuccess
+
+# Test cluster sync across nodes (requires multi-node setup)
+FUSION_TEST_VIP=192.168.2.100:8080 \
+FUSION_TEST_NODES=192.168.2.100:8080,192.168.2.101:8080,192.168.2.102:8080 \
+go test -v ./test -run TestSoftwareUpdateSyncAcrossNodes
+
+# Test validation and error handling
+FUSION_TEST_VIP=192.168.2.100:8080 \
+FUSION_TEST_NODES=192.168.2.100:8080 \
+go test -v ./test -run TestSoftwareUpdateUploadMissingFields
+```
+
+**Using multipass script** (for multipass environments):
+```bash
+# Run all software update tests
+./scripts/multipass/run-tests --software-update
+
+# Run specific cluster sync test
+./scripts/multipass/run-tests --software-update --test-name TestSoftwareUpdateSyncAcrossNodes
+
+# List available software update tests
+./scripts/multipass/run-tests --list --software-update
+```
+
+Available test scenarios:
+- **Upload + List**: Successful bundle upload and listing verification
+- **Checksum Mismatch**: 400 error for incorrect checksums
+- **Duplicate Detection**: 409 error for duplicate bundles  
+- **Oversized Files**: 413 error for files exceeding 300MB limit
+- **Missing Fields**: 400 errors for validation failures
+- **Download**: File retrieval and 404 handling
+- **Cluster Sync**: Verifies bundle propagation across all follower nodes
 
 ## Bluetooth Debugging: Verifying Local BLE Advertising
 

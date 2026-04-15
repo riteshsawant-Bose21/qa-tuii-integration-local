@@ -122,7 +122,7 @@ class _DeviceListSection extends StatelessWidget {
                 return _DeviceCard(
                   id: device.id,
                   type: SelectedItemType.source,
-                  image: device.assetImagePath,
+                  image: device.image,
                   title: device.name,
                   ports: portData,
                 );
@@ -182,8 +182,8 @@ class _DeviceCard extends StatelessWidget {
             Row(
               children: <Widget>[
                 if (image != null)
-                  Image.asset(
-                    image!,
+                  FusionImageAuto(
+                    path: image!,
                     width: 20,
                     height: 20,
                   ),

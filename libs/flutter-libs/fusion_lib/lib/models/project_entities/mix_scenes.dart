@@ -216,6 +216,7 @@ abstract class MatrixSettings {
 // ============================================================================
 class MonoMatrixSettings extends MatrixSettings {
   final double mixLevel;
+  final bool outActive;
 
   MonoMatrixSettings({
     required super.sourceId,
@@ -223,6 +224,7 @@ class MonoMatrixSettings extends MatrixSettings {
     required super.gain,
     required super.muted,
     required this.mixLevel,
+    this.outActive = false,
   });
 
   @override
@@ -232,6 +234,7 @@ class MonoMatrixSettings extends MatrixSettings {
     double? gain,
     bool? muted,
     double? mixLevel,
+    bool? outActive,
   }) {
     return MonoMatrixSettings(
       sourceId: sourceId ?? this.sourceId,
@@ -239,6 +242,7 @@ class MonoMatrixSettings extends MatrixSettings {
       gain: gain ?? this.gain,
       muted: muted ?? this.muted,
       mixLevel: mixLevel ?? this.mixLevel,
+      outActive: outActive ?? this.outActive,
     );
   }
 
@@ -249,6 +253,7 @@ class MonoMatrixSettings extends MatrixSettings {
       gain: (json['gain'] as num).toDouble(),
       muted: json['muted'] as bool,
       mixLevel: (json['mixLevel'] as num).toDouble(),
+      outActive: json['outActive'] as bool? ?? false,
     );
   }
 
@@ -260,6 +265,7 @@ class MonoMatrixSettings extends MatrixSettings {
       'gain': gain,
       'muted': muted,
       'mixLevel': mixLevel,
+      'outActive': outActive,
     };
   }
 }
@@ -353,12 +359,14 @@ abstract class MatrixMixer {
 class MonoMatrixMixer extends MatrixMixer {
   final double outGain;
   final bool outMuted;
+  final bool outActive;
 
   MonoMatrixMixer({
     super.id,
     super.type = SignalType.mono,
     required this.outGain,
     required this.outMuted,
+    this.outActive = false,
     super.settings,
   });
 
@@ -367,6 +375,7 @@ class MonoMatrixMixer extends MatrixMixer {
     String? id,
     double? outGain,
     bool? outMuted,
+    bool? outActive,
     List<MatrixSettings>? settings,
   }) {
     return MonoMatrixMixer(
@@ -374,6 +383,7 @@ class MonoMatrixMixer extends MatrixMixer {
       outGain: outGain ?? this.outGain,
       outMuted: outMuted ?? this.outMuted,
       settings: settings ?? this.settings,
+      outActive: outActive ?? this.outActive,
     );
   }
 
@@ -383,6 +393,7 @@ class MonoMatrixMixer extends MatrixMixer {
       id: id,
       outGain: outGain,
       outMuted: outMuted,
+      outActive: outActive,
       settings: settings.map((e) {
         return e is MonoMatrixSettings
             ? e.copyWith()
@@ -399,6 +410,7 @@ class MonoMatrixMixer extends MatrixMixer {
       outGain: (json['outGain'] as num).toDouble(),
       outMuted: json['outMuted'] as bool,
       type: SignalType.mono,
+      outActive: json['outActive'] as bool? ?? false,
       settings:
           (json['settings'] as List<dynamic>?)?.map((e) {
             return MonoMatrixSettings.fromJson(e);
@@ -414,6 +426,7 @@ class MonoMatrixMixer extends MatrixMixer {
       'outGain': outGain,
       'outMuted': outMuted,
       'type': type.name,
+      'outActive': outActive,
       'settings': settings.map((e) => e.toJson()).toList(),
     };
   }

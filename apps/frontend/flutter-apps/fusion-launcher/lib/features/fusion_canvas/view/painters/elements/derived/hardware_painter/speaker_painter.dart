@@ -187,7 +187,18 @@ class SpeakerPainter extends FusionCanvasElementPainter {
     final MountingType? mountingType = speaker.mountingType;
     switch (mountingType) {
       case MountingType.surface:
-        return canvas.drawRect(rect, paint);
+        paint.color = paint.color.withValues(alpha: 0.8);
+        final double yawRad = speaker.yaw * pi / 180.0;
+        canvas.save();
+        canvas.translate(rect.center.dx, rect.center.dy);
+        canvas.rotate(yawRad);
+        final RRect rRect = RRect.fromRectAndRadius(
+          Rect.fromCenter(center: Offset.zero, width: rect.width, height: rect.height),
+          Radius.circular(rect.shortestSide * 0.15),
+        );
+        canvas.drawRRect(rRect, paint);
+        canvas.restore();
+        return;
       case MountingType.pendant:
         return canvas.drawPath(
           Path()
@@ -199,7 +210,27 @@ class SpeakerPainter extends FusionCanvasElementPainter {
         );
       case MountingType.ceiling:
       case null:
-        return canvas.drawCircle(rect.center, rect.width / 2, paint);
+        final double radius = rect.width / 2;
+        final Rect layerBounds = Rect.fromCircle(center: rect.center, radius: radius).inflate(radius * 0.2);
+        canvas.saveLayer(layerBounds, Paint());
+        canvas.drawCircle(rect.center, radius, paint);
+
+        final Paint cutoutPaint =
+            Paint()
+              ..blendMode = BlendMode.clear
+              ..style = PaintingStyle.stroke
+              ..strokeCap = StrokeCap.round
+              ..strokeJoin = StrokeJoin.round
+              ..strokeWidth = radius * 0.22;
+
+        final Offset c = rect.center;
+        final Path cutoutPath =
+            Path()
+              ..moveTo(c.dx - radius * 0.58, c.dy + radius * 0.08)
+              ..cubicTo(c.dx - radius * 0.62, c.dy + radius * 0.55, c.dx - radius * 0.12, c.dy + radius * 0.72, c.dx + radius * 0.23, c.dy + radius * 0.60);
+        canvas.drawPath(cutoutPath, cutoutPaint);
+        canvas.restore();
+        return;
     }
   }
 
@@ -207,5 +238,13 @@ class SpeakerPainter extends FusionCanvasElementPainter {
   Offset getOffset() => hardware.pos ?? Offset.zero;
 
   @override
-  Size getSize() => const Size.square(30);
+  Size getSize() {
+    if (hardware.mountingType == MountingType.surface) {
+      return const Size(40, 80); // portrait base — rotated by yaw when drawing
+    } else if (hardware.mountingType == MountingType.pendant) {
+      return const Size(100, 100);
+    } else {
+      return const Size(100, 100);
+    }
+  }
 }

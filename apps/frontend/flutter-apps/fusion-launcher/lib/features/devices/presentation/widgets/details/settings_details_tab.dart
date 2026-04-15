@@ -129,9 +129,9 @@ class _DeviceSettingsTabState extends State<DeviceSettingsTab> {
                     ),
                     child: ListTile(
                       onTap: () => setState(() => _selectedIndex = index),
-                      leading: FusionImage.asset(
-                        item.icon,
-                        assetColor: context.colorScheme.iconWhite,
+                      leading: FusionImageAuto(
+                        path: item.icon,
+                        color: context.colorScheme.iconWhite,
                         height: 16,
                       ),
                       title: FusionAppText(

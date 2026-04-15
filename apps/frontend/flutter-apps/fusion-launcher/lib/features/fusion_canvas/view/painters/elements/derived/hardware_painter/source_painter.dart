@@ -15,7 +15,7 @@ class SourcePainter extends FusionCanvasElementPainter {
     final Offset? position = hardware.pos;
     if (position != null) {
       final Rect rect = getTransformedRect(painter);
-      drawImage(canvas: canvas, imagePath: hardware.assetImagePath, rect: rect, painter: painter);
+      drawImage(canvas: canvas, imagePath: hardware.image, rect: rect, painter: painter);
     }
   }
 
@@ -29,5 +29,5 @@ class SourcePainter extends FusionCanvasElementPainter {
   Offset getOffset() => hardware.pos ?? Offset.zero;
 
   @override
-  Size getSize() => const Size.square(50);
+  Size getSize() => const Size.square(120);
 }

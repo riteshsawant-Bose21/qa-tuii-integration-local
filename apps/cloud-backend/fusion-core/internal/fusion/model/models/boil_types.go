@@ -79,6 +79,38 @@ func AllBundleUpdateStatusEnum() []string {
 	}
 }
 
+// Enum values for ClaimStatusEnum
+const (
+	ClaimStatusEnumUNCLAIMED string = "UNCLAIMED"
+	ClaimStatusEnumCLAIMED   string = "CLAIMED"
+)
+
+func AllClaimStatusEnum() []string {
+	return []string{
+		ClaimStatusEnumUNCLAIMED,
+		ClaimStatusEnumCLAIMED,
+	}
+}
+
+// Enum values for CommandStatusEnum
+const (
+	CommandStatusEnumUNPUBLISHED string = "UNPUBLISHED"
+	CommandStatusEnumPUBLISHED   string = "PUBLISHED"
+	CommandStatusEnumRECEIVED    string = "RECEIVED"
+	CommandStatusEnumSUCCESS     string = "SUCCESS"
+	CommandStatusEnumFAILURE     string = "FAILURE"
+)
+
+func AllCommandStatusEnum() []string {
+	return []string{
+		CommandStatusEnumUNPUBLISHED,
+		CommandStatusEnumPUBLISHED,
+		CommandStatusEnumRECEIVED,
+		CommandStatusEnumSUCCESS,
+		CommandStatusEnumFAILURE,
+	}
+}
+
 // Enum values for ProductTypeEnum
 const (
 	ProductTypeEnumSpeaker    string = "speaker"
@@ -87,6 +119,7 @@ const (
 	ProductTypeEnumController string = "controller"
 	ProductTypeEnumIoEndpoint string = "io_endpoint"
 	ProductTypeEnumAccessory  string = "accessory"
+	ProductTypeEnumUnknown    string = "unknown"
 )
 
 func AllProductTypeEnum() []string {
@@ -97,6 +130,7 @@ func AllProductTypeEnum() []string {
 		ProductTypeEnumController,
 		ProductTypeEnumIoEndpoint,
 		ProductTypeEnumAccessory,
+		ProductTypeEnumUnknown,
 	}
 }
 

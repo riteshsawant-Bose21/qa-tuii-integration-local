@@ -1,8 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:path/path.dart' as p;
@@ -10,444 +10,560 @@ import 'package:path/path.dart' as p;
 import 'data_sources/product_catalog.dart';
 import 'models/models.dart';
 
-/// Products API - Offline-first product data access
-///
-/// All API calls happen internally. The library manages caching automatically.
-/// Local cache is the source of truth.
-///
-/// Usage:
-/// ```dart
-/// final products = Products(baseUrl: 'http://localhost:8080');
-/// await products.initialize();
-///
-/// final speakers = products.speakers;  // From local cache
-/// ```
-class Products {
-  final String baseUrl;
-  final String cacheDir;
-  final bool fusionOnly;
-  final String productCacheZipAssetPath = 'assets/zip/product_cache.zip';
+const _kCatalogCacheKey = 'products_catalog';
 
-  ProductCatalog? _catalog;
-  bool _syncedFromApi = false;
-  bool _imageCachingInProgress = false;
+/// Holds cached local file paths for a product's images, keyed by color.
+class ProductImageCache {
+  final int productId;
+  final String modelName;
+  final String category;
+  final List<String> black;
+  final List<String> white;
+  final Map<String, List<String>> others;
 
-  static String? localProductDirPath;
+  const ProductImageCache({
+    required this.productId,
+    required this.modelName,
+    required this.category,
+    required this.black,
+    required this.white,
+    required this.others,
+  });
 
-  Products({
-    required this.baseUrl,
-    String? cacheDir,
-    this.fusionOnly = false,
-  }) : cacheDir = cacheDir ?? _getDefaultCacheDir();
-
-  static String _getDefaultCacheDir() {
-    return '${Directory.current.path}/.product_cache_temp';
+  /// Returns paths for [color] (case-insensitive). Falls back to black.
+  List<String> pathsForColor(String color) {
+    final key = color.toLowerCase();
+    if (key == 'black') return black;
+    if (key == 'white') return white;
+    return others[key] ?? black;
   }
 
-  File get _cacheFile => File('$cacheDir/products.json');
-
-  File get _versionFile => File('$cacheDir/version.txt');
-
-  Directory get _imagesDir => Directory('$cacheDir/images');
-
-  /// Initialize products - offline first
-  ///
-  /// 1. Try to sync from API (if online)
-  /// 2. If API fails or offline, load from local cache
-  /// 3. If no cache exists and API fails, throws error
-  Future<void> initialize() async {
-    // Try to sync from API first
-    debugPrint("cacheDir: $cacheDir");
-    try {
-      debugPrint("Extracting local product assets...");
-      await extractLocalProductsZip();
-      debugPrint("Syncing from API...");
-      // await _syncFromApi();
-      _syncedFromApi = false;
-    } catch (e) {
-      // API failed - that's okay, we'll use cache
-      _syncedFromApi = false;
-    }
-
-    // Load from cache
-    // if (await _cacheFile.exists()) {
-    //   debugPrint("Loading products from cache...");
-    //   await _loadFromCache();
-    // } else {
-    debugPrint("No cached data found, loading from local asset...");
-    loadFromLocalAsset();
-    // }
-    if (!_syncedFromApi) {
-      // throw Exception('No cached data and API is unavailable');
-    }
-  }
-
-  /// Force refresh from API (with fallback to cache)
-  Future<void> refresh() async {
-    try {
-      // await _syncFromApi();
-      await _loadFromCache();
-      _syncedFromApi = false;
-    } catch (e) {
-      // API failed - load from cache if available
-      if (await _cacheFile.exists()) {
-        await _loadFromCache();
-        _syncedFromApi = false;
-      } else {
-        // No cache exists - load from local asset
-        loadFromLocalAsset();
-      }
-    }
-  }
-
-  Future<String> getCachedProductDirectoryPath() async {
-    final Directory dir = await FusionUtils.getFusionAppDirectory();
-    final String localPath = dir.path;
-
-    //create a directory named 'extracted_images' inside localPath
-    localProductDirPath = p.join(localPath, 'localProductCache');
-    return localProductDirPath!;
-  }
-
-  Future<void> extractLocalProductsZip() async {
-    try {
-      // 1. Get the images directory path
-      final String imagesDirPath = await getCachedProductDirectoryPath();
-      final Directory assetsProductDir = Directory(imagesDirPath);
-
-      // 2. Check if images directory exists and has files
-      if (!await assetsProductDir.exists() || (await assetsProductDir.list().isEmpty)) {
-        // Create the directory if it doesn't exist
-        await assetsProductDir.create(recursive: true);
-
-        // 3. Load the zip file from assets
-        final ByteData data = await rootBundle.load(productCacheZipAssetPath);
-        final List<int> bytes = data.buffer.asUint8List();
-
-        // 4. Decode the zip
-        final Archive archive = ZipDecoder().decodeBytes(bytes);
-
-        // 5. Loop through the archive
-        for (final ArchiveFile file in archive) {
-          final String filename = file.name;
-
-          // Construct the full output path - extract to assetsProductDir, not localPath
-          final String outputPath = p.join(imagesDirPath, filename);
-
-          if (file.isFile) {
-            // Ensure the directory for this file exists
-            final File outFile = File(outputPath);
-            await outFile.parent.create(recursive: true);
-
-            // Write the file
-            await outFile.writeAsBytes(file.content as List<int>);
-          } else {
-            // If it's a directory entry in the zip, create it
-            await Directory(outputPath).create(recursive: true);
-          }
-        }
-      } else {
-        debugPrint("Images already extracted at: $imagesDirPath");
-      }
-    } catch (e) {
-      debugPrint("Error extracting zip: $e");
-    }
-  }
-
-  /// Check if last operation synced from API
-  bool get wasSyncedFromApi => _syncedFromApi;
-
-  /// Check if image caching is in progress
-  bool get isImageCachingInProgress => _imageCachingInProgress;
-
-  /// Internal: Sync from API and save to local cache
-  Future<void> _syncFromApi() async {
-    final client = HttpClient();
-    client.connectionTimeout = const Duration(seconds: 10);
-
-    try {
-      final request = await client.getUrl(
-        Uri.parse('$baseUrl/products'),
-      );
-      request.headers.set('Accept', 'application/json');
-
-      final response = await request.close();
-      if (response.statusCode != 200) {
-        FusionLogger.log(tag: LogTag.project, message: "Failed to sync products from API. Status code: ${response.statusCode}");
-        throw Exception('HTTP Error: ${response.statusCode}');
-      }
-
-      final body = await response.transform(utf8.decoder).join();
-      final json = jsonDecode(body) as Map<String, dynamic>;
-      final catalog = ProductCatalog.fromJson(json);
-
-      // Ensure cache directory exists
-      await _ensureCacheDir();
-
-      // Save JSON to cache
-      await _cacheFile.writeAsString(body);
-      await _versionFile.writeAsString(catalog.version);
-
-      // Start image caching in background (n on-blocking)
-      _cacheImagesInBackground(catalog);
-    } finally {
-      client.close();
-    }
-  }
-
-  Future<void> loadFromLocalAsset() async {
-    try {
-      if (localProductDirPath == null) {
-        await extractLocalProductsZip();
-      }
-      if (localProductDirPath != null) {
-        final String jsonFilePath = p.join(localProductDirPath!, 'product_cache/products.json');
-        final File jsonFile = File(jsonFilePath);
-        if (await jsonFile.exists()) {
-          final jsonString = await jsonFile.readAsString();
-          final json = jsonDecode(jsonString) as Map<String, dynamic>;
-          _catalog = ProductCatalog.fromJson(json);
-          print(_catalog);
-        }
-      }
-    } catch (e) {
-      // Loading from local asset failed
-      FusionLogger.log(tag: LogTag.project, message: "Error loading products from local asset: $e");
-    }
-  }
-
-  /// Internal: Load products from local cache
-  Future<void> _loadFromCache() async {
-    if (!await _cacheFile.exists()) {
-      FusionLogger.log(tag: LogTag.project, message: "Cache file does not exist at path: ${_cacheFile.path}");
-      loadFromLocalAsset();
-    } else {
-      final jsonString = await _cacheFile.readAsString();
-      final json = jsonDecode(jsonString) as Map<String, dynamic>;
-      _catalog = ProductCatalog.fromJson(json);
-    }
-  }
-
-  /// Check if local cache exists
-  Future<bool> hasCachedData() async {
-    return _cacheFile.exists();
-  }
-
-  /// Get cached version
-  Future<String?> getCachedVersion() async {
-    if (await _versionFile.exists()) {
-      return _versionFile.readAsString();
+  /// First available path across all colors, or null.
+  String? get firstPath {
+    if (black.isNotEmpty) return black.first;
+    if (white.isNotEmpty) return white.first;
+    for (final paths in others.values) {
+      if (paths.isNotEmpty) return paths.first;
     }
     return null;
   }
+}
 
-  /// Clear local cache
+/// Products API — offline-first product data access.
+///
+/// ### Folder layout (always under getApplicationSupportDirectory)
+/// ```
+/// <appSupport>/
+///   app_cache/
+///     products/               ← _imagesRootDir
+///       assets/               ← downloaded / extracted images
+///         <base64hash>.jpg
+///         <base64hash>.png
+/// ```
+///
+/// ### Priority order
+/// ```
+/// 1. API   → save JSON via AppCacheService + download images to assets/
+/// 2. Cache → load JSON from AppCacheService + resolve images from assets/
+/// 3. ZIP   → extract ZIP into products/ folder (only when loadFromZip=true)
+/// 4. Empty → isLoaded = false
+/// ```
+class Products {
+  Products({
+    required this.baseUrl,
+    required this.networkClient,
+    required this.cacheService,
+    this.fusionOnly = false,
+    this.loadFromZip = false,
+    this.productCacheZipAssetPath = 'assets/zip/product_cache.zip',
+  });
+
+  final String baseUrl;
+  final FusionNetworkClient networkClient;
+
+  /// Scoped cache service for this feature (app_cache/products/).
+  /// Pass `await rootCache.scope('products')` from your DI setup.
+  final AppCacheService cacheService;
+
+  final bool fusionOnly;
+  final bool loadFromZip;
+  final String productCacheZipAssetPath;
+
+  // ── internal state ────────────────────────────────────────────────────────
+
+  ProductCatalog? _catalog;
+  bool _syncedFromApi = false;
+
+  /// url → absolute local image path (only entries confirmed to exist on disk).
+  final Map<String, String> _urlToAbsPath = {};
+
+  /// productId → ProductImageCache
+  final Map<int, ProductImageCache> _imageByProductId = {};
+
+  /// Resolved once in [_ensureRootDir]. Always uses getApplicationSupportDirectory.
+  String? _imagesRootDir;
+
+  // ── public: lifecycle ─────────────────────────────────────────────────────
+
+  Future<void> initialize() => _load();
+  Future<void> refresh() => _load();
+
+  // ── public: status ────────────────────────────────────────────────────────
+
+  bool get isLoaded => _catalog != null;
+  bool get wasSyncedFromApi => _syncedFromApi;
+  String get version => _catalog?.version ?? '';
+
+  // ── public: product lists ─────────────────────────────────────────────────
+
+  List<SpeakerProduct> get speakers => _filter(_catalog?.speakers, (s) => s.isFusionCompatible);
+  List<AmplifierProduct> get amplifiers => _filter(_catalog?.amplifiers, (a) => a.isFusionCompatible);
+  List<ControllerProduct> get controllers => _filter(_catalog?.controllers, (c) => c.isFusionCompatible);
+  List<DspProduct> get dsps => _filter(_catalog?.dsps, (d) => d.isFusionCompatible);
+  List<AccessoryProduct> get accessories => _filter(_catalog?.accessories, (a) => a.isFusionCompatible);
+  List<IoEndpointProduct> get ioEndpoints => _filter(_catalog?.ioEndpoints, (e) => e.isFusionCompatible);
+
+  // ── public: individual lookups ────────────────────────────────────────────
+
+  SpeakerProduct? getSpeaker(int id) => _findById(speakers, (s) => s.productId == id);
+  AmplifierProduct? getAmplifier(int id) => _findById(amplifiers, (a) => a.productId == id);
+  ControllerProduct? getController(int id) => _findById(controllers, (c) => c.productId == id);
+  DspProduct? getDsp(int id) => _findById(dsps, (d) => d.productId == id);
+  AccessoryProduct? getAccessory(int id) => _findById(accessories, (a) => a.productId == id);
+  IoEndpointProduct? getIoEndpoint(int id) => _findById(ioEndpoints, (e) => e.productId == id);
+
+  // ── public: image access ──────────────────────────────────────────────────
+
+  ProductImageCache? imageFor({required int productId}) => _imageByProductId[productId];
+
+  List<String> imagePathsFor({required int productId, String color = 'black'}) => _imageByProductId[productId]?.pathsForColor(color) ?? const [];
+
+  String? firstImagePathFor({required int productId}) => _imageByProductId[productId]?.firstPath;
+
+  // ── public: cache management ──────────────────────────────────────────────
+
+  Future<bool> hasCachedData() => cacheService.containsKey(_kCatalogCacheKey);
+
   Future<void> clearCache() async {
-    final dir = Directory(cacheDir);
-    if (await dir.exists()) {
-      await dir.delete(recursive: true);
+    await cacheService.remove(_kCatalogCacheKey);
+    await _ensureRootDir();
+    final assetsDir = Directory(_assetsDir);
+    if (await assetsDir.exists()) {
+      await assetsDir.delete(recursive: true);
+    }
+    _reset();
+  }
+
+  // ── core load pipeline ────────────────────────────────────────────────────
+
+  Future<void> _load() async {
+    await _ensureRootDir();
+
+    _log('Starting load. imagesRootDir=$_imagesRootDir');
+
+    if (await _syncFromApi()) {
+      _syncedFromApi = true;
+      return;
+    }
+    _syncedFromApi = false;
+
+    if (await _loadFromCache()) return;
+
+    if (loadFromZip && await _loadFromZip()) return;
+
+    _reset();
+    _log('All load strategies exhausted — no data available.');
+  }
+
+  // ── strategy 1: API ───────────────────────────────────────────────────────
+
+  Future<bool> _syncFromApi() async {
+    try {
+      final response = await networkClient.get<Map<String, dynamic>>(
+        api: FusionApiEndpoint.products,
+        fromJson: (dynamic data) => data as Map<String, dynamic>,
+      );
+
+      if (!response.success || response.data == null) {
+        _log('API returned failure — ${response.message}');
+        return false;
+      }
+
+      final json = response.data!;
+      _catalog = ProductCatalog.fromJson(json);
+
+      await cacheService.setJson(_kCatalogCacheKey, json);
+      await _downloadImages(json);
+      _rebuildImageMap(json);
+
+      _log(
+        'Synced from API. version=${_catalog?.version} '
+        'images=${_urlToAbsPath.length}',
+      );
+      return true;
+    } catch (e, st) {
+      _log('API sync error — $e\n$st');
+      return false;
     }
   }
 
-  Future<void> _ensureCacheDir() async {
-    final dir = Directory(cacheDir);
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-    if (!await _imagesDir.exists()) {
-      await _imagesDir.create(recursive: true);
+  // ── strategy 2: cache ─────────────────────────────────────────────────────
+
+  Future<bool> _loadFromCache() async {
+    try {
+      final json = await cacheService.getJson<Map<String, dynamic>>(
+        _kCatalogCacheKey,
+        (raw) => raw is Map<String, dynamic> ? raw : null,
+      );
+
+      if (json == null) {
+        _log('No cached catalog found.');
+        return false;
+      }
+
+      _catalog = ProductCatalog.fromJson(json);
+      _resolveImagesFromDisk(json);
+      _rebuildImageMap(json);
+
+      _log(
+        'Loaded from cache. version=${_catalog?.version} '
+        'images=${_urlToAbsPath.length}',
+      );
+      return true;
+    } catch (e) {
+      _log('Cache load failed — $e');
+      return false;
     }
   }
 
-  /// Cache images in background (non-blocking)
-  void _cacheImagesInBackground(ProductCatalog catalog) {
-    // Don't wait for this - let it run in background
-    _cacheImagesAsync(catalog);
+  // ── strategy 3: ZIP ───────────────────────────────────────────────────────
+
+  Future<bool> _loadFromZip() async {
+    try {
+      _log('Extracting bundled ZIP…');
+      await _extractZip();
+
+      // products.json is extracted directly into _imagesRootDir
+      final jsonFile = File(p.join(_imagesRootDir!, 'products.json'));
+      if (!await jsonFile.exists()) {
+        _log('products.json not found after ZIP extraction at ${jsonFile.path}');
+        return false;
+      }
+
+      final raw = await jsonFile.readAsString();
+      final json = _parseJsonMap(raw);
+      if (json == null) {
+        _log('products.json is not valid JSON after ZIP extraction.');
+        return false;
+      }
+
+      _catalog = ProductCatalog.fromJson(json);
+
+      // Promote to AppCacheService so next launch uses strategy 2.
+      await cacheService.setJson(_kCatalogCacheKey, json);
+
+      _resolveImagesFromDisk(json);
+      _rebuildImageMap(json);
+
+      _log(
+        'Loaded from ZIP. version=${_catalog?.version} '
+        'images=${_urlToAbsPath.length}',
+      );
+      return true;
+    } catch (e, st) {
+      _log('ZIP load failed — $e\n$st');
+      return false;
+    }
   }
 
-  /// Cache all product images asynchronously
-  Future<void> _cacheImagesAsync(ProductCatalog catalog) async {
-    if (_imageCachingInProgress) return;
-    _imageCachingInProgress = true;
+  // ── ZIP extraction ────────────────────────────────────────────────────────
+
+  /// Extracts ZIP into [_imagesRootDir].
+  ///
+  /// Expected ZIP layout (from generate_product_cache_zip.py):
+  /// ```
+  /// products.json
+  /// assets/
+  ///   <base64url>.jpg
+  ///   <base64url>.png
+  /// ```
+  /// After extraction the folder looks like:
+  /// ```
+  /// <appSupport>/app_cache/products/
+  ///   products.json
+  ///   assets/
+  ///     <base64url>.jpg
+  /// ```
+  Future<void> _extractZip() async {
+    final data = await rootBundle.load(productCacheZipAssetPath);
+    final archive = ZipDecoder().decodeBytes(data.buffer.asUint8List());
+
+    int extracted = 0;
+    for (final entry in archive) {
+      final normalized = p.normalize(entry.name);
+
+      // Guard against path-traversal attacks.
+      if (normalized.startsWith('..') || p.isAbsolute(normalized)) {
+        _log('Skipping unsafe ZIP entry: ${entry.name}');
+        continue;
+      }
+
+      final outPath = p.join(_imagesRootDir!, normalized);
+
+      if (!entry.isFile) {
+        await Directory(outPath).create(recursive: true);
+        continue;
+      }
+
+      final content = entry.content;
+
+      final outFile = File(outPath);
+      await outFile.parent.create(recursive: true);
+      await outFile.writeAsBytes(content, flush: true);
+      extracted++;
+    }
+
+    _log('ZIP extraction complete. $extracted files written to $_imagesRootDir');
+  }
+
+  // ── image downloading ─────────────────────────────────────────────────────
+
+  Future<void> _downloadImages(Map<String, dynamic> json) async {
+    final urls = _collectImageUrls(json);
+    if (urls.isEmpty) return;
+
+    _log('Downloading ${urls.length} images…');
+    int downloaded = 0;
+    int skipped = 0;
+
+    const batchSize = 6;
+    for (var i = 0; i < urls.length; i += batchSize) {
+      final batch = urls.skip(i).take(batchSize);
+      final results = await Future.wait(batch.map(_downloadIfNeeded));
+      for (final wasNew in results) {
+        if (wasNew)
+          downloaded++;
+        else
+          skipped++;
+      }
+    }
+
+    _log('Images: $downloaded downloaded, $skipped already cached.');
+  }
+
+  /// Returns true if the image was newly downloaded, false if already cached.
+  Future<bool> _downloadIfNeeded(String url) async {
+    if (!url.startsWith('http')) return false;
+
+    final destPath = _absPathForUrl(url);
+    final destFile = File(destPath);
+
+    if (await destFile.exists()) {
+      _urlToAbsPath[url] = destPath;
+      return false;
+    }
 
     try {
-      final allUrls = <String>{};
-
-      // Collect all unique image URLs
-      for (final s in catalog.speakers) {
-        allUrls.addAll(s.assets.allAssetUrls);
-      }
-      for (final a in catalog.amplifiers) {
-        allUrls.addAll(a.assets.allAssetUrls);
-      }
-      for (final c in catalog.controllers) {
-        allUrls.addAll(c.assets.allAssetUrls);
-      }
-      for (final d in catalog.dsps) {
-        allUrls.addAll(d.assets.allAssetUrls);
-      }
-      for (final a in catalog.accessories) {
-        allUrls.addAll(a.assets.allAssetUrls);
-      }
-      for (final e in catalog.ioEndpoints) {
-        allUrls.addAll(e.assets.allAssetUrls);
-      }
-
-      // Filter valid HTTP URLs only
-      final validUrls = allUrls.where((u) => u.startsWith('http')).toList();
-
-      if (validUrls.isEmpty) return;
-
-      await _ensureCacheDir();
-
-      // Download images with concurrency limit
-      const maxConcurrent = 5;
-      for (var i = 0; i < validUrls.length; i += maxConcurrent) {
-        final batch = validUrls.skip(i).take(maxConcurrent);
-        await Future.wait(batch.map((url) => _downloadImage(url)));
-      }
-    } finally {
-      _imageCachingInProgress = false;
-    }
-  }
-
-  /// Download a single image
-  Future<void> _downloadImage(String url) async {
-    try {
-      // Generate filename from URL
       final uri = Uri.parse(url);
-      final fileName = _sanitizeFileName(uri.pathSegments.last);
-      final file = File('${_imagesDir.path}/$fileName');
-
-      if (await file.exists()) return; // Skip if already cached
-
-      final client = HttpClient();
-      client.connectionTimeout = const Duration(seconds: 5);
-
+      final client = HttpClient()..connectionTimeout = const Duration(seconds: 10);
       try {
         final request = await client.getUrl(uri);
         final response = await request.close();
-
-        if (response.statusCode == 200) {
-          final bytes = await response.fold<List<int>>(
-            <int>[],
-            (prev, element) => prev..addAll(element),
-          );
-          await file.writeAsBytes(bytes);
+        if (response.statusCode != HttpStatus.ok) {
+          _log('HTTP ${response.statusCode} for $url');
+          return false;
         }
+        await destFile.parent.create(recursive: true);
+        final sink = destFile.openWrite();
+        await response.pipe(sink);
+        await sink.close();
+        _urlToAbsPath[url] = destPath;
+        return true;
       } finally {
-        client.close();
+        client.close(force: true);
       }
     } catch (e) {
-      // Silently skip failed downloads
+      _log('Failed to download $url — $e');
+      return false;
     }
   }
 
-  /// Sanitize filename for filesystem
-  String _sanitizeFileName(String name) {
-    return name.replaceAll(RegExp(r'[^\w\-.]'), '_');
-  }
+  // ── image resolution (no network) ────────────────────────────────────────
 
-  /// Get local path for an image (returns cached path if available)
-  String getImagePath(String imageUrl) {
-    if (imageUrl.startsWith('http')) {
-      final uri = Uri.parse(imageUrl);
-      final fileName = _sanitizeFileName(uri.pathSegments.last);
-      // final localPath = '${_imagesDir.path}/$fileName';
-      // if (File(localPath).existsSync()) {
-      //   return localPath;
-      // } else {
-      final fallbackPath = p.join(localProductDirPath ?? '', 'product_cache/images/$fileName');
-      if (File(fallbackPath).existsSync()) {
-        return fallbackPath;
+  /// Maps URLs to on-disk paths without any network access.
+  /// Only URLs whose derived path actually exists on disk are registered.
+  void _resolveImagesFromDisk(Map<String, dynamic> json) {
+    _urlToAbsPath.clear();
+    int found = 0;
+    int missing = 0;
+
+    for (final url in _collectImageUrls(json)) {
+      if (!url.startsWith('http')) continue;
+      final absPath = _absPathForUrl(url);
+      if (File(absPath).existsSync()) {
+        _urlToAbsPath[url] = absPath;
+        found++;
+      } else {
+        missing++;
       }
-      // }
     }
-    return imageUrl; // Return original if not cached
+
+    _log('Image resolution: $found found on disk, $missing missing.');
   }
 
-  String getImageName(String imageUrl) {
-    if (imageUrl.startsWith('http')) {
-      final uri = Uri.parse(imageUrl);
-      final fileName = _sanitizeFileName(uri.pathSegments.last);
-      return fileName;
+  // ── image map rebuild ─────────────────────────────────────────────────────
+
+  void _rebuildImageMap(Map<String, dynamic> json) {
+    _imageByProductId.clear();
+
+    for (final entry in json.entries) {
+      final category = entry.key;
+      final products = entry.value;
+      if (products is! List) continue;
+
+      for (final product in products) {
+        if (product is! Map<String, dynamic>) continue;
+
+        final idRaw = product['product_id'];
+        if (idRaw is! num) continue;
+        final productId = idRaw.toInt();
+
+        final colorMap = _extractColorPaths(product);
+        final black = colorMap.remove('black') ?? const [];
+        final white = colorMap.remove('white') ?? const [];
+
+        _imageByProductId[productId] = ProductImageCache(
+          productId: productId,
+          modelName: product['model_name'] as String? ?? '',
+          category: category,
+          black: black,
+          white: white,
+          others: Map.unmodifiable(colorMap),
+        );
+      }
     }
-    return imageUrl; // Return original if not cached
+
+    _log('Image map built for ${_imageByProductId.length} products.');
   }
 
-  /// Check if an image is cached locally
-  bool isImageCached(String imageUrl) {
-    if (imageUrl.startsWith('http')) {
-      final uri = Uri.parse(imageUrl);
-      final fileName = _sanitizeFileName(uri.pathSegments.last);
-      final localPath = '${_imagesDir.path}/$fileName';
-      return File(localPath).existsSync();
+  Map<String, List<String>> _extractColorPaths(Map<String, dynamic> product) {
+    final result = <String, List<String>>{};
+    final assetsRaw = product['assets'];
+    if (assetsRaw is! List) return result;
+
+    for (final group in assetsRaw) {
+      if (group is! Map<String, dynamic>) continue;
+      for (final colorEntry in group.entries) {
+        final color = colorEntry.key.toLowerCase();
+        final urlsRaw = colorEntry.value;
+        if (urlsRaw is! List) continue;
+
+        final paths = <String>[];
+        for (final raw in urlsRaw.whereType<String>()) {
+          final url = raw.trim();
+          if (url.isEmpty) continue;
+          if (url.startsWith('http')) {
+            final local = _urlToAbsPath[url];
+            if (local != null) paths.add(local);
+          } else if (File(url).existsSync()) {
+            paths.add(url);
+          }
+        }
+        if (paths.isNotEmpty) result[color] = paths;
+      }
     }
-    return false;
+    return result;
   }
 
-  /// Manually trigger image caching
-  Future<void> cacheImages() async {
-    if (_catalog != null) {
-      await _cacheImagesAsync(_catalog!);
+  // ── URL → deterministic local path ───────────────────────────────────────
+  /// Derives a stable absolute path under `<_imagesRootDir>/assets/`.
+  /// Filename = base64url(url) + original extension.
+  ///
+  /// Must stay in sync with Python script's url_to_zip_entry_name().
+  String _absPathForUrl(String url) {
+    final uri = Uri.parse(url);
+    final ext = p.extension(uri.path).isNotEmpty ? p.extension(uri.path) : '.img';
+    final encoded = base64Url.encode(utf8.encode(url)).replaceAll('=', '');
+    return p.join(_assetsDir, '$encoded$ext');
+  }
+
+  // ── helpers ───────────────────────────────────────────────────────────────
+
+  Set<String> _collectImageUrls(Map<String, dynamic> json) {
+    final urls = <String>{};
+    for (final products in json.values) {
+      if (products is! List) continue;
+      for (final product in products) {
+        if (product is! Map<String, dynamic>) continue;
+        final assetsRaw = product['assets'];
+        if (assetsRaw is! List) continue;
+        for (final group in assetsRaw) {
+          if (group is! Map<String, dynamic>) continue;
+          for (final urlsRaw in group.values) {
+            if (urlsRaw is! List) continue;
+            for (final url in urlsRaw.whereType<String>()) {
+              final trimmed = url.trim();
+              if (trimmed.startsWith('http')) urls.add(trimmed);
+            }
+          }
+        }
+      }
+    }
+    return urls;
+  }
+
+  Map<String, dynamic>? _parseJsonMap(String raw) {
+    try {
+      final decoded = jsonDecode(raw);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (_) {
+      return null;
     }
   }
 
-  // ============= Getters (from local cache) =============
+  // ── directory management ──────────────────────────────────────────────────
 
-  bool get isLoaded => _catalog != null;
+  /// Always uses getApplicationSupportDirectory — sandboxed, persistent,
+  /// correct on macOS/iOS/Android/Windows.
+  ///
+  /// macOS debug:   ~/Library/Containers/{bundle}/Data/Library/Application Support/
+  /// macOS release: ~/Library/Containers/{bundle}/Data/Library/Application Support/
+  /// iOS:           {app}/Library/Application Support/
+  /// Android:       /data/data/{package}/files/
+  Future<void> _ensureRootDir() async {
+    if (_imagesRootDir != null) return;
 
-  String get version => _catalog?.version ?? '';
+    // Use cacheService.directoryPath — it's already scoped to app_cache/products/
+    // so images land at: app_cache/products/assets/
+    _imagesRootDir = cacheService.directoryPath;
 
-  int get totalCount =>
-      fusionOnly ? speakers.length + amplifiers.length + controllers.length + dsps.length + accessories.length + ioEndpoints.length : _catalog?.totalCount ?? 0;
+    await Directory(_assetsDir).create(recursive: true);
 
-  List<SpeakerProduct> get speakers => fusionOnly ? (_catalog?.speakers ?? []).where((s) => s.isFusionCompatible).toList() : _catalog?.speakers ?? [];
+    _log('imagesRootDir resolved to: $_imagesRootDir');
+    _log('assetsDir: $_assetsDir');
+  }
 
-  List<AmplifierProduct> get amplifiers => fusionOnly ? (_catalog?.amplifiers ?? []).where((a) => a.isFusionCompatible).toList() : _catalog?.amplifiers ?? [];
+  String get _assetsDir => p.join(_imagesRootDir!, 'assets');
 
-  List<ControllerProduct> get controllers =>
-      fusionOnly ? (_catalog?.controllers ?? []).where((c) => c.isFusionCompatible).toList() : _catalog?.controllers ?? [];
+  void _reset() {
+    _catalog = null;
+    _syncedFromApi = false;
+    _urlToAbsPath.clear();
+    _imageByProductId.clear();
+  }
 
-  List<DspProduct> get dsps => fusionOnly ? (_catalog?.dsps ?? []).where((d) => d.isFusionCompatible).toList() : _catalog?.dsps ?? [];
+  void _log(String message) => FusionLogger.log(tag: LogTag.project, message: 'Products: $message');
 
-  List<AccessoryProduct> get accessories =>
-      fusionOnly ? (_catalog?.accessories ?? []).where((a) => a.isFusionCompatible).toList() : _catalog?.accessories ?? [];
+  List<T> _filter<T>(List<T>? source, bool Function(T) predicate) {
+    if (source == null) return const [];
+    if (!fusionOnly) return source;
+    return source.where(predicate).toList();
+  }
 
-  List<IoEndpointProduct> get ioEndpoints =>
-      fusionOnly ? (_catalog?.ioEndpoints ?? []).where((e) => e.isFusionCompatible).toList() : _catalog?.ioEndpoints ?? [];
-
-  // ============= Fusion Compatible Filtering =============
-
-  /// Get all speakers that are Fusion compatible
-  List<SpeakerProduct> get fusionCompatibleSpeakers => speakers.where((s) => s.isFusionCompatible).toList();
-
-  /// Get all amplifiers that are Fusion compatible
-  List<AmplifierProduct> get fusionCompatibleAmplifiers => amplifiers.where((a) => a.isFusionCompatible).toList();
-
-  /// Get all controllers that are Fusion compatible
-  List<ControllerProduct> get fusionCompatibleControllers => controllers.where((c) => c.isFusionCompatible).toList();
-
-  /// Get all DSPs that are Fusion compatible
-  List<DspProduct> get fusionCompatibleDsps => dsps.where((d) => d.isFusionCompatible).toList();
-
-  /// Get all accessories that are Fusion compatible
-  List<AccessoryProduct> get fusionCompatibleAccessories => accessories.where((a) => a.isFusionCompatible).toList();
-
-  /// Get all I/O endpoints that are Fusion compatible
-  List<IoEndpointProduct> get fusionCompatibleIoEndpoints => ioEndpoints.where((e) => e.isFusionCompatible).toList();
-
-  // ============= Lookup by ID =============
-
-  SpeakerProduct? getSpeaker(int productId) => speakers.where((s) => s.productId == productId).firstOrNull;
-
-  AmplifierProduct? getAmplifier(int productId) => amplifiers.where((a) => a.productId == productId).firstOrNull;
-
-  ControllerProduct? getController(int productId) => controllers.where((c) => c.productId == productId).firstOrNull;
-
-  DspProduct? getDsp(int productId) => dsps.where((d) => d.productId == productId).firstOrNull;
-
-  AccessoryProduct? getAccessory(int productId) => accessories.where((a) => a.productId == productId).firstOrNull;
-
-  IoEndpointProduct? getIoEndpoint(int productId) => ioEndpoints.where((e) => e.productId == productId).firstOrNull;
+  T? _findById<T>(Iterable<T> items, bool Function(T) predicate) {
+    for (final item in items) {
+      if (predicate(item)) return item;
+    }
+    return null;
+  }
 }

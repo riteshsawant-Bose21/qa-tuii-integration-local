@@ -58,7 +58,8 @@ enum fusion_cn_ctrl_cmd {
     FUSION_CN_CTRL_CMD_REMOVE_STREAM,
     FUSION_CN_CTRL_CMD_GET_METRICS,
     FUSION_CN_CTRL_CMD_SET_PHC_ANCHOR,
-    FUSION_CN_CTRL_CMD_GET_PHC_STATUS,
+    FUSION_CN_CTRL_CMD_GET_TIMING_STATUS,
+    FUSION_CN_CTRL_CMD_RESET_TIMING_STATE,
     FUSION_CN_CTRL_CMD_SET_DEBUG,
     FUSION_CN_CTRL_CMD_SET_ETH_IFACE
 };
@@ -104,15 +105,18 @@ struct fusion_cn_metrics_snapshot
     uint64_t packets_lost, packets_reordered, packets_dup;
     uint64_t packets_marked, malformed_count;
     uint64_t late_drop_count;
+    uint64_t rx_queue_drop_count;
     uint64_t burst_loss_max;
 
     uint32_t rfc3550_jitter_ns;
     uint32_t iat_min_ns, iat_p50_ns, iat_p99_ns;
+    uint32_t batch_max;
 
     uint32_t jb_depth_cur_samples, jb_depth_min_samples, jb_depth_max_samples, jb_depth_avg_samples;
     uint32_t resync_count;
 
-    uint32_t path_latency_est_ns, e2e_playout_latency_ns;
+    uint32_t path_latency_est_ns, path_latency_min_ns, path_latency_max_ns;
+    uint32_t path_latency_p50_ns, path_latency_p99_ns;
 
     /* TX */
     uint64_t tx_packets_total;
@@ -122,6 +126,7 @@ struct fusion_cn_metrics_snapshot
     uint32_t tx_iat_p50_ns;
     uint32_t tx_iat_p99_ns;
     uint32_t tx_sched_err_abs_p50_ns;
+    uint32_t tx_sched_err_abs_max_ns;
 } __attribute__((packed));
 
 struct fusion_cn_metrics_record {
@@ -137,8 +142,9 @@ struct fusion_cn_metrics_record {
 #define FD_TO_CLOCKID(fd) ((clockid_t)((((unsigned int)~(fd)) << 3) | CLOCKFD))
 #endif
 
-struct fc_get_phc_status_reply
+struct fc_get_timing_status_reply
 {
+    uint8_t discipline_ready;
     uint8_t epoch_valid;
     uint8_t aligned;
     uint32_t pps_seq;
@@ -462,14 +468,14 @@ static bool nl_set_phc_anchor(NetlinkClient& c, uint64_t phc_ns_at_pps) {
     return reply.err == 0;
 }
 
-static bool nl_set_debug(NetlinkClient& c, bool enable) {
-    fusion_cn_ctrl_msg reply{};
-    uint8_t v = enable ? 1 : 0;
-    if (!c.send_message(FUSION_CN_CTRL_CMD_SET_DEBUG, &v, sizeof(v), &reply)) return false;
-    if (reply.err != 0) SPDLOG_ERROR("SET_DEBUG({}) err={}", (int)enable, reply.err);
-    if (reply.data) free(reply.data);
-    return reply.err == 0;
-}
+// static bool nl_set_debug(NetlinkClient& c, bool enable) {
+//     fusion_cn_ctrl_msg reply{};
+//     uint8_t v = enable ? 1 : 0;
+//     if (!c.send_message(FUSION_CN_CTRL_CMD_SET_DEBUG, &v, sizeof(v), &reply)) return false;
+//     if (reply.err != 0) SPDLOG_ERROR("SET_DEBUG({}) err={}", (int)enable, reply.err);
+//     if (reply.data) free(reply.data);
+//     return reply.err == 0;
+// }
 
 static bool nl_set_eth_iface(NetlinkClient& c, const std::string& iface) {
     fusion_cn_ctrl_msg reply{};
@@ -482,18 +488,18 @@ static bool nl_set_eth_iface(NetlinkClient& c, const std::string& iface) {
     return reply.err == 0;
 }
 
-static bool nl_get_phc_status(NetlinkClient& c, fc_get_phc_status_reply *out)
+static bool nl_get_timing_status(NetlinkClient& c, fc_get_timing_status_reply *out)
 {
     if (!out) return false;
     fusion_cn_ctrl_msg reply{};
-    if (!c.send_message(FUSION_CN_CTRL_CMD_GET_PHC_STATUS, nullptr, 0, &reply)) return false;
+    if (!c.send_message(FUSION_CN_CTRL_CMD_GET_TIMING_STATUS, nullptr, 0, &reply)) return false;
     if (reply.err != 0) {
-        SPDLOG_ERROR("GET_PHC_STATUS err={}", reply.err);
+        SPDLOG_ERROR("GET_TIMING_STATUS err={}", reply.err);
         if (reply.data) free(reply.data);
         return false;
     }
     if (reply.data_size != sizeof(*out) || !reply.data) {
-        SPDLOG_ERROR("GET_PHC_STATUS bad payload size={} data={}",
+        SPDLOG_ERROR("GET_TIMING_STATUS bad payload size={} data={}",
                      reply.data_size, reply.data ? "present" : "null");
         if (reply.data) free(reply.data);
         return false;
@@ -501,6 +507,19 @@ static bool nl_get_phc_status(NetlinkClient& c, fc_get_phc_status_reply *out)
     memcpy(out, reply.data, sizeof(*out));
     if (reply.data) free(reply.data);
     return true;
+}
+
+static bool nl_reset_timing_state(NetlinkClient& c)
+{
+    fusion_cn_ctrl_msg reply{};
+    if (!c.send_message(FUSION_CN_CTRL_CMD_RESET_TIMING_STATE, nullptr, 0, &reply)) {
+        return false;
+    }
+    if (reply.err != 0) {
+        SPDLOG_ERROR("RESET_TIMING_STATE err={}", reply.err);
+    }
+    if (reply.data) free(reply.data);
+    return reply.err == 0;
 }
 
 static bool read_phc_ns(uint64_t *out_ns)
@@ -620,57 +639,6 @@ size_t curl_write_callback(void* contents, size_t size, size_t nmemb, std::strin
     return total_size;
 }
 
-// Fetch device name and system IP via curl
-std::string get_device_id(std::string& system_ip) {
-    if (system_ip.empty()) {
-        SPDLOG_ERROR("System IP is not set");
-        return "";
-    }
-
-    CURL* curl = curl_easy_init();
-    if (!curl) {
-        SPDLOG_ERROR("Failed to initialize curl");
-        return "";
-    }
-
-    std::string url = "http://" + system_ip + ":9090/device";
-    std::string response;
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_callback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-
-    CURLcode res = curl_easy_perform(curl);
-    if (res != CURLE_OK) {
-        SPDLOG_ERROR("curl request failed for {}: {}", url, curl_easy_strerror(res));
-        curl_easy_cleanup(curl);
-        return "";
-    }
-
-    curl_easy_cleanup(curl);
-
-    // Parse JSON response
-    Json::Value root;
-    Json::Reader reader;
-    if (!reader.parse(response, root)) {
-        SPDLOG_ERROR("Failed to parse device response JSON: {}", response);
-        return "";
-    }
-
-    if (!root.isMember("id") || !root["id"].isString()) {
-        SPDLOG_ERROR("Missing or invalid id in device response");
-        return "";
-    }
-    std::string device_id = root["id"].asString();
-
-    if (!root.isMember("address") || !root["address"].isString()) {
-        SPDLOG_ERROR("Missing or invalid address in device response");
-        return "";
-    }
-    system_ip = root["address"].asString();
-
-    return device_id;
-}
-
 // Query IP address for a device UID via curl
 std::string query_device_ip(const std::string& device_uid, const std::string& system_ip) {
     if (system_ip.empty()) {
@@ -741,12 +709,11 @@ private:
     bool debug_enabled;
     bool debug_sent;
     bool iface_sent;
-    bool phc_anchor_logged;
+    bool gpt_discipline_ready_logged;
     SAPAnnouncer sap_announcer;
 
     std::string audio_streams_update;
-    bool audio_update_pending;
-    std::chrono::steady_clock::time_point audio_update_last_retry;
+    bool audio_streams_update_pending;
     bool ptp_sync_good;
     bool ptp_anchor_pending;
     int ptp_good_streak;
@@ -759,6 +726,7 @@ private:
     std::chrono::steady_clock::time_point ptp_state_since;
     std::chrono::steady_clock::time_point ptp_last_anchor;
     std::chrono::steady_clock::time_point ptp_last_status_poll;
+    std::chrono::steady_clock::time_point audio_update_last_retry;
     std::chrono::steady_clock::time_point mgr_last_start_attempt;
     int mgr_start_failures;
     enum class PtpState { RESET, WAIT_GM, WAIT_LOCK, SYNCED };
@@ -768,12 +736,13 @@ private:
     int create_stream(fusion_cn_stream_config& config);
     int remove_stream(uint64_t stream_handle);
     void join_multicast_group(uint32_t multicast_ip);
+    bool process_audio_streams_update();
     void audio_streams_update_func();
-    bool process_audio_streams_update(bool is_retry);
     void maybe_retry_audio_streams_update();
     void maybe_start_manager();
-    void maybe_set_debug();
     void update_ptp_state();
+    void start_timing_session();
+    void reset_timing_session(const char *reason);
     void maybe_set_phc_anchor();
 
     MODULE_DECLARE(FusionConnectClient);
@@ -784,9 +753,10 @@ MODULE_REGISTER(FusionConnectClient, "fusion_connect_client");
 FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &configuration)
     : bosepro::Module(configuration), mgr_started(false), device_id(""),
       enet_iface("lan1"), period_ms(1000), debug_enabled(false),
-      debug_sent(false), iface_sent(false), phc_anchor_logged(false), sap_announcer(""),
-      audio_update_pending(false),
-      ptp_sync_good(false), ptp_anchor_pending(true), ptp_good_streak(0),
+      debug_sent(false), iface_sent(false),
+      gpt_discipline_ready_logged(false), sap_announcer(""),
+      audio_streams_update_pending(false),
+      ptp_sync_good(false), ptp_anchor_pending(false), ptp_good_streak(0),
       ptp_bad_streak(0), ptp_role_flag(-1), ptp_false_streak(0), mgr_start_failures(0),
       ptp_state(PtpState::RESET) {
     system_ip = "";
@@ -808,6 +778,7 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
 
     assign_parameter("audio_streams_update", &audio_streams_update, 
                      POST_FUNCTION_SCALAR(audio_streams_update_func));
+    assign_parameter("device_id", &device_id);
 
     ptp_last_poll = std::chrono::steady_clock::now();
     ptp_last_role_probe = ptp_last_poll;
@@ -815,8 +786,8 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
     ptp_state_since = ptp_last_poll;
     ptp_last_anchor = ptp_last_poll - std::chrono::seconds(60);
     ptp_last_status_poll = ptp_last_poll - std::chrono::seconds(1);
-    mgr_last_start_attempt = ptp_last_poll - std::chrono::seconds(2);
     audio_update_last_retry = ptp_last_poll - std::chrono::seconds(1);
+    mgr_last_start_attempt = ptp_last_poll - std::chrono::seconds(2);
 }
 
 static bool is_source_stream_by_name(const char *name) {
@@ -949,35 +920,29 @@ void FusionConnectClient::join_multicast_group(uint32_t multicast_ip) {
     SPDLOG_INFO("Successfully joined multicast group {} on interface {}", ip_to_string(multicast_ip), enet_iface);
 }
 
-bool FusionConnectClient::process_audio_streams_update(bool is_retry) {
+bool FusionConnectClient::process_audio_streams_update() {
     if (audio_streams_update.empty()) {
         SPDLOG_DEBUG("audio_streams_update is empty, exiting");
-        return true;
+        return false;
     }
 
-    if (!is_retry) {
-        SPDLOG_DEBUG("Received audio_streams_update: {}", audio_streams_update);
-    }
+    SPDLOG_DEBUG("Received audio_streams_update: {}", audio_streams_update);
 
     // --- Crucial pre-reqs -----------------------------------------------------
     if (system_ip.empty()) {
-        if (!is_retry) SPDLOG_ERROR("Cannot process audio_streams_update: no system IP yet");
+        SPDLOG_ERROR("Cannot process audio_streams_update: no system IP yet");
         return false;
     }
     if (device_id.empty()) {
-        device_id = get_device_id(system_ip);
-        if (device_id.empty()) {
-            if (!is_retry) SPDLOG_ERROR("Failed to get device_id after audio_streams update!");
-            return false;
-        }
-        SPDLOG_INFO("Initialized device_id: {}, system_ip: {}", device_id, system_ip);
+        SPDLOG_ERROR("Cannot process audio_streams_update: no device ID yet");
+        return false;
     }
 
     Json::Value root;
     Json::Reader reader;
     if (!reader.parse(audio_streams_update, root) || !root.isArray()) {
         SPDLOG_ERROR("Failed to parse audio_streams_update JSON or not an array: {}", audio_streams_update);
-        return true;
+        return false;
     }
 
     auto ip_to_be32 = [](const std::string& s) -> uint32_t {
@@ -988,10 +953,11 @@ bool FusionConnectClient::process_audio_streams_update(bool is_retry) {
     auto local_ip_be = ip_to_be32(system_ip);
     if (local_ip_be == INADDR_NONE || local_ip_be == 0) {
         SPDLOG_ERROR("Invalid system_ip '{}'", system_ip);
-        return true;
+        return false;
     }
 
     std::set<std::string> json_stream_names;
+    bool needs_retry = false;
 
     // --- Process each stream ---------------------------------------------------
     for (const auto& stream : root) {
@@ -1047,12 +1013,13 @@ bool FusionConnectClient::process_audio_streams_update(bool is_retry) {
 
         // Common defaults for both FC and AES67
         fusion_cn_stream_config config = {};
+        bool has_explicit_playout_delay = false;
         config.channels           = ch;
         config.sample_rate        = 48000;
         config.frames_per_packet  = 48;
         config.dest_port          = 5004;     // AES67 default; FC uses same
         config.source_port        = 49152;    // sensible default; FC overrides
-        config.playout_delay      = 1000000;
+        config.playout_delay      = 0;
         config.timestamp_offset   = 0;
         config.payload_type       = is_fusion_connect ? 100 : 97;
         config.format             = is_fusion_connect ? 15/*FLOAT_BE*/ : 33/*S24_3BE*/;
@@ -1067,8 +1034,10 @@ bool FusionConnectClient::process_audio_streams_update(bool is_retry) {
             unsigned pt = properties["payload_type"].asUInt();
             if (pt >= 96 && pt <= 127) config.payload_type = pt;
         }
-        if (properties.isMember("playout_delay") && properties["playout_delay"].isUInt())
+        if (properties.isMember("playout_delay") && properties["playout_delay"].isUInt()) {
             config.playout_delay = properties["playout_delay"].asUInt();
+            has_explicit_playout_delay = true;
+        }
         if (properties.isMember("timestamp_offset") && properties["timestamp_offset"].isUInt())
             config.timestamp_offset = properties["timestamp_offset"].asUInt();
         if (properties.isMember("frames_per_packet") && properties["frames_per_packet"].isUInt())
@@ -1092,6 +1061,9 @@ bool FusionConnectClient::process_audio_streams_update(bool is_retry) {
 
             config.frames_per_packet  = 16;
 
+            if (!has_explicit_playout_delay && config.sample_rate != 0)
+                config.playout_delay = static_cast<uint32_t>((5ULL * 1000000000ULL * config.frames_per_packet) / config.sample_rate);
+
             if (create_source) {
                 config.is_source = true;
                 std::snprintf(config.stream_name, sizeof(config.stream_name), "FC_TX_%u", config.source_port);
@@ -1099,16 +1071,12 @@ bool FusionConnectClient::process_audio_streams_update(bool is_retry) {
                 // Role invariants: TX must set source_ip=local, dest_ip=peer
                 config.source_ip = local_ip_be;
 
-                // Resolve peer (dest device) IP (no default to local)
-                uint32_t dest_ip = 0;
-                for (int retry = 0; retry < 100 && (dest_ip == 0 || dest_ip == INADDR_NONE); ++retry) {
-                    dest_ip = ip_to_be32(query_device_ip(dest_device_uid, system_ip));
-                    if (dest_ip == 0 || dest_ip == INADDR_NONE) usleep(500000);
-                }
-                config.dest_ip = dest_ip;
+                // Resolve peer (dest device) IP once; outer audio update retry owns retries.
+                config.dest_ip = ip_to_be32(query_device_ip(dest_device_uid, system_ip));
 
                 if (config.dest_ip == 0 || config.dest_ip == INADDR_NONE) {
                     SPDLOG_ERROR("Failed to resolve destination IP for {}", config.stream_name);
+                    needs_retry = true;
                 } else if (!fusion_connect_stream_map.count(config.stream_name)) {
                     fusion_connect_stream_map[config.stream_name] = config;
                     pending_streams[config.stream_name].state = STREAM_CREATE_PENDING;
@@ -1126,20 +1094,16 @@ bool FusionConnectClient::process_audio_streams_update(bool is_retry) {
                 // Role invariants: RX must set dest_ip=local, source_ip=peer
                 sink_cfg.dest_ip = local_ip_be;
 
-                // Resolve peer (source device) IP (no default to local)
-                uint32_t src_ip = 0;
-                for (int retry = 0; retry < 100 && (src_ip == 0 || src_ip == INADDR_NONE); ++retry) {
-                    src_ip = ip_to_be32(query_device_ip(source_device_uid, system_ip));
-                    if (src_ip == 0 || src_ip == INADDR_NONE) usleep(500000);
-                }
-                sink_cfg.source_ip = src_ip;
+                // Resolve peer (source device) IP once; outer audio update retry owns retries.
+                sink_cfg.source_ip = ip_to_be32(query_device_ip(source_device_uid, system_ip));
 
                 if (sink_cfg.source_ip == 0 || sink_cfg.source_ip == INADDR_NONE) {
                     SPDLOG_ERROR("Failed to resolve source IP for {}", sink_cfg.stream_name);
+                    needs_retry = true;
                 } else if (!fusion_connect_stream_map.count(sink_cfg.stream_name)) {
                     fusion_connect_stream_map[sink_cfg.stream_name] = sink_cfg;
                     pending_streams[sink_cfg.stream_name].state = STREAM_CREATE_PENDING;
-                    pending_streams[config.stream_name].retry_cnt = STREAM_RETRY_CNT;
+                    pending_streams[sink_cfg.stream_name].retry_cnt = STREAM_RETRY_CNT;
                     SPDLOG_DEBUG("Added Fusion Connect sink stream {} to pending", sink_cfg.stream_name);
                     json_stream_names.insert(sink_cfg.stream_name);
                 }
@@ -1154,6 +1118,9 @@ bool FusionConnectClient::process_audio_streams_update(bool is_retry) {
             const std::string pretty = "AES67_" + properties["stream_name"].asString();
             std::strncpy(config.stream_name, pretty.c_str(), sizeof(config.stream_name) - 1);
             config.stream_name[sizeof(config.stream_name) - 1] = '\0';
+
+            if (!has_explicit_playout_delay && config.sample_rate != 0)
+                config.playout_delay = static_cast<uint32_t>((5ULL * 1000000000ULL * config.frames_per_packet) / config.sample_rate);
 
             // role
             const bool is_source = (properties.isMember("is_source") && properties["is_source"].isBool())
@@ -1240,7 +1207,32 @@ bool FusionConnectClient::process_audio_streams_update(bool is_retry) {
             ++it;
         }
     }
+
+    if (needs_retry) {
+        SPDLOG_DEBUG("Deferring audio_streams_update until peer device discovery is available");
+        return false;
+    }
+
     return true;
+}
+
+void FusionConnectClient::audio_streams_update_func() {
+    audio_streams_update_pending = true;
+    if (process_audio_streams_update())
+        audio_streams_update_pending = false;
+}
+
+void FusionConnectClient::maybe_retry_audio_streams_update() {
+    const auto now = std::chrono::steady_clock::now();
+
+    if (!audio_streams_update_pending)
+        return;
+    if (now - audio_update_last_retry < std::chrono::seconds(1))
+        return;
+
+    audio_update_last_retry = now;
+    if (process_audio_streams_update())
+        audio_streams_update_pending = false;
 }
 
 void FusionConnectClient::maybe_start_manager()
@@ -1274,45 +1266,42 @@ void FusionConnectClient::maybe_start_manager()
     }
 
     if (reply.data) free(reply.data);
-    return;
 }
 
-void FusionConnectClient::audio_streams_update_func() {
-    audio_update_pending = true;
-    if (process_audio_streams_update(false)) {
-        audio_update_pending = false;
-    }
-}
-
-void FusionConnectClient::maybe_retry_audio_streams_update() {
-    if (!audio_update_pending) return;
-    if (!device_id.empty()) {
-        audio_update_pending = false;
-        return;
-    }
-    const auto now = std::chrono::steady_clock::now();
-    if (now - audio_update_last_retry < std::chrono::seconds(1)) return;
-    audio_update_last_retry = now;
-    if (process_audio_streams_update(true)) {
-        audio_update_pending = false;
-    }
-}
-
-void FusionConnectClient::maybe_set_debug()
+void FusionConnectClient::reset_timing_session(const char *reason)
 {
-    if (debug_sent) return;
-    if (!nl_set_debug(client, debug_enabled)) {
-        SPDLOG_ERROR("Failed to set debug to {}", debug_enabled ? "true" : "false");
-        return;
+    if (!nl_reset_timing_state(client)) {
+        SPDLOG_WARN("Failed to reset GPT timing state during {}", reason);
     }
-    debug_sent = true;
+    if (!set_pps_enable(false)) {
+        SPDLOG_WARN("Failed to disable PPS during {}", reason);
+    }
+
+    ptp_anchor_pending = false;
+    gpt_discipline_ready_logged = false;
+
+    SPDLOG_INFO("Timing state reset due to {}", reason);
+}
+
+void FusionConnectClient::start_timing_session()
+{
+    if (!nl_reset_timing_state(client)) {
+        SPDLOG_WARN("Failed to reset GPT timing state before enabling PPS");
+    }
+    if (!set_pps_enable(true)) {
+        SPDLOG_WARN("Failed to enable PPS");
+    } else {
+        SPDLOG_INFO("Enabled PHC PPS output; waiting for GPT PPS/disciplined timing");
+    }
+
+    ptp_anchor_pending = true;
+    gpt_discipline_ready_logged = false;
 }
 
 void FusionConnectClient::update_ptp_state()
 {
     constexpr auto GM_WAIT = std::chrono::seconds(25);
     constexpr long long OFFSET_LOCK_NS = 1000; // 1 us lock window
-    constexpr long long OFFSET_REPORT_NS = 1000; // report above 1 us
     constexpr long long OFFSET_LOSS_NS = 10000; // 10 us loss threshold
     constexpr int LOCK_CONSEC = 3;
     constexpr int LOSS_CONSEC = 3;
@@ -1338,26 +1327,13 @@ void FusionConnectClient::update_ptp_state()
         return;
     }
 
-    auto disable_ptp = [&]() {
-        nl_set_phc_anchor(client, 0);
-        if (!set_pps_enable(false)) {
-            SPDLOG_WARN("Failed to disable PPS");
-        }
-    };
-
-    auto enable_ptp = [&]() {
-        if (!set_pps_enable(false) || !set_pps_enable(true)) {
-            SPDLOG_WARN("Failed to re-arm PPS");
-        }
-    };
-
     if (ptp_state == PtpState::RESET) {
         ptp_sync_good = false;
         ptp_good_streak = 0;
         ptp_bad_streak = 0;
-        ptp_anchor_pending = true;
+        ptp_anchor_pending = false;
         ptp_role_flag = -1;
-        disable_ptp();
+        reset_timing_session("reset state");
         ptp_state = PtpState::WAIT_GM;
         ptp_state_since = now;
         SPDLOG_INFO("PTP reset; entering GM detection window");
@@ -1372,7 +1348,7 @@ void FusionConnectClient::update_ptp_state()
                 ptp_sync_good = false;
                 ptp_good_streak = 0;
                 ptp_bad_streak = 0;
-                ptp_anchor_pending = true;
+                ptp_anchor_pending = false;
                 ptp_state = PtpState::WAIT_LOCK;
                 ptp_state_since = now;
                 SPDLOG_INFO("GM detected; waiting for lock");
@@ -1381,11 +1357,11 @@ void FusionConnectClient::update_ptp_state()
                 ptp_sync_good = true;
                 ptp_good_streak = 0;
                 ptp_bad_streak = 0;
-                ptp_anchor_pending = true;
+                ptp_anchor_pending = false;
                 ptp_state = PtpState::SYNCED;
                 ptp_state_since = now;
                 SPDLOG_INFO("No GM after {}s; assuming GM role", GM_WAIT.count());
-                enable_ptp();
+                start_timing_session();
             }
             break;
 
@@ -1395,18 +1371,15 @@ void FusionConnectClient::update_ptp_state()
                 ptp_sync_good = false;
                 ptp_good_streak = 0;
                 ptp_bad_streak = 0;
-                ptp_anchor_pending = true;
+                ptp_anchor_pending = false;
                 ptp_state = PtpState::WAIT_GM;
                 ptp_state_since = now;
                 SPDLOG_INFO("GM lost before lock; restarting GM detection");
-                disable_ptp();
+                reset_timing_session("GM lost before lock");
                 break;
             }
             if (master_offset_valid) {
                 long long best_abs = master_offset ? std::llabs(master_offset) : 0;
-                if (best_abs > OFFSET_REPORT_NS) {
-                    SPDLOG_WARN("PTP offset {} ns exceeds {} ns", master_offset, OFFSET_REPORT_NS);
-                }
                 if (best_abs <= OFFSET_LOCK_NS) {
                     ptp_good_streak++;
                 } else {
@@ -1415,11 +1388,10 @@ void FusionConnectClient::update_ptp_state()
                 if (ptp_good_streak >= LOCK_CONSEC) {
                     ptp_sync_good = true;
                     ptp_bad_streak = 0;
-                    ptp_anchor_pending = true;
+                    ptp_anchor_pending = false;
                     ptp_state = PtpState::SYNCED;
                     ptp_state_since = now;
-                    SPDLOG_INFO("PTP lock achieved; enabling PPS");
-                    enable_ptp();
+                    start_timing_session();
                 }
             } else {
                 ptp_good_streak = 0;
@@ -1433,11 +1405,11 @@ void FusionConnectClient::update_ptp_state()
                     ptp_sync_good = false;
                     ptp_good_streak = 0;
                     ptp_bad_streak = 0;
-                    ptp_anchor_pending = true;
+                    ptp_anchor_pending = false;
                     ptp_state = PtpState::WAIT_LOCK;
                     ptp_state_since = now;
                     SPDLOG_INFO("GM appeared; switching to follower and waiting for lock");
-                    disable_ptp();
+                    reset_timing_session("role transition to follower");
                 }
                 break;
             }
@@ -1446,30 +1418,30 @@ void FusionConnectClient::update_ptp_state()
                 ptp_state = PtpState::RESET;
                 ptp_state_since = now;
                 SPDLOG_WARN("GM lost; resetting PTP state");
-                disable_ptp();
+                reset_timing_session("GM lost");
                 break;
             }
 
             if (master_offset_valid) {
                 long long best_abs = master_offset ? std::llabs(master_offset) : 0;
-                if (best_abs > OFFSET_REPORT_NS) {
-                    SPDLOG_WARN("PTP offset {} ns exceeds {} ns", master_offset, OFFSET_REPORT_NS);
-                }
                 if (best_abs > OFFSET_LOSS_NS) {
                     ptp_bad_streak++;
+                    if (ptp_bad_streak >= LOSS_CONSEC) {
+                        if (ptp_sync_good) {
+                            SPDLOG_WARN("PTP sync degraded ({}x > {} ns); keeping timing session active",
+                                        LOSS_CONSEC, OFFSET_LOSS_NS);
+                        } else {
+                            SPDLOG_WARN("PTP still out of sync: offset={} ns streak={} (keeping timing session active)",
+                                        master_offset, ptp_bad_streak);
+                        }
+                        ptp_sync_good = false;
+                    }
                 } else {
+                    if (!ptp_sync_good && ptp_bad_streak >= LOSS_CONSEC) {
+                        SPDLOG_INFO("PTP sync recovered; resuming in-sync state");
+                    }
                     ptp_bad_streak = 0;
-                }
-                if (ptp_bad_streak >= LOSS_CONSEC) {
-                    ptp_state = PtpState::RESET;
-                    ptp_state_since = now;
-                    ptp_sync_good = false;
-                    ptp_good_streak = 0;
-                    ptp_bad_streak = 0;
-                    ptp_anchor_pending = true;
-                    SPDLOG_WARN("PTP sync lost ({}x > {} ns); resetting",
-                                LOSS_CONSEC, OFFSET_LOSS_NS);
-                    disable_ptp();
+                    ptp_sync_good = true;
                 }
             } else {
                 ptp_bad_streak = 0;
@@ -1502,22 +1474,27 @@ void FusionConnectClient::maybe_set_phc_anchor()
 {
     constexpr uint64_t ONE_SEC_NS = 1000000000ULL;
     constexpr uint64_t MIN_LEAD_NS = 500000000ULL; // 500 ms
-    constexpr auto MIN_ANCHOR_INTERVAL = std::chrono::seconds(5);
     if (!ptp_sync_good) return;
 
-    const auto now = std::chrono::steady_clock::now();
+    fc_get_timing_status_reply st{};
+    if (!nl_get_timing_status(client, &st)) return;
+
+    if (st.discipline_ready && !gpt_discipline_ready_logged) {
+        const uint32_t pps_seq = st.pps_seq;
+        SPDLOG_INFO("GPT timing reports discipline ready (pps_seq={})", pps_seq);
+        gpt_discipline_ready_logged = true;
+    }
+
+    if (!st.discipline_ready) {
+        return;
+    }
+
+    if (st.epoch_valid) {
+        ptp_anchor_pending = false;
+        return;
+    }
 
     if (!ptp_anchor_pending) return;
-    if (now - ptp_last_anchor < MIN_ANCHOR_INTERVAL) return;
-
-    fc_get_phc_status_reply st{};
-    if (nl_get_phc_status(client, &st)) {
-        if (st.epoch_valid) {
-            ptp_anchor_pending = false;
-            SPDLOG_DEBUG("PHC anchor already valid (aligned={}); skipping re-arm", st.aligned);
-            return;
-        }
-    }
 
     uint64_t phc_ns = 0;
     if (!read_phc_ns(&phc_ns)) return;
@@ -1530,14 +1507,9 @@ void FusionConnectClient::maybe_set_phc_anchor()
     }
 
     if (nl_set_phc_anchor(client, next_pps_ns)) {
-        ptp_last_anchor = now;
         ptp_anchor_pending = false;
-        if (!phc_anchor_logged) {
-            SPDLOG_INFO("Set PHC anchor for next PPS at {} ns (lead {} ns)", next_pps_ns, delta);
-            phc_anchor_logged = true;
-        } else if (debug_enabled) {
-            SPDLOG_DEBUG("Set PHC anchor for next PPS at {} ns (lead {} ns)", next_pps_ns, delta);
-        }
+        ptp_last_anchor = std::chrono::steady_clock::now();
+        SPDLOG_INFO("Armed PHC anchor for next PPS at {} ns (lead {} ns)", next_pps_ns, delta);
     }
 }
 
@@ -1554,8 +1526,8 @@ void FusionConnectClient::process() {
         if (!mgr_started) return;
     }
 
-    maybe_set_debug();
     maybe_retry_audio_streams_update();
+
     update_ptp_state();
     maybe_set_phc_anchor();
     
@@ -1651,31 +1623,33 @@ void FusionConnectClient::process() {
                         "nmetrics TX stream={}: ts={} "
                         "pkts={} bytes={} "
                         "iat_min={}us p50={}us p99={}us "
-                        "sched_err_p50={}us ",
+                        "sched_err_p50={}us max={}us ",
                         r.stream_name, s.ts_snapshot_ns,
                         s.tx_packets_total, s.tx_bytes_total,
                         s.tx_iat_min_ns / 1000,
                         s.tx_iat_p50_ns / 1000,
                         s.tx_iat_p99_ns / 1000,
-                        s.tx_sched_err_abs_p50_ns / 1000
+                        s.tx_sched_err_abs_p50_ns / 1000,
+                        s.tx_sched_err_abs_max_ns / 1000
                     );
                 } else {
                     // RX
                     SPDLOG_DEBUG(
                         "metrics RX stream={}: ts={} "
-                        "pkts={} bytes={} lost={} reo={} dup={} malf={} late_drop={} burst_max={} "
+                        "pkts={} bytes={} lost={} reo={} dup={} malf={} late_drop={} rxq_drop={} burst_max={} batch_max={} "
                         "iat_min={}us p50={}us p99={}us jitter={}us "
                         "jb: cur={} min={} max={} avg={} "
-                        "lat: path={}ns e2e_playout={}ns ",
+                        "lat: path={}ns min={}ns max={}ns p50={}ns p99={}ns ",
                         r.stream_name, s.ts_snapshot_ns,
                         s.packets_total, s.bytes_total,
                         s.packets_lost, s.packets_reordered,
                         s.packets_dup, s.malformed_count, 
-                        s.late_drop_count, s.burst_loss_max,
+                        s.late_drop_count, s.rx_queue_drop_count, s.burst_loss_max, s.batch_max,
                         s.iat_min_ns / 1000, s.iat_p50_ns / 1000, s.iat_p99_ns / 1000, s.rfc3550_jitter_ns / 1000,
                         s.jb_depth_cur_samples, s.jb_depth_min_samples,
                         s.jb_depth_max_samples, s.jb_depth_avg_samples,
-                        s.path_latency_est_ns, s.e2e_playout_latency_ns
+                        s.path_latency_est_ns, s.path_latency_min_ns, s.path_latency_max_ns,
+                        s.path_latency_p50_ns, s.path_latency_p99_ns
                     );
                 }
             }

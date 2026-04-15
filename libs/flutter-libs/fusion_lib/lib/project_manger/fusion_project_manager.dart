@@ -10,6 +10,10 @@ export 'floor/floor_manager.dart';
 export 'hardware/hardware_service.dart';
 export 'hardware/hardware_manager.dart';
 
+// controller (FusionController-specific layer — mirrors message_player pattern)
+export 'controller/controller_service.dart';
+export 'controller/controller_manager.dart';
+
 //Listening Area
 export 'listening_area/listening_area_service.dart';
 export 'listening_area/listening_area_manager.dart';
@@ -87,3 +91,11 @@ export 'media_files/media_file_service.dart';
 //message player
 export 'message_player/message_player_manager.dart';
 export 'message_player/message_player_service.dart';
+
+//aes67
+export 'aes67/aes67_manager.dart';
+export 'aes67/aes67_service.dart';
+
+// AES67
+export 'aes67/aes67_manager.dart';
+export 'aes67/aes67_service.dart';

@@ -1,16 +1,25 @@
 package pubsub
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/cluster/transport"
 	"fusion/internal/persistence"
+	"sync"
 )
 
 type Broadcaster interface {
 	BroadcastMessage(msg *api.NotifyMessage) error
+}
+
+// ClusterObserverBroadcaster is implemented by observer transports that
+// should receive events originating from another cluster node.
+// WebSockets should receive these updates; local-only transports such as UDP should not.
+type ClusterObserverBroadcaster interface {
+	BroadcastToClusterObservers(msg *api.NotifyMessage) error
 }
 
 type LocalBroadcaster func(*api.NotifyMessage)
@@ -20,12 +29,19 @@ type Hub struct {
 	stateManager *persistence.StateManager
 	persistence  *persistence.Persistence
 	transport    transport.ClusterInterface
+
+	// SWUpdate progress monitoring
+	swUpdateMutex    sync.RWMutex
+	swUpdateActive   bool
+	swUpdateCancel   context.CancelFunc
+	swUpdateProgress map[string]*api.SoftwareUpdateProgress // node_name -> latest progress
 }
 
 func NewHub(stateManager *persistence.StateManager, persistence *persistence.Persistence) *Hub {
 	return &Hub{
-		stateManager: stateManager,
-		persistence:  persistence,
+		stateManager:     stateManager,
+		persistence:      persistence,
+		swUpdateProgress: make(map[string]*api.SoftwareUpdateProgress),
 	}
 }
 
@@ -43,6 +59,18 @@ func (h *Hub) BroadcastToObservers(msg *api.NotifyMessage) {
 	for _, bc := range h.broadcasters {
 		if err := bc.BroadcastMessage(msg); err != nil {
 			logging.GetLogger().Error("local broadcast failed: %v", err)
+		}
+	}
+}
+
+func (h *Hub) BroadcastToClusterObservers(msg *api.NotifyMessage) {
+	for _, bc := range h.broadcasters {
+		clusterBroadcaster, ok := bc.(ClusterObserverBroadcaster)
+		if !ok {
+			continue
+		}
+		if err := clusterBroadcaster.BroadcastToClusterObservers(msg); err != nil {
+			logging.GetLogger().Error("cluster observer broadcast failed: %v", err)
 		}
 	}
 }
@@ -109,7 +137,7 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 
 		h.persistence.MarkDirty()
 
-	case api.NotifyOpSnapActivate:
+	case api.NotifyOpTimeMachineActivate:
 		if message.SnapshotOperation == nil || message.SnapshotOperation.Name == "" {
 			return fmt.Errorf("SnapshotOperation with valid name required for snap activate")
 		}
@@ -124,25 +152,105 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 			return fmt.Errorf("error activating snapshot: %v", err)
 		}
 
-	case api.NotifyOpSnapCreate:
+	case api.NotifyOpTimeMachineCreate:
 		if err := h.persistence.CreateSnapshot(message.SnapshotOperation.Name); err != nil {
 			return fmt.Errorf("error creating snapshot: %v", err)
 		}
 
-	case api.NotifyOpSnapSave:
+	case api.NotifyOpTimeMachineSave:
 		if err := h.persistence.SaveSnapshot(message.SnapshotOperation.Name); err != nil {
 			logger.Error("Error saving snapshot: %v", err)
 		}
 
-	case api.NotifyOpSnapDelete:
+	case api.NotifyOpTimeMachineDelete:
 		if err := h.persistence.DeleteSnapshot(message.SnapshotOperation.Name); err != nil {
 			return fmt.Errorf("error deleting snapshot: %v", err)
+		}
+
+	case api.NotifyOpSnapshotDefsUpsert:
+		if len(message.SnapshotDefinitions) == 0 {
+			return fmt.Errorf("SnapshotDefinitions required for operation")
+		}
+		if h.transport == nil || h.transport.LocalNode() == nil {
+			return fmt.Errorf("cluster transport not configured")
+		}
+		if message.Node != h.transport.LocalNode().Name {
+			if err := h.persistence.UpsertSnapshotDefinitions(message.SnapshotDefinitions); err != nil {
+				return fmt.Errorf("error upserting snapshot definitions: %v", err)
+			}
+		}
+
+	case api.NotifyOpSceneSetsUpsert:
+		if len(message.SceneSets) == 0 {
+			return fmt.Errorf("SceneSets required for operation")
+		}
+		if h.transport == nil || h.transport.LocalNode() == nil {
+			return fmt.Errorf("cluster transport not configured")
+		}
+		if message.Node != h.transport.LocalNode().Name {
+			if err := h.persistence.UpsertSceneSets(message.SceneSets); err != nil {
+				return fmt.Errorf("error upserting scene sets: %v", err)
+			}
+		}
+
+	case api.NotifyOpSnapshotV2Activate:
+		if message.SnapshotActivation == nil {
+			return fmt.Errorf("SnapshotActivation required for operation")
+		}
+
+	case api.NotifyOpSceneActivate:
+		if message.SceneActivation == nil {
+			return fmt.Errorf("SceneActivation required for operation")
+		}
+		if h.transport == nil || h.transport.LocalNode() == nil {
+			return fmt.Errorf("cluster transport not configured")
+		}
+		if message.Node != h.transport.LocalNode().Name {
+			if err := h.persistence.SetCurrentScene(message.SceneActivation.SetID, message.SceneActivation.SceneID); err != nil {
+				return fmt.Errorf("error setting current scene: %v", err)
+			}
 		}
 
 	case api.NotifyOpDeviceUpdate:
 		if message.DeviceInfo == nil {
 			return fmt.Errorf("DeviceInfo required for operation")
 		}
+
+	case api.NotifyOpSoftwareUpdate:
+		logger.Info("[Hub] Broadcasting software update trigger")
+		// Primary starts follower orchestration: broadcast to followers first,
+		// wait for all followers to reach DONE, then start self-update.
+		if h.transport != nil && h.transport.LocalNode() != nil && message.Node == h.transport.LocalNode().Name {
+			h.startFollowerOrchestration()
+		}
+
+	case api.NotifyOpSoftwareUpdateProgress:
+		if message.SoftwareUpdateProgress == nil {
+			return fmt.Errorf("SoftwareUpdateProgress required for progress operation")
+		}
+		logger.Debug("[Hub] Processing software update progress from %s: %s %d%% (step %d/%d)",
+			message.SoftwareUpdateProgress.NodeName,
+			message.SoftwareUpdateProgress.Status,
+			message.SoftwareUpdateProgress.CurPercent,
+			message.SoftwareUpdateProgress.CurStep,
+			message.SoftwareUpdateProgress.NSteps)
+
+		// Store progress; aggregation is attached after gossip fanout (see below)
+		h.updateSWProgress(message.SoftwareUpdateProgress)
+
+	case api.NotifyOpSoftwareUpdateAvailable:
+		if message.SoftwareUpdate == nil {
+			return fmt.Errorf("SoftwareUpdate required for SoftwareUpdate available operation")
+		}
+		logger.Info("[Hub] Broadcasting SoftwareUpdate availability: %s (%d bytes) from %s",
+			message.SoftwareUpdate.Filename, message.SoftwareUpdate.SizeBytes, message.SoftwareUpdate.SourceIP)
+
+	case api.NotifyOpSoftwareUpdateSyncAck:
+		if message.SoftwareUpdateAck == nil {
+			return fmt.Errorf("SoftwareUpdateAck required for SoftwareUpdate sync acknowledgment operation")
+		}
+		logger.Info("[Hub] Broadcasting SoftwareUpdate sync acknowledgment: %s (success: %v, sync ID: %s)",
+			message.SoftwareUpdateAck.Filename, message.SoftwareUpdateAck.Success, message.SoftwareUpdateAck.SyncID)
 
 	default:
 		return fmt.Errorf("unknown operation type: %s", message.Operation)
@@ -161,7 +269,16 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 		if err != nil {
 			return fmt.Errorf("failed to marshal update: %w", err)
 		}
-		h.broadcastToNodes(data)
+		// Primary never triggers itself via gossip for software updates.
+		// The orchestration goroutine (waitForFollowersThenUpdateSelf) starts
+		// the primary's own update after all followers have reached DONE.
+		h.broadcastToNodes(data, false)
+	}
+
+	// Attach the aggregated progress map only for local WebSocket delivery.
+	// This is done after gossiping so the cluster payload stays lean (single-node only).
+	if message.Operation == api.NotifyOpSoftwareUpdateProgress {
+		message.SoftwareUpdateProgressAll = h.getAggregatedProgress()
 	}
 
 	h.BroadcastToObservers(message)
@@ -169,7 +286,7 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 	return nil
 }
 
-func (h *Hub) broadcastToNodes(message []byte) {
+func (h *Hub) broadcastToNodes(message []byte, includeLocalNode bool) {
 	logger := logging.GetLogger()
 
 	if h.transport == nil || h.transport.LocalNode() == nil {
@@ -178,13 +295,20 @@ func (h *Hub) broadcastToNodes(message []byte) {
 	}
 
 	localName := h.transport.LocalNode().Name
+	members := h.transport.MemberListMembers()
 
-	for _, node := range h.transport.MemberListMembers() {
-		if node.Name == localName {
+	logger.Debug("[Hub] Broadcasting gossip to %d cluster members from %s", len(members), localName)
+
+	for _, node := range members {
+		// Skip local node unless explicitly requested to include it
+		if !includeLocalNode && node.Name == localName {
 			continue
 		}
+		logger.Debug("[Hub] Sending gossip message to node %s", node.Name)
 		if err := h.transport.SendReliable(node, message); err != nil {
 			logger.Error("Failed to send message to node %s: %v", node.Name, err)
+		} else {
+			logger.Debug("[Hub] Successfully sent gossip message to node %s", node.Name)
 		}
 	}
 }

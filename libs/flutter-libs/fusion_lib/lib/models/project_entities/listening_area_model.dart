@@ -268,6 +268,21 @@ extension ListExtension<T> on List<T> {
     return null;
   }
 
+  // single where or null
+  T? singleWhereOrNull(bool Function(T element) test) {
+    T? result;
+    for (final T element in this) {
+      if (test(element)) {
+        if (result != null) {
+          // More than one match
+          return null;
+        }
+        result = element;
+      }
+    }
+    return result;
+  }
+
   T? elementAtOrNull(int index) {
     if (index < 0 || index >= length) return null;
     return this[index];
