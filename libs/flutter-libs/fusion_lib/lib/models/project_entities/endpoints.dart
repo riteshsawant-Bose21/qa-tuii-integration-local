@@ -103,7 +103,7 @@ class FusionEndpoints extends HardwareComponent {
       name: json['name'] as String,
       ipAddress: json['ipAddress'] as String,
       sku: json['sku'] as String,
-      image: json['image'] as String,
+      image: json['image'] ?? json["assetImagePath"] ?? "",
       price: (json['price'] as num).toDouble(),
       hardwareName: json['hardwareName'] as String?,
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),

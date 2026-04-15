@@ -126,7 +126,7 @@ class PEQController {
       valueHandler.addProperty(PropertySetting(name: 'frequency', value: bandData.frequency, dimension: newBandIndex));
       valueHandler.addProperty(PropertySetting(name: 'gain', value: bandData.gain, dimension: newBandIndex));
       valueHandler.addProperty(PropertySetting(name: 'q', value: bandData.q, dimension: newBandIndex));
-      valueHandler.addProperty(PropertySetting(name: 'bypass', value: bandData.bypass, dimension: newBandIndex));
+      valueHandler.addProperty(PropertySetting(name: 'band_enable', value: bandData.bypass, dimension: newBandIndex));
     }
   }
 
@@ -196,7 +196,7 @@ class PEQController {
       final num frequency = bandProperties.firstWhereOrNull((PropertySetting e) => e.name == 'frequency')?.value ?? 1000;
       final num q = bandProperties.firstWhereOrNull((PropertySetting e) => e.name == 'q')?.value ?? 1.0;
       final num gain = bandProperties.firstWhereOrNull((PropertySetting e) => e.name == 'gain')?.value ?? 0.0;
-      final bool bypass = bandProperties.firstWhereOrNull((PropertySetting e) => e.name == 'bypass')?.value ?? false;
+      final bool bypass = bandProperties.firstWhereOrNull((PropertySetting e) => e.name == 'band_enable')?.value ?? false;
 
       tableData.add(_PEQDataPoint(type: type, frequency: frequency, q: q, gain: gain, bypass: bypass));
     }
@@ -255,7 +255,7 @@ class PEQController {
   void updateBypass(int index, bool value) {
     final int bandIndex = bands[index];
 
-    valueHandler.updateValue(field: 'bypass', dimension: bandIndex, value: value);
+    valueHandler.updateValue(field: 'band_enable', dimension: bandIndex, value: value);
   }
 
   num roundTo2Digits(num value) {
@@ -268,7 +268,7 @@ class PEQController {
       valueHandler.updateValue(field: 'frequency', dimension: bandIndex, value: 1000.0);
       valueHandler.updateValue(field: 'gain', dimension: bandIndex, value: 0.0);
       valueHandler.updateValue(field: 'q', dimension: bandIndex, value: 1.0);
-      valueHandler.updateValue(field: 'bypass', dimension: bandIndex, value: false);
+      valueHandler.updateValue(field: 'band_enable', dimension: bandIndex, value: false);
     }
   }
 

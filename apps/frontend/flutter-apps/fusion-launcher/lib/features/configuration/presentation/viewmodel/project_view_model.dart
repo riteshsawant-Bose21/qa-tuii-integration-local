@@ -329,6 +329,10 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     return projectManager.getAllProcessingBlockData();
   }
 
+  WallControllerConfig get wallControllerConfig {
+    return projectManager.getWallControllerConfig();
+  }
+
   /// Clears the current project selection.
   void closeProject() {
     if (state is ProjectLoaded) {

@@ -813,6 +813,7 @@ extension HardwareViewModel on ProjectViewModel {
           SourceConnectionType.hdmi => PortType.hdmiOut,
           SourceConnectionType.rca => PortType.rcaOutput,
           SourceConnectionType.endpoint => PortType.endpointOutput,
+          SourceConnectionType.messagePlayer => PortType.messagePlayer,
         };
         return Source(
           locationEntity: locationEntity,
