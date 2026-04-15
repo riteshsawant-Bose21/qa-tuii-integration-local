@@ -101,8 +101,18 @@ runs:
           --app-id "$AMPLIFY_APP_ID" \
           --branch-name develop \
           --region "$AWS_DEFAULT_REGION" \
-          --query '[jobSummary.jobId, zipUploadUrl]' \
+          --query '[jobId, zipUploadUrl]' \
           --output text)"
+
+        if [[ -z "${JOB_ID:-}" || "$JOB_ID" == "None" || ! "$JOB_ID" =~ ^[0-9]+$ ]]; then
+          echo "Invalid Amplify job id returned from create-deployment: '${JOB_ID:-<empty>}'"
+          exit 1
+        fi
+
+        if [[ -z "${ZIP_UPLOAD_URL:-}" || "$ZIP_UPLOAD_URL" == "None" ]]; then
+          echo "Invalid zip upload URL returned from create-deployment."
+          exit 1
+        fi
 
         curl --fail -T "$ZIP_PATH" "$ZIP_UPLOAD_URL"
 
