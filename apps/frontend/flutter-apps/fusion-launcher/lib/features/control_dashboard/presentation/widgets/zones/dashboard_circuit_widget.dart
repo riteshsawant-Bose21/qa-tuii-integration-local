@@ -34,11 +34,11 @@ class DashboardCircuitWidget extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              FusionImage.asset(
-                AssetIcons.genericSpeaker,
+              FusionImageAuto(
+                path: AssetIcons.genericSpeaker,
                 width: 16,
                 height: 16,
-                assetColor: context.colorScheme.iconDefault,
+                color: context.colorScheme.iconDefault,
               ),
               const SizedBox(width: 8),
               Text(
@@ -70,12 +70,12 @@ class DashboardCircuitWidget extends StatelessWidget {
                   onTap: () {
                     ProcessingChainView.showForCircuit(context, circuit);
                   },
-                  child: FusionImage.asset(
+                  child: FusionImageAuto(
                     semanticId: FusionTestKeys.instance.zonecircuititmimg2,
-                    Assets.processingBlocksFilledIcon,
+                    path: Assets.processingBlocksFilledIcon,
                     width: 22,
                     height: 22,
-                    assetColor: context.colorScheme.primaryWhite,
+                    color: context.colorScheme.primaryWhite,
                     fit: BoxFit.contain,
                   ),
                 ),

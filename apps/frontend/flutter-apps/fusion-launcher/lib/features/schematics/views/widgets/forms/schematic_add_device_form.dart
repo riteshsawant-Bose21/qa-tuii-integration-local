@@ -107,8 +107,8 @@ class SchematicAddDeviceForm<T> extends StatelessWidget {
                                           MainAxisAlignment.start,
                                       mainAxisSize: MainAxisSize.min,
                                       children: <Widget>[
-                                        Image.asset(
-                                          itemImage(item),
+                                        FusionImageAuto(
+                                          path: itemImage(item),
                                           width: 16,
                                           height: 16,
                                         ),

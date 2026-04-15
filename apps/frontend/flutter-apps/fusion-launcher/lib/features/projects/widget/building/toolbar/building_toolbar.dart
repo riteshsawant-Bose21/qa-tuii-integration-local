@@ -326,8 +326,8 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
                     )
                     : Padding(
                       padding: const EdgeInsets.all(10.0),
-                      child: Image.asset(
-                        assetIcon!,
+                      child: FusionImageAuto(
+                        path: assetIcon!,
                         width: 18.0,
                         height: 18.0,
                       ),
@@ -557,8 +557,8 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
                 ),
                 child: Row(
                   children: <Widget>[
-                    Image.asset(
-                      'assets/images/products/rack.png',
+                    const FusionImageAuto(
+                      path: 'assets/images/products/rack.png',
                       height: 14,
                       width: 14,
                     ),

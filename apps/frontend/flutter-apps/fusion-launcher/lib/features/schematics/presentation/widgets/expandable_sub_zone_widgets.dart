@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/assets/asset_svg.dart';
+import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/service_locator.dart';
@@ -95,7 +96,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                                 onTap: () {
                                   /// Select  subzone on tap
                                   _projectViewModel.setSelectedDevice(
-                                    widget.subZoneId!,
+                                    widget.subZoneId,
                                     SelectedItemType.subzone,
                                   );
                                 },
@@ -276,12 +277,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                             location: location,
                             speakers: speakers,
                             circuitDeviceName: circuitData.name,
-                            assetImagePath:
-                                serviceLocator<ProjectViewModel>().getHardwareImage(
-                                  productId: speakers.first.productId ?? 0,
-                                  currentImagePath: speakers.first.assetImagePath,
-                                ) ??
-                                "",
+                            assetImagePath: serviceLocator<ProductQueryViewModel>().getProductImage(speakers.firstOrNull?.productId) ?? "",
                             circuitDeviceCount: speakers.length,
                             onDecrementHardwareInCircuit: () {
                               final Speaker speaker = speakers.last;
@@ -329,12 +325,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                             location: location,
                             speakers: speakers,
                             circuitDeviceName: circuitData.name,
-                            assetImagePath:
-                                serviceLocator<ProjectViewModel>().getHardwareImage(
-                                  productId: speakers.isNotEmpty ? speakers.first.productId ?? 0 : 0,
-                                  currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
-                                ) ??
-                                "",
+                            assetImagePath: serviceLocator<ProductQueryViewModel>().getProductImage(speakers.firstOrNull?.productId) ?? "",
                             circuitDeviceCount: speakers.length,
                             onDecrementHardwareInCircuit: () {},
                             onIncrementHardwareInCircuit: () {},
@@ -355,12 +346,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                       speakers: speakers,
                       circuitModel: circuitData,
                       circuitDeviceName: circuitData.name,
-                      assetImagePath:
-                          serviceLocator<ProjectViewModel>().getHardwareImage(
-                            productId: speakers.isNotEmpty ? speakers.first.productId ?? 0 : 0,
-                            currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
-                          ) ??
-                          "",
+                      assetImagePath: serviceLocator<ProductQueryViewModel>().getProductImage(speakers.firstOrNull?.productId) ?? "",
                       circuitDeviceCount: speakers.length,
                       onDecrementHardwareInCircuit: () {
                         final Speaker speaker = speakers.last;

@@ -34,11 +34,19 @@ protected:
     void set_definitions(const Definition &definitions);
 
 
+    /// Set the composite algorithm definitions for the system.
+    void set_composite_definitions(const CompositeDefinition *composite_definitions);
+
+
     /// Get the definition for the named algorithm.
     ///
     /// @param  name  The name of the algorithm or module.
     /// @return  The definition for the algorithm.
     const ProcessorDefinition *get_definition(const std::string &name) const;
+
+
+    /// Get the composite definition for a named composite algorithm.
+    const CompositeAlgorithmDefinition *get_composite_definition(const std::string &name) const;
 
 
     /// Get the frame size for this object;
@@ -61,6 +69,7 @@ protected:
 
 private:
     static const Definition *definitions;
+    static const CompositeDefinition *composite_definitions;
     int_fast32_t frame_size;
     int_fast32_t sample_rate;
 };

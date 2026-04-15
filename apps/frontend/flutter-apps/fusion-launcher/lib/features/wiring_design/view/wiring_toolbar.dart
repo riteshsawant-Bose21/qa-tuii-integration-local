@@ -240,9 +240,9 @@ class _IconButton extends StatelessWidget {
         message: tooltip,
         child: InkWell(
           onTap: onTap,
-          child: FusionImage.asset(
-            icon,
-            assetColor: isActive ? context.colorScheme.primaryWhite : context.colorScheme.elevation4,
+          child: FusionImageAuto(
+            path: icon,
+            color: isActive ? context.colorScheme.primaryWhite : context.colorScheme.elevation4,
             height: 20,
           ),
         ),

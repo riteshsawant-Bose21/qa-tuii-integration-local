@@ -61,7 +61,7 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
           model: speaker.speakerSKU ?? 'Unknown Model',
           unitPrice: speaker.price,
           quantity: 1,
-          imageUrl: speaker.assetImagePath,
+          imageUrl: speaker.image,
           type: 'Speaker',
         ),
       );
@@ -76,7 +76,7 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
           model: source.sku ?? 'Unknown Model',
           unitPrice: source.price,
           quantity: 1,
-          imageUrl: source.assetImagePath,
+          imageUrl: source.image,
           type: 'Source',
         ),
       );
@@ -91,7 +91,7 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
           model: controller.hardwareName ?? 'Unknown Model',
           unitPrice: controller.price,
           quantity: 1,
-          imageUrl: controller.assetImagePath,
+          imageUrl: controller.image,
           type: 'Controller',
         ),
       );
@@ -106,7 +106,7 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
           model: rack.hardwareName ?? 'Unknown Model',
           unitPrice: rack.price,
           quantity: 1,
-          imageUrl: rack.assetImagePath,
+          imageUrl: rack.image,
           type: 'Rack',
         ),
       );
@@ -151,7 +151,7 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
           model: other.hardwareName ?? 'Unknown Model',
           unitPrice: other.price,
           quantity: 1,
-          imageUrl: other.assetImagePath,
+          imageUrl: other.image,
           type: 'Other',
         ),
       );
@@ -415,8 +415,8 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                                       borderRadius: BorderRadius.circular(
                                                         4,
                                                       ),
-                                                      child: Image.asset(
-                                                        item.imageUrl!,
+                                                      child: FusionImageAuto(
+                                                        path: item.imageUrl!,
                                                       ),
                                                     )
                                                     : const Icon(
