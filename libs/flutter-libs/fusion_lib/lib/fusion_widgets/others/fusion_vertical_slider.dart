@@ -251,20 +251,23 @@ class _VerticalSliderState extends State<VerticalSlider> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: <Widget>[
                                     // Inactive (top)
-                                    Container(
-                                      width: widget.trackWidth,
-                                      height: inactiveHeight,
-                                      decoration: BoxDecoration(
-                                        color: context.colorScheme.elevation5,
-                                        borderRadius:
-                                            const BorderRadius.vertical(
-                                              top: Radius.circular(100),
-                                            ),
+                                    SemanticHelper.container(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, 'slider_inactive'),
+                                      child: Container(
+                                        width: widget.trackWidth,
+                                        height: inactiveHeight,
+                                        decoration: BoxDecoration(
+                                          color: context.colorScheme.elevation5,
+                                          borderRadius:
+                                              const BorderRadius.vertical(
+                                                top: Radius.circular(100),
+                                              ),
+                                        ),
                                       ),
                                     ),
                                     // Active (bottom)
                                     SemanticHelper.container(
-                                      testId: SemanticHelper.createTestId(SemanticTypes.container, 'slider_track'),
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, 'slider_active'),
                                       child: Container(
                                         width: widget.trackWidth,
                                         height: activeHeight,
