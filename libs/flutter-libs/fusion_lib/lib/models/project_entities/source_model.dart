@@ -151,7 +151,8 @@ class Source extends HardwareComponent {
           (e) => e.name == json['type'],
         ), //throw FormatException('Unknown SourceConnectionType in JSON: ${json['connectionType']}'),
       ),
-      image: json['image'] as String,
+      image:
+          DeserializationUtil.stringDeserializer.deserialize(json['image']) ?? DeserializationUtil.stringDeserializer.deserialize(json['assetImagePath']) ?? '',
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
       ipAddress: json['ipAddress'] as String?,
       sku: json['sku'] as String? ?? '',

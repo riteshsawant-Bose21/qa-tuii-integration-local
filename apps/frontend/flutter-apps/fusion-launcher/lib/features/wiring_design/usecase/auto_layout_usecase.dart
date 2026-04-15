@@ -135,7 +135,10 @@ class WiringAutoLayoutUseCase {
   final List<HardwareComponent> others = <HardwareComponent>[];
 
   ///
-  ///
+  ///Algorithm:
+  ///     1. Find all groups of connected devices to DSPs. Each group will have a DSP as the center, with its connected devices as left and right elements based on input/output.
+  ///     2. Place each group on the layout grid, starting from the top-left corner and moving right and down as needed.
+  ///     3. For any remaining unplaced devices, attempt to place them near their connected DSP if they have one, otherwise place them in the next available spot on the grid.
   ///
   List<WiringLayoutResult> execute() {
     final List<_PlacementGroup> dspPlacements = <_PlacementGroup>[];
@@ -174,8 +177,6 @@ class WiringAutoLayoutUseCase {
 
     final _LayoutGrid layoutGrid = _LayoutGrid();
 
-    // Map<
-
     Offset currentOffset = Offset.zero;
     for (final _PlacementGroup group in dspPlacements) {
       final Rect rect = _placeGroup(
@@ -187,7 +188,6 @@ class WiringAutoLayoutUseCase {
       );
       currentOffset = Offset(0, rect.bottom + _topRowDeviceGap);
     }
-    print("Placing Unplaced Sources : ${unplacedSourcesGroup.length}");
 
     for (final _PlacementGroup group in unplacedSourcesGroup) {
       _placeGroup(
@@ -204,7 +204,6 @@ class WiringAutoLayoutUseCase {
         painterById: painterById,
       );
     }
-    print("Placing Unplaced Amplifiers : ${unplacedAmplifiersGroup.length}");
     for (final _PlacementGroup group in unplacedAmplifiersGroup) {
       _placeGroup(
         centerPosition: _offsetForUnplacedDevice(
@@ -223,7 +222,7 @@ class WiringAutoLayoutUseCase {
         painterById: painterById,
       );
     }
-    print("Placing Unplaced Others : ${unplacedOthersGroup.length}");
+
     for (final _PlacementGroup group in unplacedOthersGroup) {
       _placeGroup(
         centerPosition: _offsetForUnplacedDevice(
@@ -248,8 +247,6 @@ class WiringAutoLayoutUseCase {
         painterById: painterById,
       );
     }
-
-    print("Placing Unplaced Zones : ${unplacedZonesGroup.length}");
     for (final _PlacementGroup group in unplacedZonesGroup) {
       _placeGroup(
         centerPosition: _offsetForUnplacedDevice(
@@ -380,7 +377,7 @@ class WiringAutoLayoutUseCase {
     );
 
     return _PlacementGroup(
-      center: _PlacementElement(id: zone.id, position: Offset.zero, size: sizeById[zone.id] ?? const Size(100, 100)),
+      center: _PlacementElement(id: zone.id, size: sizeById[zone.id] ?? const Size(100, 100)),
       leftElements: leftElements,
       rightElements: <_PlacingElement>[],
       bottomElements: <_PlacingElement>[],
@@ -394,7 +391,7 @@ class WiringAutoLayoutUseCase {
     final List<_PlacingElement> bottomElements = _constructGroup(_inputConnectedDevices(component.communicationPorts, connectionManager), connectionManager);
 
     return _PlacementGroup(
-      center: _PlacementElement(id: component.id, position: Offset.zero, size: sizeById[component.id] ?? const Size(100, 100)),
+      center: _PlacementElement(id: component.id, size: sizeById[component.id] ?? const Size(100, 100)),
       leftElements: leftElements,
       rightElements: rightElements,
       bottomElements: bottomElements,
@@ -420,7 +417,7 @@ class WiringAutoLayoutUseCase {
         final Zone? zone = zoneForCircuitId[circuit.id];
         if (zone != null) {
           _placedDeviceMap[zone.id] = true;
-          leftElements.add(_PlacementElement(id: zone.id, position: Offset.zero, size: sizeById[zone.id] ?? const Size(100, 100)));
+          leftElements.add(_PlacementElement(id: zone.id, size: sizeById[zone.id] ?? const Size(100, 100)));
           continue;
         }
       }
@@ -432,18 +429,29 @@ class WiringAutoLayoutUseCase {
 
   final Map<String, bool> _placedDeviceMap = <String, bool>{};
 
+  ///
+  ///
+  /// Returns all the connected Unplaced devices to given port.
+  ///
+  ///
   List<_PlacementElement> _inputConnectedDevices(List<PortData> ports, ConnectionManager connectionManager) {
     final List<_PlacementElement> elements = <_PlacementElement>[];
     double yPos = 0;
     for (final PortData port in ports) {
       final WiringConnectionModel? connection = connectionManager.getConnectionForPort(port.id);
+
       if (connection == null) continue;
       final String otherDeviceId = connection.portId == port.id ? connection.targetDeviceId : connection.deviceId;
+
+      ///
+      /// If Already Placed, then Skip the device.
+      ///
       if (_placedDeviceMap[otherDeviceId] == true) {
         continue;
       }
+
       _placedDeviceMap[otherDeviceId] = true;
-      final _PlacementElement element = _PlacementElement(id: otherDeviceId, position: Offset(0, yPos), size: sizeById[otherDeviceId] ?? const Size(100, 100));
+      final _PlacementElement element = _PlacementElement(id: otherDeviceId, size: sizeById[otherDeviceId] ?? const Size(100, 100));
       yPos++;
 
       if (!elements.any((_PlacementElement element) => element.id == otherDeviceId)) {
@@ -475,12 +483,10 @@ abstract class _PlacingElement {
 
 class _PlacementElement extends _PlacingElement {
   final String id;
-  Offset position;
   @override
   final Size size;
   _PlacementElement({
     required this.id,
-    required this.position,
     required this.size,
   });
 }
