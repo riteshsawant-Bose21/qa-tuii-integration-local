@@ -399,26 +399,26 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                       child: Row(
                         children: <Widget>[
                           if (item is SourceData)
-                            Image.asset(
-                              item.assetPath,
+                            FusionImageAuto(
+                              path: item.assetPath,
                               height: 14,
                               width: 14,
                             )
                           else if (item is RackData)
-                            Image.asset(
-                              item.assetPath,
+                            FusionImageAuto(
+                              path: item.assetPath,
                               height: 14,
                               width: 14,
                             )
                           else if (item is SwitchData)
-                            Image.asset(
-                              item.assetPath,
+                            FusionImageAuto(
+                              path: item.assetPath,
                               height: 14,
                               width: 14,
                             )
                           else if (item is ProductQueryModel)
-                            FusionImage.asset(
-                              item.image.isNotEmpty ? item.image : _getDefaultImageForProductType(item.type),
+                            FusionImageAuto(
+                              path: item.image.isNotEmpty ? item.image : _getDefaultImageForProductType(item.type),
                               height: 14,
                               width: 14,
                               fit: BoxFit.contain,

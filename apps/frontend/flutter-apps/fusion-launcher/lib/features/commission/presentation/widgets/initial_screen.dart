@@ -22,10 +22,10 @@ class InitialScreen extends StatelessWidget {
           children: <Widget>[
             // 1. The Illustration
             // Replace with Image.asset('assets/illustration.png') in a real project
-            FusionImage.asset(
-              Assets.mobileHotspot,
+            FusionImageAuto(
+              path: Assets.mobileHotspot,
               height: 200,
-              assetColor: context.colorScheme.textSecondary,
+              color: context.colorScheme.textSecondary,
             ),
 
             const SizedBox(width: 40),
@@ -42,8 +42,7 @@ class InitialScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   FusionAppText(
-                    text:
-                        'Allow your project to sync with actual hardware installations\nto monitor and control the complete audio system',
+                    text: 'Allow your project to sync with actual hardware installations\nto monitor and control the complete audio system',
                     style: context.textTheme.bodyMedium?.copyWith(
                       color: context.colorScheme.textSecondary,
                     ),

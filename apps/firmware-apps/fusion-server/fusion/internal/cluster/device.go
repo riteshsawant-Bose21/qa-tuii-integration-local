@@ -175,8 +175,6 @@ func (c *Cluster) broadcastDeviceUpdate(deviceData *api.DeviceInfo) {
 		logging.GetLogger().Info("[DeviceUpdate] Broadcasted device update for device %s via gossip", deviceData.Id)
 	}
 
-	c.delegate.hub.BroadcastToObservers(notifyMsg)
-
 }
 
 func (c *Cluster) applyPatch(patch *api.DevicePatch, storedInfo *api.DevicePatch) {
