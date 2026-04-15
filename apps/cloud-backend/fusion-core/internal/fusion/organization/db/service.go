@@ -516,7 +516,7 @@ func (s *Service) inviteUser(ctx context.Context, organizationID string, userInv
 		return types.InviteUserResult{
 			Email:   userInvite.Email,
 			Success: false,
-			Message: "Failed to create user: " + err.Error(),
+			Message: "Failed to create user",
 		}, false
 	}
 
