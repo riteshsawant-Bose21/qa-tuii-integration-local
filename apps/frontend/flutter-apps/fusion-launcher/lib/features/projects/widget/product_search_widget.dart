@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/projects/widget/sort_drop_down_content.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import 'filter_drop_down_content.dart';
 
@@ -181,8 +180,8 @@ class ProductSearchWidget extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                   )
                   : null,
-          child: Image.asset(
-            image,
+          child: FusionImageAuto(
+            path: image,
             height: 16,
             width: 16,
           ),

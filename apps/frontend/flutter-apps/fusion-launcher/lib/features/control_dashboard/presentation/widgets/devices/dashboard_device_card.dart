@@ -162,8 +162,8 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                                   children: <Widget>[
                                     // Placeholder for device icon - In real implementation, this would be an actual image/icon based on device type
                                     Center(
-                                      child: FusionImage.asset(
-                                        widget.device.assetImagePath,
+                                      child: FusionImageAuto(
+                                        path: widget.device.image,
                                       ),
                                     ),
 
@@ -353,11 +353,11 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                                     onTap: () {
                                       _showStandbyConfirmation(context);
                                     },
-                                    child: FusionImage.asset(
-                                      AssetIcons.standbyIcon,
+                                    child: FusionImageAuto(
+                                      path: AssetIcons.standbyIcon,
                                       height: 12,
                                       width: 12,
-                                      assetColor: context.colorScheme.iconWhite,
+                                      color: context.colorScheme.iconWhite,
                                     ),
                                   ),
                                   const SizedBox(width: 10),
@@ -374,11 +374,11 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                                     onTap: () {
                                       _showRestartConfirmation(context);
                                     },
-                                    child: FusionImage.asset(
-                                      AssetIcons.rebootIcon,
+                                    child: FusionImageAuto(
+                                      path: AssetIcons.rebootIcon,
                                       height: 12,
                                       width: 12,
-                                      assetColor: context.colorScheme.iconWhite,
+                                      color: context.colorScheme.iconWhite,
                                     ),
                                   ),
                               ],

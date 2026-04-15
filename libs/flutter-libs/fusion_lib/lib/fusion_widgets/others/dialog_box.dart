@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:path/path.dart';
 
 enum DialogType { success, failure, warning, confirmation }
 
@@ -24,7 +23,7 @@ class DialogBox extends StatelessWidget {
   final FusionAppButtonStyle secondaryButtonStyle;
   final String semanticId;
   const DialogBox({
-    Key? key,
+    super.key,
     this.devicetype = DeviceType.mobile,
     required this.type,
     required this.title,
@@ -41,14 +40,14 @@ class DialogBox extends StatelessWidget {
     this.secondaryButtonStyle = FusionAppButtonStyle.secondary,
     this.primaryButtonStyle = FusionAppButtonStyle.primary,
     required this.semanticId,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.section,
-        "dialog_box_${semanticId}_${type}",
+        "dialog_box_${semanticId}_$type",
       ),
       child: devicetype == DeviceType.desktop
           ? Dialog(
@@ -97,31 +96,31 @@ class DialogBox extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (type == DialogType.success) ...[
-                            FusionImage.asset(
+                            FusionImageAuto(
+                              path: "packages/fusion_lib/lib/assets/images/dialog_success.png",
                               width: 120,
                               height: 120,
-                              "packages/fusion_lib/lib/assets/images/dialog_success.png",
                             ),
                           ],
                           if (type == DialogType.warning) ...[
-                            FusionImage.asset(
+                            FusionImageAuto(
+                              path: "packages/fusion_lib/lib/assets/images/dialog_warning.png",
                               width: 120,
                               height: 120,
-                              "packages/fusion_lib/lib/assets/images/dialog_warning.png",
                             ),
                           ],
                           if (type == DialogType.confirmation) ...[
-                            FusionImage.asset(
+                            FusionImageAuto(
+                              path: "packages/fusion_lib/lib/assets/images/dialog_confirmation.png",
                               width: 120,
                               height: 120,
-                              "packages/fusion_lib/lib/assets/images/dialog_confirmation.png",
                             ),
                           ],
                           if (type == DialogType.failure) ...[
-                            FusionImage.asset(
+                            FusionImageAuto(
+                              path: "packages/fusion_lib/lib/assets/images/dialog_failure.png",
                               width: 120,
                               height: 120,
-                              "packages/fusion_lib/lib/assets/images/dialog_failure.png",
                             ),
                           ],
                           // Title
@@ -225,31 +224,31 @@ class DialogBox extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               if (type == DialogType.success) ...[
-                                FusionImage.asset(
+                                FusionImageAuto(
+                                  path: "packages/fusion_lib/lib/assets/images/dialog_success.png",
                                   width: 120,
                                   height: 120,
-                                  "packages/fusion_lib/lib/assets/images/dialog_success.png",
                                 ),
                               ],
                               if (type == DialogType.warning) ...[
-                                FusionImage.asset(
+                                FusionImageAuto(
+                                  path: "packages/fusion_lib/lib/assets/images/dialog_warning.png",
                                   width: 120,
                                   height: 120,
-                                  "packages/fusion_lib/lib/assets/images/dialog_warning.png",
                                 ),
                               ],
                               if (type == DialogType.confirmation) ...[
-                                FusionImage.asset(
+                                FusionImageAuto(
+                                  path: "packages/fusion_lib/lib/assets/images/dialog_confirmation.png",
                                   width: 120,
                                   height: 120,
-                                  "packages/fusion_lib/lib/assets/images/dialog_confirmation.png",
                                 ),
                               ],
                               if (type == DialogType.failure) ...[
-                                FusionImage.asset(
+                                FusionImageAuto(
+                                  path: "packages/fusion_lib/lib/assets/images/dialog_failure.png",
                                   width: 120,
                                   height: 120,
-                                  "packages/fusion_lib/lib/assets/images/dialog_failure.png",
                                 ),
                               ],
                               // Title
@@ -257,11 +256,9 @@ class DialogBox extends StatelessWidget {
                                 children: [
                                   FusionAppText(
                                     text: title,
-                                    style: context.textTheme.h4SemiBold
-                                        .copyWith(
-                                          color:
-                                              context.colorScheme.textPrimary,
-                                        ),
+                                    style: context.textTheme.h4SemiBold.copyWith(
+                                      color: context.colorScheme.textPrimary,
+                                    ),
                                     textAlign: TextAlign.center,
                                   ),
                                   const SizedBox(height: 8),

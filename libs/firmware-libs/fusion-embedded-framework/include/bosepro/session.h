@@ -29,7 +29,8 @@ public:
     /// @param  configuration  The configuration for the session.
     /// @param  definitions  The parameter definitions for the system.
     Session(const SessionConfiguration &configuration,
-            const Definition &definitions);
+            const Definition &definitions,
+            const CompositeDefinition *composite_definitions = nullptr);
 
 
     virtual ~Session() = default;
