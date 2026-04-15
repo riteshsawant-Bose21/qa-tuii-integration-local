@@ -100,11 +100,13 @@ class BundleDownloadUrlResult extends Equatable {
 
 class DeviceBulkRegisterResult {
   final bool success;
+  final String certificate;
   final String deviceId;
   final String error;
 
   const DeviceBulkRegisterResult({
     required this.success,
+    required this.certificate,
     required this.deviceId,
     required this.error,
   });
@@ -112,6 +114,7 @@ class DeviceBulkRegisterResult {
   factory DeviceBulkRegisterResult.fromJson(Map<String, dynamic> json) {
     return DeviceBulkRegisterResult(
       success: json['success'] as bool? ?? false,
+      certificate: json['certificate'] as String? ?? '',
       deviceId: json['device_id'] as String? ?? '',
       error: json['error'] as String? ?? '',
     );
@@ -492,13 +495,58 @@ class FusionDeviceService {
       if (response.success) {
         final Map<String, dynamic> data = (response.data as Map<String, dynamic>?) ?? <String, dynamic>{};
         final List<dynamic> resultsJson = (data['results'] as List<dynamic>?) ?? <dynamic>[];
+        log("Bulk Register Response::: ${data['results']}");
+
         final List<DeviceBulkRegisterResult> results = resultsJson.whereType<Map<String, dynamic>>().map(DeviceBulkRegisterResult.fromJson).toList();
+        final certificatesRegisterdResp = await registerCsrInFusionDevice(vip: vip, devices: devices, results: results);
+
+        if (!certificatesRegisterdResp.success) {
+          return ResponseCallback<List<DeviceBulkRegisterResult>>.failure('Failed to register device certificates in Fusion');
+        }
         return ResponseCallback<List<DeviceBulkRegisterResult>>.success(results);
       } else {
         return ResponseCallback<List<DeviceBulkRegisterResult>>.failure(response.message);
       }
     } catch (e) {
       return ResponseCallback<List<DeviceBulkRegisterResult>>.failure(e.toString());
+    }
+  }
+
+  Future<ResponseCallback<List<bool>>> registerCsrInFusionDevice({
+    required String vip,
+    required List<FusionNetworkDevice> devices,
+    required List<DeviceBulkRegisterResult> results,
+  }) async {
+    final List<bool> registrationResults = [];
+
+    try {
+      for (final DeviceBulkRegisterResult result in results) {
+        final fusionDeviceId = devices.singleWhereOrNull((element) => element.serialNumber == result.deviceId)?.id;
+
+        if (fusionDeviceId == null) {
+          registrationResults.add(false);
+          continue;
+        }
+
+        final ResponseCallback<dynamic> response = await networkClient.post(
+          api: FusionApiEndpoint.fusionDevice,
+          baseUrlToOverride: vip,
+          isSecure: false,
+          additionalPath: "$fusionDeviceId/certificate",
+          data: result.certificate,
+        );
+
+        log("CSR RESPONSE::: ${result.certificate} === ${response.data.toString()}");
+        if (response.success) {
+          registrationResults.add(true);
+        } else {
+          registrationResults.add(false);
+        }
+      }
+
+      return ResponseCallback<List<bool>>.success(registrationResults);
+    } catch (e) {
+      return ResponseCallback<List<bool>>.failure(e.toString());
     }
   }
 
