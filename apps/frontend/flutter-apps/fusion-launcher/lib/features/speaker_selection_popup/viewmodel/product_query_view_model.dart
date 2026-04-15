@@ -64,10 +64,9 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
       loadFromZip: true,
     );
 
-    if (isAuthenticated) loadProducts();
+    loadProducts();
   }
 
-  static const int _maxRetries = 1;
   static const Duration _pricesCacheTtl = Duration(hours: 24);
 
   bool _hasLoadedProducts = false;
@@ -81,8 +80,6 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
   bool get isAuthenticated => serviceLocator<AuthViewModel>().state is Authenticated;
 
   Future<void> loadProducts({int attempt = 1, bool refresh = false}) async {
-    if (!isAuthenticated) return; // no need to attempt loading products if user is not authenticated
-
     try {
       if (state.isRefreshing) return;
       if (!refresh && _hasLoadedProducts && state.products != null) return;
