@@ -94,11 +94,11 @@ static uint model_window_size_param = 8;
 module_param(model_window_size_param, uint, 0644);
 MODULE_PARM_DESC(model_window_size_param, "Rolling sample window size for DAC/error linear fit");
 
-static uint model_min_samples_param = 5;
+static uint model_min_samples_param = 4;
 module_param(model_min_samples_param, uint, 0644);
 MODULE_PARM_DESC(model_min_samples_param, "Minimum PI samples required before allowing a model-driven jump");
 
-static uint model_min_dac_span_param = 256;
+static uint model_min_dac_span_param = 64;
 module_param(model_min_dac_span_param, uint, 0644);
 MODULE_PARM_DESC(model_min_dac_span_param, "Minimum DAC span required across model samples");
 
@@ -106,13 +106,17 @@ static uint model_max_mean_residual_param = 10;
 module_param(model_max_mean_residual_param, uint, 0644);
 MODULE_PARM_DESC(model_max_mean_residual_param, "Maximum mean absolute residual in PPS ticks for a valid jump model");
 
-static uint model_jump_min_error_param = 40;
+static uint model_jump_min_error_param = 20;
 module_param(model_jump_min_error_param, uint, 0644);
 MODULE_PARM_DESC(model_jump_min_error_param, "Minimum absolute PPS error in ticks before taking a model-driven jump");
 
 int fusion_gpt_reset_timing_state(void);
+static int fusion_gpt_reset_timing_state_internal(bool preserve_ready_for_recheck,
+						  bool simulate_pps_gap);
 
 static int timing_reset_trigger_param;
+static int timing_reset_sim_trigger_param;
+static uint timing_reset_sim_duration_ms_param;
 
 static int gpt_param_set_timing_reset_trigger(const char *val,
 					      const struct kernel_param *kp)
@@ -153,6 +157,51 @@ module_param_cb(timing_reset_trigger, &timing_reset_trigger_param_ops,
 		&timing_reset_trigger_param, 0200);
 MODULE_PARM_DESC(timing_reset_trigger,
 		 "Write non-zero to trigger a one-shot timing reset");
+
+static int gpt_param_set_timing_reset_sim_trigger(const char *val,
+						  const struct kernel_param *kp)
+{
+	unsigned int trigger;
+	int *trigger_param = kp->arg;
+	int ret;
+
+	ret = kstrtouint(val, 0, &trigger);
+	if (ret)
+		return ret;
+
+	if (!trigger) {
+		*trigger_param = 0;
+		return 0;
+	}
+
+	ret = fusion_gpt_reset_timing_state_internal(true, true);
+	*trigger_param = 0;
+	return ret;
+}
+
+static int gpt_param_get_timing_reset_sim_trigger(char *buffer,
+						  const struct kernel_param *kp)
+{
+	int *trigger_param = kp->arg;
+
+	*trigger_param = 0;
+	return scnprintf(buffer, PAGE_SIZE, "0\n");
+}
+
+static const struct kernel_param_ops timing_reset_sim_trigger_param_ops = {
+	.set = gpt_param_set_timing_reset_sim_trigger,
+	.get = gpt_param_get_timing_reset_sim_trigger,
+};
+
+module_param_cb(timing_reset_sim_trigger, &timing_reset_sim_trigger_param_ops,
+		&timing_reset_sim_trigger_param, 0200);
+MODULE_PARM_DESC(timing_reset_sim_trigger,
+		 "Write non-zero to trigger a timing reset and suppress PPS handling for timing_reset_sim_duration_ms");
+
+module_param_named(timing_reset_sim_duration_ms, timing_reset_sim_duration_ms_param,
+		   uint, 0644);
+MODULE_PARM_DESC(timing_reset_sim_duration_ms,
+		 "Milliseconds to suppress PPS handling after timing_reset_sim_trigger");
 
 struct fusion_gpt
 {
@@ -196,6 +245,7 @@ struct fusion_gpt
 	/* "Arm-next-PPS" anchor from userspace. */
 	bool pending_future_anchor;
 	u64  pending_future_phc_ns;
+	unsigned long pps_suppress_until_jiffies;
 
 	/* PI servo and DAC state protected by ctrl_lock. */
 	struct work_struct dac_work;
@@ -223,6 +273,7 @@ struct fusion_gpt
 	/* Servo readiness and diagnostics. */
 	bool discipline_ready;
 	bool discipline_ready_recheck_pending;
+	bool discipline_ready_recheck_armed;
 	u64 discipline_ready_recheck_cap64;
 	u32 lock_streak;
 	unsigned long pps_diag_next_jiffies;
@@ -258,6 +309,7 @@ static void gpt_reset_timing_state_locked(struct fusion_gpt *g)
 	g->tick_phase = 0;
 	g->pending_future_anchor = false;
 	g->pending_future_phc_ns = 0;
+	g->pps_suppress_until_jiffies = 0;
 }
 
 static void gpt_init_dac_baseline_locked(struct fusion_gpt *g)
@@ -296,6 +348,7 @@ static void gpt_reset_servo_state_locked(struct fusion_gpt *g, bool preserve_dac
 	g->sq_err_sum = 0;
 	g->err_count = 0;
 	g->discipline_ready_recheck_pending = keep_ready;
+	g->discipline_ready_recheck_armed = false;
 	g->discipline_ready_recheck_cap64 = keep_ready ? last_pps_cap64 : 0;
 	WRITE_ONCE(g->discipline_ready, keep_ready);
 	g->lock_streak = keep_ready ? max_t(u32, 1, DISCIPLINE_LOCK_CONSECUTIVE) : 0;
@@ -557,7 +610,8 @@ int fusion_gpt_get_timing_status(struct fusion_gpt_timing_status *status)
 }
 EXPORT_SYMBOL(fusion_gpt_get_timing_status);
 
-int fusion_gpt_reset_timing_state(void)
+static int fusion_gpt_reset_timing_state_internal(bool preserve_ready_for_recheck,
+						  bool simulate_pps_gap)
 {
 	struct fusion_gpt *g;
 	unsigned long flags;
@@ -568,7 +622,7 @@ int fusion_gpt_reset_timing_state(void)
 	bool prev_pps_valid;
 	u64 prev_pps_cap64;
 	bool changed;
-
+	unsigned long suppress_until = 0;
 	g = fusion_gpt_get_locked();
 	if (!g)
 		return -ENODEV;
@@ -588,7 +642,12 @@ int fusion_gpt_reset_timing_state(void)
 		prev_ready || g->lock_streak || g->latest_freq_error ||
 		g->error_integrator;
 	gpt_reset_timing_state_locked(g);
-	gpt_reset_servo_state_locked(g, true, true, prev_pps_valid, prev_pps_cap64);
+	if (simulate_pps_gap)
+		suppress_until = jiffies +
+			msecs_to_jiffies(READ_ONCE(timing_reset_sim_duration_ms_param));
+	g->pps_suppress_until_jiffies = suppress_until;
+	gpt_reset_servo_state_locked(g, true, preserve_ready_for_recheck,
+				     prev_pps_valid, prev_pps_cap64);
 	baseline_dac = clamp(g->dac_target, DAC_MIN_VALUE, DAC_MAX_VALUE);
 	raw_spin_unlock(&g->ctrl_lock);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
@@ -599,9 +658,17 @@ int fusion_gpt_reset_timing_state(void)
 				prev_pending, prev_freq_error);
 	pr_info("fusion_gpt: dac restore queued reason=timing_reset dac=%d\n",
 		baseline_dac);
+	if (simulate_pps_gap)
+		pr_info("fusion_gpt: simulating PPS gap for %u ms after timing reset\n",
+			READ_ONCE(timing_reset_sim_duration_ms_param));
 	schedule_work(&g->dac_work);
 	fusion_gpt_put_locked(g);
 	return 0;
+}
+
+int fusion_gpt_reset_timing_state(void)
+{
+	return fusion_gpt_reset_timing_state_internal(true, false);
 }
 EXPORT_SYMBOL(fusion_gpt_reset_timing_state);
 
@@ -732,10 +799,17 @@ static void gpt_update_discipline_ready_locked(struct fusion_gpt *g, u64 cap64,
 	long abs_err;
 
 	if (g->discipline_ready_recheck_pending) {
+		if (!g->discipline_ready_recheck_armed) {
+			g->discipline_ready_recheck_cap64 = cap64;
+			g->discipline_ready_recheck_armed = true;
+			return;
+		}
+
 		long recheck_error =
 			gpt_compute_freq_error(cap64, g->discipline_ready_recheck_cap64);
 
 		g->discipline_ready_recheck_pending = false;
+		g->discipline_ready_recheck_armed = false;
 		if (abs(recheck_error) < thresh) {
 			g->lock_streak = needed;
 			pr_info("fusion_gpt: still disciplined after timing reset err=%ld thresh=%u\n",
@@ -1004,6 +1078,17 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 	}
 
 	if (sr & SR_IF1) {
+		unsigned long flags;
+		bool suppress_pps;
+
+		raw_spin_lock_irqsave(&g->pps_lock, flags);
+		suppress_pps = time_before(jiffies, g->pps_suppress_until_jiffies);
+		raw_spin_unlock_irqrestore(&g->pps_lock, flags);
+		if (suppress_pps) {
+			clr |= SR_IF1;
+			goto if1_done;
+		}
+
 		u64 cap64 = 0;
 		u64 prev_cap64 = 0;
 		u64 diff = 0;
@@ -1082,6 +1167,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 
 		clr |= SR_IF1;
 	}
+if1_done:
 
 	if (sr & SR_OF1) {
 		gpt_handle_of1_compare(g);
