@@ -538,7 +538,7 @@ class WiringAutoLayoutUseCase {
     return (PortPainter painter) => painter is WiringControllerPainter && (painter.device is FusionController || painter.device is FusionEndpoints);
   }
 
-  Offset _getOffsetFromDSP(Rect rect, dynamic device) {
+  Offset _getOffsetFromDSP(Rect rect, dynamic device, _LayoutGrid layoutGrid) {
     if (device is Source) {
       return rect.topLeft - Offset(_horizontalGroupGap + (sizeById[device.id]?.width ?? 100), 0);
     } else if (device is Amplifier) {
@@ -546,7 +546,7 @@ class WiringAutoLayoutUseCase {
     } else if (device is Zone) {
       return rect.topRight + const Offset(_horizontalGroupGap, 0);
     } else if (device is FusionController || device is FusionEndpoints) {
-      return Offset(-500, -(sizeById[device.id]?.height ?? 100) - _verticalGroupGap * 2);
+      return layoutGrid.getNextAvilablePosVertically(Rect.fromLTWH(rect.left, -500, sizeById[device.id]?.width ?? 100, sizeById[device.id]?.height ?? 100));
     } else if (device is FusionDsp) {
       return rect.bottomLeft + const Offset(0, _verticalGroupGap);
     }
@@ -578,8 +578,17 @@ class WiringAutoLayoutUseCase {
         }
         return layoutGrid.getLastPlacedRectForPainter(_buildTypeCheckFor(deviceById[group.center.id]));
       },
-      offsetFromDSP: (Rect rect) => _getOffsetFromDSP(rect, deviceById[group.center.id] ?? zoneById[group.center.id]),
-      offsetFromSameType: (Rect rect) => rect.bottomLeft + const Offset(0, _verticalGroupGap),
+      offsetFromDSP: (Rect rect) => _getOffsetFromDSP(rect, deviceById[group.center.id] ?? zoneById[group.center.id], layoutGrid),
+      offsetFromSameType: (Rect rect) {
+        final HardwareComponent? device = deviceById[group.center.id];
+        if (device is FusionEndpoints || device is FusionController) {
+          final Offset offset = rect.topRight + const Offset(_horizontalGroupGap / 2, 0);
+          return layoutGrid.getNextAvilablePosHorizontally(
+            Rect.fromCenter(center: offset, width: group.size.width, height: group.size.height),
+          );
+        }
+        return rect.bottomLeft + const Offset(0, _verticalGroupGap);
+      },
       layoutGrid: layoutGrid,
     );
   }
@@ -655,11 +664,11 @@ class _LayoutGrid {
     placements[painter] = rect;
   }
 
-  Offset getNextAvilablePosVertically(Rect rect) {
+  Offset getNextAvilablePosVertically(Rect rect, {double gap = 50}) {
     final double x = rect.left;
     double y = rect.top;
     while (placements.values.any((Rect r) => r.overlaps(Rect.fromLTWH(x, y, rect.width, rect.height)))) {
-      y += 50;
+      y += gap;
     }
     return Offset(x, y);
   }
@@ -667,7 +676,7 @@ class _LayoutGrid {
   Offset getNextAvilablePosHorizontally(Rect rect) {
     double x = rect.right + 50;
     final double y = rect.top;
-    while (placements.values.any((Rect r) => r.overlaps(Rect.fromLTWH(x, y, rect.width, rect.height)))) {
+    while (placements.values.any((Rect r) => r.overlaps(Rect.fromCenter(center: Offset(x, y), width: rect.width, height: rect.height)))) {
       x += 50;
     }
     return Offset(x, y);
