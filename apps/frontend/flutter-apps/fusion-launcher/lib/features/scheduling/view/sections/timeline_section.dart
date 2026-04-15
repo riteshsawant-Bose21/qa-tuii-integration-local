@@ -62,6 +62,7 @@ class _TimelineSection extends StatelessWidget {
                             // ── Month picker chip ────────────────────────────
                             FusionArrowPopup(
                               semanticId: 'timeline_month_picker',
+                              backgroundColor: context.colorScheme.elevation2,
                               content: Builder(
                                 builder:
                                     (BuildContext ctx) => _MonthPickerGrid(
@@ -86,12 +87,13 @@ class _TimelineSection extends StatelessWidget {
                             // ── Year picker chip ─────────────────────────────
                             FusionArrowPopup(
                               semanticId: 'timeline_year_picker',
+                              backgroundColor: context.colorScheme.elevation2,
                               content: Builder(
                                 builder:
                                     (BuildContext ctx) => _YearPickerList(
                                       selectedYear: state.visibleMonth.year,
                                       minYear: cubit.maxBackableMonth.year,
-                                      maxYear: 2050,
+                                      maxYear: cubit.maxForwardableMonth.year,
                                       onSelected: (int year) {
                                         Navigator.of(ctx).pop();
                                         DateTime target = DateTime(year, state.visibleMonth.month);
@@ -178,10 +180,6 @@ class _HeaderChip extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Month picker – 4 × 3 grid of abbreviated month names
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _MonthPickerGrid extends StatelessWidget {
   final int selectedMonth;
   final int selectedYear;
@@ -223,8 +221,9 @@ class _MonthPickerGrid extends StatelessWidget {
           runSpacing: 8,
           children: List<Widget>.generate(12, (int i) {
             final int month = i + 1;
-            final DateTime candidate = DateTime(selectedYear, month);
-            final bool isDisabled = candidate.isBefore(DateTime(minDate.year, minDate.month)) || candidate.isAfter(DateTime(maxDate.year, maxDate.month));
+            // Only disable months in the minimum year that fall before the
+            // allowed start month. All months in future years are always active.
+            final bool isDisabled = selectedYear == minDate.year && month < minDate.month;
             final bool isSelected = month == selectedMonth;
 
             return GestureDetector(
@@ -256,10 +255,6 @@ class _MonthPickerGrid extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Year picker – scrollable vertical list of available years
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _YearPickerList extends StatelessWidget {
   final int selectedYear;
   final int minYear;
@@ -279,34 +274,37 @@ class _YearPickerList extends StatelessWidget {
       for (int y = minYear; y <= maxYear; y++) y,
     ];
 
-    return SizedBox(
-      width: 110,
-      child: ListView.builder(
-        shrinkWrap: true,
-        itemCount: years.length,
-        itemBuilder: (BuildContext ctx, int index) {
-          final int year = years[index];
-          final bool isSelected = year == selectedYear;
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: SizedBox(
+        width: 220,
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children:
+              years.map((int year) {
+                final bool isSelected = year == selectedYear;
 
-          return GestureDetector(
-            onTap: () => onSelected(year),
-            child: Container(
-              height: 40,
-              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: isSelected ? context.colorScheme.primary : Colors.transparent,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: FusionAppText(
-                text: '$year',
-                style: context.textTheme.l1Medium.withColor(
-                  isSelected ? Colors.white : context.colorScheme.textBody,
-                ),
-              ),
-            ),
-          );
-        },
+                return GestureDetector(
+                  onTap: () => onSelected(year),
+                  child: Container(
+                    width: 48,
+                    height: 32,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: isSelected ? context.colorScheme.primary : Colors.transparent,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: FusionAppText(
+                      text: '$year',
+                      style: context.textTheme.l1Medium.withColor(
+                        isSelected ? Colors.white : context.colorScheme.textBody,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+        ),
       ),
     );
   }

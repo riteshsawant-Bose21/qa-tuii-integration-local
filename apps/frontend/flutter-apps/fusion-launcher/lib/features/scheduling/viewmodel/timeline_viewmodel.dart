@@ -20,7 +20,7 @@ class TimelineCubit extends Cubit<TimelineState> {
   }
 
   void goToMonth(DateTime month) {
-    if (month.isBefore(maxBackableMonth) || month.isAfter(maxForwardableMonth)) {
+    if (month.isBefore(maxBackableMonth)) {
       return;
     }
     emit(state.changeMonth(month));
@@ -31,8 +31,7 @@ class TimelineCubit extends Cubit<TimelineState> {
     return DateTime(now.year, now.month);
   }
 
-  DateTime get maxForwardableMonth {
-    final DateTime now = DateTime.now();
-    return DateTime(now.year + 1, now.month);
-  }
+  /// No hard upper limit – the UI year picker controls how far forward
+  /// the user can navigate.
+  DateTime get maxForwardableMonth => DateTime(2045, 12);
 }
