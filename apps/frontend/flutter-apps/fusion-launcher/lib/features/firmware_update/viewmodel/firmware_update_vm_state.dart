@@ -30,6 +30,7 @@ class FirmwareUpdateViewModelState extends Equatable {
   final List<FusionNetworkDevice> networkDevices;
   final bool isWaitingForSocketResponse;
   final bool isRebootTrackingInProgress;
+  final List<FirmwareDeviceRebootStatus> devicesRebootStatus;
 
   const FirmwareUpdateViewModelState({
     this.uiState = FirmwareUpdateUiState.checking,
@@ -48,7 +49,13 @@ class FirmwareUpdateViewModelState extends Equatable {
     this.networkDevices = const <FusionNetworkDevice>[],
     this.isWaitingForSocketResponse = false,
     this.isRebootTrackingInProgress = false,
+    this.devicesRebootStatus = const <FirmwareDeviceRebootStatus>[],
   });
+
+  bool get isAllDevicesRebooted {
+    if (devicesRebootStatus.isEmpty) return false;
+    return devicesRebootStatus.every((FirmwareDeviceRebootStatus item) => item.isSUCCESS);
+  }
 
   FirmwareUpdateViewModelState copyWith({
     FirmwareUpdateUiState? uiState,
@@ -67,6 +74,7 @@ class FirmwareUpdateViewModelState extends Equatable {
     List<FusionNetworkDevice>? networkDevices,
     bool? isWaitingForSocketResponse,
     bool? isRebootTrackingInProgress,
+    List<FirmwareDeviceRebootStatus>? devicesRebootStatus,
   }) {
     return FirmwareUpdateViewModelState(
       uiState: uiState ?? this.uiState,
@@ -87,6 +95,7 @@ class FirmwareUpdateViewModelState extends Equatable {
       isSocketTrackingInProgress: isSocketTrackingInProgress ?? this.isSocketTrackingInProgress,
       isWaitingForSocketResponse: isWaitingForSocketResponse ?? this.isWaitingForSocketResponse,
       isRebootTrackingInProgress: isRebootTrackingInProgress ?? this.isRebootTrackingInProgress,
+      devicesRebootStatus: devicesRebootStatus ?? this.devicesRebootStatus,
     );
   }
 
@@ -108,6 +117,7 @@ class FirmwareUpdateViewModelState extends Equatable {
     networkDevices,
     isWaitingForSocketResponse,
     isRebootTrackingInProgress,
+    devicesRebootStatus,
   ];
 }
 

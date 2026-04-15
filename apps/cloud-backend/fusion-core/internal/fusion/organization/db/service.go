@@ -481,9 +481,10 @@ func (s *Service) InviteUsersToOrganization(ctx context.Context, organizationID 
 
 // inviteUser handles the invitation of a single user to an organization
 func (s *Service) inviteUser(ctx context.Context, organizationID string, userInvite types.InviteUserToOrganizationRequest) (types.InviteUserResult, bool) {
-	// Check if user already exists
+	// Check if user already exists in this organization
 	existingUser, err := models.AppUsers(
 		models.AppUserWhere.Email.EQ(userInvite.Email),
+		models.AppUserWhere.AccountID.EQ(organizationID),
 	).One(ctx, s.db)
 
 	if err != nil && err != sql.ErrNoRows {
@@ -494,56 +495,35 @@ func (s *Service) inviteUser(ctx context.Context, organizationID string, userInv
 		}, false
 	}
 
-	var userID string
-
-	if err == sql.ErrNoRows {
-		// User doesn't exist, create new user
-		newUser := &models.AppUser{
-			Email:     userInvite.Email,
-			AccountID: organizationID,
-		}
-
-		err = newUser.Insert(ctx, s.db, boil.Infer())
-		if err != nil {
-			return types.InviteUserResult{
-				Email:   userInvite.Email,
-				Success: false,
-				Message: "Failed to create new user: " + err.Error(),
-			}, false
-		}
-		userID = newUser.ID
-	} else {
-		// User exists, check if already in organization
-		if existingUser.AccountID == organizationID {
-			return types.InviteUserResult{
-				Email:   userInvite.Email,
-				Success: false,
-				Message: "User is already a member of this organization",
-			}, false
-		}
-
-		// Update user's organization
-		existingUser.AccountID = organizationID
-		_, err = existingUser.Update(ctx, s.db, boil.Infer())
-		if err != nil {
-			return types.InviteUserResult{
-				Email:   userInvite.Email,
-				Success: false,
-				Message: "Failed to update user organization: " + err.Error(),
-			}, false
-		}
-		userID = existingUser.ID
+	if existingUser != nil {
+		return types.InviteUserResult{
+			Email:   userInvite.Email,
+			Success: false,
+			Message: "User is already a member of this organization",
+		}, false
 	}
 
-	// TODO: In a real implementation, you would:
-	// 1. Create a role assignment for the user based on userInvite.Role
-	// 2. Send an invitation email to the user
-	// 3. Create an invitation record with expiration
+	// Create new user in the organization
+	newUser := &models.AppUser{
+		Email:             userInvite.Email,
+		FullName:          null.StringFrom(userInvite.FullName),
+		AccountID:         organizationID,
+		AccountTypeRoleID: userInvite.AccountTypeRoleID,
+	}
+
+	err = newUser.Insert(ctx, s.db, boil.Infer())
+	if err != nil {
+		return types.InviteUserResult{
+			Email:   userInvite.Email,
+			Success: false,
+			Message: "Failed to create user",
+		}, false
+	}
 
 	return types.InviteUserResult{
 		Email:   userInvite.Email,
 		Success: true,
 		Message: "User invited successfully",
-		UserID:  userID,
+		UserID:  newUser.ID,
 	}, true
 }
