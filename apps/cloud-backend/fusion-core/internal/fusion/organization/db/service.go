@@ -503,18 +503,10 @@ func (s *Service) inviteUser(ctx context.Context, organizationID string, userInv
 		}, false
 	}
 
-	// Derive full_name from email if not provided
-	fullName := userInvite.FullName
-	if fullName == "" {
-		// Extract name from email (part before @)
-		parts := strings.Split(userInvite.Email, "@")
-		fullName = parts[0]
-	}
-
 	// Create new user in the organization
 	newUser := &models.AppUser{
 		Email:             userInvite.Email,
-		FullName:          null.StringFrom(fullName),
+		FullName:          null.StringFrom(userInvite.FullName),
 		AccountID:         organizationID,
 		AccountTypeRoleID: userInvite.AccountTypeRoleID,
 	}
