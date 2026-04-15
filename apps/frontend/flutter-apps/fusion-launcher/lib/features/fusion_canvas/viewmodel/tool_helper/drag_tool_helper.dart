@@ -79,7 +79,7 @@ class DragToolHelper extends FusionCanvasToolTransformer<DragToolState> {
               : <FusionCanvasElement>[];
 
       final Set<String> draggedLayerIds =
-          context.inputState.isShiftPressed ? <String>{...currentState.selectedLayerIds, hoveredPainterId} : <String>{hoveredPainterId};
+          currentState.selectedLayerIds.length > 2 ? <String>{...currentState.selectedLayerIds, hoveredPainterId} : <String>{hoveredPainterId};
       print(
         "Is shift pressed for tap down? ${context.inputState.isShiftPressed}. draggedLayerIds: $draggedLayerIds, hoveredPainterId: $hoveredPainterId, currentState.selectedLayerIds: ${currentState.selectedLayerIds}",
       );

@@ -10,6 +10,7 @@ const (
 	BranchNameUnknown            = "Unknown"
 	CommitHashUnknown            = "Unknown"
 	JenkinsBuildNumberUnknown    = "Unknown"
+	PreReleaseTagUnknown         = "Unknown"
 	SoftwareUpdateOTAPath        = "/mnt/ota"
 	MaxSoftwareUpdateUploadBytes = 300 << 20 // 300 MB
 	MinFreeSpaceBuffer           = 100 << 20 // 100 MB minimum free space buffer

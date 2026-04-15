@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/assets/asset_svg.dart';
@@ -39,6 +40,8 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
   void _retryInstall() => unawaited(_firmwareUpdateViewModel.retryInstall());
 
   void _rollbackToDownloaded() => unawaited(_firmwareUpdateViewModel.rollbackToDownloaded());
+
+  void _deleteDownloadedBundle() => unawaited(_firmwareUpdateViewModel.deleteDownloadedBundle());
 
   String get _description {
     final String releaseNotes = _firmwareUpdateViewModel.state.updateCheckResult?.releaseNotes ?? '';
@@ -125,34 +128,97 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
   }
 
   void _syncGlobalInstallBlocker(FirmwareUpdateViewModelState state) {
-    if (state.uiState == FirmwareUpdateUiState.installing) {
-      _showGlobalInstallBlocker();
+    if (state.uiState == FirmwareUpdateUiState.downloading || state.uiState == FirmwareUpdateUiState.installing || state.isRebootTrackingInProgress) {
+      // Remove existing and recreate to update the state
+      _hideGlobalInstallBlocker();
+      _showGlobalInstallBlocker(state);
     } else {
       _hideGlobalInstallBlocker();
     }
   }
 
-  void _showGlobalInstallBlocker() {
-    // if (!mounted || _globalInstallBlockerEntry != null) return;
+  void _showGlobalInstallBlocker(FirmwareUpdateViewModelState state) {
+    if (!mounted || _globalInstallBlockerEntry != null) return;
 
-    // final OverlayState overlayState = Overlay.of(context, rootOverlay: true);
+    final OverlayState overlayState = Overlay.of(context, rootOverlay: true);
 
-    // _globalInstallBlockerEntry = OverlayEntry(
-    //   builder: (BuildContext context) {
-    //     return Positioned.fill(
-    //       child: Material(
-    //         color: Colors.transparent,
-    //         child: GestureDetector(
-    //           behavior: HitTestBehavior.opaque,
-    //           onTap: _showInstallTapHint,
-    //           child: const SizedBox.expand(),
-    //         ),
-    //       ),
-    //     );
-    //   },
-    // );
+    _globalInstallBlockerEntry = OverlayEntry(
+      builder: (BuildContext context) {
+        final bool isDownloading = state.uiState == FirmwareUpdateUiState.downloading;
+        final bool isInstalling = state.uiState == FirmwareUpdateUiState.installing;
+        final bool isUploading = isInstalling && state.isUploadInProgress;
+        final bool isRebooting = state.isRebootTrackingInProgress;
+        final int totalDevices = state.networkDevices.length;
+        final int completedDevices = state.devicesRebootStatus.where((FirmwareDeviceRebootStatus d) => d.isSUCCESS).length;
 
-    // overlayState.insert(_globalInstallBlockerEntry!);
+        String title() {
+          if (isDownloading) return "Firmware is downloading";
+          if (isUploading) return "Firmware is uploading";
+          if (isRebooting) return "Devices are rebooting";
+          if (isInstalling) return "Firmware is installing";
+          return "Devices are rebooting";
+        }
+
+        String description() {
+          if (isDownloading) return 'Firmware bundle is being downloaded to your devices. Please do not close the launcher or disconnect your devices.';
+          if (isUploading) return 'Firmware bundle is being uploaded to your devices. Please do not close the launcher or disconnect your devices.';
+          if (isRebooting) return 'Devices are rebooting with new firmware. Please do not close the launcher or disconnect your devices.';
+          if (isInstalling) return 'Firmware bundle is being installed on your devices. Please do not close the launcher or disconnect your devices.';
+          return 'Devices are rebooting with new firmware. Please do not close the launcher or disconnect your devices.';
+        }
+
+        return Positioned.fill(
+          child: Material(
+            color: const Color(0x80000000),
+            child: Stack(
+              children: <Widget>[
+                const SizedBox.expand(),
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      const SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          color: Color(0xFF27B177),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      FusionAppText(
+                        text: title(),
+                        style: context.textTheme.b3Bold,
+                      ),
+                      const SizedBox(height: 8),
+                      FusionAppText(
+                        text: description(),
+                        style: context.textTheme.b3Regular.copyWith(
+                          color: context.colorScheme.textSecondary,
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      // if (isRebooting && totalDevices > 0 && completedDevices > 0) ...<Widget>[
+                      //   const SizedBox(height: 16),
+                      //   FusionAppText(
+                      //     text: '$completedDevices of $totalDevices devices rebooted',
+                      //     style: context.textTheme.b2Medium.copyWith(
+                      //       color: const Color(0xFF27B177),
+                      //     ),
+                      //   ),
+                      // ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    overlayState.insert(_globalInstallBlockerEntry!);
   }
 
   void _hideGlobalInstallBlocker() {
@@ -164,7 +230,11 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
   Widget build(BuildContext context) {
     return BlocConsumer<FirmwareUpdateViewModel, FirmwareUpdateViewModelState>(
       bloc: _firmwareUpdateViewModel,
-      listenWhen: (FirmwareUpdateViewModelState previous, FirmwareUpdateViewModelState current) => previous.uiState != current.uiState,
+      listenWhen: (FirmwareUpdateViewModelState previous, FirmwareUpdateViewModelState current) {
+        return previous.uiState != current.uiState ||
+            previous.isRebootTrackingInProgress != current.isRebootTrackingInProgress ||
+            previous.isUploadInProgress != current.isUploadInProgress;
+      },
       listener: (BuildContext context, FirmwareUpdateViewModelState state) {
         _syncGlobalInstallBlocker(state);
         if (state.uiState == FirmwareUpdateUiState.installed) {
@@ -305,6 +375,11 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             _buildProgressCircle(state),
+            const SizedBox(width: 14),
+            FusionAppText(
+              text: 'Downloading',
+              style: context.textTheme.b2Medium,
+            ),
           ],
         );
       case FirmwareUpdateUiState.downloaded:
@@ -313,6 +388,44 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
             _buildButton(context, 'Install Now', _installNow),
             const SizedBox(height: 14),
             _buildSuccessLabel('Downloaded Successfully'),
+            if (kDebugMode) ...<Widget>[
+              const SizedBox(height: 12),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  InkWell(
+                    onTap: _retryDownload,
+                    child: FusionAppText(
+                      text: 'Re-download',
+                      style: context.textTheme.b3Regular.copyWith(
+                        color: context.colorScheme.textSecondary,
+                        decoration: TextDecoration.underline,
+                        decorationColor: context.colorScheme.textSecondary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  FusionAppText(
+                    text: '•',
+                    style: context.textTheme.b3Regular.copyWith(
+                      color: context.colorScheme.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  InkWell(
+                    onTap: _deleteDownloadedBundle,
+                    child: FusionAppText(
+                      text: 'Delete file',
+                      style: context.textTheme.b3Regular.copyWith(
+                        color: const Color(0xFFE43333),
+                        decoration: TextDecoration.underline,
+                        decorationColor: const Color(0xFFE43333),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         );
       case FirmwareUpdateUiState.downloadFailed:
@@ -625,7 +738,7 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
                             (FirmwareInstallDeviceProgress d) => d.serialNumber == networkDevice.serialNumber,
                           );
 
-                          return _buildDeviceRow(networkDevice, device);
+                          return _buildDeviceRow(networkDevice, device, state);
                         }),
                       ],
                     );
@@ -639,8 +752,12 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
     );
   }
 
-  Widget _buildDeviceRow(FusionNetworkDevice networkDevice, FirmwareInstallDeviceProgress? device) {
-    final String normalizedState = device?.updateState.toUpperCase() ?? '';
+  Widget _buildDeviceRow(FusionNetworkDevice networkDevice, FirmwareInstallDeviceProgress? device, FirmwareUpdateViewModelState state) {
+    // Check if we're in reboot tracking mode
+    final bool isRebooting = state.isRebootTrackingInProgress;
+
+    final String normalizedState = isRebooting ? 'REBOOTING' : device?.updateState.toUpperCase() ?? '';
+
     final bool completed = normalizedState == 'COMPLETED';
     final bool success = normalizedState == 'SUCCESS';
     final Color stateColor = completed || success ? const Color(0xFF5CC59A) : const Color(0xFFE0A645);

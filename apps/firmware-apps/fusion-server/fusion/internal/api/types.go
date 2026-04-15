@@ -188,6 +188,7 @@ type DeviceInfo struct {
 	FusionMonorepoBranch     string `json:"fusion_monorepo_branch,omitempty"`
 	FusionMonorepoCommitHash string `json:"fusion_monorepo_commit_hash,omitempty"`
 	JenkinsBuildNumber       string `json:"jenkins_build_number,omitempty"`
+	PreReleaseTag            string `json:"pre_release_tag,omitempty"`
 	VrrpPriority             int    `json:"vrrp_priority"`
 }
 
@@ -481,5 +482,6 @@ type SoftwareUpdateInfo struct {
 		FusionMonorepoBranch        string `json:"FUSION_MONOREPO_BRANCH"`
 		FusionMonorepoCommitHash    string `json:"FUSION_MONOREPO_COMMIT_HASH"`
 		JenkinsBuildNumber          string `json:"JENKINS_BUILD_NUMBER"`
+		PreReleaseTag               string `json:"PRE_RELEASE_TAG"`
 	} `json:"build_configuration"`
 }

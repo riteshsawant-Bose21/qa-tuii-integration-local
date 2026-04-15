@@ -155,11 +155,8 @@ class WiringToolBar extends StatelessWidget {
                 icon: 'assets/icons/building_page/fit_to_screen.png',
                 onTap: () {
                   context.read<FusionCanvasStateViewModel>().fitToScreen(
-                    padding: EdgeInsets.only(top: WorkAreaScope.of(context).appBarHeight + 20, bottom: 20 + 60),
+                    padding: EdgeInsets.only(top: WorkAreaScope.of(context).appBarHeight + 20, bottom: 20 + 60, left: 50, right: 50),
                   );
-                  // if (painter != null) {
-                  //   painter.fitToViewport();
-                  // }
                 },
               ),
 
@@ -170,12 +167,13 @@ class WiringToolBar extends StatelessWidget {
                 icon: 'assets/icons/wiring_page/auto_layout.png',
                 onTap: () {
                   final WiringZoneManager zoneManager = WiringZoneManager()..syncWithProjectManager(projectViewModel);
-                  final List<WiringLayoutResult> layouts = WiringAutoLayoutUseCase().execute(
-                    devices: projectViewModel.getAllHardware(),
-                    connections: projectViewModel.getAllWiringConnections(),
-                    zones: projectViewModel.getAllZones(),
-                    zoneManager: zoneManager,
-                  );
+                  final List<WiringLayoutResult> layouts =
+                      WiringAutoLayoutUseCase(
+                        devices: projectViewModel.getAllHardware(),
+                        connections: projectViewModel.getAllWiringConnections(),
+                        zones: projectViewModel.getAllZones(),
+                        zoneManager: zoneManager,
+                      ).execute();
                   for (final WiringConnectionModel element in projectViewModel.getAllWiringConnections()) {
                     projectViewModel.updateWiringConnection(connection: element.copyWith(axisLocks: <AxisLock>[]));
                   }

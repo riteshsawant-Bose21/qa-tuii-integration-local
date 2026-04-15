@@ -90,6 +90,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -103,6 +104,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -116,6 +118,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -129,6 +132,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -142,6 +146,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -155,6 +160,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -168,6 +174,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -181,6 +188,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -194,6 +202,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -207,6 +216,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -220,6 +230,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -233,6 +244,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -246,6 +258,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -259,6 +272,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -460,7 +474,7 @@ class SourceData extends DeviceComponent {
       name: "Message Player",
       assetPath: "assets/images/products/dvdplayer.png",
       type: SourceType.paging,
-      connectionType: SourceConnectionType.analogInput,
+      connectionType: SourceConnectionType.messagePlayer,
       pagingSourceType: PagingSourceType.messagePlayer,
       price: 100.0,
       supportedConnectionTypes: <SourceConnectionType>[],
@@ -500,7 +514,7 @@ class SourceData extends DeviceComponent {
 
   static SourceConnectionType getSourceConnectionType(String id) {
     //search both microphone list and media list and return type
-    for (SourceData item in <SourceData>[...microphoneItems, ...mediaSourceItems]) {
+    for (SourceData item in <SourceData>[...microphoneItems, ...mediaSourceItems, ...pagingItems]) {
       if (item.id == id) {
         return item.connectionType;
       }

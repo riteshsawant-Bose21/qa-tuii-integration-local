@@ -302,35 +302,57 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  ResponseCallback<bool> runAutoPlacementForCurrentListeningArea({required AutoPlacementResult autoPlacementResult}) {
+  ResponseCallback<SpeakerPlacementAlgorithmResult> runAutoPlacementForCurrentListeningArea({required AutoPlacementResult autoPlacementResult}) {
     try {
       final String? listeningAreaId = currentSelectedListeningAreaId;
-      if (listeningAreaId == null) return ResponseCallback<bool>.failure('Select a listening area first.');
+      if (listeningAreaId == null) return ResponseCallback<SpeakerPlacementAlgorithmResult>.failure('Select a listening area first.');
 
       final ListeningArea listeningArea = getListeningArea(areaId: listeningAreaId);
-      if (!listeningArea.autoPlacement) return ResponseCallback<bool>.failure('Enable Auto-Placement and try again.');
-      if (listeningArea.vertices.length < 3) return ResponseCallback<bool>.failure('Listening area shape is invalid. Redraw the area and try again.');
+      if (!listeningArea.autoPlacement) return ResponseCallback<SpeakerPlacementAlgorithmResult>.failure('Enable Auto-Placement and try again.');
+      if (listeningArea.vertices.length < 3)
+        return ResponseCallback<SpeakerPlacementAlgorithmResult>.failure('Listening area shape is invalid. Redraw the area and try again.');
 
       final ProductQueryViewModel productQueryViewModel = serviceLocator<ProductQueryViewModel>();
       final List<SpeakerProduct> catalogSpeakers = productQueryViewModel.speakers;
 
       final List<Speaker> targetSpeakers = _getAutoPlacementTargetSpeakers(catalogSpeakers: catalogSpeakers);
 
-      if (targetSpeakers.isEmpty) return ResponseCallback<bool>.failure('Add at least one non-subwoofer speaker to auto-place.');
+      if (targetSpeakers.isEmpty) return ResponseCallback<SpeakerPlacementAlgorithmResult>.failure('Add at least one non-subwoofer speaker to auto-place.');
 
-      final ({List<Offset> positions, SurfacePlacementResult? surfacePlacementResult, PlacementResult? placementResult}) autoPlacedDetails =
-          _calculateAutoPlacedPositions(
-            listeningArea: listeningArea,
-            catalogSpeakers: catalogSpeakers,
-            targetSpeakers: targetSpeakers,
-            autoPlacementResult: autoPlacementResult,
-          );
+      final ({
+        List<Offset> positions,
+        SurfacePlacementResult? surfacePlacementResult,
+        PlacementResult? placementResult,
+        CeilingPlacementParams? ceilingPlacementParams,
+      })
+      autoPlacedDetails = _calculateAutoPlacedPositions(
+        listeningArea: listeningArea,
+        catalogSpeakers: catalogSpeakers,
+        targetSpeakers: targetSpeakers,
+        autoPlacementResult: autoPlacementResult,
+        );
 
       final List<Offset> candidatePoints = autoPlacedDetails.positions;
 
       if (candidatePoints.isEmpty) {
         FusionLogger.log(tag: LogTag.project, message: 'Auto-placement candidate points: $candidatePoints');
-        return ResponseCallback<bool>.failure('No valid placement positions found. Adjust your listening area shape or auto-placement settings and try again.');
+        return ResponseCallback<SpeakerPlacementAlgorithmResult>.success(
+          SpeakerPlacementAlgorithmResult(
+            positions: <Offset>[],
+            surfacePlacementResult: autoPlacedDetails.surfacePlacementResult,
+            placementResult: autoPlacedDetails.placementResult,
+            ceilingPlacementParams: autoPlacedDetails.ceilingPlacementParams,
+            coverageAngle: _resolveCoverageAngle(catalogSpeakers.where((SpeakerProduct p) => p.productId == targetSpeakers.first.productId).firstOrNull),
+            listnersHeight: listeningArea.listeningHeight,
+            coveragePreference: autoPlacementResult.autoPlaceCoveragePreference,
+            width: listeningArea.getBoundsForVertices().roomWidthInMeters,
+            length: listeningArea.getBoundsForVertices().roomLengthInMeters,
+          ),
+          message: 'No valid placement positions found. Adjust your listening area shape or auto-placement settings and try again.',
+        );
+        // return ResponseCallback<SpeakerPlacementAlgorithmResult>.failure(
+        //   'No valid placement positions found. Adjust your listening area shape or auto-placement settings and try again.',
+        // );
       }
 
       final List<Offset> sortedPoints = _sortPlacementPoints(listeningArea: listeningArea, points: candidatePoints);
@@ -366,10 +388,22 @@ extension HardwareViewModel on ProjectViewModel {
       saveProject();
       updateProject();
 
-      return ResponseCallback<bool>.success(true, message: 'Auto-placement successful. Placed $placeCount speakers.');
+      return ResponseCallback<SpeakerPlacementAlgorithmResult>.success(
+        SpeakerPlacementAlgorithmResult(
+          positions: sortedPoints,
+          surfacePlacementResult: autoPlacedDetails.surfacePlacementResult,
+          placementResult: autoPlacedDetails.placementResult,
+          coverageAngle: _resolveCoverageAngle(catalogSpeakers.where((SpeakerProduct p) => p.productId == targetSpeakers.first.productId).firstOrNull),
+          listnersHeight: listeningArea.listeningHeight,
+          coveragePreference: autoPlacementResult.autoPlaceCoveragePreference,
+          width: listeningArea.getBoundsForVertices().roomWidthInMeters,
+          length: listeningArea.getBoundsForVertices().roomLengthInMeters,
+        ),
+        message: 'Auto-placement successful. Placed $placeCount speakers.',
+      );
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: 'Auto-placement failed: $e');
-      return ResponseCallback<bool>.failure(e.toString().replaceFirst('Invalid argument(s): ', ''));
+      return ResponseCallback<SpeakerPlacementAlgorithmResult>.failure(e.toString().replaceFirst('Invalid argument(s): ', ''));
     }
   }
 
@@ -396,7 +430,8 @@ extension HardwareViewModel on ProjectViewModel {
     return List<Offset>.from(points)..sort((Offset a, Offset b) => (a - center).distance.compareTo((b - center).distance));
   }
 
-  ({List<Offset> positions, SurfacePlacementResult? surfacePlacementResult, PlacementResult? placementResult}) _calculateAutoPlacedPositions({
+  ({List<Offset> positions, SurfacePlacementResult? surfacePlacementResult, PlacementResult? placementResult, CeilingPlacementParams? ceilingPlacementParams})
+  _calculateAutoPlacedPositions({
     required ListeningArea listeningArea,
     required List<SpeakerProduct> catalogSpeakers,
     required List<Speaker> targetSpeakers,
@@ -438,6 +473,7 @@ extension HardwareViewModel on ProjectViewModel {
           },
         ),
       ];
+      print("Geometry for auto-placement algorithm: ${geometry.map((Point2D p) => "(${p.x}, ${p.y})").join(", ")}");
 
       final Room room = Room.asymmetrical(geometry: geometry, ceilingHeight: ceilingHeight, listenerHeight: listenerHeight);
 
@@ -458,7 +494,20 @@ extension HardwareViewModel on ProjectViewModel {
       log("Total speakers placed by algorithm: ${result.speakerPositions.length}");
       final List<Offset> positions = result.speakerPositions.map((Point2D p) => Offset((p.x * 100) + bounds.minX, (p.y * 100) + bounds.minY)).toList();
 
-      return (positions: positions, surfacePlacementResult: null, placementResult: result);
+      return (
+        positions: positions,
+        surfacePlacementResult: null,
+        placementResult: result,
+        ceilingPlacementParams: CeilingPlacementParams(
+          room: room,
+          coverageAngle: coverageAngle,
+          selectedLayoutPattern: autoPlacementResult.autoPlaceLayoutPattern,
+          boundaryOverlapThreshold: 0.7,
+          selectedCoveragePreference: autoPlacementResult.autoPlaceCoveragePreference,
+          selectedSpeakerType: speakerType,
+          selectedRoomType: room.roomType,
+        ),
+      );
     } else {
       final SurfacePlacementResult result = SurfaceSpeakerPlacer.calculatePlacement(
         room: SurfaceRoom(
@@ -483,7 +532,7 @@ extension HardwareViewModel on ProjectViewModel {
           },
         ),
       ];
-      return (positions: positions, surfacePlacementResult: result, placementResult: null);
+      return (positions: positions, surfacePlacementResult: result, placementResult: null, ceilingPlacementParams: null);
     }
   }
 
@@ -813,6 +862,7 @@ extension HardwareViewModel on ProjectViewModel {
           SourceConnectionType.hdmi => PortType.hdmiOut,
           SourceConnectionType.rca => PortType.rcaOutput,
           SourceConnectionType.endpoint => PortType.endpointOutput,
+          SourceConnectionType.messagePlayer => PortType.messagePlayer,
         };
         return Source(
           locationEntity: locationEntity,

@@ -67,8 +67,7 @@ Future<void> reportCrash(Object exception, StackTrace stack) async {
   try {
     FusionLogger.log(
       tag: LogTag.exceptions,
-      message:
-          "Exception: ${exception.toString()} \n, StackTrace: ${stack.toString()} ",
+      message: "Exception: ${exception.toString()} \n, StackTrace: ${stack.toString()} ",
     );
     // FirebaseCrashlytics.instance.recordError(exception, stack);
   } catch (ex) {
@@ -122,16 +121,13 @@ class MyApp extends StatelessWidget {
           create: (BuildContext context) => serviceLocator<ProjectViewModel>(),
         ),
         BlocProvider<ProjectSyncViewModel>(
-          create:
-              (BuildContext context) => serviceLocator<ProjectSyncViewModel>(),
+          create: (BuildContext context) => serviceLocator<ProjectSyncViewModel>(),
         ),
         BlocProvider<ProductQueryCubit>(
           create: (BuildContext context) => serviceLocator<ProductQueryCubit>(),
         ),
         BlocProvider<GuideShowCaseController>(
-          create:
-              (BuildContext context) =>
-                  serviceLocator<GuideShowCaseController>(),
+          create: (BuildContext context) => serviceLocator<GuideShowCaseController>(),
         ),
         BlocProvider<ConfigSyncViewModel>(
           create: (BuildContext context) => serviceLocator<ConfigSyncViewModel>(),
@@ -186,9 +182,7 @@ class MyApp extends StatelessWidget {
                     navigatorObservers: <NavigatorObserver>[
                       AppNavigatorObserver(),
                     ],
-                    onGenerateRoute:
-                        (RouteSettings settings) =>
-                            Routes.onGenerateRoute(settings),
+                    onGenerateRoute: (RouteSettings settings) => Routes.onGenerateRoute(settings),
                   );
                 },
               );
