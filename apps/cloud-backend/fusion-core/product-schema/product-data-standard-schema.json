@@ -1636,31 +1636,27 @@
       },
       "additionalProperties": false
     },
+    "color": {
+      "type": "string",
+      "title": "Product Color Variant",
+      "description": "Allowed color variants for Bose Professional products",
+      "enum": [
+        "black",
+        "white",
+        "green",
+        "gray"
+      ]
+    },
     "skus": {
       "type": "object",
       "title": "Product SKUs by Color",
       "description": "SKU numbers organized by color variant",
-      "properties": {
-        "black": {
-          "type": "array",
-          "description": "SKU numbers for black variant",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "white": {
-          "type": "array",
-          "description": "SKU numbers for white variant",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        }
+      "propertyNames": {
+        "$ref": "#/$defs/color"
       },
       "additionalProperties": {
         "type": "array",
-        "description": "SKU numbers for other color variants",
+        "description": "SKU numbers for the color variant",
         "items": {
           "type": "string",
           "minLength": 1
