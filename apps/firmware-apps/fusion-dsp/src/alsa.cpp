@@ -360,17 +360,22 @@ void AlsaDevice::close_device()
     if (alsa != nullptr)
     {
         snd_pcm_close(alsa);
+        alsa = nullptr;
     }
 
     if (hw_params != nullptr)
     {
         snd_pcm_hw_params_free(hw_params);
+        hw_params = nullptr;
     }
 
     if (sw_params != nullptr)
     {
         snd_pcm_sw_params_free(sw_params);
+        sw_params = nullptr;
     }
+
+    negotiated_buffer_size = 0;
 
     ALSA_DEVICE_SET_STATE(DEVICE_STATE_CLOSED, "Closed device {}",
                           device_name.c_str());
@@ -386,7 +391,8 @@ void AlsaDevice::deferred_open(void *obj)
 
 bool AlsaDevice::is_open()
 {
-    return current_state != DEVICE_STATE_CLOSED;
+    return current_state == DEVICE_STATE_IDLE
+        || current_state == DEVICE_STATE_STREAMING;
 }
 
 
