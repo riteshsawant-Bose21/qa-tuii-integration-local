@@ -110,6 +110,50 @@ static uint model_jump_min_error_param = 40;
 module_param(model_jump_min_error_param, uint, 0644);
 MODULE_PARM_DESC(model_jump_min_error_param, "Minimum absolute PPS error in ticks before taking a model-driven jump");
 
+int fusion_gpt_reset_timing_state(void);
+
+static int timing_reset_trigger_param;
+
+static int gpt_param_set_timing_reset_trigger(const char *val,
+					      const struct kernel_param *kp)
+{
+	unsigned int trigger;
+	int *trigger_param = kp->arg;
+	int ret;
+
+	ret = kstrtouint(val, 0, &trigger);
+	if (ret)
+		return ret;
+
+	if (!trigger) {
+		*trigger_param = 0;
+		return 0;
+	}
+
+	ret = fusion_gpt_reset_timing_state();
+	*trigger_param = 0;
+	return ret;
+}
+
+static int gpt_param_get_timing_reset_trigger(char *buffer,
+					      const struct kernel_param *kp)
+{
+	int *trigger_param = kp->arg;
+
+	*trigger_param = 0;
+	return scnprintf(buffer, PAGE_SIZE, "0\n");
+}
+
+static const struct kernel_param_ops timing_reset_trigger_param_ops = {
+	.set = gpt_param_set_timing_reset_trigger,
+	.get = gpt_param_get_timing_reset_trigger,
+};
+
+module_param_cb(timing_reset_trigger, &timing_reset_trigger_param_ops,
+		&timing_reset_trigger_param, 0200);
+MODULE_PARM_DESC(timing_reset_trigger,
+		 "Write non-zero to trigger a one-shot timing reset");
+
 struct fusion_gpt
 {
 	void __iomem *base;
@@ -553,7 +597,7 @@ int fusion_gpt_reset_timing_state(void)
 		pr_info("fusion_gpt: timing reset reason=api prev{pps_seq=%u epoch=%u aligned=%u ready=%u pending=%u freq_err=%ld}\n",
 				prev_pps_seq, prev_epoch_valid, prev_aligned, prev_ready,
 				prev_pending, prev_freq_error);
-	pr_info("fusion_gpt: baseline queued reason=timing_reset dac=%d\n",
+	pr_info("fusion_gpt: dac restore queued reason=timing_reset dac=%d\n",
 		baseline_dac);
 	schedule_work(&g->dac_work);
 	fusion_gpt_put_locked(g);
@@ -694,6 +738,8 @@ static void gpt_update_discipline_ready_locked(struct fusion_gpt *g, u64 cap64,
 		g->discipline_ready_recheck_pending = false;
 		if (abs(recheck_error) < thresh) {
 			g->lock_streak = needed;
+			pr_info("fusion_gpt: still disciplined after timing reset err=%ld thresh=%u\n",
+				recheck_error, thresh);
 			return;
 		}
 
@@ -975,6 +1021,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 		int observed_dac = DAC_INVALID_VALUE;
 		bool model_valid_log = false;
 		bool model_jump_consumed_log = false;
+		bool discipline_ready_log = false;
 		u32 model_mean_abs_residual_log = 0;
 		u32 model_dac_span_log = 0;
 		int model_predicted_dac_log = DAC_INVALID_VALUE;
@@ -1009,6 +1056,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 			}
 			gpt_update_discipline_ready_locked(g, cap64, have_freq_error,
 							   freq_error);
+			discipline_ready_log = READ_ONCE(g->discipline_ready);
 			if (had_prev) {
 				do_pps_log = READ_ONCE(pps_debug_param);
 				gpt_maybe_reset_diag_window_locked(g);
@@ -1017,8 +1065,9 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 
 			if (had_prev) {
 				if (do_pps_log)
-					pr_info("fusion_gpt: [PPS] diff=%llu ticks err=%ld ticks rms=%u ticks 48k_off=%ldns dac=%d obs_dac=%d p=%ld i=%ld integ=%ld model_valid=%u jump_used=%u jump=%u pred_dac=%d resid=%u span=%u rebase=%d\n",
+					pr_info("fusion_gpt: [PPS] diff=%llu ticks err=%ld ticks rms=%u ticks 48k_off=%ldns ready=%u dac=%d obs_dac_applied=%d p=%ld i=%ld integ=%ld model_valid=%u jump_used=%u jump=%u pred_dac=%d resid=%u span_dac=%u rebase=%d\n",
 						diff, freq_error, rms_jitter, if2_offset_ns,
+						discipline_ready_log ? 1U : 0U,
 						dac_target, observed_dac, p_term_log, i_term_log,
 						integrator_log, model_valid_log ? 1U : 0U,
 						model_jump_consumed_log ? 1U : 0U,
@@ -1109,7 +1158,7 @@ static void fusion_dac_work_handler(struct work_struct *work)
 		g->baseline_restore_pending = false;
 		raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
 
-		pr_info("fusion_gpt: baseline applied reason=timing_reset dac=%d applied_dac=%u\n",
+		pr_info("fusion_gpt: dac restore applied reason=timing_reset dac=%d applied_dac=%u\n",
 			target, current_dac == target ? 1U : 0U);
 	}
 }
