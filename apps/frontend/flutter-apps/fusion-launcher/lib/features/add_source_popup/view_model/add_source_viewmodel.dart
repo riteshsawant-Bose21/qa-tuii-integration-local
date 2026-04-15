@@ -145,7 +145,7 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
     if (state.selectedListeningArea == null) return FusionToast.error(context, message: "Please select a location");
 
     // if connection location is not selected
-    if (selectedSources.first == SourceType.paging && state.selectedConnectionType == null) {
+    if (state.selectedSources.first?.type != SourceType.paging && state.selectedConnectionType == null) {
       return FusionToast.error(context, message: "Please select a connection type");
     }
 
@@ -165,6 +165,7 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
 
     /// Sources [onTapAddDevice]
     final SourceConnectionType connectType = state.selectedConnectionType ?? SourceData.getSourceConnectionType(selectedItem.id);
+
     final PortType portType = switch (connectType) {
       SourceConnectionType.analogInput => PortType.analogOutput,
       SourceConnectionType.aes67input => PortType.networkSwitchOut,
@@ -174,7 +175,8 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
       SourceConnectionType.xlr => PortType.xlrOutput,
       SourceConnectionType.hdmi => PortType.hdmiOut,
       SourceConnectionType.rca => PortType.rcaOutput,
-      SourceConnectionType.endpoint => PortType.analogOutput, // TODO: Check this
+      SourceConnectionType.endpoint => PortType.analogOutput, // TODO: Consider it like a wired connection
+      SourceConnectionType.messagePlayer => PortType.messagePlayer,
     };
 
     final Source source = Source(
