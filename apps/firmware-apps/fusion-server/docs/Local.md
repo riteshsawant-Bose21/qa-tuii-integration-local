@@ -166,7 +166,7 @@ curl http://localhost:8080/pava/messages
 
 ```bash
 curl --request PUT   --url http://localhost:8080/pava/messages/:id/trigger   --header 'content-type: application/json'   --data '{
-    "zones": "all",
+    "zones": "lobby",
     "priority": 100
   }'
 ```
@@ -192,7 +192,7 @@ Triggered messages display a JSON structure:
   "id": "01K8TYPMWW9HSK2QS5Y5W10ABS",
   "path": "/var/lib/fusion/audio/01K8TYPMWW9HSK2QS5Y5W10ABS.wav",
   "priority": 100,
-  "zones": "all",
+  "zones": "lobby",
   "timestamp": 1761844571
 }
 ```

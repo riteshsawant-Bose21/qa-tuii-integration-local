@@ -485,3 +485,18 @@ type SoftwareUpdateInfo struct {
 		PreReleaseTag               string `json:"PRE_RELEASE_TAG"`
 	} `json:"build_configuration"`
 }
+
+// PAVA Messages
+
+type TriggerMessageRequest struct {
+	Priority int    `json:"priority,omitempty"`
+	Zones    string `json:"zones,omitempty"`
+}
+
+type MessageTrigger struct {
+	ID        string `json:"id"`
+	Path      string `json:"path"`
+	Priority  int    `json:"priority,omitempty"`
+	Zones     string `json:"zones,omitempty"`
+	Timestamp int64  `json:"timestamp"`
+}
