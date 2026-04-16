@@ -45,19 +45,24 @@ class SplPainter extends FusionBasePainter {
     return Color.lerp(_legendColors[i0], _legendColors[i1], f)!;
   }
 
-  List<HeatMapData> _buildSortedAreaHeatMapEntries(SplData spl) {
-    final List<Offset> points = spl.fieldPoints;
-    final List<double> values = spl.splValues;
-    final int count = points.length < values.length ? points.length : values.length;
+  List<Color> _buildColorLut([int lutSize = 256]) {
+    final int safeSize = lutSize.clamp(2, 4096);
+    final List<Color> lut = List<Color>.filled(safeSize, const Color(0x00000000), growable: false);
 
-    final List<HeatMapData> entries = List<HeatMapData>.generate(
-      count,
-      (int i) => HeatMapData(point: points[i], value: values[i]),
-      growable: false,
-    );
+    if (maxSpl <= minSpl) {
+      final Color fallback = _legendColors.isEmpty ? const Color(0x00000000) : _legendColors.first;
+      for (int i = 0; i < safeSize; i++) {
+        lut[i] = fallback;
+      }
+      return lut;
+    }
 
-    entries.sort((HeatMapData a, HeatMapData b) => a.value.compareTo(b.value));
-    return entries;
+    final double range = maxSpl - minSpl;
+    for (int i = 0; i < safeSize; i++) {
+      final double t = i / (safeSize - 1);
+      lut[i] = _colorFromLegend(minSpl + (t * range));
+    }
+    return lut;
   }
 
   _HeatmapSignature _computeHeatmapSignature() {
@@ -90,6 +95,10 @@ class SplPainter extends FusionBasePainter {
     final double cellPointSize = pointSize;
     final Path tmpPath = Path();
     final Paint drawImagePaint = Paint();
+    final List<Color> colorLut = _buildColorLut();
+    final int maxColorIdx = colorLut.length - 1;
+    final double splRange = maxSpl - minSpl;
+    final double invSplRange = splRange > 0 ? 1.0 / splRange : 0.0;
 
     for (final ListeningAreaPainter listeningAreaPainter in listeningAreas) {
       final ListeningArea listeningArea = listeningAreaPainter.listeningArea;
@@ -112,7 +121,21 @@ class SplPainter extends FusionBasePainter {
       );
 
       final Image areaImage = _HeatmapCache.instance.getOrBuild(cacheKey, () {
-        final List<HeatMapData> areaHeatMapData = _buildSortedAreaHeatMapEntries(spl);
+        final List<Offset> points = spl.fieldPoints;
+        final List<double> values = spl.splValues;
+        final int count = points.length < values.length ? points.length : values.length;
+        if (count == 0) {
+          final PictureRecorder emptyRecorder = PictureRecorder();
+          final Picture emptyPic = emptyRecorder.endRecording();
+          return emptyPic.toImageSync(1, 1);
+        }
+
+        final _SplSortKey sortKey = _SplSortKey(
+          splRef: spl,
+          fieldPointsLen: points.length,
+          splValuesLen: values.length,
+        );
+        final List<int> sortedIndices = _HeatmapCache.instance.getOrBuildSortedIndices(sortKey, values, count);
 
         final PictureRecorder areaRecorder = PictureRecorder();
         final Canvas areaCanvas = Canvas(areaRecorder);
@@ -123,10 +146,16 @@ class SplPainter extends FusionBasePainter {
 
         final Paint pointPaint = Paint()..maskFilter = const MaskFilter.blur(BlurStyle.normal, 30);
 
-        for (final HeatMapData data in areaHeatMapData) {
-          final double v = data.value.clamp(minSpl, maxSpl);
-          pointPaint.color = _colorFromLegend(v);
-          areaCanvas.drawRect(Rect.fromCenter(center: data.point, width: cellPointSize, height: cellPointSize), pointPaint);
+        for (int i = 0; i < sortedIndices.length; i++) {
+          final int idx = sortedIndices[i];
+          if (idx < 0 || idx >= count) {
+            continue;
+          }
+
+          final double normalized = invSplRange > 0 ? (values[idx] - minSpl) * invSplRange : 0.0;
+          final int lutIndex = (normalized * maxColorIdx).round().clamp(0, maxColorIdx);
+          pointPaint.color = colorLut[lutIndex];
+          areaCanvas.drawRect(Rect.fromCenter(center: points[idx], width: cellPointSize, height: cellPointSize), pointPaint);
         }
 
         areaCanvas.restore();
@@ -156,10 +185,18 @@ class _HeatmapCache {
 
   _HeatmapSignature? _currentSignature;
   final Map<_AreaSplSummary, Image> _cache = <_AreaSplSummary, Image>{};
+  final Map<_SplSortKey, List<int>> _sortedIndicesCache = <_SplSortKey, List<int>>{};
 
   void checkWithSignature(_HeatmapSignature sig) {
-    if (_currentSignature != sig) {
-      clear();
+    final _HeatmapSignature? previous = _currentSignature;
+    if (previous != sig) {
+      _clearImages();
+
+      // Keep sorted indices when only visual range/inversion changes.
+      if (previous == null || !previous.hasSameSplLayout(sig)) {
+        _sortedIndicesCache.clear();
+      }
+
       _currentSignature = sig;
     }
   }
@@ -175,19 +212,29 @@ class _HeatmapCache {
     return img;
   }
 
+  List<int> getOrBuildSortedIndices(_SplSortKey key, List<double> values, int count) {
+    final List<int>? existing = _sortedIndicesCache[key];
+    if (existing != null) {
+      return existing;
+    }
+
+    final List<int> indices = List<int>.generate(count, (int i) => i, growable: false);
+    indices.sort((int a, int b) => values[a].compareTo(values[b]));
+    _sortedIndicesCache[key] = indices;
+    return indices;
+  }
+
   void clear() {
+    _clearImages();
+    _sortedIndicesCache.clear();
+  }
+
+  void _clearImages() {
     for (final Image image in _cache.values) {
       image.dispose();
     }
     _cache.clear();
   }
-}
-
-class HeatMapData {
-  final Offset point;
-  final double value;
-
-  HeatMapData({required this.point, required this.value});
 }
 
 class _HeatmapSignature {
@@ -204,6 +251,19 @@ class _HeatmapSignature {
     required this.gridSize,
     required this.areas,
   });
+
+  bool hasSameSplLayout(_HeatmapSignature other) {
+    if (gridSize != other.gridSize || areas.length != other.areas.length) {
+      return false;
+    }
+
+    for (int i = 0; i < areas.length; i++) {
+      if (areas[i] != other.areas[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   @override
   bool operator ==(Object other) {
@@ -269,4 +329,27 @@ class _AreaSplSummary {
     }
     return true;
   }
+}
+
+class _SplSortKey {
+  final Object? splRef;
+  final int fieldPointsLen;
+  final int splValuesLen;
+
+  const _SplSortKey({
+    required this.splRef,
+    required this.fieldPointsLen,
+    required this.splValuesLen,
+  });
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! _SplSortKey) return false;
+
+    return identical(splRef, other.splRef) && fieldPointsLen == other.fieldPointsLen && splValuesLen == other.splValuesLen;
+  }
+
+  @override
+  int get hashCode => identityHashCode(splRef) ^ fieldPointsLen.hashCode ^ splValuesLen.hashCode;
 }
