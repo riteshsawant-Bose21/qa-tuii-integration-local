@@ -19,6 +19,16 @@ class TimelineCubit extends Cubit<TimelineState> {
     goToMonth(DateTime(state.visibleMonth.year, state.visibleMonth.month - 1));
   }
 
+  void nextWeek() {
+    emit(state.changeMonth(state.visibleMonth.add(const Duration(days: 7))));
+  }
+
+  void previousWeek() {
+    final DateTime target = state.visibleMonth.subtract(const Duration(days: 7));
+    if (target.isBefore(maxBackableMonth)) return;
+    emit(state.changeMonth(target));
+  }
+
   void goToMonth(DateTime month) {
     if (month.isBefore(maxBackableMonth)) {
       return;

@@ -1,7 +1,36 @@
 part of '../scheduling_page.dart';
 
-class _TimelineSection extends StatelessWidget {
+// Returns the Sunday that starts the ISO week containing [date].
+DateTime _weekStart(DateTime date) {
+  final int offset = date.weekday % 7; // Mon=1…Sun=7 → Sun=0
+  return DateTime(date.year, date.month, date.day - offset);
+}
+
+// Formats a week range like "05 - 11 April 2026" or "28 April - 04 May 2026".
+String _weekRangeLabel(DateTime weekStart) {
+  final DateTime end = weekStart.add(const Duration(days: 6));
+  if (weekStart.month == end.month) {
+    // "05 - 11 April 2026"
+    return '${DateFormat('dd').format(weekStart)} - ${DateFormat('dd MMMM yyyy').format(end)}';
+  } else if (weekStart.year == end.year) {
+    // "28 April - 04 May 2026"
+    return '${DateFormat('dd MMMM').format(weekStart)} - ${DateFormat('dd MMMM yyyy').format(end)}';
+  }
+  // "29 Dec 2026 - 04 Jan 2027"
+  return '${DateFormat('dd MMM yyyy').format(weekStart)} - ${DateFormat('dd MMM yyyy').format(end)}';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _TimelineSection extends StatefulWidget {
   const _TimelineSection();
+
+  @override
+  State<_TimelineSection> createState() => _TimelineSectionState();
+}
+
+class _TimelineSectionState extends State<_TimelineSection> {
+  bool _isMonthView = true;
 
   @override
   Widget build(BuildContext context) {
@@ -20,8 +49,13 @@ class _TimelineSection extends StatelessWidget {
           child: BlocBuilder<TimelineCubit, TimelineState>(
             builder: (BuildContext context, TimelineState state) {
               final TimelineCubit cubit = BlocProvider.of<TimelineCubit>(context);
-              final bool canGoBack = state.visibleMonth.isAfter(cubit.maxBackableMonth);
-              final bool canGoForward = state.visibleMonth.isBefore(cubit.maxForwardableMonth);
+
+              // ── Mode-aware navigation guards ──────────────────────────────
+              final DateTime ws = _weekStart(state.visibleMonth);
+              final bool canGoBack = _isMonthView ? state.visibleMonth.isAfter(cubit.maxBackableMonth) : ws.isAfter(_weekStart(cubit.maxBackableMonth));
+
+              void prev() => _isMonthView ? cubit.previousMonth() : cubit.previousWeek();
+              void next() => _isMonthView ? cubit.nextMonth() : cubit.nextWeek();
 
               return SemanticHelper.button(
                 testId: SemanticHelper.createTestId(SemanticTypes.button, "timeline_section"),
@@ -38,7 +72,7 @@ class _TimelineSection extends StatelessWidget {
                               semanticId: 'timeline_section_now_button',
                               width: 100,
                               height: 32,
-                              text: "Now",
+                              text: "Today",
                               textstyle: context.textTheme.l1SemiBold,
                               showPrefixIcon: true,
                               prefixIcon: Icons.calendar_today,
@@ -48,9 +82,9 @@ class _TimelineSection extends StatelessWidget {
                             ),
                             const SizedBox(width: 12),
 
-                            // ── Previous month ───────────────────────────────
+                            // ── Previous ─────────────────────────────────────
                             IconButton(
-                              onPressed: canGoBack ? cubit.previousMonth : null,
+                              onPressed: canGoBack ? prev : null,
                               icon: FusionIcon.icon(
                                 semanticId: 'timeline_section_previous_button',
                                 Icons.chevron_left_rounded,
@@ -59,86 +93,288 @@ class _TimelineSection extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
 
-                            // ── Month picker chip ────────────────────────────
-                            FusionArrowPopup(
-                              semanticId: 'timeline_month_picker',
-                              backgroundColor: context.colorScheme.elevation2,
-                              content: Builder(
-                                builder:
-                                    (BuildContext ctx) => _MonthPickerGrid(
-                                      selectedMonth: state.visibleMonth.month,
-                                      selectedYear: state.visibleMonth.year,
-                                      minDate: cubit.maxBackableMonth,
-                                      maxDate: cubit.maxForwardableMonth,
-                                      onSelected: (int month) {
-                                        Navigator.of(ctx).pop();
-                                        cubit.goToMonth(
-                                          DateTime(state.visibleMonth.year, month),
-                                        );
-                                      },
-                                    ),
+                            // ── Month picker chip  (month view) ──────────────
+                            // ── Week range label   (week view)  ──────────────
+                            if (_isMonthView) ...<Widget>[
+                              FusionArrowPopup(
+                                semanticId: 'timeline_month_picker',
+                                backgroundColor: context.colorScheme.elevation2,
+                                content: Builder(
+                                  builder:
+                                      (BuildContext ctx) => _MonthPickerGrid(
+                                        selectedMonth: state.visibleMonth.month,
+                                        selectedYear: state.visibleMonth.year,
+                                        minDate: cubit.maxBackableMonth,
+                                        maxDate: cubit.maxForwardableMonth,
+                                        onSelected: (int month) {
+                                          Navigator.of(ctx).pop();
+                                          cubit.goToMonth(DateTime(state.visibleMonth.year, month));
+                                        },
+                                      ),
+                                ),
+                                child: _HeaderChip(
+                                  label: DateFormat('MMMM').format(state.visibleMonth),
+                                ),
                               ),
-                              child: _HeaderChip(
-                                label: DateFormat('MMMM').format(state.visibleMonth),
+                              const SizedBox(width: 4),
+                              FusionArrowPopup(
+                                semanticId: 'timeline_year_picker',
+                                backgroundColor: context.colorScheme.elevation2,
+                                content: Builder(
+                                  builder:
+                                      (BuildContext ctx) => _YearPickerList(
+                                        selectedYear: state.visibleMonth.year,
+                                        minYear: cubit.maxBackableMonth.year,
+                                        maxYear: cubit.maxForwardableMonth.year,
+                                        onSelected: (int year) {
+                                          Navigator.of(ctx).pop();
+                                          DateTime target = DateTime(year, state.visibleMonth.month);
+                                          if (target.isBefore(cubit.maxBackableMonth)) {
+                                            target = cubit.maxBackableMonth;
+                                          }
+                                          cubit.goToMonth(target);
+                                        },
+                                      ),
+                                ),
+                                child: _HeaderChip(
+                                  label: state.visibleMonth.year.toString(),
+                                ),
                               ),
-                            ),
+                            ] else ...<Widget>[
+                              FusionAppText(
+                                text: _weekRangeLabel(ws),
+                                style: context.textTheme.b3Medium,
+                              ),
+                            ],
                             const SizedBox(width: 4),
 
-                            // ── Year picker chip ─────────────────────────────
-                            FusionArrowPopup(
-                              semanticId: 'timeline_year_picker',
-                              backgroundColor: context.colorScheme.elevation2,
-                              content: Builder(
-                                builder:
-                                    (BuildContext ctx) => _YearPickerList(
-                                      selectedYear: state.visibleMonth.year,
-                                      minYear: cubit.maxBackableMonth.year,
-                                      maxYear: cubit.maxForwardableMonth.year,
-                                      onSelected: (int year) {
-                                        Navigator.of(ctx).pop();
-                                        DateTime target = DateTime(year, state.visibleMonth.month);
-                                        if (target.isBefore(cubit.maxBackableMonth)) {
-                                          target = cubit.maxBackableMonth;
-                                        } else if (target.isAfter(cubit.maxForwardableMonth)) {
-                                          target = cubit.maxForwardableMonth;
-                                        }
-                                        cubit.goToMonth(target);
-                                      },
-                                    ),
-                              ),
-                              child: _HeaderChip(
-                                label: state.visibleMonth.year.toString(),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-
-                            // ── Next month ───────────────────────────────────
+                            // ── Next ─────────────────────────────────────────
                             IconButton(
-                              onPressed: canGoForward ? cubit.nextMonth : null,
+                              onPressed: next,
                               icon: FusionIcon.icon(
                                 semanticId: 'timeline_section_next_button',
                                 Icons.chevron_right_rounded,
-                                color: canGoForward ? context.colorScheme.iconDefault : context.colorScheme.iconDefault.withAlpha(60),
+                                color: context.colorScheme.iconDefault,
                               ),
                             ),
 
                             const Spacer(),
+
+                            // ── Month / Week toggle ───────────────────────────
+                            Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                color: context.colorScheme.elevation2,
+                                borderRadius: BorderRadius.circular(9),
+                              ),
+                              child: Row(
+                                children: <Widget>[
+                                  ViewToggle(
+                                    label: 'Month',
+                                    isActive: _isMonthView,
+                                    onTap: () => setState(() => _isMonthView = true),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  ViewToggle(
+                                    label: 'Week',
+                                    isActive: !_isMonthView,
+                                    onTap: () => setState(() => _isMonthView = false),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
                       ),
                     ),
                     Divider(height: 1, color: context.colorScheme.strokeLight),
+
+                    // ── Body ─────────────────────────────────────────────────
                     Expanded(
-                      child: CalenderView(
-                        viewingMonth: state.visibleMonth,
-                        events: state.currentMonthEvents,
-                        eventsByDate: state.eventsByDate,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        child:
+                            _isMonthView
+                                ? CalenderView(
+                                  key: const ValueKey<String>('month'),
+                                  viewingMonth: state.visibleMonth,
+                                  events: state.currentMonthEvents,
+                                  eventsByDate: state.eventsByDate,
+                                )
+                                : _WeekView(
+                                  key: const ValueKey<String>('week'),
+                                  weekAnchor: state.visibleMonth,
+                                  eventsByDate: state.eventsByDate,
+                                ),
                       ),
                     ),
                   ],
                 ),
               );
             },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Week view
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _WeekView extends StatelessWidget {
+  final DateTime weekAnchor;
+  final Map<DateTime, List<CalendarEvent>> eventsByDate;
+
+  const _WeekView({super.key, required this.weekAnchor, required this.eventsByDate});
+
+  @override
+  Widget build(BuildContext context) {
+    final DateTime today = DateTime.now();
+    final DateTime start = _weekStart(weekAnchor);
+    final List<DateTime> days = List<DateTime>.generate(
+      7,
+      (int i) => start.add(Duration(days: i)),
+    );
+
+    return Column(
+      children: <Widget>[
+        // ── Shared day-name header row (mirrors CalenderView) ────────────────
+        const WeekDayRowHeader(),
+
+        // ── Day columns ──────────────────────────────────────────────────────
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+            child: Row(
+              spacing: 4,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children:
+                  days.map((DateTime day) {
+                    final bool isToday = day.year == today.year && day.month == today.month && day.day == today.day;
+                    final DateTime key = DateTime(day.year, day.month, day.day);
+                    final List<CalendarEvent> events = eventsByDate[key] ?? <CalendarEvent>[];
+                    final bool isLast = day == days.last;
+
+                    return Expanded(
+                      child: Container(
+                        // margin: EdgeInsets.only(right: isLast ? 0 : 4),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isToday ? context.colorScheme.primary : context.colorScheme.strokeLight,
+                            width: 1,
+                          ),
+                        ),
+                        child: _WeekDayColumn(
+                          day: day,
+                          isToday: isToday,
+                          events: events,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _WeekDayColumn extends StatelessWidget {
+  final DateTime day;
+  final bool isToday;
+  final List<CalendarEvent> events;
+
+  const _WeekDayColumn({
+    required this.day,
+    required this.isToday,
+    required this.events,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        // ── Date number header (day name is in the shared WeekDayRowHeader) ──
+        // Padding(
+        //   padding: const EdgeInsets.symmetric(vertical: 8),
+        //   child: Center(
+        //     child: Container(
+        //       width: 28,
+        //       height: 28,
+        //       alignment: Alignment.center,
+        //       decoration: BoxDecoration(
+        //         color: isToday ? context.colorScheme.primary : Colors.transparent,
+        //         shape: BoxShape.circle,
+        //       ),
+        //       child: FusionAppText(
+        //         text: '${day.day}',
+        //         style: context.textTheme.b3Medium.withColor(
+        //           isToday ? Colors.white : context.colorScheme.textBody,
+        //         ),
+        //       ),
+        //     ),
+        //   ),
+        // ),
+
+        // ── Events ──────────────────────────────────────────────────────────
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              children: <Widget>[
+                const SizedBox(height: 4),
+                ...events.map(
+                  (CalendarEvent event) => Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: EventCard(event: event),
+                  ),
+                ),
+                const SizedBox(height: 4),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared helpers below (ViewToggle, _HeaderChip, _MonthPickerGrid, _YearPickerList)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class ViewToggle extends StatelessWidget {
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const ViewToggle({
+    super.key,
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFF3D3D3D) : Colors.transparent,
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isActive ? Colors.white : Colors.white54,
+            fontSize: 12,
+            fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
           ),
         ),
       ),
