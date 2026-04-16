@@ -15,11 +15,13 @@ class FusionFlatContainer extends StatelessWidget {
     this.padding,
     this.toolTip,
     this.margin,
+    this.isSelected,
   });
   final double? width;
   final double? height;
   final double borderRadius;
   final Widget child;
+  final bool? isSelected;
   final Color? color;
   final Color? borderColor;
   final AlignmentGeometry? alignment;
@@ -32,6 +34,7 @@ class FusionFlatContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(SemanticTypes.container, "fusion_flat_container_${semanticsId ?? ""}"),
+      isSelected: isSelected,
       child: Tooltip(
         message: toolTip ?? "",
         child: ClipRRect(
