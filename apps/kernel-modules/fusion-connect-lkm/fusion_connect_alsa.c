@@ -502,7 +502,7 @@ static snd_pcm_uframes_t fusion_cn_pcm_pointer(struct snd_pcm_substream *substre
     struct snd_pcm_runtime *runtime = substream->runtime;
     snd_pcm_uframes_t offset;
 
-    if (fusion_cn_alsa_stream_disconnected(runtime->private_data)) return 0;
+    if (fusion_cn_alsa_stream_disconnected(runtime->private_data)) return SNDRV_PCM_POS_XRUN;
 
     offset = stream->buffer_pos;
     if (offset >= runtime->buffer_size) offset %= runtime->buffer_size;
