@@ -26,11 +26,11 @@ class DeviceInfoCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          FusionImage.asset(
-            assetPath,
+          FusionImageAuto(
+            path: assetPath,
             height: 16,
             width: 16,
-            assetColor: context.colorScheme.textSecondary,
+            color: context.colorScheme.textSecondary,
           ),
           const SizedBox(height: 8),
           FusionAppText(

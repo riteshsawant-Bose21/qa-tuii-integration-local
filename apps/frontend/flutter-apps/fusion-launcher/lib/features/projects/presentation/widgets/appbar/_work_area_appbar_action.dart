@@ -84,9 +84,9 @@ class _WorkAreaAppbarAction extends StatelessWidget {
                       onTap: () {
                         DeviceMappingDialog.show(context);
                       },
-                      child: FusionImage.asset(
-                        AssetIcons.networkIcon,
-                        assetColor: Theme.of(context).colorScheme.iconWhite,
+                      child: FusionImageAuto(
+                        path: AssetIcons.networkIcon,
+                        color: Theme.of(context).colorScheme.iconWhite,
                       ),
                     ),
                   ),
@@ -324,8 +324,10 @@ class _WorkAreaAppbarAction extends StatelessWidget {
 
   void _showProjectJsonDialog(BuildContext context) {
     serviceLocator<ProjectViewModel>().saveProject();
-    // final Map<String, dynamic> jsonMap = serviceLocator<ProjectViewModel>().getDroInputData().toJson();
-    final Map<String, dynamic> jsonMap = serviceLocator<ProjectViewModel>().getProjectJson();
+
+    final Map<String, dynamic> jsonMap = serviceLocator<ProjectViewModel>().getDroInputData().toJson();
+    // final Map<String, dynamic> jsonMap = serviceLocator<ProjectViewModel>().getAllProcessingBlocksData();
+    // final Map<String, dynamic> jsonMap = serviceLocator<ProjectViewModel>().getProjectJson();
 
     showDialog(
       context: context,
@@ -408,6 +410,33 @@ class _ProjectJsonDialogState extends State<_ProjectJsonDialog> {
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue.shade700,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+              elevation: 0,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SemanticHelper.button(
+          testId: SemanticHelper.createTestId(SemanticTypes.button, 'copy_json'),
+          child: ElevatedButton.icon(
+            onPressed: () {
+              final String jsonString = const JsonEncoder.withIndent('  ').convert(widget.jsonMap);
+              Clipboard.setData(ClipboardData(text: jsonString));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('JSON copied to clipboard'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            icon: const Icon(Icons.copy, size: 18),
+            label: const FusionAppText(
+              text: 'Copy JSON',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.teal.shade700,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
               elevation: 0,

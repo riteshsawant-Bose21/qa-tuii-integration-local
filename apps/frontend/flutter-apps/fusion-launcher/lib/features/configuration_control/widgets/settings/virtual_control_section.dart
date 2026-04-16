@@ -25,9 +25,8 @@ class VirtualControlSection extends StatelessWidget {
   const VirtualControlSection({super.key, this.controllerId});
 
   String get _qrData => jsonEncode(<String, String>{
-    "vip": serviceLocator<ProjectViewModel>().virtualIP ?? "192.168.1.110",
+    "vip": serviceLocator<ProjectViewModel>().virtualIP ?? "",
     "controller_id": controllerId ?? "",
-    // "controller_id": "CTRL1762958340064766236",
   });
 
   Future<void> _printQr(BuildContext context) async {

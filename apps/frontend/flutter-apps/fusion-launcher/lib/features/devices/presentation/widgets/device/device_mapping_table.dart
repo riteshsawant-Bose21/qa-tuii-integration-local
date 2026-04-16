@@ -268,7 +268,7 @@ class _DeviceMappingTableState extends State<DeviceMappingTable> {
       if (isAssignedToThis) return true;
 
       final bool isAssignedToAnother = widget.devices.any((HardwareComponent d) => d.id == hw.id);
-      return !isAssignedToAnother && (hw.modelName == device.hardwareName);
+      return !isAssignedToAnother; //commeted this check since model name is not availabe // && (hw.modelName.toLowerCase() == device.hardwareName.toLowerCase());
     });
 
     final Set<String> addedIds = <String>{};

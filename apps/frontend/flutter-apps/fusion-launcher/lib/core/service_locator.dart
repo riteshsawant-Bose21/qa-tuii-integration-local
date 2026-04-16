@@ -22,7 +22,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/authentication/viewmodel/session_view_model.dart';
 import '../features/configuration/presentation/viewmodel/project_view_model.dart';
-import '../features/devices/view_model/firmware_update/firmware_update_vm.dart';
 import '../features/dynamic_config/data/datasources/panel_datasource.dart';
 import '../features/dynamic_config/data/datasources/panel_datasource_impl.dart';
 import '../features/dynamic_config/data/repositories/panel_repository_impl.dart';
@@ -34,6 +33,7 @@ import '../features/dynamic_config/domain/usecases/initialize_panel_usecase.dart
 import '../features/dynamic_config/domain/usecases/reset_fusion_data_usecase.dart';
 import '../features/dynamic_config/domain/usecases/send_widget_data_usecase.dart';
 import '../features/dynamic_config/presentation/bloc/panel_bloc.dart';
+import '../features/firmware_update/viewmodel/firmware_update_vm.dart';
 import '../features/home/domain/usecases/create_project_usecase.dart';
 import '../features/home/domain/usecases/delete_project_usecase.dart';
 import '../features/home/domain/usecases/fetch_file_usecase.dart';
@@ -216,6 +216,9 @@ Future<void> setupServiceLocator() async {
       networkClient: serviceLocator<FusionNetworkClient>(),
     ),
   );
+
+  // Download manager for handling file downloads across the app
+  serviceLocator.registerSingleton<TransferManagerCubit>(TransferManagerCubit());
 
   serviceLocator.registerSingleton<DroConfigService>(
     DroConfigService(

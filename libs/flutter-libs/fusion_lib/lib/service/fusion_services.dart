@@ -6,3 +6,5 @@ export 'dsp_sync/fusion_config_sync_service.dart';
 export 'fusion_device/fusion_device_service.dart';
 export 'websocket/websocket_service.dart';
 export 'cache/app_cache_service.dart';
+export 'dowload_manager/dowload_manager.dart';
+export 'dowload_manager/file_download.dart';

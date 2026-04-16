@@ -34,6 +34,42 @@ import 'package:fusion_lib/fusion_lib.dart';
 /// ];
 /// ```
 class AutoWiringUseCase {
+  /// Auto-wires all provided components, then all circuits.
+  ///
+  /// This is the primary entry point for generating connection suggestions for
+  /// the whole canvas. Newly created links are included immediately in the
+  /// running connection set, which avoids duplicate links within the same pass.
+  List<WiringConnectionModel> autoWire({
+    required List<HardwareComponent> components,
+    required List<CircuitModel> circuits,
+    required List<WiringConnectionModel> existingConnections,
+  }) {
+    final List<WiringConnectionModel> newConnections = <WiringConnectionModel>[];
+
+    for (final HardwareComponent component in components) {
+      newConnections.addAll(
+        autoWireForHardware(
+          component: component,
+          allComponents: components,
+          circuits: circuits,
+          existingConnections: <WiringConnectionModel>[...existingConnections, ...newConnections],
+        ),
+      );
+    }
+    for (final CircuitModel circuit in circuits) {
+      newConnections.addAll(
+        autoWireForCircuit(
+          circuit: circuit,
+          allComponents: components,
+          circuits: circuits,
+          existingConnections: <WiringConnectionModel>[...existingConnections, ...newConnections],
+        ),
+      );
+    }
+
+    return newConnections;
+  }
+
   /// Auto-wires a single hardware component to compatible targets.
   ///
   /// Use this when one device changes (for example after drag/drop or a port
@@ -44,13 +80,34 @@ class AutoWiringUseCase {
     required List<CircuitModel> circuits,
     required List<WiringConnectionModel> existingConnections,
   }) {
+    if (component is Amplifier) {
+      return _autoWireForAmplifier(
+        amplifier: component,
+        allComponents: allComponents,
+        circuits: circuits,
+        existingConnections: existingConnections,
+      );
+    }
+
+    if (component is FusionDsp) {
+      return _autoWireForDsp(
+        dsp: component,
+        allComponents: allComponents,
+        circuits: circuits,
+        existingConnections: existingConnections,
+      );
+    }
+
     final List<WiringConnectionModel> newConnections = <WiringConnectionModel>[];
 
     if (component is Speaker || component is HardwareRack) {
       return newConnections;
     }
 
-    for (final PortData port in <PortData>[...component.inputPortsData, ...component.outputPortsData, ...component.communicationPorts]) {
+    for (final PortData port in <PortData>[
+      ...component.inputPortsData,
+      ...component.outputPortsData,
+    ]) {
       final List<WiringConnectionModel> allConnections = <WiringConnectionModel>[...existingConnections, ...newConnections];
       if (_hasExistingConnection(component.id, port.id, allConnections)) {
         continue;
@@ -80,6 +137,195 @@ class AutoWiringUseCase {
     }
 
     return newConnections;
+  }
+
+  List<WiringConnectionModel> _autoWireForAmplifier({
+    required Amplifier amplifier,
+    required List<HardwareComponent> allComponents,
+    required List<CircuitModel> circuits,
+    required List<WiringConnectionModel> existingConnections,
+  }) {
+    final List<WiringConnectionModel> newConnections = <WiringConnectionModel>[];
+
+    for (final PortData port in amplifier.outputPortsData) {
+      final List<WiringConnectionModel> allConnections = <WiringConnectionModel>[...existingConnections, ...newConnections];
+      if (_hasExistingConnection(amplifier.id, port.id, allConnections)) {
+        continue;
+      }
+
+      final (String, PortData)? bestMatch = _findBestPortMatch(
+        amplifier.id,
+        port,
+        allComponents,
+        circuits,
+        allConnections,
+      );
+
+      if (bestMatch != null) {
+        final String targetComponentId = bestMatch.$1;
+        final PortData targetPort = bestMatch.$2;
+
+        newConnections.add(
+          _createConnection(
+            fromDeviceId: amplifier.id,
+            fromPort: port,
+            toDeviceId: targetComponentId,
+            toPort: targetPort,
+          ),
+        );
+      }
+    }
+
+    // for (final PortData port in amplifier.inputPortsData) {
+    //   final List<WiringConnectionModel> allConnections = <WiringConnectionModel>[...existingConnections, ...newConnections];
+
+    //   final int connectedOutputs =
+    //       amplifier.outputPortsData.where((PortData outputPort) => _hasExistingConnection(amplifier.id, outputPort.id, allConnections)).length;
+
+    //   final int connectedInputs =
+    //       amplifier.inputPortsData.where((PortData inputPort) => _hasExistingConnection(amplifier.id, inputPort.id, allConnections)).length;
+
+    //   if (connectedInputs >= connectedOutputs) {
+    //     break;
+    //   }
+
+    //   if (_hasExistingConnection(amplifier.id, port.id, allConnections)) {
+    //     continue;
+    //   }
+
+    //   final (String, PortData)? bestMatch = _findBestPortMatch(
+    //     amplifier.id,
+    //     port,
+    //     allComponents,
+    //     circuits,
+    //     allConnections,
+    //   );
+
+    //   if (bestMatch != null) {
+    //     final String targetComponentId = bestMatch.$1;
+    //     final PortData targetPort = bestMatch.$2;
+
+    //     newConnections.add(
+    //       _createConnection(
+    //         fromDeviceId: amplifier.id,
+    //         fromPort: port,
+    //         toDeviceId: targetComponentId,
+    //         toPort: targetPort,
+    //       ),
+    //     );
+    //   }
+    // }
+
+    return newConnections;
+  }
+
+  List<WiringConnectionModel> _autoWireForDsp({
+    required FusionDsp dsp,
+    required List<HardwareComponent> allComponents,
+    required List<CircuitModel> circuits,
+    required List<WiringConnectionModel> existingConnections,
+  }) {
+    final List<WiringConnectionModel> newConnections = <WiringConnectionModel>[];
+
+    for (final PortData port in dsp.inputPortsData) {
+      final List<WiringConnectionModel> allConnections = <WiringConnectionModel>[...existingConnections, ...newConnections];
+      if (_hasExistingConnection(dsp.id, port.id, allConnections)) {
+        continue;
+      }
+
+      final (String, PortData)? bestMatch = _findBestPortMatch(
+        dsp.id,
+        port,
+        allComponents,
+        circuits,
+        allConnections,
+      );
+
+      if (bestMatch != null) {
+        final String targetComponentId = bestMatch.$1;
+        final PortData targetPort = bestMatch.$2;
+
+        newConnections.add(
+          _createConnection(
+            fromDeviceId: dsp.id,
+            fromPort: port,
+            toDeviceId: targetComponentId,
+            toPort: targetPort,
+          ),
+        );
+      }
+    }
+
+    // for (final PortData port in dsp.outputPortsData) {
+    //   final List<WiringConnectionModel> allConnections = <WiringConnectionModel>[...existingConnections, ...newConnections];
+
+    //   final int connectedInputs = dsp.inputPortsData.where((PortData inputPort) => _hasExistingConnection(dsp.id, inputPort.id, allConnections)).length;
+
+    //   final int connectedOutputs = dsp.outputPortsData.where((PortData outputPort) => _hasExistingConnection(dsp.id, outputPort.id, allConnections)).length;
+
+    //   if (connectedOutputs >= connectedInputs) {
+    //     break;
+    //   }
+
+    //   if (_hasExistingConnection(dsp.id, port.id, allConnections)) {
+    //     continue;
+    //   }
+
+    //   final (String, PortData)? bestMatch = _findBestPortMatchForDspOutput(
+    //     dsp.id,
+    //     port,
+    //     allComponents,
+    //     circuits,
+    //     allConnections,
+    //   );
+
+    //   if (bestMatch != null) {
+    //     final String targetComponentId = bestMatch.$1;
+    //     final PortData targetPort = bestMatch.$2;
+
+    //     newConnections.add(
+    //       _createConnection(
+    //         fromDeviceId: dsp.id,
+    //         fromPort: port,
+    //         toDeviceId: targetComponentId,
+    //         toPort: targetPort,
+    //       ),
+    //     );
+    //   }
+    // }
+
+    return newConnections;
+  }
+
+  (String, PortData)? _findBestPortMatchForDspOutput(
+    String dspId,
+    PortData port,
+    List<HardwareComponent> allComponents,
+    List<CircuitModel> circuits,
+    List<WiringConnectionModel> existingConnections,
+  ) {
+    for (final HardwareComponent targetComponent in allComponents) {
+      if (targetComponent is! Amplifier) {
+        continue;
+      }
+      if (targetComponent.id == dspId) {
+        continue;
+      }
+
+      for (final PortData targetPort in targetComponent.inputPortsData) {
+        if (_arePortsCompatible(port, targetPort) && !_hasExistingConnection(targetComponent.id, targetPort.id, existingConnections)) {
+          return (targetComponent.id, targetPort);
+        }
+      }
+    }
+
+    return _findBestPortMatch(
+      dspId,
+      port,
+      allComponents,
+      circuits,
+      existingConnections,
+    );
   }
 
   /// Auto-wires a single circuit input port to a compatible source.
@@ -117,42 +363,6 @@ class AutoWiringUseCase {
           fromPort: port,
           toDeviceId: targetComponentId,
           toPort: targetPort,
-        ),
-      );
-    }
-
-    return newConnections;
-  }
-
-  /// Auto-wires all provided components, then all circuits.
-  ///
-  /// This is the primary entry point for generating connection suggestions for
-  /// the whole canvas. Newly created links are included immediately in the
-  /// running connection set, which avoids duplicate links within the same pass.
-  List<WiringConnectionModel> autoWire({
-    required List<HardwareComponent> components,
-    required List<CircuitModel> circuits,
-    required List<WiringConnectionModel> existingConnections,
-  }) {
-    final List<WiringConnectionModel> newConnections = <WiringConnectionModel>[];
-
-    for (final HardwareComponent component in components) {
-      newConnections.addAll(
-        autoWireForHardware(
-          component: component,
-          allComponents: components,
-          circuits: circuits,
-          existingConnections: <WiringConnectionModel>[...existingConnections, ...newConnections],
-        ),
-      );
-    }
-    for (final CircuitModel circuit in circuits) {
-      newConnections.addAll(
-        autoWireForCircuit(
-          circuit: circuit,
-          allComponents: components,
-          circuits: circuits,
-          existingConnections: <WiringConnectionModel>[...existingConnections, ...newConnections],
         ),
       );
     }
