@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/config/app_config.dart';
+import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/product_data.dart';
@@ -66,7 +67,6 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
     loadProducts();
   }
 
-  static const int _maxRetries = 1;
   static const Duration _pricesCacheTtl = Duration(hours: 24);
 
   bool _hasLoadedProducts = false;
@@ -77,8 +77,9 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
   late String localProductDirPath;
 
   bool get hasCloudAccess => serviceLocator<SessionViewModel>().hasCloudAccess();
+  bool get isAuthenticated => serviceLocator<AuthViewModel>().state is Authenticated;
 
-  Future<void> loadProducts({bool refresh = false}) async {
+  Future<void> loadProducts({int attempt = 1, bool refresh = false}) async {
     try {
       if (state.isRefreshing) return;
       if (!refresh && _hasLoadedProducts && state.products != null) return;
