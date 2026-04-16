@@ -55,7 +55,7 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
       );
     }
     for (final IoEndpointProduct element in datasource.ioEndpoints) {
-      final String key = element.assets.assets.keys.firstOrNull ?? '';
+      // final String key = element.assets.assets.keys.firstOrNull ?? '';
       allProducts.add(
         EQLProduct(
           productId: element.productId,
