@@ -827,6 +827,10 @@ static int remove_stream(struct fusion_cn_manager *mgr,
     rtp_stream->stream_node = NULL;
     write_unlock_irqrestore(&mgr->rtp.lock, flags);
 
+    /* Drop extra refs taken when the stream was added to the active list. */
+    kref_put(&alsa_stream->ref, fusion_cn_alsa_substream_release);
+    kref_put(&rtp_stream->ref, fusion_cn_rtp_stream_release);
+
     /* Remove RTP stream from hash/lists */
     write_lock_irqsave(&mgr->rtp.lock, flags);
     ret = fusion_cn_rtp_remove_stream(&mgr->rtp, rtp_stream);

@@ -492,6 +492,13 @@ int AlsaDevice::read(float *buffer, int samples)
         return samples;
     }
 
+    if (snd_pcm_state(alsa) == SND_PCM_STATE_DISCONNECTED)
+    {
+        close_device();
+        std::memset(buffer, 0, samples * channels * sizeof(float));
+        return samples;
+    }
+
     int res = snd_pcm_readi(alsa, sample_buffer.get(), samples);
 
     if (res == -EAGAIN)

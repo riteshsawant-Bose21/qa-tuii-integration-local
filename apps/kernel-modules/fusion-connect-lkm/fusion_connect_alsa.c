@@ -112,24 +112,6 @@ void fusion_cn_alsa_substream_release(struct kref *kref)
     kfree(s);
 }
 
-void fusion_cn_alsa_set_playback_phase(struct fusion_cn_substream *stream, u32 buffer_pos)
-{
-    unsigned long flags;
-
-    if (!stream)
-        return;
-
-    spin_lock_irqsave(&stream->lock, flags);
-    stream->buffer_pos = buffer_pos;
-    if (stream->substream && stream->substream->runtime && stream->rtp_frames_per_packet) {
-        u32 period_size = stream->substream->runtime->period_size;
-        stream->interrupt_idx = (buffer_pos % period_size) / stream->rtp_frames_per_packet;
-    } else {
-        stream->interrupt_idx = 0;
-    }
-    spin_unlock_irqrestore(&stream->lock, flags);
-}
-
 void fusion_cn_alsa_fill_silence(struct fusion_cn_substream *stream, u32 frame_offset, u32 frames)
 {
     unsigned long flags;
@@ -304,9 +286,6 @@ int fusion_cn_alsa_remove_substream(struct fusion_cn_substream *stream)
     ss = stream->substream;
     stream->pending_free = true;
     spin_unlock_irqrestore(&stream->lock, flags);
-
-    if (ss)
-        snd_pcm_stop(ss, SNDRV_PCM_STATE_DISCONNECTED);
 
     if (stream->pcm)
         snd_device_disconnect(stream->pcm->card, stream->pcm);
@@ -727,10 +706,14 @@ int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, u64 stream_h
         goto stream_free;
     }
 
-    if (fusion_cn_find_substream(stream_name)) {
-        printk(KERN_WARNING "fusion_cn_alsa: open_substream: Stream %s already exists\n", stream_name);
-        err = -EEXIST;
-        goto stream_free;
+    {
+        struct fusion_cn_substream *existing = fusion_cn_find_substream(stream_name);
+        if (existing) {
+            printk(KERN_WARNING "fusion_cn_alsa: open_substream: Stream %s already exists\n", stream_name);
+            kref_put(&existing->ref, fusion_cn_alsa_substream_release);
+            err = -EEXIST;
+            goto stream_free;
+        }
     }
 
     write_lock_irqsave(&chip->lock, flags);
