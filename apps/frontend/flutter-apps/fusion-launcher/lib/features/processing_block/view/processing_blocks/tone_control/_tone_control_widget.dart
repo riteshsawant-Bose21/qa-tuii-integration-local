@@ -31,8 +31,7 @@ class ToneControlWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.horizontal(
-          left:
-              leftRadius ? Radius.circular(context.mediumRadius) : Radius.zero,
+          left: leftRadius ? Radius.circular(context.mediumRadius) : Radius.zero,
         ),
       ),
       child: Column(
@@ -99,8 +98,8 @@ class ToneControlWidget extends StatelessWidget {
                               onChanged(value);
                               // context.read<LimiterController>().updateThreshold(value);
                             },
-                            min: 1,
-                            max: 96000,
+                            min: -15,
+                            max: 15,
                           ),
                         ),
                         const SizedBox(height: 4),
