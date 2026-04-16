@@ -738,7 +738,7 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
                             (FirmwareInstallDeviceProgress d) => d.serialNumber == networkDevice.serialNumber,
                           );
 
-                          return _buildDeviceRow(networkDevice, device);
+                          return _buildDeviceRow(networkDevice, device, state);
                         }),
                       ],
                     );
@@ -752,8 +752,12 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
     );
   }
 
-  Widget _buildDeviceRow(FusionNetworkDevice networkDevice, FirmwareInstallDeviceProgress? device) {
-    final String normalizedState = device?.updateState.toUpperCase() ?? '';
+  Widget _buildDeviceRow(FusionNetworkDevice networkDevice, FirmwareInstallDeviceProgress? device, FirmwareUpdateViewModelState state) {
+    // Check if we're in reboot tracking mode
+    final bool isRebooting = state.isRebootTrackingInProgress;
+
+    final String normalizedState = isRebooting ? 'REBOOTING' : device?.updateState.toUpperCase() ?? '';
+
     final bool completed = normalizedState == 'COMPLETED';
     final bool success = normalizedState == 'SUCCESS';
     final Color stateColor = completed || success ? const Color(0xFF5CC59A) : const Color(0xFFE0A645);
