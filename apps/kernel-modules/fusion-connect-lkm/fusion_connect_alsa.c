@@ -258,7 +258,6 @@ static int fusion_cn_pcm_silence(struct snd_pcm_substream *substream,
     return (int)frames;
 }
 
-
 static int fusion_cn_pcm_fill_silence(struct snd_pcm_substream *substream,
                                      int channel, unsigned long pos,
                                      unsigned long count)
