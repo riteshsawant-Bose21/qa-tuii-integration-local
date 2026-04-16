@@ -1,4 +1,5 @@
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/endpoints.dart';
 
 extension DroInputMapperService on ProjectService {
   DroInputModel getDroInputData() {
@@ -527,16 +528,16 @@ extension DroInputMapperService on ProjectService {
           connection: connection,
         );
 
-        if (matchedPort == null) {
-          FusionLogger.log(tag: LogTag.dro, message: "No matching port found for connection ${connection.id} on device ${dsp.name}");
-
-          // for(PortData port in inputPorts) {
-          //   FusionLogger.log(tag: LogTag.dro, message: "Input Port - id: ${port.id}, number: ${port.portNumber}, type: ${port.type}");
-          // }
-          for (PortData port in comPorts) {
-            FusionLogger.log(tag: LogTag.dro, message: "Communication Port - id: ${port.id}, number: ${port.portNumber}, type: ${port.type}");
-          }
-        }
+        // if (matchedPort == null) {
+        //   FusionLogger.log(tag: LogTag.dro, message: "No matching port found for connection ${connection.id} on device ${dsp.name}");
+        //
+        //   // for(PortData port in inputPorts) {
+        //   //   FusionLogger.log(tag: LogTag.dro, message: "Input Port - id: ${port.id}, number: ${port.portNumber}, type: ${port.type}");
+        //   // }
+        //   for (PortData port in comPorts) {
+        //     FusionLogger.log(tag: LogTag.dro, message: "Communication Port - id: ${port.id}, number: ${port.portNumber}, type: ${port.type}");
+        //   }
+        // }
 
         if (matchedPort != null) {
           droIoPorts.add(
@@ -608,7 +609,53 @@ extension DroInputMapperService on ProjectService {
       }
     }
 
-    // todo: confirm if we need to add amps or not
+    //endpoints
+    for (FusionEndpoints endpoint in getAllHardware().whereType<FusionEndpoints>()) {
+      DroMaxDevice droMaxDevice = DroMaxDevice(
+        deviceId: endpoint.id,
+        deviceType: endpoint.sku.toLowerCase(),
+        deviceLocation: "",
+      );
+      droMaxDevices.add(droMaxDevice);
+
+      List<WiringConnectionModel> wiringConnections = getConnectionForDevice(endpoint.id) ?? [];
+
+      for (WiringConnectionModel connection in wiringConnections) {
+        List<PortData> inputPorts = endpoint.inputPortsData;
+        List<PortData> comPorts = endpoint.communicationPorts;
+
+        // Find matching port from input or communication ports
+        PortData? matchedPort = _findMatchingPort(
+          inputPorts: inputPorts,
+          comPorts: comPorts,
+          connection: connection,
+        );
+
+        // if (matchedPort == null) {
+        //   FusionLogger.log(tag: LogTag.dro, message: "No matching port found for connection ${connection.id} on endpoint ${endpoint.name}");
+        //   for (PortData port in inputPorts) {
+        //     FusionLogger.log(tag: LogTag.dro, message: "Input Port - id: ${port.id}, number: ${port.portNumber}, type: ${port.type}");
+        //   }
+        //   for (PortData port in comPorts) {
+        //     FusionLogger.log(tag: LogTag.dro, message: "Communication Port - id: ${port.id}, number: ${port.portNumber}, type: ${port.type}");
+        //   }
+        // }
+
+        if (matchedPort != null) {
+          droIoPorts.add(
+            DroIoPorts(
+              ioId: endpoint.id == connection.deviceId ? connection.targetDeviceId : connection.deviceId,
+              deviceId: endpoint.id,
+              portType: connection.type.type,
+              portNums: [
+                matchedPort.portNumber,
+              ],
+            ),
+          );
+        }
+      }
+    }
+
     // for (Amplifier amps in getAllHardware().whereType<Amplifier>()) {
     //   DroMaxDevice droMaxDevice = DroMaxDevice(
     //     deviceId: amps.id,
@@ -621,7 +668,7 @@ extension DroInputMapperService on ProjectService {
     DroUserSetting droUserSetting = DroUserSetting(
       maxDevices: droMaxDevices,
       ioPorts: droIoPorts,
-      deviceCapacity: 90,
+      deviceCapacity: 70,
       maxSolveTime: 60,
       maxDeviceHopCount: 10,
       maxNetworkLatency: 50,

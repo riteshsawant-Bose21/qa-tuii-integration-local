@@ -25,7 +25,6 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
   StreamSubscription<FileTransferState>? _downloadSubscription;
   StreamSubscription<FileTransferState>? _uploadSubscription;
   StreamSubscription<ResponseCallback<FirmwareUpdateProgressEvent>>? _firmwareInstallSocketSubscription;
-  StreamSubscription<ResponseCallback<FirmwareUpdateProgressEvent>>? _deviceRebootSocketSubscription;
 
   final TransferManagerCubit downloadManager = serviceLocator<TransferManagerCubit>();
   String? _persistedBundleId;
@@ -43,7 +42,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
       _emitIfOpen(
         state.copyWith(
           uiState: FirmwareUpdateUiState.noUpdate,
-          errorShortText: _shortError('Target device is not configured.'),
+          errorShortText: 'Target device is not configured.',
           errorText: 'Target device is not configured.',
         ),
       );
@@ -70,6 +69,17 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     if (current == FirmwareUpdateUiState.downloading || current == FirmwareUpdateUiState.installing) return;
 
     _emitIfOpen(state.copyWith(uiState: FirmwareUpdateUiState.checking, errorShortText: '', errorText: ''));
+
+    if (!HAS_CLOUD_ACCESS) {
+      _emitIfOpen(
+        state.copyWith(
+          uiState: FirmwareUpdateUiState.noUpdate,
+          errorShortText: 'Cloud access is not available.',
+          errorText: 'Cloud access is not available. Please ensure you are signed in.',
+        ),
+      );
+      return;
+    }
 
     try {
       final FirmwareUpdateCheckResult updateCheckResult = await checkForUpdates();
@@ -133,7 +143,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
       _emitIfOpen(
         state.copyWith(
           uiState: nextUiState,
-          errorShortText: _shortError(nextErrorText),
+          errorShortText: nextErrorText,
           errorText: nextErrorText,
           updateCheckResult: updateCheckResult,
           availableVersion: updateAvailableVersion,
@@ -146,7 +156,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
       _emitIfOpen(
         state.copyWith(
           uiState: FirmwareUpdateUiState.noUpdate,
-          errorShortText: _shortError('Failed to check firmware updates: $e'),
+          errorShortText: 'Failed to check firmware updates',
           errorText: 'Failed to check firmware updates: $e',
         ),
       );
@@ -193,12 +203,12 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     return response.data!;
   }
 
-  void _setDownloadFailed(String errorText) {
+  void _setDownloadFailed(String shortError, String? detailedError) {
     _emitIfOpen(
       state.copyWith(
         uiState: FirmwareUpdateUiState.downloadFailed,
-        errorShortText: _shortError(errorText),
-        errorText: errorText,
+        errorShortText: shortError,
+        errorText: detailedError,
         progress: 0,
       ),
     );
@@ -235,12 +245,12 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     );
   }
 
-  void _setInstallFailed(String errorText) {
+  void _setInstallFailed(String errorText, String? detailedError) {
     _emitIfOpen(
       state.copyWith(
         uiState: FirmwareUpdateUiState.installFailed,
-        errorShortText: _shortError(errorText),
-        errorText: errorText,
+        errorShortText: errorText,
+        errorText: detailedError,
         isUploadInProgress: false,
         isSocketTrackingInProgress: false,
       ),
@@ -250,7 +260,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
   Future<void> onDownloadTap() async {
     final String? currentBundleId = bundleId;
     if (currentBundleId == null || currentBundleId.trim().isEmpty) {
-      _setDownloadFailed('Invalid bundle ID. Cannot download update.');
+      _setDownloadFailed('Invalid bundle ID. Cannot download update.', "Bundle ID is missing or empty.");
       return;
     }
 
@@ -299,13 +309,13 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
           }
 
           if (fileDownloadState.status == TransferStatus.failed) {
-            _setDownloadFailed('Download failed. Please try again.');
+            _setDownloadFailed('Download failed', "The firmware bundle download failed. Please try again.");
           }
         },
-        onError: (Object error) => _setDownloadFailed('Download error: $error'),
+        onError: (Object error) => _setDownloadFailed('Download failed', "The firmware bundle download failed with error: $error"),
       );
     } catch (e) {
-      _setDownloadFailed('Download could not be started: $e');
+      _setDownloadFailed('Download could not be started', "The firmware bundle download could not be started due to an error: $e");
     }
   }
 
@@ -335,10 +345,21 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     await onDownloadTap();
   }
 
+  Future<void> deleteDownloadedBundle() async {
+    final String bundlePath = state.downloadedFilePath.trim();
+    if (bundlePath.isNotEmpty) {
+      await _deleteCachedBundleIfExists(bundlePath);
+      await _clearDownloadedBundlePath();
+    }
+
+    _emitIfOpen(state.copyWith(uiState: FirmwareUpdateUiState.checking, downloadedFilePath: '', progress: 0, errorShortText: '', errorText: ''));
+    checkNewFirmwareUpdates();
+  }
+
   Future<void> installNow() async {
     final String targetVip = (vip ?? '').trim();
     if (targetVip.isEmpty) {
-      _setInstallFailed('Virtual IP is not configured.');
+      _setInstallFailed('Virtual IP is not configured.', "Please configure the target device's Virtual IP before attempting installation.");
       return;
     }
 
@@ -350,7 +371,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     final String resolvedChecksum = (metadata?.checksum ?? persistedMetadata?.checksum ?? '').trim();
 
     if (resolvedDownloadUrl.isEmpty || resolvedDownloadFileName.isEmpty || resolvedChecksum.isEmpty) {
-      _setInstallFailed('No firmware metadata available. Re-download and try again.');
+      _setInstallFailed('No firmware metadata available.', "Re-download and try again.");
       return;
     }
 
@@ -359,7 +380,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
 
     if (!await File(bundleFilePath).exists()) {
       await _clearDownloadedBundlePath();
-      _setInstallFailed('No downloaded bundle available for installation.');
+      _setInstallFailed('No downloaded bundle available for installation.', "Please download the firmware bundle before attempting installation.");
       return;
     }
 
@@ -419,7 +440,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
 
       _uploadSubscription = task.stream.listen(
         (FileTransferState fileUploadState) {
-          log("FileTransferState == ${fileUploadState.progress}");
+          log("FileTransferState == ${fileUploadState.status.name}, progress: ${fileUploadState.progress}");
 
           if (fileUploadState.status == TransferStatus.inProgress) {
             _setInstallProgress(fileUploadState.progress);
@@ -434,24 +455,29 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
           }
 
           if (fileUploadState.status == TransferStatus.failed) {
-            _setInstallFailed('Upload failed. Please try again.');
+            if (fileUploadState.error != null) log("FILE UPLOAD ERROR ========== : ${fileUploadState.error}");
+            if (fileUploadState.error == "already_exists") {
+              _markInstallUploadCompleted();
+              _emitIfOpen(state.copyWith(isWaitingForSocketResponse: true));
+              _listenToSoftwareInstallationProgress();
+            } else {
+              _setInstallFailed('Upload failed.', fileUploadState.errorMessage ?? "Unknown error");
+            }
           }
         },
         onError: (Object error) {
           log("FM file upload error: $error");
-          _setInstallFailed('Upload error: $error');
+          _setInstallFailed('Upload error.', "Error details: $error");
         },
       );
     } on DioException catch (e) {
-      _setInstallFailed('Upload request failed: ${e.message ?? e.toString()}');
+      _setInstallFailed('Upload request failed', "Error details: ${e.message ?? e.toString()}");
     } catch (e) {
-      _setInstallFailed('Unexpected error during upload: $e');
+      _setInstallFailed('Unexpected error during upload', "Error details: $e");
     }
   }
 
-  Future<void> retryInstall() async {
-    await installNow();
-  }
+  Future<void> retryInstall() => installNow();
 
   Future<void> rollbackToDownloaded() async {
     await cancelSoftwareUpdateProgressListening();
@@ -490,7 +516,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
   String get primaryFusionDeviceVersion {
     final List<FusionNetworkDevice> fustionNetworkDevices = state.networkDevices;
     final FusionNetworkDevice? primaryDevice = fustionNetworkDevices.firstWhereOrNull((FusionNetworkDevice? d) => d?.isPrimary == true);
-    return primaryDevice?.softwareUpdateVersion ?? '';
+    return primaryDevice?.primaryDeviceVersion ?? '';
   }
 
   String get primaryFusionDevicejenkinsBuildNumber {
@@ -516,7 +542,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     final String targetBundleId = (bundleId ?? '').trim();
 
     if (targetVip.isEmpty || targetBundleId.isEmpty) {
-      _setInstallFailed('Missing device IP or bundle ID for installation tracking.');
+      _setInstallFailed('Missing device IP or bundle ID', "Please ensure the device IP and bundle ID are correctly configured.");
       return;
     }
 
@@ -592,26 +618,122 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
         },
         onError: (Object error) {
           if (!completer.isCompleted) {
-            completer.completeError(Exception('Firmware install websocket error: $error'));
+            // Check if installation was actually completed before treating as error
+            final bool wasCompleted = state.installTrackingCompleted;
+            if (wasCompleted) {
+              completer.complete(); // Devices completed, socket error is expected during reboot
+            } else {
+              completer.completeError(Exception('Firmware install websocket error: $error'));
+            }
           }
         },
         onDone: () {
-          if (!completer.isCompleted && !state.installTrackingCompleted) {
-            completer.completeError(Exception('Firmware install websocket closed before completion.'));
+          if (!completer.isCompleted) {
+            // Check if installation was completed before socket closed
+            final bool wasCompleted = state.installTrackingCompleted;
+            if (wasCompleted) {
+              log('Socket closed after installation completed - devices starting reboot');
+              completer.complete(); // Expected: devices going offline to reboot
+            } else {
+              completer.completeError(Exception('Firmware install websocket closed before completion.'));
+            }
           }
         },
       );
 
       await completer.future;
 
-      final bool allCompleted = state.deviceInstallProgress.every((FirmwareInstallDeviceProgress e) => e.isCompleted);
+      // Proceed to reboot tracking regardless of how completer completed
+      // (as long as no exception was thrown)
+      await listenToDeviceRebootEvents();
+    } catch (e) {
+      // Only fail if devices didn't complete installation
+      final bool wasCompleted = state.installTrackingCompleted;
+      if (wasCompleted) {
+        log('Installation completed despite error: $e - proceeding to reboot tracking');
+        await listenToDeviceRebootEvents();
+      } else {
+        _setInstallFailed('Installation failed', "Error details: $e");
+      }
+    } finally {
+      await cancelSoftwareUpdateProgressListening();
+      _emitIfOpen(state.copyWith(isSocketTrackingInProgress: false));
+    }
+  }
 
-      if (allCompleted) {
-        // Installation successful - delete the downloaded bundle file but keep metadata for rollback
-        final String bundlePathToDelete = state.downloadedFilePath.trim();
-        if (bundlePathToDelete.isNotEmpty) {
-          await _deleteCachedBundleIfExists(bundlePathToDelete);
+  Future<void> listenToDeviceRebootEvents() async {
+    log("REBOOTING:::: Waiting for devices to reboot...");
+    _emitIfOpen(state.copyWith(isRebootTrackingInProgress: true));
+    // await Future<void>.delayed(const Duration(minutes: 1));
+    log("REBOOTING:::: Starting device polling...");
+
+    _emitIfOpen(state.copyWith(isSocketTrackingInProgress: true));
+
+    try {
+      final List<FusionNetworkDevice> expectedDevices = state.networkDevices;
+      final Set<String> expectedSerials = expectedDevices.map((FusionNetworkDevice d) => d.serialNumber).toSet();
+
+      const int maxAttempts = 60; // 10 minutes max (60 attempts * 10 seconds)
+      int attempts = 0;
+      bool allDevicesOnline = false;
+
+      while (attempts < maxAttempts) {
+        attempts++;
+        log("REBOOTING:::: Polling devices... attempt $attempts/$maxAttempts");
+
+        try {
+          final ResponseCallback<List<FusionNetworkDevice>> response = await fusionDeviceService.getAvailableDevicesOnNetwork(ip: vip!);
+
+          if (response.success && response.data != null) {
+            final List<FusionNetworkDevice> currentDevices = response.data!;
+            final Set<String> currentSerials = currentDevices.map((FusionNetworkDevice d) => d.serialNumber).toSet();
+
+            // Update reboot status for tracking
+            final List<FirmwareDeviceRebootStatus> rebootStatuses =
+                expectedDevices.map((FusionNetworkDevice device) {
+                  final bool isOnline = currentSerials.contains(device.serialNumber);
+
+                  // Use fresh device data from API if online, otherwise use expected device data
+                  final FusionNetworkDevice? currentDevice =
+                      isOnline ? currentDevices.firstWhereOrNull((FusionNetworkDevice d) => d.serialNumber == device.serialNumber) : null;
+
+                  return FirmwareDeviceRebootStatus(
+                    serialNumber: device.serialNumber,
+                    currentBundleVersion: currentDevice?.softwareUpdateVersion ?? device.softwareUpdateVersion,
+                    status: isOnline ? 'SUCCESS' : 'REBOOTING',
+                    currentState: isOnline ? 'ONLINE' : 'OFFLINE',
+                  );
+                }).toList();
+
+            _emitIfOpen(state.copyWith(devicesRebootStatus: rebootStatuses));
+
+            // Check if all expected devices are back online
+            allDevicesOnline = expectedSerials.every((String serial) => currentSerials.contains(serial)) && currentDevices.length >= expectedDevices.length;
+
+            if (allDevicesOnline) {
+              log("REBOOTING:::: All devices are back online! (${currentDevices.length}/${expectedDevices.length})");
+              break;
+            } else {
+              log("REBOOTING:::: Devices online: ${currentDevices.length}/${expectedDevices.length}");
+            }
+          }
+        } catch (e) {
+          log("REBOOTING:::: Error polling devices: $e");
         }
+
+        if (!allDevicesOnline) {
+          await Future<void>.delayed(const Duration(seconds: 10));
+        }
+      }
+
+      if (!allDevicesOnline) {
+        throw Exception('Device reboot timeout: Not all devices came back online within 10 minutes');
+      }
+
+      // Delete the bundle file after successful completion
+      final String bundlePathToDelete = state.downloadedFilePath.trim();
+      if (bundlePathToDelete.isNotEmpty) {
+        await _deleteCachedBundleIfExists(bundlePathToDelete);
       }
 
       _emitIfOpen(
@@ -622,14 +744,15 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
           errorShortText: '',
           installTrackingCompleted: true,
           isSocketTrackingInProgress: false,
-          downloadedFilePath: '', // Clear the file path since we deleted the bundle
+          isRebootTrackingInProgress: false,
         ),
       );
     } catch (e) {
-      _setInstallFailed('Installation failed: $e');
+      log("REBOOTING ERROR :::: ${e.toString()}");
+      _setInstallFailed('Installation failed', "Error details: $e");
     } finally {
       await cancelSoftwareUpdateProgressListening();
-      _emitIfOpen(state.copyWith(isSocketTrackingInProgress: false));
+      _emitIfOpen(state.copyWith(isSocketTrackingInProgress: false, isRebootTrackingInProgress: false));
     }
   }
 
@@ -661,7 +784,6 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
   Future<void> cancelSoftwareUpdateProgressListening() async {
     await _firmwareInstallSocketSubscription?.cancel();
     _firmwareInstallSocketSubscription = null;
-    // await fusionDeviceService.disconnectFirmwareUpdateWebSocket();
   }
 
   void _emitIfOpen(FirmwareUpdateViewModelState nextState) {
@@ -814,13 +936,6 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
       downloadFileName: downloadFileName,
       checksum: checksum,
     );
-  }
-
-  String _shortError(String message) {
-    final String normalized = message.trim().replaceAll(RegExp(r'\s+'), ' ');
-    if (normalized.isEmpty) return '';
-    if (normalized.length <= 100) return normalized;
-    return '${normalized.substring(0, 97)}...';
   }
 
   @override

@@ -7,112 +7,23 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
-class FirmwareUpdateRebootStatusEvent {
-  final String id;
-  final String type;
-  final String status;
-  final int code;
-  final String message;
-  final String timestamp;
-
-  final Map<String, FirmwareDeviceRebootStatusEvent> devicesBySerial;
-
-  const FirmwareUpdateRebootStatusEvent({
-    required this.id,
-    required this.type,
-    required this.status,
-    required this.code,
-    required this.message,
-    required this.timestamp,
-    required this.devicesBySerial,
-  });
-
-  bool get isAllSuccess => devicesBySerial.values.every((FirmwareDeviceRebootStatusEvent e) => e.isSUCCESS);
-
-  factory FirmwareUpdateRebootStatusEvent.fromJson(Map<String, dynamic> json) {
-    final Map<String, FirmwareDeviceRebootStatusEvent> devicesBySerial = <String, FirmwareDeviceRebootStatusEvent>{};
-    final dynamic rawData = json['data'];
-    if (rawData is Map<String, dynamic>) {
-      for (final MapEntry<String, dynamic> entry in rawData.entries) {
-        final dynamic value = entry.value;
-        if (value is! Map<String, dynamic>) continue;
-        final FirmwareDeviceRebootStatusEvent parsed = FirmwareDeviceRebootStatusEvent.fromJson(value);
-        final String serial = parsed.serialNumber.trim();
-        final String key = serial.isNotEmpty ? serial : entry.key;
-        devicesBySerial[key] = parsed;
-      }
-    }
-
-    return FirmwareUpdateRebootStatusEvent(
-      id: json['id']?.toString() ?? '',
-      type: json['type']?.toString() ?? '',
-      status: json['status']?.toString() ?? '',
-      code: json['code'] is int ? json['code'] as int : int.tryParse(json['code']?.toString() ?? '') ?? 0,
-      message: json['message']?.toString() ?? '',
-      timestamp: json['timestamp']?.toString() ?? '',
-      devicesBySerial: devicesBySerial,
-    );
-  }
-}
-
-class FirmwareDeviceRebootStatusEvent {
+class FirmwareDeviceRebootStatus extends Equatable {
   final String serialNumber;
   final String currentBundleVersion;
-  final String previousBundleVersion;
-  final String mount;
-  final String previousMount;
   final String status;
   final String currentState;
-  final String bootPartition;
-  final String previousBootPartition;
-  final String error;
-  final String timestamp;
 
-  const FirmwareDeviceRebootStatusEvent({
+  const FirmwareDeviceRebootStatus({
     required this.serialNumber,
     required this.currentBundleVersion,
-    required this.previousBundleVersion,
-    required this.mount,
-    required this.previousMount,
     required this.status,
     required this.currentState,
-    required this.bootPartition,
-    required this.previousBootPartition,
-    required this.error,
-    required this.timestamp,
   });
 
+  @override
+  List<Object?> get props => [serialNumber, currentBundleVersion, status, currentState];
+
   bool get isSUCCESS => status.toUpperCase() == 'SUCCESS';
-
-  factory FirmwareDeviceRebootStatusEvent.fromJson(Map<String, dynamic> json) {
-    final Map<String, FirmwareDeviceRebootStatusEvent> devicesBySerial = <String, FirmwareDeviceRebootStatusEvent>{};
-
-    final dynamic rawData = json['data'];
-    if (rawData is Map<String, dynamic>) {
-      for (final MapEntry<String, dynamic> entry in rawData.entries) {
-        final dynamic value = entry.value;
-        if (value is! Map<String, dynamic>) continue;
-        final FirmwareDeviceRebootStatusEvent parsed = FirmwareDeviceRebootStatusEvent.fromJson(value);
-        final String serial = parsed.serialNumber.trim();
-        final String key = serial.isNotEmpty ? serial : entry.key;
-        devicesBySerial[key] = parsed;
-      }
-    }
-
-    return FirmwareDeviceRebootStatusEvent(
-      serialNumber: json['serial_number']?.toString() ?? '',
-      currentBundleVersion: json['current_bundle_version']?.toString() ?? '',
-      previousBundleVersion: json['previous_bundle_version']?.toString() ?? '',
-      mount: json['mount']?.toString() ?? '',
-      previousMount: json['previous_mount']?.toString() ?? '',
-      status: json['status']?.toString() ?? '',
-      currentState: json['current_state']?.toString() ?? '',
-      bootPartition: json['boot_partition']?.toString() ?? '',
-      previousBootPartition: json['previous_boot_partition']?.toString() ?? '',
-      error: json['error']?.toString() ?? '',
-      timestamp: json['timestamp']?.toString() ?? '',
-    );
-  }
 }
 
 class FirmwareUpdateCheckResult extends Equatable {
@@ -189,11 +100,13 @@ class BundleDownloadUrlResult extends Equatable {
 
 class DeviceBulkRegisterResult {
   final bool success;
+  final String certificate;
   final String deviceId;
   final String error;
 
   const DeviceBulkRegisterResult({
     required this.success,
+    required this.certificate,
     required this.deviceId,
     required this.error,
   });
@@ -201,6 +114,7 @@ class DeviceBulkRegisterResult {
   factory DeviceBulkRegisterResult.fromJson(Map<String, dynamic> json) {
     return DeviceBulkRegisterResult(
       success: json['success'] as bool? ?? false,
+      certificate: json['certificate'] as String? ?? '',
       deviceId: json['device_id'] as String? ?? '',
       error: json['error'] as String? ?? '',
     );
@@ -302,7 +216,7 @@ class FusionDeviceService {
       final ResponseCallback<FirmwareUpdateCheckResult> response = await networkClient.get<FirmwareUpdateCheckResult>(
         api: FusionApiEndpoint.firmwareUpdateCheck,
         urlParameters: <String, dynamic>{
-          'current_firmware_version': "$currentFirmwareVersion-dev.$jenkinsBuildNumber",
+          'current_firmware_version': currentFirmwareVersion,
           'current_desktop_app_version': currentDesktopAppVersion,
         },
         fromJson: (dynamic json) {
@@ -453,9 +367,24 @@ class FusionDeviceService {
     try {
       final ResponseCallback<void> response = await networkClient.sendWebSocketMessage<void>(<String, dynamic>{
         'id': bundleId,
-        'version': 1,
-        'type': 'start_update',
+        "version": 1,
+        "type": "start_update",
       });
+      log("SOFTWARE UPDATE START EVENT TRGIGERED => id: $bundleId, response: ${response.success}, message: ${response.message}");
+      return response;
+    } catch (e) {
+      return ResponseCallback<void>.failure(e.toString());
+    }
+  }
+
+  Future<ResponseCallback<void>> sendRebootStartupdateEvent({required String bundleId}) async {
+    try {
+      final ResponseCallback<void> response = await networkClient.sendWebSocketMessage<void>(<String, dynamic>{
+        'id': bundleId,
+        "version": 1,
+        "type": "sw_update_info",
+      });
+      log("SOFTWARE REBOOT START EVENT TRGIGERED => id: $bundleId, response: ${response.success}, message: ${response.message}");
       return response;
     } catch (e) {
       return ResponseCallback<void>.failure(e.toString());
@@ -480,25 +409,6 @@ class FusionDeviceService {
       }
 
       yield ResponseCallback<FirmwareUpdateProgressEvent>.success(event);
-    }
-  }
-
-  Stream<ResponseCallback<FirmwareUpdateRebootStatusEvent>> listenDeviceRebootEvents(String requestId) async* {
-    await for (final ResponseCallback<dynamic> message in networkClient.webSocketMessages) {
-      if (!message.success || message.data == null) {
-        yield ResponseCallback<FirmwareUpdateRebootStatusEvent>.failure(message.message);
-        continue;
-      }
-
-      final dynamic payload = message.data;
-      if (payload is! Map<String, dynamic>) {
-        continue;
-      }
-
-      final FirmwareUpdateRebootStatusEvent event = FirmwareUpdateRebootStatusEvent.fromJson(payload);
-      if (event.id.isEmpty) continue;
-
-      yield ResponseCallback<FirmwareUpdateRebootStatusEvent>.success(FirmwareUpdateRebootStatusEvent.fromJson(payload));
     }
   }
 
@@ -549,6 +459,7 @@ class FusionDeviceService {
             additionalPath: "${device.id}/csr",
           );
 
+          log("CSR RESPONSE:::${response.data.toString()}");
           if (response.success && response.data != null) {
             deviceIdToCsr[device.id] = response.data;
           }
@@ -584,13 +495,58 @@ class FusionDeviceService {
       if (response.success) {
         final Map<String, dynamic> data = (response.data as Map<String, dynamic>?) ?? <String, dynamic>{};
         final List<dynamic> resultsJson = (data['results'] as List<dynamic>?) ?? <dynamic>[];
+        log("Bulk Register Response::: ${data['results']}");
+
         final List<DeviceBulkRegisterResult> results = resultsJson.whereType<Map<String, dynamic>>().map(DeviceBulkRegisterResult.fromJson).toList();
+        final certificatesRegisterdResp = await registerCsrInFusionDevice(vip: vip, devices: devices, results: results);
+
+        if (!certificatesRegisterdResp.success) {
+          return ResponseCallback<List<DeviceBulkRegisterResult>>.failure('Failed to register device certificates in Fusion');
+        }
         return ResponseCallback<List<DeviceBulkRegisterResult>>.success(results);
       } else {
         return ResponseCallback<List<DeviceBulkRegisterResult>>.failure(response.message);
       }
     } catch (e) {
       return ResponseCallback<List<DeviceBulkRegisterResult>>.failure(e.toString());
+    }
+  }
+
+  Future<ResponseCallback<List<bool>>> registerCsrInFusionDevice({
+    required String vip,
+    required List<FusionNetworkDevice> devices,
+    required List<DeviceBulkRegisterResult> results,
+  }) async {
+    final List<bool> registrationResults = [];
+
+    try {
+      for (final DeviceBulkRegisterResult result in results) {
+        final fusionDeviceId = devices.singleWhereOrNull((element) => element.serialNumber == result.deviceId)?.id;
+
+        if (fusionDeviceId == null) {
+          registrationResults.add(false);
+          continue;
+        }
+
+        final ResponseCallback<dynamic> response = await networkClient.post(
+          api: FusionApiEndpoint.fusionDevice,
+          baseUrlToOverride: vip,
+          isSecure: false,
+          additionalPath: "$fusionDeviceId/certificate",
+          data: result.certificate,
+        );
+
+        log("CSR RESPONSE::: ${result.certificate} === ${response.data.toString()}");
+        if (response.success) {
+          registrationResults.add(true);
+        } else {
+          registrationResults.add(false);
+        }
+      }
+
+      return ResponseCallback<List<bool>>.success(registrationResults);
+    } catch (e) {
+      return ResponseCallback<List<bool>>.failure(e.toString());
     }
   }
 
