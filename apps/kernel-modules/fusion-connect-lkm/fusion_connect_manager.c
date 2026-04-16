@@ -824,40 +824,28 @@ static int remove_stream(struct fusion_cn_manager *mgr,
         pr_warn("fusion_cn: remove_stream: stop_interrupts (%s) = %d\n", stream_name, ret);
 
     /* Unlink node from active lists and clear back-pointer */
-    printk(KERN_DEBUG "fusion_cn: remove_stream: before active_list_lock stream=%s handle=%llu sn=%px
-", stream_name, handle, sn);
+    printk(KERN_DEBUG "fusion_cn: remove_stream: before active_list_lock stream=%s handle=%llu sn=%px\n", stream_name, handle, sn);
     write_lock_irqsave(&mgr->rtp.lock, flags);
-    printk(KERN_DEBUG "fusion_cn: remove_stream: after active_list_lock stream=%s handle=%llu
-", stream_name, handle);
+    printk(KERN_DEBUG "fusion_cn: remove_stream: after active_list_lock stream=%s handle=%llu\n", stream_name, handle);
     sn = rtp_stream->stream_node;
-    printk(KERN_DEBUG "fusion_cn: remove_stream: before list_del_init stream=%s handle=%llu sn=%px
-", stream_name, handle, sn);
+    printk(KERN_DEBUG "fusion_cn: remove_stream: before list_del_init stream=%s handle=%llu sn=%px\n", stream_name, handle, sn);
     list_del_init(&sn->node);
-    printk(KERN_DEBUG "fusion_cn: remove_stream: after list_del_init stream=%s handle=%llu sn=%px
-", stream_name, handle, sn);
-    printk(KERN_DEBUG "fusion_cn: remove_stream: before kfree stream=%s handle=%llu sn=%px
-", stream_name, handle, sn);
+    printk(KERN_DEBUG "fusion_cn: remove_stream: after list_del_init stream=%s handle=%llu sn=%px\n", stream_name, handle, sn);
+    printk(KERN_DEBUG "fusion_cn: remove_stream: before kfree stream=%s handle=%llu sn=%px\n", stream_name, handle, sn);
     kfree(sn);
-    printk(KERN_DEBUG "fusion_cn: remove_stream: after kfree stream=%s handle=%llu
-", stream_name, handle);
+    printk(KERN_DEBUG "fusion_cn: remove_stream: after kfree stream=%s handle=%llu\n", stream_name, handle);
     rtp_stream->stream_node = NULL;
-    printk(KERN_DEBUG "fusion_cn: remove_stream: before active_list_unlock stream=%s handle=%llu
-", stream_name, handle);
+    printk(KERN_DEBUG "fusion_cn: remove_stream: before active_list_unlock stream=%s handle=%llu\n", stream_name, handle);
     write_unlock_irqrestore(&mgr->rtp.lock, flags);
-    printk(KERN_DEBUG "fusion_cn: remove_stream: after active_list_unlock stream=%s handle=%llu
-", stream_name, handle);
+    printk(KERN_DEBUG "fusion_cn: remove_stream: after active_list_unlock stream=%s handle=%llu\n", stream_name, handle);
 
     /* Drop extra refs taken when the stream was added to the active list. */
-    printk(KERN_DEBUG "fusion_cn: remove_stream: before alsa list-ref put stream=%s handle=%llu
-", stream_name, handle);
+    printk(KERN_DEBUG "fusion_cn: remove_stream: before alsa list-ref put stream=%s handle=%llu\n", stream_name, handle);
     kref_put(&alsa_stream->ref, fusion_cn_alsa_substream_release);
-    printk(KERN_DEBUG "fusion_cn: remove_stream: after alsa list-ref put stream=%s handle=%llu
-", stream_name, handle);
-    printk(KERN_DEBUG "fusion_cn: remove_stream: before rtp list-ref put stream=%s handle=%llu
-", stream_name, handle);
+    printk(KERN_DEBUG "fusion_cn: remove_stream: after alsa list-ref put stream=%s handle=%llu\n", stream_name, handle);
+    printk(KERN_DEBUG "fusion_cn: remove_stream: before rtp list-ref put stream=%s handle=%llu\n", stream_name, handle);
     kref_put(&rtp_stream->ref, fusion_cn_rtp_stream_release);
-    printk(KERN_DEBUG "fusion_cn: remove_stream: after rtp list-ref put stream=%s handle=%llu
-", stream_name, handle);
+    printk(KERN_DEBUG "fusion_cn: remove_stream: after rtp list-ref put stream=%s handle=%llu\n", stream_name, handle);
 
     /* Remove RTP stream from hash/lists */
     printk(KERN_DEBUG "fusion_cn: remove_stream: before rtp_remove_stream stream=%s handle=%llu\n", stream_name, handle);
