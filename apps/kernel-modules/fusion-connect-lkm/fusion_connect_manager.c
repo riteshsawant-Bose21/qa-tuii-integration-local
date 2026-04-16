@@ -725,7 +725,7 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
     struct kthread_worker *worker;
 
     if (atomic_read(&mgr->state.is_started)) {
-        pr_debug("fusion_cn: mgr already started\n");
+        printk(KERN_DEBUG "fusion_cn: mgr already started\n");
         return -MGR_START_ERRNO_RUNNING;
     }
 
@@ -759,7 +759,7 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
     atomic_set(&mgr->state.is_started, true);
     queue_delayed_work(system_unbound_wq, &metrics_work,
                        msecs_to_jiffies(FUSION_CN_METRICS_INTERVAL_MS));
-    pr_debug("fusion_cn: mgr_start: Started manager\n");
+    printk(KERN_DEBUG "fusion_cn: mgr_start: Started manager\n");
     return MGR_START_OK;
 }
 
@@ -784,7 +784,7 @@ bool fusion_cn_mgr_stop(struct fusion_cn_manager *mgr)
     atomic_set(&mgr->netfilter.is_enabled, false);
     atomic_set(&mgr->state.is_started, false);
     WRITE_ONCE(mgr->timing_ready, false);
-    pr_debug("fusion_cn: mgr_stop: Stopped manager\n");
+    printk(KERN_DEBUG "fusion_cn: mgr_stop: Stopped manager\n");
     return true;
 }
 
@@ -814,12 +814,12 @@ static int remove_stream(struct fusion_cn_manager *mgr,
     int ret;
     unsigned long flags;
 
-    pr_debug("fusion_cn: remove_stream: begin stream=%s handle=%llu\n", stream_name, handle);
+    printk(KERN_DEBUG "fusion_cn: remove_stream: begin stream=%s handle=%llu\n", stream_name, handle);
 
     /* Stop stream activity */
-    pr_debug("fusion_cn: remove_stream: before stop_interrupts stream=%s handle=%llu\n", stream_name, handle);
+    printk(KERN_DEBUG "fusion_cn: remove_stream: before stop_interrupts stream=%s handle=%llu\n", stream_name, handle);
     ret = alsa_ops_stop_interrupts(mgr, handle);
-    pr_debug("fusion_cn: remove_stream: after stop_interrupts stream=%s handle=%llu ret=%d\n", stream_name, handle, ret);
+    printk(KERN_DEBUG "fusion_cn: remove_stream: after stop_interrupts stream=%s handle=%llu ret=%d\n", stream_name, handle, ret);
     if (ret < 0)
         pr_warn("fusion_cn: remove_stream: stop_interrupts (%s) = %d\n", stream_name, ret);
 
@@ -836,11 +836,11 @@ static int remove_stream(struct fusion_cn_manager *mgr,
     kref_put(&rtp_stream->ref, fusion_cn_rtp_stream_release);
 
     /* Remove RTP stream from hash/lists */
-    pr_debug("fusion_cn: remove_stream: before rtp_remove_stream stream=%s handle=%llu\n", stream_name, handle);
+    printk(KERN_DEBUG "fusion_cn: remove_stream: before rtp_remove_stream stream=%s handle=%llu\n", stream_name, handle);
     write_lock_irqsave(&mgr->rtp.lock, flags);
     ret = fusion_cn_rtp_remove_stream(&mgr->rtp, rtp_stream);
     write_unlock_irqrestore(&mgr->rtp.lock, flags);
-    pr_debug("fusion_cn: remove_stream: after rtp_remove_stream stream=%s handle=%llu ret=%d\n", stream_name, handle, ret);
+    printk(KERN_DEBUG "fusion_cn: remove_stream: after rtp_remove_stream stream=%s handle=%llu ret=%d\n", stream_name, handle, ret);
     if (ret < 0) {
         pr_warn("fusion_cn: remove_stream: rtp_remove_stream (%s) failed with %d\n", stream_name, ret);
         return ret;
@@ -848,9 +848,9 @@ static int remove_stream(struct fusion_cn_manager *mgr,
 
     /* Metrics are released with the RTP stream refcount */
 
-    pr_debug("fusion_cn: remove_stream: before alsa_remove_substream stream=%s handle=%llu\n", stream_name, handle);
+    printk(KERN_DEBUG "fusion_cn: remove_stream: before alsa_remove_substream stream=%s handle=%llu\n", stream_name, handle);
     ret = fusion_cn_alsa_remove_substream(alsa_stream);
-    pr_debug("fusion_cn: remove_stream: after alsa_remove_substream stream=%s handle=%llu ret=%d\n", stream_name, handle, ret);
+    printk(KERN_DEBUG "fusion_cn: remove_stream: after alsa_remove_substream stream=%s handle=%llu ret=%d\n", stream_name, handle, ret);
 
     return ret;
 }
@@ -975,7 +975,7 @@ static int handle_add_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctr
     kref_get(&rtp_stream->ref);
     kref_get(&alsa_stream->ref);
 
-    pr_debug("fusion_cn: handle_add_stream: Success, name=%s, handle=%llu\n",
+    printk(KERN_DEBUG "fusion_cn: handle_add_stream: Success, name=%s, handle=%llu\n",
            config->stream_name, config->stream_handle);
     return 0;
 }
@@ -1000,7 +1000,7 @@ static int handle_remove_stream(struct fusion_cn_manager *mgr,
     rtp_stream = fusion_cn_rtp_get_stream(&mgr->rtp, handle);
     if (!rtp_stream) {
         read_unlock_irqrestore(&mgr->rtp.lock, flags);
-        pr_debug("fusion_cn: handle_remove_stream: rtp stream %llu already gone\n", handle);
+        printk(KERN_DEBUG "fusion_cn: handle_remove_stream: rtp stream %llu already gone\n", handle);
         return (reply->err = 0);
     }
     strscpy(stream_name, rtp_stream->info.stream_name, sizeof(stream_name));
@@ -1008,7 +1008,7 @@ static int handle_remove_stream(struct fusion_cn_manager *mgr,
 
     alsa_stream = fusion_cn_find_substream(stream_name);
     if (!alsa_stream) {
-        pr_debug("fusion_cn: handle_remove_stream: alsa stream %s already gone\n", stream_name);
+        printk(KERN_DEBUG "fusion_cn: handle_remove_stream: alsa stream %s already gone\n", stream_name);
         kref_put(&rtp_stream->ref, fusion_cn_rtp_stream_release);
         return (reply->err = 0);
     }

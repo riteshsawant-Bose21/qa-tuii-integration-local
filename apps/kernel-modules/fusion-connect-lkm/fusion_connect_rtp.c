@@ -482,12 +482,26 @@ int fusion_cn_rtp_remove_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fu
 {
     struct fusion_cn_packet_map *map;
     struct hlist_node *map_tmp;
+    unsigned long flags;
 
     // TODO: Cleanup profiling and stats gathering
+    printk(KERN_DEBUG "fusion_cn_rtp: remove_stream: entry stream=%s handle=%llu is_source=%d\n",
+           stream->info.stream_name, stream->info.stream_handle, stream->info.is_source);
 
+    write_lock_irqsave(&rtp_mgr->lock, flags);
+
+    printk(KERN_DEBUG "fusion_cn_rtp: remove_stream: before hlist_del stream=%s handle=%llu\n",
+           stream->info.stream_name, stream->info.stream_handle);
     hlist_del(&stream->hnode);
+    printk(KERN_DEBUG "fusion_cn_rtp: remove_stream: after hlist_del stream=%s handle=%llu\n",
+           stream->info.stream_name, stream->info.stream_handle);
+
     // Only remove from packet_maps for sink streams
     if (!stream->info.is_source) {
+        printk(KERN_DEBUG "fusion_cn_rtp: remove_stream: before packet_map unlink stream=%s handle=%llu dest_ip=0x%08x source_ip=0x%08x source_port=%u\n",
+               stream->info.stream_name, stream->info.stream_handle,
+               be32_to_cpu(stream->info.dest_ip), be32_to_cpu(stream->info.source_ip),
+               stream->info.source_port);
         if (fusion_cn_rtp_is_ip_mcast(stream->info.dest_ip)) {
             hlist_for_each_entry_safe(map, map_tmp, &rtp_mgr->mc_packet_maps[PACKET_MAP_KEY_MC(stream->info.dest_ip)], hnode) {
                 if (map->stream_handle == stream->info.stream_handle) {
@@ -505,8 +519,17 @@ int fusion_cn_rtp_remove_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fu
                 }
             }
         }
+        printk(KERN_DEBUG "fusion_cn_rtp: remove_stream: after packet_map unlink stream=%s handle=%llu\n",
+               stream->info.stream_name, stream->info.stream_handle);
     }
+
+    write_unlock_irqrestore(&rtp_mgr->lock, flags);
+
+    printk(KERN_DEBUG "fusion_cn_rtp: remove_stream: before kref_put stream=%s handle=%llu\n",
+           stream->info.stream_name, stream->info.stream_handle);
     kref_put(&stream->ref, fusion_cn_rtp_stream_release);
+    printk(KERN_DEBUG "fusion_cn_rtp: remove_stream: after kref_put stream=%s handle=%llu\n",
+           stream->info.stream_name, stream->info.stream_handle);
 
     return 0;
 }
