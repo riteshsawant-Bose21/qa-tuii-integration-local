@@ -42,6 +42,7 @@ const (
 	NotifyOpSoftwareUpdateSyncAck     NotifyOp = "software_update_sync_ack"
 	NotifyOpSoftwareUpdate            NotifyOp = "software_update"
 	NotifyOpSoftwareUpdateProgress    NotifyOp = "software_update_progress"
+	NotifyOpMeterData                 NotifyOp = "meter_data"
 )
 
 // NotifyMessage holds information about a cross-node message
@@ -66,6 +67,7 @@ type NotifyMessage struct {
 	SnapshotOperation         *SnapshotOperation
 	Task                      *Task
 	VersionUpdate             *VersionUpdate
+	MeterData                 *MeterDataMessage
 }
 
 func NewNotifyMessage(op NotifyOp, node string, builder func(*NotifyMessage)) *NotifyMessage {

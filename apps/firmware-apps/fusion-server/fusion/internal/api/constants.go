@@ -49,20 +49,24 @@ const (
 	VIPvrrpLowPriority     = 90
 
 	// WS Request types (client -> server)
-	WSMsgTypeDevices             = "devices"
-	WSMsgTypeDeviceByID          = "device_by_id"
-	WSMsgTypeUpdateDeviceInfo    = "update_device_info"
-	WSMsgTypeConfiguration       = "config"
-	WSMsgTypePatchConfiguration  = "patch_config"
-	WSMsgTypeUnsubscribeConfig   = "unsubscribe_config"
-	WSMsgTypeUnsubscribeDevices  = "unsubscribe_devices"
-	WSMsgTypePing                = "ping"
-	WSMsgTypePong                = "pong"
-	WSMsgTypeError               = "error"
-	WSMsgTypeStartUpdate         = "start_update"
-	WSMsgTypeUpdateProgress      = "update_progress"
-	WSMsgTypeSwUpdateInfo        = "sw_update_info"
-	WSMsgTypeListSoftwareUpdates = "list_sw_update_files"
+	WSMsgTypeDevices               = "devices"
+	WSMsgTypeDeviceByID            = "device_by_id"
+	WSMsgTypeUpdateDeviceInfo      = "update_device_info"
+	WSMsgTypeConfiguration         = "config"
+	WSMsgTypePatchConfiguration    = "patch_config"
+	WSMsgTypeUnsubscribeConfig     = "unsubscribe_config"
+	WSMsgTypeUnsubscribeDevices    = "unsubscribe_devices"
+	WSMsgTypePing                  = "ping"
+	WSMsgTypePong                  = "pong"
+	WSMsgTypeError                 = "error"
+	WSMsgTypeStartUpdate           = "start_update"
+	WSMsgTypeUpdateMeterDataFilter = "update_meter_data_filter"
+	WSMsgTypeSubscribeMeterData    = "subscribe_meter_data"
+	WSMsgTypeUnsubscribeMeterData  = "unsubscribe_meter_data"
+	WSMsgTypeMeterData             = "meter_data"
+	WSMsgTypeUpdateProgress        = "update_progress"
+	WSMsgTypeSwUpdateInfo          = "sw_update_info"
+	WSMsgTypeListSoftwareUpdates   = "list_sw_update_files"
 
 	// WS event types (server -> client)
 	WSMsgTypeDeviceUpdate = "device_update"
@@ -71,6 +75,7 @@ const (
 	// WS topic names
 	WSTopicConfigUpdates = "config_updates"
 	WSTopicDeviceUpdates = "device_updates"
+	WSTopicMeterData     = "meter_data"
 
 	// WebSocket response data field keys
 	WSDataFieldDeviceID   = "device_id"
@@ -114,12 +119,14 @@ const (
 )
 
 const (
-	AdminPort          = "9090"
-	ControllerPort     = "7950"
-	HTTPPort           = "8080"
-	MessageTriggerPort = 7949
-	SAPPort            = "9875" // As defined: https://datatracker.ietf.org/doc/html/rfc2974
-	UDPPort            = "7947"
+	AdminPort               = "9090"
+	ControllerPort          = "7950"
+	HTTPPort                = "8080"
+	MessageTriggerPort      = 7949
+	SAPPort                 = "9875" // As defined: https://datatracker.ietf.org/doc/html/rfc2974
+	UDPPort                 = "7947"
+	TelemetryCoreZMQPort    = "5678" // ZMQ PUB port on each device's telemetry core
+	TelemetryCoreFilterPort = "1234" // UDP port for update_filter_req on each device's telemetry core
 )
 
 var (

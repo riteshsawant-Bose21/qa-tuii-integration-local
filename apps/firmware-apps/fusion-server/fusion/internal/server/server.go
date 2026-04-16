@@ -24,15 +24,17 @@ import (
 
 // FusionServer handles networks connections to manage Fusion state.
 type FusionServer struct {
-	node          string
-	handler       *handler.Handler
-	wsClients     map[*websocket.Conn]bool
-	wsWriteMutex  map[*websocket.Conn]*sync.Mutex     // Per-connection write mutexes
-	subscriptions map[string]map[*websocket.Conn]bool // Topic-based subscriptions: topic -> connections
-	wsLock        sync.RWMutex
-	upgrader      websocket.Upgrader
-	wsStats       *api.WebSocketStats
-	statsLock     sync.RWMutex
+	node               string
+	handler            *handler.Handler
+	wsClients          map[*websocket.Conn]bool
+	wsWriteMutex       map[*websocket.Conn]*sync.Mutex     // Per-connection write mutexes
+	subscriptions      map[string]map[*websocket.Conn]bool // Topic-based subscriptions: topic -> connections
+	wsLock             sync.RWMutex
+	upgrader           websocket.Upgrader
+	wsStats            *api.WebSocketStats
+	statsLock          sync.RWMutex
+	meterFilterManager *MeterFilterManager
+	telemetrySub       *TelemetrySubscriber
 
 	maxConnections int
 }
@@ -40,13 +42,16 @@ type FusionServer struct {
 // NewFusionServer creates and initializes a new configuration server with the provided node name,
 // handler and cluster member list. It also sets up a WebSocket upgrader with custom options.
 func NewFusionServer(node string, handler *handler.Handler, hub *pubsub.Hub) *FusionServer {
+
 	server := &FusionServer{
-		node:           node,
-		handler:        handler,
-		wsClients:      make(map[*websocket.Conn]bool),
-		wsWriteMutex:   make(map[*websocket.Conn]*sync.Mutex),
-		subscriptions:  make(map[string]map[*websocket.Conn]bool),
-		maxConnections: wsMaxConnections,
+		node:               node,
+		handler:            handler,
+		wsClients:          make(map[*websocket.Conn]bool),
+		wsWriteMutex:       make(map[*websocket.Conn]*sync.Mutex),
+		subscriptions:      make(map[string]map[*websocket.Conn]bool),
+		maxConnections:     wsMaxConnections,
+		meterFilterManager: NewMeterFilterManager(),
+		telemetrySub:       NewTelemetrySubscriber(hub, api.TelemetryCoreZMQPort),
 		wsStats: &api.WebSocketStats{
 			Connections:    0,
 			Messages:       0,
@@ -70,6 +75,54 @@ func NewFusionServer(node string, handler *handler.Handler, hub *pubsub.Hub) *Fu
 	}
 	hub.Register(server)
 	return server
+}
+
+// clusterMemberFilterAddrs returns "ip:TelemetryCoreFilterPort" for every current cluster member.
+func (s *FusionServer) clusterMemberFilterAddrs() []string {
+	nodes := s.handler.GetMembers()
+	addrs := make([]string, 0, len(nodes))
+	for _, node := range nodes {
+		addrs = append(addrs, fmt.Sprintf("%s:%s", node.Addr.String(), api.TelemetryCoreFilterPort))
+	}
+	return addrs
+}
+
+// clusterMemberZMQIPs returns the IP string for every current cluster member
+// (port is embedded in TelemetrySubscriber).
+func (s *FusionServer) clusterMemberZMQIPs() []string {
+	nodes := s.handler.GetMembers()
+	ips := make([]string, 0, len(nodes))
+	for _, node := range nodes {
+		ips = append(ips, node.Addr.String())
+	}
+	return ips
+}
+
+// StartTelemetrySubscriptions connects to the ZMQ PUB socket on every current
+// cluster device. Called when this node gains the VIP.
+// It also resets all per-connection filters and immediately sends an empty
+// filter request to every telemetry core, clearing any stale filter state
+// that may have been left from a previous VIP holder or fusion-server restart.
+func (s *FusionServer) StartTelemetrySubscriptions() {
+	ips := s.clusterMemberZMQIPs()
+	addrs := s.clusterMemberFilterAddrs()
+	s.telemetrySub.Start(ips)
+	s.meterFilterManager.ResetAndClear(addrs)
+	logging.GetLogger().Info("FusionServer: started telemetry ZMQ subscriptions for %d devices", len(ips))
+}
+
+// StopTelemetrySubscriptions cancels all active ZMQ subscriptions.
+// Called when this node loses the VIP.
+func (s *FusionServer) StopTelemetrySubscriptions() {
+	s.telemetrySub.Stop()
+	logging.GetLogger().Info("FusionServer: stopped all telemetry ZMQ subscriptions")
+}
+
+// ReconcileTelemetrySubscriptions syncs active ZMQ subscriptions with the current
+// cluster membership. Call this when cluster topology changes while VIP.
+func (s *FusionServer) ReconcileTelemetrySubscriptions() {
+	ips := s.clusterMemberZMQIPs()
+	s.telemetrySub.Reconcile(ips)
 }
 
 // GetValue handles HTTP GET requests to retrieve a configuration value based on a "key" query parameter.

@@ -102,6 +102,7 @@ func (s *FusionServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		s.wsLock.Unlock()
+		s.meterFilterManager.RemoveFilter(conn, s.clusterMemberFilterAddrs())
 		logger.Info("WebSocket connection closed")
 	}()
 
@@ -214,11 +215,27 @@ func (s *FusionServer) sendErrorToConnection(conn *websocket.Conn, requestID str
 	}
 }
 
+// SetMeterFilter replaces the meter ID filter for a WebSocket connection and updates
+// the master filter sent to all cluster device telemetry cores.
+func (s *FusionServer) SetMeterFilter(conn *websocket.Conn, ids []string) {
+	s.meterFilterManager.SetFilter(conn, ids, s.clusterMemberFilterAddrs())
+}
+
+// RemoveMeterFilter removes the meter ID filter for a WebSocket connection and updates
+// the master filter sent to all cluster device telemetry cores.
+func (s *FusionServer) RemoveMeterFilter(conn *websocket.Conn) {
+	s.meterFilterManager.RemoveFilter(conn, s.clusterMemberFilterAddrs())
+}
+
 // BroadcastMessage sends a notification message to all connected WebSocket clients.
 // It acquires a read lock on the clients list to ensure thread-safe access.
 func (s *FusionServer) BroadcastMessage(message *api.NotifyMessage) error {
 	// Convert NotifyMessage to appropriate WebSocket format based on operation
 	switch message.Operation {
+	case api.NotifyOpMeterData:
+		if message.MeterData != nil {
+			return s.routeMeterData(message.MeterData)
+		}
 	case api.NotifyOpConfigUpdate:
 		if message.ConfigUpdate != nil {
 			return s.broadcastConfigUpdate(message)
@@ -373,6 +390,67 @@ func (s *FusionServer) BroadcastToTopic(topic string, message *api.WebSocketResp
 			delete(s.subscriptions, topic)
 		}
 		s.wsLock.Unlock()
+	}
+
+	return nil
+}
+
+// routeMeterData fans out meter data to each subscribed WebSocket connection,
+// sending only the subset of samples that each client has registered a filter for.
+// The sent payload preserves the original telemetry message structure.
+func (s *FusionServer) routeMeterData(msg *api.MeterDataMessage) error {
+	s.wsLock.RLock()
+	subscribers := s.subscriptions[api.WSTopicMeterData]
+	conns := make([]*websocket.Conn, 0, len(subscribers))
+	for conn := range subscribers {
+		conns = append(conns, conn)
+	}
+	s.wsLock.RUnlock()
+
+	if len(conns) == 0 {
+		return nil
+	}
+
+	now := time.Now()
+	var failedConnections []*websocket.Conn
+	for _, conn := range conns {
+		filtered := s.meterFilterManager.FilterMeterDataForConn(conn, msg)
+		if filtered == nil {
+			continue
+		}
+		wsMsg := &api.WebSocketResponse{
+			ID:        nil,
+			Version:   api.WSCurrentVersion,
+			Type:      api.WSMsgTypeMeterData,
+			Code:      api.WSCodeDeviceUpdated,
+			Status:    api.WSStatusEvent,
+			Message:   "meter_data",
+			Data:      filtered,
+			Timestamp: now,
+		}
+		if err := s.safeWriteJSON(conn, wsMsg); err != nil {
+			logging.GetLogger().Error("Error routing meter data to WebSocket client: %v", err)
+			failedConnections = append(failedConnections, conn)
+		}
+	}
+
+	if len(failedConnections) > 0 {
+		s.wsLock.Lock()
+		for _, conn := range failedConnections {
+			if s.subscriptions[api.WSTopicMeterData] != nil {
+				delete(s.subscriptions[api.WSTopicMeterData], conn)
+			}
+			delete(s.wsClients, conn)
+			delete(s.wsWriteMutex, conn)
+			conn.Close()
+		}
+		if len(s.subscriptions[api.WSTopicMeterData]) == 0 {
+			delete(s.subscriptions, api.WSTopicMeterData)
+		}
+		s.wsLock.Unlock()
+		for _, conn := range failedConnections {
+			s.meterFilterManager.RemoveFilter(conn, s.clusterMemberFilterAddrs())
+		}
 	}
 
 	return nil

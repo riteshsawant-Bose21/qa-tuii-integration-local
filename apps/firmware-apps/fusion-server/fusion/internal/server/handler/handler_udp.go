@@ -95,6 +95,22 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 			Payload:  info,
 		}, nil
 
+	case api.NotifyOpMeterData:
+		// Telemetry core is pushing meter readings. Unmarshal the payload, then
+		// fan it out to subscribed WebSocket clients via the hub.
+		if len(msg.Payload) == 0 {
+			return udpResponse{FusionOp: msg.Action, Status: "ok"}, nil
+		}
+		var meterData api.MeterDataMessage
+		if err := json.Unmarshal(msg.Payload, &meterData); err != nil {
+			logger.Error("HandleUDPMessage meter_data: invalid payload: %v", err)
+			return nil, fmt.Errorf("invalid meter_data payload: %w", err)
+		}
+		h.hub.BroadcastToObservers(api.NewNotifyMessage(api.NotifyOpMeterData, "", func(m *api.NotifyMessage) {
+			m.MeterData = &meterData
+		}))
+		return udpResponse{FusionOp: api.NotifyOpMeterData, Status: "ok"}, nil
+
 	default:
 		logger.Warn("HandleUDPMessage unknown action: %s", msg.Action)
 		return nil, fmt.Errorf("unknown action: %s", msg.Action)

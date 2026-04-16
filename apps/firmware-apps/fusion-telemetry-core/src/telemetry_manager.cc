@@ -219,7 +219,10 @@ void bosepro::telemetryManager::send_update_request()
 
 int bosepro::telemetryManager::send_meter_data(std::ostringstream& meter_data)
 {
-
+    if (meter_data.str().empty())
+    {
+        return 0;
+    }
     return subscriber_channel.send(meter_data.str());
 }
 

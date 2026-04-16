@@ -22,6 +22,9 @@ type WebSocketServer interface {
 	SubscribeToTopic(conn *websocket.Conn, topic string)
 	UnsubscribeFromTopic(conn *websocket.Conn, topic string)
 	BroadcastToTopic(topic string, message *api.WebSocketResponse) error
+	// Meter data filter methods
+	SetMeterFilter(conn *websocket.Conn, ids []string)
+	RemoveMeterFilter(conn *websocket.Conn)
 }
 
 // HandleWebSocketMessageWithConn processes incoming WebSocket messages and enables pull-then-push pattern
@@ -84,6 +87,12 @@ func (h *Handler) routeWebSocketMessageWithConn(request *api.WebSocketRequest, c
 		return h.handleSwUpdateInfo(request)
 	case api.WSMsgTypeListSoftwareUpdates:
 		return h.handleListSoftwareUpdates(request)
+	case api.WSMsgTypeSubscribeMeterData:
+		return h.handleMeterDataWithSubscription(request, conn, server)
+	case api.WSMsgTypeUpdateMeterDataFilter:
+		return h.handlePatchMeterDataFilter(request, conn, server)
+	case api.WSMsgTypeUnsubscribeMeterData:
+		return h.handleUnsubscribeMeterData(request, conn, server)
 	default:
 		return createErrorResponse(&request.ID, api.WSCodeInvalidType, fmt.Sprintf("Unknown message type: %s", request.Type)), nil
 	}
@@ -273,6 +282,44 @@ func (h *Handler) handleStartUpdate(request *api.WebSocketRequest) (*api.WebSock
 		"action": "broadcast_cluster",
 		"nodes":  h.clusterTransport.MemberListMembers(),
 	}), nil
+}
+
+// handlerMeterDataWithSubscription handles meter data filter requests and subscribes client to meter data updates
+func (h *Handler) handleMeterDataWithSubscription(request *api.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*api.WebSocketResponse, error) {
+	logger := logging.GetLogger()
+
+	server.SubscribeToTopic(conn, api.WSTopicMeterData)
+	logger.Info("Client subscribed to meter data")
+
+	return createSuccessResponse(&request.ID, api.WSMsgTypeSubscribeMeterData, api.WSCodeOK, "OK - subscribed to meter data", nil), nil
+}
+
+func (h *Handler) handlePatchMeterDataFilter(request *api.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*api.WebSocketResponse, error) {
+	var payload struct {
+		Filter []string `json:"filter"`
+	}
+
+	if err := json.Unmarshal(request.Data, &payload); err != nil {
+		return createErrorResponse(&request.ID, api.WSCodeInvalidPayload, ErrInvalidPayload), nil
+	}
+
+	server.SetMeterFilter(conn, payload.Filter)
+	logging.GetLogger().Info("Client updated meter data filter: %d IDs", len(payload.Filter))
+
+	return createSuccessResponse(&request.ID, api.WSMsgTypeUpdateMeterDataFilter, api.WSCodeUpdated, "Meter data filter updated", map[string]interface{}{
+		"filter_count": len(payload.Filter),
+	}), nil
+}
+
+// handleUnsubscribeMeterData handles requests to unsubscribe from meter data updates
+func (h *Handler) handleUnsubscribeMeterData(request *api.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*api.WebSocketResponse, error) {
+	logger := logging.GetLogger()
+
+	server.UnsubscribeFromTopic(conn, api.WSTopicMeterData)
+	server.RemoveMeterFilter(conn)
+	logger.Info("Client unsubscribed from meter data")
+
+	return createSuccessResponse(&request.ID, api.WSMsgTypeUnsubscribeMeterData, api.WSCodeOK, "Unsubscribed from meter data", nil), nil
 }
 
 // Helper functions for creating responses in the new format
