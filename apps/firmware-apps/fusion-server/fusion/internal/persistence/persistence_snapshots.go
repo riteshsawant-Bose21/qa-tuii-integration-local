@@ -99,7 +99,7 @@ func (p *Persistence) DeleteSnapshot(snapshotName string) error {
 		return fmt.Errorf("failed to check snapshot %q existence: %w", snapshotName, err)
 	}
 	if !exists {
-		return fmt.Errorf("snapshot %q does not exist", snapshotName)
+		return fmt.Errorf("%w: snapshot %q does not exist", ErrNotFound, snapshotName)
 	}
 
 	// Perform deletion in a single atomic transaction.
@@ -141,7 +141,7 @@ func (p *Persistence) DeleteSnapshot(snapshotName string) error {
 			return fmt.Errorf("failed to check default snapshot existence: %w", err)
 		}
 		if !exists {
-			return fmt.Errorf("default snapshot %q does not exist", keyDefaultSnapshot)
+			return fmt.Errorf("%w: default snapshot %q does not exist", ErrNotFound, keyDefaultSnapshot)
 		}
 
 		if err := p.ActivateSnapshot(keyDefaultSnapshot); err != nil {
