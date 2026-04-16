@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/utils"
 	"io"
 	"net/http"
@@ -204,7 +204,7 @@ func (tm *TaskManager) taskActivateSnapshotFunc(t *api.Task) TaskFunc {
 		if err := tm.handleSnapshotOperation(
 			tm.node,
 			snapID,
-			api.NotifyOpSnapActivate); err != nil {
+			api.NotifyOpTimeMachineActivate); err != nil {
 			return err
 		}
 

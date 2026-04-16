@@ -82,6 +82,12 @@ runs:
         $global:LASTEXITCODE = 0
         flutter pub get --suppress-analytics *> $null
         moon run flutter-apps:win-automation-build
+
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "moon run flutter-apps:win-automation-build failed with exit code $LASTEXITCODE"
+          exit $LASTEXITCODE
+        }
+
         E:\'Program Files (x86)'\NSIS\makensis.exe C:\Users\Administrator\Documents\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher\windows\Installer\NSIS\fusion_launcher_automation_build.nsi
 
         echo "SM_API_KEY=${{ inputs.SM_API_KEY }}" >> $env:GITHUB_ENV

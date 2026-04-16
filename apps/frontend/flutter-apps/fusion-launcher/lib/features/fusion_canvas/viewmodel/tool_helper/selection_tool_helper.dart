@@ -83,7 +83,9 @@ class SelectionToolHelper extends FusionCanvasToolTransformer<SelectToolState> {
           context.hoverState.hoveredElement != null ? <FusionCanvasElement>[context.hoverState.hoveredElement!] : <FusionCanvasElement>[];
 
       final Set<String> draggedLayerIds =
-          (multiSelectEnabled && context.inputState.isShiftPressed) ? <String>{...currentState.selectedLayerIds, hoveredPainterId} : <String>{hoveredPainterId};
+          (multiSelectEnabled && (currentState.selectedLayerIds.length >= 2 || context.inputState.isShiftPressed))
+              ? <String>{...currentState.selectedLayerIds, hoveredPainterId}
+              : <String>{hoveredPainterId};
       if (elements.isNotEmpty) {
         final Set<String> draggableLayerIds =
             draggedLayerIds.where(
@@ -97,6 +99,9 @@ class SelectionToolHelper extends FusionCanvasToolTransformer<SelectToolState> {
         if (draggableLayerIds.isEmpty) {
           return currentState;
         }
+        // print(
+        //   "Is Shift pressed: ${context.inputState.isShiftPressed}, multiSelectEnabled: $multiSelectEnabled, draggedLayerIds: $draggedLayerIds, draggableLayerIds: $draggableLayerIds",
+        // );
         return PointsDragStartState(layerIds: draggableLayerIds, elements: elements);
       } else {
         final Set<String> draggableLayerIds =

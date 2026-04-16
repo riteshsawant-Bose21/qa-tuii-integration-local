@@ -1,6 +1,6 @@
 {
-  "version": "1.0.4",
-  "date": "23-03-2026",
+  "version": "1.0.5",
+  "date": "15-04-2026",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://boseprofessional.com/schemas/project-data-schema",
   "title": "Bose Professional Product Data Schema",
@@ -10,11 +10,14 @@
     "version": {
       "type": "string",
       "description": "Data schema version",
-      "pattern": "^\\d+\\.\\d+$",
+      "pattern": "^v?\\d+\\.\\d+(\\.\\d+)?$",
       "examples": [
         "1.0",
         "1.1",
-        "2.0"
+        "2.0",
+        "v1.0.0",
+        "v1.1.0",
+        "v2.0.0"
       ]
     },
     "title": {
@@ -181,7 +184,10 @@
             "properties": {
               "reference_db": {
                 "type": "number",
-                "enum": [-10, -3]
+                "enum": [
+                  -10,
+                  -3
+                ]
               },
               "unit": {
                 "type": "string",
@@ -369,7 +375,7 @@
             "accessories": {
               "type": "array",
               "items": {
-                "$ref": "#/$defs/accessory"
+                "$ref": "#/$defs/skus"
               }
             }
           },
@@ -876,6 +882,12 @@
             "type": "string"
           }
         },
+        "accessories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/skus"
+          }
+        },
         "updated_at": {
           "type": "string",
           "format": "epoch",
@@ -988,6 +1000,12 @@
           "type": "string",
           "description": "Path to rear panel image"
         },
+        "accessories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/skus"
+          }
+        },
         "updated_at": {
           "type": "string",
           "format": "epoch",
@@ -1083,6 +1101,12 @@
             "type": "string"
           }
         },
+        "accessories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/skus"
+          }
+        },
         "updated_at": {
           "type": "string",
           "format": "epoch",
@@ -1133,6 +1157,12 @@
         },
         "images": {
           "$ref": "#/$defs/productImages"
+        },
+        "accessories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/skus"
+          }
         },
         "updated_at": {
           "type": "string",
@@ -1609,31 +1639,27 @@
       },
       "additionalProperties": false
     },
+    "color": {
+      "type": "string",
+      "title": "Product Color Variant",
+      "description": "Allowed color variants for Bose Professional products",
+      "enum": [
+        "black",
+        "white",
+        "green",
+        "gray"
+      ]
+    },
     "skus": {
       "type": "object",
       "title": "Product SKUs by Color",
       "description": "SKU numbers organized by color variant",
-      "properties": {
-        "black": {
-          "type": "array",
-          "description": "SKU numbers for black variant",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "white": {
-          "type": "array",
-          "description": "SKU numbers for white variant",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        }
+      "propertyNames": {
+        "$ref": "#/$defs/color"
       },
       "additionalProperties": {
         "type": "array",
-        "description": "SKU numbers for other color variants",
+        "description": "SKU numbers for the color variant",
         "items": {
           "type": "string",
           "minLength": 1

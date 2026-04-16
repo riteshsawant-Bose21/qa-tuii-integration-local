@@ -39,6 +39,8 @@ class FusionNetworkDevice {
   /// The Jenkins build number running on the device.
   final String jenkinsBuildNumber;
 
+  final String? preReleaseTag;
+
   const FusionNetworkDevice({
     required this.address,
     required this.id,
@@ -53,7 +55,18 @@ class FusionNetworkDevice {
     this.fusionMonorepoBranch = '',
     this.fusionMonorepoCommitHash = '',
     this.jenkinsBuildNumber = '',
+    this.preReleaseTag,
   });
+
+  String? get primaryDeviceVersion {
+    if (!isPrimary) return null;
+
+    if (preReleaseTag != null && preReleaseTag!.isNotEmpty && preReleaseTag!.toLowerCase() != 'unknown') {
+      return "$softwareUpdateVersion-$preReleaseTag.$jenkinsBuildNumber";
+    }
+
+    return softwareUpdateVersion;
+  }
 
   factory FusionNetworkDevice.fromJson(Map<String, dynamic> json) {
     return FusionNetworkDevice(
@@ -61,7 +74,7 @@ class FusionNetworkDevice {
       id: json['id'] as String? ?? '',
       location: json['location'] as String? ?? '',
       name: json['name'] as String? ?? '',
-      modelName: 'FM8Y', //json['model_name'] as String? ?? ''
+      modelName: json['serial_number'] == "07323a09dabc1d39" ? "XLRPAL" : 'FM8Y', //json['model_name'] as String? ?? ''
       serialNumber: json['serial_number'] as String? ?? '',
       isPrimary: json['is_primary'] as bool? ?? false,
       macAddress: json['mac_address'] as String? ?? '',
@@ -70,6 +83,7 @@ class FusionNetworkDevice {
       fusionMonorepoBranch: json['fusion_monorepo_branch'] as String? ?? '',
       fusionMonorepoCommitHash: json['fusion_monorepo_commit_hash'] as String? ?? '',
       jenkinsBuildNumber: json['jenkins_build_number'] as String? ?? '',
+      preReleaseTag: json['pre_release_tag'] as String?,
     );
   }
 
@@ -88,6 +102,7 @@ class FusionNetworkDevice {
       'fusion_monorepo_branch': fusionMonorepoBranch,
       'fusion_monorepo_commit_hash': fusionMonorepoCommitHash,
       'jenkins_build_number': jenkinsBuildNumber,
+      'pre_release_tag': preReleaseTag,
     };
   }
 
@@ -105,6 +120,7 @@ class FusionNetworkDevice {
     String? fusionMonorepoBranch,
     String? fusionMonorepoCommitHash,
     String? jenkinsBuildNumber,
+    String? preReleaseTag,
   }) {
     return FusionNetworkDevice(
       address: address ?? this.address,
@@ -120,6 +136,7 @@ class FusionNetworkDevice {
       fusionMonorepoBranch: fusionMonorepoBranch ?? this.fusionMonorepoBranch,
       fusionMonorepoCommitHash: fusionMonorepoCommitHash ?? this.fusionMonorepoCommitHash,
       jenkinsBuildNumber: jenkinsBuildNumber ?? this.jenkinsBuildNumber,
+      preReleaseTag: preReleaseTag ?? this.preReleaseTag,
     );
   }
 
@@ -129,7 +146,10 @@ class FusionNetworkDevice {
         'modelName: $modelName, serialNumber: $serialNumber, isPrimary: $isPrimary, '
         'macAddress: $macAddress, softwareUpdateVersion: $softwareUpdateVersion, '
         'isDeviceCertificateValid: $isDeviceCertificateValid, '
-        'fusionMonorepoBranch: $fusionMonorepoBranch)';
+        'fusionMonorepoBranch: $fusionMonorepoBranch, '
+        'fusionMonorepoCommitHash: $fusionMonorepoCommitHash, '
+        'jenkinsBuildNumber: $jenkinsBuildNumber, '
+        'preReleaseTag: $preReleaseTag)';
   }
 
   @override
@@ -148,7 +168,8 @@ class FusionNetworkDevice {
         other.isDeviceCertificateValid == isDeviceCertificateValid &&
         other.fusionMonorepoBranch == fusionMonorepoBranch &&
         other.fusionMonorepoCommitHash == fusionMonorepoCommitHash &&
-        other.jenkinsBuildNumber == jenkinsBuildNumber;
+        other.jenkinsBuildNumber == jenkinsBuildNumber &&
+        other.preReleaseTag == preReleaseTag;
   }
 
   @override
@@ -167,6 +188,7 @@ class FusionNetworkDevice {
       fusionMonorepoBranch,
       fusionMonorepoCommitHash,
       jenkinsBuildNumber,
+      preReleaseTag,
     );
   }
 }

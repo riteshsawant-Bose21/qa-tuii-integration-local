@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/assets/asset_icons.dart';
@@ -35,7 +34,9 @@ class _ZoneControlHeaderState extends State<ZoneControlHeader> {
 
   /// Keep the text field in sync with cubit state without losing cursor focus.
   void _syncVolumeText(double gain) {
-    final String formatted = gain.toStringAsFixed(1);
+    final double percentageGain =   context.read<ZoneControlViewModel>().dbfsToPercentage(gain);
+    final String formatted = percentageGain.toStringAsFixed(1);
+
     if (volumeController.text != formatted) {
       volumeController.text = formatted;
     }
@@ -107,11 +108,11 @@ class _ZoneControlHeaderState extends State<ZoneControlHeader> {
                 onPressed: () {},
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
-                icon: FusionImage.asset(
-                  AssetIcons.controllerSettings,
+                icon: FusionImageAuto(
+                  path: AssetIcons.controllerSettings,
                   height: 14,
                   width: 16,
-                  assetColor: context.colorScheme.iconWhite,
+                  color: context.colorScheme.iconWhite,
                 ),
               ),
             ],

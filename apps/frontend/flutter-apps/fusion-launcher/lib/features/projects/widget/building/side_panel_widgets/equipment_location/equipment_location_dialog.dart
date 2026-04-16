@@ -13,9 +13,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nested/nested.dart';
 import 'package:recase/recase.dart';
 
+import '../../../../../../core/service_locator.dart';
+import '../../../../../speaker_selection_popup/viewmodel/product_query_view_model.dart' show ProductQueryViewModel;
 import '../../../../viewmodel/equipment_location_selection_viewmodel.dart';
 import '../../../../viewmodel/equipment_location_viewmodel.dart';
-import '../../../../../speaker_selection_popup/viewmodel/product_query_view_model.dart' show ProductQueryViewModel;
 import '../../widgets/drop_down.dart';
 import '../../widgets/grid_view.dart';
 

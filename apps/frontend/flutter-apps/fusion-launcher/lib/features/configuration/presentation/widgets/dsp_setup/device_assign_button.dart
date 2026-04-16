@@ -514,9 +514,9 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
                     color: AppColors.primarySoft.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Center(
-                    child: Image.asset(
-                      "assets/images/bose_dsp.png",
+                  child: const Center(
+                    child: FusionImageAuto(
+                      path: "assets/images/bose_dsp.png",
                       height: 40,
                       width: 40,
                     ),

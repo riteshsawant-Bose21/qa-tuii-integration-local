@@ -26,6 +26,7 @@ import '../../../fusion_canvas/view/painters/elements/derived/hardware_painter/f
 import '../../../fusion_canvas/view/painters/elements/derived/listening_area_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/spl_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/fusion_dotted_bg_painter.dart';
+import '../../../fusion_canvas/viewmodel/fusion_canvas_state_viewmodel.dart';
 import '../../presentation/project_work_area.dart';
 import '../../viewmodel/building_page_viewmodel.dart';
 
@@ -68,63 +69,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
     super.dispose();
   }
 
-  // void zoneSelectionMode(Zone zone) async {
-  //   final List<ListeningArea>? selectedAreas = await widget.floorCanvasController.requestListeningAreaSelection(
-  //     serviceLocator<ProjectViewModel>().getListeningAreasForZone(
-  //       zoneId: zone.id,
-  //     ),
-  //     zone,
-  //   );
-
-  //   if (selectedAreas != null) {
-  //     print(
-  //       "Selected areas for zone ${zone.name}: ${selectedAreas.map((ListeningArea e) => e.name).toList()}",
-  //     );
-  //     serviceLocator<ProjectViewModel>().updateListeningAreasInZone(
-  //       zoneId: zone.id,
-  //       listeningAreaIds: selectedAreas.map((ListeningArea e) => e.id).toList(),
-  //     );
-  //   } else {
-  //     serviceLocator<ProjectViewModel>().clearSelectedZone();
-  //   }
-  // // }
-
-  // void subzoneSelectionMode(SubZone subZone) async {
-  //   final List<ListeningArea>? selectedAreas = await widget.floorCanvasController.requestListeningAreaSelectionForSubZone(
-  //     serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(
-  //       subZoneId: subZone.id,
-  //     ),
-  //     subZone,
-  //   );
-
-  //   if (selectedAreas != null) {
-  //     print(
-  //       "Selected areas for subzone ${subZone.name}: ${selectedAreas.map((ListeningArea e) => e.name).toList()}",
-  //     );
-  //     serviceLocator<ProjectViewModel>().updateListeningAreasInSubZone(
-  //       subZoneId: subZone.id,
-  //       listeningAreaIds: selectedAreas.map((ListeningArea e) => e.id).toList(),
-  //     );
-  //   } else {
-  //     serviceLocator<ProjectViewModel>().clearSelectedSubZone();
-  //   }
-  // }
-
-  // Offset? cursorPosition;
-
   final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-
-  // // bool get shouldUseCustomCursor => projectViewModel.selectedProductToAdd != null || projectViewModel.shouldPlaceNonPlacedSpeakers;
-
-  // MouseCursor get cursorType {
-  //   // if (widget.floorCanvasController.isDrawing.value) {
-  //   //   return SystemMouseCursors.precise;
-  //   // } else if (projectViewModel.selectedProductToAdd != null || projectViewModel.shouldPlaceNonPlacedSpeakers) {
-  //   //   return SystemMouseCursors.none;
-  //   // } else {
-  //   return SystemMouseCursors.basic;
-  //   // }
-  // }
 
   void calculateSpl(BuildContext context) {
     if (context.read<BuildingPageViewModel>().isSplMode) {
@@ -172,11 +117,18 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       testId: SemanticHelper.createTestId(SemanticTypes.container, "building_floor_canvas"),
                                       child: Builder(
                                         builder: (BuildContext context) {
+                                          final List<HardwareComponent> hardwareInFloorWithPosition = serviceLocator<ProjectViewModel>()
+                                              .getHardwareInFloorWithPosition(floorId: floor.id);
+
+                                          final bool isAcousticsMode = context.watch<BuildingPageViewModel>().state.toolbarMode == ToolbarMode.acoustics;
+
                                           final List<ListeningAreaPainter> listeningAreaPainters = <ListeningAreaPainter>[
-                                            for (final ListeningArea area in serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
-                                              floorId: floor.id,
-                                            ))
-                                              ListeningAreaPainter(listeningArea: area, isShowingSpl: buildingPageViewModel.isSplMode),
+                                            for (final ListeningArea area in serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floorId: floor.id))
+                                              ListeningAreaPainter(
+                                                backgoundColor: serviceLocator<ProjectViewModel>().getZoneColorForLA(areaId: area.id),
+                                                listeningArea: area,
+                                                isShowingSpl: buildingPageViewModel.isSplMode,
+                                              ),
                                           ];
 
                                           return FusionCanvas(
@@ -204,12 +156,11 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 showSpl: true,
                                               ),
                                               ...listeningAreaPainters,
-                                              for (final HardwareComponent hw in serviceLocator<ProjectViewModel>().getHardwareInFloorWithPosition(
-                                                floorId: floor.id,
-                                              ))
-                                                HardwareComponentPainter(
-                                                  hardware: hw,
-                                                ),
+                                              for (final HardwareComponent hw in hardwareInFloorWithPosition)
+                                                if (isAcousticsMode && hw is Speaker)
+                                                  HardwareComponentPainter(hardware: hw)
+                                                else if (!isAcousticsMode)
+                                                  HardwareComponentPainter(hardware: hw),
                                             ],
                                             toolbarEvents: FusionCanvasEvents(
                                               onLayerSelected: (List<FusionBasePainter>? values) {
@@ -271,7 +222,11 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 if (painter is ListeningAreaPainter) {
                                                   final ListeningArea area = painter.listeningArea;
                                                   final List<FusionCanvasPoint> updatedPoints =
-                                                      area.vertices.where((FusionCanvasPoint v) => points.every((String p) => p != v.id)).toList();
+                                                      area.vertices.where((FusionCanvasPoint v) => points.every((String p) => !p.contains(v.id))).toList();
+                                                  if (updatedPoints.length < 3) {
+                                                    FusionToast.error(context, message: "Listening area should have minimum 3 points");
+                                                    return;
+                                                  }
                                                   serviceLocator<ProjectViewModel>().updateListeningArea(
                                                     area: area.copyWith(vertices: updatedPoints),
                                                   );
@@ -318,52 +273,93 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                               penToolEvents: FusionPenToolEvents(
                                                 onPathClosed: (List<FusionCanvasPoint> value) {
                                                   final ProjectViewModel projectVM = serviceLocator<ProjectViewModel>();
-                                                  final ListeningArea listeningArea = ListeningArea(
-                                                    vertices: value,
-                                                    name: "Listening Area ${projectVM.listeningAreas.length + 1}",
+                                                  if (value.last == value.first) {
+                                                    value.removeLast();
+                                                  }
+                                                  final BuildingPageToolState state = context.read<BuildingPageViewModel>().state.toolState;
+                                                  final String? listeningAreaId =
+                                                      state is DrawingListeningAreaState
+                                                          ? state.listeningAreaId
+                                                          : null; // if we are already in drawing mode, we should update the existing listening area instead of creating a new one
+                                                  final ListeningArea? existingArea = projectVM.listeningAreas.firstWhereOrNull(
+                                                    (ListeningArea element) => element.id == listeningAreaId,
                                                   );
-                                                  projectVM.addListeningArea(
-                                                    area: listeningArea,
-                                                    floorId: floor.id,
-                                                  );
-                                                  projectVM.setCurrentSelectedHardware(null);
-                                                  projectVM.setCurrentSelectedListeningArea(listeningArea.id);
+                                                  if (existingArea == null) {
+                                                    final ListeningArea listeningArea = ListeningArea(
+                                                      vertices: value,
+                                                      name: "Listening Area ${projectVM.listeningAreas.length + 1}",
+                                                    );
+                                                    projectVM.addListeningArea(
+                                                      area: listeningArea,
+                                                      floorId: floor.id,
+                                                    );
+                                                    projectVM.setCurrentSelectedHardware(null);
+                                                    projectVM.setCurrentSelectedListeningArea(listeningArea.id);
+                                                  } else {
+                                                    projectVM.updateListeningArea(
+                                                      area: existingArea.copyWith(vertices: value, isDrawn: true),
+                                                    );
+                                                    projectVM.setCurrentSelectedHardware(null);
+                                                    projectVM.setCurrentSelectedListeningArea(existingArea.id);
+                                                  }
 
                                                   calculateSpl(context);
                                                 },
                                               ),
                                             ),
                                             builder:
-                                                (BuildContext context) => Stack(
-                                                  children: <Widget>[
-                                                    Positioned(left: 0, child: widget.leftPanel),
-                                                    Positioned(
-                                                      right: 0,
-                                                      child: Row(
-                                                        mainAxisAlignment: MainAxisAlignment.end,
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                                        children: <Widget>[
-                                                          widget.rightPanel,
-                                                          WorkSafeAreaContent(
-                                                            child: SizedBox(
-                                                              height: constraints.maxHeight - WorkAreaScope.of(context).appBarHeight,
-                                                              child: SplSlider(
-                                                                splPanelData: widget.splPanelData,
-                                                                splRangeController: widget.splRangeController,
-                                                              ),
-                                                            ),
+                                                (BuildContext context) => BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+                                                  listenWhen:
+                                                      (ProjectViewModelState previous, ProjectViewModelState current) =>
+                                                          previous != current && current is FloorsUpdated,
+                                                  listener: (BuildContext context, ProjectViewModelState state) {
+                                                    if (state is FloorsUpdated) {
+                                                      Future<void>.delayed(const Duration(milliseconds: 100), () {
+                                                        context.read<FusionCanvasStateViewModel>().fitToScreen(
+                                                          padding: EdgeInsets.only(
+                                                            left: 250,
+                                                            right: 250,
+                                                            top: WorkAreaScope.of(context).appBarHeight,
+                                                            bottom: 20 + 50,
                                                           ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    const Align(
-                                                      alignment: Alignment.bottomCenter,
-                                                      child: Padding(
-                                                        padding: EdgeInsets.all(20),
-                                                        child: CanvasToolBar(),
-                                                      ),
-                                                    ),
-                                                  ],
+                                                        );
+                                                      });
+                                                      // onFloorUpdated();
+                                                    }
+                                                  },
+                                                  builder: (BuildContext context, _) {
+                                                    return Stack(
+                                                      children: <Widget>[
+                                                        Positioned(left: 0, child: widget.leftPanel),
+                                                        Positioned(
+                                                          right: 0,
+                                                          child: Row(
+                                                            mainAxisAlignment: MainAxisAlignment.end,
+                                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                                            children: <Widget>[
+                                                              widget.rightPanel,
+                                                              WorkSafeAreaContent(
+                                                                child: SizedBox(
+                                                                  height: constraints.maxHeight - WorkAreaScope.of(context).appBarHeight,
+                                                                  child: SplSlider(
+                                                                    splPanelData: widget.splPanelData,
+                                                                    splRangeController: widget.splRangeController,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                        const Align(
+                                                          alignment: Alignment.bottomCenter,
+                                                          child: Padding(
+                                                            padding: EdgeInsets.all(20),
+                                                            child: CanvasToolBar(),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    );
+                                                  },
                                                 ),
 
                                             cursorBuilder: (BuildContext context) {
@@ -495,8 +491,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
               Theme.of(context).colorScheme.primaryWhite,
               BlendMode.srcIn,
             ),
-            child: const FusionImage.asset(
-              "assets/images/upload_floor_plan.png",
+            child: const FusionImageAuto(
+              path: "assets/images/upload_floor_plan.png",
               width: 64,
               height: 64,
             ),
@@ -749,13 +745,13 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   Widget _buildFloorPlanImage(String imagePath) {
     if (imagePath.startsWith('assets/')) {
-      return Image.asset(
-        imagePath,
+      return FusionImageAuto(
+        path: imagePath,
         fit: BoxFit.cover,
       );
     } else {
-      return Image.file(
-        File(imagePath),
+      return FusionImageAuto(
+        path: imagePath,
         fit: BoxFit.cover,
         errorBuilder: (
           BuildContext context,
@@ -942,7 +938,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
       final CalibrationData? calibrationData = await showDialog<CalibrationData>(
         context: context,
-        barrierDismissible: true,
+        barrierDismissible: false,
         builder: (_) {
           return Dialog(
             insetPadding: const EdgeInsets.all(100),

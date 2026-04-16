@@ -97,6 +97,7 @@ func NewApp(config *api.AppConfig) *App {
 	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
 	hub.SetClusterTransport(clusterInstance)
 	connectionHandler := handler.NewHandler(config, clusterInstance, persistence, stateManager, hub, controllerManager)
+	taskManager.SetHandler(connectionHandler)
 
 	// Set the sync handler on the delegate so it can handle software update acknowledgments
 	delegate.SetSyncHandler(connectionHandler)
@@ -290,22 +291,37 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.SessionsEndpoint, app.Server.GetSessions)
 	app.registerPublicGET(routes.SessionsIdEndpoint, app.Server.GetSession)
 
+	// Time Machine
+	app.registerPublicPOST(routes.TimeMachineActivateEndpoint, app.Server.ActivateTimeMachine)
+	app.registerPublicPOST(routes.TimeMachineUpdateEndpoint, app.Server.SaveTimeMachine)
+	app.registerPublicPOST(routes.TimeMachineNameEndpoint, app.Server.CreateTimeMachine)
+	app.registerPublicGET(routes.TimeMachineEndpoint, app.Server.ListTimeMachines)
+	app.registerPublicGET(routes.TimeMachineActiveEndpoint, app.Server.GetActiveTimeMachineName)
+	app.registerPublicGET(routes.TimeMachineNameEndpoint, app.Server.GetTimeMachine)
+	app.registerPublicDELETE(routes.TimeMachineNameEndpoint, app.Server.DeleteTimeMachine)
+
 	// Snapshots
 	app.registerPublicPOST(routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
-	app.registerPublicPOST(routes.SnapshotsUpdateEndpoint, app.Server.SaveSnapshot)
-	app.registerPublicPOST(routes.SnapshotsNameEndpoint, app.Server.CreateSnapshot)
-	app.registerPublicGET(routes.SnapshotsEndpoint, app.Server.ListSnapshots)
-	app.registerPublicGET(routes.SnapshotsActiveEndpoint, app.Server.GetActiveSnapshotName)
-	app.registerPublicGET(routes.SnapshotsNameEndpoint, app.Server.GetSnapshot)
-	app.registerPublicDELETE(routes.SnapshotsNameEndpoint, app.Server.DeleteSnapshot)
+	app.registerPublicGET(routes.SnapshotsListEndpoint, app.Server.ListSnapshotDefinitions)
+
+	// Scenes
+	app.registerPublicGET(routes.ScenesListEndpoint, app.Server.ListScenes)
+
+	// Scene Sets
+	app.registerPublicPOST(routes.SceneSetsActivateEndpoint, app.Server.ActivateSceneSet)
+	app.registerPublicPOST(routes.SceneSetsCurrentEndpoint, app.Server.GetCurrentScene)
+	app.registerPublicGET(routes.SceneSetsListEndpoint, app.Server.ListSceneSets)
+
+	// Scene Catalog
+	app.registerPublicGET(routes.SceneCatalogListEndpoint, app.Server.ListSceneCatalog)
 
 	// Tasks
 	app.registerPublicGET(routes.TasksHistoryEndpoint, app.TaskManager.GetHistory)
 	app.registerPublicDELETE(routes.TasksHistoryEndpoint, app.TaskManager.ClearHistory)
 	app.registerPublicGET(routes.TasksEndpoint, app.TaskManager.GetTasks)
-	app.registerPublicPOST(routes.TasksEndpoint, app.TaskManager.CreateApplySnapshotTask)
+	app.registerPublicPOST(routes.TasksEndpoint, app.TaskManager.CreateTask)
 	app.registerPublicGET(routes.TasksIdEndpoint, app.TaskManager.GetTaskHandler)
-	app.registerPublicPATCH(routes.TasksIdEndpoint, app.TaskManager.UpdateApplySnapshotTask)
+	app.registerPublicPATCH(routes.TasksIdEndpoint, app.TaskManager.UpdateTaskHandler)
 	app.registerPublicDELETE(routes.TasksIdEndpoint, app.TaskManager.DeleteTask)
 	app.registerPublicPOST(routes.TasksIdEnableEndpoint, app.TaskManager.EnableTask)
 	app.registerPublicPOST(routes.TasksIdDisableEndpoint, app.TaskManager.DisableTask)
@@ -348,6 +364,9 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivateGET(routes.DevicesGetCSREndpoint, app.Server.GetCSR)
 	app.registerPrivateDELETE(routes.DevicesIDResetEndpoint, app.Server.ResetDeviceCertificate)
 	app.registerPrivatePOST(routes.DevicesIDCertificateEndpoint, app.Server.SetDeviceCertificate)
+
+	app.registerPrivateGET(routes.SoftwareUpdateInfoLocalEndpoint, app.Server.GetLocalSwUpdateInfo)
+	app.registerPrivateGET(routes.SoftwareUpdateListEndpoint, app.ConnectionHandler.HandleSoftwareUpdateListLocal)
 
 	app.registerPrivateGET(routes.DataEndpoint, app.Server.ExportData)
 	app.registerPrivatePOST(routes.DataEndpoint, app.Server.ImportData)

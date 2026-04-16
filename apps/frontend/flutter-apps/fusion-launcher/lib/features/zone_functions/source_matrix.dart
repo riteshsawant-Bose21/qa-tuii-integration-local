@@ -101,7 +101,7 @@ class _SourceMatrixZoneControlPanelState extends State<SourceMatrixZoneControlPa
                           ),
                         ),
                       ),
-                  
+
                       // CLOSE BUTTON
                       Positioned(
                         top: 0,
@@ -127,12 +127,12 @@ class _SourceMatrixZoneControlPanelState extends State<SourceMatrixZoneControlPa
                           ),
                         ),
                       ),
-                  
+
                       /// --------------------------------------------------------------------------------
                       ///                             MAIN CONTENT
                       /// --------------------------------------------------------------------------------
                       Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 50.0).copyWith(bottom: hasPriority ? null : 0),
+                        padding: const EdgeInsets.symmetric(vertical: 50.0).copyWith(bottom: hasPriority ? null : null),
                         child: SemanticHelper.container(
                           testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_main_container"),
                           child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
@@ -173,7 +173,7 @@ class _SourceMatrixZoneControlPanelState extends State<SourceMatrixZoneControlPa
                                             ),
                                           ),
                                         ),
-                  
+
                                         VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
                                         MixScenes(
                                           selectedMixSceneName: selectedMixScene(zoneFunction)?.name,
@@ -210,11 +210,11 @@ class _SourceMatrixZoneControlPanelState extends State<SourceMatrixZoneControlPa
                                             }
                                           },
                                         ),
-                  
+
                                         VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
-                  
+
                                         PrioritySelectionWidget(zoneId: widget.zoneID),
-                  
+
                                         // RIGHT COLUMN (Static)
                                         Flexible(
                                           flex: 2,
@@ -229,52 +229,50 @@ class _SourceMatrixZoneControlPanelState extends State<SourceMatrixZoneControlPa
                           ),
                         ),
                       ),
-                      if (hasPriority) ...<Widget>[
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Material(
-                            color: Colors.transparent,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              child: InkWell(
-                                onTap: () {
-                                  SourceMatrixAdditionalSettingsDialog.showDialog(
-                                    context,
-                                    zoneID: widget.zoneID,
-                                  );
-                                },
-                                borderRadius: BorderRadius.circular(8),
-                                splashColor: Colors.transparent,
-                                child: Ink(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: context.colorScheme.elevation2,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: <Widget>[
-                                      Flexible(
-                                        child: FusionAppText(
-                                          text: "Additional Settings",
-                                          style: Theme.of(context).textTheme.labelSmall,
-                                        ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            child: InkWell(
+                              onTap: () {
+                                SourceMatrixAdditionalSettingsDialog.showDialog(
+                                  context,
+                                  zoneID: widget.zoneID,
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(8),
+                              splashColor: Colors.transparent,
+                              child: Ink(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: context.colorScheme.elevation2,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    Flexible(
+                                      child: FusionAppText(
+                                        text: "Additional Settings",
+                                        style: Theme.of(context).textTheme.labelSmall,
                                       ),
-                                      const SizedBox(width: 8),
-                                      Icon(
-                                        LucideIcons.arrowUpRight200,
-                                        size: 16,
-                                        color: context.colorScheme.iconDefault,
-                                      ),
-                                    ],
-                                  ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Icon(
+                                      LucideIcons.arrowUpRight200,
+                                      size: 16,
+                                      color: context.colorScheme.iconDefault,
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ],
+                      ),
                     ],
                   ),
                 ),
@@ -484,7 +482,8 @@ class _SourceMatrixControlsState extends State<SourceMatrixControls> {
                   child: Column(
                     children: <Widget>[
                       NeumorphicAudioToggleButton(
-                        isActive: widget.zoneFunctions.matrixMixer! is MonoMatrixMixer ? (widget.zoneFunctions.matrixMixer! as MonoMatrixMixer).outMuted : false,
+                        isActive:
+                            widget.zoneFunctions.matrixMixer! is MonoMatrixMixer ? (widget.zoneFunctions.matrixMixer! as MonoMatrixMixer).outMuted : false,
                         iconSize: 16,
                         backgroundColor: context.colorScheme.elevation2,
                         onTap: () {
@@ -499,9 +498,9 @@ class _SourceMatrixControlsState extends State<SourceMatrixControls> {
                           );
                         },
                       ),
-            
+
                       const SizedBox(height: 16),
-            
+
                       //
                       // OUT GAIN SLIDER
                       //
@@ -509,7 +508,7 @@ class _SourceMatrixControlsState extends State<SourceMatrixControls> {
                         builder: (BuildContext context) {
                           final MonoMatrixMixer? monoMatrixMixer =
                               widget.zoneFunctions.matrixMixer is MonoMatrixMixer ? widget.zoneFunctions.matrixMixer as MonoMatrixMixer : null;
-            
+
                           return Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16.0),
                             child: GestureDetector(
@@ -552,10 +551,10 @@ class _SourceMatrixControlsState extends State<SourceMatrixControls> {
                     separatorBuilder: (BuildContext context, int index) => Divider(color: context.colorScheme.strokeLight, height: 0),
                     itemBuilder: (BuildContext context, int index) {
                       final Source source = sources[index];
-            
+
                       final MonoMatrixSettings matrixSetting =
                           widget.zoneFunctions.matrixMixer!.settings.firstWhere((MatrixSettings ms) => ms.sourceId == source.id) as MonoMatrixSettings;
-            
+
                       return GestureDetector(
                         onTap: () {
                           projectViewModel.updateMatrixSettings(
@@ -568,7 +567,6 @@ class _SourceMatrixControlsState extends State<SourceMatrixControls> {
                           child: SemanticHelper.container(
                             testId: SemanticHelper.createTestId(SemanticTypes.container, "crosspoint_channel_gain_$index"),
                             child: NeumorphicTextWithPopupSliderButton(
-                              
                               isActive: matrixSetting.outActive,
                               value: matrixSetting.mixLevel,
                               borderRadius: 6,
