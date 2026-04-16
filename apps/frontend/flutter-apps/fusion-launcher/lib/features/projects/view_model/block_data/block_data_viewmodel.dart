@@ -530,6 +530,40 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
     );
   }
 
+  Future<void> updateBlockParameterViaAPi({required String blockId, required String parameter, required dynamic value, int? dimension}) async {
+    try {
+      final Map<String, dynamic> payload =
+          dimension == null
+              ? <String, dynamic>{
+                "settings": <String, dynamic>{
+                  "audio": <String, dynamic>{
+                    blockId: <String, dynamic>{parameter: value},
+                  },
+                },
+              }
+              : <String, dynamic>{
+                "value": value,
+              };
+      final ResponseCallback<dynamic> response = await _networkClient.patch(
+        api: FusionApiEndpoint.fusionValue,
+        isSecure: false,
+        urlParameters:
+            dimension != null
+                ? <String, dynamic>{
+                  "key": "settings.audio.$blockId.$parameter[$dimension]",
+                }
+                : null,
+        baseUrlToOverride: serviceLocator<ProjectViewModel>().virtualIP,
+        data: payload,
+      );
+      if (!response.success) {
+        FusionLogger.log(tag: LogTag.dspConfig, message: "Failed to update block parameter for $blockId.$parameter: ${response.message}");
+      }
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.dspConfig, message: "Error updating block parameter for $blockId.$parameter: $ex");
+    }
+  }
+
   /// The actual network call — called after debounce settles.
   Future<void> _flushParameterUpdate({
     required String blockId,

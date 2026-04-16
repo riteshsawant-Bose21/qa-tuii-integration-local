@@ -281,16 +281,16 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                                     Expanded(
                                                                       child: MouseRegion(
                                                                         cursor: SystemMouseCursors.click,
-                                                                        child: GestureDetector(
+                                                                        child: InkWell(
                                                                           onTap: () {
-                                                                            projectViewModel.selectSourceForFunction(
-                                                                              functionId: zoneFunction!.id,
-                                                                              sourceId: source.id,
-                                                                            );
-                                                                            serviceLocator<BlockDataViewmodel>().updateBlockParameter(
+                                                                            serviceLocator<BlockDataViewmodel>().updateBlockParameterViaAPi(
                                                                               blockId: "${zoneFunction!.id}/selector",
                                                                               parameter: 'input',
                                                                               value: index + 1,
+                                                                            );
+                                                                            projectViewModel.selectSourceForFunction(
+                                                                              functionId: zoneFunction!.id,
+                                                                              sourceId: source.id,
                                                                             );
                                                                           },
                                                                           child: SemanticHelper.toggle(
