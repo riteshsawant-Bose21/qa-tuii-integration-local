@@ -35,7 +35,7 @@ func NewRoleManagementHandler(userService fusion.User) *RoleManagementHandler {
 // @Failure 401 {object} map[string]string "Unauthorized - User email not found in token"
 // @Failure 403 {object} map[string]string "Forbidden - Insufficient permissions for role management"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /organization/role-management [get]
+// @Router /organizations/role-management [get]
 func (h *RoleManagementHandler) GetOrganizationRoleManagement(ctx *gin.Context) {
 	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
 	user, err := middleware.GetUserAuth(ctx)
@@ -91,7 +91,7 @@ func (h *RoleManagementHandler) GetOrganizationRoleManagement(ctx *gin.Context) 
 // @Failure 401 {object} map[string]string "Unauthorized - User email not found in token"
 // @Failure 403 {object} map[string]string "Forbidden - Insufficient permissions to create roles"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /organization/roles [post]
+// @Router /organizations/roles [post]
 func (h *RoleManagementHandler) CreateRole(ctx *gin.Context) {
 	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
 	user, err := middleware.GetUserAuth(ctx)
@@ -158,7 +158,7 @@ func (h *RoleManagementHandler) CreateRole(ctx *gin.Context) {
 // @Failure 401 {object} map[string]string "Unauthorized - User email not found in token"
 // @Failure 403 {object} map[string]string "Forbidden - Insufficient permissions to update user roles"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /organization/users/{userID}/role [put]
+// @Router /organizations/users/{userID}/role [put]
 func (h *RoleManagementHandler) UpdateUserRole(ctx *gin.Context) {
 	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
 	user, err := middleware.GetUserAuth(ctx)
@@ -235,7 +235,7 @@ func (h *RoleManagementHandler) UpdateUserRole(ctx *gin.Context) {
 // @Failure 401 {object} map[string]string "Unauthorized - User email not found in token"
 // @Failure 403 {object} map[string]string "Forbidden - Insufficient permissions to update role permissions"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /organization/roles/{roleID}/permissions [put]
+// @Router /organizations/roles/{roleID}/permissions [put]
 func (h *RoleManagementHandler) UpdateRolePermissions(ctx *gin.Context) {
 	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
 	user, err := middleware.GetUserAuth(ctx)
@@ -318,7 +318,7 @@ func (h *RoleManagementHandler) UpdateRolePermissions(ctx *gin.Context) {
 // @Failure 401 {object} map[string]string "Unauthorized - User email not found in token"
 // @Failure 403 {object} map[string]string "Forbidden - Insufficient permissions to view organization users"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /organization/users [get]
+// @Router /organizations/users [get]
 func (h *RoleManagementHandler) GetOrganizationUsers(ctx *gin.Context) {
 	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
 	user, err := middleware.GetUserAuth(ctx)

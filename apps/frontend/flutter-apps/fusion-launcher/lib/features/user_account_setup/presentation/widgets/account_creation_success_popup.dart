@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 Future<void> showSuccessPopup(BuildContext context, Function onDismiss, {int durationInMils = 1000}) {
   return showDialog(
@@ -77,8 +78,8 @@ class _AnimatedCheckMarkDialogState extends State<_AnimatedCheckMarkDialog> with
             ),
             child: ScaleTransition(
               scale: _scaleAnimation,
-              child: Image.asset(
-                "assets/images/check_mark.webp",
+              child: const FusionImageAuto(
+                path: "assets/images/check_mark.webp",
                 fit: BoxFit.contain,
                 height: 150,
                 width: 150,

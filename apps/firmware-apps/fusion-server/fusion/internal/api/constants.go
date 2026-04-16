@@ -1,14 +1,16 @@
 package api
 
-import "os"
-
-import "time"
+import (
+	"os"
+	"time"
+)
 
 const (
 	SoftwareUpdateVersionUnknown = "Unknown"
 	BranchNameUnknown            = "Unknown"
 	CommitHashUnknown            = "Unknown"
 	JenkinsBuildNumberUnknown    = "Unknown"
+	PreReleaseTagUnknown         = "Unknown"
 	SoftwareUpdateOTAPath        = "/mnt/ota"
 	MaxSoftwareUpdateUploadBytes = 300 << 20 // 300 MB
 	MinFreeSpaceBuffer           = 100 << 20 // 100 MB minimum free space buffer
@@ -34,7 +36,10 @@ const (
 
 	SerialUnknown = "Unknown"
 
-	SnapshotIDKey = "snapshot_id"
+	SnapshotIDKey           = "snapshot_id"
+	SnapshotDefinitionIDKey = "snapshot_definition_id"
+	SceneSetIDKey           = "set_id"
+	SceneIDKey              = "scene_id"
 
 	VIPHighPriority        = "high"
 	VIPvrrpHighPriority    = 120
