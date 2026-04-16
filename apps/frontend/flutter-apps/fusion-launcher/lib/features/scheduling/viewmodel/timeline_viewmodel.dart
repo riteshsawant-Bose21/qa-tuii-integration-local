@@ -25,7 +25,10 @@ class TimelineCubit extends Cubit<TimelineState> {
 
   void previousWeek() {
     final DateTime target = state.visibleMonth.subtract(const Duration(days: 7));
-    if (target.isBefore(maxBackableMonth)) return;
+    // Do not navigate before the Sunday that starts the current week.
+    final DateTime now = DateTime.now();
+    final DateTime currentWeekStart = DateTime(now.year, now.month, now.day - (now.weekday % 7));
+    if (target.isBefore(currentWeekStart)) return;
     emit(state.changeMonth(target));
   }
 

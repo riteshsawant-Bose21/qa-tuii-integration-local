@@ -44,12 +44,14 @@ class _MonthDayCellState extends State<MonthDayCell> {
   Widget build(BuildContext context) {
     final DateTime today = DateTime.now();
     final bool isToday = widget.date.year == today.year && widget.date.month == today.month && widget.date.day == today.day;
+    final bool isPast = widget.date.isBefore(DateTime(today.year, today.month, today.day));
 
     final List<CalendarEvent> events = _eventsFor(widget.date);
     const int maxVisible = 2;
 
     return GestureDetector(
-      onTap: () => SchedulerForm.show(context, context.read<SchedulerViewmodel>()),
+      // Tapping the cell opens "Add Schedule" only for today / future dates
+      onTap: isPast ? null : () => SchedulerForm.show(context, context.read<SchedulerViewmodel>()),
       child: MouseRegion(
         onEnter: (_) => _hoveredEventNotifier.value = true,
         onExit: (_) => _hoveredEventNotifier.value = false,
@@ -108,14 +110,16 @@ class _MonthDayCellState extends State<MonthDayCell> {
               ValueListenableBuilder<bool>(
                 valueListenable: _hoveredEventNotifier,
                 builder: (BuildContext context, bool isHovered, Widget? child) {
+                  // Never show "Add Schedule" for past dates
+                  final bool showAdd = isHovered && !isPast;
                   return Positioned(
                     bottom: 0,
                     left: 0,
                     right: 0,
                     child: IgnorePointer(
-                      ignoring: !isHovered,
+                      ignoring: !showAdd,
                       child: AnimatedOpacity(
-                        opacity: isHovered ? 1.0 : 0.0,
+                        opacity: showAdd ? 1.0 : 0.0,
                         duration: const Duration(milliseconds: 200),
                         child: GestureDetector(
                           onTap: () => SchedulerForm.show(context, context.read<SchedulerViewmodel>()),

@@ -52,7 +52,7 @@ class _TimelineSectionState extends State<_TimelineSection> {
 
               // ── Mode-aware navigation guards ──────────────────────────────
               final DateTime ws = _weekStart(state.visibleMonth);
-              final bool canGoBack = _isMonthView ? state.visibleMonth.isAfter(cubit.maxBackableMonth) : ws.isAfter(_weekStart(cubit.maxBackableMonth));
+              final bool canGoBack = _isMonthView ? state.visibleMonth.isAfter(cubit.maxBackableMonth) : ws.isAfter(_weekStart(DateTime.now()));
 
               void prev() => _isMonthView ? cubit.previousMonth() : cubit.previousWeek();
               void next() => _isMonthView ? cubit.nextMonth() : cubit.nextWeek();
@@ -219,10 +219,6 @@ class _TimelineSectionState extends State<_TimelineSection> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Week view
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _WeekView extends StatelessWidget {
   final DateTime weekAnchor;
   final Map<DateTime, List<CalendarEvent>> eventsByDate;
@@ -240,10 +236,8 @@ class _WeekView extends StatelessWidget {
 
     return Column(
       children: <Widget>[
-        // ── Shared day-name header row (mirrors CalenderView) ────────────────
-        const WeekDayRowHeader(),
-
-        // ── Day columns ──────────────────────────────────────────────────────
+        WeekDayRowHeader(dates: days),
+        const SizedBox(height: 4),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
@@ -255,7 +249,6 @@ class _WeekView extends StatelessWidget {
                     final bool isToday = day.year == today.year && day.month == today.month && day.day == today.day;
                     final DateTime key = DateTime(day.year, day.month, day.day);
                     final List<CalendarEvent> events = eventsByDate[key] ?? <CalendarEvent>[];
-                    final bool isLast = day == days.last;
 
                     return Expanded(
                       child: Container(
@@ -283,7 +276,7 @@ class _WeekView extends StatelessWidget {
   }
 }
 
-class _WeekDayColumn extends StatelessWidget {
+class _WeekDayColumn extends StatefulWidget {
   final DateTime day;
   final bool isToday;
   final List<CalendarEvent> events;
@@ -295,49 +288,104 @@ class _WeekDayColumn extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        // ── Date number header (day name is in the shared WeekDayRowHeader) ──
-        // Padding(
-        //   padding: const EdgeInsets.symmetric(vertical: 8),
-        //   child: Center(
-        //     child: Container(
-        //       width: 28,
-        //       height: 28,
-        //       alignment: Alignment.center,
-        //       decoration: BoxDecoration(
-        //         color: isToday ? context.colorScheme.primary : Colors.transparent,
-        //         shape: BoxShape.circle,
-        //       ),
-        //       child: FusionAppText(
-        //         text: '${day.day}',
-        //         style: context.textTheme.b3Medium.withColor(
-        //           isToday ? Colors.white : context.colorScheme.textBody,
-        //         ),
-        //       ),
-        //     ),
-        //   ),
-        // ),
+  State<_WeekDayColumn> createState() => _WeekDayColumnState();
+}
 
-        // ── Events ──────────────────────────────────────────────────────────
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
+class _WeekDayColumnState extends State<_WeekDayColumn> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final DateTime today = DateTime.now();
+    final bool isPast = DateTime(widget.day.year, widget.day.month, widget.day.day).isBefore(DateTime(today.year, today.month, today.day));
+    final bool showAdd = _isHovered && !isPast;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap:
+            isPast
+                ? null
+                : () => SchedulerForm.show(
+                  context,
+                  context.read<SchedulerViewmodel>(),
+                ),
+        child: Stack(
+          children: <Widget>[
+            Column(
               children: <Widget>[
-                const SizedBox(height: 4),
-                ...events.map(
-                  (CalendarEvent event) => Padding(
-                    padding: const EdgeInsets.only(bottom: 2),
-                    child: EventCard(event: event),
+                // Events list
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: <Widget>[
+                        const SizedBox(height: 4),
+                        ...widget.events.map(
+                          (CalendarEvent event) => Padding(
+                            padding: const EdgeInsets.only(bottom: 2),
+                            child: EventCard(event: event),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
               ],
             ),
-          ),
+
+            // ── "Add Schedule" hover overlay (mirrors MonthDayCell) ─────────
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                ignoring: !showAdd,
+                child: AnimatedOpacity(
+                  opacity: showAdd ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: GestureDetector(
+                    onTap:
+                        () => SchedulerForm.show(
+                          context,
+                          context.read<SchedulerViewmodel>(),
+                        ),
+                    child: Container(
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: context.colorScheme.elevation3,
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(10),
+                          bottomRight: Radius.circular(10),
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          FusionIcon.icon(
+                            semanticId: 'week_add_schedule_icon',
+                            Icons.add,
+                            size: 16,
+                            color: context.colorScheme.iconDefault,
+                          ),
+                          const SizedBox(width: 6),
+                          FusionAppText(
+                            text: 'Add Schedule',
+                            style: context.textTheme.l1Regular.withColor(context.colorScheme.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

@@ -12,7 +12,8 @@ class MonthGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final DateTime first = DateTime(viewingMonth.year, viewingMonth.month, 1);
-    // Calculate total cells needed (including leading empty cells)
+
+    /// Calculate total cells needed (including leading empty cells)
     final int startOffset = first.weekday % 7;
     final int daysInMonth = DateUtils.getDaysInMonth(
       viewingMonth.year,
