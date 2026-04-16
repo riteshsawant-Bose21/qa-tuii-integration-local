@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/service/auth/fusion_auth_service.dart';
 
@@ -88,15 +89,48 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
     }
   }
 
+  Future<void> skipLoginByPassForAutomation() async {
+    try {
+      // if (!_isIntegrationTest) {
+      //   _emitError('Bypass login is only allowed for integration tests');
+      //   return;
+      // }
+
+      _emitLoading();
+
+      final Credentials credentials = await _authService.loginByPassForIntegrationTest();
+      await serviceLocator<SharedPreferencesHandler>().setBool(SharedPreferenceKeys.skipLogin, false);
+
+      emit(Authenticated());
+
+      // ==== TEMPORARY IMPLEMENTATION ====
+      UserSessionManager().saveUserProfile(
+        UserModel(
+          account: UserAccount(id: credentials.user.sub, description: credentials.user.email, name: credentials.user.name, type: 'test@gmail.com'),
+          user: UserData(id: credentials.user.sub, email: credentials.user.email),
+        ),
+      );
+    } on Exception catch (e) {
+      // Web redirect initiated - this is expected
+      if (kIsWeb && e.toString().contains('Web redirect initiated')) {
+        _emitWebRedirectInProgress();
+        return;
+      }
+
+      FusionLogger.log(tag: LogTag.exceptions, message: 'Login error: $e');
+      _emitError('Login failed: ${e.toString()}');
+    }
+  }
+
   /// Login
   Future<void> login() async {
     try {
       _emitLoading();
+
       final Credentials credentials = await _authService.login();
-
       await serviceLocator<SharedPreferencesHandler>().setBool(SharedPreferenceKeys.skipLogin, false);
-
       await _handleLoginSuccess(credentials);
+      serviceLocator<ProductQueryViewModel>().loadProducts(); // Load products after successful login
     } on Exception catch (e) {
       // Web redirect initiated - this is expected
       if (kIsWeb && e.toString().contains('Web redirect initiated')) {

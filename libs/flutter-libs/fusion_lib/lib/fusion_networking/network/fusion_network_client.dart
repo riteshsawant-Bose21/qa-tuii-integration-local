@@ -59,6 +59,8 @@ class FusionNetworkClient {
     return null;
   }
 
+  bool canCallCloudApis(FusionApiType api) => api == FusionApiType.backendServer && !HAS_CLOUD_ACCESS;
+
   Future<ResponseCallback<T>> get<T>({
     required FusionApiEndpoint api,
     Map<String, dynamic>? urlParameters,
@@ -67,6 +69,8 @@ class FusionNetworkClient {
     bool isSecure = true,
     T Function(dynamic)? fromJson,
   }) async {
+    if (canCallCloudApis(api.type)) return ResponseCallback<T>(success: false, message: "Access to APIs is not allowed.");
+
     try {
       final String url = additionalPath != null
           ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
@@ -109,6 +113,8 @@ class FusionNetworkClient {
     bool isSecure = true,
     T Function(dynamic)? fromJson,
   }) async {
+    if (canCallCloudApis(api.type)) return ResponseCallback<T>(success: false, message: "Access to APIs is not allowed.");
+
     try {
       final String url = additionalPath != null
           ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
@@ -145,6 +151,8 @@ class FusionNetworkClient {
     bool isSecure = true,
     T Function(dynamic)? fromJson,
   }) async {
+    if (canCallCloudApis(api.type)) return ResponseCallback<T>(success: false, message: "Access to APIs is not allowed.");
+
     try {
       final String url = additionalPath != null
           ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
@@ -191,6 +199,8 @@ class FusionNetworkClient {
     bool isSecure = true,
     T Function(dynamic)? fromJson,
   }) async {
+    if (canCallCloudApis(api.type)) return ResponseCallback<T>(success: false, message: "Access to APIs is not allowed.");
+
     try {
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
@@ -240,18 +250,12 @@ class FusionNetworkClient {
     bool isSecure = true,
     String? baseUrlToOverride,
   }) async {
+    if (canCallCloudApis(api.type)) return ResponseCallback<T>(success: false, message: "Access to APIs is not allowed.");
+
     try {
       final String url = additionalPath != null
-          ? "${geApiUrl(
-              api,
-              baseUrlToOverride: baseUrlToOverride,
-              isSecure: isSecure,
-            )}/$additionalPath"
-          : geApiUrl(
-              api,
-              baseUrlToOverride: baseUrlToOverride,
-              isSecure: isSecure,
-            );
+          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
+          : geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure);
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
@@ -289,6 +293,9 @@ class FusionNetworkClient {
     required CancelToken cancelToken,
     required void Function(int received, int total) onProgress,
   }) async {
+    final isNetworkUrl = url.startsWith('http://') || url.startsWith('https://');
+    if (isNetworkUrl && !HAS_CLOUD_ACCESS) return ResponseCallback<T>(success: false, message: "Access to APIs is not allowed.");
+
     final Dio cleanDio = Dio();
     try {
       await cleanDio.download(
@@ -311,6 +318,8 @@ class FusionNetworkClient {
   }
 
   Future<ResponseCallback<T>> connect<T>({required String vip}) async {
+    if (!HAS_CLOUD_ACCESS) return ResponseCallback<T>(success: false, message: "Access to APIs is not allowed.");
+
     try {
       // Close any existing socket to prevent leaks on reconnect.
       if (subscriberSocket != null) {

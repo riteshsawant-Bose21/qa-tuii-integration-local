@@ -1,3 +1,4 @@
+import 'package:fusion_lib/di/service_locator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Singleton class for managing key-value storage using `SharedPreferences`.
@@ -63,6 +64,9 @@ class SharedPreferencesHandler {
     return _prefs.clear();
   }
 }
+
+// ignore: non_constant_identifier_names
+bool get HAS_CLOUD_ACCESS => !(fusionLibLocator<SharedPreferencesHandler>().getBool(SharedPreferenceKeys.skipLogin) ?? false);
 
 enum SharedPreferenceKeys {
   appSettings, //TODO: need to rename this key
