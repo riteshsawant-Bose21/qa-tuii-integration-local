@@ -57,8 +57,6 @@ Future<void> main() async {
     //TODO: Only for web automation build
     //This needs to be conditionally switched on based on some commandline param.
     //Else, this would create the semantics tree everytime misusing computation power.
-
-    
     SemanticsBinding.instance.ensureSemantics();
 
     _setupMacOSDeepLinkListener();

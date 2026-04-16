@@ -20,6 +20,7 @@ class SpeakerSelectionWidget extends StatefulWidget {
 
 class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
   bool _isExpanded = true; // intialized to true
+  final GlobalKey<PopupMenuButtonState<String>> _autoPlacementSettingsKey = GlobalKey<PopupMenuButtonState<String>>();
 
   @override
   Widget build(BuildContext context) {
@@ -466,6 +467,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                     ),
                                     if (listeningArea.autoPlacement)
                                       PopupMenuButton<String>(
+                                        key: _autoPlacementSettingsKey,
                                         color: Colors.transparent,
                                         shadowColor: Colors.transparent,
                                         tooltip: 'Auto-place speaker settings',
@@ -513,6 +515,14 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                         }
                                         final ListeningArea updatedLA = listeningArea.copyWith(autoPlacement: value);
                                         projectViewModel.updateListeningArea(area: updatedLA);
+
+                                        // Auto open the auto-placement settings dialog when toggled on.
+                                        if (value) {
+                                          // Wait for the widget to rebuild with the new state before opening the menu
+                                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                                            _autoPlacementSettingsKey.currentState?.showButtonMenu();
+                                          });
+                                        }
                                       },
                                     ),
                                   ],

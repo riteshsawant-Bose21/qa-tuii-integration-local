@@ -32,19 +32,27 @@ class _FusionResizableSidebarState extends State<FusionResizableSidebar> {
   final List<_DyingSection> _dyingSections = [];
 
   static const double _collapsedSectionHeight = 44.0;
-  static const double _minExpandedHeight = 200.0;
+  static const double _minExpandedHeight = 72.0;
+  static const double _minNewSectionContentHeight = 300.0;
   static const double _dividerHeight = 12.0;
-  static const double _minCollapsedVisibleHeight = 28.0;
+  static const double _minCollapsedVisibleHeight = _collapsedSectionHeight;
 
   // New sections must show at least header + minimum content area.
-  double get _minNewSectionVisibleHeight => _collapsedSectionHeight + _minExpandedHeight;
+  double get _minNewSectionVisibleHeight => _collapsedSectionHeight + _minNewSectionContentHeight;
+
+  bool _isCollapsible(int index) {
+    if (index < 0 || index >= widget.sections.length) return true;
+    return widget.sections[index].enableExpandCollapse;
+  }
 
   @override
   void initState() {
     super.initState();
     _sidebarWidth = widget.initialWidth;
     // Initialize with placeholder heights - will be calculated in first build
-    _sectionStates = widget.sections.map((FusionResizableSidebarSection s) => _SectionState(height: 0, isExpanded: s.initiallyExpanded)).toList();
+    _sectionStates = widget.sections
+        .map((FusionResizableSidebarSection s) => _SectionState(height: 0, isExpanded: s.initiallyExpanded || !s.enableExpandCollapse))
+        .toList();
   }
 
   /// Proportionally rescale expanded section heights when the available
@@ -90,60 +98,114 @@ class _FusionResizableSidebarState extends State<FusionResizableSidebar> {
     setState(() => _sidebarWidth = (_sidebarWidth + details.delta.dx).clamp(widget.minWidth, widget.maxWidth));
   }
 
+  int _findExpandedAtOrAbove(int startIndex) {
+    for (int i = startIndex; i >= 0; i--) {
+      if (_sectionStates[i].isExpanded) return i;
+    }
+    return -1;
+  }
+
+  int _findExpandedAtOrBelow(int startIndex) {
+    for (int i = startIndex; i < _sectionStates.length; i++) {
+      if (_sectionStates[i].isExpanded) return i;
+    }
+    return -1;
+  }
+
   void _onSectionDividerDrag(int index, int nextIndex, DragUpdateDetails details) {
     setState(() {
       final double dy = details.delta.dy;
 
-      // Find the expanded section above (at or before index)
-      int upperExpandedIndex = -1;
-      for (int i = index; i >= 0; i--) {
-        if (_sectionStates[i].isExpanded) {
-          upperExpandedIndex = i;
-          break;
-        }
-      }
-
-      // Find the expanded section below (at or after nextIndex)
-      int lowerExpandedIndex = -1;
-      for (int i = nextIndex; i < _sectionStates.length; i++) {
-        if (_sectionStates[i].isExpanded) {
-          lowerExpandedIndex = i;
-          break;
-        }
-      }
-
-      // Need at least one expanded section on each side to drag
-      if (upperExpandedIndex < 0 || lowerExpandedIndex < 0) {
+      if (index < 0 || nextIndex < 0 || index >= _sectionStates.length || nextIndex >= _sectionStates.length) {
         return;
       }
 
-      final double upperHeight = _sectionStates[upperExpandedIndex].height;
-      final double lowerHeight = _sectionStates[lowerExpandedIndex].height;
+      // Prefer resizing the nearest expanded section above and below the divider.
+      // This makes collapsed neighbors move with the drag instead of stretching
+      // and showing blank space.
+      final int upperExpandedIndex = _findExpandedAtOrAbove(index);
+      final int lowerExpandedIndex = _findExpandedAtOrBelow(nextIndex);
 
-      // Calculate new heights
-      double newUpperHeight = upperHeight + dy;
-      double newLowerHeight = lowerHeight - dy;
+      if (upperExpandedIndex >= 0 && lowerExpandedIndex >= 0 && upperExpandedIndex != lowerExpandedIndex) {
+        final _SectionState upperExpanded = _sectionStates[upperExpandedIndex];
+        final _SectionState lowerExpanded = _sectionStates[lowerExpandedIndex];
 
-      // Clamp to minimum heights
-      if (newUpperHeight < _minExpandedHeight) {
-        final double diff = _minExpandedHeight - newUpperHeight;
-        newUpperHeight = _minExpandedHeight;
-        newLowerHeight -= diff;
+        double newUpperHeight = upperExpanded.height + dy;
+        double newLowerHeight = lowerExpanded.height - dy;
+
+        if (newUpperHeight < _minExpandedHeight) {
+          final double diff = _minExpandedHeight - newUpperHeight;
+          newUpperHeight = _minExpandedHeight;
+          newLowerHeight -= diff;
+        }
+
+        if (newLowerHeight < _minExpandedHeight) {
+          final double diff = _minExpandedHeight - newLowerHeight;
+          newLowerHeight = _minExpandedHeight;
+          newUpperHeight -= diff;
+        }
+
+        newUpperHeight = newUpperHeight.clamp(_minExpandedHeight, double.infinity);
+        newLowerHeight = newLowerHeight.clamp(_minExpandedHeight, double.infinity);
+
+        _sectionStates[upperExpandedIndex] = upperExpanded.copyWith(height: newUpperHeight);
+        _sectionStates[lowerExpandedIndex] = lowerExpanded.copyWith(height: newLowerHeight);
+        return;
       }
-      if (newLowerHeight < _minExpandedHeight) {
-        final double diff = _minExpandedHeight - newLowerHeight;
-        newLowerHeight = _minExpandedHeight;
-        newUpperHeight -= diff;
+
+      final _SectionState upperState = _sectionStates[index];
+      final _SectionState lowerState = _sectionStates[nextIndex];
+
+      // During drag, keep at least a little content visible for expanded sections.
+      // New-section strict minimum is only for first insertion, not drag.
+      final bool upperCollapsible = _isCollapsible(index);
+      final bool lowerCollapsible = _isCollapsible(nextIndex);
+      final double upperMinHeight = (!upperCollapsible || upperState.isExpanded) ? _minExpandedHeight : _collapsedSectionHeight;
+      final double lowerMinHeight = (!lowerCollapsible || lowerState.isExpanded) ? _minExpandedHeight : _collapsedSectionHeight;
+      final double upperMaxHeight = upperState.isExpanded ? double.infinity : _collapsedSectionHeight;
+      final double lowerMaxHeight = lowerState.isExpanded ? double.infinity : _collapsedSectionHeight;
+
+      double newUpperHeight = upperState.height + dy;
+      double newLowerHeight = lowerState.height - dy;
+
+      // If upper hits its floor, clamp and give the excess back to lower.
+      if (newUpperHeight < upperMinHeight) {
+        newLowerHeight += newUpperHeight - upperMinHeight;
+        newUpperHeight = upperMinHeight;
       }
 
-      // Final clamp check
-      newUpperHeight = newUpperHeight.clamp(_minExpandedHeight, double.infinity);
-      newLowerHeight = newLowerHeight.clamp(_minExpandedHeight, double.infinity);
+      // If lower hits its floor, clamp and give the excess back to upper.
+      if (newLowerHeight < lowerMinHeight) {
+        newUpperHeight += newLowerHeight - lowerMinHeight;
+        newLowerHeight = lowerMinHeight;
+      }
 
-      _sectionStates[upperExpandedIndex] = _sectionStates[upperExpandedIndex].copyWith(height: newUpperHeight);
-      _sectionStates[lowerExpandedIndex] = _sectionStates[lowerExpandedIndex].copyWith(height: newLowerHeight);
+      // Collapsed sections should remain header-sized while dragging.
+      if (newUpperHeight > upperMaxHeight) {
+        final double overflow = newUpperHeight - upperMaxHeight;
+        newUpperHeight = upperMaxHeight;
+        newLowerHeight += overflow;
+      }
 
-      // Normalize: give any remaining space to last expanded section
+      if (newLowerHeight > lowerMaxHeight) {
+        final double overflow = newLowerHeight - lowerMaxHeight;
+        newLowerHeight = lowerMaxHeight;
+        newUpperHeight += overflow;
+      }
+
+      // Hard clamp — don't allow negative redistribution.
+      newUpperHeight = newUpperHeight.clamp(upperMinHeight, upperMaxHeight);
+      newLowerHeight = newLowerHeight.clamp(lowerMinHeight, lowerMaxHeight);
+
+      _sectionStates[index] = upperState.copyWith(height: newUpperHeight);
+      _sectionStates[nextIndex] = lowerState.copyWith(height: newLowerHeight);
+      // Do NOT call _normalizeHeights here — it fights the drag and causes jumps.
+    });
+  }
+
+  void _onSectionDividerDragEnd(int index, int nextIndex) {
+    setState(() {
+      // After drag ends, normalize so heights fill available space cleanly.
       _normalizeHeights();
     });
   }
@@ -181,11 +243,36 @@ class _FusionResizableSidebarState extends State<FusionResizableSidebar> {
       double overflow = -difference;
       for (int i = _sectionStates.length - 1; i >= 0 && overflow > 0; i--) {
         if (!_sectionStates[i].isExpanded) continue;
-        final double shrinkable = (_sectionStates[i].height - _minExpandedHeight).clamp(0.0, double.infinity);
+        final double minHeight = _sectionStates[i].isExpanded ? _minExpandedHeight : _collapsedSectionHeight;
+        final double shrinkable = (_sectionStates[i].height - minHeight).clamp(0.0, double.infinity);
         if (shrinkable <= 0) continue;
         final double delta = shrinkable < overflow ? shrinkable : overflow;
         _sectionStates[i] = _sectionStates[i].copyWith(height: _sectionStates[i].height - delta);
         overflow -= delta;
+      }
+
+      // If still over-filled, shrink collapsed sections down to the minimum
+      // visible height so dividers stay usable and sections can be recovered.
+      for (int i = _sectionStates.length - 1; i >= 0 && overflow > 0; i--) {
+        if (_sectionStates[i].isExpanded) continue;
+        final double shrinkable = (_sectionStates[i].height - _minCollapsedVisibleHeight).clamp(0.0, double.infinity);
+        if (shrinkable <= 0) continue;
+        final double delta = shrinkable < overflow ? shrinkable : overflow;
+        _sectionStates[i] = _sectionStates[i].copyWith(height: _sectionStates[i].height - delta);
+        overflow -= delta;
+      }
+
+      // Final safety net: if constraints are still impossible, force all
+      // sections to share available space and collapse them. This guarantees
+      // no persistent overflow or hidden, unreachable sections.
+      if (overflow > 0 && _sectionStates.isNotEmpty) {
+        final double perSection = ((_availableHeight - dividerTotalHeight) / _sectionStates.length).clamp(0.0, double.infinity);
+        for (int i = 0; i < _sectionStates.length; i++) {
+          _sectionStates[i] = _sectionStates[i].copyWith(
+            height: perSection,
+            isExpanded: false,
+          );
+        }
       }
     }
   }
@@ -197,6 +284,52 @@ class _FusionResizableSidebarState extends State<FusionResizableSidebar> {
       totalUsedHeight += state.height;
     }
     return totalUsedHeight;
+  }
+
+  List<_SectionState> _redistributeForAddedSections(
+    List<_SectionState> states,
+    List<FusionResizableSidebarSection> sections,
+    Set<String> newlyAddedIds,
+    double availableHeight,
+  ) {
+    if (availableHeight <= 0 || newlyAddedIds.isEmpty) return states;
+
+    final List<_SectionState> redistributed = List<_SectionState>.from(states);
+
+    final List<int> newIndexes = <int>[];
+    final List<int> existingIndexes = <int>[];
+    for (int i = 0; i < redistributed.length; i++) {
+      if (newlyAddedIds.contains(sections[i].sementicId)) {
+        newIndexes.add(i);
+      } else {
+        existingIndexes.add(i);
+      }
+    }
+
+    // New sections always start expanded at the first-time minimum height.
+    for (final int idx in newIndexes) {
+      redistributed[idx] = redistributed[idx].copyWith(
+        height: _minNewSectionVisibleHeight,
+        isExpanded: true,
+      );
+    }
+
+    final double dividerTotalHeight = redistributed.length > 1 ? (redistributed.length - 1) * _dividerHeight : 0.0;
+    final double heightReservedForNew = newIndexes.length * _minNewSectionVisibleHeight;
+    final double remainingForExisting = (availableHeight - dividerTotalHeight - heightReservedForNew).clamp(0.0, double.infinity);
+
+    if (existingIndexes.isNotEmpty) {
+      final double evenExistingHeight = (remainingForExisting / existingIndexes.length).clamp(0.0, double.infinity);
+      for (final int idx in existingIndexes) {
+        final bool collapsible = sections[idx].enableExpandCollapse;
+        redistributed[idx] = redistributed[idx].copyWith(
+          height: evenExistingHeight,
+          isExpanded: collapsible ? redistributed[idx].isExpanded : true,
+        );
+      }
+    }
+
+    return redistributed;
   }
 
   /// Shrink sections only when needed to fit available height.
@@ -226,7 +359,7 @@ class _FusionResizableSidebarState extends State<FusionResizableSidebar> {
       if (shrinkable <= 0) continue;
       final double delta = shrinkable < overflow ? shrinkable : overflow;
       final double newHeight = fitted[i].height - delta;
-      final bool shouldCollapse = newHeight <= _collapsedSectionHeight + 0.5;
+      final bool shouldCollapse = sections[i].enableExpandCollapse && newHeight <= _collapsedSectionHeight + 0.5;
       fitted[i] = fitted[i].copyWith(
         height: shouldCollapse ? _collapsedSectionHeight : newHeight,
         isExpanded: shouldCollapse ? false : fitted[i].isExpanded,
@@ -285,7 +418,7 @@ class _FusionResizableSidebarState extends State<FusionResizableSidebar> {
       if (shrinkable <= 0) continue;
       final double delta = shrinkable < overflow ? shrinkable : overflow;
       final double newHeight = fitted[i].height - delta;
-      final bool shouldCollapse = newHeight <= _collapsedSectionHeight + 0.5;
+      final bool shouldCollapse = sections[i].enableExpandCollapse && newHeight <= _collapsedSectionHeight + 0.5;
       fitted[i] = fitted[i].copyWith(
         height: shouldCollapse ? _collapsedSectionHeight : newHeight,
         isExpanded: shouldCollapse ? false : fitted[i].isExpanded,
@@ -306,55 +439,70 @@ class _FusionResizableSidebarState extends State<FusionResizableSidebar> {
       overflow -= delta;
     }
 
+    // Pass 6 (guaranteed fit): if still overflowing due hard constraints,
+    // force all sections to share space and collapse them.
+    if (overflow > 0 && fitted.isNotEmpty) {
+      final double dividerTotalHeight = fitted.length > 1 ? (fitted.length - 1) * _dividerHeight : 0.0;
+      final double perSection = ((availableHeight - dividerTotalHeight) / fitted.length).clamp(0.0, double.infinity);
+      for (int i = 0; i < fitted.length; i++) {
+        fitted[i] = fitted[i].copyWith(
+          height: perSection,
+          isExpanded: false,
+        );
+      }
+    }
+
     return fitted;
   }
 
   void _toggleSection(int index) {
     setState(() {
+      if (!_isCollapsible(index)) {
+        return;
+      }
+
       final bool wasExpanded = _sectionStates[index].isExpanded;
       final bool willExpand = !wasExpanded;
 
       if (willExpand) {
-        // Find the first expanded section below to steal space from.
-        // Fall back to the nearest expanded section above.
-        int donorIndex = -1;
-        for (int i = index + 1; i < _sectionStates.length; i++) {
-          if (_sectionStates[i].isExpanded) {
-            donorIndex = i;
-            break;
+        // Expanding by toggle should open with first-time minimum visible content.
+        final double desiredExpandedHeight = _minNewSectionVisibleHeight;
+        double currentHeight = _sectionStates[index].height;
+
+        _sectionStates[index] = _sectionStates[index].copyWith(isExpanded: true);
+
+        double needed = (desiredExpandedHeight - currentHeight).clamp(0.0, double.infinity);
+        if (needed > 0) {
+          final List<int> donorOrder = <int>[];
+
+          // Prefer donors below, then above, to keep movement intuitive.
+          for (int i = index + 1; i < _sectionStates.length; i++) {
+            donorOrder.add(i);
           }
-        }
-        if (donorIndex < 0) {
           for (int i = index - 1; i >= 0; i--) {
-            if (_sectionStates[i].isExpanded) {
-              donorIndex = i;
-              break;
-            }
+            donorOrder.add(i);
+          }
+
+          for (final int donorIndex in donorOrder) {
+            if (needed <= 0) break;
+
+            final _SectionState donor = _sectionStates[donorIndex];
+            final double donorMin = donor.isExpanded ? _minExpandedHeight : _collapsedSectionHeight;
+            final double shrinkable = (donor.height - donorMin).clamp(0.0, double.infinity);
+            if (shrinkable <= 0) continue;
+
+            final double granted = shrinkable < needed ? shrinkable : needed;
+            _sectionStates[donorIndex] = donor.copyWith(height: donor.height - granted);
+            currentHeight += granted;
+            needed -= granted;
           }
         }
 
-        if (donorIndex >= 0) {
-          // Give the expanding section half the donor's current height,
-          // but respect minimum heights on both sides.
-          final double donorHeight = _sectionStates[donorIndex].height;
-          final double needed = _collapsedSectionHeight; // current collapsed height to replace
-          final double available = (donorHeight - _minExpandedHeight).clamp(0.0, double.infinity);
-          final double granted = (available / 2).clamp(0.0, available);
-          final double expandedHeight = (needed + granted).clamp(_minExpandedHeight, double.infinity);
-          final double newDonorHeight = (donorHeight - granted).clamp(_minExpandedHeight, double.infinity);
-
-          _sectionStates[index] = _sectionStates[index].copyWith(height: expandedHeight, isExpanded: true);
-          _sectionStates[donorIndex] = _sectionStates[donorIndex].copyWith(height: newDonorHeight);
-        } else {
-          // No other expanded sections — give all available space.
-          final double dividerTotalHeight = _sectionStates.length > 1 ? (_sectionStates.length - 1) * _dividerHeight : 0.0;
-          final int collapsedCount = _sectionStates.length - 1; // All others are collapsed
-          final double heightForExpanded = _availableHeight - (collapsedCount * _collapsedSectionHeight) - dividerTotalHeight;
-          _sectionStates[index] = _sectionStates[index].copyWith(
-            height: heightForExpanded.clamp(_minExpandedHeight, double.infinity),
-            isExpanded: true,
-          );
-        }
+        final double minHeight = _minExpandedHeight;
+        _sectionStates[index] = _sectionStates[index].copyWith(
+          height: currentHeight.clamp(minHeight, double.infinity),
+          isExpanded: true,
+        );
       } else {
         // Collapsing: give freed space only to the first expanded section below,
         // so it moves up to fill the gap. Fall back to the nearest expanded section above.
@@ -418,7 +566,10 @@ class _FusionResizableSidebarState extends State<FusionResizableSidebar> {
       List<_SectionState> nextStates = widget.sections.map((FusionResizableSidebarSection s) {
         final int oldIdx = oldWidget.sections.indexWhere((FusionResizableSidebarSection o) => o.sementicId == s.sementicId);
         if (oldIdx >= 0 && oldIdx < oldStates.length) {
-          return oldStates[oldIdx];
+          final _SectionState restored = oldStates[oldIdx];
+          return restored.copyWith(
+            isExpanded: s.enableExpandCollapse ? restored.isExpanded : true,
+          );
         }
         // Newly added sections should always start with minimum content visible.
         if (_newSectionIds.contains(s.sementicId)) {
@@ -428,10 +579,16 @@ class _FusionResizableSidebarState extends State<FusionResizableSidebar> {
           );
         }
         return _SectionState(
-          height: s.initiallyExpanded ? _minExpandedHeight : _collapsedSectionHeight,
-          isExpanded: s.initiallyExpanded,
+          height: s.initiallyExpanded || !s.enableExpandCollapse ? _minExpandedHeight : _collapsedSectionHeight,
+          isExpanded: s.initiallyExpanded || !s.enableExpandCollapse,
         );
       }).toList();
+
+      // For additions, keep new sections at default visible height and
+      // distribute required shrinkage evenly across existing sections first.
+      if (_newSectionIds.isNotEmpty) {
+        nextStates = _redistributeForAddedSections(nextStates, widget.sections, _newSectionIds, _availableHeight);
+      }
 
       // Only resize existing sections if there is not enough room.
       nextStates = _fitStatesToAvailableHeight(nextStates, widget.sections, _newSectionIds, _availableHeight);
@@ -518,20 +675,50 @@ class _FusionResizableSidebarState extends State<FusionResizableSidebar> {
           _isWindowResizing = false;
         }
 
-        // Calculate total used height and find last expanded section
+        // ── Render-time height fit ──────────────────────────────────────────
+        // Compute render heights from stored state and guarantee they fit
+        // exactly within availableHeight so the Column never overflows.
         final double dividerTotalHeight = widget.sections.length > 1 ? (widget.sections.length - 1) * _dividerHeight : 0.0;
-        double totalUsedHeight = dividerTotalHeight;
-        int lastExpandedIndex = -1;
+        final List<double> renderHeights = List<double>.generate(
+          _sectionStates.length,
+          (int i) => _sectionStates[i].height,
+        );
 
-        for (int i = 0; i < _sectionStates.length; i++) {
-          totalUsedHeight += _sectionStates[i].height;
-          if (_sectionStates[i].isExpanded) {
-            lastExpandedIndex = i;
-          }
+        // 1) Fill any under-used space into the last expanded section.
+        int lastExpandedIndex = -1;
+        double totalRender = dividerTotalHeight;
+        for (int i = 0; i < renderHeights.length; i++) {
+          totalRender += renderHeights[i];
+          if (_sectionStates[i].isExpanded) lastExpandedIndex = i;
+        }
+        final double slack = availableHeight - totalRender;
+        if (slack > 0.5 && lastExpandedIndex >= 0) {
+          renderHeights[lastExpandedIndex] += slack;
+          totalRender = availableHeight;
         }
 
-        // Calculate extra space to give to last expanded section
-        final double extraSpace = (availableHeight - totalUsedHeight).clamp(0.0, double.infinity);
+        // 2) If total still exceeds available, scale expanded sections down
+        //    proportionally while keeping every section at least its header height.
+        if (totalRender > availableHeight + 0.5 && renderHeights.isNotEmpty) {
+          double overflow = totalRender - availableHeight;
+          for (int i = renderHeights.length - 1; i >= 0 && overflow > 0; i--) {
+            final double floor = _sectionStates[i].isExpanded ? _minExpandedHeight : _collapsedSectionHeight;
+            final double shrinkable = (renderHeights[i] - floor).clamp(0.0, double.infinity);
+            if (shrinkable <= 0) continue;
+            final double delta = shrinkable < overflow ? shrinkable : overflow;
+            renderHeights[i] -= delta;
+            overflow -= delta;
+          }
+          // If still over (every section at its floor), scale equally ignoring floors.
+          if (overflow > 0.5) {
+            final double available = (availableHeight - dividerTotalHeight).clamp(0.0, double.infinity);
+            final double perSection = (available / renderHeights.length).clamp(0.0, double.infinity);
+            for (int i = 0; i < renderHeights.length; i++) {
+              renderHeights[i] = perSection;
+            }
+          }
+        }
+        // ────────────────────────────────────────────────────────────────────
 
         final List<Widget> sectionWidgets = [];
 
@@ -539,11 +726,7 @@ class _FusionResizableSidebarState extends State<FusionResizableSidebar> {
           final bool isLast = i == widget.sections.length - 1;
           final int nextIndex = !isLast ? i + 1 : -1;
 
-          // Use stored height, add extra space to last expanded section
-          double height = _sectionStates[i].height;
-          if (i == lastExpandedIndex && extraSpace > 0) {
-            height += extraSpace;
-          }
+          final double height = renderHeights[i];
 
           sectionWidgets.add(
             _SectionWidget(
@@ -555,7 +738,12 @@ class _FusionResizableSidebarState extends State<FusionResizableSidebar> {
               onToggle: () => _toggleSection(i),
               onDividerDrag: !isLast ? (DragUpdateDetails d) => _onSectionDividerDrag(i, nextIndex, d) : null,
               onDividerDragStart: !isLast ? () => setState(() => _isDraggingDivider = true) : null,
-              onDividerDragEnd: !isLast ? () => setState(() => _isDraggingDivider = false) : null,
+              onDividerDragEnd: !isLast
+                  ? () {
+                      setState(() => _isDraggingDivider = false);
+                      _onSectionDividerDragEnd(i, nextIndex);
+                    }
+                  : null,
             ),
           );
         }
@@ -607,7 +795,7 @@ class _FusionResizableSidebarState extends State<FusionResizableSidebar> {
                 return Stack(
                   children: <Widget>[
                     Column(
-                      mainAxisSize: MainAxisSize.min,
+                      mainAxisSize: MainAxisSize.max,
                       children: sectionWidgets,
                     ),
                     ...dyingOverlays,

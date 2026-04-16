@@ -372,7 +372,7 @@ class ListeningArea {
   final bool isDrawn;
 
   final Color? preferredSpeakerColor;
-  final SplRange? splRange;
+  final SplRange splRange;
   final ListeningPreference? listeningPreference;
 
   /// THESE ARE FILTER OPTIONS
@@ -405,7 +405,7 @@ class ListeningArea {
     this.autoPlacement = false,
     this.autoPlacementResult,
     this.preferredSpeakerColor,
-    this.splRange,
+    this.splRange = SplRange.backgroundMusic,
     this.listeningPreference,
     bool? isDrawn,
   }) : id = id ?? "AREA${FusionUtils.shortStringUUID()}",
@@ -564,7 +564,7 @@ class ListeningArea {
     'customListeningAreaHeight': customListeningAreaHeight,
     'isDrawn': isDrawn,
     'preferredSpeakerColor': preferredSpeakerColor,
-    'splRange': splRange?.name,
+    'splRange': splRange.name,
     'listeningPreference': listeningPreference?.name,
     'signalType': signalType.name,
     'backgroundNoise': backgroundNoise?.name,
@@ -599,7 +599,7 @@ class ListeningArea {
       maxSPL: (json['maxSPL'] as num?)?.toDouble() ?? 70.0,
       isDrawn: json['isDrawn'] as bool? ?? (verts.isNotEmpty),
       preferredSpeakerColor: json['preferredSpeakerColor'] != null ? Color(json['preferredSpeakerColor'] as int) : null,
-      splRange: SplRange.fromJson(json['splRange'] as String?),
+      splRange: SplRange.fromJson(json['splRange'] as String?) ?? SplRange.backgroundMusic,
       listeningPreference: ListeningPreference.fromJson(json['listeningPreference']),
       signalType: SignalType.fromJson(json['signalType']) ?? SignalType.mono,
       mountingType: MountingType.fromJson(json['mountingType']) ?? MountingType.surface,
