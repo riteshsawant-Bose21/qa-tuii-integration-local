@@ -316,6 +316,9 @@ class WiringAutoLayoutUseCase {
     required Map<String, PortPainter> painterById,
   }) {
     if (element is _PlacementElement) {
+      ///
+      /// Place Element At Center Position;
+      ///
       final Size elementSize = sizeById[element.id] ?? Size.zero;
       final PortPainter? elementPainter = painterById[element.id];
       if (elementPainter == null) return Rect.zero;
@@ -323,11 +326,13 @@ class WiringAutoLayoutUseCase {
       layoutGrid.addPlacement(elementRect, elementPainter);
       return elementRect;
     } else if (element is _PlacementGroup) {
+      ///
+      /// Place Group Elements
+      ///
       Rect fullRect = Rect.zero;
       final Offset actialCenter = layoutGrid.getNextAvilablePosVertically(
         Rect.fromLTWH(centerPosition.dx, centerPosition.dy, element.size.width, element.size.height),
       );
-      print("Placing element ${element.center.id} at $centerPosition.  Actual center: $actialCenter");
 
       final Rect centerRect = _placeGroup(
         centerPosition: actialCenter,
@@ -372,7 +377,7 @@ class WiringAutoLayoutUseCase {
   _PlacementGroup _getPlacementGroupForZone(Zone zone, ConnectionManager connectionManager) {
     final List<CircuitModel> circuitsInZone = circuitsByZoneId[zone.id] ?? <CircuitModel>[];
     final List<_PlacingElement> leftElements = _constructGroup(
-      _inputConnectedDevices(circuitsInZone.map((CircuitModel e) => e.inputPort).toList(), connectionManager),
+      _getUnplacedConnectedDevice(circuitsInZone.map((CircuitModel e) => e.inputPort).toList(), connectionManager),
       connectionManager,
     );
 
@@ -386,9 +391,12 @@ class WiringAutoLayoutUseCase {
 
   _PlacementGroup _getPlacementGroupForHardwareComponent(HardwareComponent component, ConnectionManager connectionManager) {
     _placedDeviceMap[component.id] = true;
-    final List<_PlacingElement> leftElements = _constructGroup(_inputConnectedDevices(component.inputPortsData, connectionManager), connectionManager);
-    final List<_PlacingElement> rightElements = _constructGroup(_inputConnectedDevices(component.outputPortsData, connectionManager), connectionManager);
-    final List<_PlacingElement> bottomElements = _constructGroup(_inputConnectedDevices(component.communicationPorts, connectionManager), connectionManager);
+    final List<_PlacingElement> leftElements = _constructGroup(_getUnplacedConnectedDevice(component.inputPortsData, connectionManager), connectionManager);
+    final List<_PlacingElement> rightElements = _constructGroup(_getUnplacedConnectedDevice(component.outputPortsData, connectionManager), connectionManager);
+    final List<_PlacingElement> bottomElements = _constructGroup(
+      _getUnplacedConnectedDevice(component.communicationPorts, connectionManager),
+      connectionManager,
+    );
 
     return _PlacementGroup(
       center: _PlacementElement(id: component.id, size: sizeById[component.id] ?? const Size(100, 100)),
@@ -437,9 +445,9 @@ class WiringAutoLayoutUseCase {
   /// Returns all the connected Unplaced devices to given port.
   ///
   ///
-  List<_PlacementElement> _inputConnectedDevices(List<PortData> ports, ConnectionManager connectionManager) {
+  List<_PlacementElement> _getUnplacedConnectedDevice(List<PortData> ports, ConnectionManager connectionManager) {
     final List<_PlacementElement> elements = <_PlacementElement>[];
-    double yPos = 0;
+
     for (final PortData port in ports) {
       final WiringConnectionModel? connection = connectionManager.getConnectionForPort(port.id);
 
@@ -455,7 +463,6 @@ class WiringAutoLayoutUseCase {
 
       _placedDeviceMap[otherDeviceId] = true;
       final _PlacementElement element = _PlacementElement(id: otherDeviceId, size: sizeById[otherDeviceId] ?? const Size(100, 100));
-      yPos++;
 
       if (!elements.any((_PlacementElement element) => element.id == otherDeviceId)) {
         elements.add(element);
