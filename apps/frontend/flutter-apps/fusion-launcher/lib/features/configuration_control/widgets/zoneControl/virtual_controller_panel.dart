@@ -67,6 +67,7 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
           zone = WallZone(
             id: id,
             name: item.name,
+            functionId: item.functionId,
             subZones: <WallSubZone>[],
             sources: item.sources ?? <WallZoneSource>[],
             gain: item.gain,
