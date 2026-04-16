@@ -77,8 +77,8 @@ func (m *MeterFilterManager) RemoveFilter(conn *websocket.Conn, deviceAddressArr
 }
 
 // FilterMeterDataForConn returns a copy of msg with parameters.value filtered to
-// only the samples whose "block_name/meter_name" key is in conn's registered filter.
-// If the connection has no filter registered, the original message is returned unchanged.
+// only the samples whose block_name is in conn's registered filter.
+// If the connection has no filter registered, nil is returned (no data until a filter is set).
 // Returns nil if the filter is set but matches no samples.
 func (m *MeterFilterManager) FilterMeterDataForConn(conn *websocket.Conn, msg *api.MeterDataMessage) *api.MeterDataMessage {
 	m.mu.RLock()
@@ -86,13 +86,12 @@ func (m *MeterFilterManager) FilterMeterDataForConn(conn *websocket.Conn, msg *a
 	m.mu.RUnlock()
 
 	if filter == nil {
-		return msg
+		return nil
 	}
 
 	filtered := make([]api.MeterDataSample, 0, len(filter))
 	for _, sample := range msg.Parameters.Value {
-		key := sample.BlockName + "/" + sample.MeterName
-		if filter[key] {
+		if filter[sample.BlockName] {
 			filtered = append(filtered, sample)
 		}
 	}
