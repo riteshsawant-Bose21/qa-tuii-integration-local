@@ -876,17 +876,41 @@ static void gpt_pi_step_locked(struct fusion_gpt *g, long freq_error,
 				      (long)READ_ONCE(pi_integrator_clamp_param));
 	long p_term = 0;
 	long i_term;
-
-	g->error_integrator += freq_error;
-	g->error_integrator = clamp_t(long, g->error_integrator,
-				      -integrator_clamp, integrator_clamp);
+	int dac_after_p;
+	bool hold_integrator = false;
 
 	if (abs(freq_error) > p_threshold) {
 		p_term = (long)(((s64)freq_error * (s64)p_gain_q16) >> 16);
 		if (p_term == 0)
 			p_term = (freq_error > 0) ? 1 : -1;
-		g->dac_target -= (int)p_term;
 	}
+
+	dac_after_p = g->dac_target - (int)p_term;
+
+	/*
+	 * Anti-windup: if the controller is already demanding a saturated DAC
+	 * value, only integrate when the new error would pull the command back
+	 * toward the usable range.
+	 */
+	if ((dac_after_p >= DAC_MAX_VALUE && freq_error < 0) ||
+	    (dac_after_p <= DAC_MIN_VALUE && freq_error > 0))
+		hold_integrator = true;
+
+	if (!hold_integrator) {
+		if (freq_error == 0) {
+			if (g->error_integrator > 0)
+				g->error_integrator--;
+			else if (g->error_integrator < 0)
+				g->error_integrator++;
+		} else {
+			g->error_integrator += freq_error;
+		}
+
+		g->error_integrator = clamp_t(long, g->error_integrator,
+					      -integrator_clamp, integrator_clamp);
+	}
+
+	g->dac_target = dac_after_p;
 
 	i_term = (long)(((s64)g->error_integrator * (s64)i_gain_q16) >> 16);
 	if (i_term != 0)
