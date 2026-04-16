@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_blocks/widgets/pb_section.dart';
-import 'package:fusion_launcher/features/zone_functions/widgets/neumorphic_gain_text_field.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
 
 import '../../../viewmodel/algorithm_data_viewmodel.dart';
 import '../../widgets/pb_out_meter.dart';
+import '../../widgets/pb_textfield.dart';
 import '../widgets/pb_block_layout.dart';
 
 part '_agc_controller.dart';
@@ -72,13 +72,12 @@ class AgcBlock extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(border: Border(top: BorderSide(color: context.colorScheme.strokeLight))),
-                          child: NeumorphicGainTextField(
+                          child: PBNumberTextField(
                             semanticId: 'agc_threshold_text_field',
-                            controllerValue: context.watch<AgcController>().currentThreshold,
-                            maxGain: 12,
-                            minGain: -60,
-                            showDbSuffix: false,
-                            onSubmitted: context.read<AgcController>().updateThreshold,
+                            value: context.watch<AgcController>().currentThreshold,
+                            max: 12,
+                            min: -60,
+                            onChanged: context.read<AgcController>().updateThreshold,
                           ),
                         ),
                         FusionAppText(
@@ -146,13 +145,12 @@ class AgcBlock extends StatelessWidget {
                               ),
                             ),
                           ),
-                          child: NeumorphicGainTextField(
+                          child: PBNumberTextField(
                             semanticId: 'agc_reduction_text_field',
-                            controllerValue: 10,
-                            maxGain: 12,
-                            minGain: -60,
-                            showDbSuffix: false,
-                            onSubmitted: context.read<AgcController>().updateReduction,
+                            value: 10,
+                            max: 12,
+                            min: -60,
+                            onChanged: context.read<AgcController>().updateReduction,
                           ),
                         ),
                         FusionAppText(

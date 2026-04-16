@@ -44,7 +44,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
 
   final List<Widget> _designTabs = const <Widget>[
     Tab(text: 'Building'),
-    Tab(text: 'System'),
+    Tab(text: 'Devices'),
     Tab(text: 'Connections'),
     // Tab(text: 'Cost'),
     Tab(text: 'Configuration'),
@@ -54,7 +54,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
   final List<Widget> _controlTabs = const <Widget>[
     Tab(text: 'Dashboard'),
     Tab(text: 'Devices'),
-    Tab(text: 'Building'),
+    // Tab(text: 'Building'),
     Tab(text: 'Configuration'),
   ];
 
@@ -192,11 +192,11 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
     _controlWidgets = <Widget>[
       WorkSafeAreaContent(child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionControlDashboardPage()),
       WorkSafeAreaContent(child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionDevicesPage()),
-      serviceLocator<ProjectViewModel>().virtualIP == null
-          ? const WorkSafeAreaContent(
-            child: NetworkConfigTrigger(),
-          )
-          : buildingPage,
+      // serviceLocator<ProjectViewModel>().virtualIP == null
+      //     ? const WorkSafeAreaContent(
+      //       child: NetworkConfigTrigger(),
+      //     )
+      //     : buildingPage,
       WorkSafeAreaContent(child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : configurationPage),
     ];
   }
