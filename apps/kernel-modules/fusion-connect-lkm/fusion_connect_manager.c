@@ -342,7 +342,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
     }
 
     /* -------- Phase 1: FusionConnect sinks (low latency priority) -------- */
-    read_lock_irqsave(&mgr->rtp.lock, flags);
+    read_lock_irqsave(&mgr->active_streams_lock, flags);
     list_for_each_entry_safe(node, tmp, &mgr->active_streams.fn_sink, node) {
         struct fusion_cn_rtp_stream *r = node->rtp_stream;
         struct fusion_cn_substream  *a = node->alsa_stream;
@@ -368,7 +368,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
             }
         }
     }
-    read_unlock_irqrestore(&mgr->rtp.lock, flags);
+    read_unlock_irqrestore(&mgr->active_streams_lock, flags);
 
     if (profiling)
         t0 = ktime_get_ns();
@@ -386,7 +386,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         fusion_cn_prof_add(&fusion_cn_worker_prof.fc_phase, ktime_get_ns() - t0);
 
     /* -------- Phase 2: FC sources + AES67 sinks + AES67 sources -------- */
-    read_lock_irqsave(&mgr->rtp.lock, flags);
+    read_lock_irqsave(&mgr->active_streams_lock, flags);
 
     /* FC sources */
     list_for_each_entry_safe(node, tmp, &mgr->active_streams.fn_source, node) {
@@ -439,7 +439,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         }
     }
 
-    read_unlock_irqrestore(&mgr->rtp.lock, flags);
+    read_unlock_irqrestore(&mgr->active_streams_lock, flags);
 
     if (profiling)
         t0 = ktime_get_ns();
@@ -485,7 +485,7 @@ static void do_metrics(struct fusion_cn_manager *mgr)
     if (!atomic_read(&mgr->state.is_started))
         return;
 
-    read_lock_irqsave(&mgr->rtp.lock, flags);
+    read_lock_irqsave(&mgr->active_streams_lock, flags);
 
     /* Collect work under lock, then aggregate outside */
 #define COLLECT_PENDING(list_head)                                             \
@@ -521,7 +521,7 @@ static void do_metrics(struct fusion_cn_manager *mgr)
 
 #undef COLLECT_PENDING
 
-    read_unlock_irqrestore(&mgr->rtp.lock, flags);
+    read_unlock_irqrestore(&mgr->active_streams_lock, flags);
 
     {
         u64 snapshot_ns = READ_ONCE(mgr->tick_ns);
@@ -750,6 +750,7 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
         process_worker = worker;
     }
     g_fusion_cn_mgr = mgr;
+    rwlock_init(&mgr->active_streams_lock);
     INIT_LIST_HEAD(&mgr->active_streams.fn_sink);
     INIT_LIST_HEAD(&mgr->active_streams.fn_source);
     INIT_LIST_HEAD(&mgr->active_streams.aes67_sink);
@@ -825,7 +826,7 @@ static int remove_stream(struct fusion_cn_manager *mgr,
 
     /* Unlink node from active lists and clear back-pointer */
     printk(KERN_DEBUG "fusion_cn: remove_stream: before active_list_lock stream=%s handle=%llu sn=%px\n", stream_name, handle, sn);
-    write_lock_irqsave(&mgr->rtp.lock, flags);
+    write_lock_irqsave(&mgr->active_streams_lock, flags);
     printk(KERN_DEBUG "fusion_cn: remove_stream: after active_list_lock stream=%s handle=%llu\n", stream_name, handle);
     sn = rtp_stream->stream_node;
     printk(KERN_DEBUG "fusion_cn: remove_stream: before list_del_init stream=%s handle=%llu sn=%px\n", stream_name, handle, sn);
@@ -836,7 +837,7 @@ static int remove_stream(struct fusion_cn_manager *mgr,
     printk(KERN_DEBUG "fusion_cn: remove_stream: after kfree stream=%s handle=%llu\n", stream_name, handle);
     rtp_stream->stream_node = NULL;
     printk(KERN_DEBUG "fusion_cn: remove_stream: before active_list_unlock stream=%s handle=%llu\n", stream_name, handle);
-    write_unlock_irqrestore(&mgr->rtp.lock, flags);
+    write_unlock_irqrestore(&mgr->active_streams_lock, flags);
     printk(KERN_DEBUG "fusion_cn: remove_stream: after active_list_unlock stream=%s handle=%llu\n", stream_name, handle);
 
     /* Drop extra refs taken when the stream was added to the active list. */
@@ -958,7 +959,7 @@ static int handle_add_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctr
     rtp_stream->stream_node = stream_node;
 
     /* add to active list under write lock */
-    write_lock_irqsave(&mgr->rtp.lock, flags);
+    write_lock_irqsave(&mgr->active_streams_lock, flags);
     if (!config->is_source) {
         if (config->is_fusion_connect)
             list_add_tail(&stream_node->node, &mgr->active_streams.fn_sink);
@@ -970,7 +971,7 @@ static int handle_add_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctr
         else
             list_add_tail(&stream_node->node, &mgr->active_streams.aes67_source);
     }
-    write_unlock_irqrestore(&mgr->rtp.lock, flags);
+    write_unlock_irqrestore(&mgr->active_streams_lock, flags);
 
     reply->err = 0;
     reply->data_size = sizeof(u64);
@@ -1077,7 +1078,7 @@ static int handle_get_metrics(struct fusion_cn_manager *mgr,
 #define COUNT_LIST(head) \
     list_for_each_entry(tmp_node, &(head), node) { count++; }
 
-    read_lock_irqsave(&mgr->rtp.lock, flags);
+    read_lock_irqsave(&mgr->active_streams_lock, flags);
     {
         struct stream_node *tmp_node;
         COUNT_LIST(mgr->active_streams.fn_sink);
@@ -1086,7 +1087,7 @@ static int handle_get_metrics(struct fusion_cn_manager *mgr,
         COUNT_LIST(mgr->active_streams.aes67_source);
     }
     cap = count;
-    read_unlock_irqrestore(&mgr->rtp.lock, flags);
+    read_unlock_irqrestore(&mgr->active_streams_lock, flags);
 
     if (!cap) {
         reply->data = NULL;
@@ -1099,7 +1100,7 @@ static int handle_get_metrics(struct fusion_cn_manager *mgr,
     if (!out) return reply->err = -ENOMEM;
 
     /* Second pass: fill (re-lock for stable traversal) */
-    read_lock_irqsave(&mgr->rtp.lock, flags);
+    read_lock_irqsave(&mgr->active_streams_lock, flags);
     {
         struct stream_node *n;
         size_t i = 0;
@@ -1122,7 +1123,7 @@ static int handle_get_metrics(struct fusion_cn_manager *mgr,
 
         cap = i;
     }
-    read_unlock_irqrestore(&mgr->rtp.lock, flags);
+    read_unlock_irqrestore(&mgr->active_streams_lock, flags);
 
     reply->data      = out;
     reply->data_size = cap * sizeof(*out);
