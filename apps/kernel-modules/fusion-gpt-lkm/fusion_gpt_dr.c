@@ -74,6 +74,10 @@ static uint error_thresh_param = 20;
 module_param(error_thresh_param, uint, 0644);
 MODULE_PARM_DESC(error_thresh_param, "Raise discipline_ready after 5 PPS samples with abs_error < this threshold");
 
+static uint max_valid_pps_error_param = 10000;
+module_param(max_valid_pps_error_param, uint, 0644);
+MODULE_PARM_DESC(max_valid_pps_error_param, "Maximum absolute PPS interval error in ticks for a sample to be used by servo and discipline logic");
+
 static uint pi_p_threshold_param = 20;
 module_param(pi_p_threshold_param, uint, 0644);
 MODULE_PARM_DESC(pi_p_threshold_param, "PI P-term activation threshold in PPS error ticks");
@@ -106,7 +110,7 @@ static uint model_max_mean_residual_param = 10;
 module_param(model_max_mean_residual_param, uint, 0644);
 MODULE_PARM_DESC(model_max_mean_residual_param, "Maximum mean absolute residual in PPS ticks for a valid jump model");
 
-static uint model_jump_min_error_param = 20;
+static uint model_jump_min_error_param = 10;
 module_param(model_jump_min_error_param, uint, 0644);
 MODULE_PARM_DESC(model_jump_min_error_param, "Minimum absolute PPS error in ticks before taking a model-driven jump");
 
@@ -340,16 +344,20 @@ static void gpt_reset_servo_state_locked(struct fusion_gpt *g, bool preserve_dac
 			     g->current_dac_value <= DAC_MAX_VALUE) ?
 		g->current_dac_value : clamp(g->dac_target, DAC_MIN_VALUE,
 					       DAC_MAX_VALUE);
+	bool recheck_pending = g->discipline_ready_recheck_pending;
 	bool keep_ready = preserve_ready_for_recheck &&
-		READ_ONCE(g->discipline_ready) && last_pps_valid;
+		((READ_ONCE(g->discipline_ready) && last_pps_valid) ||
+		 recheck_pending);
 
 	g->latest_freq_error = 0;
 	g->error_integrator = 0;
 	g->sq_err_sum = 0;
 	g->err_count = 0;
 	g->discipline_ready_recheck_pending = keep_ready;
-	g->discipline_ready_recheck_armed = false;
-	g->discipline_ready_recheck_cap64 = keep_ready ? last_pps_cap64 : 0;
+	g->discipline_ready_recheck_armed = keep_ready && recheck_pending &&
+		g->discipline_ready_recheck_armed;
+	g->discipline_ready_recheck_cap64 = keep_ready ?
+		(recheck_pending ? g->discipline_ready_recheck_cap64 : last_pps_cap64) : 0;
 	WRITE_ONCE(g->discipline_ready, keep_ready);
 	g->lock_streak = keep_ready ? max_t(u32, 1, DISCIPLINE_LOCK_CONSECUTIVE) : 0;
 	g->pps_diag_next_jiffies = jiffies + HZ;
@@ -790,8 +798,14 @@ static long gpt_compute_freq_error(u64 cap64, u64 prev_cap64)
 	return (long)(cap64 - prev_cap64) - (long)PPS_TICKS;
 }
 
+static bool gpt_is_valid_pps_interval(long freq_error)
+{
+	return abs(freq_error) <= READ_ONCE(max_valid_pps_error_param);
+}
+
 static void gpt_update_discipline_ready_locked(struct fusion_gpt *g, u64 cap64,
 					       bool have_freq_error,
+					       bool valid_pps_interval,
 					       long freq_error)
 {
 	u32 thresh = READ_ONCE(error_thresh_param);
@@ -804,6 +818,9 @@ static void gpt_update_discipline_ready_locked(struct fusion_gpt *g, u64 cap64,
 			g->discipline_ready_recheck_armed = true;
 			return;
 		}
+
+		if (!valid_pps_interval)
+			return;
 
 		long recheck_error =
 			gpt_compute_freq_error(cap64, g->discipline_ready_recheck_cap64);
@@ -824,6 +841,9 @@ static void gpt_update_discipline_ready_locked(struct fusion_gpt *g, u64 cap64,
 	}
 
 	if (!have_freq_error)
+		return;
+
+	if (!valid_pps_interval)
 		return;
 
 	abs_err = abs(freq_error);
@@ -1094,6 +1114,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 		u64 diff = 0;
 		u32 rms_jitter = 0;
 		bool had_prev = false;
+		bool valid_pps_interval = false;
 		bool need_dac_work = false;
 		bool do_pps_log = false;
 		bool rebase_ready = false;
@@ -1121,37 +1142,47 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 			if (had_prev) {
 				diff = cap64 - prev_cap64;
 				freq_error = gpt_compute_freq_error(cap64, prev_cap64);
+				valid_pps_interval = gpt_is_valid_pps_interval(freq_error);
 
-				rms_jitter = gpt_update_jitter_stats_locked(g, freq_error);
-				observed_dac = gpt_get_observed_dac_locked(g);
-				gpt_pi_step_locked(g, freq_error, &p_term_log,
-						   &i_term_log, &integrator_log);
-				model_jump_log = gpt_maybe_apply_model_jump_locked(g,
-								observed_dac,
-								freq_error);
-				integrator_log = g->error_integrator;
-				g->latest_freq_error = freq_error;
-				dac_target = g->dac_target;
-				model_valid_log = g->model_valid;
-				model_jump_consumed_log = g->model_jump_consumed;
-				model_mean_abs_residual_log = g->model_mean_abs_residual;
-				model_dac_span_log = g->model_dac_span;
-				model_predicted_dac_log = g->model_predicted_dac;
-				need_dac_work = gpt_should_schedule_dac_work_locked(g);
+				if (valid_pps_interval) {
+					rms_jitter = gpt_update_jitter_stats_locked(g, freq_error);
+					observed_dac = gpt_get_observed_dac_locked(g);
+					gpt_pi_step_locked(g, freq_error, &p_term_log,
+							   &i_term_log, &integrator_log);
+					model_jump_log = gpt_maybe_apply_model_jump_locked(g,
+									observed_dac,
+									freq_error);
+					integrator_log = g->error_integrator;
+					g->latest_freq_error = freq_error;
+					dac_target = g->dac_target;
+					model_valid_log = g->model_valid;
+					model_jump_consumed_log = g->model_jump_consumed;
+					model_mean_abs_residual_log = g->model_mean_abs_residual;
+					model_dac_span_log = g->model_dac_span;
+					model_predicted_dac_log = g->model_predicted_dac;
+					need_dac_work = gpt_should_schedule_dac_work_locked(g);
+				}
 			}
 			gpt_update_discipline_ready_locked(g, cap64, have_freq_error,
+							   valid_pps_interval,
 							   freq_error);
 			discipline_ready_log = READ_ONCE(g->discipline_ready);
 			if (had_prev) {
 				do_pps_log = READ_ONCE(pps_debug_param);
-				gpt_maybe_reset_diag_window_locked(g);
+				if (valid_pps_interval)
+					gpt_maybe_reset_diag_window_locked(g);
 			}
 			raw_spin_unlock(&g->ctrl_lock);
 
 			if (had_prev) {
+				if (!valid_pps_interval)
+					pr_warn_ratelimited("fusion_gpt: ignoring invalid PPS interval diff=%llu err=%ld max_valid_err=%u\n",
+							    diff, freq_error,
+							    READ_ONCE(max_valid_pps_error_param));
 				if (do_pps_log)
-					pr_info("fusion_gpt: [PPS] diff=%llu ticks err=%ld ticks rms=%u ticks 48k_off=%ldns ready=%u dac=%d obs_dac_applied=%d p=%ld i=%ld integ=%ld model_valid=%u jump_used=%u jump=%u pred_dac=%d resid=%u span_dac=%u rebase=%d\n",
+					pr_info("fusion_gpt: [PPS] diff=%llu ticks err=%ld ticks rms=%u ticks 48k_off=%ldns valid=%u ready=%u dac=%d obs_dac_applied=%d p=%ld i=%ld integ=%ld model_valid=%u jump_used=%u jump=%u pred_dac=%d resid=%u span_dac=%u rebase=%d\n",
 						diff, freq_error, rms_jitter, if2_offset_ns,
+						valid_pps_interval ? 1U : 0U,
 						discipline_ready_log ? 1U : 0U,
 						dac_target, observed_dac, p_term_log, i_term_log,
 						integrator_log, model_valid_log ? 1U : 0U,
