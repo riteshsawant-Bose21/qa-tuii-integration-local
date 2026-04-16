@@ -314,6 +314,12 @@ class _FusionResizableSidebarState extends State<FusionResizableSidebar> {
       );
     }
 
+    // Keep existing section offsets/heights whenever the new section fits.
+    final double currentTotalUsed = _calculateTotalUsedHeight(redistributed);
+    if (currentTotalUsed <= availableHeight + 0.5) {
+      return redistributed;
+    }
+
     final double dividerTotalHeight = redistributed.length > 1 ? (redistributed.length - 1) * _dividerHeight : 0.0;
     final double heightReservedForNew = newIndexes.length * _minNewSectionVisibleHeight;
     final double remainingForExisting = (availableHeight - dividerTotalHeight - heightReservedForNew).clamp(0.0, double.infinity);
