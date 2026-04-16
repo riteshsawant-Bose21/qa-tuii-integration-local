@@ -814,8 +814,12 @@ static int remove_stream(struct fusion_cn_manager *mgr,
     int ret;
     unsigned long flags;
 
+    pr_debug("fusion_cn: remove_stream: begin stream=%s handle=%llu\n", stream_name, handle);
+
     /* Stop stream activity */
+    pr_debug("fusion_cn: remove_stream: before stop_interrupts stream=%s handle=%llu\n", stream_name, handle);
     ret = alsa_ops_stop_interrupts(mgr, handle);
+    pr_debug("fusion_cn: remove_stream: after stop_interrupts stream=%s handle=%llu ret=%d\n", stream_name, handle, ret);
     if (ret < 0)
         pr_warn("fusion_cn: remove_stream: stop_interrupts (%s) = %d\n", stream_name, ret);
 
@@ -832,9 +836,11 @@ static int remove_stream(struct fusion_cn_manager *mgr,
     kref_put(&rtp_stream->ref, fusion_cn_rtp_stream_release);
 
     /* Remove RTP stream from hash/lists */
+    pr_debug("fusion_cn: remove_stream: before rtp_remove_stream stream=%s handle=%llu\n", stream_name, handle);
     write_lock_irqsave(&mgr->rtp.lock, flags);
     ret = fusion_cn_rtp_remove_stream(&mgr->rtp, rtp_stream);
     write_unlock_irqrestore(&mgr->rtp.lock, flags);
+    pr_debug("fusion_cn: remove_stream: after rtp_remove_stream stream=%s handle=%llu ret=%d\n", stream_name, handle, ret);
     if (ret < 0) {
         pr_warn("fusion_cn: remove_stream: rtp_remove_stream (%s) failed with %d\n", stream_name, ret);
         return ret;
@@ -842,8 +848,10 @@ static int remove_stream(struct fusion_cn_manager *mgr,
 
     /* Metrics are released with the RTP stream refcount */
 
+    pr_debug("fusion_cn: remove_stream: before alsa_remove_substream stream=%s handle=%llu\n", stream_name, handle);
     ret = fusion_cn_alsa_remove_substream(alsa_stream);
-    
+    pr_debug("fusion_cn: remove_stream: after alsa_remove_substream stream=%s handle=%llu ret=%d\n", stream_name, handle, ret);
+
     return ret;
 }
 

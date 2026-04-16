@@ -279,6 +279,10 @@ int fusion_cn_alsa_remove_substream(struct fusion_cn_substream *stream)
     if (!stream)
         return -EINVAL;
 
+    printk(KERN_DEBUG "fusion_cn_alsa: remove_substream: entry stream=%s device=%d open_count=%d disconnected=%d pending_free=%d\n",
+           stream->stream_name, stream->stream_index, atomic_read(&stream->open_count),
+           atomic_read(&stream->disconnected), stream->pending_free ? 1 : 0);
+
     chip = platform_get_drvdata(g_pdev);
 
     spin_lock_irqsave(&stream->lock, flags);
@@ -287,18 +291,34 @@ int fusion_cn_alsa_remove_substream(struct fusion_cn_substream *stream)
     stream->pending_free = true;
     spin_unlock_irqrestore(&stream->lock, flags);
 
-    if (stream->pcm)
+    printk(KERN_DEBUG "fusion_cn_alsa: remove_substream: marked disconnected stream=%s device=%d ss=%p pcm=%p open_count=%d\n",
+           stream->stream_name, stream->stream_index, ss, stream->pcm, atomic_read(&stream->open_count));
+
+    if (stream->pcm) {
+        printk(KERN_DEBUG "fusion_cn_alsa: remove_substream: before snd_device_disconnect stream=%s device=%d\n",
+               stream->stream_name, stream->stream_index);
         snd_device_disconnect(stream->pcm->card, stream->pcm);
+        printk(KERN_DEBUG "fusion_cn_alsa: remove_substream: after snd_device_disconnect stream=%s device=%d\n",
+               stream->stream_name, stream->stream_index);
+    }
 
     if (chip) {
+        printk(KERN_DEBUG "fusion_cn_alsa: remove_substream: before unlink stream=%s device=%d\n",
+               stream->stream_name, stream->stream_index);
         write_lock_irqsave(&chip->lock, flags);
         if (!hlist_unhashed(&stream->hnode))
             hlist_del_init(&stream->hnode);
         clear_bit(stream->stream_index, chip->stream_indices);
         write_unlock_irqrestore(&chip->lock, flags);
+        printk(KERN_DEBUG "fusion_cn_alsa: remove_substream: after unlink stream=%s device=%d\n",
+               stream->stream_name, stream->stream_index);
     }
 
+    printk(KERN_DEBUG "fusion_cn_alsa: remove_substream: before kref_put stream=%s device=%d\n",
+           stream->stream_name, stream->stream_index);
     kref_put(&stream->ref, fusion_cn_alsa_substream_release);
+    printk(KERN_DEBUG "fusion_cn_alsa: remove_substream: after kref_put stream=%s device=%d\n",
+           stream->stream_name, stream->stream_index);
 
     printk(KERN_DEBUG "fusion_cn_alsa: remove_substream: Stream %s removed, device=%d%s\n",
             stream->stream_name, stream->stream_index,
