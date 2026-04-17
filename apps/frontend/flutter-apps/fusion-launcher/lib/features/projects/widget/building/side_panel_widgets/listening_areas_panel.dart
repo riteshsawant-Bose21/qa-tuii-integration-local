@@ -9,6 +9,9 @@ import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../viewmodel/building_page_state.dart';
+import '../../../viewmodel/building_page_viewmodel.dart';
+
 class ListeningAreasPanel extends StatefulWidget {
   final FloorCanvasController floorCanvasController;
 
@@ -200,19 +203,25 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                         if (!area.isDrawn) ...<Widget>[
                           SemanticHelper.button(
                             testId: SemanticHelper.createTestId(SemanticTypes.button, "listening_area_draw_$index"),
-                            child: Tooltip(
-                              message: 'Start drawing to place this listening area',
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: (isSelected && widget.floorCanvasController.isDrawing.value) ? context.colorScheme.errorContainer : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
+                            child: InkWell(
+                              onTap: () {
+                                context.read<BuildingPageViewModel>().setTool(DrawingListeningAreaState(listeningAreaId: area.id));
+                              },
+                              child: Tooltip(
+                                message: 'Start drawing to place this listening area',
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        (isSelected && widget.floorCanvasController.isDrawing.value) ? context.colorScheme.errorContainer : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
 
-                                child: Icon(
-                                  Icons.info_outline_rounded,
-                                  size: 12,
-                                  color: context.colorScheme.error,
+                                  child: Icon(
+                                    Icons.info_outline_rounded,
+                                    size: 12,
+                                    color: context.colorScheme.error,
+                                  ),
                                 ),
                               ),
                             ),

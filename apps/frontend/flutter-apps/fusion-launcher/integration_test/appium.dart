@@ -13,22 +13,23 @@ void main() {
       // Any prerequisite steps or initialise any dependencies required by the app
       // and make sure to pump the app widget at last.
       WidgetsFlutterBinding.ensureInitialized();
-    
-    await AppConfig.initialize();
 
-    await setupServiceLocator();
-    if (UniversalPlatform.isWindows) {
-      await initDesktopAuth0Flutter(
-        const DesktopAuth0FlutterInitOptions(
-          bundleName: 'com.bosepro.fusion',
-          auth0Scheme: 'com.bosepro.fusion',
-          categories: 'Office;Productivity',
-          comment: 'Fusion Launcher',
-          name: 'Fusion Launcher',
-          iconAssetPath: 'assets/images/splash/splash_app_icon.png',
-        ),
-      );
-    }
+      await AppConfig.initialize();
+
+      await setupServiceLocator();
+      if (UniversalPlatform.isWindows) {
+        await initDesktopAuth0Flutter(
+          const DesktopAuth0FlutterInitOptions(
+            bundleName: 'com.bosepro.fusion',
+            auth0Scheme: 'com.bosepro.fusion',
+            categories: 'Office;Productivity',
+            comment: 'Fusion Launcher',
+            name: 'Fusion Launcher',
+            iconAssetPath: 'assets/images/splash/splash_app_icon.png',
+          ),
+        );
+      }
+
       await tester.pumpWidget(const MyApp());
     },
   );

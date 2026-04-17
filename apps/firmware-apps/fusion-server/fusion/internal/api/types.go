@@ -313,8 +313,10 @@ type SceneCatalogListResponse struct {
 type TaskType string
 
 const (
-	TaskTypeMessage  TaskType = "message"
-	TaskTypeSnapshot TaskType = "snapshot"
+	TaskTypeMessage       TaskType = "message"
+	TaskTypeSnapshot      TaskType = "snapshot"
+	TaskTypeSceneSnapshot TaskType = "scene_snapshot"
+	TaskTypeSceneActivate TaskType = "scene_activate"
 )
 
 // Task represents a task
@@ -461,6 +463,17 @@ type SwUpdateInfo struct {
 type SoftwareUpdateErrorResponse struct {
 	Error   string `json:"error"`
 	Message string `json:"message,omitempty"`
+}
+
+// TaskPatchRequest is the HTTP request body for PATCH /tasks/{id}.
+type TaskPatchRequest struct {
+	Description *string          `json:"description,omitempty"`
+	CronExpr    *string          `json:"cron_expr,omitempty"`
+	StartAt     *time.Time       `json:"start_at,omitempty"`
+	EndAt       *time.Time       `json:"end_at,omitempty"`
+	Recurrence  *RecurringWindow `json:"recurrence,omitempty"`
+	Params      map[string]any   `json:"params,omitempty"`
+	Snapshot    *string          `json:"snapshot,omitempty"`
 }
 
 type SoftwareUpdateInfo struct {

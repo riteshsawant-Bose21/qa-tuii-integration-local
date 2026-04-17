@@ -222,7 +222,11 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 if (painter is ListeningAreaPainter) {
                                                   final ListeningArea area = painter.listeningArea;
                                                   final List<FusionCanvasPoint> updatedPoints =
-                                                      area.vertices.where((FusionCanvasPoint v) => points.every((String p) => p != v.id)).toList();
+                                                      area.vertices.where((FusionCanvasPoint v) => points.every((String p) => !p.contains(v.id))).toList();
+                                                  if (updatedPoints.length < 3) {
+                                                    FusionToast.error(context, message: "Listening area should have minimum 3 points");
+                                                    return;
+                                                  }
                                                   serviceLocator<ProjectViewModel>().updateListeningArea(
                                                     area: area.copyWith(vertices: updatedPoints),
                                                   );
@@ -269,16 +273,35 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                               penToolEvents: FusionPenToolEvents(
                                                 onPathClosed: (List<FusionCanvasPoint> value) {
                                                   final ProjectViewModel projectVM = serviceLocator<ProjectViewModel>();
-                                                  final ListeningArea listeningArea = ListeningArea(
-                                                    vertices: value,
-                                                    name: "Listening Area ${projectVM.listeningAreas.length + 1}",
+                                                  if (value.last == value.first) {
+                                                    value.removeLast();
+                                                  }
+                                                  final BuildingPageToolState state = context.read<BuildingPageViewModel>().state.toolState;
+                                                  final String? listeningAreaId =
+                                                      state is DrawingListeningAreaState
+                                                          ? state.listeningAreaId
+                                                          : null; // if we are already in drawing mode, we should update the existing listening area instead of creating a new one
+                                                  final ListeningArea? existingArea = projectVM.listeningAreas.firstWhereOrNull(
+                                                    (ListeningArea element) => element.id == listeningAreaId,
                                                   );
-                                                  projectVM.addListeningArea(
-                                                    area: listeningArea,
-                                                    floorId: floor.id,
-                                                  );
-                                                  projectVM.setCurrentSelectedHardware(null);
-                                                  projectVM.setCurrentSelectedListeningArea(listeningArea.id);
+                                                  if (existingArea == null) {
+                                                    final ListeningArea listeningArea = ListeningArea(
+                                                      vertices: value,
+                                                      name: "Listening Area ${projectVM.listeningAreas.length + 1}",
+                                                    );
+                                                    projectVM.addListeningArea(
+                                                      area: listeningArea,
+                                                      floorId: floor.id,
+                                                    );
+                                                    projectVM.setCurrentSelectedHardware(null);
+                                                    projectVM.setCurrentSelectedListeningArea(listeningArea.id);
+                                                  } else {
+                                                    projectVM.updateListeningArea(
+                                                      area: existingArea.copyWith(vertices: value, isDrawn: true),
+                                                    );
+                                                    projectVM.setCurrentSelectedHardware(null);
+                                                    projectVM.setCurrentSelectedListeningArea(existingArea.id);
+                                                  }
 
                                                   calculateSpl(context);
                                                 },
