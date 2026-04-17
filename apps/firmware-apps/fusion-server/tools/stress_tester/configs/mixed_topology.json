@@ -1,0 +1,23 @@
+{
+    "writer_mode": "ws",
+    "writer_host": "192.168.2.131:8080",
+    "ws_listener_hosts": [
+        "192.168.2.131:8080",
+        "192.168.2.132:8080",
+        "192.168.2.133:8080"
+    ],
+    "ws_listener_count": 6,
+    "udp_listener_bind_ips": [
+        "0.0.0.0"
+    ],
+    "udp_listener_count": 9,
+    "udp_server_host": "192.168.2.132:7947",
+    "updates_per_second": 500,
+    "total_updates": 5000,
+    "start_gain": 1,
+    "grace_period": 300000000000,
+    "adaptive_grace": true,
+    "listener_startup_timeout": 15000000000,
+    "output_path": "report/mixed_topology_report.json",
+    "verbosity": "verbose"
+}
