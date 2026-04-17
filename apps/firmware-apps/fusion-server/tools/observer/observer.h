@@ -1100,7 +1100,7 @@ private:
       if (!shouldAcceptUpdate(incomingEpoch, incomingVersion, lastEpoch_,
                               lastCounter_))
       {
-        SPDLOG_WARN("Rejecting out of order update {}", update.toStyledString());
+        SPDLOG_WARN("Rejecting out of order update with epoch={} version={}", incomingEpoch, incomingVersion);
         return;
       }
     }
