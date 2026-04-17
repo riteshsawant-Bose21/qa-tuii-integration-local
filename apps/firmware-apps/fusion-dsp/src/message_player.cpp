@@ -184,6 +184,10 @@ void MessagePlayer::process()
             std::memcpy(out[channel], buffer.get(),
                         get_frame_size() * sizeof(float));
         }
+        else
+        {
+            std::memset(out[channel], 0, get_frame_size() * sizeof(float));
+        }
     }
 }
 
