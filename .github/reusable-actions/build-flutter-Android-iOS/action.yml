@@ -49,6 +49,10 @@ runs:
         flutter pub get
         cp /Users/devops/Documents/flutter-env/.env ./.env
         moon run flutter-apps:build-mac-ios-android
+        if [ $? -ne 0 ]; then
+          echo "moon run flutter-apps:build-mac-ios-android failed with exit code $?"
+          exit $?
+        fi
         codesign --force  --verbose=4 --display  --options runtime --entitlements macos/Runner/Release.entitlements --sign "Developer ID Application: Transom Post Opco LLC (7FDK3RUF89)" --identifier "com.bosepro.fusion" -vvv ./build/macos/Build/Products/Release/Fusion\ Launcher.app/Contents/Frameworks/*
         codesign --force  --verbose=4 --display  --options runtime --entitlements macos/Runner/Release.entitlements --sign "Developer ID Application: Transom Post Opco LLC (7FDK3RUF89)" --identifier "com.bosepro.fusion" -vvv ./build/macos/Build/Products/Release/Fusion\ Launcher.app/Contents/MacOS/Fusion\ Launcher*
         codesign --force  --verbose=4 --display  --options runtime --entitlements macos/Runner/Release.entitlements --sign "Developer ID Application: Transom Post Opco LLC (7FDK3RUF89)" --identifier "com.bosepro.fusion" -vvv ./build/macos/Build/Products/Release/Fusion\ Launcher.app

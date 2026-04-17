@@ -101,33 +101,16 @@ void fusion_cn_alsa_substream_release(struct kref *kref)
     struct fusion_cn_substream *s =
         container_of(kref, struct fusion_cn_substream, ref);
 
+    printk(KERN_DEBUG "fusion_cn_alsa: substream_release: stream=%s device=%d",
+           s->stream_name, s->stream_index);
+
     /*
      * PCM device lifetime is owned by ALSA disconnect/card teardown, not by
      * the close path for an individual substream.
      */
     s->pcm = NULL;
 
-    printk(KERN_DEBUG "fusion_cn_alsa: substream_release: release stream %s\n", s->stream_name);
-
     kfree(s);
-}
-
-void fusion_cn_alsa_set_playback_phase(struct fusion_cn_substream *stream, u32 buffer_pos)
-{
-    unsigned long flags;
-
-    if (!stream)
-        return;
-
-    spin_lock_irqsave(&stream->lock, flags);
-    stream->buffer_pos = buffer_pos;
-    if (stream->substream && stream->substream->runtime && stream->rtp_frames_per_packet) {
-        u32 period_size = stream->substream->runtime->period_size;
-        stream->interrupt_idx = (buffer_pos % period_size) / stream->rtp_frames_per_packet;
-    } else {
-        stream->interrupt_idx = 0;
-    }
-    spin_unlock_irqrestore(&stream->lock, flags);
 }
 
 void fusion_cn_alsa_fill_silence(struct fusion_cn_substream *stream, u32 frame_offset, u32 frames)
@@ -276,7 +259,6 @@ static int fusion_cn_pcm_silence(struct snd_pcm_substream *substream,
     return (int)frames;
 }
 
-
 static int fusion_cn_pcm_fill_silence(struct snd_pcm_substream *substream,
                                      int channel, unsigned long pos,
                                      unsigned long count)
@@ -302,14 +284,11 @@ int fusion_cn_alsa_remove_substream(struct fusion_cn_substream *stream)
     spin_lock_irqsave(&stream->lock, flags);
     atomic_set(&stream->disconnected, 1);
     ss = stream->substream;
-    stream->pending_free = true;
     spin_unlock_irqrestore(&stream->lock, flags);
 
-    if (ss)
-        snd_pcm_stop(ss, SNDRV_PCM_STATE_DISCONNECTED);
-
-    if (stream->pcm)
+    if (stream->pcm) {
         snd_device_disconnect(stream->pcm->card, stream->pcm);
+    }
 
     if (chip) {
         write_lock_irqsave(&chip->lock, flags);
@@ -321,9 +300,8 @@ int fusion_cn_alsa_remove_substream(struct fusion_cn_substream *stream)
 
     kref_put(&stream->ref, fusion_cn_alsa_substream_release);
 
-    printk(KERN_DEBUG "fusion_cn_alsa: remove_substream: Stream %s removed, device=%d%s\n",
-            stream->stream_name, stream->stream_index,
-            stream->pending_free ? " (pending free)" : "");
+    printk(KERN_DEBUG "fusion_cn_alsa: remove_substream: Stream %s removed, device=%d\n",
+            stream->stream_name, stream->stream_index);
     return 0;
 }
 
@@ -441,8 +419,6 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
         }
     }
 
-    atomic_inc(&stream->open_count);
-
     printk(KERN_DEBUG "fusion_cn_alsa: pcm_open: Opened stream %s\n", stream_name);
     return 0;
 }
@@ -463,7 +439,6 @@ static int fusion_cn_pcm_close(struct snd_pcm_substream *substream)
     }
     spin_unlock_irqrestore(&stream->lock, flags);
 
-    atomic_dec(&stream->open_count);
     kref_put(&stream->ref, fusion_cn_alsa_substream_release);
 
     printk(KERN_DEBUG "fusion_cn_alsa: pcm_close: Closed stream %s\n", stream->stream_name);
@@ -502,7 +477,7 @@ static snd_pcm_uframes_t fusion_cn_pcm_pointer(struct snd_pcm_substream *substre
     struct snd_pcm_runtime *runtime = substream->runtime;
     snd_pcm_uframes_t offset;
 
-    if (fusion_cn_alsa_stream_disconnected(runtime->private_data)) return 0;
+    if (fusion_cn_alsa_stream_disconnected(runtime->private_data)) return SNDRV_PCM_POS_XRUN;
 
     offset = stream->buffer_pos;
     if (offset >= runtime->buffer_size) offset %= runtime->buffer_size;
@@ -727,10 +702,14 @@ int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, u64 stream_h
         goto stream_free;
     }
 
-    if (fusion_cn_find_substream(stream_name)) {
-        printk(KERN_WARNING "fusion_cn_alsa: open_substream: Stream %s already exists\n", stream_name);
-        err = -EEXIST;
-        goto stream_free;
+    {
+        struct fusion_cn_substream *existing = fusion_cn_find_substream(stream_name);
+        if (existing) {
+            printk(KERN_WARNING "fusion_cn_alsa: open_substream: Stream %s already exists\n", stream_name);
+            kref_put(&existing->ref, fusion_cn_alsa_substream_release);
+            err = -EEXIST;
+            goto stream_free;
+        }
     }
 
     write_lock_irqsave(&chip->lock, flags);
@@ -744,8 +723,6 @@ int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, u64 stream_h
         goto clr_hnode;
     }
 
-    atomic_set(&stream->open_count, 0);
-    stream->pending_free = false;
     atomic_set(&stream->disconnected, 0);
 
     printk(KERN_DEBUG "fusion_cn_alsa: open_substream: Successfully created substream for stream %s, device=%d, format=%d, channels=%u, rate=%u, frames_per_packet=%u\n", 
@@ -843,8 +820,7 @@ static void fusion_cn_chip_remove(struct platform_device *pdev)
             hlist_del_init(&stream->hnode);
             clear_bit(stream->stream_index, chip->stream_indices);
             atomic_set(&stream->disconnected, 1);
-            stream->pending_free = true;
-            to_free[n++] = stream;
+                    to_free[n++] = stream;
         }
     }
     write_unlock_irqrestore(&chip->lock, flags);
