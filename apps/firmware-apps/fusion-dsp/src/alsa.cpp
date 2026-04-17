@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -194,6 +195,33 @@ std::vector<AlsaDevice::AlsaFormat> AlsaDevice::alsa_formats = {
 
 pthread_mutex_t AlsaDevice::open_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+std::mutex bluealsa_error_handler_mutex;
+
+void ignore_alsa_error(const char *file, int line, const char *function,
+                       int err, const char *fmt, ...)
+{
+    (void)file;
+    (void)line;
+    (void)function;
+    (void)err;
+    (void)fmt;
+}
+
+int open_pcm(snd_pcm_t **alsa, const std::string &full_device_name,
+             snd_pcm_stream_t stream, int mode)
+{
+    if (full_device_name.compare(0, 9, "bluealsa:") != 0)
+    {
+        return snd_pcm_open(alsa, full_device_name.c_str(), stream, mode);
+    }
+
+    std::lock_guard<std::mutex> lock(bluealsa_error_handler_mutex);
+    snd_lib_error_set_handler(ignore_alsa_error);
+    int error = snd_pcm_open(alsa, full_device_name.c_str(), stream, mode);
+    snd_lib_error_set_handler(nullptr);
+    return error;
+}
+
 class AlsaIn : public bosepro::Algorithm {
 public:
     AlsaIn(const bosepro::BlockConfiguration &configuration);
@@ -299,10 +327,10 @@ void AlsaDevice::open_device()
     }
 
     SPDLOG_DEBUG("Opening: {}", full_device_name);
-    int error = snd_pcm_open(&alsa, full_device_name.c_str(),
-                             is_input ? SND_PCM_STREAM_CAPTURE
-                                      : SND_PCM_STREAM_PLAYBACK,
-                             SND_PCM_NONBLOCK);
+    int error = open_pcm(&alsa, full_device_name,
+                         is_input ? SND_PCM_STREAM_CAPTURE
+                                  : SND_PCM_STREAM_PLAYBACK,
+                         SND_PCM_NONBLOCK);
 
     if (error < 0)
     {
@@ -332,17 +360,22 @@ void AlsaDevice::close_device()
     if (alsa != nullptr)
     {
         snd_pcm_close(alsa);
+        alsa = nullptr;
     }
 
     if (hw_params != nullptr)
     {
         snd_pcm_hw_params_free(hw_params);
+        hw_params = nullptr;
     }
 
     if (sw_params != nullptr)
     {
         snd_pcm_sw_params_free(sw_params);
+        sw_params = nullptr;
     }
+
+    negotiated_buffer_size = 0;
 
     ALSA_DEVICE_SET_STATE(DEVICE_STATE_CLOSED, "Closed device {}",
                           device_name.c_str());
@@ -358,7 +391,8 @@ void AlsaDevice::deferred_open(void *obj)
 
 bool AlsaDevice::is_open()
 {
-    return current_state != DEVICE_STATE_CLOSED;
+    return current_state == DEVICE_STATE_IDLE
+        || current_state == DEVICE_STATE_STREAMING;
 }
 
 
@@ -454,6 +488,13 @@ int AlsaDevice::read(float *buffer, int samples)
     {
         SPDLOG_ERROR("Requested read size {} exceeds maximum {}",
                      samples, max_transfer_size);
+        std::memset(buffer, 0, samples * channels * sizeof(float));
+        return samples;
+    }
+
+    if (snd_pcm_state(alsa) == SND_PCM_STATE_DISCONNECTED)
+    {
+        close_device();
         std::memset(buffer, 0, samples * channels * sizeof(float));
         return samples;
     }
