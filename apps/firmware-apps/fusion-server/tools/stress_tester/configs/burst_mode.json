@@ -1,0 +1,23 @@
+{
+    "writer_mode": "ws",
+    "writer_host": "192.168.2.131:8080",
+    "ws_listener_hosts": [
+        "192.168.2.131:8080"
+    ],
+    "ws_listener_count": 3,
+    "udp_listener_bind_ips": [
+        "0.0.0.0"
+    ],
+    "udp_listener_count": 5,
+    "udp_server_host": "192.168.2.131:7947",
+    "updates_per_second": 100,
+    "burst_mode": true,
+    "burst_multiplier": 5.0,
+    "total_updates": 3000,
+    "start_gain": 1,
+    "grace_period": 300000000000,
+    "adaptive_grace": true,
+    "listener_startup_timeout": 10000000000,
+    "output_path": "burst_mode_report.json",
+    "verbosity": "verbose"
+}
