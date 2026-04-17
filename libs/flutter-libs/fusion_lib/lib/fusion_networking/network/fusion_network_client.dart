@@ -462,7 +462,6 @@ enum FusionApiEndpoint {
   getProfile("/users/authorization", FusionApiType.backendServer),
   projects("/projects", FusionApiType.backendServer),
   products('/products', FusionApiType.backendServer),
-  devicesBulkCloud('/devices/bulk', FusionApiType.backendServer),
   devicesCloud('/devices', FusionApiType.backendServer),
   firmwareUpdateCheck('/firmware/updates/check', FusionApiType.backendServer),
   firmwareBundleDownloadUrl('/firmware/bundles', FusionApiType.backendServer),

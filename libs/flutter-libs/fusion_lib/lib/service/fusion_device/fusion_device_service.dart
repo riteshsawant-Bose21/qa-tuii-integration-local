@@ -98,21 +98,21 @@ class BundleDownloadUrlResult extends Equatable {
   String get downloadFileName => Uri.parse(downloadUrl).pathSegments.last;
 }
 
-class DeviceBulkRegisterResult {
+class CloudDeviceRegisterResult {
   final bool success;
   final String certificate;
   final String deviceId;
   final String error;
 
-  const DeviceBulkRegisterResult({
+  const CloudDeviceRegisterResult({
     required this.success,
     required this.certificate,
     required this.deviceId,
     required this.error,
   });
 
-  factory DeviceBulkRegisterResult.fromJson(Map<String, dynamic> json) {
-    return DeviceBulkRegisterResult(
+  factory CloudDeviceRegisterResult.fromJson(Map<String, dynamic> json) {
+    return CloudDeviceRegisterResult(
       success: json['success'] as bool? ?? false,
       certificate: json['certificate'] as String? ?? '',
       deviceId: json['device_id'] as String? ?? '',
@@ -443,110 +443,64 @@ class FusionDeviceService {
     }
   }
 
-  Future<ResponseCallback<List<DeviceBulkRegisterResult>>> registerDevicesBulk({
-    required String vip,
-    required List<FusionNetworkDevice> devices,
-    required String projectId,
-  }) async {
+  Future<ResponseCallback<String>> getCsrCertificate({required String vip, required String deviceId}) async {
     try {
-      Map<String, dynamic> deviceIdToCsr = <String, dynamic>{};
-      try {
-        for (final FusionNetworkDevice device in devices) {
-          final ResponseCallback<dynamic> response = await networkClient.get(
-            api: FusionApiEndpoint.fusionDevice,
-            baseUrlToOverride: vip,
-            isSecure: false,
-            additionalPath: "${device.id}/csr",
-          );
-
-          log("CSR RESPONSE:::${response.data.toString()}");
-          if (response.success && response.data != null) {
-            deviceIdToCsr[device.id] = response.data;
-          }
-        }
-      } catch (e) {
-        log("Failed to fetch CSR for devices: ${e.toString()}");
-      }
-
-      final ResponseCallback<dynamic> response = await networkClient.post(
-        api: FusionApiEndpoint.devicesBulkCloud,
-        data: <String, dynamic>{
-          'devices': [
-            ...devices.map(
-              (FusionNetworkDevice device) {
-                return <String, dynamic>{
-                  'client_device_id': device.id,
-                  'csr': deviceIdToCsr[device.id],
-                  'device_location': device.location,
-                  'device_name': device.name,
-                  'device_zone': device.location,
-                  'is_primary': device.isPrimary,
-                  'mac_address': device.macAddress,
-                  'model_name': device.modelName,
-                  'project_id': projectId,
-                  'serial_number': device.serialNumber,
-                };
-              },
-            ),
-          ],
-        },
+      final ResponseCallback<String> csrResponse = await networkClient.get(
+        api: FusionApiEndpoint.fusionDevice,
+        baseUrlToOverride: vip,
+        isSecure: false,
+        additionalPath: "$deviceId/csr",
       );
 
-      if (response.success) {
-        final Map<String, dynamic> data = (response.data as Map<String, dynamic>?) ?? <String, dynamic>{};
-        final List<dynamic> resultsJson = (data['results'] as List<dynamic>?) ?? <dynamic>[];
-        log("Bulk Register Response::: ${data['results']}");
-
-        final List<DeviceBulkRegisterResult> results = resultsJson.whereType<Map<String, dynamic>>().map(DeviceBulkRegisterResult.fromJson).toList();
-        final certificatesRegisterdResp = await registerCsrInFusionDevice(vip: vip, devices: devices, results: results);
-
-        if (!certificatesRegisterdResp.success) {
-          return ResponseCallback<List<DeviceBulkRegisterResult>>.failure('Failed to register device certificates in Fusion');
-        }
-        return ResponseCallback<List<DeviceBulkRegisterResult>>.success(results);
-      } else {
-        return ResponseCallback<List<DeviceBulkRegisterResult>>.failure(response.message);
-      }
+      return csrResponse;
     } catch (e) {
-      return ResponseCallback<List<DeviceBulkRegisterResult>>.failure(e.toString());
+      return ResponseCallback<String>.failure(e.toString());
     }
   }
 
-  Future<ResponseCallback<List<bool>>> registerCsrInFusionDevice({
+  Future<ResponseCallback<CloudDeviceRegisterResult>> registerSingleDevice({
     required String vip,
-    required List<FusionNetworkDevice> devices,
-    required List<DeviceBulkRegisterResult> results,
+    required FusionNetworkDevice device,
+    required String projectId,
+    required String csrCertificate,
   }) async {
-    final List<bool> registrationResults = [];
-
     try {
-      for (final DeviceBulkRegisterResult result in results) {
-        final fusionDeviceId = devices.singleWhereOrNull((element) => element.serialNumber == result.deviceId)?.id;
+      final ResponseCallback<CloudDeviceRegisterResult> response = await networkClient.post(
+        api: FusionApiEndpoint.devicesCloud,
+        fromJson: (dynamic json) => CloudDeviceRegisterResult.fromJson(json as Map<String, dynamic>),
+        data: <String, dynamic>{
+          'client_device_id': device.id,
+          'csr': csrCertificate,
+          'device_location': device.location,
+          'device_name': device.name,
+          'device_zone': device.location,
+          'is_primary': device.isPrimary,
+          'mac_address': device.macAddress,
+          'model_name': device.modelName,
+          'project_id': projectId,
+          'serial_number': device.serialNumber,
+        },
+      );
 
-        if (fusionDeviceId == null) {
-          registrationResults.add(false);
-          continue;
-        }
-
-        final ResponseCallback<dynamic> response = await networkClient.post(
-          api: FusionApiEndpoint.fusionDevice,
-          baseUrlToOverride: vip,
-          isSecure: false,
-          additionalPath: "$fusionDeviceId/certificate",
-          data: result.certificate,
-        );
-
-        log("CSR RESPONSE::: ${result.certificate} === ${response.data.toString()}");
-        if (response.success) {
-          registrationResults.add(true);
-        } else {
-          registrationResults.add(false);
-        }
-      }
-
-      return ResponseCallback<List<bool>>.success(registrationResults);
+      return response;
     } catch (e) {
-      return ResponseCallback<List<bool>>.failure(e.toString());
+      return ResponseCallback<CloudDeviceRegisterResult>.failure(e.toString());
+    }
+  }
+
+  Future<ResponseCallback<dynamic>> updateCsrInFusionDevice({required String vip, required String fusionDeviceId, required String certificate}) async {
+    try {
+      final ResponseCallback<dynamic> response = await networkClient.post(
+        api: FusionApiEndpoint.fusionDevice,
+        baseUrlToOverride: vip,
+        isSecure: false,
+        additionalPath: "$fusionDeviceId/certificate",
+        data: certificate,
+      );
+
+      return response;
+    } catch (e) {
+      return ResponseCallback<dynamic>.failure("Fusion device certificate update failed at $vip");
     }
   }
 
