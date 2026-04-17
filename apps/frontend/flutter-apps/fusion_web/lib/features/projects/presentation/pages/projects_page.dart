@@ -45,6 +45,8 @@ class _ProjectsPageState extends State<ProjectsPage> {
     return BlocProvider.value(
       value: _viewModel,
       child: Scaffold(
+        backgroundColor: context.colorScheme.elevation1,
+
         body: Padding(
           padding: const EdgeInsets.all(24),
           child: BlocBuilder<ProjectsViewModel, BaseState<List<ProjectModel>>>(
@@ -52,12 +54,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const PageHeader(
-                    title: 'Projects',
-                    subtitle:
-                        'Manage and monitor all projects across your organization',
-                  ),
-                  const SizedBox(height: 24),
+
                   Expanded(
                     child: Container(
                       padding: const EdgeInsets.all(20),
@@ -71,6 +68,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          const PageHeader(title: 'Projects', subtitle: ''),
                           // const SizedBox(height: 24),
                           const SizedBox(height: 12),
                           const ProjectsFilters(),

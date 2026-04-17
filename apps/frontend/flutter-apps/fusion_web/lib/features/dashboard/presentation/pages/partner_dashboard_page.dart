@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_web/features/common-widgets/page_header.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fusion_web/features/dashboard/presentation/viewmodels/dashboard_viewmodel.dart';
@@ -116,7 +118,7 @@ class _PartnerDashboardPageState extends State<PartnerDashboardPage>
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
+                              color: context.colorScheme.elevation2,
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
@@ -131,12 +133,11 @@ class _PartnerDashboardPageState extends State<PartnerDashboardPage>
                                   ),
                                 ),
                                 const SizedBox(width: 6),
-                                Text(
+                                FusionAppText(text:
                                   'Updated ${_formatLastUpdated(_viewModel.dashboard!.lastUpdated)}',
                                   style: GoogleFonts.inter(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
-                                    color: const Color(0xFF475569),
                                   ),
                                 ),
                               ],
@@ -147,12 +148,10 @@ class _PartnerDashboardPageState extends State<PartnerDashboardPage>
                         // Refresh Button
                         Container(
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                              color: context.colorScheme.elevation2,
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
                             boxShadow: const [
                               BoxShadow(
-                                color: Color(0x05000000),
                                 blurRadius: 4,
                                 offset: Offset(0, 1),
                               ),

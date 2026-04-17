@@ -45,7 +45,7 @@ class ProjectGridCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Stack(
+            Stack(             
               children: [
                 // Expanded(
                 //   // child: FusionAppText(

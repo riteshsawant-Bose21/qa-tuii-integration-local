@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fusion_web/features/dashboard/domain/entities/dashboard_entities.dart';
 
-/// Regional insights widget showing regional statistics for partners
 class RegionalInsightsWidget extends StatelessWidget {
   final RegionalInsightsEntity? regionalInsights;
   final bool isLoading;
@@ -19,30 +20,23 @@ class RegionalInsightsWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
+          /// HEADER
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
             child: Row(
               children: [
-                Text(
-                  'Regional Insights',
+                FusionAppText(
+                  text: 'Regional Insights',
                   style: GoogleFonts.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF0F172A),
+                    color: context.colorScheme.elevation6,
                   ),
                 ),
                 const Spacer(),
@@ -52,25 +46,10 @@ class RegionalInsightsWidget extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
+                        color: context.colorScheme.elevation3,
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: isLoading
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation(
-                                  Color(0xFF64748B),
-                                ),
-                              ),
-                            )
-                          : const Icon(
-                              Icons.refresh_rounded,
-                              size: 16,
-                              color: Color(0xFF64748B),
-                            ),
+                      child: const Icon(Icons.refresh_rounded, size: 16),
                     ),
                   ),
               ],
@@ -78,96 +57,61 @@ class RegionalInsightsWidget extends StatelessWidget {
           ),
 
           if (isLoading && regionalInsights == null)
-            const Expanded(
-              child: Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation(Color(0xFF8B5CF6)),
-                ),
-              ),
-            )
+            const Expanded(child: Center(child: CircularProgressIndicator()))
+
           else if (regionalInsights != null) ...[
             const SizedBox(height: 24),
 
-            // Global coverage map visualization
+            /// GLOBAL COVERAGE CARD
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFF8B5CF6).withValues(alpha: 0.08),
-                      const Color(0xFF06B6D4).withValues(alpha: 0.05),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: context.colorScheme.elevation3,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFF8B5CF6).withValues(alpha: 0.2),
-                  ),
                 ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(
-                              0xFF8B5CF6,
-                            ).withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.public_rounded,
-                            color: Color(0xFF8B5CF6),
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Global Coverage',
+                        const Icon(Icons.public_rounded, color: Colors.purple),
+                        const SizedBox(width: 8),
+                        FusionAppText(
+                          text: 'Global Coverage',
                           style: GoogleFonts.inter(
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF8B5CF6),
+                            color: context.colorScheme.elevation6,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
 
-                    // Coverage stats
                     Row(
                       children: [
                         Expanded(
-                          child: _buildCoverageMetric(
-                            regionalInsights!.projectsByRegion.length
-                                .toString(),
+                          child: _buildMetric(
+                            context,
+                            regionalInsights!.projectsByRegion.length.toString(),
                             'Regions',
-                            const Color(0xFF8B5CF6),
                           ),
                         ),
-                        const SizedBox(width: 16),
                         Expanded(
-                          child: _buildCoverageMetric(
-                            regionalInsights!.activePartnersByRegion.length
-                                .toString(),
+                          child: _buildMetric(
+                            context,
+                            regionalInsights!.activePartnersByRegion.length.toString(),
                             'Partners',
-                            const Color(0xFF06B6D4),
                           ),
                         ),
-                        const SizedBox(width: 16),
                         Expanded(
-                          child: _buildCoverageMetric(
+                          child: _buildMetric(
+                            context,
                             regionalInsights!.devicesByGeography.values
-                                .fold(0, (sum, count) => sum + count)
+                                .fold(0, (a, b) => a + b)
                                 .toString(),
                             'Devices',
-                            const Color(0xFF10B981),
                           ),
                         ),
                       ],
@@ -179,16 +123,16 @@ class RegionalInsightsWidget extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // Top performing regions
+            /// TOP REGIONS
             if (regionalInsights!.projectsByRegion.isNotEmpty) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Text(
-                  'Top Performing Regions',
+                child: FusionAppText(
+                  text: 'Top Performing Regions',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF374151),
+                    color: context.colorScheme.elevation6,
                   ),
                 ),
               ),
@@ -200,7 +144,7 @@ class RegionalInsightsWidget extends StatelessWidget {
                 child: Column(
                   children: regionalInsights!.projectsByRegion.entries
                       .take(5)
-                      .map((entry) => _buildRegionCard(entry.key, entry.value))
+                      .map((e) => _buildRegionCard(context, e.key, e.value))
                       .toList(),
                 ),
               ),
@@ -208,23 +152,23 @@ class RegionalInsightsWidget extends StatelessWidget {
               const SizedBox(height: 24),
             ],
 
-            // Regional distribution chart
+            /// DISTRIBUTION
             if (regionalInsights!.activePartnersByRegion.isNotEmpty) ...[
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24),
-                child: Divider(color: Color(0xFFE2E8F0)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Divider(color: context.colorScheme.elevation3),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Text(
-                  'Active Partners by Region',
+                child: FusionAppText(
+                  text: 'Active Partners by Region',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF374151),
+                    color: context.colorScheme.elevation6,
                   ),
                 ),
               ),
@@ -233,31 +177,21 @@ class RegionalInsightsWidget extends StatelessWidget {
 
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: _buildDistributionChart(),
+                child: _buildDistributionChart(context),
               ),
             ],
 
             const SizedBox(height: 24),
-          ] else
+          ]
+
+          else
             Expanded(
               child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.public_outlined,
-                      size: 48,
-                      color: Colors.grey[300],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No regional data available',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
+                child: FusionAppText(
+                  text: 'No regional data available',
+                  style: GoogleFonts.inter(
+                    color: context.colorScheme.elevation6,
+                  ),
                 ),
               ),
             ),
@@ -266,83 +200,56 @@ class RegionalInsightsWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildCoverageMetric(String value, String label, Color color) {
+  /// METRIC
+  Widget _buildMetric(BuildContext context, String value, String label) {
     return Column(
       children: [
-        Text(
-          value,
+        FusionAppText(
+          text: value,
           style: GoogleFonts.inter(
-            fontSize: 24,
+            fontSize: 20,
             fontWeight: FontWeight.w700,
-            color: color,
+            color: context.colorScheme.elevation6,
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          label,
+        FusionAppText(
+          text: label,
           style: GoogleFonts.inter(
             fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: const Color(0xFF64748B),
+            color: context.colorScheme.elevation6,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildRegionCard(String region, int value) {
-    final colors = [
-      const Color(0xFF3B82F6),
-      const Color(0xFF10B981),
-      const Color(0xFFF59E0B),
-      const Color(0xFFEF4444),
-      const Color(0xFF8B5CF6),
-    ];
-
-    final index = regionalInsights!.projectsByRegion.keys.toList().indexOf(
-      region,
-    );
-    final color = colors[index % colors.length];
-
+  /// REGION CARD
+  Widget _buildRegionCard(
+      BuildContext context, String region, int value) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.05),
+        color: context.colorScheme.elevation3,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
+          const Icon(Icons.circle, size: 8, color: Colors.blue),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              region,
+            child: FusionAppText(
+              text: region,
               style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF374151),
+                color: context.colorScheme.elevation6,
               ),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              value.toString(),
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: color,
-              ),
+          FusionAppText(
+            text: value.toString(),
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.w600,
+              color: context.colorScheme.elevation6,
             ),
           ),
         ],
@@ -350,63 +257,52 @@ class RegionalInsightsWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildDistributionChart() {
-    final maxValue = regionalInsights!.activePartnersByRegion.values.fold<int>(
-      0,
-      (max, value) => value > max ? value : max,
-    );
+  /// DISTRIBUTION CHART
+  Widget _buildDistributionChart(BuildContext context) {
+    final maxValue = regionalInsights!.activePartnersByRegion.values
+        .fold<int>(0, (max, v) => v > max ? v : max);
 
     return Column(
-      children: regionalInsights!.activePartnersByRegion.entries.take(6).map((
-        entry,
-      ) {
-        final percentage = (entry.value / maxValue * 100).round();
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    entry.key,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF374151),
+      children: regionalInsights!.activePartnersByRegion.entries.take(6).map((entry) {
+        final percent = maxValue == 0 ? 0.0 : (entry.value / maxValue).toDouble();
+  
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: FusionAppText(
+                        text: entry.key,
+                        style: GoogleFonts.inter(
+                          color: context.colorScheme.elevation6,
+                        ),
+                      ),
                     ),
-                  ),
-                  Text(
-                    entry.value.toString(),
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF0F172A),
+                    FusionAppText(
+                      text: entry.value.toString(),
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600,
+                        color: context.colorScheme.elevation6,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Container(
-                height: 6,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
-                  borderRadius: BorderRadius.circular(3),
+                  ],
                 ),
-                child: FractionallySizedBox(
+                const SizedBox(height: 4),
+                Container(
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: context.colorScheme.elevation3,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: FractionallySizedBox(
+                    widthFactor: percent,
                   alignment: Alignment.centerLeft,
-                  widthFactor: percentage / 100,
                   child: Container(
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFF8B5CF6),
-                          const Color(0xFF06B6D4),
-                        ],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
+                      color: Colors.blue,
                       borderRadius: BorderRadius.circular(3),
                     ),
                   ),

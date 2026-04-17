@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fusion_web/features/dashboard/domain/entities/dashboard_entities.dart';
 
@@ -19,31 +21,23 @@ class UsersOverviewWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
+          /// HEADER
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
             child: Row(
               children: [
-                Text(
-                  'Users Overview',
+                FusionAppText(
+                  text: 'Users Overview',
                   style: GoogleFonts.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF0F172A),
+                    color: context.colorScheme.elevation6,
                   ),
                 ),
                 const Spacer(),
@@ -53,25 +47,10 @@ class UsersOverviewWidget extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
+                        color: context.colorScheme.elevation3,
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: isLoading
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation(
-                                  Color(0xFF64748B),
-                                ),
-                              ),
-                            )
-                          : const Icon(
-                              Icons.refresh_rounded,
-                              size: 16,
-                              color: Color(0xFF64748B),
-                            ),
+                      child: const Icon(Icons.refresh_rounded, size: 16),
                     ),
                   ),
               ],
@@ -79,37 +58,36 @@ class UsersOverviewWidget extends StatelessWidget {
           ),
 
           if (isLoading && usersOverview == null)
-            Container(
+            const SizedBox(
               height: 200,
-              alignment: Alignment.center,
-              child: const CircularProgressIndicator(
-                strokeWidth: 3,
-                valueColor: AlwaysStoppedAnimation(Color(0xFF6366F1)),
-              ),
+              child: Center(child: CircularProgressIndicator()),
             )
+
           else if (usersOverview != null) ...[
             const SizedBox(height: 24),
 
-            // Main metrics row
+            /// MAIN METRICS
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
                 children: [
                   Expanded(
                     child: _buildMainMetric(
+                      context,
                       usersOverview!.totalUsers.toString(),
                       'Total Users',
-                      const Color(0xFF6366F1),
-                      Icons.people_rounded,
+                      Icons.people,
+                      Colors.blue,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: _buildMainMetric(
+                      context,
                       usersOverview!.usersJoinedLast30Days.toString(),
                       'Joined (30 days)',
-                      const Color(0xFF10B981),
-                      Icons.person_add_rounded,
+                      Icons.person_add,
+                      Colors.green,
                     ),
                   ),
                 ],
@@ -118,53 +96,32 @@ class UsersOverviewWidget extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // User status breakdown
+            /// STATUS
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 12,
                 children: [
-                  Expanded(
-                    child: _buildStatusCard(
-                      usersOverview!.activeUsers.toString(),
-                      'Active',
-                      const Color(0xFF10B981),
-                      Icons.check_circle,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatusCard(
-                      usersOverview!.invitedUsers.toString(),
-                      'Invited',
-                      const Color(0xFF3B82F6),
-                      Icons.mail_outline,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatusCard(
-                      usersOverview!.inactiveUsers.toString(),
-                      'Inactive',
-                      const Color(0xFF64748B),
-                      Icons.person_off_outlined,
-                    ),
-                  ),
+                  _buildStatusCard(context, usersOverview!.activeUsers.toString(), 'Active', Colors.green, Icons.check_circle),
+                  _buildStatusCard(context, usersOverview!.invitedUsers.toString(), 'Invited', Colors.blue, Icons.mail),
+                  _buildStatusCard(context, usersOverview!.inactiveUsers.toString(), 'Inactive', Colors.grey, Icons.person_off),
                 ],
               ),
             ),
 
             const SizedBox(height: 24),
 
-            // Users by role section
+            /// USERS BY ROLE
             if (usersOverview!.usersByRole.isNotEmpty) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Text(
-                  'Users by Role',
+                child: FusionAppText(
+                  text: 'Users by Role',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF374151),
+                    color: context.colorScheme.elevation6,
                   ),
                 ),
               ),
@@ -173,29 +130,29 @@ class UsersOverviewWidget extends StatelessWidget {
 
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: _buildRoleChart(),
+                child: _buildRoleChart(context),
               ),
 
               const SizedBox(height: 24),
             ],
 
-            // User types breakdown
+            /// USER TYPES
             if (usersOverview!.usersByType.isNotEmpty) ...[
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24),
-                child: Divider(color: Color(0xFFE2E8F0)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Divider(color: context.colorScheme.elevation3),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Text(
-                  'User Types Distribution',
+                child: FusionAppText(
+                  text: 'User Types Distribution',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF374151),
+                    color: context.colorScheme.elevation6,
                   ),
                 ),
               ),
@@ -208,85 +165,51 @@ class UsersOverviewWidget extends StatelessWidget {
                   spacing: 12,
                   runSpacing: 12,
                   children: usersOverview!.usersByType.entries
-                      .map((entry) => _buildTypeChip(entry.key, entry.value))
+                      .map((e) => _buildTypeChip(context, e.key, e.value))
                       .toList(),
                 ),
               ),
             ],
 
             const SizedBox(height: 24),
-          ] else
-            Container(
+          ]
+
+          else
+            const SizedBox(
               height: 200,
-              alignment: Alignment.center,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.people_outlined,
-                    size: 48,
-                    color: Colors.grey[300],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No user data available',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: const Color(0xFF64748B),
-                    ),
-                  ),
-                ],
-              ),
+              child: Center(child: Text('No user data available')),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildMainMetric(
-    String value,
-    String label,
-    Color color,
-    IconData icon,
-  ) {
+  /// MAIN CARD
+  Widget _buildMainMetric(BuildContext context, String value, String label, IconData icon, Color accent) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [color.withValues(alpha: 0.1), color.withValues(alpha: 0.05)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: context.colorScheme.elevation3,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            value,
+          Icon(icon, color: accent, size: 20),
+          const SizedBox(height: 12),
+          FusionAppText(
+            text: value,
             style: GoogleFonts.inter(
-              fontSize: 28,
+              fontSize: 24,
               fontWeight: FontWeight.w700,
-              color: color,
+              color: context.colorScheme.elevation6,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            label,
+          FusionAppText(
+            text: label,
             style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF64748B),
+              fontSize: 13,
+              color: context.colorScheme.elevation6,
             ),
           ),
         ],
@@ -294,77 +217,64 @@ class UsersOverviewWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusCard(
-    String count,
-    String label,
-    Color color,
-    IconData icon,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(height: 8),
-          Text(
-            count,
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: color,
+  /// STATUS CARD
+  Widget _buildStatusCard(BuildContext context, String count, String label, Color accent, IconData icon) {
+    return SizedBox(
+      width: 110,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: context.colorScheme.elevation3,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: accent, size: 18),
+            const SizedBox(height: 6),
+            FusionAppText(
+              text: count,
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w700,
+                color: context.colorScheme.elevation6,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF64748B),
+            FusionAppText(
+              text: label,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                color: context.colorScheme.elevation6,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildRoleChart() {
-    final maxCount = usersOverview!.usersByRole.values.fold<int>(
-      0,
-      (max, count) => count > max ? count : max,
-    );
+  /// ROLE CHART
+  Widget _buildRoleChart(BuildContext context) {
+    final max = usersOverview!.usersByRole.values.fold<int>(0, (m, v) => v > m ? v : m);
 
     return Column(
-      children: usersOverview!.usersByRole.entries.take(5).map((entry) {
-        final percentage = (entry.value / maxCount * 100).round();
+      children: usersOverview!.usersByRole.entries.map((e) {
+        final percent = max == 0 ? 0 : e.value / max;
+
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start, 
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    entry.key,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF374151),
+                  Expanded(
+                    child: FusionAppText(
+                      text: e.key,
+                      style: GoogleFonts.inter(color: context.colorScheme.elevation6),
                     ),
                   ),
-                  Text(
-                    entry.value.toString(),
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF0F172A),
-                    ),
+                  FusionAppText(
+                    text: e.value.toString(),
+                    style: GoogleFonts.inter(color: context.colorScheme.elevation6),
                   ),
                 ],
               ),
@@ -372,15 +282,15 @@ class UsersOverviewWidget extends StatelessWidget {
               Container(
                 height: 6,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
+                  color: context.colorScheme.elevation3,
                   borderRadius: BorderRadius.circular(3),
                 ),
                 child: FractionallySizedBox(
+                  widthFactor: percent.toDouble(),
                   alignment: Alignment.centerLeft,
-                  widthFactor: percentage / 100,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: const Color(0xFF6366F1),
+                      color: Colors.blue,
                       borderRadius: BorderRadius.circular(3),
                     ),
                   ),
@@ -393,52 +303,20 @@ class UsersOverviewWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildTypeChip(String type, int count) {
-    final colors = [
-      const Color(0xFF3B82F6),
-      const Color(0xFF10B981),
-      const Color(0xFFF59E0B),
-      const Color(0xFFEF4444),
-      const Color(0xFF8B5CF6),
-    ];
-
-    final index = usersOverview!.usersByType.keys.toList().indexOf(type);
-    final color = colors[index % colors.length];
-
+  /// TYPE CHIP
+  Widget _buildTypeChip(BuildContext context, String type, int count) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: context.colorScheme.elevation3,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            type,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF374151),
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            '($count)',
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
-          ),
-        ],
+      child: FusionAppText(
+        text: '$type ($count)',
+        style: GoogleFonts.inter(
+          fontSize: 12,
+          color: context.colorScheme.elevation6,
+        ),
       ),
     );
   }

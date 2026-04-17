@@ -63,6 +63,7 @@ class _UsersPageState extends State<UsersPage> {
     return BlocProvider.value(
       value: _viewModel,
       child: Scaffold(
+        backgroundColor: context.colorScheme.elevation1,
         body: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
