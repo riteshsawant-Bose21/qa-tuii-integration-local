@@ -163,6 +163,21 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                   HardwareComponentPainter(hardware: hw),
                                             ],
                                             toolbarEvents: FusionCanvasEvents(
+                                              onLayerDragStart: (List<FusionBasePainter> painters) {
+                                                final Map<String, Offset> offsets = <String, Offset>{};
+                                                for (final FusionBasePainter p in painters) {
+                                                  if (p is HardwareComponentPainter) {
+                                                    offsets[p.hardware.id] = Offset.zero;
+                                                  }
+                                                }
+                                                projectViewModel.liveDragOffsets.value = offsets;
+                                              },
+                                              onMoveLayerDuringDrag: (FusionBasePainter painter, Offset cumulativeDelta) {
+                                                if (painter is! HardwareComponentPainter) return;
+                                                final Map<String, Offset> offsets = Map<String, Offset>.from(projectViewModel.liveDragOffsets.value);
+                                                offsets[painter.hardware.id] = cumulativeDelta;
+                                                projectViewModel.liveDragOffsets.value = offsets;
+                                              },
                                               onLayerSelected: (List<FusionBasePainter>? values) {
                                                 final FusionBasePainter? value = values != null && values.isNotEmpty ? values.first : null;
                                                 if (value is ListeningAreaPainter) {
@@ -201,6 +216,10 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                   calculateSpl(context);
                                                 } else if (painter is HardwareComponentPainter) {
                                                   final HardwareComponent hw = painter.hardware;
+                                                  // Clear live drag offset for this hardware.
+                                                  final Map<String, Offset> offsets = Map<String, Offset>.from(projectViewModel.liveDragOffsets.value);
+                                                  offsets.remove(hw.id);
+                                                  projectViewModel.liveDragOffsets.value = offsets;
                                                   serviceLocator<ProjectViewModel>().updateHardware(
                                                     hardware: hw.copyWith(
                                                       pos: (hw.pos ?? Offset.zero) + offset,
