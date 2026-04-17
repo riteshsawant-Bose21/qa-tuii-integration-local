@@ -268,32 +268,40 @@ func (h *OrganizationHandler) DeleteOrganization(ctx *gin.Context) {
 
 // InviteUsersToOrganization invites multiple users to an organization
 // @Summary Invite users to organization
-// @Description Invite multiple users to join an organization with specified roles
+// @Description Invite multiple users to join an organization with specified roles. Organization ID is taken from the authenticated user's account.
 // @Tags organizations
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param organizationId path string true "Organization ID"
 // @Param invitations body types.InviteUsersToOrganizationRequest true "User invitations"
 // @Success 200 {object} types.InviteUsersToOrganizationResponse "Successfully processed invitations"
-// @Failure 400 {object} map[string]string "Bad request - Invalid organization ID or JSON payload"
-// @Failure 401 {object} map[string]string "Unauthorized - User email not found in token"
+// @Failure 400 {object} map[string]string "Bad request - Invalid JSON payload"
+// @Failure 401 {object} map[string]string "Unauthorized - User not authenticated"
 // @Failure 403 {object} map[string]string "Forbidden - Insufficient permissions to invite users"
 // @Failure 404 {object} map[string]string "Not found - Organization not found"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /organizations/{organizationId}/invite-users [post]
+// @Router /organizations/invite-users [post]
 func (h *OrganizationHandler) InviteUsersToOrganization(ctx *gin.Context) {
-	// Skip authentication for testing
-
-	// Get organization ID from URL path parameter
-	organizationID := ctx.Param("organizationId")
-	if organizationID == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Bad Request",
-			"message": "Organization ID is required",
+	// Get organization ID from user auth context (X-Account-ID header)
+	userAuth, exists := ctx.Get("user_auth")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{
+			"error":   "Unauthorized",
+			"message": "User authentication required",
 		})
 		return
 	}
+
+	auth, ok := userAuth.(*types.UserAuthorizationResponse)
+	if !ok || auth.Account.ID == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Bad Request",
+			"message": "Organization ID (X-Account-ID) is required",
+		})
+		return
+	}
+
+	organizationID := auth.Account.ID
 
 	// Parse request body
 	var req types.InviteUsersToOrganizationRequest

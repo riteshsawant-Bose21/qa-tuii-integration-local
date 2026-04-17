@@ -237,6 +237,8 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
   void _onDataReceived(ResponseCallback<dynamic> message) {
     _lastDataReceivedAt = DateTime.now();
 
+    // print("[MeterData] Data received: ${message.data}");
+
     // If we were in a "disconnected" state, mark as reconnected.
     if (!state.isConnected && !isClosed) {
       emit(state.copyWith(isConnected: true, clearInactiveReason: true));

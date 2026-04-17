@@ -1268,6 +1268,50 @@
             ]
         },
         {
+            "name": "iir_filter",
+            "properties": [
+                {
+                    "name": "channels",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 32
+                },
+                {
+                    "name": "bands",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 40
+                }
+            ],
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "channels": "channels"
+                },
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": "channels",
+                    "bypass_source": "in"
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "coefficients",
+                    "value_type": "float",
+                    "dimensions": ["bands", 5],
+                    "default_value": 0.0,
+                    "minimum_value": -10.0,
+                    "maximum_value": 10.0
+                }
+            ]
+        },
+        {
             "name": "jack_in",
             "properties": [
                 {
