@@ -8,8 +8,9 @@ type RunResult struct {
 	EndedAt   time.Time `json:"ended_at"`
 	Config    Config    `json:"config"`
 
-	SentCount    int `json:"sent_count"`
-	LastSentGain int `json:"last_sent_gain"`
+	SentCount          int `json:"sent_count"`
+	LastSentGain       int `json:"last_sent_gain"`
+	WriterReconnects   int `json:"writer_reconnects"`
 
 	WebSocketResults []ListenerResult `json:"websocket_results"`
 	UDPResults       []ListenerResult `json:"udp_results"`
@@ -26,6 +27,7 @@ type ListenerResult struct {
 	DuplicateCount      int          `json:"duplicate_count"`
 	OutOfOrderCount     int          `json:"out_of_order_count"`
 	MissedCount         int          `json:"missed_count"`
+	ReconnectCount      int          `json:"reconnect_count"`
 	LatestValueReceived bool         `json:"latest_value_received"`
 	FirstReceivedGain   int          `json:"first_received_gain"`
 	LastReceivedGain    int          `json:"last_received_gain"`
@@ -51,6 +53,7 @@ type AggregateResult struct {
 	TotalDuplicates      int          `json:"total_duplicates"`
 	TotalOutOfOrder      int          `json:"total_out_of_order"`
 	TotalMissed          int          `json:"total_missed"`
+	TotalReconnects      int          `json:"total_reconnects"`
 	LatestDeliveredCount int          `json:"latest_delivered_count"`
 	LatestMissedCount    int          `json:"latest_missed_count"`
 	WorstLatency         LatencyStats `json:"worst_latency"`

@@ -88,7 +88,7 @@ func DefaultConfig() Config {
 		AdaptiveGrace:          true,
 		ListenerStartupTimeout: 10 * time.Second,
 
-		OutputPath: "stress_test_report.json",
+		OutputPath: "report/stress_test_report.json",
 		Verbosity:  VerbosityNormal,
 	}
 }

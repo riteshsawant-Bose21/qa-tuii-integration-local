@@ -18,6 +18,6 @@
     "grace_period": 300000000000,
     "adaptive_grace": true,
     "listener_startup_timeout": 15000000000,
-    "output_path": "high_rate_report.json",
+    "output_path": "report/high_rate_report.json",
     "verbosity": "verbose"
 }

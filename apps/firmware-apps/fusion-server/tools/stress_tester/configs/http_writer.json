@@ -16,6 +16,6 @@
     "grace_period": 300000000000,
     "adaptive_grace": true,
     "listener_startup_timeout": 10000000000,
-    "output_path": "http_writer_report.json",
+    "output_path": "report/http_writer_report.json",
     "verbosity": "normal"
 }

@@ -11,7 +11,7 @@ func buildListenerResult(
 	name, transport, address string,
 	obs []observation,
 	seen map[int]int,
-	outOfOrder, duplicates int,
+	outOfOrder, duplicates, reconnects int,
 	sendTimes map[int]time.Time,
 	startGain, lastSentGain int,
 ) ListenerResult {
@@ -22,6 +22,7 @@ func buildListenerResult(
 		ReceivedCount:   len(obs),
 		DuplicateCount:  duplicates,
 		OutOfOrderCount: outOfOrder,
+		ReconnectCount:  reconnects,
 	}
 
 	if len(obs) > 0 {
@@ -126,6 +127,7 @@ func buildAggregateResult(results []ListenerResult, sentCount int) AggregateResu
 		agg.TotalDuplicates += r.DuplicateCount
 		agg.TotalOutOfOrder += r.OutOfOrderCount
 		agg.TotalMissed += r.MissedCount
+		agg.TotalReconnects += r.ReconnectCount
 		if r.LatestValueReceived {
 			agg.LatestDeliveredCount++
 		} else {

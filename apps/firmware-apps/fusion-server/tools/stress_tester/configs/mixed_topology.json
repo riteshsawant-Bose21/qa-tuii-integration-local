@@ -18,6 +18,6 @@
     "grace_period": 300000000000,
     "adaptive_grace": true,
     "listener_startup_timeout": 15000000000,
-    "output_path": "mixed_topology_report.json",
+    "output_path": "report/mixed_topology_report.json",
     "verbosity": "verbose"
 }

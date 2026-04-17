@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	json "github.com/goccy/go-json"
@@ -13,6 +14,11 @@ func writeJSONReport(path string, result *RunResult) error {
 	data, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal report: %w", err)
+	}
+	if dir := filepath.Dir(path); dir != "." {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("create report directory: %w", err)
+		}
 	}
 	if err := os.WriteFile(path, data, 0644); err != nil {
 		return fmt.Errorf("write report: %w", err)
@@ -40,6 +46,9 @@ func printSummary(result *RunResult) {
 	fmt.Printf("  Writer mode:    %s\n", result.Config.WriterMode)
 	fmt.Printf("  Target rate:    %d updates/sec\n", result.Config.UpdatesPerSecond)
 	fmt.Printf("  Sent:           %d  (last gain = %d)\n", result.SentCount, result.LastSentGain)
+	if result.WriterReconnects > 0 {
+		fmt.Printf("  Writer reconn:  %d\n", result.WriterReconnects)
+	}
 	fmt.Println()
 
 	printListenerTable("WebSocket Listeners", result.WebSocketResults)
@@ -54,6 +63,9 @@ func printSummary(result *RunResult) {
 	fmt.Printf("  Missed:         %d total\n", agg.TotalMissed)
 	fmt.Printf("  Duplicates:     %d total\n", agg.TotalDuplicates)
 	fmt.Printf("  Out-of-order:   %d total\n", agg.TotalOutOfOrder)
+	if agg.TotalReconnects > 0 {
+		fmt.Printf("  Reconnects:     %d total\n", agg.TotalReconnects)
+	}
 	fmt.Printf("  Latest value:   %d delivered / %d missed\n", agg.LatestDeliveredCount, agg.LatestMissedCount)
 	fmt.Printf("  Avg latency:    p50=%.2fms  p95=%.2fms  p99=%.2fms\n",
 		agg.AvgLatency.P50Ms, agg.AvgLatency.P95Ms, agg.AvgLatency.P99Ms)
@@ -73,16 +85,16 @@ func printListenerTable(header string, results []ListenerResult) {
 	}
 	fmt.Printf("  %s\n", header)
 	fmt.Println("  ---------------------------------------------------------------")
-	fmt.Printf("  %-14s %6s %6s %5s %5s %8s %8s %8s %s\n",
-		"Name", "Recv", "Miss", "Dup", "OoO", "P50ms", "P95ms", "P99ms", "Latest?")
+	fmt.Printf("  %-14s %6s %6s %5s %5s %5s %8s %8s %8s %s\n",
+		"Name", "Recv", "Miss", "Dup", "OoO", "Rcon", "P50ms", "P95ms", "P99ms", "Latest?")
 	for _, r := range results {
 		latest := "YES"
 		if !r.LatestValueReceived {
 			latest = "NO (ERR)"
 		}
-		fmt.Printf("  %-14s %6d %6d %5d %5d %8.2f %8.2f %8.2f %s\n",
+		fmt.Printf("  %-14s %6d %6d %5d %5d %5d %8.2f %8.2f %8.2f %s\n",
 			r.Name, r.ReceivedCount, r.MissedCount, r.DuplicateCount,
-			r.OutOfOrderCount, r.LatencyStats.P50Ms, r.LatencyStats.P95Ms,
+			r.OutOfOrderCount, r.ReconnectCount, r.LatencyStats.P50Ms, r.LatencyStats.P95Ms,
 			r.LatencyStats.P99Ms, latest)
 	}
 	fmt.Println()

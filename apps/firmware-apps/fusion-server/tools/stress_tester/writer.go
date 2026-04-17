@@ -16,6 +16,7 @@ import (
 type Writer interface {
 	Send(gain int) error
 	Close() error
+	Reconnects() int
 }
 
 // NewWriter creates a Writer for the configured transport.
@@ -35,19 +36,22 @@ func NewWriter(cfg Config) (Writer, error) {
 // ---------------------------------------------------------------------------
 
 type wsWriter struct {
-	conn *websocket.Conn
-	mu   sync.Mutex
-	seq  atomic.Int64
+	host       string
+	conn       *websocket.Conn
+	mu         sync.Mutex
+	seq        atomic.Int64
+	reconnects atomic.Int64
 }
 
-func newWSWriter(host string) (*wsWriter, error) {
+const writerMaxReconnect = 5
+const writerReconnectDelay = 500 * time.Millisecond
+
+func dialWSWriter(host string) (*websocket.Conn, error) {
 	url := fmt.Sprintf("ws://%s/ws", host)
 	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("ws writer dial %s: %w", url, err)
 	}
-
-	w := &wsWriter{conn: conn}
 
 	// Read and discard the welcome message
 	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
@@ -67,8 +71,37 @@ func newWSWriter(host string) (*wsWriter, error) {
 		}
 	}()
 
-	return w, nil
+	return conn, nil
 }
+
+func newWSWriter(host string) (*wsWriter, error) {
+	conn, err := dialWSWriter(host)
+	if err != nil {
+		return nil, err
+	}
+	return &wsWriter{host: host, conn: conn}, nil
+}
+
+func (w *wsWriter) reconnect() error {
+	if w.conn != nil {
+		w.conn.Close()
+	}
+	for attempt := 1; attempt <= writerMaxReconnect; attempt++ {
+		time.Sleep(writerReconnectDelay * time.Duration(attempt))
+		conn, err := dialWSWriter(w.host)
+		if err != nil {
+			fmt.Printf("  writer reconnect attempt %d/%d failed: %v\n", attempt, writerMaxReconnect, err)
+			continue
+		}
+		w.conn = conn
+		w.reconnects.Add(1)
+		fmt.Printf("  writer reconnected on attempt %d\n", attempt)
+		return nil
+	}
+	return fmt.Errorf("writer reconnect failed after %d attempts", writerMaxReconnect)
+}
+
+func (w *wsWriter) Reconnects() int { return int(w.reconnects.Load()) }
 
 func (w *wsWriter) Send(gain int) error {
 	seq := w.seq.Add(1)
@@ -89,6 +122,17 @@ func (w *wsWriter) Send(gain int) error {
 
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
+	err := w.conn.WriteJSON(msg)
+	if err == nil {
+		return nil
+	}
+
+	// Connection dead — attempt reconnect
+	if reconnErr := w.reconnect(); reconnErr != nil {
+		return fmt.Errorf("send gain=%d: %w (reconnect also failed)", gain, err)
+	}
+	// Retry once after reconnect
 	return w.conn.WriteJSON(msg)
 }
 
@@ -115,6 +159,8 @@ func newHTTPWriter(host string) (*httpWriter, error) {
 		baseURL: fmt.Sprintf("http://%s", host),
 	}, nil
 }
+
+func (w *httpWriter) Reconnects() int { return 0 }
 
 func (w *httpWriter) Send(gain int) error {
 	body := map[string]any{

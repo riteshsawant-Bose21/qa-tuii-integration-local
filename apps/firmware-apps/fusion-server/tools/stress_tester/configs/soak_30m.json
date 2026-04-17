@@ -18,6 +18,6 @@
     "grace_period": 300000000000,
     "adaptive_grace": true,
     "listener_startup_timeout": 10000000000,
-    "output_path": "soak_30m_report.json",
+    "output_path": "report/soak_30m_report.json",
     "verbosity": "verbose"
 }

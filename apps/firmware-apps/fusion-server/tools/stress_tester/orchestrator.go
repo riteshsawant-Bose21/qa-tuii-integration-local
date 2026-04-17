@@ -67,8 +67,10 @@ func Run(cfg Config) (*RunResult, error) {
 	for _, l := range udpListeners {
 		select {
 		case <-l.Ready():
+		case <-l.Stopped():
+			return nil, fmt.Errorf("udp listener %s failed during startup: %v", l.Name(), l.Err())
 		case <-deadline:
-			return nil, fmt.Errorf("timeout waiting for udp listener %s to be ready", l.Name())
+			return nil, fmt.Errorf("timeout waiting for udp listener %s to be ready (err=%v)", l.Name(), l.Err())
 		}
 	}
 	logNormal(cfg.Verbosity, "All listeners ready.")
@@ -110,6 +112,7 @@ func Run(cfg Config) (*RunResult, error) {
 	lastSentGain := nextGain - 1
 	result.SentCount = sentCount
 	result.LastSentGain = lastSentGain
+	result.WriterReconnects = writer.Reconnects()
 
 	logNormal(cfg.Verbosity, "Send complete: %d updates sent, last gain=%d (%.1fs)",
 		sentCount, lastSentGain, time.Since(sendStart).Seconds())
@@ -134,8 +137,8 @@ func Run(cfg Config) (*RunResult, error) {
 
 	// WebSocket results
 	for _, l := range wsListeners {
-		obs, seen, ooo, dups := l.Snapshot()
-		lr := buildListenerResult(l.Name(), "websocket", l.Address(), obs, seen, ooo, dups,
+		obs, seen, ooo, dups, recon := l.Snapshot()
+		lr := buildListenerResult(l.Name(), "websocket", l.Address(), obs, seen, ooo, dups, recon,
 			sendTimesMap, cfg.StartGain, lastSentGain)
 		result.WebSocketResults = append(result.WebSocketResults, lr)
 	}
@@ -143,7 +146,7 @@ func Run(cfg Config) (*RunResult, error) {
 	// UDP results
 	for _, l := range udpListeners {
 		obs, seen, ooo, dups := l.Snapshot()
-		lr := buildListenerResult(l.Name(), "udp", l.Address(), obs, seen, ooo, dups,
+		lr := buildListenerResult(l.Name(), "udp", l.Address(), obs, seen, ooo, dups, 0,
 			sendTimesMap, cfg.StartGain, lastSentGain)
 		result.UDPResults = append(result.UDPResults, lr)
 	}
@@ -169,6 +172,9 @@ func sendEven(cfg Config, w Writer, sendTimes *sync.Map, startGain int, sharedSe
 		soakDeadline = time.Now().Add(cfg.SoakDuration)
 	}
 
+	var consecutiveErrors int
+	const maxLoggedErrors = 5
+
 	for {
 		<-ticker.C
 
@@ -184,13 +190,22 @@ func sendEven(cfg Config, w Writer, sendTimes *sync.Map, startGain int, sharedSe
 
 		now := time.Now()
 		if err := w.Send(gain); err != nil {
-			logVerbose(cfg.Verbosity, "send error gain=%d: %v", gain, err)
-			// Continue — don't abort on transient errors
-		} else {
-			sendTimes.Store(gain, now)
-			sent++
-			sharedSent.Store(int64(sent))
+			consecutiveErrors++
+			if consecutiveErrors <= maxLoggedErrors {
+				logVerbose(cfg.Verbosity, "send error gain=%d: %v", gain, err)
+			} else if consecutiveErrors == maxLoggedErrors+1 {
+				logVerbose(cfg.Verbosity, "  (further send errors suppressed)")
+			}
+			// Don't advance gain — retry same value next tick
+			continue
 		}
+		if consecutiveErrors > maxLoggedErrors {
+			logVerbose(cfg.Verbosity, "  send recovered after %d consecutive errors", consecutiveErrors)
+		}
+		consecutiveErrors = 0
+		sendTimes.Store(gain, now)
+		sent++
+		sharedSent.Store(int64(sent))
 		sharedGain.Store(int64(gain))
 		gain++
 	}
@@ -219,6 +234,9 @@ func sendBurst(cfg Config, w Writer, sendTimes *sync.Map, startGain int, sharedS
 		return gain >= endGain
 	}
 
+	var consecutiveErrors int
+	const maxLoggedErrors = 5
+
 	for !done() {
 		// Burst phase
 		burstEnd := time.Now().Add(burstDuration)
@@ -227,12 +245,21 @@ func sendBurst(cfg Config, w Writer, sendTimes *sync.Map, startGain int, sharedS
 			<-burstTicker.C
 			now := time.Now()
 			if err := w.Send(gain); err != nil {
-				logVerbose(cfg.Verbosity, "send error gain=%d: %v", gain, err)
-			} else {
-				sendTimes.Store(gain, now)
-				sent++
-				sharedSent.Store(int64(sent))
+				consecutiveErrors++
+				if consecutiveErrors <= maxLoggedErrors {
+					logVerbose(cfg.Verbosity, "send error gain=%d: %v", gain, err)
+				} else if consecutiveErrors == maxLoggedErrors+1 {
+					logVerbose(cfg.Verbosity, "  (further send errors suppressed)")
+				}
+				continue // retry same gain next tick
 			}
+			if consecutiveErrors > maxLoggedErrors {
+				logVerbose(cfg.Verbosity, "  send recovered after %d consecutive errors", consecutiveErrors)
+			}
+			consecutiveErrors = 0
+			sendTimes.Store(gain, now)
+			sent++
+			sharedSent.Store(int64(sent))
 			sharedGain.Store(int64(gain))
 			gain++
 		}
@@ -272,7 +299,7 @@ func waitGracePeriod(cfg Config, wsListeners []*WSListener, udpListeners []*UDPL
 
 func allReceivedLatest(wsListeners []*WSListener, udpListeners []*UDPListener, lastGain int) bool {
 	for _, l := range wsListeners {
-		_, seen, _, _ := l.Snapshot()
+		_, seen, _, _, _ := l.Snapshot()
 		if _, ok := seen[lastGain]; !ok {
 			return false
 		}
@@ -289,7 +316,7 @@ func allReceivedLatest(wsListeners []*WSListener, udpListeners []*UDPListener, l
 func countReceived(wsListeners []*WSListener, udpListeners []*UDPListener) (int, int) {
 	wsCount := 0
 	for _, l := range wsListeners {
-		obs, _, _, _ := l.Snapshot()
+		obs, _, _, _, _ := l.Snapshot()
 		wsCount += len(obs)
 	}
 	udpCount := 0

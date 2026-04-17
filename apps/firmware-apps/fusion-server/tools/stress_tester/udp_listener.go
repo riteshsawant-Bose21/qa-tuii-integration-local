@@ -27,6 +27,7 @@ type UDPListener struct {
 	ready        chan struct{}
 	stopped      chan struct{}
 	stopOnce     sync.Once
+	err          error // set if handshake fails
 }
 
 // NewUDPListener creates, binds, registers, and starts a UDP listener.
@@ -69,16 +70,19 @@ func (l *UDPListener) loop() {
 	// 1. Send GET handshake with retries — the server may not respond
 	//    immediately when many listeners register at once.
 	registered := false
-	for attempt := 0; attempt < 5; attempt++ {
+	for attempt := 0; attempt < 3; attempt++ {
 		if _, err := l.conn.WriteToUDP(handshake, l.serverAddr); err != nil {
+			l.err = fmt.Errorf("handshake write: %w", err)
 			return
 		}
-		l.conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+		l.conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 		n, _, err := l.conn.ReadFromUDP(buf)
 		if err != nil {
 			if ne, ok := err.(net.Error); ok && ne.Timeout() {
+				fmt.Printf("  [%s] handshake attempt %d timed out, retrying...\n", l.name, attempt+1)
 				continue // retry
 			}
+			l.err = fmt.Errorf("handshake read: %w", err)
 			return // real error
 		}
 		_ = n
@@ -86,6 +90,7 @@ func (l *UDPListener) loop() {
 		break
 	}
 	if !registered {
+		l.err = fmt.Errorf("handshake failed after 3 attempts (no response from %s)", l.serverAddr)
 		return
 	}
 	l.conn.SetReadDeadline(time.Time{})
@@ -170,6 +175,9 @@ func (l *UDPListener) Close() error {
 
 // Name returns the listener name.
 func (l *UDPListener) Name() string { return l.name }
+
+// Err returns the error that caused the listener to fail, if any.
+func (l *UDPListener) Err() error { return l.err }
 
 // Address returns the local bound address string.
 func (l *UDPListener) Address() string { return l.conn.LocalAddr().String() }

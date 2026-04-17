@@ -15,7 +15,7 @@
     "start_gain": 1,
     "grace_period": 300000000000,
     "adaptive_grace": true,
-    "listener_startup_timeout": 10000000000,
-    "output_path": "stress_test_report.json",
+    "listener_startup_timeout": 30000000000,
+    "output_path": "report/stress_test_report.json",
     "verbosity": "verbose"
 }

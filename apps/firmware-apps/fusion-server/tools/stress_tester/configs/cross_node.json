@@ -17,6 +17,6 @@
     "grace_period": 300000000000,
     "adaptive_grace": true,
     "listener_startup_timeout": 15000000000,
-    "output_path": "cross_node_report.json",
+    "output_path": "report/cross_node_report.json",
     "verbosity": "normal"
 }
