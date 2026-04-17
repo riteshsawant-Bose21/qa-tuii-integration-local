@@ -1,7 +1,6 @@
 import 'dart:ui';
 
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/models/project_entities/controller_page_model.dart';
 
 /// A wall-controller hardware component.
 ///
@@ -26,7 +25,7 @@ class FusionController extends HardwareComponent {
     super.pos,
     super.wiringPos,
     super.zAxis,
-    required super.assetImagePath,
+    required super.image,
     LocationModel? locationEntity,
     required super.price,
     String? hardwareName,
@@ -58,7 +57,7 @@ class FusionController extends HardwareComponent {
     Offset? pos,
     Offset? wiringPos,
     double? zAxis,
-    String? assetImagePath,
+    String? image,
     LocationModel? locationEntity,
     double? price,
     String? hardwareName,
@@ -79,7 +78,7 @@ class FusionController extends HardwareComponent {
       pos: pos ?? this.pos,
       wiringPos: wiringPos ?? this.wiringPos,
       zAxis: zAxis ?? this.zAxis,
-      assetImagePath: assetImagePath ?? this.assetImagePath,
+      image: image ?? this.image,
       locationEntity: locationEntity ?? this.locationEntity,
       price: price ?? this.price,
       hardwareName: hardwareName ?? this.hardwareName,
@@ -103,7 +102,7 @@ class FusionController extends HardwareComponent {
       'pos': pos != null ? <String, double>{'dx': pos!.dx, 'dy': pos!.dy} : null,
       'wiringPos': wiringPos != null ? {'x': wiringPos!.dx, 'y': wiringPos!.dy} : null,
       'zAxis': zAxis,
-      'assetImagePath': assetImagePath,
+      'image': image,
       'locationEntity': locationEntity.toJson(),
       'price': price,
       'hardwareName': hardwareName,
@@ -138,7 +137,8 @@ class FusionController extends HardwareComponent {
       pos: json['pos'] != null ? Offset((json['pos']['dx'] as num).toDouble(), (json['pos']['dy'] as num).toDouble()) : null,
       wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['x'] as num).toDouble(), (json['wiringPos']['y'] as num).toDouble()) : null,
       zAxis: (json['zAxis'] as num?)?.toDouble() ?? 0.0,
-      assetImagePath: json['assetImagePath'] as String,
+      image:
+          DeserializationUtil.stringDeserializer.deserialize(json['image']) ?? DeserializationUtil.stringDeserializer.deserialize(json['assetImagePath']) ?? '',
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       hardwareName: json['hardwareName'] as String? ?? json['name'] as String,

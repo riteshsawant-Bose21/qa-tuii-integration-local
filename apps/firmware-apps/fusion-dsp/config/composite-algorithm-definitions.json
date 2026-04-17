@@ -1,0 +1,916 @@
+{
+    "composite_algorithms": [
+        {
+            "name": "mono_mix",
+            "is_opaque": true,
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "channels": 2
+                },
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": 1
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "out_gain",
+                    "value_type": "float",
+                    "dimensions": [1],
+                    "default_value": 0.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 24.0
+                },
+                {
+                    "name": "out_mute",
+                    "value_type": "bool",
+                    "dimensions": [1],
+                    "default_value": false
+                }
+            ],
+            "telemetry": [
+                {
+                    "name": "out_meter",
+                    "dimensions": [1],
+                    "value_type": "float",
+                    "default_value": -60.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 24.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                }
+            ],
+            "implementation": {
+                "blocks": [
+                    {
+                        "name": "mixer",
+                        "algorithm": "standard_mixer",
+                        "property_settings": [
+                            {
+                                "name": "sample_rate",
+                                "value": "$sample_rate"
+                            },
+                            {
+                                "name": "frame_size",
+                                "value": "$frame_size"
+                            }
+                        ],
+                        "terminal_channels": [
+                            {
+                                "name": "in",
+                                "channels": 2
+                            },
+                            {
+                                "name": "out",
+                                "channels": 1
+                            }
+                        ]
+                    }
+                ],
+                "block_connections": [
+                    {
+                        "source_block": "$in",
+                        "output_terminal": "$in",
+                        "output_channel": 1,
+                        "destination_block": "mixer",
+                        "input_terminal": "in",
+                        "input_channel": 1
+                    },
+                    {
+                        "source_block": "$in",
+                        "output_terminal": "$in",
+                        "output_channel": 2,
+                        "destination_block": "mixer",
+                        "input_terminal": "in",
+                        "input_channel": 2
+                    },
+                    {
+                        "source_block": "mixer",
+                        "output_terminal": "out",
+                        "output_channel": 1,
+                        "destination_block": "$out",
+                        "input_terminal": "$out",
+                        "input_channel": 1
+                    }
+                ],
+                "parameter_settings": [
+                    {
+                        "target": "mixer",
+                        "name": "input_gain",
+                        "index": [1],
+                        "value": -3.0
+                    },
+                    {
+                        "target": "mixer",
+                        "name": "input_gain",
+                        "index": [2],
+                        "value": -3.0
+                    }
+                ],
+                "parameter_map": [
+                    {
+                        "composite_parameter": "out_gain",
+                        "block_name": "mixer",
+                        "block_parameter": "out_gain"
+                    }
+                ],
+                "telemetry_map": [
+                    {
+                        "composite_telemetry": "out_meter",
+                        "block_name": "mixer",
+                        "block_telemetry": "out_meter"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "bluetooth_in",
+            "is_opaque": true,
+            "terminals": [
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": 2
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "out_gain",
+                    "value_type": "float",
+                    "dimensions": [2],
+                    "default_value": 0.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 24.0
+                },
+                {
+                    "name": "out_mute",
+                    "value_type": "bool",
+                    "dimensions": [2],
+                    "default_value": false
+                }
+            ],
+            "telemetry": [
+                {
+                    "name": "out_meter",
+                    "dimensions": [2],
+                    "value_type": "float",
+                    "default_value": -60.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 24.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                }
+            ],
+            "implementation": {
+                "blocks": [
+                    {
+                        "name": "bluetooth_in",
+                        "algorithm": "alsa_in",
+                        "property_settings": [
+                            {
+                                "name": "sample_rate",
+                                "value": "$sample_rate"
+                            },
+                            {
+                                "name": "frame_size",
+                                "value": "$frame_size"
+                            },
+                            {
+                                "name": "device_sample_rate",
+                                "value": 44100
+                            },
+                            {
+                                "name": "device_name",
+                                "value": "bluealsa:DEV=00:00:00:00:00:00,PROFILE=a2dp"
+                            },
+                            {
+                                "name": "period_size",
+                                "value": 8192
+                            },
+                            {
+                                "name": "use_asrc",
+                                "value": true
+                            }
+                        ],
+                        "terminal_channels": [
+                            {
+                                "name": "out",
+                                "channels": 2
+                            }
+                        ]
+                    }
+                ],
+                "block_connections": [
+                    {
+                        "source_block": "bluetooth_in",
+                        "output_terminal": "out",
+                        "output_channel": 1,
+                        "destination_block": "$out",
+                        "input_terminal": "$out",
+                        "input_channel": 1
+                    },
+                    {
+                        "source_block": "bluetooth_in",
+                        "output_terminal": "out",
+                        "output_channel": 2,
+                        "destination_block": "$out",
+                        "input_terminal": "$out",
+                        "input_channel": 2
+                    }
+                ],
+                "parameter_map": [
+                    {
+                        "composite_parameter": "out_gain",
+                        "block_name": "bluetooth_in",
+                        "block_parameter": "out_gain"
+                    },
+                    {
+                        "composite_parameter": "out_mute",
+                        "block_name": "bluetooth_in",
+                        "block_parameter": "out_mute"
+                    }
+                ],
+                "telemetry_map": [
+                    {
+                        "composite_telemetry": "out_meter",
+                        "block_name": "bluetooth_in",
+                        "block_telemetry": "out_meter"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "usb_in",
+            "is_opaque": true,
+            "terminals": [
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": 2
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "out_gain",
+                    "value_type": "float",
+                    "dimensions": [2],
+                    "default_value": 0.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 24.0
+                },
+                {
+                    "name": "out_mute",
+                    "value_type": "bool",
+                    "dimensions": [2],
+                    "default_value": false
+                }
+            ],
+            "telemetry": [
+                {
+                    "name": "out_meter",
+                    "dimensions": [2],
+                    "value_type": "float",
+                    "default_value": -60.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 24.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                }
+            ],
+            "implementation": {
+                "blocks": [
+                    {
+                        "name": "usb_in",
+                        "algorithm": "alsa_in",
+                        "property_settings": [
+                            {
+                                "name": "sample_rate",
+                                "value": "$sample_rate"
+                            },
+                            {
+                                "name": "frame_size",
+                                "value": "$frame_size"
+                            },
+                            {
+                                "name": "device_name",
+                                "value": "hw:UAC1Gadget,0"
+                            },
+                            {
+                                "name": "period_size",
+                                "value": 32
+                            },
+                            {
+                                "name": "use_asrc",
+                                "value": true
+                            }
+                        ],
+                        "terminal_channels": [
+                            {
+                                "name": "out",
+                                "channels": 2
+                            }
+                        ]
+                    }
+                ],
+                "block_connections": [
+                    {
+                        "source_block": "usb_in",
+                        "output_terminal": "out",
+                        "output_channel": 1,
+                        "destination_block": "$out",
+                        "input_terminal": "$out",
+                        "input_channel": 1
+                    },
+                    {
+                        "source_block": "usb_in",
+                        "output_terminal": "out",
+                        "output_channel": 2,
+                        "destination_block": "$out",
+                        "input_terminal": "$out",
+                        "input_channel": 2
+                    }
+                ],
+                "parameter_map": [
+                    {
+                        "composite_parameter": "out_gain",
+                        "block_name": "usb_in",
+                        "block_parameter": "out_gain"
+                    },
+                    {
+                        "composite_parameter": "out_mute",
+                        "block_name": "usb_in",
+                        "block_parameter": "out_mute"
+                    }
+                ],
+                "telemetry_map": [
+                    {
+                        "composite_telemetry": "out_meter",
+                        "block_name": "usb_in",
+                        "block_telemetry": "out_meter"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "usb_out",
+            "is_opaque": true,
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "channels": 2
+                }
+            ],
+            "implementation": {
+                "blocks": [
+                    {
+                        "name": "usb_out",
+                        "algorithm": "alsa_out",
+                        "property_settings": [
+                            {
+                                "name": "sample_rate",
+                                "value": "$sample_rate"
+                            },
+                            {
+                                "name": "frame_size",
+                                "value": "$frame_size"
+                            },
+                            {
+                                "name": "device_name",
+                                "value": "hw:UAC1Gadget,0"
+                            },
+                            {
+                                "name": "period_size",
+                                "value": 32
+                            },
+                            {
+                                "name": "use_asrc",
+                                "value": true
+                            }
+                        ],
+                        "terminal_channels": [
+                            {
+                                "name": "in",
+                                "channels": 2
+                            }
+                        ]
+                    }
+                ],
+                "block_connections": [
+                    {
+                        "source_block": "$in",
+                        "output_terminal": "$in",
+                        "output_channel": 1,
+                        "destination_block": "usb_in",
+                        "input_terminal": "in",
+                        "input_channel": 1
+                    },
+                    {
+                        "source_block": "$in",
+                        "output_terminal": "$in",
+                        "output_channel": 2,
+                        "destination_block": "usb_in",
+                        "input_terminal": "in",
+                        "input_channel": 2
+                    }
+                ]
+            }
+        },
+        {
+            "name": "loudspeaker_processor_dm5se",
+            "is_opaque": true,
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "channels": 1
+                },
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": 1
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "peak_threshold",
+                    "value_type": "float",
+                    "default_value": 0.0,
+                    "minimum_value": -40.0,
+                    "maximum_value": 0.0
+                },
+                {
+                    "name": "rms_threshold",
+                    "value_type": "float",
+                    "default_value": 0.0,
+                    "minimum_value": -40.0,
+                    "maximum_value": 0.0
+                },
+                {
+                    "name": "delay",
+                    "value_type": "integer",
+                    "dimensions": [1],
+                    "default_value": 0,
+                    "minimum_value": 0,
+                    "maximum_value": 960
+                }
+            ],
+            "telemetry": [
+                {
+                    "name": "out_meter",
+                    "dimensions": [1],
+                    "value_type": "float",
+                    "default_value": -60.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 24.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                }
+            ],
+            "implementation": {
+                "blocks": [
+                    {
+                        "name": "hpf_lpf",
+                        "algorithm": "crossover",
+                        "property_settings": [
+                            { "name": "sample_rate", "value": "$sample_rate" },
+                            { "name": "frame_size", "value": "$frame_size" },
+                            { "name": "channels", "value": 1 }
+                        ]
+                    },
+                    {
+                        "name": "peq",
+                        "algorithm": "peq",
+                        "property_settings": [
+                            { "name": "sample_rate", "value": "$sample_rate" },
+                            { "name": "frame_size", "value": "$frame_size" },
+                            { "name": "bands", "value": 9 },
+                            { "name": "channels", "value": 1 }
+                        ]
+                    },
+                    {
+                        "name": "excursion_filter",
+                        "algorithm": "iir_filter",
+                        "property_settings": [
+                            { "name": "sample_rate", "value": "$sample_rate" },
+                            { "name": "frame_size", "value": "$frame_size" },
+                            { "name": "bands", "value": 4 },
+                            { "name": "channels", "value": 1 }
+                        ]
+                    },
+                    {
+                        "name": "limiter",
+                        "algorithm": "limiter",
+                        "property_settings": [
+                            { "name": "sample_rate", "value": "$sample_rate" },
+                            { "name": "frame_size", "value": "$frame_size" },
+                            { "name": "max_delay", "value": 480 },
+                            { "name": "channels", "value": 1 }
+                        ]
+                    },
+                    {
+                        "name": "delay",
+                        "algorithm": "delay",
+                        "property_settings": [
+                            { "name": "sample_rate", "value": "$sample_rate" },
+                            { "name": "frame_size", "value": "$frame_size" },
+                            { "name": "max_delay", "value": 960 },
+                            { "name": "channels", "value": 1 }
+                        ]
+                    }
+                ],
+                "block_connections": [
+                    {
+                        "source_block": "$in",
+                        "output_terminal": "$in",
+                        "output_channel": 1,
+                        "destination_block": "hpf_lpf",
+                        "input_terminal": "in",
+                        "input_channel": 1
+                    },
+                    {
+                        "source_block": "hpf_lpf",
+                        "output_terminal": "out",
+                        "output_channel": 1,
+                        "destination_block": "peq",
+                        "input_terminal": "in",
+                        "input_channel": 1
+                    },
+                    {
+                        "source_block": "peq",
+                        "output_terminal": "out",
+                        "output_channel": 1,
+                        "destination_block": "limiter",
+                        "input_terminal": "in",
+                        "input_channel": 1
+                    },
+                    {
+                        "source_block": "peq",
+                        "output_terminal": "out",
+                        "output_channel": 1,
+                        "destination_block": "excursion_filter",
+                        "input_terminal": "in",
+                        "input_channel": 1
+                    },
+                    {
+                        "source_block": "excursion_filter",
+                        "output_terminal": "out",
+                        "output_channel": 1,
+                        "destination_block": "limiter",
+                        "input_terminal": "peak_in",
+                        "input_channel": 1
+                    },
+                    {
+                        "source_block": "limiter",
+                        "output_terminal": "out",
+                        "output_channel": 1,
+                        "destination_block": "delay",
+                        "input_terminal": "in",
+                        "input_channel": 1
+                    },
+                    {
+                        "source_block": "delay",
+                        "output_terminal": "out",
+                        "output_channel": 1,
+                        "destination_block": "$out",
+                        "input_terminal": "out",
+                        "input_channel": 1
+                    }
+                ],
+                "parameter_settings": [
+                    {
+                        "target": "hpf_lpf",
+                        "name": "hpf_freq",
+                        "value": 65.0
+                    },
+                    {
+                        "target": "hpf_lpf",
+                        "name": "hpf_order",
+                        "value": 4
+                    },
+                    {
+                        "target": "hpf_lpf",
+                        "name": "hpf_type",
+                        "value": "butterworth"
+                    },
+                    {
+                        "target": "peq",
+                        "name": "frequency",
+                        "index": [1],
+                        "value": 84.0
+                    },
+                    {
+                        "target": "peq",
+                        "name": "gain",
+                        "index": [1],
+                        "value": 3.9
+                    },
+                    {
+                        "target": "peq",
+                        "name": "q",
+                        "index": [1],
+                        "value": 5.0
+                    },
+                    {
+                        "target": "peq",
+                        "name": "frequency",
+                        "index": [2],
+                        "value": 115.0
+                    },
+                    {
+                        "target": "peq",
+                        "name": "gain",
+                        "index": [2],
+                        "value": 3.0
+                    },
+                    {
+                        "target": "peq",
+                        "name": "q",
+                        "index": [2],
+                        "value": 2.94
+                    },
+                    {
+                        "target": "peq",
+                        "name": "frequency",
+                        "index": [3],
+                        "value": 285.0
+                    },
+                    {
+                        "target": "peq",
+                        "name": "gain",
+                        "index": [3],
+                        "value": -5.4
+                    },
+                    {
+                        "target": "peq",
+                        "name": "q",
+                        "index": [3],
+                        "value": 4.18
+                    },
+                    {
+                        "target": "peq",
+                        "name": "frequency",
+                        "index": [4],
+                        "value": 540.0
+                    },
+                    {
+                        "target": "peq",
+                        "name": "gain",
+                        "index": [4],
+                        "value": 3.0
+                    },
+                    {
+                        "target": "peq",
+                        "name": "q",
+                        "index": [4],
+                        "value": 2.94
+                    },
+                    {
+                        "target": "peq",
+                        "name": "frequency",
+                        "index": [5],
+                        "value": 1060.0
+                    },
+                    {
+                        "target": "peq",
+                        "name": "gain",
+                        "index": [5],
+                        "value": -4.7
+                    },
+                    {
+                        "target": "peq",
+                        "name": "q",
+                        "index": [5],
+                        "value": 3.24
+                    },
+                    {
+                        "target": "peq",
+                        "name": "frequency",
+                        "index": [6],
+                        "value": 2050.0
+                    },
+                    {
+                        "target": "peq",
+                        "name": "gain",
+                        "index": [6],
+                        "value": 1.5
+                    },
+                    {
+                        "target": "peq",
+                        "name": "q",
+                        "index": [6],
+                        "value": 10.0
+                    },
+                    {
+                        "target": "peq",
+                        "name": "frequency",
+                        "index": [7],
+                        "value": 6200.0
+                    },
+                    {
+                        "target": "peq",
+                        "name": "gain",
+                        "index": [7],
+                        "value": 2.4
+                    },
+                    {
+                        "target": "peq",
+                        "name": "q",
+                        "index": [7],
+                        "value": 3.71
+                    },
+                    {
+                        "target": "peq",
+                        "name": "frequency",
+                        "index": [8],
+                        "value": 12600.0
+                    },
+                    {
+                        "target": "peq",
+                        "name": "gain",
+                        "index": [8],
+                        "value": -3.0
+                    },
+                    {
+                        "target": "peq",
+                        "name": "q",
+                        "index": [8],
+                        "value": 5.91
+                    },
+                    {
+                        "target": "peq",
+                        "name": "frequency",
+                        "index": [9],
+                        "value": 17400.0
+                    },
+                    {
+                        "target": "peq",
+                        "name": "gain",
+                        "index": [9],
+                        "value": 6.3
+                    },
+                    {
+                        "target": "peq",
+                        "name": "q",
+                        "index": [9],
+                        "value": 2.44
+                    },
+                    {
+                        "target": "excursion_filter",
+                        "name": "coefficients",
+                        "index": [1, 1],
+                        "value": 0.998540454539078
+                    },
+                    {
+                        "target": "excursion_filter",
+                        "name": "coefficients",
+                        "index": [1, 2],
+                        "value": -1.961412640700445
+                    },
+                    {
+                        "target": "excursion_filter",
+                        "name": "coefficients",
+                        "index": [1, 3],
+                        "value": 0.963190484763579
+                    },
+                    {
+                        "target": "excursion_filter",
+                        "name": "coefficients",
+                        "index": [1, 4],
+                        "value": -1.961504934884443
+                    },
+                    {
+                        "target": "excursion_filter",
+                        "name": "coefficients",
+                        "index": [1, 5],
+                        "value": 0.961638645107712
+                    },
+                    {
+                        "target": "excursion_filter",
+                        "name": "coefficients",
+                        "index": [2, 1],
+                        "value": 0.000169689778512
+                    },
+                    {
+                        "target": "excursion_filter",
+                        "name": "coefficients",
+                        "index": [2, 2],
+                        "value": 0.000133893890173
+                    },
+                    {
+                        "target": "excursion_filter",
+                        "name": "coefficients",
+                        "index": [2, 3],
+                        "value": 0.000142327927607
+                    },
+                    {
+                        "target": "excursion_filter",
+                        "name": "coefficients",
+                        "index": [2, 4],
+                        "value": -1.979479744728553
+                    },
+                    {
+                        "target": "excursion_filter",
+                        "name": "coefficients",
+                        "index": [2, 5],
+                        "value": 0.979924810964622
+                    },
+                    {
+                        "target": "excursion_filter",
+                        "name": "coefficients",
+                        "index": [3, 1],
+                        "value": 0.790871561067067
+                    },
+                    {
+                        "target": "excursion_filter",
+                        "name": "coefficients",
+                        "index": [3, 2],
+                        "value": -1.573305693261331
+                    },
+                    {
+                        "target": "excursion_filter",
+                        "name": "coefficients",
+                        "index": [3, 3],
+                        "value": 0.782912775303754
+                    },
+                    {
+                        "target": "excursion_filter",
+                        "name": "coefficients",
+                        "index": [3, 4],
+                        "value": -1.990852208514906
+                    },
+                    {
+                        "target": "excursion_filter",
+                        "name": "coefficients",
+                        "index": [3, 5],
+                        "value": 0.991396962512163
+                    },
+                    {
+                        "target": "excursion_filter",
+                        "name": "coefficients",
+                        "index": [4, 1],
+                        "value": 1.142778177464161
+                    },
+                    {
+                        "target": "excursion_filter",
+                        "name": "coefficients",
+                        "index": [4, 2],
+                        "value": -2.282713533956400
+                    },
+                    {
+                        "target": "excursion_filter",
+                        "name": "coefficients",
+                        "index": [4, 3],
+                        "value": 1.140093156030526
+                    },
+                    {
+                        "target": "excursion_filter",
+                        "name": "coefficients",
+                        "index": [4, 4],
+                        "value": -1.994609564738387
+                    },
+                    {
+                        "target": "excursion_filter",
+                        "name": "coefficients",
+                        "index": [4, 5],
+                        "value": 0.994729471701945
+                    }
+                ],
+                "parameter_map": [
+                    {
+                        "composite_parameter": "peak_threshold",
+                        "block_name": "limiter",
+                        "block_parameter": "peak_threshold"
+                    },
+                    {
+                        "composite_parameter": "rms_threshold",
+                        "block_name": "limiter",
+                        "block_parameter": "rms_threshold"
+                    },
+                    {
+                        "composite_parameter": "delay",
+                        "block_name": "delay",
+                        "block_parameter": "delay"
+                    }
+                ],
+                "telemetry_map": [
+                    {
+                        "composite_telemetry": "out_meter",
+                        "block_name": "delay",
+                        "block_telemetry": "out_meter"
+                    }
+                ]
+            }
+        }
+    ]
+}

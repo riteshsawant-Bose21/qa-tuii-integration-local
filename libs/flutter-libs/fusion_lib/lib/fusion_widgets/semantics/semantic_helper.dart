@@ -56,6 +56,7 @@ class SemanticHelper {
     String? label,
     String? value,
     bool? isChecked,
+    bool? isSelected,
   }) {
     return Semantics(
       value: value,
@@ -65,6 +66,7 @@ class SemanticHelper {
       label: label,
       child: child,
       checked: isChecked,
+      selected: isSelected,
     );
   }
 
@@ -202,6 +204,7 @@ class SemanticHelper {
       value: value,
       child: child,
       liveRegion: live,
+      container: true,
     );
   }
 
@@ -214,6 +217,7 @@ class SemanticHelper {
       button: true,
       identifier: testId,
       value: value,
+      container: true,
       child: child,
     );
   }
@@ -245,6 +249,7 @@ class SemanticHelper {
       button: true,
       identifier: testId,
       enabled: enabled,
+      container: true,
       child: child,
       value: value,
       focusable: blur,

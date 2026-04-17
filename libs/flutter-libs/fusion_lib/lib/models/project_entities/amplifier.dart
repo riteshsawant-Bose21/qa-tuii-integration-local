@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:uuid/uuid.dart';
 
 class Amplifier extends HardwareComponent {
   final int channels;
@@ -14,7 +13,7 @@ class Amplifier extends HardwareComponent {
     required this.channels,
     required this.powerPerChannel,
     required this.color,
-    super.assetImagePath = 'assets/images/amplifier.png',
+    super.image = 'assets/images/amplifier.png',
     super.price = 1000.0,
     super.pos,
     super.wiringPos,
@@ -44,7 +43,7 @@ class Amplifier extends HardwareComponent {
     int? channels,
     double? powerPerChannel,
     MaterialColor? color,
-    String? assetImagePath,
+    String? image,
     double? price,
     String? hardwareName,
     LocationModel? locationEntity,
@@ -65,7 +64,7 @@ class Amplifier extends HardwareComponent {
       channels: channels ?? this.channels,
       powerPerChannel: powerPerChannel ?? this.powerPerChannel,
       color: color ?? this.color,
-      assetImagePath: assetImagePath ?? this.assetImagePath,
+      image: image ?? this.image,
       price: price ?? this.price,
       hardwareName: hardwareName ?? this.hardwareName,
       locationEntity: locationEntity ?? this.locationEntity,
@@ -89,7 +88,8 @@ class Amplifier extends HardwareComponent {
       channels: json['channels'] as int,
       powerPerChannel: (json['powerPerChannel'] as num).toDouble(),
       color: _materialColorFromHex(json['color'] as String),
-      assetImagePath: json['assetImagePath'] as String,
+      image:
+          DeserializationUtil.stringDeserializer.deserialize(json['image']) ?? DeserializationUtil.stringDeserializer.deserialize(json['assetImagePath']) ?? '',
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       id: json['id'] as String?,
       hardwareName: json['hardwareName'] as String?,
@@ -114,7 +114,7 @@ class Amplifier extends HardwareComponent {
       'channels': channels,
       'powerPerChannel': powerPerChannel,
       'color': '#${color.value.toRadixString(16).padLeft(8, '0')}',
-      'assetImagePath': assetImagePath,
+      'image': image,
       'price': price,
       'id': id,
       'hardwareName': hardwareName,

@@ -145,7 +145,7 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
     if (state.selectedListeningArea == null) return FusionToast.error(context, message: "Please select a location");
 
     // if connection location is not selected
-    if (selectedSources.first == SourceType.paging && state.selectedConnectionType == null) {
+    if (state.selectedSources.first?.type != SourceType.paging && state.selectedConnectionType == null) {
       return FusionToast.error(context, message: "Please select a connection type");
     }
 
@@ -165,15 +165,18 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
 
     /// Sources [onTapAddDevice]
     final SourceConnectionType connectType = state.selectedConnectionType ?? SourceData.getSourceConnectionType(selectedItem.id);
+
     final PortType portType = switch (connectType) {
-      SourceConnectionType.analogInput || SourceConnectionType.aes67input => PortType.analogOutput,
+      SourceConnectionType.analogInput => PortType.analogOutput,
+      SourceConnectionType.aes67input => PortType.networkSwitchOut,
       SourceConnectionType.bluetooth => PortType.bleOut,
       SourceConnectionType.usb => PortType.usbOut,
       SourceConnectionType.audioJack => PortType.audioJackOutput,
       SourceConnectionType.xlr => PortType.xlrOutput,
       SourceConnectionType.hdmi => PortType.hdmiOut,
       SourceConnectionType.rca => PortType.rcaOutput,
-      SourceConnectionType.endpoint => PortType.endpointOutput,
+      SourceConnectionType.endpoint => PortType.analogOutput, // TODO: Consider it like a wired connection
+      SourceConnectionType.messagePlayer => PortType.messagePlayer,
     };
 
     final Source source = Source(
@@ -182,7 +185,7 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
       type: selectedItem.type,
       addedFromBuildingPage: false,
       connectionType: connectType,
-      assetImagePath: selectedItem.assetPath,
+      image: selectedItem.assetPath,
       locationEntity: LocationModel(listeningAreaId: selectedAreaId, floorId: floorId),
       sku: selectedItem.id,
       price: selectedItem.price,

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/config/app_config.dart';
+import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/product_data.dart';
@@ -66,7 +67,6 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
     loadProducts();
   }
 
-  static const int _maxRetries = 1;
   static const Duration _pricesCacheTtl = Duration(hours: 24);
 
   bool _hasLoadedProducts = false;
@@ -77,52 +77,53 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
   late String localProductDirPath;
 
   bool get hasCloudAccess => serviceLocator<SessionViewModel>().hasCloudAccess();
+  bool get isAuthenticated => serviceLocator<AuthViewModel>().state is Authenticated;
 
   Future<void> loadProducts({int attempt = 1, bool refresh = false}) async {
     try {
       if (state.isRefreshing) return;
       if (!refresh && _hasLoadedProducts && state.products != null) return;
 
-      if (refresh) emit(state.copyWith(isRefreshing: true));
+      emit(state.copyWith(isLoading: !refresh, isRefreshing: refresh, errorMessage: null));
+
       await (refresh ? _productsApi.refresh() : _productsApi.initialize());
+
       _hasLoadedProducts = true;
+
       emit(state.copyWith(products: _productsApi, isLoading: false, isRefreshing: false));
 
-      if (hasCloudAccess) {
-        for (SpeakerProduct element in speakers) {
-          _fetchProductPrices(element.productId, forceRefresh: refresh);
-        }
-        for (AmplifierProduct element in amplifiers) {
-          _fetchProductPrices(element.productId, forceRefresh: refresh);
-        }
-        for (IoEndpointProduct element in ioEndpoints) {
-          _fetchProductPrices(element.productId, forceRefresh: refresh);
-        }
-        for (DspProduct element in dsps) {
-          _fetchProductPrices(element.productId, forceRefresh: refresh);
-        }
-        for (ControllerProduct element in controllers) {
-          _fetchProductPrices(element.productId, forceRefresh: refresh);
-        }
-        for (AccessoryProduct element in accessories) {
-          _fetchProductPrices(element.productId, forceRefresh: refresh);
-        }
-      }
+      if (hasCloudAccess) _fetchAllProductPrices(forceRefresh: refresh);
     } catch (e) {
-      if (attempt < _maxRetries) {
-        // optional small delay before retry
-        await Future<void>.delayed(const Duration(milliseconds: 500));
-        return loadProducts(attempt: attempt + 1);
-      }
+      emit(state.copyWith(isLoading: false, isRefreshing: false, errorMessage: 'Failed to load products'));
+    }
+  }
 
-      // failed after 3 attempts
-      emit(state.copyWith(products: null, isLoading: false, errorMessage: 'Failed to load products'));
+  void _fetchAllProductPrices({bool forceRefresh = false}) {
+    if (hasCloudAccess) {
+      for (SpeakerProduct element in speakers) {
+        _fetchProductPrices(element.productId, forceRefresh: forceRefresh);
+      }
+      for (AmplifierProduct element in amplifiers) {
+        _fetchProductPrices(element.productId, forceRefresh: forceRefresh);
+      }
+      for (IoEndpointProduct element in ioEndpoints) {
+        _fetchProductPrices(element.productId, forceRefresh: forceRefresh);
+      }
+      for (DspProduct element in dsps) {
+        _fetchProductPrices(element.productId, forceRefresh: forceRefresh);
+      }
+      for (ControllerProduct element in controllers) {
+        _fetchProductPrices(element.productId, forceRefresh: forceRefresh);
+      }
+      for (AccessoryProduct element in accessories) {
+        _fetchProductPrices(element.productId, forceRefresh: forceRefresh);
+      }
     }
   }
 
   void refresh() => loadProducts(refresh: true);
 
-  String? getProductImage(int productId) => _productsApi.imageFor(productId: productId)?.firstPath;
+  String? getProductImage(int? productId) => productId != null ? _productsApi.imageFor(productId: productId)?.firstPath : null;
 
   bool get isLoading => state.isLoading;
 

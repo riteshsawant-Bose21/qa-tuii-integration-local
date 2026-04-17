@@ -14,7 +14,9 @@ class _TernaryToolbar extends StatelessWidget {
             label: "Draw",
             isSelected: currentMode is DrawingListeningAreaState,
             onTap: () {
-              context.read<BuildingPageViewModel>().setTool(DrawingListeningAreaState());
+              context.read<BuildingPageViewModel>().setTool(DrawingListeningAreaState(
+                listeningAreaId: null
+              ));
             },
           ),
           _ToolBarIcon(

@@ -225,7 +225,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
       // setShouldPlaceNonPlacedSpeakers(false);
 
       projectManager.setCurrentFloorIndex(index);
-      updateProject();
+      updateFloorPlan();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to set current floor index: $e");
       throwError("Failed to set current floor index: $e");

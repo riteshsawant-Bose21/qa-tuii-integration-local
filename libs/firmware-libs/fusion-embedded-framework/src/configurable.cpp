@@ -9,7 +9,8 @@
 namespace bosepro {
 
 
-const Definition *Configurable::definitions;
+const Definition *Configurable::definitions = nullptr;
+const CompositeDefinition *Configurable::composite_definitions = nullptr;
 
 
 Configurable::Configurable(const Configuration &configuration)
@@ -40,6 +41,12 @@ void Configurable::set_definitions(const Definition &definitions)
 }
 
 
+void Configurable::set_composite_definitions(const CompositeDefinition *composite_definitions)
+{
+    this->composite_definitions = composite_definitions;
+}
+
+
 const ProcessorDefinition *Configurable::get_definition(const std::string &name) const
 {
     if (definitions->has_algorithm(name))
@@ -52,6 +59,18 @@ const ProcessorDefinition *Configurable::get_definition(const std::string &name)
     }
 
     SPDLOG_CRITICAL("No definition available for algorithm/module '{}'.", name);
+    return nullptr;
+}
+
+
+const CompositeAlgorithmDefinition *Configurable::get_composite_definition(const std::string &name) const
+{
+    if (composite_definitions != nullptr
+        && composite_definitions->has_composite_algorithm(name))
+    {
+        return &composite_definitions->get_composite_algorithm(name);
+    }
+
     return nullptr;
 }
 

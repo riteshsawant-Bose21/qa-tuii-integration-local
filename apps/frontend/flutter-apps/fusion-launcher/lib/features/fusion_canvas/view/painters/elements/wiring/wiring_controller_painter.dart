@@ -95,7 +95,7 @@ class WiringControllerPainter extends WiringDevicesPainter {
       contentRect.height - 2 * imagePadding,
     );
     canvas.drawRRect(RRect.fromRectAndRadius(imageRect, Radius.circular(radius * 0.8)), Paint()..color = Colors.grey);
-    drawImage(canvas: canvas, imagePath: device.assetImagePath, rect: imageRect.deflate(imagePadding), painter: painter);
+    drawImage(canvas: canvas, imagePath: device.image, rect: imageRect.deflate(imagePadding), painter: painter);
     final Rect textRect = Rect.fromLTWH(
       imageRect.right + imagePadding,
       contentRect.top + imagePadding,
