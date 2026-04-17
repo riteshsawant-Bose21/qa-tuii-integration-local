@@ -57,13 +57,9 @@ class SchematicHardwareListing<T extends HardwareComponent, VM extends DeviceLis
               zoneName: value.zoneName, //getZoneName(item.id),
               zoneColor: value.zoneColor, //getZoneColor(item.id),
               equipmentLocation: value.equipmentLocationName, //getEquipmentLocationForHardware(item.id),
-              assetImagePath: item.assetImagePath,
+              image: item.image,
               pagingSourceType: item is Source ? item.pagingSourceType : null,
-              onTap:
-                  () => projectViewModel.setSelectedDevice(
-                    item.id,
-                    SelectedItemType.source,
-                  ),
+              onTap: () => projectViewModel.setSelectedDevice(item.id, SelectedItemType.source),
               onDelete: (String id) {
                 projectViewModel.removeHardware(
                   hardwareId: id,

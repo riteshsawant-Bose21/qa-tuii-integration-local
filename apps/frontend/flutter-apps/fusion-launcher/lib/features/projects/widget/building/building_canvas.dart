@@ -172,11 +172,18 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       testId: SemanticHelper.createTestId(SemanticTypes.container, "building_floor_canvas"),
                                       child: Builder(
                                         builder: (BuildContext context) {
+                                          final List<HardwareComponent> hardwareInFloorWithPosition = serviceLocator<ProjectViewModel>()
+                                              .getHardwareInFloorWithPosition(floorId: floor.id);
+
+                                          final bool isAcousticsMode = context.watch<BuildingPageViewModel>().state.toolbarMode == ToolbarMode.acoustics;
+
                                           final List<ListeningAreaPainter> listeningAreaPainters = <ListeningAreaPainter>[
-                                            for (final ListeningArea area in serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
-                                              floorId: floor.id,
-                                            ))
-                                              ListeningAreaPainter(listeningArea: area, isShowingSpl: buildingPageViewModel.isSplMode),
+                                            for (final ListeningArea area in serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floorId: floor.id))
+                                              ListeningAreaPainter(
+                                                backgoundColor: serviceLocator<ProjectViewModel>().getZoneColorForLA(areaId: area.id),
+                                                listeningArea: area,
+                                                isShowingSpl: buildingPageViewModel.isSplMode,
+                                              ),
                                           ];
 
                                           return FusionCanvas(
@@ -204,12 +211,11 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 showSpl: true,
                                               ),
                                               ...listeningAreaPainters,
-                                              for (final HardwareComponent hw in serviceLocator<ProjectViewModel>().getHardwareInFloorWithPosition(
-                                                floorId: floor.id,
-                                              ))
-                                                HardwareComponentPainter(
-                                                  hardware: hw,
-                                                ),
+                                              for (final HardwareComponent hw in hardwareInFloorWithPosition)
+                                                if (isAcousticsMode && hw is Speaker)
+                                                  HardwareComponentPainter(hardware: hw)
+                                                else if (!isAcousticsMode)
+                                                  HardwareComponentPainter(hardware: hw),
                                             ],
                                             toolbarEvents: FusionCanvasEvents(
                                               onLayerSelected: (List<FusionBasePainter>? values) {
@@ -495,8 +501,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
               Theme.of(context).colorScheme.primaryWhite,
               BlendMode.srcIn,
             ),
-            child: const FusionImage.asset(
-              "assets/images/upload_floor_plan.png",
+            child: const FusionImageAuto(
+              path: "assets/images/upload_floor_plan.png",
               width: 64,
               height: 64,
             ),
@@ -749,13 +755,13 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   Widget _buildFloorPlanImage(String imagePath) {
     if (imagePath.startsWith('assets/')) {
-      return Image.asset(
-        imagePath,
+      return FusionImageAuto(
+        path: imagePath,
         fit: BoxFit.cover,
       );
     } else {
-      return Image.file(
-        File(imagePath),
+      return FusionImageAuto(
+        path: imagePath,
         fit: BoxFit.cover,
         errorBuilder: (
           BuildContext context,
@@ -942,7 +948,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
       final CalibrationData? calibrationData = await showDialog<CalibrationData>(
         context: context,
-        barrierDismissible: true,
+        barrierDismissible: false,
         builder: (_) {
           return Dialog(
             insetPadding: const EdgeInsets.all(100),

@@ -226,8 +226,8 @@ class _DevicesPanelState extends State<DevicesPanel> {
                   value: item,
                   child: Row(
                     children: <Widget>[
-                      Image.asset(
-                        item.image,
+                      FusionImageAuto(
+                        path: item.image,
                         height: 14,
                         width: 14,
                       ),
@@ -257,8 +257,8 @@ class _DevicesPanelState extends State<DevicesPanel> {
                   value: item,
                   child: Row(
                     children: <Widget>[
-                      Image.asset(
-                        item.image,
+                      FusionImageAuto(
+                        path: item.image,
                         height: 14,
                         width: 14,
                       ),
@@ -294,8 +294,8 @@ class _DevicesPanelState extends State<DevicesPanel> {
                   ),
                   child: Row(
                     children: <Widget>[
-                      Image.asset(
-                        'assets/images/products/rack.png',
+                      const FusionImageAuto(
+                        path: 'assets/images/products/rack.png',
                         height: 14,
                         width: 14,
                       ),

@@ -12,12 +12,14 @@
 namespace bosepro {
 
 Session::Session(const SessionConfiguration &configuration,
-                 const Definition &definitions)
+                 const Definition &definitions,
+                 const CompositeDefinition *composite_definitions)
     : Configurable(configuration), ready(false)
 {
     SPDLOG_TRACE("Creating session.");
     // This makes the definitions available to all `Configurable` objects.
     set_definitions(definitions);
+    set_composite_definitions(composite_definitions);
 
     ps_command_map = {
         {"stop",                        [this](const ParameterSetting& c){ return cmd_stop_all(c); }},
@@ -537,12 +539,8 @@ bool Session::cmd_apply_parameter_setting(const ParameterSetting& setting)
 {
     for (auto &task : audio_tasks)
     {
-        std::string block_name;
-        Algorithm *block = task.second->get_block(setting.get_target());
-        if (block != nullptr)
+        if (task.second->apply_parameter_setting(setting))
         {
-            block->set_parameter(setting);
-            
             return true;
         }
     }
@@ -553,7 +551,7 @@ bool Session::cmd_apply_parameter_setting(const ParameterSetting& setting)
         if (block != nullptr)
         {
             block->set_parameter(setting);
-            
+
             return true;
         }
     }

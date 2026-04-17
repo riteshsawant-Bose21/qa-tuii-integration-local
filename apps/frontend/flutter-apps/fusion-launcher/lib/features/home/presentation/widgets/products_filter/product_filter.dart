@@ -1371,13 +1371,13 @@ class CleanProductCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                           child:
                               product.imageUrl!.startsWith('assets/')
-                                  ? Image.asset(
-                                    product.imageUrl!,
+                                  ? FusionImageAuto(
+                                    path: product.imageUrl!,
                                     fit: BoxFit.contain,
                                     errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) {
                                       // Try fallback to default image
-                                      return Image.asset(
-                                        'assets/images/default_image.png',
+                                      return FusionImageAuto(
+                                        path: 'assets/images/default_image.png',
                                         fit: BoxFit.contain,
                                         errorBuilder:
                                             (BuildContext context, Object error, StackTrace? stackTrace) => Center(
@@ -1713,13 +1713,13 @@ class ProductDetailsDialog extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(12),
                                 child:
                                     product.imageUrl!.startsWith('assets/')
-                                        ? Image.asset(
-                                          product.imageUrl!,
+                                        ? FusionImageAuto(
+                                          path: product.imageUrl!,
                                           fit: BoxFit.contain,
                                           errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) {
                                             // Try fallback to default image
-                                            return Image.asset(
-                                              'assets/images/default_image.png',
+                                            return FusionImageAuto(
+                                              path: 'assets/images/default_image.png',
                                               fit: BoxFit.contain,
                                               errorBuilder:
                                                   (BuildContext context, Object error, StackTrace? stackTrace) => Center(

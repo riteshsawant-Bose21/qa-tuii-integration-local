@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/add_source_popup/view/add_source_popup.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_state_viewmodel.dart';
+import 'package:fusion_launcher/features/projects/presentation/project_work_area.dart';
 import 'package:fusion_launcher/features/projects/view_model/spl_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:nested/nested.dart';
@@ -84,7 +85,9 @@ class CanvasToolBar extends StatelessWidget {
                     label: "Fit to Screen",
                     isSelected: false,
                     onTap: () {
-                      context.read<FusionCanvasStateViewModel>().fitToScreen();
+                      context.read<FusionCanvasStateViewModel>().fitToScreen(
+                        padding: EdgeInsets.only(left: 250, right: 250, top: WorkAreaScope.of(context).appBarHeight, bottom: 20 + 50),
+                      );
                     },
                   ),
                 ],
