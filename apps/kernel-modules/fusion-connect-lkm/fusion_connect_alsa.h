@@ -44,8 +44,6 @@ struct fusion_cn_substream {
     struct hlist_node       hnode;
     struct kref             ref;
     u16                stream_index;
-    atomic_t                open_count;
-    bool                    pending_free;
     atomic_t                disconnected;
 };
 
