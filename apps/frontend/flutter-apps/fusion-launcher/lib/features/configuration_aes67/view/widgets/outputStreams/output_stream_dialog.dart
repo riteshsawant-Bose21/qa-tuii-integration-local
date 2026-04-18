@@ -744,7 +744,7 @@ class _DarkDropdown<T> extends StatelessWidget {
   final String semanticId;
   final List<T> items;
   final String Function(T) labelBuilder;
-  final ValueChanged<T?> onChanged;
+  final ValueChanged<T?>? onChanged;
 
   const _DarkDropdown({
     required this.value,
