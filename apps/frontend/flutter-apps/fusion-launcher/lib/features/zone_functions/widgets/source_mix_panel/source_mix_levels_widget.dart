@@ -178,7 +178,7 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
                                 semanticId: 'source_mix_gain_text_field',
                                 controllerValue: mixSetting.gain,
                                 minGain: -60,
-                                maxGain: 12,
+                                maxGain: 0,
                                 onSubmitted: (double value) {
                                   _sourceMixViewModel.updateGain(
                                     function: widget.zoneFunctions,

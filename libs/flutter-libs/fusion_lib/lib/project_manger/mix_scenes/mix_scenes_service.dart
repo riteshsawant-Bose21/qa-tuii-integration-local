@@ -225,7 +225,7 @@ extension MixScenesService on ProjectService {
               inputGain: 0.0,
               inputMute: false,
               mixLevel: 0.0,
-              isSelected: true,
+              isSelected: false,
             );
             existingMatrixSetting.add(newSetting);
           }
