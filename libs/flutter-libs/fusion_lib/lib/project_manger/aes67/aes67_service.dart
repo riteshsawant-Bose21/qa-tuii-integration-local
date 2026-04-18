@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:fusion_lib/fusion_lib.dart';
 
 extension Aes67Service on ProjectService {
@@ -194,5 +196,91 @@ extension Aes67Service on ProjectService {
     currentOrder.insert(newIndex, streamIdToMove);
 
     relationships.reOrder(RelationshipType.aes67OutputStreams, id, currentOrder);
+  }
+
+  // ==================== Source ↔ Stream+Channel Mapping ====================
+
+  /// Assigns multiple stream-channel mappings to [sourceId].
+  void assignStreamChannelsToSource({
+    required String sourceId,
+    required List<AssignedStreamChannel> channels,
+  }) {
+    // Clear any existing mapping for this source first.
+    final Set<String> existing = relationships.getChildren(RelationshipType.sourceStreamMapping, sourceId);
+    for (final String old in List<String>.from(existing)) {
+      relationships.unlink(RelationshipType.sourceStreamMapping, sourceId, old);
+    }
+
+    // Link each channel mapping.
+    for (final AssignedStreamChannel ch in channels) {
+      final String entry = '${ch.streamId}:${ch.channelNumber}:${ch.channelName}';
+      relationships.link(RelationshipType.sourceStreamMapping, sourceId, entry);
+    }
+  }
+
+  /// Returns a raw map of streamId → Map<sourceId, Set<channelNumber>>
+  /// by reading all [RelationshipType.sourceStreamMapping] entries across
+  /// every hardware component.
+  Map<String, Map<String, Set<int>>> getAllSourceStreamMappings() {
+    final Map<String, Map<String, Set<int>>> streamToSourceChannels = <String, Map<String, Set<int>>>{};
+
+    for (final HardwareComponent hw in hardware.getAll()) {
+      final Set<String> entries = relationships.getChildren(RelationshipType.sourceStreamMapping, hw.id);
+      for (final String entry in entries) {
+        final List<String> parts = entry.split(':');
+        if (parts.length < 3) continue;
+        final int? ch = int.tryParse(parts[parts.length - 2]);
+        if (ch == null) continue;
+        final String streamId = parts.sublist(0, parts.length - 2).join(':');
+
+        streamToSourceChannels.putIfAbsent(streamId, () => <String, Set<int>>{});
+        streamToSourceChannels[streamId]!.putIfAbsent(hw.id, () => <int>{}).add(ch);
+      }
+    }
+
+    return streamToSourceChannels;
+  }
+
+  /// Returns all input streams that have at least one source mapped to them,
+  /// along with the source-to-channel assignments for each stream.
+  List<AssignedInputStreamInfo> getAssignedInputStreamChannelsForSource() {
+    final Map<String, Map<String, Set<int>>> streamToSourceChannels = getAllSourceStreamMappings();
+
+    return streamToSourceChannels.entries.map((MapEntry<String, Map<String, Set<int>>> e) {
+      final String streamId = e.key;
+      final Aes67Config? stream = aes67Devices.get(streamId);
+
+      final List<StreamSourceChannelMapping> sourceMappings = e.value.entries
+          .map(
+            (MapEntry<String, Set<int>> sm) => StreamSourceChannelMapping(
+              sourceId: sm.key,
+              channelNumbers: sm.value.toList()..sort(),
+            ),
+          )
+          .toList();
+
+      print(
+        JsonEncoder.withIndent('  ').convert({
+          'streamId': streamId,
+          'streamName': stream?.name ?? streamId,
+          'ipAddress': stream?.ipAddress ?? '-',
+          'sourceMappings': sourceMappings
+              .map(
+                (s) => {
+                  'sourceId': s.sourceId,
+                  'channelNumbers': s.channelNumbers,
+                },
+              )
+              .toList(),
+        }),
+      );
+
+      return AssignedInputStreamInfo(
+        streamId: streamId,
+        streamName: stream?.name ?? streamId,
+        ipAddress: stream?.ipAddress ?? '-',
+        sourceMappings: sourceMappings,
+      );
+    }).toList();
   }
 }
