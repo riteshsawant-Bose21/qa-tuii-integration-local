@@ -350,7 +350,8 @@ class _ConfigurationAes67View extends StatelessWidget {
               'delete': FusionTableCell(
                 value: null,
                 child: DeleteButton(
-                  onDelete: () => cubit.deleteOutputStream(s.id),
+                  // onDelete: () => cubit.deleteOutputStream(s.id),
+                  onDelete: () => cubit.getAssignedInputStreamChannelsForSource(),
                 ),
               ),
             },

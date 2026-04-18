@@ -1,5 +1,62 @@
 import 'package:uuid/uuid.dart';
 
+/// Represents a single stream-channel assignment for a source.
+class AssignedStreamChannel {
+  final String streamId;
+  final int channelNumber;
+  final String channelName;
+
+  const AssignedStreamChannel({
+    required this.streamId,
+    required this.channelNumber,
+    required this.channelName,
+  });
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is AssignedStreamChannel && other.streamId == streamId && other.channelNumber == channelNumber && other.channelName == channelName;
+  }
+
+  @override
+  int get hashCode => Object.hash(streamId, channelNumber, channelName);
+
+  @override
+  String toString() => 'AssignedStreamChannel(streamId: $streamId, channelNumber: $channelNumber, channelName: $channelName)';
+}
+
+/// Represents a source's channel assignments to a specific stream.
+class StreamSourceChannelMapping {
+  final String sourceId;
+  final List<int> channelNumbers;
+
+  const StreamSourceChannelMapping({
+    required this.sourceId,
+    required this.channelNumbers,
+  });
+
+  @override
+  String toString() => 'StreamSourceChannelMapping(sourceId: $sourceId, channelNumbers: $channelNumbers)';
+}
+
+/// Represents an input stream along with all source-channel mappings assigned to it.
+class AssignedInputStreamInfo {
+  final String streamId;
+  final String streamName;
+  final String ipAddress;
+  final List<StreamSourceChannelMapping> sourceMappings;
+
+  const AssignedInputStreamInfo({
+    required this.streamId,
+    required this.streamName,
+    required this.ipAddress,
+    this.sourceMappings = const <StreamSourceChannelMapping>[],
+  });
+
+  @override
+  String toString() => 'AssignedInputStreamInfo(streamId: $streamId, streamName: $streamName, ipAddress: $ipAddress, sourceMappings: $sourceMappings)';
+}
+
 /// Enum representing the type of AES67 stream
 enum Aes67StreamType {
   input,

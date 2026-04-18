@@ -154,6 +154,33 @@ extension Aes67ViewModel on ProjectViewModel {
     }
   }
 
+  // ==================== Source ↔ Stream+Channel Mapping ====================
+
+  /// Assigns multiple stream-channel mappings to [sourceId].
+  void assignStreamChannelsToSource({
+    required String sourceId,
+    required List<AssignedStreamChannel> channels,
+    bool autoSave = true,
+  }) {
+    try {
+      if (autoSave) recordSnapshot();
+      projectManager.assignStreamChannelsToSource(sourceId: sourceId, channels: channels);
+      if (autoSave) saveProject();
+    } catch (e) {
+      throwError('Assign Stream Channels to Source Error: ${e.toString()}');
+    }
+  }
+
+  /// Returns all input streams with their assigned source-channel mappings.
+  List<AssignedInputStreamInfo> getAssignedInputStreamChannelsForSource() {
+    try {
+      return projectManager.getAssignedInputStreamChannelsForSource();
+    } catch (e) {
+      throwError('Get Assigned Input Stream Channels Error: ${e.toString()}');
+      return <AssignedInputStreamInfo>[];
+    }
+  }
+
   // ==================== General Operations ====================
 
   List<Aes67Config> getAllAes67Streams() {
