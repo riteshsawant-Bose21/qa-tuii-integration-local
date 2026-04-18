@@ -284,7 +284,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                                         child: InkWell(
                                                                           onTap: () {
                                                                             serviceLocator<BlockDataViewmodel>().updateBlockParameterViaAPi(
-                                                                              blockId: "${zoneFunction!.id}/selector",
+                                                                              blockId: zoneFunction!.id,
                                                                               parameter: 'input',
                                                                               value: index + 1,
                                                                             );

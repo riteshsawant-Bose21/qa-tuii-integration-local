@@ -408,11 +408,11 @@ class _SourceMatrixControlsState extends State<SourceMatrixControls> {
                                     ),
                                     FusionNeumorphicButton(
                                       semanticId: 'mute_unmute',
-                                      selected: matrixSetting.muted,
+                                      selected: matrixSetting.isSelected,
                                       onTap: () {
                                         projectViewModel.updateMatrixSettings(
                                           matrixSettings: matrixSetting.copyWith(
-                                            muted: !matrixSetting.muted,
+                                            inputMute: !matrixSetting.inputMute,
                                           ),
                                           functionId: widget.zoneFunctions.id,
                                         );
@@ -425,18 +425,18 @@ class _SourceMatrixControlsState extends State<SourceMatrixControls> {
                                         width: 12,
                                         height: 12,
                                         // ignore: deprecated_member_use
-                                        color: matrixSetting.muted ? context.colorScheme.iconDisabled : context.colorScheme.primaryWhite,
+                                        color: matrixSetting.inputMute ? context.colorScheme.iconDisabled : context.colorScheme.primaryWhite,
                                       ),
                                     ),
                                     Expanded(
                                       child: NeumorphicTextWithPopupSliderButton(
                                         isActive: false, // DONT ALLOW ACTIVE STATE.
-                                        value: matrixSetting.gain,
+                                        value: matrixSetting.inputGain,
                                         borderRadius: 6,
                                         onChanged: (double value) {
                                           projectViewModel.updateMatrixSettings(
                                             matrixSettings: matrixSetting.copyWith(
-                                              gain: value,
+                                              inputGain: value,
                                             ),
                                             functionId: widget.zoneFunctions.id,
                                           );
@@ -558,7 +558,7 @@ class _SourceMatrixControlsState extends State<SourceMatrixControls> {
                       return GestureDetector(
                         onTap: () {
                           projectViewModel.updateMatrixSettings(
-                            matrixSettings: matrixSetting.copyWith(outActive: !matrixSetting.outActive),
+                            matrixSettings: matrixSetting.copyWith(isSelected: !matrixSetting.isSelected),
                             functionId: widget.zoneFunctions.id,
                           );
                         },
@@ -567,7 +567,7 @@ class _SourceMatrixControlsState extends State<SourceMatrixControls> {
                           child: SemanticHelper.container(
                             testId: SemanticHelper.createTestId(SemanticTypes.container, "crosspoint_channel_gain_$index"),
                             child: NeumorphicTextWithPopupSliderButton(
-                              isActive: matrixSetting.outActive,
+                              isActive: matrixSetting.isSelected,
                               value: matrixSetting.mixLevel,
                               borderRadius: 6,
                               onChanged: (double value) {
