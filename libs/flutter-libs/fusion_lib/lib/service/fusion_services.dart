@@ -7,3 +7,4 @@ export 'websocket/websocket_service.dart';
 export 'cache/app_cache_service.dart';
 export 'dowload_manager/dowload_manager.dart';
 export 'dowload_manager/file_download.dart';
+export 'aes67/session_sync_service.dart';

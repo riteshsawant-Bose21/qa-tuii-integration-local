@@ -126,13 +126,12 @@ class Aes67SessionEntry {
   }
 
   factory Aes67SessionEntry.fromJson(Map<String, dynamic> json) {
-    final int channelCount = json['channels'] as int;
-    final List<String> labels =
-        (json['channelLabels'] as List<dynamic>?)?.map((dynamic e) => e as String).toList() ?? List<String>.generate(channelCount, (int i) => 'Ch${i + 1}');
+    final List<String> labels = (json['channelLabels'] as List<dynamic>?)?.map((dynamic e) => e as String).toList() ?? <String>[];
+
     return Aes67SessionEntry(
       id: json['id'] as String,
       sessionId: json['sessionId'] as String,
-      channels: channelCount,
+      channels: json['channels'] as int,
       ipVersion: json['ipVersion'] as String? ?? 'IPv4',
       ipAddress: json['ipAddress'] as String,
       port: json['port'] as int,
@@ -211,22 +210,11 @@ class Aes67Config {
        sessions = sessions ?? <Aes67SessionEntry>[];
 
   static List<Aes67ChannelConfig> buildDefaultChannels(int count) {
-    const Map<int, List<String>> channelLabels = <int, List<String>>{
-      1: <String>['Mono'],
-      2: <String>['Left', 'Right'],
-      3: <String>['Left', 'Right', 'Center'],
-      4: <String>['Left', 'Right', 'Center', 'LFE'],
-      5: <String>['Left', 'Right', 'Center', 'LFE', 'Surround'],
-      6: <String>['Left', 'Right', 'Center', 'LFE', 'Ls', 'Rs'],
-      7: <String>['Left', 'Right', 'Center', 'LFE', 'Ls', 'Rs', 'Cs'],
-      8: <String>['Left', 'Right', 'Center', 'LFE', 'Lss', 'Rss', 'Lrs', 'Rrs'],
-    };
-    final List<String> labels = channelLabels[count] ?? List<String>.generate(count, (int i) => 'Ch ${i + 1}');
     return List<Aes67ChannelConfig>.generate(
       count,
       (int i) => Aes67ChannelConfig(
         channelNumber: i + 1,
-        label: labels[i],
+        label: 'channel_${i + 1}',
         assignedTo: null,
       ),
     );
