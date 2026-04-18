@@ -407,6 +407,14 @@ int AlsaDevice::get_buffer_depth()
 
     if (depth < 0)
     {
+        if (depth == -ESTRPIPE)
+        {
+            ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                                  "ALSA stream suspended while getting {} buffer depth: {}",
+                                  device_name.c_str(), snd_strerror(depth));
+            return -1;
+        }
+
         ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                               "Failed to get {} buffer depth: {}",
                               device_name.c_str(), snd_strerror(depth));
@@ -445,6 +453,14 @@ int AlsaDevice::adjust_buffer_depth(int samples)
 
         if (forwarded < 0)
         {
+            if (forwarded == -ESTRPIPE)
+            {
+                ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                                      "ALSA stream suspended while forwarding {} buffer depth: {}",
+                                      device_name.c_str(), snd_strerror(forwarded));
+                return -1;
+            }
+
             ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                                   "Failed to forward {} buffer depth: {}",
                                   device_name.c_str(), snd_strerror(forwarded));
@@ -465,6 +481,14 @@ int AlsaDevice::adjust_buffer_depth(int samples)
 
         if (rewound < 0)
         {
+            if (rewound == -ESTRPIPE)
+            {
+                ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                                      "ALSA stream suspended while rewinding {} buffer depth: {}",
+                                      device_name.c_str(), snd_strerror(rewound));
+                return -1;
+            }
+
             ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                                   "Failed to rewind {} buffer depth: {}",
                                   device_name.c_str(), snd_strerror(rewound));
@@ -529,6 +553,15 @@ int AlsaDevice::read(float *buffer, int samples)
         if (res == -EBADFD || res == -ENODEV)
         {
             close_device();
+            std::memset(buffer, 0, samples * channels * sizeof(float));
+            return samples;
+        }
+
+        if (res == -ESTRPIPE)
+        {
+            ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                                  "Capture stream suspended on {}: {}",
+                                  device_name.c_str(), snd_strerror(res));
             std::memset(buffer, 0, samples * channels * sizeof(float));
             return samples;
         }
@@ -613,6 +646,14 @@ void AlsaDevice::write(const float *buffer, int samples)
         if (res == -EBADFD || res == -ENODEV)
         {
             close_device();
+            return;
+        }
+
+        if (res == -ESTRPIPE)
+        {
+            ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                                  "Playback stream suspended on {}: {}",
+                                  device_name.c_str(), snd_strerror(res));
             return;
         }
 
