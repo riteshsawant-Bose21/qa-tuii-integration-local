@@ -57,6 +57,46 @@ class AssignedInputStreamInfo {
   String toString() => 'AssignedInputStreamInfo(streamId: $streamId, streamName: $streamName, ipAddress: $ipAddress, sourceMappings: $sourceMappings)';
 }
 
+// ── Output stream → circuit assignment models ─────────────────────────────────
+
+/// One circuit that has one or more channels of an output stream assigned to it.
+class AssignedCircuitInfo {
+  final String circuitId;
+  final String circuitName;
+
+  /// The channel configs from the output stream that are assigned to this circuit.
+  final List<Aes67ChannelConfig> channels;
+
+  const AssignedCircuitInfo({
+    required this.circuitId,
+    required this.circuitName,
+    required this.channels,
+  });
+
+  @override
+  String toString() => 'AssignedCircuitInfo(circuitId: $circuitId, circuitName: $circuitName, channels: $channels)';
+}
+
+/// An output stream with all its circuit assignments grouped by circuit.
+class AssignedOutputStreamInfo {
+  final String streamId;
+  final String streamName;
+  final String ipAddress;
+
+  /// Circuits that have at least one channel of this stream assigned to them.
+  final List<AssignedCircuitInfo> assignedCircuits;
+
+  const AssignedOutputStreamInfo({
+    required this.streamId,
+    required this.streamName,
+    required this.ipAddress,
+    this.assignedCircuits = const <AssignedCircuitInfo>[],
+  });
+
+  @override
+  String toString() => 'AssignedOutputStreamInfo(streamId: $streamId, streamName: $streamName, assignedCircuits: $assignedCircuits)';
+}
+
 /// Enum representing the type of AES67 stream
 enum Aes67StreamType {
   input,

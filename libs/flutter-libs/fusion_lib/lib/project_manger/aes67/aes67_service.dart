@@ -241,6 +241,81 @@ extension Aes67Service on ProjectService {
     return streamToSourceChannels;
   }
 
+  // ==================== Output Stream → Circuit Assignment ====================
+
+  /// Returns all output streams that have at least one channel assigned to a circuit.
+  ///
+  /// For each stream, circuits are grouped so that every [AssignedCircuitInfo]
+  /// lists all the stream channels whose [Aes67ChannelConfig.assignedTo] matches
+  /// that circuit's ID.
+  ///
+  /// Streams with no circuit assignments are **excluded** from the result.
+  List<AssignedOutputStreamInfo> getAssignedOutputStreamToCircuit() {
+    final List<Aes67Config> outputStreams = getAllAes67OutputStreams();
+    final List<AssignedOutputStreamInfo> result = <AssignedOutputStreamInfo>[];
+
+    for (final Aes67Config stream in outputStreams) {
+      // Collect channel configs that have a circuit assignment
+      final List<Aes67ChannelConfig> assignedChannels = stream.channelConfigs.where((Aes67ChannelConfig ch) => ch.assignedTo != null).toList();
+
+      if (assignedChannels.isEmpty) continue;
+
+      // Group channels by circuitId
+      final Map<String, List<Aes67ChannelConfig>> byCircuit = <String, List<Aes67ChannelConfig>>{};
+      for (final Aes67ChannelConfig ch in assignedChannels) {
+        byCircuit.putIfAbsent(ch.assignedTo!, () => <Aes67ChannelConfig>[]).add(ch);
+      }
+
+      // Build AssignedCircuitInfo for each circuit
+      final List<AssignedCircuitInfo> circuits = byCircuit.entries.map(
+        (MapEntry<String, List<Aes67ChannelConfig>> entry) {
+          final CircuitModel? circuit = getCircuitById(entry.key);
+          return AssignedCircuitInfo(
+            circuitId: entry.key,
+            circuitName: circuit?.name ?? entry.key,
+            channels: entry.value,
+          );
+        },
+      ).toList();
+
+      // Pretty print JSON
+      print(
+        const JsonEncoder.withIndent('  ').convert({
+          'streamId': stream.id,
+          'streamName': stream.name,
+          'ipAddress': stream.ipAddress,
+          'assignedCircuits': circuits
+              .map(
+                (c) => {
+                  'circuitId': c.circuitId,
+                  'circuitName': c.circuitName,
+                  'channels': c.channels
+                      .map(
+                        (ch) => {
+                          'channelNumber': ch.channelNumber,
+                          'channelLabel': ch.label,
+                        },
+                      )
+                      .toList(),
+                },
+              )
+              .toList(),
+        }),
+      );
+
+      result.add(
+        AssignedOutputStreamInfo(
+          streamId: stream.id,
+          streamName: stream.name,
+          ipAddress: stream.ipAddress,
+          assignedCircuits: circuits,
+        ),
+      );
+    }
+
+    return result;
+  }
+
   /// Returns all input streams that have at least one source mapped to them,
   /// along with the source-to-channel assignments for each stream.
   List<AssignedInputStreamInfo> getAssignedInputStreamChannelsForSource() {

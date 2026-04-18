@@ -279,17 +279,6 @@ class _LoadedBody extends StatelessWidget {
   }
 }
 
-// ── Channel section ───────────────────────────────────────────────────────────
-//
-// Renders:
-//   Name  [2]  [Channel 1 field]
-//              [Channel 2 field]
-//              ...
-//
-// The count badge and every channel field are left-edge-aligned with each
-// other (they all start at labelW + gap). The "Name" label is in the fixed
-// labelW column so it lines up with the labels below it.
-
 class _ChannelSection extends StatelessWidget {
   final OutputStreamLoaded state;
   final OutputStreamViewmodel cubit;

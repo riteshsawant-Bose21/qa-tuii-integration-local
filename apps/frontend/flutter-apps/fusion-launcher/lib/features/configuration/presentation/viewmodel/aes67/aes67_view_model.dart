@@ -181,6 +181,17 @@ extension Aes67ViewModel on ProjectViewModel {
     }
   }
 
+  /// Returns all output streams that have at least one channel assigned to a
+  /// circuit, grouped by circuit.
+  List<AssignedOutputStreamInfo> getAssignedOutputStreamToCircuit() {
+    try {
+      return projectManager.getAssignedOutputStreamToCircuit();
+    } catch (e) {
+      throwError('Get Assigned Output Stream To Circuit Error: ${e.toString()}');
+      return <AssignedOutputStreamInfo>[];
+    }
+  }
+
   // ==================== General Operations ====================
 
   List<Aes67Config> getAllAes67Streams() {

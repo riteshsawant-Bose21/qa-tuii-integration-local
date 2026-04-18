@@ -139,4 +139,10 @@ class ConfigAes67Viewmodel extends Cubit<ConfigAes67State> {
   List<AssignedInputStreamInfo> getAssignedInputStreamChannelsForSource() {
     return _projectViewModel.getAssignedInputStreamChannelsForSource();
   }
+
+  /// Returns all output streams that have at least one channel assigned to a
+  /// circuit, grouped by circuit.
+  List<AssignedOutputStreamInfo> getAssignedOutputStreamToCircuit() {
+    return _projectViewModel.getAssignedOutputStreamToCircuit();
+  }
 }

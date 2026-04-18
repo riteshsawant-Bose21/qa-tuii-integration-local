@@ -183,4 +183,13 @@ extension Aes67Manager on ProjectManager {
     }
     return projectService!.getAssignedInputStreamChannelsForSource();
   }
+
+  /// Returns all output streams that have at least one channel assigned to a
+  /// circuit, grouped by circuit.
+  List<AssignedOutputStreamInfo> getAssignedOutputStreamToCircuit() {
+    if (projectService == null) {
+      throw Exception('Project service is not initialized.');
+    }
+    return projectService!.getAssignedOutputStreamToCircuit();
+  }
 }
