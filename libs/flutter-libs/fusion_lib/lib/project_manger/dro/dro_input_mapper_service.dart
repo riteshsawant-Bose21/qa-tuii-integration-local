@@ -184,6 +184,8 @@ extension DroInputMapperService on ProjectService {
 
       List<Source> functionSources = getSourcesAndSourceSetSourcesInZone(zoneId: zone.id);
 
+      final Map<String, int> sourceIndex = {};
+
       List<DroSourceConnection> droSourceConnections = [];
       for (int i = 0; i < functionSources.length; i++) {
         Source source = functionSources[i];
@@ -196,7 +198,10 @@ extension DroInputMapperService on ProjectService {
             destinationChannel: i + 1,
           ),
         );
+        sourceIndex[source.id] = i;
       }
+
+      updateSourceIndexForFunction(functionId: zoneFunction.id, sourceIndex: sourceIndex);
 
       List<PrioritySourceData> prioritySources = getPrioritySourcesDataInZone(zone.id);
 
@@ -263,7 +268,7 @@ extension DroInputMapperService on ProjectService {
           sourceTerminal: "out",
           sourceChannel: 1,
           destinationTerminal: "in",
-          destinationChannel: i + 1,
+          destinationChannel: 1,
         ),
       );
 
