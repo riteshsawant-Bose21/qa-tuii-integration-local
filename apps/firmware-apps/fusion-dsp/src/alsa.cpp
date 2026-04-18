@@ -410,7 +410,8 @@ int AlsaDevice::get_buffer_depth()
         ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                               "Failed to get {} buffer depth: {}",
                               device_name.c_str(), snd_strerror(depth));
-        return 0;
+        close_device();
+        return -1;
     }
 
     return depth;
@@ -430,6 +431,12 @@ int AlsaDevice::adjust_buffer_depth(int samples)
         return 0;
     }
 
+    if (snd_pcm_state(alsa) == SND_PCM_STATE_DISCONNECTED)
+    {
+        close_device();
+        return -1;
+    }
+
     SPDLOG_TRACE("Adjusting ALSA buffer depth by {} samples", samples);
 
     if (samples < 0)
@@ -441,7 +448,8 @@ int AlsaDevice::adjust_buffer_depth(int samples)
             ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                                   "Failed to forward {} buffer depth: {}",
                                   device_name.c_str(), snd_strerror(forwarded));
-            return 0;
+            close_device();
+            return -1;
         }
 
         if (forwarded != -samples)
@@ -460,7 +468,8 @@ int AlsaDevice::adjust_buffer_depth(int samples)
             ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                                   "Failed to rewind {} buffer depth: {}",
                                   device_name.c_str(), snd_strerror(rewound));
-            return 0;
+            close_device();
+            return -1;
         }
 
         if (rewound != samples)
@@ -488,13 +497,6 @@ int AlsaDevice::read(float *buffer, int samples)
     {
         SPDLOG_ERROR("Requested read size {} exceeds maximum {}",
                      samples, max_transfer_size);
-        std::memset(buffer, 0, samples * channels * sizeof(float));
-        return samples;
-    }
-
-    if (snd_pcm_state(alsa) == SND_PCM_STATE_DISCONNECTED)
-    {
-        close_device();
         std::memset(buffer, 0, samples * channels * sizeof(float));
         return samples;
     }
@@ -534,6 +536,7 @@ int AlsaDevice::read(float *buffer, int samples)
         ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                               "Unable to read from {}: {}",
                               device_name.c_str(), snd_strerror(res));
+        close_device();
         std::memset(buffer, 0, samples * channels * sizeof(float));
         return samples;
     }
@@ -576,6 +579,12 @@ void AlsaDevice::write(const float *buffer, int samples)
         return;
     }
 
+    if (snd_pcm_state(alsa) == SND_PCM_STATE_DISCONNECTED)
+    {
+        close_device();
+        return;
+    }
+
     convert_write(buffer, sample_buffer.get(), channels, samples);
 
     int res = snd_pcm_writei(alsa, sample_buffer.get(), samples);
@@ -610,6 +619,7 @@ void AlsaDevice::write(const float *buffer, int samples)
         ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                               "Unable to write {}: {}",
                               device_name.c_str(), snd_strerror(res));
+        close_device();
         return;
     }
 

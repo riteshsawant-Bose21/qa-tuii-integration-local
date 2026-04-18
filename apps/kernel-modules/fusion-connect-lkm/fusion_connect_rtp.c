@@ -138,6 +138,8 @@ int fusion_cn_rtp_enqueue_packet(struct fusion_cn_rtp_manager *rtp_mgr, u64 stre
 void fusion_cn_rtp_stream_release(struct kref *ref)
 {
     struct fusion_cn_rtp_stream *stream = container_of(ref, struct fusion_cn_rtp_stream, ref);
+    printk(KERN_DEBUG "fusion_cn_rtp: stream_release: stream=%s handle=%llu\n",
+           stream->info.stream_name, stream->info.stream_handle);
     if (stream->metrics) {
         fusion_cn_metrics_destroy(stream->metrics);
         stream->metrics = NULL;

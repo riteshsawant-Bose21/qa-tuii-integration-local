@@ -101,7 +101,7 @@ void fusion_cn_alsa_substream_release(struct kref *kref)
     struct fusion_cn_substream *s =
         container_of(kref, struct fusion_cn_substream, ref);
 
-    printk(KERN_DEBUG "fusion_cn_alsa: substream_release: stream=%s device=%d",
+    printk(KERN_DEBUG "fusion_cn_alsa: substream_release: stream=%s device=%d\n",
            s->stream_name, s->stream_index);
 
     /*
