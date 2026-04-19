@@ -71,6 +71,29 @@ extension ConfigationAes67 on FusionTestKeys {
   String get aes67_output_dialog_sample_rate_dropdown => "aes67_output_dialog_sample_rate_dropdown";
   String get aes67_output_dialog_packet_time_dropdown_label => "aes67_output_dialog_packet_time_dropdown_label";
   String get aes67_output_dialog_packet_time_dropdown => "aes67_output_dialog_packet_time_dropdown";
+  String get aes67_output_dialog_zone_label => "aes67_output_dialog_zone_label";
+  String get aes67_output_dialog_zone_dropdown => "aes67_output_dialog_zone_dropdown";
+  String get aes67_output_dialog_subzone_label => "aes67_output_dialog_subzone_label";
+  String get aes67_output_dialog_subzone_dropdown => "aes67_output_dialog_subzone_dropdown";
+  String get aes67_output_dialog_circuit_label => "aes67_output_dialog_circuit_label";
+  String get aes67_output_dialog_circuit_dropdown => "aes67_output_dialog_circuit_dropdown";
+
+  // ── Assign Circuit dialog ──────────────────────────────────────────────────
+  String get aes67_assign_circuit_dialog => "aes67_assign_circuit_dialog";
+  String get aes67_assign_circuit_dialog_header => "aes67_assign_circuit_dialog_header";
+  String get aes67_assign_circuit_dialog_header_text => "aes67_assign_circuit_dialog_header_text";
+  String get aes67_assign_circuit_dialog_header_icon => "aes67_assign_circuit_dialog_header_icon";
+  String get aes67_assign_circuit_dialog_channel_row => "aes67_assign_circuit_dialog_channel_row";
+  String get aes67_assign_circuit_dialog_channel_label => "aes67_assign_circuit_dialog_channel_label";
+  String get aes67_assign_circuit_dialog_zone_dropdown => "aes67_assign_circuit_dialog_zone_dropdown";
+  String get aes67_assign_circuit_dialog_subzone_dropdown => "aes67_assign_circuit_dialog_subzone_dropdown";
+  String get aes67_assign_circuit_dialog_circuit_dropdown => "aes67_assign_circuit_dialog_circuit_dropdown";
+  String get aes67_assign_circuit_dialog_save_button => "aes67_assign_circuit_dialog_save_button";
+  String get aes67_assign_circuit_dialog_footer => "aes67_assign_circuit_dialog_footer";
+
+  // ── Output table assign button ─────────────────────────────────────────────
+  String get aes67_output_assign_button => "aes67_output_assign_button";
+
   String get aes67_output_dialog_footer => "aes67_output_dialog_footer";
   String get aes67_output_dialog_export_sdp_button => "aes67_output_dialog_export_sdp_button";
   String get aes67_output_dialog_save_button => "aes67_output_dialog_save_button";

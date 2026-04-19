@@ -471,7 +471,11 @@ enum FusionApiEndpoint {
   //fusion server setup apis
   fusionDevice('/devices', FusionApiType.fusionServer),
   setVip('/devices/vip', FusionApiType.fusionServer),
-  sapSessions('/sessions', FusionApiType.fusionServer);
+  sapSessions('/sessions', FusionApiType.fusionServer),
+  pavaMessages('/pava/messages', FusionApiType.fusionServer),
+  sceneSetsActivate('/scene-sets/activate', FusionApiType.fusionServer),
+  snapshotsActivate('/snapshots/activate', FusionApiType.fusionServer),
+  tasks('/tasks', FusionApiType.fusionServer);
 
   final String path;
   final FusionApiType type;

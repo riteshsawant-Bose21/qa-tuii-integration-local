@@ -9,15 +9,18 @@ class SnapshotItemCard extends StatefulWidget {
   final SnapshotsModel snapShotData;
   final bool isDragging;
   final bool isSelected;
+  final bool isInControlMode;
   final VoidCallback? onDelete;
   final VoidCallback? onTap;
   final VoidCallback? onDuplicate;
+  final VoidCallback? onSnapshotRecall;
   final void Function(String value, SnapshotsModel newSnapshot)? onRenameSave;
   final int index;
 
   const SnapshotItemCard({
     this.isDragging = false,
     this.isSelected = false,
+    this.isInControlMode = false,
     super.key,
     required this.snapShotData,
     this.onDelete,
@@ -25,6 +28,7 @@ class SnapshotItemCard extends StatefulWidget {
     this.onDuplicate,
     required this.index,
     this.onRenameSave,
+    this.onSnapshotRecall,
   });
 
   @override
@@ -33,6 +37,11 @@ class SnapshotItemCard extends StatefulWidget {
 
 class _SnapshotItemCardState extends State<SnapshotItemCard> {
   bool _isHovered = false;
+
+  void _handleRecallTap() {
+    if (!widget.isInControlMode || widget.onSnapshotRecall == null) return;
+    widget.onSnapshotRecall!();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -82,13 +91,19 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                FusionImageAuto(
-                  path: Assets.playIcon,
-                  semanticId: "${FusionTestKeys.instance.snplistitmplayicon}_${widget.index}",
-                  width: 24,
-                  height: 24,
-                  color: context.colorScheme.iconWhite,
-                  fit: BoxFit.contain,
+                GestureDetector(
+                  onTap: widget.isInControlMode ? _handleRecallTap : null,
+                  child: Tooltip(
+                    message: widget.isInControlMode ? 'Recall Snapshot' : 'Enable control mode to recall',
+                    child: FusionImageAuto(
+                      path: Assets.playIcon,
+                      semanticId: "${FusionTestKeys.instance.snplistitmplayicon}_${widget.index}",
+                      width: 24,
+                      height: 24,
+                      color: widget.isInControlMode ? context.colorScheme.iconWhite : context.colorScheme.iconWhite.withAlpha(80),
+                      fit: BoxFit.contain,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 12),
 

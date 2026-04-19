@@ -27,6 +27,9 @@ class ConfigurationEvents extends StatelessWidget {
             create:
                 (BuildContext context) => ConfigEventsViewmodel(
                   projectViewModel: projectViewModel,
+                  eventActivateService: FusionEventService(
+                    networkClient: serviceLocator<FusionNetworkClient>(),
+                  ),
                 ),
           ),
           BlocProvider<ConfigEventActionsViewmodel>(

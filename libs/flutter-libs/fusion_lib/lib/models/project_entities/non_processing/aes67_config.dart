@@ -1,5 +1,102 @@
 import 'package:uuid/uuid.dart';
 
+/// Represents a single stream-channel assignment for a source.
+class AssignedStreamChannel {
+  final String streamId;
+  final int channelNumber;
+  final String channelName;
+
+  const AssignedStreamChannel({
+    required this.streamId,
+    required this.channelNumber,
+    required this.channelName,
+  });
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is AssignedStreamChannel && other.streamId == streamId && other.channelNumber == channelNumber && other.channelName == channelName;
+  }
+
+  @override
+  int get hashCode => Object.hash(streamId, channelNumber, channelName);
+
+  @override
+  String toString() => 'AssignedStreamChannel(streamId: $streamId, channelNumber: $channelNumber, channelName: $channelName)';
+}
+
+/// Represents a source's channel assignments to a specific stream.
+class StreamSourceChannelMapping {
+  final String sourceId;
+  final List<int> channelNumbers;
+
+  const StreamSourceChannelMapping({
+    required this.sourceId,
+    required this.channelNumbers,
+  });
+
+  @override
+  String toString() => 'StreamSourceChannelMapping(sourceId: $sourceId, channelNumbers: $channelNumbers)';
+}
+
+/// Represents an input stream along with all source-channel mappings assigned to it.
+class AssignedInputStreamInfo {
+  final String streamId;
+  final String streamName;
+  final String ipAddress;
+  final List<StreamSourceChannelMapping> sourceMappings;
+
+  const AssignedInputStreamInfo({
+    required this.streamId,
+    required this.streamName,
+    required this.ipAddress,
+    this.sourceMappings = const <StreamSourceChannelMapping>[],
+  });
+
+  @override
+  String toString() => 'AssignedInputStreamInfo(streamId: $streamId, streamName: $streamName, ipAddress: $ipAddress, sourceMappings: $sourceMappings)';
+}
+
+// ── Output stream → circuit assignment models ─────────────────────────────────
+
+/// One circuit that has one or more channels of an output stream assigned to it.
+class AssignedCircuitInfo {
+  final String circuitId;
+  final String circuitName;
+
+  /// The channel configs from the output stream that are assigned to this circuit.
+  final List<Aes67ChannelConfig> channels;
+
+  const AssignedCircuitInfo({
+    required this.circuitId,
+    required this.circuitName,
+    required this.channels,
+  });
+
+  @override
+  String toString() => 'AssignedCircuitInfo(circuitId: $circuitId, circuitName: $circuitName, channels: $channels)';
+}
+
+/// An output stream with all its circuit assignments grouped by circuit.
+class AssignedOutputStreamInfo {
+  final String streamId;
+  final String streamName;
+  final String ipAddress;
+
+  /// Circuits that have at least one channel of this stream assigned to them.
+  final List<AssignedCircuitInfo> assignedCircuits;
+
+  const AssignedOutputStreamInfo({
+    required this.streamId,
+    required this.streamName,
+    required this.ipAddress,
+    this.assignedCircuits = const <AssignedCircuitInfo>[],
+  });
+
+  @override
+  String toString() => 'AssignedOutputStreamInfo(streamId: $streamId, streamName: $streamName, assignedCircuits: $assignedCircuits)';
+}
+
 /// Enum representing the type of AES67 stream
 enum Aes67StreamType {
   input,
@@ -126,13 +223,12 @@ class Aes67SessionEntry {
   }
 
   factory Aes67SessionEntry.fromJson(Map<String, dynamic> json) {
-    final int channelCount = json['channels'] as int;
-    final List<String> labels =
-        (json['channelLabels'] as List<dynamic>?)?.map((dynamic e) => e as String).toList() ?? List<String>.generate(channelCount, (int i) => 'Ch${i + 1}');
+    final List<String> labels = (json['channelLabels'] as List<dynamic>?)?.map((dynamic e) => e as String).toList() ?? <String>[];
+
     return Aes67SessionEntry(
       id: json['id'] as String,
       sessionId: json['sessionId'] as String,
-      channels: channelCount,
+      channels: json['channels'] as int,
       ipVersion: json['ipVersion'] as String? ?? 'IPv4',
       ipAddress: json['ipAddress'] as String,
       port: json['port'] as int,
@@ -211,22 +307,11 @@ class Aes67Config {
        sessions = sessions ?? <Aes67SessionEntry>[];
 
   static List<Aes67ChannelConfig> buildDefaultChannels(int count) {
-    const Map<int, List<String>> channelLabels = <int, List<String>>{
-      1: <String>['Mono'],
-      2: <String>['Left', 'Right'],
-      3: <String>['Left', 'Right', 'Center'],
-      4: <String>['Left', 'Right', 'Center', 'LFE'],
-      5: <String>['Left', 'Right', 'Center', 'LFE', 'Surround'],
-      6: <String>['Left', 'Right', 'Center', 'LFE', 'Ls', 'Rs'],
-      7: <String>['Left', 'Right', 'Center', 'LFE', 'Ls', 'Rs', 'Cs'],
-      8: <String>['Left', 'Right', 'Center', 'LFE', 'Lss', 'Rss', 'Lrs', 'Rrs'],
-    };
-    final List<String> labels = channelLabels[count] ?? List<String>.generate(count, (int i) => 'Ch ${i + 1}');
     return List<Aes67ChannelConfig>.generate(
       count,
       (int i) => Aes67ChannelConfig(
         channelNumber: i + 1,
-        label: labels[i],
+        label: 'channel_${i + 1}',
         assignedTo: null,
       ),
     );

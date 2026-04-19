@@ -9,6 +9,7 @@ import 'package:fusion_launcher/core/network_clients/rest_client/interceptor.dar
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/dynamic_config/domain/usecases/get_panel_entity_usecase.dart';
+import 'package:fusion_launcher/features/projects/view_model/audio_message_sync/audio_message_sync_view model.dart';
 import 'package:fusion_launcher/features/projects/view_model/dsp_sync/config_sync_view_model.dart';
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
@@ -69,6 +70,20 @@ Future<void> setupServiceLocator() async {
   );
 
   serviceLocator.registerSingleton<WebSocketService>(WebSocketService());
+
+  /// Common Virtual Controller Service
+  serviceLocator.registerLazySingleton<FusionVirtualControllerService>(
+    () => FusionVirtualControllerService(
+      networkClient: serviceLocator<FusionNetworkClient>(),
+    ),
+  );
+
+  /// Common Virtual Controller ViewModel
+  serviceLocator.registerLazySingleton<VirtualControllerViewModel>(
+    () => VirtualControllerViewModel(
+      service: serviceLocator<FusionVirtualControllerService>(),
+    ),
+  );
 
   serviceLocator.registerLazySingleton<FusionSecureStorage>(
     () => FusionSecureStorageImpl(serviceLocator<FlutterSecureStorage>()),
@@ -257,10 +272,20 @@ Future<void> setupServiceLocator() async {
 
   serviceLocator.registerLazySingleton<BlockDataViewmodel>(() => BlockDataViewmodel());
 
+  serviceLocator.registerLazySingleton<MessageSyncService>(
+    () => MessageSyncService(networkClient: serviceLocator<FusionNetworkClient>()),
+  );
+
   serviceLocator.registerLazySingleton<ConfigSyncViewModel>(
     () => ConfigSyncViewModel(
       droConfigService: serviceLocator<DroConfigService>(),
       fusionConfigSyncService: serviceLocator<FusionConfigSyncService>(),
+    ),
+  );
+
+  serviceLocator.registerLazySingleton<AudioMessageSyncViewModel>(
+    () => AudioMessageSyncViewModel(
+      messageSyncService: serviceLocator<MessageSyncService>(),
     ),
   );
 
