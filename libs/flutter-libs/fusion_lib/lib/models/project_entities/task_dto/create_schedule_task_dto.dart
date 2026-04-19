@@ -38,8 +38,8 @@ class CreateScheduleTaskDto {
       'description': description,
       'type': type,
       'cron_expr': cronExpr,
-      'start_at': startAt.toLocal().toIso8601String(),
-      'end_at': endAt?.toLocal().toIso8601String(),
+      'start_at': startAt.toUtc().toIso8601String(),
+      'end_at': endAt?.toUtc().toIso8601String(),
       'params': params.toJson(),
       'enabled': enabled,
     };

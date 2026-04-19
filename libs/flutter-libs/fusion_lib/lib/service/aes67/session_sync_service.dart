@@ -33,7 +33,8 @@ class SessionSyncService {
 
           // ── IP address (strip CIDR suffix e.g. /32) ────────────
           final Map<String, dynamic> connInfo = desc['ConnectionInformation'] as Map<String, dynamic>;
-          final String ipAddress = (connInfo['Address'] as Map<String, dynamic>)['Address'] as String;
+          final String rawAddress = (connInfo['Address'] as Map<String, dynamic>)['Address'] as String;
+          final String ipAddress = rawAddress.split('/').first;
 
           // ── isDanteDevice (keywds = Dante in top-level Attributes) ─
           final List<dynamic> topAttrs = desc['Attributes'] as List<dynamic>? ?? <dynamic>[];

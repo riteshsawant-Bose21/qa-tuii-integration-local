@@ -18,7 +18,10 @@ class MessageSyncService {
         isSecure: false,
       );
 
-      if (response.success && response.data != null) {
+      if (response.success) {
+        if (response.data == null) {
+          return ResponseCallback<List<PavaMessageModel>>.success([]);
+        }
         final List<dynamic> list = response.data as List<dynamic>;
         final List<PavaMessageModel> messages = list.map((dynamic e) => PavaMessageModel.fromJson(e as Map<String, dynamic>)).toList();
         return ResponseCallback<List<PavaMessageModel>>.success(messages);

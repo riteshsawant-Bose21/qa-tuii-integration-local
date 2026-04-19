@@ -1,3 +1,4 @@
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:uuid/uuid.dart';
 
 /// Represents a single stream-channel assignment for a source.
@@ -302,7 +303,7 @@ class Aes67Config {
     List<Aes67SessionEntry>? sessions,
     this.selectedSessionId,
     this.assignedTo,
-  }) : id = id ?? const Uuid().v4(),
+  }) : id = id ?? "AES${FusionUtils.shortStringUUID()}",
        channelConfigs = channelConfigs ?? buildDefaultChannels(channels),
        sessions = sessions ?? <Aes67SessionEntry>[];
 

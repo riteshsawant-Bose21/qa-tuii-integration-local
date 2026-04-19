@@ -255,13 +255,23 @@ extension DroInputMapperService on ProjectService {
         }
       }
 
+      final bool usesInOutChannels =
+          zoneFunction.type == ZoneFunctionsType.sourceMix ||
+          zoneFunction.type == ZoneFunctionsType.sourceMixWithPriority ||
+          zoneFunction.type == ZoneFunctionsType.sourceMatrix ||
+          zoneFunction.type == ZoneFunctionsType.sourceMatrixWithPriority;
+
       Map<String, dynamic> algorithmProperties = prioritySources.isEmpty
           ? {
-              "source_channels": 1,
+              if (usesInOutChannels) "out_channels": 1 else "source_channels": 1,
+              if (usesInOutChannels) "in_channels": functionSources.length else "total_channels": functionSources.length,
             }
           : {
-              "source_channels": 1,
-              "total_channels": functionSources.length + 1,
+              if (usesInOutChannels) "out_channels": 1 else "source_channels": 1,
+              if (usesInOutChannels)
+                "in_channels": functionSources.length + 1
+              else
+                "total_channels": functionSources.length + 1, //+1 is for the priority source
               "priority_count": prioritySources.length,
             };
 
@@ -565,6 +575,7 @@ extension DroInputMapperService on ProjectService {
           name: streamInfo.streamName,
           serverLocation: '',
           sourcePort: 49152,
+          totalChannels: streamChannelMapping.length,
           multicastDestinationIp: streamInfo.ipAddress,
           streamChannelMapping: streamChannelMapping,
         ),

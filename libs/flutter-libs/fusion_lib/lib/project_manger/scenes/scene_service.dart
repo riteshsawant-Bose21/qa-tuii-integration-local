@@ -185,14 +185,14 @@ extension SceneService on ProjectService {
           }
           if (param.type == SceneParamType.volume) {
             final double gainValue = FusionUtils().percentageToDbfs(double.tryParse(value.value ?? "0") ?? 0);
-            data[userFacingGain.id] = {
-              "gain": gainValue,
-            };
+            Map<String, dynamic> mapData = data[userFacingGain.id] ?? {};
+            mapData["gain"] = gainValue;
+            data[userFacingGain.id] = mapData;
           } else if (param.type == SceneParamType.mute) {
             bool isMuted = value.value?.toLowerCase() == "mute";
-            data[userFacingGain.id] = {
-              "mute": isMuted,
-            };
+            Map<String, dynamic> mapData = data[userFacingGain.id] ?? {};
+            mapData["mute"] = isMuted;
+            data[userFacingGain.id] = mapData;
           }
         case SceneParamType.sourceSelect:
           //set the source index as the source
@@ -210,9 +210,13 @@ extension SceneService on ProjectService {
           if (sourceIndex == null) {
             continue; //if source index is not found, skip this action
           }
-          data[zoneFunction.id] = {
-            "input": sourceIndex + 1,
-          };
+          Map<String, dynamic> algorithmData = data[zoneFunction.id] != null
+              ? data[zoneFunction.id] is Map<String, dynamic>
+                    ? data[zoneFunction.id]
+                    : <String, dynamic>{}
+              : <String, dynamic>{};
+          algorithmData["input"] = sourceIndex + 1;
+          data[zoneFunction.id] = algorithmData;
         case SceneParamType.inputLevel:
         case SceneParamType.inputMute:
           //set the source index as the source

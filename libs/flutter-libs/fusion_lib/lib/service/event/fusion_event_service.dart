@@ -99,8 +99,10 @@ class FusionEventService {
   }) async {
     try {
       final ResponseCallback<dynamic> response = await networkClient.post(
-        api: FusionApiEndpoint.tasks,
-        additionalPath: eventId,
+        api: FusionApiEndpoint.snapshotsActivate,
+        data: {
+          'id': eventId,
+        },
         baseUrlToOverride: vip,
         isSecure: false,
       );

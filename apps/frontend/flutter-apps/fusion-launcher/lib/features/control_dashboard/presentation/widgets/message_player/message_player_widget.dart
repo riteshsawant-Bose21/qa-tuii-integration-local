@@ -62,7 +62,7 @@ List<MessagePlayerTestData> buildMessagePlayerData() {
         messages.map((MessageModel message) {
           final MediaFileModel? mediaFile = projectViewModel.getMediaFileForMessage(message.id);
           return MessageTrack(
-            id: message.id,
+            id: mediaFile?.triggerId ?? "",
             title: message.name,
             mediaFile: mediaFile,
           );
