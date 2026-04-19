@@ -6,7 +6,6 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/pava/pava_message_model.dart';
-import 'package:fusion_lib/service/pava/pava_message_service.dart';
 
 import 'audio_messge_sync_state.dart';
 

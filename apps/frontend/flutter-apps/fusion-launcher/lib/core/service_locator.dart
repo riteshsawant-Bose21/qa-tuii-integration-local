@@ -18,7 +18,6 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_networking/network/rest_client/dio_client.dart';
 import 'package:fusion_lib/service/auth/fusion_auth_service.dart';
 import 'package:fusion_lib/service/dro/dro_config_service.dart';
-import 'package:fusion_lib/service/pava/pava_message_service.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

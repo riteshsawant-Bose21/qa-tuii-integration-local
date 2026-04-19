@@ -11,4 +11,5 @@ export 'dowload_manager/file_download.dart';
 export 'aes67/session_sync_service.dart';
 export 'scene_set/scene_set_activate_service.dart';
 export 'snapshot/snapshot_activate_service.dart';
-export 'event/event_activate_service.dart';
+export 'event/fusion_event_service.dart';
+export 'message_sync/message_sync_service.dart';

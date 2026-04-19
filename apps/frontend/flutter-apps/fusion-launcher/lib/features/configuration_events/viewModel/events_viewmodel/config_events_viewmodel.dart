@@ -6,11 +6,11 @@ import 'package:fusion_lib/fusion_lib.dart';
 /// Cubit for managing Events feature state and business logic
 class ConfigEventsViewmodel extends Cubit<ConfigEventsState> {
   final ProjectViewModel _projectViewModel;
-  final EventActivateService _eventActivateService;
+  final FusionEventService _eventActivateService;
 
   ConfigEventsViewmodel({
     required ProjectViewModel projectViewModel,
-    required EventActivateService eventActivateService,
+    required FusionEventService eventActivateService,
   }) : _projectViewModel = projectViewModel,
        _eventActivateService = eventActivateService,
        super(const EventsInitial()) {
