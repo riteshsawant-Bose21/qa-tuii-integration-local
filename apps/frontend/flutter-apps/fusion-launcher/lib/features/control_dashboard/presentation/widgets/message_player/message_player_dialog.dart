@@ -1,6 +1,8 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/projects/view_model/audio_message_sync/audio_message_sync_view model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'message_player_widget.dart';
@@ -98,11 +100,13 @@ class _MessagePlayerDialogState extends State<MessagePlayerDialog> {
                       ),
                     ),
                     onTap: () {
-                      if (isPlaying) {
-                        widget.onStopPlayback();
-                      } else {
-                        widget.onPlayTrack(track.id);
-                      }
+                      serviceLocator<AudioMessageSyncViewModel>().triggerMessage(triggerId: track.id);
+
+                      // if (isPlaying) {
+                      //   widget.onStopPlayback();
+                      // } else {
+                      //   widget.onPlayTrack(track.id);
+                      // }
                       // Rebuild dialog to reflect new track states and show/hide bottom player
                       setState(() {});
                     },
