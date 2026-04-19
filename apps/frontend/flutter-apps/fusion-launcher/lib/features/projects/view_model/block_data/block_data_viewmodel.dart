@@ -711,8 +711,16 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
   /// Sends the actual network update after the debounce settles.
   ///
   /// Preference order:
-  ///   1. WebSocket [patch_config] message — lowest latency.
-  ///   2. REST PATCH — fallback when socket is unavailable.
+  ///   1. WebSocket [patch_config] — lowest latency, only when the connection
+  ///      is FULLY CONFIRMED healthy (_wsState == connected, i.e. a prior pong
+  ///      has been received).
+  ///   2. REST PATCH — used in every other state:
+  ///      • verifying  — a ping is in flight; the socket might be dead. Sending
+  ///        a patch on a potentially-dead socket and having the ping subsequently
+  ///        time out means the patch is silently lost with no retry.
+  ///      • connecting — socket handshake still in progress.
+  ///      • disconnected — no socket.
+  ///      REST guarantees delivery in all three cases.
   ///
   /// Does NOT attempt to reconnect the socket here — that is the responsibility
   /// of the heartbeat / disconnect handler. Mixing reconnect logic into the
@@ -743,13 +751,22 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
                 },
               };
 
-      if (_networkClient.webSocketService.isConnected) {
+      // IMPORTANT: check _wsState, NOT just the underlying isConnected flag.
+      //
+      // During 'verifying', the physical socket is still open so isConnected
+      // returns true — but we have not yet received a pong confirming the
+      // socket is alive. If the ping subsequently times out, _forceReconnect
+      // tears the socket down and any message sent in this window is dropped
+      // with no retry. REST is reliable; use it whenever we are not in the
+      // fully-confirmed 'connected' state.
+      final bool socketConfirmedHealthy = _wsState == _WsState.connected && _networkClient.webSocketService.isConnected;
+
+      if (socketConfirmedHealthy) {
         _sendPatchConfig(audioPayload);
         return;
       }
 
-      // Socket is not connected — fall back to REST. Do NOT attempt to
-      // reconnect here; the reconnect system will pick it up separately.
+      // Socket uncertain or unavailable — fall back to REST.
       await _restPatch(
         blockId: blockId,
         parameter: parameter,

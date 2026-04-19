@@ -405,6 +405,8 @@ class FusionNetworkClient {
       final dynamic payload = message is String ? message : jsonEncode(message);
       webSocketService.sendMessage(payload);
 
+      FusionLogger.log(tag: LogTag.dspConfig, message: "WS Payload $payload");
+
       return ResponseCallback<T>(success: true, message: "Message sent successfully");
     } catch (ex) {
       FusionLogger.log(tag: LogTag.exceptions, message: "Exception in FusionNetworkClient.sendWebSocketMessage() - $ex", logLevel: LogLevel.error);
