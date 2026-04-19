@@ -1,4 +1,6 @@
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/snapshot_api/snapshots_request.dart';
+import 'package:fusion_lib/models/project_entities/sncene_set/scene_set_request.dart';
 
 extension SceneService on ProjectService {
   void addNewSnapshots(SnapshotsModel scene) {
@@ -38,6 +40,241 @@ extension SceneService on ProjectService {
     for (var valueId in copyOfValueIds) {
       relationships.unlink(RelationshipType.actionValueMapping, actionId, valueId);
     }
+  }
+
+  SceneSetRequestDto? getSceneSetRequestDtoData() {
+    try {
+      final List<SceneSetDto> sceneSetDtos = [];
+      final List<SceneSetModel> allSceneSets = sceneSets.getAll();
+      if (allSceneSets.isEmpty) {
+        return null;
+      }
+
+      for (SceneSetModel sceneSet in allSceneSets) {
+        final List<SnapshotsModel> snapshotsInSet = getSnapshotInSceneSet(sceneSet.id);
+        if (snapshotsInSet.isEmpty) {
+          continue; //if there is no snapshot in scene set, skip this scene set
+        }
+        final List<SnapshotItemDto> scenesDto = [];
+        for (SnapshotsModel snapshot in snapshotsInSet) {
+          final List<SceneActionModel> actions = getSceneActionsForSnapshot(snapshot.id);
+          final List<SceneActionModel> zoneActions = actions.where((action) => action.actionType == SceneActionType.zoneControl).toList();
+          final Map<String, dynamic> audio = getDynamicDataForActions(zoneActions);
+          final SnapshotItemDto snapshotDto = SnapshotItemDto(
+            id: snapshot.id,
+            name: snapshot.name,
+            data: SnapshotDataDto(
+              settings: SnapshotSettingsDto(
+                audio: audio,
+              ),
+            ),
+          );
+          scenesDto.add(snapshotDto);
+        }
+
+        sceneSetDtos.add(
+          SceneSetDto(
+            setId: sceneSet.id,
+            name: sceneSet.name,
+            // defaultScene: sceneSet.defaultScene,
+            scenes: scenesDto,
+          ),
+        );
+      }
+
+      return SceneSetRequestDto(sceneSets: sceneSetDtos);
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get SceneSetRequestDto : $ex");
+      return null;
+    }
+  }
+
+  SnapshotsRequestDto? getSnapshotsRequestDtoData() {
+    try {
+      final List<SnapshotItemDto> snapshotsDto = [];
+      final List<SnapshotsModel> allSnapshots = getAllSnapshots();
+      if (allSnapshots.isEmpty) {
+        return null;
+      }
+
+      for (SnapshotsModel snapshot in allSnapshots) {
+        final List<SceneActionModel> actions = getSceneActionsForSnapshot(snapshot.id);
+        final List<SceneActionModel> zoneActions = actions.where((action) => action.actionType == SceneActionType.zoneControl).toList();
+        if (zoneActions.isEmpty) {
+          continue;
+        }
+        final Map<String, dynamic> audio = getDynamicDataForActions(zoneActions);
+        snapshotsDto.add(
+          SnapshotItemDto(
+            id: snapshot.id,
+            name: snapshot.name,
+            data: SnapshotDataDto(
+              settings: SnapshotSettingsDto(
+                audio: audio,
+              ),
+            ),
+          ),
+        );
+      }
+
+      //include all the actions in the events
+      final List<FusionEvent> allEvents = events.getAll();
+      for (FusionEvent event in allEvents) {
+        final List<SceneActionModel> actions = getEventActionsForEvent(event.id);
+        final List<SceneActionModel> zoneActions = actions.where((action) => action.actionType == SceneActionType.zoneControl).toList();
+        if (zoneActions.isEmpty) {
+          continue;
+        }
+        final Map<String, dynamic> audio = getDynamicDataForActions(zoneActions);
+        snapshotsDto.add(
+          SnapshotItemDto(
+            id: event.id,
+            name: event.name,
+            data: SnapshotDataDto(
+              settings: SnapshotSettingsDto(
+                audio: audio,
+              ),
+            ),
+          ),
+        );
+      }
+
+      //todo: Include all the mixscene actions in the zones funtions
+      // final List<ZoneFunctions> allZoneFunctions = zoneFunctions.getAll();
+      // for (ZoneFunctions zoneFunction in allZoneFunctions) {
+      //   final List<MixScene> mixScenes = zoneFunction.mixScenes;
+      //
+      // }
+
+      return SnapshotsRequestDto(snapshots: snapshotsDto);
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get SnapshotsRequestDto : $ex");
+      return null;
+    }
+  }
+
+  Map<String, dynamic> getDynamicDataForActions(List<SceneActionModel> sceneActions) {
+    final Map<String, dynamic> data = {};
+    for (SceneActionModel action in sceneActions) {
+      final SceneActionType? actionType = action.actionType;
+
+      //todo: we need to add support for all other action types in future
+      if (actionType != SceneActionType.zoneControl) {
+        continue; // Currently, we are only interested in zone control actions for audio data
+      }
+      final SceneItem? item = action.item;
+      if (item == null) {
+        continue; // If item is null, skip this action
+      }
+      final SceneParam? param = action.param;
+      if (param == null) {
+        continue; // If param is null, skip this action
+      }
+      final SceneValue? value = action.value;
+      if (value == null) {
+        continue; // If value is null, skip this action
+      }
+
+      switch (param.type) {
+        case SceneParamType.volume:
+        case SceneParamType.mute:
+          //Get the user facing zone control and set its gain or mute to the value
+          final ProcessingBlockModel? userFacingGain = getUserFacingGainBlockForParent(item.itemId);
+          if (userFacingGain == null) {
+            continue; //if there is no user facing gain block, skip this action
+          }
+          if (param.type == SceneParamType.volume) {
+            final double gainValue = FusionUtils().percentageToDbfs(double.tryParse(value.value ?? "0") ?? 0);
+            data[userFacingGain.id] = {
+              "gain": gainValue,
+            };
+          } else if (param.type == SceneParamType.mute) {
+            bool isMuted = value.value?.toLowerCase() == "mute";
+            data[userFacingGain.id] = {
+              "mute": isMuted,
+            };
+          }
+        case SceneParamType.sourceSelect:
+          //set the source index as the source
+          final String? sourceId = value.value;
+          if (sourceId == null) {
+            continue; //if there is no source selected, skip this action
+          }
+          final ZoneFunctions? zoneFunction = getZoneFunction(zoneOrSubZoneId: item.itemId);
+          if (zoneFunction == null) {
+            continue; //if there is no zone function, skip this action
+          }
+          final int? sourceIndex = zoneFunction.sourceIndex != null && zoneFunction.sourceIndex!.containsKey(sourceId)
+              ? zoneFunction.sourceIndex![sourceId]
+              : null;
+          if (sourceIndex == null) {
+            continue; //if source index is not found, skip this action
+          }
+          data[zoneFunction.id] = {
+            "input": sourceIndex + 1,
+          };
+        case SceneParamType.inputLevel:
+        case SceneParamType.inputMute:
+          //set the source index as the source
+          final String? sourceId = param.associatedId;
+          if (sourceId == null) {
+            continue; //if there is no source selected, skip this action
+          }
+          final ZoneFunctions? zoneFunction = getZoneFunction(zoneOrSubZoneId: item.itemId);
+          if (zoneFunction == null) {
+            continue; //if there is no zone function, skip this action
+          }
+          final int? sourceIndex = zoneFunction.sourceIndex != null && zoneFunction.sourceIndex!.containsKey(sourceId)
+              ? zoneFunction.sourceIndex![sourceId]
+              : null;
+          if (sourceIndex == null) {
+            continue; //if source index is not found, skip this action
+          }
+          if (param.type == SceneParamType.inputLevel) {
+            final double levelValue = double.tryParse(value.value ?? "0") ?? 0;
+
+            Map<String, dynamic> algorithmData = data[zoneFunction.id] != null
+                ? data[zoneFunction.id] is Map<String, dynamic>
+                      ? data[zoneFunction.id]
+                      : <String, dynamic>{}
+                : <String, dynamic>{};
+
+            List<dynamic> valueList = algorithmData["input_gain"] is List<dynamic> ? data["input_gain"] as List<dynamic> : <dynamic>[];
+            if (valueList.length <= sourceIndex) {
+              valueList.addAll(List<dynamic>.filled(sourceIndex - valueList.length + 1, null));
+            }
+            valueList[sourceIndex] = levelValue;
+            algorithmData["input_gain"] = valueList;
+
+            data[zoneFunction.id] = algorithmData;
+          } else if (param.type == SceneParamType.inputMute) {
+            bool isMuted = value.value?.toLowerCase() == "mute";
+            Map<String, dynamic> algorithmData = data[zoneFunction.id] != null
+                ? data[zoneFunction.id] is Map<String, dynamic>
+                      ? data[zoneFunction.id]
+                      : <String, dynamic>{}
+                : <String, dynamic>{};
+            List<dynamic> valueList = algorithmData["input_mute"] is List<dynamic> ? data["input_mute"] as List<dynamic> : <dynamic>[];
+            if (valueList.length <= sourceIndex) {
+              valueList.addAll(List<dynamic>.filled(sourceIndex - valueList.length + 1, null));
+            }
+            valueList[sourceIndex] = isMuted;
+            algorithmData["input_mute"] = valueList;
+            data[zoneFunction.id] = algorithmData;
+          }
+
+        //bellow cases are not implemented yet, we will add support for them in future, for now we just skip them in data generation
+        case SceneParamType.mixScene:
+        case SceneParamType.prioritySelect1:
+        case SceneParamType.prioritySelect2:
+        case SceneParamType.recall:
+        case SceneParamType.pulse:
+        case SceneParamType.standby:
+        case SceneParamType.setState:
+          continue;
+      }
+    }
+    return data;
   }
 
   void addSceneActionToSnapshot({required String sceneId, required SceneActionModel action}) {
