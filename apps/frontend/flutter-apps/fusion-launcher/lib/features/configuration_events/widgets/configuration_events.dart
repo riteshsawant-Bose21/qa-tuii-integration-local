@@ -9,6 +9,7 @@ import 'package:fusion_launcher/features/configuration_events/widgets/events/eve
 import 'package:fusion_launcher/features/configuration_events/widgets/actions/trigger_panel.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/events/configation_events_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/service/event/event_activate_service.dart';
 
 import '../viewModel/events_viewmodel/config_events_viewmodel.dart';
 
@@ -27,6 +28,9 @@ class ConfigurationEvents extends StatelessWidget {
             create:
                 (BuildContext context) => ConfigEventsViewmodel(
                   projectViewModel: projectViewModel,
+                  eventActivateService: EventActivateService(
+                    networkClient: serviceLocator<FusionNetworkClient>(),
+                  ),
                 ),
           ),
           BlocProvider<ConfigEventActionsViewmodel>(
