@@ -11,7 +11,9 @@ import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_mode
 import 'package:fusion_launcher/features/dynamic_config/domain/usecases/get_panel_entity_usecase.dart';
 import 'package:fusion_launcher/features/projects/view_model/audio_message_sync/audio_message_sync_view model.dart';
 import 'package:fusion_launcher/features/projects/view_model/dsp_sync/config_sync_view_model.dart';
+import 'package:fusion_launcher/features/projects/view_model/fusion_events_sync/fusion_events_sync_view_model.dart';
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
+import 'package:fusion_launcher/features/projects/view_model/snapshots_sync/snapshot_sync_view_model.dart';
 import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'package:fusion_lib/di/service_locator.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -275,6 +277,12 @@ Future<void> setupServiceLocator() async {
   serviceLocator.registerLazySingleton<MessageSyncService>(
     () => MessageSyncService(networkClient: serviceLocator<FusionNetworkClient>()),
   );
+  serviceLocator.registerLazySingleton<FusionEventService>(
+    () => FusionEventService(networkClient: serviceLocator<FusionNetworkClient>()),
+  );
+  serviceLocator.registerLazySingleton<SnapshotActivateService>(
+    () => SnapshotActivateService(networkClient: serviceLocator<FusionNetworkClient>()),
+  );
 
   serviceLocator.registerLazySingleton<ConfigSyncViewModel>(
     () => ConfigSyncViewModel(
@@ -286,6 +294,17 @@ Future<void> setupServiceLocator() async {
   serviceLocator.registerLazySingleton<AudioMessageSyncViewModel>(
     () => AudioMessageSyncViewModel(
       messageSyncService: serviceLocator<MessageSyncService>(),
+    ),
+  );
+  serviceLocator.registerLazySingleton<FusionEventsSyncViewModel>(
+    () => FusionEventsSyncViewModel(
+      fusionEventService: serviceLocator<FusionEventService>(),
+    ),
+  );
+
+  serviceLocator.registerLazySingleton<SnapshotSyncViewModel>(
+    () => SnapshotSyncViewModel(
+      snapshotActivateService: serviceLocator<SnapshotActivateService>(),
     ),
   );
 
