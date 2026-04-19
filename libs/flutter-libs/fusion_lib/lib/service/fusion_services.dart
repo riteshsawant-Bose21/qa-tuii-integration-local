@@ -9,3 +9,5 @@ export 'cache/app_cache_service.dart';
 export 'dowload_manager/dowload_manager.dart';
 export 'dowload_manager/file_download.dart';
 export 'aes67/session_sync_service.dart';
+export 'scene_set/scene_set_activate_service.dart';
+export 'snapshot/snapshot_activate_service.dart';
