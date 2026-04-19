@@ -45,7 +45,7 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
     _meterDataViewModel = serviceLocator<MeterDataViewModel>();
 
     // Register as meter observer so telemetry stays alive while this widget is mounted.
-    _meterDataViewModel.registerObserver();
+    _meterDataViewModel.registerObserver(this);
 
     // Fetch the latest server values on load.
     _sourceMixViewModel.updateParamsAsPerServer(function: widget.zoneFunctions);
@@ -58,7 +58,7 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
   void dispose() {
     _sourceMixViewModel.unsubscribeFromBlockData();
     _sourceMixViewModel.close();
-    _meterDataViewModel.unregisterObserver();
+    _meterDataViewModel.unregisterObserver(this);
     _scrollController.dispose();
     super.dispose();
   }
@@ -295,7 +295,6 @@ class _InputPresenceIndicator extends StatelessWidget {
       bloc: meterDataViewModel,
       selector: (MeterDataState state) {
         final MeterBlock? meter = _findInputPresenceBlock(state, blockId);
-        print("Debug: Checking input presence for blockId=$blockId, dimension=$dimension. Meter found: ${meter != null}. Meter value: ${meter?.value}");
         if (meter == null || dimension < 0 || dimension >= meter.value.length) return false;
         return meter.value[dimension] >= 1.0;
       },

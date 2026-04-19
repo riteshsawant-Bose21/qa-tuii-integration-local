@@ -55,7 +55,7 @@ class _SourceMatrixControlsPanelState extends State<SourceMatrixControlsPanel> {
     _meterDataViewModel = serviceLocator<MeterDataViewModel>();
 
     // Register as meter observer so telemetry stays alive while this widget is mounted.
-    _meterDataViewModel.registerObserver();
+    _meterDataViewModel.registerObserver(this);
 
     // Fetch the latest server values on load.
     _matrixMixerViewModel.updateParamsAsPerServer(function: widget.zoneFunctions);
@@ -68,7 +68,7 @@ class _SourceMatrixControlsPanelState extends State<SourceMatrixControlsPanel> {
   void dispose() {
     _matrixMixerViewModel.unsubscribeFromBlockData();
     _matrixMixerViewModel.close();
-    _meterDataViewModel.unregisterObserver();
+    _meterDataViewModel.unregisterObserver(this);
     sourcesScrollController.dispose();
     outScrollController.dispose();
     super.dispose();
