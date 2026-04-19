@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/control_dashboard/presentation/widgets/dashboard_section_header.dart';
 import 'package:fusion_launcher/features/control_dashboard/presentation/widgets/message_player/message_player_card.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -11,11 +13,13 @@ import 'message_player_dialog.dart';
 class MessageTrack {
   final String id;
   final String title;
+  final MediaFileModel? mediaFile;
   bool isPlaying;
 
   MessageTrack({
     required this.id,
     required this.title,
+    this.mediaFile,
     this.isPlaying = false,
   });
 }
@@ -45,50 +49,32 @@ class MessagePlayerTestData {
   }
 }
 
-// --- 2. Sample Data Generator ---
+List<MessagePlayerTestData> buildMessagePlayerData() {
+  final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
 
-List<MessagePlayerTestData> generateSampleData() {
-  return <MessagePlayerTestData>[
-    // MessagePlayerTestData(
-    //   id: 'p1',
-    //   title: 'Message Player 1',
-    //   messages: <MessageTrack>[
-    //     MessageTrack(id: 'm1_1', title: 'Message 1'),
-    //     MessageTrack(id: 'm1_2', title: 'Message 2'),
-    //     MessageTrack(id: 'm1_3', title: 'Message 3'),
-    //     // Matching Image 5 & 6: This track is actively playing
-    //     MessageTrack(id: 'm1_4', title: 'Morning ...', isPlaying: true),
-    //     MessageTrack(id: 'm1_5', title: 'Message 5'),
-    //     MessageTrack(id: 'm1_6', title: 'Message 6'),
-    //     MessageTrack(id: 'm1_7', title: 'Message 7'),
-    //     MessageTrack(id: 'm1_8', title: 'Message 8'),
-    //     MessageTrack(id: 'm1_9', title: 'Message 9'),
-    //   ],
-    // ),
-    // MessagePlayerTestData(
-    //   id: 'p2',
-    //   title: 'Message Player 2',
-    //   messages: List<MessageTrack>.generate(5, (int index) => MessageTrack(id: 'm2_$index', title: 'Message ${index + 1}')),
-    // ),
-    // MessagePlayerTestData(
-    //   id: 'p3',
-    //   title: 'Message Player 3',
-    //   messages: List<MessageTrack>.generate(3, (int index) => MessageTrack(id: 'm3_$index', title: 'Message ${index + 1}')),
-    // ),
-    // MessagePlayerTestData(
-    //   id: 'p4',
-    //   title: 'Message Player 4',
-    //   messages: List<MessageTrack>.generate(6, (int index) => MessageTrack(id: 'm4_$index', title: 'Message ${index + 1}')),
-    // ),
-    // MessagePlayerTestData(
-    //   id: 'p5',
-    //   title: 'Message Player 5',
-    //   messages: List<MessageTrack>.generate(4, (int index) => MessageTrack(id: 'm5_$index', title: 'Message ${index + 1}')),
-    // ),
-  ];
+  // Get all message player sources via the service layer
+  final List<Source> messagePlayers = projectViewModel.getAllMessagePlayerSources();
+
+  return messagePlayers.map((Source source) {
+    final List<MessageModel> messages = projectViewModel.getMessagesForSource(source.id);
+
+    final List<MessageTrack> tracks =
+        messages.map((MessageModel message) {
+          final MediaFileModel? mediaFile = projectViewModel.getMediaFileForMessage(message.id);
+          return MessageTrack(
+            id: message.id,
+            title: message.name,
+            mediaFile: mediaFile,
+          );
+        }).toList();
+
+    return MessagePlayerTestData(
+      id: source.id,
+      title: source.name,
+      messages: tracks,
+    );
+  }).toList();
 }
-
-// --- 4. Main Widget ---
 
 class MessagePlayerWidget extends StatefulWidget {
   const MessagePlayerWidget({super.key});
@@ -103,7 +89,7 @@ class _MessagePlayerWidgetState extends State<MessagePlayerWidget> {
   @override
   void initState() {
     super.initState();
-    players = generateSampleData();
+    players = buildMessagePlayerData();
   }
 
   @override
@@ -126,22 +112,25 @@ class _MessagePlayerWidgetState extends State<MessagePlayerWidget> {
             onViewAll: () {},
           ),
           Expanded(
-            child: ListView.separated(
-              itemCount: players.length,
-              separatorBuilder:
-                  (BuildContext context, int index) => Divider(
-                    thickness: 1,
-                    color: context.colorScheme.strokeLight,
-                  ),
-              itemBuilder: (BuildContext context, int index) {
-                final MessagePlayerTestData player = players[index];
-                return MessagePlayerCard(
-                  player: player,
-                  onShowDialog: (MessagePlayerTestData player) => _showDialog(player, context),
-                  onStopPlayback: _stopAllPlayback,
-                );
-              },
-            ),
+            child:
+                players.isEmpty
+                    ? const Center(child: Text('No message players configured'))
+                    : ListView.separated(
+                      itemCount: players.length,
+                      separatorBuilder:
+                          (BuildContext context, int index) => Divider(
+                            thickness: 1,
+                            color: context.colorScheme.strokeLight,
+                          ),
+                      itemBuilder: (BuildContext context, int index) {
+                        final MessagePlayerTestData player = players[index];
+                        return MessagePlayerCard(
+                          player: player,
+                          onShowDialog: (MessagePlayerTestData player) => _showDialog(player, context),
+                          onStopPlayback: _stopAllPlayback,
+                        );
+                      },
+                    ),
           ),
         ],
       ),
@@ -151,8 +140,8 @@ class _MessagePlayerWidgetState extends State<MessagePlayerWidget> {
   /// Handles stopping playback globally across all players
   void _stopAllPlayback() {
     setState(() {
-      for (MessagePlayerTestData player in players) {
-        for (MessageTrack message in player.messages) {
+      for (final MessagePlayerTestData player in players) {
+        for (final MessageTrack message in player.messages) {
           message.isPlaying = false;
         }
       }
@@ -162,8 +151,7 @@ class _MessagePlayerWidgetState extends State<MessagePlayerWidget> {
   /// Handles playing a specific track and ensuring only one plays at a time
   void _playTrack(String playerId, String trackId) {
     setState(() {
-      _stopAllPlayback(); // Stop others first
-      // Find the player and track to play
+      _stopAllPlayback();
       final MessagePlayerTestData player = players.firstWhere((MessagePlayerTestData p) => p.id == playerId);
       final MessageTrack track = player.messages.firstWhere((MessageTrack t) => t.id == trackId);
       track.isPlaying = true;
@@ -181,7 +169,6 @@ class _MessagePlayerWidgetState extends State<MessagePlayerWidget> {
         );
       },
     ).then((_) {
-      // Ensure main widget rebuilds when dialog closes to reflect changes
       setState(() {});
     });
   }

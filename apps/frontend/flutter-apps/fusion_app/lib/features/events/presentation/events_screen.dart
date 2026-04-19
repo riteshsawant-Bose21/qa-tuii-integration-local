@@ -334,7 +334,7 @@ class _EventsScreenState extends State<EventsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.colorScheme.primaryBlack,
-      appBar: widget.showAppbar ? CommonAppBar(title: 'Events') :null,
+      appBar: widget.showAppbar ? CommonMobileAppBar(title: 'Events') :null,
       body: SafeArea(
         bottom: false,
         child: Column(

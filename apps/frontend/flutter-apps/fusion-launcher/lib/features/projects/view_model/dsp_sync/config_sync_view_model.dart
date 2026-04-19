@@ -7,6 +7,8 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/service/dro/dro_config_service.dart';
 
+import '../audio_message_sync/audio_message_sync_view model.dart';
+
 part 'config_sync_view_model_state.dart';
 
 class ConfigSyncViewModel extends Cubit<ConfigSyncState> {
@@ -105,7 +107,13 @@ class ConfigSyncViewModel extends Cubit<ConfigSyncState> {
       vip: vip,
     );
     if (response.success) {
-      emit(ConfigSyncedWithDsp());
+      final ResponseCallback<bool> response = await serviceLocator<AudioMessageSyncViewModel>().syncPendingAudioMessages();
+
+      if (response.success) {
+        emit(ConfigSyncedWithDsp());
+      } else {
+        emit(ConfigSyncFailure(message: "Config synced but failed to sync audio messages: ${response.message}"));
+      }
       // initializeTelemetryData();
     } else {
       emit(DroProcessingFailed(message: response.message));

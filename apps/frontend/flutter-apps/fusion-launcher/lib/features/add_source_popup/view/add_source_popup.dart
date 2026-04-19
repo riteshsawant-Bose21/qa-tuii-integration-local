@@ -141,6 +141,7 @@ class AddSourcePopup extends StatelessWidget {
                                                   borderRadius: 8,
                                                   variant: FusionFieldVariant.neumorphic,
                                                   semanticId: '',
+                                                  showLabel: false,
                                                   hint: 'Enter name',
                                                   charlimit: 24,
                                                   onChange: (String value) {
@@ -411,23 +412,26 @@ class AddSourcePopup extends StatelessWidget {
                                         if ((state.selectedSourceSectionType == SourceSectionType.mediaSources ||
                                                 state.selectedSourceSectionType == SourceSectionType.microPhone) &&
                                             state.selectedSources.firstOrNull != null) ...<Widget>[
-                                          SemanticHelper.container(
-                                            testId: SemanticHelper.createTestId(
-                                              SemanticTypes.container,
-                                              FusionTestKeys.instance.addSourceSectionSignalTypeRadioGroup,
+                                          if (state.selectedSourceSectionType == SourceSectionType.mediaSources) ...<Widget>[
+                                            SemanticHelper.container(
+                                              testId: SemanticHelper.createTestId(
+                                                SemanticTypes.container,
+                                                FusionTestKeys.instance.addSourceSectionSignalTypeRadioGroup,
+                                              ),
+                                              child: FusionRadio<SignalType>(
+                                                selected: state.selectedSignalType,
+                                                options: addSourceViewModel.signalTypes,
+                                                labelBuilder: (SignalType option) {
+                                                  return FusionAppText(
+                                                    text: option.displayName,
+                                                    style: context.textTheme.l1Regular,
+                                                  );
+                                                },
+                                                onChanged: (SignalType value) => addSourceViewModel.setSignalType(value),
+                                              ),
                                             ),
-                                            child: FusionRadio<SignalType>(
-                                              selected: state.selectedSignalType,
-                                              options: addSourceViewModel.signalTypes,
-                                              labelBuilder: (SignalType option) {
-                                                return FusionAppText(
-                                                  text: option.displayName,
-                                                  style: context.textTheme.l1Regular,
-                                                );
-                                              },
-                                              onChanged: (SignalType value) => addSourceViewModel.setSignalType(value),
-                                            ),
-                                          ),
+                                          ],
+
                                           const SizedBox(height: 16),
                                           BuildRowPropertyWidget<SourceConnectionType>(
                                             label: "Connection",

@@ -46,3 +46,7 @@ export 'text_views/fusion_currency_text.dart';
 export 'text_views/fusion_gradient_text.dart';
 export 'text_views/fusion_rich_text.dart';
 export 'text_views/fusion_timezones.dart';
+
+export 'virtual_controllers/zone_volume_control.dart';
+export 'virtual_controllers/virtual_controller.dart';
+export 'virtual_controllers/view_model/controller_zone_view_model.dart';

@@ -91,6 +91,13 @@ extension MediaFileManager on ProjectManager {
     return File('${mediaDir.path}${Platform.pathSeparator}${mediaFile.path}');
   }
 
+  void updateMediaFile({required MediaFileModel mediaFile}) {
+    if (projectService == null) {
+      throw Exception("ProjectService is not initialized.");
+    }
+    projectService!.updateMediaFile(mediaFile: mediaFile);
+  }
+
   Future<void> renameMediaFile({required String mediaId, required String newFileName}) async {
     // Ensure projectService is not null
     if (projectService == null) {
