@@ -6,7 +6,7 @@
         },
         {
             "name": "subscriber_socket_path",
-            "property": "tcp://*:5678"
+            "property": "ws://*:5678"
         },
         {
             "name": "fusion_server_port",

@@ -90,7 +90,7 @@ func (t *TelemetrySubscriber) subscribeDevice(deviceIP string) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.devices[deviceIP] = cancel
 
-	addr := fmt.Sprintf("tcp://%s:%s", deviceIP, t.zmqPort)
+	addr := fmt.Sprintf("ws://%s:%s", deviceIP, t.zmqPort)
 	go t.listenLoop(ctx, deviceIP, addr)
 	logging.GetLogger().Info("TelemetrySubscriber: subscribing to %s", addr)
 }
