@@ -56,6 +56,7 @@ class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: context.colorScheme.elevation1,
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(

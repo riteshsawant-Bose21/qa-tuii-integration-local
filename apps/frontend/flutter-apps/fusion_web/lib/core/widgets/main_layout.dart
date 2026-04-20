@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
 import 'package:fusion_web/core/navigation/app_router.dart';
 import 'package:fusion_web/core/services/service_locator.dart';
@@ -128,6 +129,7 @@ class _MainLayoutState extends State<MainLayout> {
     }
 
     return Scaffold(
+      backgroundColor: context.colorScheme.elevation1,
       body: Row(
         children: [
           // FusionSidebar(

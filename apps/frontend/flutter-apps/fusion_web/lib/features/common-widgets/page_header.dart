@@ -19,10 +19,10 @@ class PageHeader extends StatelessWidget {
       children: [
         FusionAppText(
           text: title,
-          style: context.textTheme.headlineMedium?.copyWith(
+          style: context.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
           ),
-          maxLine: 2,
+          // maxLine: 2,
         ),
         const SizedBox(height: 4),
         FusionAppText(text: subtitle),

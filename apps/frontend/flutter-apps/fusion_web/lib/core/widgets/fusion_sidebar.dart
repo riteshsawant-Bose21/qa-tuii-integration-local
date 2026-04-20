@@ -11,6 +11,7 @@ import 'package:fusion_web/core/permissions/permission_service.dart';
 import 'package:fusion_web/features/auth/data/datasources/auth0_datasource.dart';
 import 'package:fusion_web/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:fusion_web/features/auth/domain/usecases/auth_usecases.dart';
+import 'package:fusion_web/features/auth/presentation/pages/login_page.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class FusionSidebar extends StatefulWidget {
@@ -39,7 +40,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
           return Container(
             width: AppConstants.sidebarWidth,
             height: double.infinity,
-            decoration: BoxDecoration(color: Theme.of(context).cardColor),
+            // decoration: BoxDecoration(color: Theme.of(context).cardColor),
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
@@ -83,7 +84,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
       decoration: BoxDecoration(
         color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-        boxShadow: [BoxShadow(blurRadius: 6, color: Colors.black12)],
+        // boxShadow: [BoxShadow(blurRadius: 6, color: Colors.black12)],
       ),
       padding: const EdgeInsets.all(AppConstants.padding),
       child: Column(
@@ -166,7 +167,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
         // color: Colors.white,
         color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-        boxShadow: [BoxShadow(blurRadius: 6, color: Colors.black12)],
+        // boxShadow: [BoxShadow(blurRadius: 6, color: Colors.black12)],
       ),
       child: Column(
         children: [
@@ -241,11 +242,64 @@ class _FusionSidebarState extends State<FusionSidebar> {
               icon: LucideIcons.logOut,
               title: 'Sign Out',
               semanticsId: 'signout_section',
-              onTap: () => _handleLogout(context),
+              onTap: () => _logoutDialog(context),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  void _logoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          title: FusionAppText(
+            text: "Sign Out",
+            style: context.textTheme.titleMedium,
+          ),
+          content: const FusionAppText(
+            text: "Are you sure you want to sign out? ",
+          ),
+          actions: <Widget>[
+            SemanticHelper.button(
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.button,
+                "dashboard_sidebar_signout_button",
+              ),
+              child: NeumorphicDarkButton(
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  _handleLogout(context);
+                },
+                height: 32,
+                borderRadius: 8,
+                child: FusionAppText(
+                  text: "Sign Out",
+                  style: context.textTheme.labelMedium,
+                ),
+              ),
+            ),
+            const SizedBox(height: 5),
+            SemanticHelper.button(
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.button,
+                "dashboard_sidebar_cancel_button",
+              ),
+              child: NeumorphicDarkButton(
+                onTap: () => Navigator.pop(ctx),
+                height: 32,
+                borderRadius: 8,
+                child: FusionAppText(
+                  text: "Cancel",
+                  style: context.textTheme.labelMedium,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

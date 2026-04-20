@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/color_pallette.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fusion_web/features/auth/presentation/viewmodels/auth_viewmodel.dart';
 import 'package:fusion_web/features/auth/data/datasources/auth0_datasource.dart';
 import 'package:fusion_web/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:fusion_web/features/auth/domain/usecases/auth_usecases.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -81,177 +84,168 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final double headlineFontSize = MediaQuery.of(context).size.width * 0.07;
+    final double subHeadingFontSize = MediaQuery.of(context).size.width * 0.02;
+
     return Scaffold(
       backgroundColor: context.colorScheme.elevation1,
-      body: Stack(
-        children: [
-          Center(
-            child: Container(
-              width: 450,
-              padding: const EdgeInsets.all(48),
-              decoration: BoxDecoration(
-                color: context.colorScheme.elevation2,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: context.colorScheme.elevation3,
-                  width: 1.2,
-                ),
+      body: Padding(
+        padding: const EdgeInsets.all(40.0),
+        child: Row(
+          children: [
+            /// LEFT SIDE (TEXT)
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Welcome to\nFusion',
+                    style: context.textTheme.displayLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: headlineFontSize > 120 ? 120 : headlineFontSize,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Sign into your Fusion account on the right and\nget started creating dynamic audio experiences',
+                    style: context.textTheme.bodyLarge?.copyWith(
+                      color: FusionDarkColorPallette.medium50,
+                      fontSize: subHeadingFontSize > 16
+                          ? 16
+                          : subHeadingFontSize,
+                    ),
+                  ),
+                ],
               ),
-              child: ListenableBuilder(
-                listenable: _viewModel,
-                builder: (context, child) {
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // 802 Labs Logo
-                      SvgPicture.asset(
-                        'assets/images/logo/light/802Labs_Logo_Lockup_Horizontal_Linear_Light00_RGB.svg',
-                        height: 80,
-                        fit: BoxFit.contain,
-                        colorFilter: ColorFilter.mode(
-                          context.colorScheme.textPrimary,
-                          BlendMode.srcIn,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Welcome Text
-                      Text(
-                        'Welcome',
-                        style: GoogleFonts.montserrat(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w600,
-                          color: context.colorScheme.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Please sign in to access your account',
-                        style: GoogleFonts.montserrat(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                          color: context.colorScheme.elevation6,
-                        ),
-                      ),
-                      const SizedBox(height: 40),
-
-                      // Error Message
-                      if (_viewModel.error != null)
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          margin: const EdgeInsets.only(bottom: 24),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE57373).withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: const Color(0xFFE57373).withOpacity(0.3),
-                            ),
-                          ),
-                          child: Text(
-                            'Authentication failed. Please try again.',
-                            style: GoogleFonts.montserrat(
-                              color: const Color(0xFFE57373),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-
-                      // Login Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: ElevatedButton(
-                          onPressed: _viewModel.isLoading ? null : _handleLogin,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: context.colorScheme.primaryColor,
-                            foregroundColor: context.colorScheme.textPrimary,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: _viewModel.isLoading
-                              ? SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      context.colorScheme.textPrimary,
-                                    ),
-                                  ),
-                                )
-                              : Text(
-                                  'Sign In',
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                        ),
-                      ),
-                      const SizedBox(height: 44),
-
-                      // Register Link
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            "Don't have an account? ",
-                            style: GoogleFonts.montserrat(
-                              fontSize: 14,
-                              color: context.colorScheme.elevation6,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Registration feature coming soon. Please contact your administrator for account access.',
-                                    style: GoogleFonts.montserrat(
-                                      color: context.colorScheme.textPrimary,
-                                    ),
-                                  ),
-                                  backgroundColor:
-                                      context.colorScheme.elevation3,
-                                  behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                              );
-                            },
-                            style: TextButton.styleFrom(
-                              foregroundColor: context.colorScheme.primaryColor,
-                              padding: EdgeInsets.zero,
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: Text(
-                              'Register here',
-                              style: GoogleFonts.montserrat(
-                                fontSize: 14,
-                                color: context.colorScheme.primaryColor,
+            ),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: Column(
+                spacing: 10,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: <Widget>[
+                  NeumorphicDarkButton(
+                    onTap: () {
+                      _handleLogin();
+                    },
+                    height: 60,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                      child: Row(
+                        spacing: 10,
+                        children: <Widget>[
+                          Expanded(
+                            child: FusionAppText(
+                              text: 'Log in',
+                              style: context.textTheme.labelLarge?.copyWith(
+                                fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                decoration: TextDecoration.underline,
-                                decorationColor:
-                                    context.colorScheme.primaryColor,
                               ),
+                            ),
+                          ),
+                          Container(
+                            height: double.infinity,
+                            width: 47,
+                            margin: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: FusionDarkColorPallette.green20,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Icon(
+                              LucideIcons.arrowRight,
+                              color: Colors.white,
+                              size: 12,
                             ),
                           ),
                         ],
                       ),
-                    ],
-                  );
-                },
+                    ),
+                  ),
+                  // skip login Ui
+                  // const SizedBox(height: 44),
+                  // Padding(
+                  //   padding: const EdgeInsets.only(right: 10.0),
+                  //   child: SemanticHelper.button(
+                  //     testId: SemanticHelper.createTestId(
+                  //       SemanticTypes.button,
+                  //       "skip_login_button",
+                  //     ),
+                  //     child: TextButton(
+                  //       onPressed: () {},
+                  //       child: FusionAppText(
+                  //         text: "Don't have an account?",
+                  //         textAlign: TextAlign.start,
+                  //         style: context.textTheme.bodyMedium,
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
+                ],
               ),
             ),
+        
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class NeumorphicDarkButton extends StatefulWidget {
+  final String? text;
+  final Widget? child;
+
+  final double? width;
+  final double? height;
+  final VoidCallback? onTap;
+  final double borderRadius;
+  final Color? backgroundColor;
+
+  const NeumorphicDarkButton({
+    super.key,
+    this.text,
+    this.borderRadius = 12,
+    this.child,
+    this.onTap,
+    this.width,
+    this.height,
+    this.backgroundColor,
+  });
+
+  @override
+  State<NeumorphicDarkButton> createState() => _NeumorphicDarkButtonState();
+}
+
+class _NeumorphicDarkButtonState extends State<NeumorphicDarkButton> {
+  bool isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    assert(widget.text != null || widget.child != null);
+
+    return Padding(
+      padding: const EdgeInsets.all(2.0),
+      child: FusionNeumorphicButton(
+        semanticId: 'launcher_sign_in_button',
+        onTap: widget.onTap ?? () {},
+        width: widget.width,
+        height: widget.height ?? 44,
+        borderRadius: widget.borderRadius,
+        text: widget.text ?? "",
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(widget.borderRadius),
+          child: Container(
+            decoration: BoxDecoration(
+              color: widget.backgroundColor,
+              borderRadius: BorderRadius.circular(widget.borderRadius),
+            ),
+            child: Center(
+              child: widget.child ?? FusionAppText(text: widget.text ?? ""),
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
