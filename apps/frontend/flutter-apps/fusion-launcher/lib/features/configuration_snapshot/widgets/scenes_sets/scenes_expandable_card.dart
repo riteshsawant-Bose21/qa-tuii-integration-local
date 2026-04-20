@@ -8,7 +8,8 @@ import 'package:fusion_launcher/features/configuration_snapshot/widgets/snapshot
 import 'package:fusion_lib/constants/semantics/features/configuration/snapshots/SnapshotsKeys.dart';
 import 'package:fusion_lib/constants/semantics/test_keys.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/others/fusion_dialog.dart';
+import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
@@ -320,14 +321,27 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                                         _configSnapshotsViewmodel.updateSnapshot(newSnapshot);
                                         _configSceneSetsViewmodel.syncWithProjectViewModel();
                                       },
-                                      onSnapshotRecall: (String sceneId) {
+                                      onSnapshotRecall: (String sceneId) async {
                                         final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
                                         if (vip != null) {
-                                          _configSceneSetsViewmodel.recallSceneSetSnapshot(
-                                            vip: vip,
-                                            sceneSetId: widget.sceneSetData.id,
-                                            snapshotId: sceneId,
-                                          );
+                                          try {
+                                            final ResponseCallback<bool> result = await _configSceneSetsViewmodel.recallSceneSetSnapshot(
+                                              vip: vip,
+                                              sceneSetId: widget.sceneSetData.id,
+                                              snapshotId: sceneId,
+                                            );
+                                            if (context.mounted) {
+                                              if (result.success) {
+                                                FusionToast.success(context, message: "Snapshot recalled successfully");
+                                              } else {
+                                                FusionToast.error(context, message: result.message.isNotEmpty ? result.message : "Failed to recall snapshot");
+                                              }
+                                            }
+                                          } catch (e) {
+                                            if (context.mounted) {
+                                              FusionToast.error(context, message: "Failed to recall snapshot");
+                                            }
+                                          }
                                         }
                                       },
                                     );
