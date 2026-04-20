@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"io"
 	"log"
@@ -15,6 +16,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gibson042/canonicaljson-go"
@@ -451,4 +453,37 @@ func ToMap(v any) (map[string]any, error) {
 		return nil, err
 	}
 	return m, nil
+}
+
+// CleanupStaleSwuFiles removes all .swu files in otaPath whose SHA-256 checksum
+// does not match keepChecksum, ensuring no stale bundles remain before a new
+// upload or download begins.
+func CleanupStaleSwuFiles(otaPath, keepChecksum string, logger *logging.Logger) {
+	entries, err := os.ReadDir(otaPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			logger.Warn("[SWUCleanup] Could not read OTA directory %s: %v", otaPath, err)
+		}
+		return
+	}
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".swu") {
+			continue
+		}
+		fullPath := filepath.Join(otaPath, entry.Name())
+		checksum, csErr := FileChecksum(fullPath)
+		if csErr != nil {
+			logger.Warn("[SWUCleanup] Could not checksum %s: %v — skipping", fullPath, csErr)
+			continue
+		}
+		if strings.EqualFold(checksum, keepChecksum) {
+			logger.Debug("[SWUCleanup] Keeping %s (checksum matches)", entry.Name())
+			continue
+		}
+		if rmErr := os.Remove(fullPath); rmErr != nil {
+			logger.Warn("[SWUCleanup] Failed to remove stale bundle %s: %v", fullPath, rmErr)
+		} else {
+			logger.Info("[SWUCleanup] Removed stale bundle %s (checksum %s != expected %s)", fullPath, checksum, keepChecksum)
+		}
+	}
 }
