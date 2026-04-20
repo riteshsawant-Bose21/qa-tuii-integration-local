@@ -62,6 +62,34 @@ FUSION_UDP_STALE_TEST=1 \
 go test -v --race ./test -run StaleClientPruned
 ```
 
+### UDP Observer Latency Diagnostic (Opt-in, Local)
+
+This diagnostic is useful on macOS, where Multipass cannot return UDP observer
+traffic from the VM back to the host test process.
+
+1. From the repo root, build and start a local server with UDP diagnostics enabled:
+
+```bash
+./build-fusion-server --target darwin
+FUSION_UDP_DIAGNOSTICS=1 ./build/fusion-server --local
+```
+
+2. From the module root (`fusion/`), run the latency diagnostic against the local server:
+
+```bash
+FUSION_TEST_LOCAL=1 \
+FUSION_TEST_NODES=127.0.0.1:8080 \
+FUSION_TEST_VIP=127.0.0.1:8080 \
+FUSION_UDP_ADDR=127.0.0.1:7947 \
+FUSION_UDP_OBSERVER_LATENCY_TEST=1 \
+go test -v --race ./test -run TestFusionUDP_ObserverLatencyDiagnostic
+```
+
+Notes:
+- `FUSION_UDP_DIAGNOSTICS=1` enables `/cluster/udp/status`, which the test samples while load is running.
+- `FUSION_UDP_ADDR=127.0.0.1:7947` disables the macOS Multipass skip path and forces the test to target the local UDP server.
+- This validates the single-node local observer path. It does not reproduce full multi-node Multipass network behavior.
+
 ### Multi-Node UDP Chaos Test (Opt-in, Multipass)
 
 This test simulates many virtual UDP devices over a 3+ node cluster and injects:
