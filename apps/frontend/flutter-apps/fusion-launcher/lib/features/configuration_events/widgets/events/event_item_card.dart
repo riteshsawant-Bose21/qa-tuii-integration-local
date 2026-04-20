@@ -36,10 +36,17 @@ class EventItemCard extends StatefulWidget {
 
 class _EventItemCardState extends State<EventItemCard> {
   bool _isHovered = false;
+  bool _isRecalling = false;
+  bool _isPressed = false;
 
-  void _handleRecallTap() {
+  Future<void> _handleRecallTap() async {
     if (!widget.isInControlMode || widget.onEventRecall == null) return;
-    widget.onEventRecall!();
+    setState(() => _isRecalling = true);
+    try {
+      await Future<void>.microtask(() => widget.onEventRecall!());
+    } finally {
+      if (mounted) setState(() => _isRecalling = false);
+    }
   }
 
   @override
@@ -87,17 +94,40 @@ class _EventItemCardState extends State<EventItemCard> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: widget.isInControlMode ? _handleRecallTap : null,
-                  child: Tooltip(
-                    message: widget.isInControlMode ? 'Recall Event' : 'Enable control mode to recall',
-                    child: FusionImageAuto(
-                      path: Assets.playIcon,
-                      semanticId: "${FusionTestKeys.instance.events_itm_card_play_icon}_${widget.index}",
-                      width: 24,
-                      height: 24,
-                      color: widget.isInControlMode ? context.colorScheme.iconWhite : context.colorScheme.iconWhite.withAlpha(80),
-                      fit: BoxFit.contain,
+                Tooltip(
+                  message: widget.isInControlMode ? 'Recall Event' : 'Enable control mode to recall',
+                  child: GestureDetector(
+                    onTap: widget.isInControlMode && !_isRecalling ? _handleRecallTap : null,
+                    onTapDown: widget.isInControlMode && !_isRecalling ? (_) => setState(() => _isPressed = true) : null,
+                    onTapUp: (_) => setState(() => _isPressed = false),
+                    onTapCancel: () => setState(() => _isPressed = false),
+                    child: AnimatedScale(
+                      scale: _isPressed ? 0.6 : 1.0,
+                      duration: const Duration(milliseconds: 100),
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child:
+                            _isRecalling
+                                ? Center(
+                                  child: SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: context.colorScheme.iconWhite,
+                                    ),
+                                  ),
+                                )
+                                : FusionImageAuto(
+                                  path: Assets.playIcon,
+                                  semanticId: "${FusionTestKeys.instance.events_itm_card_play_icon}_${widget.index}",
+                                  width: 24,
+                                  height: 24,
+                                  color: widget.isInControlMode ? context.colorScheme.iconWhite : context.colorScheme.iconWhite.withAlpha(80),
+                                  fit: BoxFit.contain,
+                                ),
+                      ),
                     ),
                   ),
                 ),
