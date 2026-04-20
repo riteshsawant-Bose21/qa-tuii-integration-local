@@ -15,6 +15,7 @@ class DeviceRegistrationViewModel extends Cubit<DeviceRegistrationState> {
   }
 
   final String virtualIP = serviceLocator<ProjectViewModel>().virtualIP ?? '';
+  final String projectId = serviceLocator<ProjectViewModel>().projectId;
 
   Future<void> _syncLocalFusionNetworkUnRegisteredDevices() async {
     try {
@@ -43,45 +44,26 @@ class DeviceRegistrationViewModel extends Cubit<DeviceRegistrationState> {
     try {
       final String csrCertificate = await repository.getCSRCertificate(fusionDeviceId);
 
-      final CloudDeviceRegisterResult result = await repository.registerSingleDevice(virtualIP, csrCertificate, deviceState.device);
+      final CloudDeviceRegisterResult result = await repository.registerSingleDevice(
+        projectId: projectId,
+        csrCertificate: csrCertificate,
+        device: deviceState.device,
+      );
 
-      await updateCsrInFusionDevice(fusionDeviceId, csrCertificate);
+      // If any exceptions were thrown in the updateCsrInFusionDevice call, the next lines won't execute and
+      // the catch block will handle it, setting the device back to initial step with an error message.
+      final bool updateResult = await updateCsrInFusionDevice(fusionDeviceId, result.certificate);
 
       deviceState = deviceState.copyWith(
-        device: deviceState.device.copyWith(isDeviceCertificateValid: result.success),
-        step: result.success ? DeviceRegistrationStep.completed : DeviceRegistrationStep.initial,
+        device: deviceState.device.copyWith(isDeviceCertificateValid: updateResult),
+        step: updateResult ? DeviceRegistrationStep.completed : DeviceRegistrationStep.initial,
         error: '',
       );
 
       final List<DeviceSpecificRegistrationState>? updated = state.updateDevice(deviceState);
       emit(state.copyWith(devices: updated));
-    } on DeviceAlreadyRegisteredException catch (e) {
-      try {
-        await updateCsrInFusionDevice(e.fusionDeviceId, e.certificate);
-
-        emit(
-          state.copyWith(
-            devices: state.updateDevice(
-              deviceState.copyWith(
-                step: DeviceRegistrationStep.completed,
-                device: deviceState.device.copyWith(isDeviceCertificateValid: true),
-                error: '',
-              ),
-            ),
-          ),
-        );
-      } catch (syncError) {
-        emit(
-          state.copyWith(
-            devices: state.updateDevice(
-              deviceState.copyWith(
-                step: DeviceRegistrationStep.initial,
-                error: 'Registration Failed',
-              ),
-            ),
-          ),
-        );
-      }
+    } on DeviceAlreadyRegisteredException {
+      resetDeviceCertificateAndRetry(deviceState);
     } catch (e) {
       final DeviceRegistrationState updated = state.copyWith(
         devices: state.updateDevice(
@@ -93,7 +75,7 @@ class DeviceRegistrationViewModel extends Cubit<DeviceRegistrationState> {
       );
 
       emit(updated);
-    } finally {}
+    }
   }
 
   Future<void> bulkDeviceRegistration() async {
@@ -119,6 +101,36 @@ class DeviceRegistrationViewModel extends Cubit<DeviceRegistrationState> {
       return result;
     } catch (e) {
       return false;
+    }
+  }
+
+  Future<void> refreshDevices() async {
+    emit(state.copyWith(stepBulk: DeviceRegistrationStep.processing));
+    await _syncLocalFusionNetworkUnRegisteredDevices();
+    emit(state.copyWith(stepBulk: DeviceRegistrationStep.initial));
+  }
+
+  // RESET DEVICE CERTIFICATE
+  // & RETRY REGISTRATION AGAIN FOR THAT FAILED DEVICE.
+  Future<void> resetDeviceCertificateAndRetry(DeviceSpecificRegistrationState deviceState) async {
+    try {
+      final bool result = await repository.resetDeviceCertificate(fusionDeviceSerialNumber: deviceState.device.serialNumber);
+      if (result) {
+      } else {}
+      if (!result) throw Exception("Failed to reset device certificate");
+
+      await singleDeviceRegister(deviceState);
+    } catch (e) {
+      emit(
+        state.copyWith(
+          devices: state.updateDevice(
+            deviceState.copyWith(
+              step: DeviceRegistrationStep.initial,
+              error: 'Failed to reset device certificate. Please try again.',
+            ),
+          ),
+        ),
+      );
     }
   }
 }

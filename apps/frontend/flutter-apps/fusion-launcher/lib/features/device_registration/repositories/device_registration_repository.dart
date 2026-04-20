@@ -1,5 +1,8 @@
 import 'package:fusion_lib/fusion_lib.dart';
 
+// CUSTOM EXCEPTIONS based on error responses from the API,
+// to allow more granular error handling in the ViewModel.
+// For example, DeviceAlreadyRegisteredException can be caught separately to trigger a CSR update flow.
 class DeviceAlreadyRegisteredException implements Exception {
   final String certificate;
   final String fusionDeviceId;
@@ -27,7 +30,11 @@ class DeviceRegistrationRepository {
     }
   }
 
-  Future<CloudDeviceRegisterResult> registerSingleDevice(String projectId, String csrCertificate, FusionNetworkDevice device) async {
+  Future<CloudDeviceRegisterResult> registerSingleDevice({
+    required String projectId,
+    required String csrCertificate,
+    required FusionNetworkDevice device,
+  }) async {
     try {
       final ResponseCallback<CloudDeviceRegisterResult> response = await fusionDeviceService.registerSingleDevice(
         device: device,
@@ -40,10 +47,10 @@ class DeviceRegistrationRepository {
         return response.data!;
       } else {
         final Map<String, dynamic> errorObject = response.data is Map<String, dynamic> ? (response.data as Map<String, dynamic>) : <String, dynamic>{};
-        final String? errorType = errorObject['error'] ?? response.message ?? 'Unknown error';
+        // final String? errorType = errorObject['error'] ?? response.message ?? 'Unknown error';
         final String errorMessage = errorObject['message'] ?? response.message ?? 'Unknown error';
 
-        if (errorType == "already_exists") {
+        if (response.statusCode == 400) {
           throw DeviceAlreadyRegisteredException(csrCertificate, device.id);
         }
         throw Exception(errorMessage);
@@ -77,7 +84,7 @@ class DeviceRegistrationRepository {
         certificate: certificate,
       );
 
-      if (response.success && response.data != null) {
+      if (response.success) {
         return true;
       } else {
         final Map<String, dynamic> errorObject = response.data is Map<String, dynamic> ? (response.data as Map<String, dynamic>) : <String, dynamic>{};
@@ -86,6 +93,21 @@ class DeviceRegistrationRepository {
       }
     } catch (e) {
       rethrow;
+    }
+  }
+
+  // resetDeviceCertificate
+  Future<bool> resetDeviceCertificate({required String fusionDeviceSerialNumber}) async {
+    try {
+      final ResponseCallback<dynamic> response = await fusionDeviceService.resetDeviceCertificate(
+        vip: vip,
+        fusionDeviceSerialNumber: fusionDeviceSerialNumber,
+      );
+
+      if (response.success) return true;
+      return false;
+    } catch (e) {
+      return false;
     }
   }
 }

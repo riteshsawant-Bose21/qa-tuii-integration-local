@@ -1,4 +1,3 @@
-import 'dart:developer' show log;
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -99,24 +98,15 @@ class BundleDownloadUrlResult extends Equatable {
 }
 
 class CloudDeviceRegisterResult {
-  final bool success;
   final String certificate;
-  final String deviceId;
-  final String error;
 
   const CloudDeviceRegisterResult({
-    required this.success,
     required this.certificate,
-    required this.deviceId,
-    required this.error,
   });
 
   factory CloudDeviceRegisterResult.fromJson(Map<String, dynamic> json) {
     return CloudDeviceRegisterResult(
-      success: json['success'] as bool? ?? false,
       certificate: json['certificate'] as String? ?? '',
-      deviceId: json['device_id'] as String? ?? '',
-      error: json['error'] as String? ?? '',
     );
   }
 }
@@ -348,7 +338,6 @@ class FusionDeviceService {
       );
       return ResponseCallback<void>.success(null);
     } catch (e) {
-      log("Failed to upload firmware bundle to fusion server");
       return ResponseCallback<void>.failure(e.toString());
     }
   }
@@ -370,7 +359,6 @@ class FusionDeviceService {
         "version": 1,
         "type": "start_update",
       });
-      log("SOFTWARE UPDATE START EVENT TRGIGERED => id: $bundleId, response: ${response.success}, message: ${response.message}");
       return response;
     } catch (e) {
       return ResponseCallback<void>.failure(e.toString());
@@ -384,7 +372,6 @@ class FusionDeviceService {
         "version": 1,
         "type": "sw_update_info",
       });
-      log("SOFTWARE REBOOT START EVENT TRGIGERED => id: $bundleId, response: ${response.success}, message: ${response.message}");
       return response;
     } catch (e) {
       return ResponseCallback<void>.failure(e.toString());
@@ -465,21 +452,24 @@ class FusionDeviceService {
     required String csrCertificate,
   }) async {
     try {
+      final payload = <String, dynamic>{
+        'client_device_id': device.id,
+        'csr': csrCertificate,
+        'device_location': 'device.location', // TODO: SHARTH - REMOVE this hardcoded value.
+        'device_zone': 'device.location', // TODO: SHARTH - REMOVE this hardcoded value.
+        'device_name': device.name,
+        'is_primary': device.isPrimary,
+        'mac_address': device.macAddress,
+        'model_name': device.modelName,
+        'project_id': projectId,
+        'serial_number': device.serialNumber,
+        "firmware_version": device.softwareUpdateVersion,
+      };
+
       final ResponseCallback<CloudDeviceRegisterResult> response = await networkClient.post(
         api: FusionApiEndpoint.devicesCloud,
         fromJson: (dynamic json) => CloudDeviceRegisterResult.fromJson(json as Map<String, dynamic>),
-        data: <String, dynamic>{
-          'client_device_id': device.id,
-          'csr': csrCertificate,
-          'device_location': device.location,
-          'device_name': device.name,
-          'device_zone': device.location,
-          'is_primary': device.isPrimary,
-          'mac_address': device.macAddress,
-          'model_name': device.modelName,
-          'project_id': projectId,
-          'serial_number': device.serialNumber,
-        },
+        data: payload,
       );
 
       return response;
@@ -530,6 +520,19 @@ class FusionDeviceService {
       }
     } catch (e) {
       return ResponseCallback<bool>.failure(e.toString());
+    }
+  }
+
+  Future<ResponseCallback<dynamic>> resetDeviceCertificate({required String vip, required String fusionDeviceSerialNumber}) async {
+    try {
+      final ResponseCallback<dynamic> response = await networkClient.delete(
+        api: FusionApiEndpoint.devicesCloud,
+        additionalPath: "$fusionDeviceSerialNumber/reset",
+      );
+
+      return response;
+    } catch (e) {
+      rethrow;
     }
   }
 }
