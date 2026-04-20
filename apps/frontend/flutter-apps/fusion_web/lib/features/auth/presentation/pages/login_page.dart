@@ -100,7 +100,7 @@ class _LoginPageState extends State<LoginPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Welcome to\nFusion',
+                    'Welcome to\nFusion Web',
                     style: context.textTheme.displayLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       fontSize: headlineFontSize > 120 ? 120 : headlineFontSize,
@@ -185,7 +185,6 @@ class _LoginPageState extends State<LoginPage> {
                 ],
               ),
             ),
-        
           ],
         ),
       ),
@@ -227,22 +226,25 @@ class _NeumorphicDarkButtonState extends State<NeumorphicDarkButton> {
 
     return Padding(
       padding: const EdgeInsets.all(2.0),
-      child: FusionNeumorphicButton(
-        semanticId: 'launcher_sign_in_button',
-        onTap: widget.onTap ?? () {},
-        width: widget.width,
-        height: widget.height ?? 44,
-        borderRadius: widget.borderRadius,
-        text: widget.text ?? "",
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(widget.borderRadius),
-          child: Container(
-            decoration: BoxDecoration(
-              color: widget.backgroundColor,
-              borderRadius: BorderRadius.circular(widget.borderRadius),
-            ),
-            child: Center(
-              child: widget.child ?? FusionAppText(text: widget.text ?? ""),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: FusionNeumorphicButton(
+          semanticId: 'launcher_sign_in_button',
+          onTap: widget.onTap ?? () {},
+          width: widget.width,
+          height: widget.height ?? 44,
+          borderRadius: widget.borderRadius,
+          text: widget.text ?? "",
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+            child: Container(
+              decoration: BoxDecoration(
+                color: widget.backgroundColor,
+                borderRadius: BorderRadius.circular(widget.borderRadius),
+              ),
+              child: Center(
+                child: widget.child ?? FusionAppText(text: widget.text ?? ""),
+              ),
             ),
           ),
         ),
