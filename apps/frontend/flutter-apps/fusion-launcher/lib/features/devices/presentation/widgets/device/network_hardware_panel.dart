@@ -97,7 +97,16 @@ class NetworkHardwarePanel extends StatelessWidget {
                   semanticId: "register_devices_btn",
                   text: "Register devices",
                   height: 48,
-                  onTap: () => showUnregisteredDevicesClaimDialog(context),
+                  onTap: () {
+                    showUnregisteredDevicesClaimDialog(context).then(
+                      (void value) {
+                        if (!context.mounted) return;
+                        // After the dialog is closed, refresh the device list to reflect any changes in registration status.
+                        final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
+                        if (vip != null) context.read<FusionNetworkDeviceViewModel>().getFusionNetworkDevice(vip: vip);
+                      },
+                    );
+                  },
                 ),
               ],
             );

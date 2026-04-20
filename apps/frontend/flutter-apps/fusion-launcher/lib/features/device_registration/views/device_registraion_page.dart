@@ -9,8 +9,8 @@ import 'package:fusion_lib/fusion_lib.dart';
 /// Opens a dialog that checks the cloud registration status of [hardwareDevices]
 /// (via GET /devices) and lists devices that are not yet registered.
 /// On confirmation it bulk-registers them then claims each one individually.
-void showUnregisteredDevicesClaimDialog(BuildContext context) {
-  showDialog<void>(
+Future<void> showUnregisteredDevicesClaimDialog(BuildContext context) {
+  return showDialog<void>(
     context: context,
     barrierDismissible: false,
     barrierColor: Colors.transparent,

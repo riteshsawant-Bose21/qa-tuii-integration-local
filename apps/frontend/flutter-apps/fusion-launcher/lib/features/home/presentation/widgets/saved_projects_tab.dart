@@ -910,6 +910,7 @@ class _BorderedTextfieldState extends State<BorderedTextfield> {
             maxLines: widget.maxLines,
             enabled: widget.isEnabled,
             obscureText: isObscured,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             inputFormatters: widget.inputFormatters,
             style: context.textTheme.labelLarge?.copyWith(
               color: context.colorScheme.textPrimary,
