@@ -63,7 +63,7 @@ class DeviceRegistrationViewModel extends Cubit<DeviceRegistrationState> {
       final List<DeviceSpecificRegistrationState>? updated = state.updateDevice(deviceState);
       emit(state.copyWith(devices: updated));
     } on DeviceAlreadyRegisteredException {
-      resetDeviceCertificateAndRetry(deviceState);
+      await resetDeviceCertificateAndRetry(deviceState);
     } catch (e) {
       final DeviceRegistrationState updated = state.copyWith(
         devices: state.updateDevice(
