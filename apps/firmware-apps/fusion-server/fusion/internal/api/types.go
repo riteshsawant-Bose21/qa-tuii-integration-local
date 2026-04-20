@@ -161,10 +161,11 @@ type VersionUpdate struct {
 // This separation keeps replication simple and Lamport-correct, while PATCH
 // provides advanced local update semantics.
 type ConfigUpdate struct {
-	Hash    string         `json:"hash"`
-	Data    map[string]any `json:"data"`
-	Version Version        `json:"version"`
-	Clear   bool           `json:"clear,omitempty"`
+	Hash         string         `json:"hash"`
+	Data         map[string]any `json:"data"`
+	ObserverData map[string]any `json:"observer_data,omitempty"`
+	Version      Version        `json:"version"`
+	Clear        bool           `json:"clear,omitempty"`
 }
 
 // ConfigValue represents a key/value pair

@@ -96,4 +96,33 @@ class ScheduleConfig {
       status: status ?? this.status,
     );
   }
+
+  /// Returns a cron expression based on [recurrence], [time], [startDate], and [weeklyDays].
+  ///
+  /// Format: `minute hour day-of-month month day-of-week`
+  ///
+  /// - [RecurrenceType.none]   → `min hour day month *`  (runs once on startDate)
+  /// - [RecurrenceType.daily]  → `min hour * * *`
+  /// - [RecurrenceType.weekly] → `min hour * * mon,tue,...` (weeklyDays 1=Mon…7=Sun converted to cron 0=Sun…6=Sat)
+  String get cronExpression {
+    final minute = time.minute;
+    final hour = time.hour;
+
+    switch (recurrence) {
+      case RecurrenceType.none:
+        // Specific date — run once
+        final day = startDate.day;
+        final month = startDate.month;
+        return '$minute $hour $day $month *';
+
+      case RecurrenceType.daily:
+        return '$minute $hour * * *';
+
+      case RecurrenceType.weekly:
+        // Convert ISO weekday (1=Mon … 7=Sun) → cron weekday (0=Sun, 1=Mon … 6=Sat)
+        final cronDays = weeklyDays.map((d) => d == 7 ? 0 : d).toList()..sort();
+        final daysStr = cronDays.isNotEmpty ? cronDays.join(',') : '*';
+        return '$minute $hour * * $daysStr';
+    }
+  }
 }

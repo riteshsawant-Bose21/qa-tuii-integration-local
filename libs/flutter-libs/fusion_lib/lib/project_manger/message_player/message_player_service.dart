@@ -22,6 +22,18 @@ extension MessagePlayerService on ProjectService {
     linkMessageToSource(sourceId: sourceId, messageId: message.id);
   }
 
+  /// Get all message player sources (paging sources of type messagePlayer or messagePlayerWithZoneSelect)
+  List<Source> getAllMessagePlayerSources() {
+    return getAllHardware()
+        .whereType<Source>()
+        .where(
+          (Source s) =>
+              s.type == SourceType.paging &&
+              (s.pagingSourceType == PagingSourceType.messagePlayer || s.pagingSourceType == PagingSourceType.messagePlayerWithZoneSelect),
+        )
+        .toList();
+  }
+
   /// Get all messages for a source
   List<MessageModel> getMessagesForSource({required String sourceId}) {
     final Set<String> messageIds = relationships.getChildren(

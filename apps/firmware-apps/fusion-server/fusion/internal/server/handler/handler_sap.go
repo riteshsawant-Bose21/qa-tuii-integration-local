@@ -199,7 +199,7 @@ func (h *Handler) updateStateMap() error {
 
 		state := h.StateManager.GetStateMap()
 		state[sessionsKey] = h.sessions
-		if err := h.handleConfigUpdate(state, false); err != nil {
+		if err := h.handleConfigUpdate(state, nil, false); err != nil {
 			return fmt.Errorf("failed to handle update SAP session data: %w", err)
 		}
 	}

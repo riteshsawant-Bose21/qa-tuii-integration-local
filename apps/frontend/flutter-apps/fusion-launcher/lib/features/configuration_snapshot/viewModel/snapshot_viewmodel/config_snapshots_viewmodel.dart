@@ -2,14 +2,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/config_snapshots_state.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/service/snapshot/snapshot_activate_service.dart';
 
 /// Cubit for managing Snapshots feature state and business logic
 class ConfigSnapshotsViewmodel extends Cubit<ConfigSnapshotsState> {
   final ProjectViewModel _projectViewModel;
+  final SnapshotActivateService _snapshotActivateService;
 
   ConfigSnapshotsViewmodel({
     required ProjectViewModel projectViewModel,
+    required SnapshotActivateService snapshotActivateService,
   }) : _projectViewModel = projectViewModel,
+       _snapshotActivateService = snapshotActivateService,
        super(const SnapshotsInitial()) {
     _loadSnapshots();
   }
@@ -224,6 +228,14 @@ class ConfigSnapshotsViewmodel extends Cubit<ConfigSnapshotsState> {
       final double initialHeight = (totalHeight - 100) * 0.4;
       emit(currentState.copyWith(sourcesHeight: initialHeight));
     }
+  }
+
+  /// Recall (activate) a snapshot by name on the fusion server
+  Future<ResponseCallback<bool>> recallSnapshot({
+    required String vip,
+    required String snapshotId,
+  }) async {
+    return _snapshotActivateService.activateSnapshot(vip: vip, name: snapshotId);
   }
 
   @override

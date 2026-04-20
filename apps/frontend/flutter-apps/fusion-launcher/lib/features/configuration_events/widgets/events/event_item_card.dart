@@ -10,17 +10,21 @@ class EventItemCard extends StatefulWidget {
   final FusionEvent eventData;
   final ConfigEventsViewmodel cubit;
   final bool isSelected;
+  final bool isInControlMode;
   final VoidCallback? onDelete;
   final VoidCallback? onTap;
-  final Function(String eventId)? onSwitchChanged;
+  final VoidCallback? onEventRecall;
+  final Function(String eventId, bool isEnabled)? onSwitchChanged;
   final int index;
 
   const EventItemCard({
     this.isSelected = false,
+    this.isInControlMode = false,
     super.key,
     required this.eventData,
     this.onDelete,
     this.onTap,
+    this.onEventRecall,
     required this.index,
     this.onSwitchChanged,
     required this.cubit,
@@ -32,6 +36,18 @@ class EventItemCard extends StatefulWidget {
 
 class _EventItemCardState extends State<EventItemCard> {
   bool _isHovered = false;
+  bool _isRecalling = false;
+  bool _isPressed = false;
+
+  Future<void> _handleRecallTap() async {
+    if (!widget.isInControlMode || widget.onEventRecall == null) return;
+    setState(() => _isRecalling = true);
+    try {
+      await Future<void>.microtask(() => widget.onEventRecall!());
+    } finally {
+      if (mounted) setState(() => _isRecalling = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,13 +94,42 @@ class _EventItemCardState extends State<EventItemCard> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                FusionImageAuto(
-                  path: Assets.playIcon,
-                  semanticId: "${FusionTestKeys.instance.events_itm_card_play_icon}_${widget.index}",
-                  width: 24,
-                  height: 24,
-                  color: context.colorScheme.iconWhite,
-                  fit: BoxFit.contain,
+                Tooltip(
+                  message: widget.isInControlMode ? 'Recall Event' : 'Enable control mode to recall',
+                  child: GestureDetector(
+                    onTap: widget.isInControlMode && !_isRecalling ? _handleRecallTap : null,
+                    onTapDown: widget.isInControlMode && !_isRecalling ? (_) => setState(() => _isPressed = true) : null,
+                    onTapUp: (_) => setState(() => _isPressed = false),
+                    onTapCancel: () => setState(() => _isPressed = false),
+                    child: AnimatedScale(
+                      scale: _isPressed ? 0.6 : 1.0,
+                      duration: const Duration(milliseconds: 100),
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child:
+                            _isRecalling
+                                ? Center(
+                                  child: SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: context.colorScheme.iconWhite,
+                                    ),
+                                  ),
+                                )
+                                : FusionImageAuto(
+                                  path: Assets.playIcon,
+                                  semanticId: "${FusionTestKeys.instance.events_itm_card_play_icon}_${widget.index}",
+                                  width: 24,
+                                  height: 24,
+                                  color: widget.isInControlMode ? context.colorScheme.iconWhite : context.colorScheme.iconWhite.withAlpha(80),
+                                  fit: BoxFit.contain,
+                                ),
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 12),
 
@@ -106,15 +151,21 @@ class _EventItemCardState extends State<EventItemCard> {
                 SemanticHelper.toggle(
                   testId: SemanticHelper.createTestId(SemanticTypes.toggle, "${FusionTestKeys.instance.eventsswitch}_${widget.index}"),
                   value: widget.eventData.isEnabled,
-                  child: FusionSwitch(
-                    height: 22,
-                    width: 36,
-                    value: widget.eventData.isEnabled,
-                    onChanged: (bool value) {
-                      if (widget.onSwitchChanged != null) {
-                        widget.onSwitchChanged!(widget.eventData.id);
-                      }
-                    },
+                  child: IgnorePointer(
+                    ignoring: !widget.isInControlMode,
+                    child: Opacity(
+                      opacity: widget.isInControlMode ? 1.0 : 0.4,
+                      child: FusionSwitch(
+                        height: 22,
+                        width: 36,
+                        value: widget.eventData.isEnabled,
+                        onChanged: (bool value) {
+                          if (widget.onSwitchChanged != null) {
+                            widget.onSwitchChanged!(widget.eventData.id, value);
+                          }
+                        },
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),

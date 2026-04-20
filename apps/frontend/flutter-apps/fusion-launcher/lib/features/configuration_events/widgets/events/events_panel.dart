@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration_events/viewModel/events_viewmodel/config_events_state.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/section_header.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/events/configation_events_keys.dart';
@@ -17,6 +19,8 @@ import 'events_list.dart';
 
 class EventsPanel extends StatelessWidget {
   const EventsPanel({super.key});
+
+  bool get _isInControlMode => serviceLocator<ProjectViewModel>().isInControlMode;
 
   @override
   Widget build(BuildContext context) {
@@ -151,8 +155,21 @@ class EventsPanel extends StatelessWidget {
       onReorder: (int oldIndex, int newIndex) {
         cubit.reorderEvents(oldIndex, newIndex);
       },
-      onSwitchChanged: (String eventId) {
+      onSwitchChanged: (String eventId, bool isEnabled) {
         cubit.toggleEventEnabled(eventId);
+        if (_isInControlMode) {
+          final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
+          if (vip != null) {
+            cubit.toggleEventEnabledRemote(vip: vip, eventId: eventId, isEnabled: isEnabled);
+          }
+        }
+      },
+      isInControlMode: _isInControlMode,
+      onEventRecall: (String eventId) {
+        final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
+        if (vip != null) {
+          cubit.recallEvent(vip: vip, eventId: eventId);
+        }
       },
     );
   }

@@ -2,14 +2,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/viewModel/scenes_viewmodel/config_scene_sets_state.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/service/scene_set/scene_set_activate_service.dart';
 
 /// Cubit for managing Scene Sets feature state and business logic
 class ConfigSceneSetsViewmodel extends Cubit<ConfigSceneSetsState> {
   final ProjectViewModel _projectViewModel;
+  final SceneSetActivateService _sceneSetActivateService;
 
   ConfigSceneSetsViewmodel({
     required ProjectViewModel projectViewModel,
+    required SceneSetActivateService sceneSetActivateService,
   }) : _projectViewModel = projectViewModel,
+       _sceneSetActivateService = sceneSetActivateService,
        super(const SceneSetsInitial()) {
     _loadSceneSets();
   }
@@ -183,6 +187,15 @@ class ConfigSceneSetsViewmodel extends Cubit<ConfigSceneSetsState> {
       return !scenesInSet.any((SnapshotsModel s) => s.id == snapshotId);
     }
     return false;
+  }
+
+  /// Recall (activate) a scene set snapshot on the fusion server
+  Future<ResponseCallback<bool>> recallSceneSetSnapshot({
+    required String vip,
+    required String sceneSetId,
+    required String snapshotId,
+  }) async {
+    return _sceneSetActivateService.activateSceneSet(vip: vip, setId: sceneSetId, sceneId: snapshotId);
   }
 
   @override
