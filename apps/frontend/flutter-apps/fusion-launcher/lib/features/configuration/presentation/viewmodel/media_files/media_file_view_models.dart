@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/project_manger/media_files/media_file_manager.dart';
 
 extension MediaFileViewModels on ProjectViewModel {
   Future<void> addMediaFile({required File file, String? fileName, bool autoSave = true}) async {
@@ -63,6 +64,16 @@ extension MediaFileViewModels on ProjectViewModel {
     }
     await projectManager.renameMediaFile(mediaId: mediaId, newFileName: newName);
 
+    if (autoSave) {
+      await saveProject();
+    }
+  }
+
+  Future<void> updateMediaFile({required MediaFileModel mediaFile, bool autoSave = true}) async {
+    if (autoSave) {
+      recordSnapshot();
+    }
+    projectManager.updateMediaFile(mediaFile: mediaFile);
     if (autoSave) {
       await saveProject();
     }

@@ -23,6 +23,7 @@ class FusionNeumorphicDropdown<T> extends StatefulWidget {
     this.itemPadding,
     this.constraints,
     this.color,
+    this.semanticId,
   }) : matchChildWidth = matchChildWidth ?? (popupWidth == null);
 
   final String? displayValue;
@@ -44,6 +45,7 @@ class FusionNeumorphicDropdown<T> extends StatefulWidget {
   final bool Function(T)? isItemEnabled;
   final EdgeInsets? itemPadding;
   final Color? color;
+  final String? semanticId;
 
   /// Optional constraints forwarded to the popup menu (e.g. max height for scrolling).
   final BoxConstraints? constraints;
@@ -104,6 +106,7 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
     return FusionPopupMenu<T>(
       popupwidth: widget.matchChildWidth ? null : widget.popupWidth,
       items: widget.items,
+      semanticsId: widget.semanticId,
       tooltip: '',
       onSelected: _handleChange,
       popupOffset: widget.popupOffset,
@@ -118,7 +121,7 @@ class _FusionNeumorphicDropdownState<T> extends State<FusionNeumorphicDropdown<T
         }
 
         if (widget.itemBuilder != null) {
-          return Container(child: widget.itemBuilder!(context, item));
+          return Container(padding: EdgeInsets.all(8), child: widget.itemBuilder!(context, item));
         }
 
         return Container(

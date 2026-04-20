@@ -191,21 +191,21 @@ class MixSettings {
 abstract class MatrixSettings {
   final String sourceId;
   final String type;
-  final double gain;
-  final bool muted;
+  final double inputGain;
+  final bool inputMute;
 
   MatrixSettings({
     required this.sourceId,
     required this.type,
-    required this.gain,
-    required this.muted,
+    required this.inputGain,
+    required this.inputMute,
   });
 
   MatrixSettings copyWith({
     String? sourceId,
     String? type,
-    double? gain,
-    bool? muted,
+    double? inputGain,
+    bool? inputMute,
   });
 
   Map<String, dynamic> toJson();
@@ -216,33 +216,33 @@ abstract class MatrixSettings {
 // ============================================================================
 class MonoMatrixSettings extends MatrixSettings {
   final double mixLevel;
-  final bool outActive;
+  final bool isSelected;
 
   MonoMatrixSettings({
     required super.sourceId,
     super.type = "mono",
-    required super.gain,
-    required super.muted,
+    required super.inputGain,
+    required super.inputMute,
     required this.mixLevel,
-    this.outActive = false,
+    this.isSelected = true,
   });
 
   @override
   MonoMatrixSettings copyWith({
     String? sourceId,
     String? type,
-    double? gain,
-    bool? muted,
+    double? inputGain,
+    bool? inputMute,
     double? mixLevel,
-    bool? outActive,
+    bool? isSelected,
   }) {
     return MonoMatrixSettings(
       sourceId: sourceId ?? this.sourceId,
       type: type ?? this.type,
-      gain: gain ?? this.gain,
-      muted: muted ?? this.muted,
+      inputGain: inputGain ?? this.inputGain,
+      inputMute: inputMute ?? this.inputMute,
       mixLevel: mixLevel ?? this.mixLevel,
-      outActive: outActive ?? this.outActive,
+      isSelected: isSelected ?? this.isSelected,
     );
   }
 
@@ -250,10 +250,10 @@ class MonoMatrixSettings extends MatrixSettings {
     return MonoMatrixSettings(
       sourceId: json['sourceId'],
       type: json['type'],
-      gain: (json['gain'] as num).toDouble(),
-      muted: json['muted'] as bool,
+      inputGain: (json['inputGain'] as num).toDouble(),
+      inputMute: json['inputMute'] as bool,
       mixLevel: (json['mixLevel'] as num).toDouble(),
-      outActive: json['outActive'] as bool? ?? false,
+      isSelected: json['isSelected'] as bool? ?? true,
     );
   }
 
@@ -262,10 +262,10 @@ class MonoMatrixSettings extends MatrixSettings {
     return {
       'sourceId': sourceId,
       'type': type,
-      'gain': gain,
-      'muted': muted,
+      'inputGain': inputGain,
+      'inputMute': inputMute,
       'mixLevel': mixLevel,
-      'outActive': outActive,
+      'isSelected': isSelected,
     };
   }
 }
@@ -280,8 +280,8 @@ class StereoMatrixSettings extends MatrixSettings {
   StereoMatrixSettings({
     required super.sourceId,
     super.type = "stereo",
-    required super.gain,
-    required super.muted,
+    required super.inputGain,
+    required super.inputMute,
     required this.leftMixLevel,
     required this.rightMixLevel,
   });
@@ -290,16 +290,16 @@ class StereoMatrixSettings extends MatrixSettings {
   StereoMatrixSettings copyWith({
     String? sourceId,
     String? type,
-    double? gain,
-    bool? muted,
+    double? inputGain,
+    bool? inputMute,
     double? leftMixLevel,
     double? rightMixLevel,
   }) {
     return StereoMatrixSettings(
       sourceId: sourceId ?? this.sourceId,
       type: type ?? this.type,
-      gain: gain ?? this.gain,
-      muted: muted ?? this.muted,
+      inputGain: inputGain ?? this.inputGain,
+      inputMute: inputMute ?? this.inputMute,
       leftMixLevel: leftMixLevel ?? this.leftMixLevel,
       rightMixLevel: rightMixLevel ?? this.rightMixLevel,
     );
@@ -309,8 +309,8 @@ class StereoMatrixSettings extends MatrixSettings {
     return StereoMatrixSettings(
       sourceId: json['sourceId'],
       type: json['type'],
-      gain: (json['gain'] as num).toDouble(),
-      muted: json['muted'] as bool,
+      inputGain: (json['inputGain'] as num).toDouble(),
+      inputMute: json['inputMute'] as bool,
       leftMixLevel: (json['leftMixLevel'] as num).toDouble(),
       rightMixLevel: (json['rightMixLevel'] as num).toDouble(),
     );
@@ -321,8 +321,8 @@ class StereoMatrixSettings extends MatrixSettings {
     return {
       'sourceId': sourceId,
       'type': type,
-      'gain': gain,
-      'muted': muted,
+      'inputGain': inputGain,
+      'inputMute': inputMute,
       'leftMixLevel': leftMixLevel,
       'rightMixLevel': rightMixLevel,
     };

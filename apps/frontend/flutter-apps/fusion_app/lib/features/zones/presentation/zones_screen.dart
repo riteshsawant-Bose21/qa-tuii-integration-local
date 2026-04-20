@@ -12,7 +12,7 @@ class ZonesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.colorScheme.primaryBlack,
-      appBar: CommonAppBar(title: 'Zones'),
+      appBar: CommonMobileAppBar(title: 'Zones'),
       body: _ZonesList()
     );
   }
