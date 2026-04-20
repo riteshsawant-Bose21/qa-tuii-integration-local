@@ -210,16 +210,41 @@ class _LoadedBody extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // ── Row 2: Channel count + per-channel name fields ───
-                // Layout:
-                //   [labelW: "Name"] [gap] [small-badge: count] [gap] [channel-name-field]
-                //                                               [gap] [channel-name-field]
-                //                                               ...
                 _ChannelSection(
                   state: state,
                   cubit: cubit,
                   labelW: _labelW,
                   gapLabel: _gapLabel,
+                ),
+
+                const SizedBox(height: 20),
+
+                // ── Session ID ───────────────────────────────────────
+                _FormRow(
+                  sematicId: FusionTestKeys.instance.aes67_output_dialog_session_id_label,
+                  labelW: _labelW,
+                  gapLabel: _gapLabel,
+                  label: 'Session ID',
+                  child: _DarkTextField(
+                    semanticId: FusionTestKeys.instance.aes67_output_dialog_session_id_field,
+                    value: state.sessionId,
+                    onChanged: cubit.updateSessionId,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // ── IP Address ───────────────────────────────────────
+                _FormRow(
+                  sematicId: FusionTestKeys.instance.aes67_output_dialog_ip_address_label,
+                  labelW: _labelW,
+                  gapLabel: _gapLabel,
+                  label: 'IP Address',
+                  child: _DarkTextField(
+                    semanticId: FusionTestKeys.instance.aes67_output_dialog_ip_address_field,
+                    value: state.ipAddress,
+                    onChanged: cubit.updateIpAddress,
+                  ),
                 ),
 
                 const SizedBox(height: 20),
@@ -254,17 +279,6 @@ class _LoadedBody extends StatelessWidget {
   }
 }
 
-// ── Channel section ───────────────────────────────────────────────────────────
-//
-// Renders:
-//   Name  [2]  [Channel 1 field]
-//              [Channel 2 field]
-//              ...
-//
-// The count badge and every channel field are left-edge-aligned with each
-// other (they all start at labelW + gap). The "Name" label is in the fixed
-// labelW column so it lines up with the labels below it.
-
 class _ChannelSection extends StatelessWidget {
   final OutputStreamLoaded state;
   final OutputStreamViewmodel cubit;
@@ -294,7 +308,7 @@ class _ChannelSection extends StatelessWidget {
             // Vertically centre against the first channel row (≈38px high)
             padding: const EdgeInsets.only(top: 10),
             child: _FieldLabel(
-              text: 'Name',
+              text: 'Channel',
               semanticId: FusionTestKeys.instance.aes67_output_dialog_channel_label,
             ),
           ),
@@ -403,34 +417,6 @@ class _AdvancedSection extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                // Session ID
-                _FormRow(
-                  sematicId: FusionTestKeys.instance.aes67_output_dialog_session_id_label,
-                  labelW: labelW,
-                  gapLabel: gapLabel,
-                  label: 'Session ID',
-                  child: _DarkTextField(
-                    semanticId: FusionTestKeys.instance.aes67_output_dialog_session_id_field,
-                    value: state.sessionId,
-                    onChanged: cubit.updateSessionId,
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // IP Address
-                _FormRow(
-                  sematicId: FusionTestKeys.instance.aes67_output_dialog_ip_address_label,
-                  labelW: labelW,
-                  gapLabel: gapLabel,
-                  label: 'IP Address',
-                  child: _DarkTextField(
-                    semanticId: FusionTestKeys.instance.aes67_output_dialog_ip_address_field,
-                    value: state.ipAddress,
-                    onChanged: cubit.updateIpAddress,
-                  ),
-                ),
-                const SizedBox(height: 14),
-
                 // Bit Depth
                 _FormRow(
                   sematicId: FusionTestKeys.instance.aes67_output_dialog_bit_depth_dropdown_label,
@@ -747,7 +733,7 @@ class _DarkDropdown<T> extends StatelessWidget {
   final String semanticId;
   final List<T> items;
   final String Function(T) labelBuilder;
-  final ValueChanged<T?> onChanged;
+  final ValueChanged<T?>? onChanged;
 
   const _DarkDropdown({
     required this.value,

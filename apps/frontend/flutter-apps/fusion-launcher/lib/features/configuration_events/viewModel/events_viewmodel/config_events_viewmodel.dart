@@ -6,10 +6,13 @@ import 'package:fusion_lib/fusion_lib.dart';
 /// Cubit for managing Events feature state and business logic
 class ConfigEventsViewmodel extends Cubit<ConfigEventsState> {
   final ProjectViewModel _projectViewModel;
+  final FusionEventService _eventActivateService;
 
   ConfigEventsViewmodel({
     required ProjectViewModel projectViewModel,
+    required FusionEventService eventActivateService,
   }) : _projectViewModel = projectViewModel,
+       _eventActivateService = eventActivateService,
        super(const EventsInitial()) {
     _loadEvents();
   }
@@ -77,6 +80,16 @@ class ConfigEventsViewmodel extends Cubit<ConfigEventsState> {
     syncWithProjectViewModel();
   }
 
+  /// Toggle event enabled state remotely via the fusion server.
+  /// Calls PUT /tasks/:id/enable or /tasks/:id/disable based on [isEnabled].
+  Future<ResponseCallback<bool>> toggleEventEnabledRemote({
+    required String vip,
+    required String eventId,
+    required bool isEnabled,
+  }) async {
+    return isEnabled ? _eventActivateService.enableEvent(vip: vip, eventId: eventId) : _eventActivateService.disableEvent(vip: vip, eventId: eventId);
+  }
+
   void reorderEvents(int oldIndex, int newIndex) {
     int adjustedNewIndex = newIndex;
     if (oldIndex < newIndex) adjustedNewIndex -= 1;
@@ -138,6 +151,14 @@ class ConfigEventsViewmodel extends Cubit<ConfigEventsState> {
   void updateEventSelectedState({required String eventId, required EventStates selectedState}) {
     _projectViewModel.updateEventSelectedState(eventId: eventId, selectedState: selectedState);
     syncWithProjectViewModel();
+  }
+
+  /// Recall (trigger) an event by id on the fusion server
+  Future<ResponseCallback<bool>> recallEvent({
+    required String vip,
+    required String eventId,
+  }) async {
+    return _eventActivateService.activateEvent(vip: vip, eventId: eventId);
   }
 
   @override

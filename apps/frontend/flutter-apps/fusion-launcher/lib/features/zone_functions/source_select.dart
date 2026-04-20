@@ -5,9 +5,11 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../projects/view_model/block_data/block_data_viewmodel.dart';
+import '../projects/models/meter_data.dart';
+import '../projects/view_model/meter_data/meter_data_view_model.dart';
 import '../zone_function_settings/select_settings/select_settings.dart';
 import 'source_mix.dart';
+import 'view_model/source_select/source_select_viewmodel.dart';
 import 'widgets/priority_selection_widget.dart';
 
 class SourceSelectZoneControlPanel extends StatefulWidget {
@@ -37,12 +39,41 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
   late List<Source> sources;
   final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
   ZoneFunctions? zoneFunction;
+  late final SourceSelectViewmodel _sourceSelectViewModel;
+  late final MeterDataViewModel _meterDataViewModel;
 
   @override
   void initState() {
     super.initState();
     sources = projectViewModel.getSourcesAndSourceSetSourcesInZone(zoneId: widget.zoneID);
     zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID);
+
+    _sourceSelectViewModel = SourceSelectViewmodel();
+    _meterDataViewModel = serviceLocator<MeterDataViewModel>();
+
+    // Register as meter observer so telemetry stays alive while this widget is mounted.
+    _meterDataViewModel.registerObserver(this);
+
+    if (zoneFunction != null) {
+      // Fetch the latest server-authoritative selected input on load.
+      _sourceSelectViewModel.getSelectedInputInServer(
+        function: zoneFunction!,
+        zoneId: widget.zoneID,
+      );
+      // Subscribe to live WebSocket block-data updates for cross-device sync.
+      _sourceSelectViewModel.subscribeToBlockData(
+        functionId: zoneFunction!.id,
+        zoneId: widget.zoneID,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _sourceSelectViewModel.unsubscribeFromBlockData();
+    _sourceSelectViewModel.close();
+    _meterDataViewModel.unregisterObserver(this);
+    super.dispose();
   }
 
   @override
@@ -243,8 +274,8 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                             cursor: SystemMouseCursors.click,
                                                             child: GestureDetector(
                                                               onTap: () {
-                                                                projectViewModel.selectSourceForFunction(
-                                                                  functionId: zoneFunction!.id,
+                                                                _sourceSelectViewModel.updateInputSelection(
+                                                                  function: zoneFunction!,
                                                                   sourceId: source.id,
                                                                 );
                                                               },
@@ -257,13 +288,12 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                                     Expanded(
                                                                       child: Column(
                                                                         children: <Widget>[
-                                                                          Container(
-                                                                            height: 16,
-                                                                            width: 16,
-                                                                            decoration: BoxDecoration(
-                                                                              color: context.colorScheme.iconDisabled,
-                                                                              borderRadius: BorderRadius.circular(4),
-                                                                            ),
+                                                                          // Signal indicator — green when out_meter > -60.
+                                                                          _SourceSelectSignalIndicator(
+                                                                            functionId: zoneFunction?.id ?? '',
+                                                                            sourceId: source.id,
+                                                                            zoneFunction: zoneFunction,
+                                                                            meterDataViewModel: _meterDataViewModel,
                                                                           ),
                                                                         ],
                                                                       ),
@@ -281,16 +311,11 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                                     Expanded(
                                                                       child: MouseRegion(
                                                                         cursor: SystemMouseCursors.click,
-                                                                        child: GestureDetector(
+                                                                        child: InkWell(
                                                                           onTap: () {
-                                                                            projectViewModel.selectSourceForFunction(
-                                                                              functionId: zoneFunction!.id,
+                                                                            _sourceSelectViewModel.updateInputSelection(
+                                                                              function: zoneFunction!,
                                                                               sourceId: source.id,
-                                                                            );
-                                                                            serviceLocator<BlockDataViewmodel>().updateBlockParameter(
-                                                                              blockId: "${zoneFunction!.id}/selector",
-                                                                              parameter: 'input',
-                                                                              value: index + 1,
                                                                             );
                                                                           },
                                                                           child: SemanticHelper.toggle(
@@ -392,6 +417,84 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// _SourceSelectSignalIndicator
+//
+// A small coloured square that turns green when the function's out_meter
+// value at the source's dimension index is greater than -60 (signal present).
+// The meter block_name is the function ID (e.g. "FUNC268951892").
+// The dimension index comes from function.sourceIndex[sourceId].
+// ─────────────────────────────────────────────────────────────────────────────
+class _SourceSelectSignalIndicator extends StatelessWidget {
+  final String functionId;
+  final String sourceId;
+  final ZoneFunctions? zoneFunction;
+  final MeterDataViewModel meterDataViewModel;
+
+  const _SourceSelectSignalIndicator({
+    required this.functionId,
+    required this.sourceId,
+    required this.zoneFunction,
+    required this.meterDataViewModel,
+  });
+
+  /// Searches all packets for a [MeterBlock] whose `blockName` matches
+  /// [functionId] and whose `meterName` is `out_meter`.
+  static MeterBlock? _findOutMeter(MeterDataState state, String functionId) {
+    for (final MeterPacket packet in state.packets.values) {
+      for (final MeterBlock block in packet.blocks) {
+        if (block.blockName == functionId && block.meterName == 'out_meter') {
+          return block;
+        }
+      }
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (functionId.isEmpty) {
+      return Container(
+        height: 16,
+        width: 16,
+        decoration: BoxDecoration(
+          color: context.colorScheme.iconDisabled,
+          borderRadius: BorderRadius.circular(4),
+        ),
+      );
+    }
+
+    // Resolve the dimension index for this source from the function's sourceIndex map.
+    final int dimension = zoneFunction?.sourceIndex != null && zoneFunction!.sourceIndex!.containsKey(sourceId) ? zoneFunction!.sourceIndex![sourceId]! : 0;
+
+    return BlocSelector<MeterDataViewModel, MeterDataState, bool>(
+      bloc: meterDataViewModel,
+      selector: (MeterDataState state) {
+        final MeterBlock? outMeter = _findOutMeter(state, functionId);
+        if (outMeter == null || outMeter.value.isEmpty) return false;
+        if (dimension < 0 || dimension >= outMeter.value.length) return false;
+        return outMeter.value[dimension] > -60.0;
+      },
+      builder: (BuildContext context, bool hasSignal) {
+        return SemanticHelper.container(
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.container,
+            'signal_indicator_$sourceId',
+          ),
+          child: Container(
+            height: 16,
+            width: 16,
+            decoration: BoxDecoration(
+              color: hasSignal ? const Color(0xFF48BB78) : context.colorScheme.iconDisabled,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        );
+      },
     );
   }
 }

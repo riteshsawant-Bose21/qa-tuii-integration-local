@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/scheduling/model/calendar_event.dart';
 import 'package:fusion_launcher/features/scheduling/view/widgets/calender_view.dart';
+import 'package:fusion_launcher/features/scheduling/view/widgets/event_card.dart';
+import 'package:fusion_launcher/features/scheduling/view/widgets/WeekDayHeader.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:intl/intl.dart';
 

@@ -24,7 +24,7 @@ class NeumorphicTextWithPopupSliderButton extends StatefulWidget {
     this.backgroundColor,
     this.borderRadius = 8,
     this.iconSize = 24,
-    this.semanticId = 'undefined'
+    this.semanticId = 'undefined',
   });
 
   @override
@@ -69,7 +69,7 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
                       ),
                     ),
                   ),
-              
+
                   VerticalDivider(
                     color: context.colorScheme.strokeLight,
                     thickness: 1,
@@ -128,7 +128,7 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
                                       semanticId: 'neumorphic_text_with_popup_slider_button',
                                       value: widget.value ?? 0.0,
                                       min: -60,
-                                      max: 12,
+                                      max: 0,
                                       intervalGap: 12,
                                       onChanged: (num value) {
                                         widget.onChanged?.call(

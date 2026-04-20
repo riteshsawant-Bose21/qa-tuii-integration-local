@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/snapshotViewModel/snapshot_state.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/snapshotViewModel/snapshot_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/controller/controller_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Middle panel — PAGES (snapshot/scene tab).
@@ -32,7 +33,7 @@ class PagesPanel extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const PanelSectionHeader(title: 'PAGES'),
+              PanelSectionHeader(semanticId: FusionTestKeys.instance.snapshotAndScenesPagesSectionHeader, title: 'PAGES'),
               Expanded(
                 child:
                     nothingToShow

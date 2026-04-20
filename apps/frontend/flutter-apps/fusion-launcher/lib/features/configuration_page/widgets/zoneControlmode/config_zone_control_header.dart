@@ -34,7 +34,7 @@ class _ConfigZoneControlHeaderState extends State<ConfigZoneControlHeader> {
 
   /// Keep the text field in sync with cubit state without losing cursor focus.
   void _syncVolumeText(double gain) {
-    final double percentageGain = context.read<ZoneControlViewModel>().dbfsToPercentage(gain);
+    final double percentageGain = FusionUtils().dbfsToPercentage(gain);
     final String formatted = percentageGain.toStringAsFixed(1);
 
     if (volumeController.text != formatted) {

@@ -3,6 +3,11 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 /// Extension on ProjectViewModel for managing Messages linked to Sources
 extension MessagePlayerViewModels on ProjectViewModel {
+  /// Get all message player sources (paging sources of type messagePlayer / messagePlayerWithZoneSelect)
+  List<Source> getAllMessagePlayerSources() {
+    return projectManager.getAllMessagePlayerSources();
+  }
+
   /// Get all messages for a source (message player)
   List<MessageModel> getMessagesForSource(String sourceId) {
     return projectManager.getMessagesForSource(sourceId);
