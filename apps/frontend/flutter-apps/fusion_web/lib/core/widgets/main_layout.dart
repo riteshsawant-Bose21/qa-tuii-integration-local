@@ -6,6 +6,7 @@ import 'package:fusion_web/core/widgets/fusion_sidebar.dart';
 import 'package:fusion_web/features/dashboard/presentation/pages/partner_dashboard_page.dart';
 import 'package:fusion_web/features/devices/presentation/pages/devices_page.dart';
 import 'package:fusion_web/features/organizations/presentation/pages/organizations_page.dart';
+import 'package:fusion_web/features/software_update/presentation/pages/software_update_page.dart';
 import 'package:fusion_web/features/projects/presentation/pages/projects_page.dart';
 import 'package:fusion_web/features/roles/presentation/pages/roles_page.dart';
 import 'package:fusion_web/features/settings/presentation/pages/settings_page.dart';
@@ -111,6 +112,8 @@ class _MainLayoutState extends State<MainLayout> {
         return const RolesPage();
       case DashboardTabs.settings:
         return const SettingsPage();
+      case DashboardTabs.softwareUpdate:
+        return const SoftwareUpdatePage();
     }
   }
 

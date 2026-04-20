@@ -4,12 +4,14 @@ import 'package:google_fonts/google_fonts.dart';
 
 class InviteUserRow {
   final TextEditingController emailController = TextEditingController();
+  final TextEditingController fullNameController = TextEditingController();
   String? selectedRole;
 
   InviteUserRow();
 
   void dispose() {
     emailController.dispose();
+    fullNameController.dispose();
   }
 }
 
@@ -52,11 +54,7 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
   }
 
   int _roleToId(String role) {
-    const roleMap = {
-      'Admin': 1,
-      'Designer': 2,
-      'Technician': 3,
-    };
+    const roleMap = {'Admin': 1, 'Designer': 2, 'Technician': 3};
     return roleMap[role] ?? 3;
   }
 
@@ -68,6 +66,7 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
         if (row.emailController.text.isNotEmpty && row.selectedRole != null) {
           invites.add({
             'email': row.emailController.text.trim(),
+            'fullName': row.fullNameController.text.trim(),
             'account_type_role_id': _roleToId(row.selectedRole!),
           });
         }
@@ -153,6 +152,52 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
                           margin: const EdgeInsets.only(bottom: 16),
                           child: Row(
                             children: [
+                              // Full Name Field
+                              Expanded(
+                                flex: 2,
+                                child: TextFormField(
+                                  controller: row.fullNameController,
+                                  style: TextStyle(
+                                    color: context.colorScheme.textPrimary,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: 'Full name',
+                                    filled: true,
+                                    fillColor: context.colorScheme.elevation2,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(
+                                        color: context.colorScheme.elevation3,
+                                      ),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(
+                                        color: context.colorScheme.elevation3,
+                                      ),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(
+                                        color: context.colorScheme.primaryColor,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Please enter a name';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+
                               // Email Field
                               Expanded(
                                 flex: 2,

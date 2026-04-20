@@ -208,6 +208,14 @@ class _FusionSidebarState extends State<FusionSidebar> {
                       Icons.business,
                       DashboardTabs.organizations,
                     ),
+                  // Only show Software Update tab for Super Admin with Bose Pro account
+                  if (_shouldShowOrganizations())
+                    _buildNavItem(
+                      context,
+                      viewModel,
+                      Icons.system_update,
+                      DashboardTabs.softwareUpdate,
+                    ),
                   _buildNavItem(
                     context,
                     viewModel,
