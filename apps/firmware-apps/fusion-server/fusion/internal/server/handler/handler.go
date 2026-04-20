@@ -158,7 +158,7 @@ func (h *Handler) HandleHTTPSet(update map[string]any) (any, error) {
 		}, nil
 	}
 
-	if err := h.handleConfigUpdate(configUpdate, true); err != nil {
+	if err := h.handleConfigUpdate(configUpdate, nil, true); err != nil {
 		return nil, err
 	}
 
@@ -208,7 +208,7 @@ func (h *Handler) HandleHTTPPatch(patch map[string]any) (map[string]any, error) 
 
 	diff := utils.CalculateDiff(before, after)
 
-	if err := h.handleConfigUpdate(after, false); err != nil {
+	if err := h.handleConfigUpdate(after, diff, false); err != nil {
 		return nil, err
 	}
 
@@ -285,7 +285,7 @@ func (h *Handler) SplitFeaturePayload(update map[string]any) (
 
 func (h *Handler) HandleClearAllData() error {
 
-	if err := h.handleConfigUpdate(map[string]any{}, true); err != nil {
+	if err := h.handleConfigUpdate(map[string]any{}, nil, true); err != nil {
 		return err
 	}
 
@@ -323,12 +323,13 @@ func (h *Handler) HandleExportData() (any, error) {
 	return h.persistence.ExportData()
 }
 
-func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
+func (h *Handler) handleConfigUpdate(data map[string]any, observerData map[string]any, clear bool) error {
 
 	configUpdate, err := h.StateManager.NewConfigUpdate(data)
 	if err != nil {
 		return err
 	}
+	configUpdate.ObserverData = observerData
 	configUpdate.Clear = clear
 
 	if _, err := h.StateManager.ApplyUpdate(*configUpdate); err != nil {

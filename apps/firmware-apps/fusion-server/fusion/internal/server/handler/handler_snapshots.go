@@ -46,7 +46,7 @@ func (h *Handler) HandleActivateSnapshotByID(id string) error {
 		return nil
 	}
 
-	if err := h.handleConfigUpdate(*afterPtr, false); err != nil {
+	if err := h.handleConfigUpdate(*afterPtr, nil, false); err != nil {
 		return err
 	}
 
@@ -90,7 +90,7 @@ func (h *Handler) HandleActivateScene(setID, sceneID string) error {
 		return nil
 	}
 
-	if err := h.handleConfigUpdate(*afterPtr, false); err != nil {
+	if err := h.handleConfigUpdate(*afterPtr, nil, false); err != nil {
 		return err
 	}
 
