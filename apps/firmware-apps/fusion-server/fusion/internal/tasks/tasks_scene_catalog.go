@@ -10,7 +10,7 @@ import (
 
 func (tm *TaskManager) taskActivateSceneSnapshotFunc(task *api.Task) TaskFunc {
 	return func(ctx context.Context) error {
-		if tm.handler == nil {
+		if tm.sceneCatalog == nil {
 			return errors.New("scene catalog handler is not configured")
 		}
 
@@ -19,13 +19,13 @@ func (tm *TaskManager) taskActivateSceneSnapshotFunc(task *api.Task) TaskFunc {
 			return fmt.Errorf("%s required for scene_snapshot tasks", api.SnapshotDefinitionIDKey)
 		}
 
-		return tm.handler.HandleActivateSnapshotByID(snapshotDefinitionID)
+		return tm.sceneCatalog.ActivateSnapshotByID(snapshotDefinitionID)
 	}
 }
 
 func (tm *TaskManager) taskActivateSceneFunc(task *api.Task) TaskFunc {
 	return func(ctx context.Context) error {
-		if tm.handler == nil {
+		if tm.sceneCatalog == nil {
 			return errors.New("scene catalog handler is not configured")
 		}
 
@@ -39,6 +39,6 @@ func (tm *TaskManager) taskActivateSceneFunc(task *api.Task) TaskFunc {
 			return fmt.Errorf("%s required for scene_activate tasks", api.SceneIDKey)
 		}
 
-		return tm.handler.HandleActivateScene(setID, sceneID)
+		return tm.sceneCatalog.ActivateScene(setID, sceneID)
 	}
 }
