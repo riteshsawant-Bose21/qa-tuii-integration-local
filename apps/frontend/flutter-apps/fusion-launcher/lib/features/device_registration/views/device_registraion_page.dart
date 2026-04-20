@@ -28,11 +28,11 @@ class _DeviceRegistraionPage extends StatefulWidget {
 }
 
 class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
-  final GlobalBlockerController _blocker = GlobalBlockerController();
+  final GlobalBlockerController _screenBlocker = GlobalBlockerController();
 
   @override
   void dispose() {
-    _blocker.dispose(); // ✅ proper cleanup
+    _screenBlocker.dispose(); // ✅ proper cleanup
     super.dispose();
   }
 
@@ -61,9 +61,9 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
           child: BlocConsumer<DeviceRegistrationViewModel, DeviceRegistrationState>(
             listener: (BuildContext context, DeviceRegistrationState state) {
               if (state.stepBulk == DeviceRegistrationStep.processing) {
-                _blocker.show(context, content: const SizedBox());
+                _screenBlocker.show(context, content: const SizedBox());
               } else {
-                _blocker.hide();
+                _screenBlocker.hide();
               }
             },
             builder: (BuildContext context, DeviceRegistrationState state) {
