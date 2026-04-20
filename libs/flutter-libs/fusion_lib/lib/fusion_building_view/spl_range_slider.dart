@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../fusion_acoustic_calculation_engine/spl_calculation_data.dart';
@@ -39,7 +41,7 @@ class _SPLRangeSliderState extends State<SPLRangeSlider> {
   bool _isDraggingMax = false;
   bool _isDraggingRange = false;
   bool _isUpdatingFromController = false;
-
+  final Debouncer _debouncer = Debouncer(delay: const Duration(milliseconds: 1000));
   @override
   void initState() {
     super.initState();
@@ -238,7 +240,9 @@ class _SPLRangeSliderState extends State<SPLRangeSlider> {
 
           // Update controller and notify parent
           _updateController(_currentMin, _currentMax);
-          widget.onChanged(_currentMin, _currentMax);
+          _debouncer.call(() {
+            widget.onChanged(_currentMin, _currentMax);
+          });
         },
         onPanEnd: (_) {
           setState(() {
@@ -339,5 +343,27 @@ class _SPLRangeSliderState extends State<SPLRangeSlider> {
         ),
       ),
     );
+  }
+}
+
+class Debouncer {
+  final Duration delay;
+  VoidCallback? _action;
+  Timer? _timer;
+
+  Debouncer({required this.delay});
+
+  void call(VoidCallback action) {
+    _action = action;
+    _timer?.cancel();
+    _timer = Timer(delay, () {
+      _action?.call();
+      _action = null;
+    });
+  }
+
+  void cancel() {
+    _timer?.cancel();
+    _action = null;
   }
 }

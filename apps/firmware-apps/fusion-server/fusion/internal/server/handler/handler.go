@@ -7,6 +7,7 @@ import (
 	"fusion/internal/controllers"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
+	"fusion/internal/scene_catalog"
 	"fusion/internal/utils"
 	"fusion/internal/version"
 	"net/http"
@@ -34,6 +35,7 @@ type Handler struct {
 
 	controllerManager controllers.ControllerManagerInterface
 	httpClient        *http.Client
+	sceneCatalog      *scene_catalog.Activator
 
 	// Software update sync tracking
 	syncTrackers     map[string]*api.SoftwareUpdateSyncTracker
@@ -57,6 +59,7 @@ func NewHandler(
 	stateManager *persistence.StateManager,
 	hub *pubsub.Hub,
 	controllerManager controllers.ControllerManagerInterface,
+	sceneCatalog *scene_catalog.Activator,
 ) *Handler {
 	return &Handler{
 		appConfig:         appConfig,
@@ -67,6 +70,7 @@ func NewHandler(
 		controllerManager: controllerManager,
 		sessions:          make(map[string]*SAPSession),
 		httpClient:        &http.Client{Timeout: api.HTTPTimeout},
+		sceneCatalog:      sceneCatalog,
 		syncTrackers:      make(map[string]*api.SoftwareUpdateSyncTracker),
 	}
 }
