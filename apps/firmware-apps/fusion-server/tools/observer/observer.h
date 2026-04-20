@@ -381,6 +381,46 @@ shouldAcceptUpdate(long long incomingEpoch, long long incomingVersion,
   return false;
 }
 
+inline std::string summarizeTopLevelKeys(const Json::Value &value)
+{
+  if (!value.isObject())
+    return "";
+
+  std::ostringstream oss;
+  bool first = true;
+  for (const auto &key : value.getMemberNames())
+  {
+    if (!first)
+      oss << ", ";
+    oss << key;
+    first = false;
+  }
+  return oss.str();
+}
+
+inline std::string summarizeUpdateMetadata(const Json::Value &update)
+{
+  std::ostringstream oss;
+  oss << "keys=[" << summarizeTopLevelKeys(update) << "]";
+  if (update.isMember("_fusion_op"))
+  {
+    oss << " op=" << update["_fusion_op"].asString();
+  }
+  if (update.isMember("_fusion_epoch"))
+  {
+    oss << " epoch=" << update["_fusion_epoch"].asInt64();
+  }
+  if (update.isMember("_fusion_version"))
+  {
+    oss << " version=" << update["_fusion_version"].asInt64();
+  }
+  if (update.isMember("_fusion_msg_id"))
+  {
+    oss << " msg_id=" << update["_fusion_msg_id"].asString();
+  }
+  return oss.str();
+}
+
 // -----------------------------------------------------------------------------
 // Class: JsonMonitor
 // -----------------------------------------------------------------------------
@@ -1064,33 +1104,19 @@ private:
 
   void handleUpdateMessage(const Json::Value &update, bool useVersion = true)
   {
-    SPDLOG_TRACE("Received update: {}", update.toStyledString());
+    SPDLOG_TRACE("Received update {}", summarizeUpdateMetadata(update));
 
     if (useVersion)
     {
       if (!update.isMember("_fusion_epoch"))
       {
-        SPDLOG_WARN("Ignoring update without epoch. Keys present: [{}]. Full JSON: {}",
-                    [&]{
-                      std::string keys;
-                      for (const auto &k : update.getMemberNames())
-                        keys += k + ", ";
-                      return keys;
-                    }(),
-                    update.toStyledString());
+        SPDLOG_WARN("Ignoring update without epoch {}", summarizeUpdateMetadata(update));
         return;
       }
 
       if (!update.isMember("_fusion_version"))
       {
-        SPDLOG_WARN("Ignoring update without version. Keys present: [{}]. Full JSON: {}",
-                    [&]{
-                      std::string keys;
-                      for (const auto &k : update.getMemberNames())
-                        keys += k + ", ";
-                      return keys;
-                    }(),
-                    update.toStyledString());
+        SPDLOG_WARN("Ignoring update without version {}", summarizeUpdateMetadata(update));
         return;
       }
 
@@ -1100,7 +1126,7 @@ private:
       if (!shouldAcceptUpdate(incomingEpoch, incomingVersion, lastEpoch_,
                               lastCounter_))
       {
-        SPDLOG_WARN("Rejecting out of order update with epoch={} version={}", incomingEpoch, incomingVersion);
+        SPDLOG_WARN("Rejecting out of order update {}", summarizeUpdateMetadata(update));
         return;
       }
     }
@@ -1307,8 +1333,8 @@ private:
           }
           else
           {
-            SPDLOG_DEBUG("Processing update message (no _fusion_op). Raw JSON: {}",
-                        response.toStyledString());
+            SPDLOG_DEBUG("Processing update message without _fusion_op {}",
+                         summarizeUpdateMetadata(response));
             handleUpdateMessage(response);
           }
         }
