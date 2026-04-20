@@ -162,39 +162,48 @@ class VirtualControlSection extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            FusionAppText(
-              semanticId: FusionTestKeys.instance.settingsTabvirtualControlsectiondesctext,
-              text: 'Scan the QR Code with any mobile devices on the same network to access a virtual wall controller',
-              style: Theme.of(context).textTheme.l1Regular.withColor(
-                context.colorScheme.textBody,
+            GestureDetector(
+              onTap: () {
+                final WallControllerConfig config = serviceLocator<ProjectViewModel>().getWallControllerConfig();
+                final String prettyJson = const JsonEncoder.withIndent('  ').convert(config.toJson());
+                debugPrint('─── WallControllerConfig JSON ───');
+                debugPrint(prettyJson);
+              },
+              child: FusionAppText(
+                semanticId: FusionTestKeys.instance.settingsTabvirtualControlsectiondesctext,
+                text: 'Scan the QR Code with any mobile devices on the same network to access a virtual wall controller',
+                style: Theme.of(context).textTheme.l1Regular.withColor(
+                  context.colorScheme.textBody,
+                ),
               ),
             ),
             const SizedBox(height: 12),
-            Row(
-              children: <Widget>[
-                FusionAppButton(
-                  semanticId: FusionTestKeys.instance.settingsTabvirtualControlsectiondescprintbutton,
-                  text: 'Print',
-                  height: 32,
-                  width: 110,
-                  showSuffixIcon: true,
-                  suffixIcon: Icons.print_outlined,
-                  style: FusionAppButtonStyle.primary,
-                  onPressed: () => _printQr(context),
-                ),
-                const SizedBox(width: 12),
-                FusionAppButton(
-                  semanticId: FusionTestKeys.instance.settingsTabvirtualControlsectiondescdownloadbutton,
-                  text: 'Download',
-                  height: 32,
-                  width: 110,
-                  showSuffixIcon: true,
-                  suffixIcon: Icons.download_outlined,
-                  style: FusionAppButtonStyle.primary,
-                  onPressed: () => _downloadQrAsImage(context),
-                ),
-              ],
+            FusionAppButton(
+              semanticId: FusionTestKeys.instance.settingsTabvirtualControlsectiondescdownloadbutton,
+              text: 'Download',
+              height: 32,
+              width: 110,
+              showSuffixIcon: true,
+              suffixIcon: Icons.download_outlined,
+              style: FusionAppButtonStyle.primary,
+              onPressed: () => _downloadQrAsImage(context),
             ),
+            // Row(
+            //   children: <Widget>[
+            //     FusionAppButton(
+            //       semanticId: FusionTestKeys.instance.settingsTabvirtualControlsectiondescprintbutton,
+            //       text: 'Print',
+            //       height: 32,
+            //       width: 110,
+            //       showSuffixIcon: true,
+            //       suffixIcon: Icons.print_outlined,
+            //       style: FusionAppButtonStyle.primary,
+            //       onPressed: () => _printQr(context),
+            //     ),
+            //     const SizedBox(width: 12),
+            //
+            //   ],
+            // ),
           ],
         ),
       ),
