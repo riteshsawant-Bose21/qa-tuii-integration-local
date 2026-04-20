@@ -40,8 +40,8 @@ final class TabChanged extends ProjectViewModelState {
   TabChanged({required this.tab});
 }
 
-final class FloorsUpdated extends ProjectViewModelState {
-  FloorsUpdated();
+final class FloorsUpdated extends ProjectUpdated {
+  FloorsUpdated({required super.projectId});
 }
 
 final class ProjectError extends ProjectViewModelState {

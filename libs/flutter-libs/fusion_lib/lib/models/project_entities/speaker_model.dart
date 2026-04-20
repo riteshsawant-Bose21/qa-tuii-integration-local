@@ -163,11 +163,7 @@ class Speaker extends HardwareComponent {
     }
 
     // Check string fields (slightly more expensive)
-    if (name != other.name ||
-        image != other.image ||
-        ipAddress != other.ipAddress ||
-        speakerSKU != other.speakerSKU ||
-        hardwareName != other.hardwareName) {
+    if (name != other.name || image != other.image || ipAddress != other.ipAddress || speakerSKU != other.speakerSKU || hardwareName != other.hardwareName) {
       return false;
     }
 
@@ -266,7 +262,8 @@ class Speaker extends HardwareComponent {
       wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['dx'] as num).toDouble(), (json['wiringPos']['dy'] as num).toDouble()) : null,
       rotation: (json['rotation'] as num).toDouble(),
       gain: (json['gain'] as num).toDouble(),
-      image: json['image'] as String,
+      image:
+          DeserializationUtil.stringDeserializer.deserialize(json['image']) ?? DeserializationUtil.stringDeserializer.deserialize(json['assetImagePath']) ?? '',
       type: OutputType.values.firstWhere((OutputType e) => e.name == json['type'], orElse: () => OutputType.analogOutput),
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
       ipAddress: json['ipAddress'] as String?,

@@ -24,10 +24,14 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
     algorithm = config.algorithms.firstWhereOrNull((Algorithm element) => element.name == algorithmId);
     _loadLayout();
     getParameterValueFromServer();
-    //initlize websocket
+    _subscribeToBlockDataStream();
   }
 
   final ScrollController scrollController = ScrollController();
+
+  /// Subscription to [BlockDataViewmodel] state changes for real-time
+  /// WebSocket-pushed block data updates.
+  StreamSubscription<BlockDataState>? _blockDataSubscription;
   Algorithm? algorithm;
   PBLayout? _layout;
   PBLayout? get layout => _layout;
@@ -43,6 +47,43 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
 
   /// Whether a throttle window is currently active
   bool _isThrottling = false;
+
+  @override
+  void dispose() {
+    _blockDataSubscription?.cancel();
+    _updateThrottleTimer?.cancel();
+    _updateTrailingTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Listens to [BlockDataViewmodel.stream] and applies incoming WebSocket
+  /// block-data updates for this processing block in real time.
+  void _subscribeToBlockDataStream() {
+    final BlockDataViewmodel blockDataVM = serviceLocator<BlockDataViewmodel>();
+    _blockDataSubscription = blockDataVM.stream.listen((BlockDataState blockState) {
+      final Map<String, dynamic>? blockData = blockState.allBlockData[processingBlock.id];
+      if (blockData == null || blockData.isEmpty) return;
+
+      bool changed = false;
+      blockData.forEach((String key, dynamic value) {
+        if (value is List<dynamic>) {
+          for (int i = 0; i < value.length; i++) {
+            if (value[i] != null) {
+              processingBlock.updateProperty(PropertySetting(name: key, value: value[i], dimension: i));
+              changed = true;
+            }
+          }
+        } else {
+          processingBlock.updateProperty(PropertySetting(name: key, value: value));
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        notifyListeners();
+      }
+    });
+  }
 
   Future<void> _loadLayout() async {
     _layout = await AlgorithmLayoutData.getForAlgorithm(algorithm?.name ?? "");

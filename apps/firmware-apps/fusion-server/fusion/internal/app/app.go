@@ -13,6 +13,7 @@ import (
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/routes"
+	"fusion/internal/scene_catalog"
 	"fusion/internal/server"
 	"fusion/internal/server/handler"
 	"fusion/internal/tasks"
@@ -89,14 +90,15 @@ func NewApp(config *api.AppConfig) *App {
 	stateManager := initStateManager(config)
 	persistence := initPersistence(fusionDatabasePath, stateManager)
 	hub := pubsub.NewHub(stateManager, persistence)
-	taskManager := initTaskManager(config, persistence, hub)
+	sceneActivator := scene_catalog.NewActivator(config, persistence, stateManager, hub)
+	taskManager := initTaskManager(config, persistence, hub, sceneActivator)
 	controllerManager := controllers.NewControllerManager(hub, api.ControllerPort)
 	delegate := cluster.NewClusterDelegate(config, persistence, stateManager, taskManager, hub)
 
 	memberlist := cluster.CreateMemberlist(config, delegate)
 	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
 	hub.SetClusterTransport(clusterInstance)
-	connectionHandler := handler.NewHandler(config, clusterInstance, persistence, stateManager, hub, controllerManager)
+	connectionHandler := handler.NewHandler(config, clusterInstance, persistence, stateManager, hub, controllerManager, sceneActivator)
 
 	// Set the sync handler on the delegate so it can handle software update acknowledgments
 	delegate.SetSyncHandler(connectionHandler)
@@ -318,9 +320,9 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.TasksHistoryEndpoint, app.TaskManager.GetHistory)
 	app.registerPublicDELETE(routes.TasksHistoryEndpoint, app.TaskManager.ClearHistory)
 	app.registerPublicGET(routes.TasksEndpoint, app.TaskManager.GetTasks)
-	app.registerPublicPOST(routes.TasksEndpoint, app.TaskManager.CreateApplySnapshotTask)
+	app.registerPublicPOST(routes.TasksEndpoint, app.TaskManager.CreateTask)
 	app.registerPublicGET(routes.TasksIdEndpoint, app.TaskManager.GetTaskHandler)
-	app.registerPublicPATCH(routes.TasksIdEndpoint, app.TaskManager.UpdateApplySnapshotTask)
+	app.registerPublicPATCH(routes.TasksIdEndpoint, app.TaskManager.UpdateTaskHandler)
 	app.registerPublicDELETE(routes.TasksIdEndpoint, app.TaskManager.DeleteTask)
 	app.registerPublicPOST(routes.TasksIdEnableEndpoint, app.TaskManager.EnableTask)
 	app.registerPublicPOST(routes.TasksIdDisableEndpoint, app.TaskManager.DisableTask)
@@ -613,8 +615,13 @@ func initStateManager(config *api.AppConfig) *persistence.StateManager {
 }
 
 // initTaskManager initializes the timer manager.
-func initTaskManager(config *api.AppConfig, persistence *persistence.Persistence, hub *pubsub.Hub) *tasks.TaskManager {
-	taskManager := tasks.NewTaskManager(config, persistence, hub)
+func initTaskManager(
+	config *api.AppConfig,
+	persistence *persistence.Persistence,
+	hub *pubsub.Hub,
+	sceneActivator tasks.SceneCatalogActivator,
+) *tasks.TaskManager {
+	taskManager := tasks.NewTaskManager(config, persistence, hub, sceneActivator)
 	taskManager.Start()
 	return taskManager
 }
