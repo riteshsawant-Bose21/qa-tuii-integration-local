@@ -33,7 +33,7 @@ Future<void> main() async {
       scheme: 'com.bosepro.fusion',
       host: 'connect',
       queryParameters: {
-        'vip': '192.168.1.110',
+        'vip': '192.168.1.100',
         'controller_id': 'CTRL1762958340064766236',
       },
     );
@@ -109,8 +109,8 @@ class MyApp extends StatelessWidget {
         BlocProvider<ProjectViewModel>(
           create: (BuildContext context) => serviceLocator<ProjectViewModel>(),
         ),
-        BlocProvider<ControlPalZonesViewModel>(
-          create: (BuildContext context) => serviceLocator<ControlPalZonesViewModel>(),
+        BlocProvider<VirtualControllerViewModel>(
+          create: (BuildContext context) => serviceLocator<VirtualControllerViewModel>(),
         ),
         // BlocProvider<ProductQueryCubit>(
         //   create: (BuildContext context) => serviceLocator<ProductQueryCubit>(),

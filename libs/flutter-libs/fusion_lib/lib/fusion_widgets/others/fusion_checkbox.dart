@@ -49,8 +49,8 @@ class FusionCheckbox extends StatelessWidget {
               borderRadius: resolvedShape == BoxShape.rectangle ? BorderRadius.circular(4) : null,
               color: resolvedShape == BoxShape.circle ? Colors.transparent : (isActive ? context.colorScheme.iconWhite : null),
               border: Border.all(
-                color: isActive ? context.colorScheme.iconWhite : context.colorScheme.iconDisabled,
-                width: 2,
+                color: isActive ? context.colorScheme.iconWhite : context.colorScheme.iconDefault,
+                width: 1,
               ),
             ),
             child: Center(

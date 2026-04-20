@@ -59,10 +59,45 @@ extension DroInputMapperService on ProjectService {
   }
 
   DroInputModel updateInputStreamData(DroInputModel droInputModel) {
+    List<DroInputStream> inputStreams = [];
+
+    List<AssignedInputStreamInfo> inputStreamInfo = getAssignedInputStreamChannelsForSource();
+
+    for (AssignedInputStreamInfo streamInfo in inputStreamInfo) {
+      if (streamInfo.sourceMappings.isEmpty) {
+        continue;
+      }
+      List<StreamChannelMapping> streamChannelMapping = [];
+      for (StreamSourceChannelMapping sourceMapping in streamInfo.sourceMappings) {
+        if (sourceMapping.channelNumbers.isEmpty) {
+          continue;
+        }
+        streamChannelMapping.add(
+          StreamChannelMapping(
+            ioId: sourceMapping.sourceId,
+            ioCh: sourceMapping.channelNumbers.first,
+          ),
+        );
+      }
+      if (streamChannelMapping.isEmpty) {
+        continue;
+      }
+      inputStreams.add(
+        DroInputStream(
+          id: streamInfo.streamId,
+          name: streamInfo.streamName,
+          serverLocation: '',
+          totalChannels: streamInfo.sourceMappings.length,
+          sourcePort: 5004,
+          multicastDestinationIp: streamInfo.ipAddress,
+          streamChannelMapping: streamChannelMapping,
+        ),
+      );
+    }
     //Update Input Stream Data
     droInputModel = droInputModel.copyWith(
       //input steam not implemented yet, so we will use empty list for now
-      inputStreams: [],
+      inputStreams: inputStreams,
     );
     return droInputModel;
   }
@@ -184,6 +219,8 @@ extension DroInputMapperService on ProjectService {
 
       List<Source> functionSources = getSourcesAndSourceSetSourcesInZone(zoneId: zone.id);
 
+      final Map<String, int> sourceIndex = {};
+
       List<DroSourceConnection> droSourceConnections = [];
       for (int i = 0; i < functionSources.length; i++) {
         Source source = functionSources[i];
@@ -196,7 +233,10 @@ extension DroInputMapperService on ProjectService {
             destinationChannel: i + 1,
           ),
         );
+        sourceIndex[source.id] = i;
       }
+
+      updateSourceIndexForFunction(functionId: zoneFunction.id, sourceIndex: sourceIndex);
 
       List<PrioritySourceData> prioritySources = getPrioritySourcesDataInZone(zone.id);
 
@@ -215,13 +255,23 @@ extension DroInputMapperService on ProjectService {
         }
       }
 
+      final bool usesInOutChannels =
+          zoneFunction.type == ZoneFunctionsType.sourceMix ||
+          zoneFunction.type == ZoneFunctionsType.sourceMixWithPriority ||
+          zoneFunction.type == ZoneFunctionsType.sourceMatrix ||
+          zoneFunction.type == ZoneFunctionsType.sourceMatrixWithPriority;
+
       Map<String, dynamic> algorithmProperties = prioritySources.isEmpty
           ? {
-              "source_channels": 1,
+              if (usesInOutChannels) "out_channels": 1 else "source_channels": 1,
+              if (usesInOutChannels) "in_channels": functionSources.length else "total_channels": functionSources.length,
             }
           : {
-              "source_channels": 1,
-              "total_channels": functionSources.length + 1,
+              if (usesInOutChannels) "out_channels": 1 else "source_channels": 1,
+              if (usesInOutChannels)
+                "in_channels": functionSources.length + 1
+              else
+                "total_channels": functionSources.length + 1, //+1 is for the priority source
               "priority_count": prioritySources.length,
             };
 
@@ -263,7 +313,7 @@ extension DroInputMapperService on ProjectService {
           sourceTerminal: "out",
           sourceChannel: 1,
           destinationTerminal: "in",
-          destinationChannel: i + 1,
+          destinationChannel: 1,
         ),
       );
 
@@ -493,6 +543,44 @@ extension DroInputMapperService on ProjectService {
   //Update output stream data
   DroInputModel updateOutputStreamData(DroInputModel droInputModel) {
     List<DroOutputStream> droOutputStreams = [];
+
+    List<AssignedOutputStreamInfo> outputStreams = getAssignedOutputStreamToCircuit();
+
+    for (AssignedOutputStreamInfo streamInfo in outputStreams) {
+      if (streamInfo.assignedCircuits.isEmpty) {
+        continue;
+      }
+
+      List<StreamChannelMapping> streamChannelMapping = [];
+
+      for (AssignedCircuitInfo circuitMapping in streamInfo.assignedCircuits) {
+        if (circuitMapping.channels.isEmpty) {
+          continue;
+        }
+        streamChannelMapping.add(
+          StreamChannelMapping(
+            ioId: circuitMapping.circuitId,
+            ioCh: circuitMapping.channels.first.channelNumber,
+          ),
+        );
+      }
+
+      if (streamChannelMapping.isEmpty) {
+        continue;
+      }
+
+      droOutputStreams.add(
+        DroOutputStream(
+          id: streamInfo.streamId,
+          name: streamInfo.streamName,
+          serverLocation: '',
+          sourcePort: 49152,
+          totalChannels: streamChannelMapping.length,
+          multicastDestinationIp: streamInfo.ipAddress,
+          streamChannelMapping: streamChannelMapping,
+        ),
+      );
+    }
 
     //No output steam implemented yet, so we will use empty list for now
 

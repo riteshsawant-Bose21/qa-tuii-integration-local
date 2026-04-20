@@ -103,7 +103,7 @@ class MenuDrawer extends StatelessWidget {
     ];
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: CommonAppBar(
+      appBar: CommonMobileAppBar(
         title: 'Menu',
         dividerPadding: 0,
         leadingIcon: SizedBox(width: 16),

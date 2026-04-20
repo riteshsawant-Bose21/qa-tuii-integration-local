@@ -48,7 +48,7 @@ class DevicesScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: context.colorScheme.primaryBlack,
-      appBar: CommonAppBar(title: "Devices",actions: [
+      appBar: CommonMobileAppBar(title: "Devices",actions: [
         GestureDetector(
             onTap: (){
               _openFilter(context,true);

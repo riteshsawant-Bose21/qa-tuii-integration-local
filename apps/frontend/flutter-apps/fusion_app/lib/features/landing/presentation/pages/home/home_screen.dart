@@ -124,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
         key: _scaffoldKey,
         backgroundColor: context.colorScheme.primaryBlack,
         drawer: MenuDrawer(),
-        appBar: CommonAppBar(title: 'Home',leadingIcon: GestureDetector(
+        appBar: CommonMobileAppBar(title: 'Home',leadingIcon: GestureDetector(
             onTap: (){
               _scaffoldKey.currentState?.openDrawer();
             },
