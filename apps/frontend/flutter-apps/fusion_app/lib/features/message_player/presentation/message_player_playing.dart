@@ -36,7 +36,7 @@ class _MessagePlayerPlayingState extends State<MessagePlayerPlaying> {
       bottom: false,
       child: Scaffold(
         backgroundColor: context.colorScheme.primaryBlack,
-        appBar: CommonAppBar(
+        appBar: CommonMobileAppBar(
           title: widget.title
         ),
         bottomNavigationBar: indexSelected!=null ? Container(

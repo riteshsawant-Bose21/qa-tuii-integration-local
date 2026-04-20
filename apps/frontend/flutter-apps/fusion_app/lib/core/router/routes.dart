@@ -150,15 +150,8 @@ class Routes {
 
       /// Zone Volume Controller Page
       case zoneVolumeControlPage:
-        //Map<String,dynamic> data = routeSettings.arguments as Map<String,dynamic>;
         return CupertinoPageRoute<void>(
           builder: (BuildContext context) =>  ZoneVolumeControl(
-            // sourceId: data['sourceId'],
-            // zoneIndex: data['zoneIndex'],
-            // zones: data['zones'],
-            // onNext: data['onNext'],
-            // onPrevious: data['onPrevious'],
-            // onVolumeChanged: data['onVolumeChanged'],
            ),
           settings: const RouteSettings(name: zoneVolumeControlPage),
         );

@@ -195,4 +195,11 @@ extension EventsManager on ProjectManager {
     }
     return projectService!.getAllTimedEvents();
   }
+
+  List<CreateScheduleTaskDto> getScheduledEventsDto() {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getScheduledEventsDto();
+  }
 }

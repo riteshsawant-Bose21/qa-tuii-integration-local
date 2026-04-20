@@ -33,7 +33,7 @@ class PersonalInformationScreen extends StatelessWidget {
       bottom: false,
       child: Scaffold(
         backgroundColor: context.colorScheme.primaryBlack,
-        appBar: CommonAppBar(title: 'Personal Information'),
+        appBar: CommonMobileAppBar(title: 'Personal Information'),
         body: Column(
           children: [
             Expanded(
