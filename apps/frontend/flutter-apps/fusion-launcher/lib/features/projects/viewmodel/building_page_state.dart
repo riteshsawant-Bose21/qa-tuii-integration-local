@@ -1,3 +1,4 @@
+// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 
 class BuildingPageState {
@@ -160,7 +161,21 @@ class SplSelectToolState extends SplToolState {
 
 abstract class ListeningAreaToolState extends BuildingPageToolState {}
 
-class DrawingListeningAreaState extends ListeningAreaToolState {}
+class DrawingListeningAreaState extends ListeningAreaToolState {
+  final String? listeningAreaId;
+
+  DrawingListeningAreaState({required this.listeningAreaId});
+
+  @override
+  bool operator ==(covariant BuildingPageToolState other) {
+    if (identical(this, other)) return true;
+
+    return other is DrawingListeningAreaState && other.listeningAreaId == listeningAreaId;
+  }
+
+  @override
+  int get hashCode => listeningAreaId.hashCode;
+}
 
 class SelectToolState extends ListeningAreaToolState {
   final String? selectedListeningAreaId;
