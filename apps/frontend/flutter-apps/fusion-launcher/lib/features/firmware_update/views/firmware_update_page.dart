@@ -8,14 +8,14 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/firmware_update/viewmodel/firmware_update_vm.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-class DeviceUpdatesTab extends StatefulWidget {
-  const DeviceUpdatesTab({super.key});
+class FirmwareUpdatesTab extends StatefulWidget {
+  const FirmwareUpdatesTab({super.key});
 
   @override
-  State<DeviceUpdatesTab> createState() => _DeviceUpdatesTabState();
+  State<FirmwareUpdatesTab> createState() => _FirmwareUpdatesTabState();
 }
 
-class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
+class _FirmwareUpdatesTabState extends State<FirmwareUpdatesTab> {
   final FirmwareUpdateViewModel _firmwareUpdateViewModel = serviceLocator<FirmwareUpdateViewModel>();
   OverlayEntry? _globalInstallBlockerEntry;
 
