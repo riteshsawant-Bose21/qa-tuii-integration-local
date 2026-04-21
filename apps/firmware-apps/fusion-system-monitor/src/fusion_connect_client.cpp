@@ -1062,6 +1062,7 @@ bool FusionConnectClient::process_audio_streams_update() {
             if (create_source) {
                 config.is_source = true;
                 std::snprintf(config.stream_name, sizeof(config.stream_name), "FC_TX_%u", config.source_port);
+                json_stream_names.insert(config.stream_name);
 
                 // Role invariants: TX must set source_ip=local, dest_ip=peer
                 config.source_ip = local_ip_be;
@@ -1077,7 +1078,6 @@ bool FusionConnectClient::process_audio_streams_update() {
                     pending_streams[config.stream_name].state = STREAM_CREATE_PENDING;
                     pending_streams[config.stream_name].retry_cnt = STREAM_RETRY_CNT;
                     SPDLOG_DEBUG("Added Fusion Connect source stream {} to pending", config.stream_name);
-                    json_stream_names.insert(config.stream_name);
                 }
             }
 
@@ -1085,6 +1085,7 @@ bool FusionConnectClient::process_audio_streams_update() {
                 fusion_cn_stream_config sink_cfg = config; // copy common defaults/overrides
                 sink_cfg.is_source = false;
                 std::snprintf(sink_cfg.stream_name, sizeof(sink_cfg.stream_name), "FC_RX_%u", sink_cfg.source_port);
+                json_stream_names.insert(sink_cfg.stream_name);
 
                 // Role invariants: RX must set dest_ip=local, source_ip=peer
                 sink_cfg.dest_ip = local_ip_be;
@@ -1100,7 +1101,6 @@ bool FusionConnectClient::process_audio_streams_update() {
                     pending_streams[sink_cfg.stream_name].state = STREAM_CREATE_PENDING;
                     pending_streams[sink_cfg.stream_name].retry_cnt = STREAM_RETRY_CNT;
                     SPDLOG_DEBUG("Added Fusion Connect sink stream {} to pending", sink_cfg.stream_name);
-                    json_stream_names.insert(sink_cfg.stream_name);
                 }
             }
         } else {
@@ -1166,6 +1166,11 @@ bool FusionConnectClient::process_audio_streams_update() {
         }
     }
 
+    if (needs_retry) {
+        SPDLOG_DEBUG("Deferring audio_streams_update until peer device discovery is available");
+        return false;
+    }
+
     // --- Remove missing Fusion Connect streams --------------------------------
     for (auto it = fusion_connect_stream_map.begin(); it != fusion_connect_stream_map.end(); ) {
         if (!json_stream_names.count(it->first)) {
@@ -1201,11 +1206,6 @@ bool FusionConnectClient::process_audio_streams_update() {
         } else {
             ++it;
         }
-    }
-
-    if (needs_retry) {
-        SPDLOG_DEBUG("Deferring audio_streams_update until peer device discovery is available");
-        return false;
     }
 
     return true;
