@@ -51,6 +51,7 @@ class CompressorBlock extends StatelessWidget {
                           spacing: 10,
                           children: <Widget>[
                             PBNumberTextField(
+                              semanticId: "compressor_threshold",
                               value: controller.threshold ?? 0,
                               max: 0.0,
                               min: -40,
@@ -98,6 +99,7 @@ class CompressorBlock extends StatelessWidget {
                           spacing: 10,
                           children: <Widget>[
                             PBNumberTextField(
+                              semanticId: "compressor_ratio",
                               value: controller.ratio ?? 0,
                               min: 1.0,
                               max: 20,
@@ -301,6 +303,7 @@ class _GateTextField extends StatelessWidget {
           ),
           Expanded(
             child: PBNumberTextField(
+              semanticId: "$semanticId",
               onChanged: onChanged,
               value: value,
               min: min,
