@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/derived/listening_area_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canvas_painter.dart';
+import 'package:fusion_launcher/features/projects/view_model/spl_viewmodel.dart';
 import 'package:fusion_lib/fusion_acoustic_calculation_engine/spl_calculation_data.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -11,13 +12,22 @@ class SplPainter extends FusionBasePainter {
   final double minSpl;
   final double maxSpl;
   final SplPanelData splPanelData;
+  final SplState splState;
+  final int livePointStride;
   final List<Color> _legendColors;
 
   final double gridSize = 100;
-  double get pointSize => gridSize / 2;
+  double get pointSize => (gridSize / 2);
+  SplPainter({
+    required this.listeningAreas,
+    required this.minSpl,
+    required this.maxSpl,
+    required this.splPanelData,
+    required this.splState,
+    this.livePointStride = 4,
+  }) : _legendColors = splPanelData.splInvertColor ? List<Color>.of(SPLCalculationData.legendColors.reversed) : SPLCalculationData.legendColors;
 
-  SplPainter({required this.listeningAreas, required this.minSpl, required this.maxSpl, required this.splPanelData})
-    : _legendColors = splPanelData.splInvertColor ? List<Color>.of(SPLCalculationData.legendColors.reversed) : SPLCalculationData.legendColors;
+  bool get isLiveSpl => splState is LiveSplState;
 
   @override
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter) {
@@ -66,6 +76,7 @@ class SplPainter extends FusionBasePainter {
   }
 
   _HeatmapSignature _computeHeatmapSignature() {
+    final int effectiveStride = isLiveSpl ? livePointStride.clamp(1, 1 << 20) : 1;
     final List<_AreaSplSummary> summaries = <_AreaSplSummary>[];
     for (int i = 0; i < listeningAreas.length; i++) {
       final ListeningAreaPainter aPainter = listeningAreas[i];
@@ -87,11 +98,14 @@ class SplPainter extends FusionBasePainter {
       splMax: maxSpl,
       invert: splPanelData.splInvertColor,
       gridSize: gridSize,
+      isLive: isLiveSpl,
+      livePointStride: effectiveStride,
       areas: summaries,
     );
   }
 
   void _buildHeatmapPicture(Canvas canvas) {
+    final int effectiveStride = isLiveSpl ? livePointStride.clamp(1, 1 << 20) : 1;
     final double cellPointSize = pointSize;
     final Path tmpPath = Path();
     final Paint drawImagePaint = Paint();
@@ -109,6 +123,7 @@ class SplPainter extends FusionBasePainter {
       final Rect bounds = tmpPath.getBounds();
 
       if (bounds.width <= 0 || bounds.height <= 0 || spl == null) {
+        print("Skipping area ${listeningArea.name} due to invalid bounds or missing SPL data. Bounds: $bounds, SPL: ${spl == null ? 'null' : 'available'}");
         continue;
       }
 
@@ -134,8 +149,9 @@ class SplPainter extends FusionBasePainter {
           splRef: spl,
           fieldPointsLen: points.length,
           splValuesLen: values.length,
+          stride: effectiveStride,
         );
-        final List<int> sortedIndices = _HeatmapCache.instance.getOrBuildSortedIndices(sortKey, values, count);
+        final List<int> sortedIndices = _HeatmapCache.instance.getOrBuildSortedIndices(sortKey, values, count, effectiveStride);
 
         final PictureRecorder areaRecorder = PictureRecorder();
         final Canvas areaCanvas = Canvas(areaRecorder);
@@ -212,13 +228,15 @@ class _HeatmapCache {
     return img;
   }
 
-  List<int> getOrBuildSortedIndices(_SplSortKey key, List<double> values, int count) {
+  List<int> getOrBuildSortedIndices(_SplSortKey key, List<double> values, int count, int stride) {
     final List<int>? existing = _sortedIndicesCache[key];
     if (existing != null) {
       return existing;
     }
 
-    final List<int> indices = List<int>.generate(count, (int i) => i, growable: false);
+    final int safeStride = stride.clamp(1, 1 << 20);
+    final int sampledCount = (count + safeStride - 1) ~/ safeStride;
+    final List<int> indices = List<int>.generate(sampledCount, (int i) => i * safeStride, growable: false);
     indices.sort((int a, int b) => values[a].compareTo(values[b]));
     _sortedIndicesCache[key] = indices;
     return indices;
@@ -242,6 +260,8 @@ class _HeatmapSignature {
   final double splMax;
   final bool invert;
   final double gridSize;
+  final bool isLive;
+  final int livePointStride;
   final List<_AreaSplSummary> areas;
 
   const _HeatmapSignature({
@@ -249,6 +269,8 @@ class _HeatmapSignature {
     required this.splMax,
     required this.invert,
     required this.gridSize,
+    required this.isLive,
+    required this.livePointStride,
     required this.areas,
   });
 
@@ -270,7 +292,12 @@ class _HeatmapSignature {
     if (identical(this, other)) return true;
     if (other is! _HeatmapSignature) return false;
 
-    if (splMin != other.splMin || splMax != other.splMax || invert != other.invert || gridSize != other.gridSize) {
+    if (splMin != other.splMin ||
+        splMax != other.splMax ||
+        invert != other.invert ||
+        gridSize != other.gridSize ||
+        isLive != other.isLive ||
+        livePointStride != other.livePointStride) {
       return false;
     }
 
@@ -284,7 +311,7 @@ class _HeatmapSignature {
 
   @override
   int get hashCode {
-    int h = splMin.hashCode ^ splMax.hashCode ^ invert.hashCode ^ gridSize.hashCode;
+    int h = splMin.hashCode ^ splMax.hashCode ^ invert.hashCode ^ gridSize.hashCode ^ isLive.hashCode ^ livePointStride.hashCode;
     for (final _AreaSplSummary a in areas) {
       h = h * 31 ^ a.hashCode;
     }
@@ -335,11 +362,13 @@ class _SplSortKey {
   final Object? splRef;
   final int fieldPointsLen;
   final int splValuesLen;
+  final int stride;
 
   const _SplSortKey({
     required this.splRef,
     required this.fieldPointsLen,
     required this.splValuesLen,
+    required this.stride,
   });
 
   @override
@@ -347,9 +376,9 @@ class _SplSortKey {
     if (identical(this, other)) return true;
     if (other is! _SplSortKey) return false;
 
-    return identical(splRef, other.splRef) && fieldPointsLen == other.fieldPointsLen && splValuesLen == other.splValuesLen;
+    return identical(splRef, other.splRef) && fieldPointsLen == other.fieldPointsLen && splValuesLen == other.splValuesLen && stride == other.stride;
   }
 
   @override
-  int get hashCode => identityHashCode(splRef) ^ fieldPointsLen.hashCode ^ splValuesLen.hashCode;
+  int get hashCode => identityHashCode(splRef) ^ fieldPointsLen.hashCode ^ splValuesLen.hashCode ^ stride.hashCode;
 }
