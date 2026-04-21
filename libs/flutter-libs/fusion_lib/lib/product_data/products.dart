@@ -116,6 +116,7 @@ class Products {
   List<DspProduct> get dsps => _filter(_catalog?.dsps, (d) => d.isFusionCompatible);
   List<AccessoryProduct> get accessories => _filter(_catalog?.accessories, (a) => a.isFusionCompatible);
   List<IoEndpointProduct> get ioEndpoints => _filter(_catalog?.ioEndpoints, (e) => e.isFusionCompatible);
+  List<SourceProduct> get sources => _filter(_catalog?.sources, (s) => true);
 
   // ── public: individual lookups ────────────────────────────────────────────
 
@@ -125,6 +126,7 @@ class Products {
   DspProduct? getDsp(int id) => _findById(dsps, (d) => d.productId == id);
   AccessoryProduct? getAccessory(int id) => _findById(accessories, (a) => a.productId == id);
   IoEndpointProduct? getIoEndpoint(int id) => _findById(ioEndpoints, (e) => e.productId == id);
+  SourceProduct? getSource(String id) => _findById(sources, (s) => s.productId == id);
 
   // ── public: image access ──────────────────────────────────────────────────
 
