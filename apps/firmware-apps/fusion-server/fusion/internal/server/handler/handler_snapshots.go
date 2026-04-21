@@ -24,86 +24,12 @@ func (h *Handler) HandleGetSceneSet(setID string) (*api.SceneSet, error) {
 
 // HandleActivateSnapshotByID patches the snapshot data onto DB State.
 func (h *Handler) HandleActivateSnapshotByID(id string) error {
-	def, err := h.persistence.GetSnapshotDefinition(id)
-	if err != nil {
-		return err
-	}
-
-	afterPtr, err := h.StateManager.Patch(def.Data)
-	if err != nil {
-		return err
-	}
-
-	if afterPtr == nil {
-		msg := api.NewNotifyMessage(
-			api.NotifyOpSnapshotV2Activate,
-			h.appConfig.NodeName,
-			api.WithSnapshotActivation(&api.ActivateSnapshotRequest{ID: id}),
-		)
-		if err := h.hub.BroadcastToNodes(msg); err != nil {
-			return fmt.Errorf("failed to broadcast snapshot activation: %w", err)
-		}
-		return nil
-	}
-
-	if err := h.handleConfigUpdate(*afterPtr, false); err != nil {
-		return err
-	}
-
-	msg := api.NewNotifyMessage(
-		api.NotifyOpSnapshotV2Activate,
-		h.appConfig.NodeName,
-		api.WithSnapshotActivation(&api.ActivateSnapshotRequest{ID: id}),
-	)
-	if err := h.hub.BroadcastToNodes(msg); err != nil {
-		return fmt.Errorf("failed to broadcast snapshot activation: %w", err)
-	}
-
-	return nil
+	return h.sceneCatalog.ActivateSnapshotByID(id)
 }
 
 // HandleActivateScene activates a scene within a scene set and patches its data onto DB State.
 func (h *Handler) HandleActivateScene(setID, sceneID string) error {
-	scene, err := h.persistence.GetSceneInSet(setID, sceneID)
-	if err != nil {
-		return err
-	}
-
-	afterPtr, err := h.StateManager.Patch(scene.Data)
-	if err != nil {
-		return err
-	}
-
-	if err := h.persistence.SetCurrentScene(setID, sceneID); err != nil {
-		return err
-	}
-
-	if afterPtr == nil {
-		msg := api.NewNotifyMessage(
-			api.NotifyOpSceneActivate,
-			h.appConfig.NodeName,
-			api.WithSceneActivation(&api.ActivateSceneSetRequest{SetID: setID, SceneID: sceneID}),
-		)
-		if err := h.hub.BroadcastToNodes(msg); err != nil {
-			return fmt.Errorf("failed to broadcast scene activation: %w", err)
-		}
-		return nil
-	}
-
-	if err := h.handleConfigUpdate(*afterPtr, false); err != nil {
-		return err
-	}
-
-	msg := api.NewNotifyMessage(
-		api.NotifyOpSceneActivate,
-		h.appConfig.NodeName,
-		api.WithSceneActivation(&api.ActivateSceneSetRequest{SetID: setID, SceneID: sceneID}),
-	)
-	if err := h.hub.BroadcastToNodes(msg); err != nil {
-		return fmt.Errorf("failed to broadcast scene activation: %w", err)
-	}
-
-	return nil
+	return h.sceneCatalog.ActivateScene(setID, sceneID)
 }
 
 // HandleListSnapshots returns a list of all available snapshot names.

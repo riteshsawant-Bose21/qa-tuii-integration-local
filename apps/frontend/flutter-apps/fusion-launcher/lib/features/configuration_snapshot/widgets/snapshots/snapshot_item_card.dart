@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/snapshots/SnapshotsKeys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/constants/assets_constants.dart';
+import '../../viewModel/snapshot_viewmodel/config_snapshots_state.dart';
+import '../../viewModel/snapshot_viewmodel/config_snapshots_viewmodel.dart';
 
 class SnapshotItemCard extends StatefulWidget {
   final SnapshotsModel snapShotData;
@@ -13,7 +16,7 @@ class SnapshotItemCard extends StatefulWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onTap;
   final VoidCallback? onDuplicate;
-  final VoidCallback? onSnapshotRecall;
+  final Future<void> Function()? onSnapshotRecall;
   final void Function(String value, SnapshotsModel newSnapshot)? onRenameSave;
   final int index;
 
@@ -37,6 +40,7 @@ class SnapshotItemCard extends StatefulWidget {
 
 class _SnapshotItemCardState extends State<SnapshotItemCard> {
   bool _isHovered = false;
+  bool _isPressed = false;
 
   void _handleRecallTap() {
     if (!widget.isInControlMode || widget.onSnapshotRecall == null) return;
@@ -91,18 +95,46 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: widget.isInControlMode ? _handleRecallTap : null,
-                  child: Tooltip(
-                    message: widget.isInControlMode ? 'Recall Snapshot' : 'Enable control mode to recall',
-                    child: FusionImageAuto(
-                      path: Assets.playIcon,
-                      semanticId: "${FusionTestKeys.instance.snplistitmplayicon}_${widget.index}",
-                      width: 24,
-                      height: 24,
-                      color: widget.isInControlMode ? context.colorScheme.iconWhite : context.colorScheme.iconWhite.withAlpha(80),
-                      fit: BoxFit.contain,
-                    ),
+                Tooltip(
+                  message: widget.isInControlMode ? 'Recall Snapshot' : 'Enable control mode to recall',
+                  child: BlocBuilder<ConfigSnapshotsViewmodel, ConfigSnapshotsState>(
+                    builder: (BuildContext context, ConfigSnapshotsState snapshotsState) {
+                      final bool isRecalling = snapshotsState.recallingSnapshotId == widget.snapShotData.id;
+                      return GestureDetector(
+                        onTap: widget.isInControlMode && !isRecalling ? _handleRecallTap : null,
+                        onTapDown: widget.isInControlMode && !isRecalling ? (_) => setState(() => _isPressed = true) : null,
+                        onTapUp: (_) => setState(() => _isPressed = false),
+                        onTapCancel: () => setState(() => _isPressed = false),
+                        child: AnimatedScale(
+                          scale: _isPressed ? 0.6 : 1.0,
+                          duration: const Duration(milliseconds: 100),
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child:
+                                isRecalling
+                                    ? Center(
+                                      child: SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: context.colorScheme.iconWhite,
+                                        ),
+                                      ),
+                                    )
+                                    : FusionImageAuto(
+                                      path: Assets.playIcon,
+                                      semanticId: "${FusionTestKeys.instance.snplistitmplayicon}_${widget.index}",
+                                      width: 24,
+                                      height: 24,
+                                      color: widget.isInControlMode ? context.colorScheme.iconWhite : context.colorScheme.iconWhite.withAlpha(80),
+                                      fit: BoxFit.contain,
+                                    ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(width: 12),
