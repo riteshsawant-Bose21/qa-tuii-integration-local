@@ -43,7 +43,7 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
             if(state is VirtualZoneSelected) {
               WallZone selectedZone = state.zone;
 
-              WallZoneSource? selectedSource = selectedZone.sources?[selectedZone.sourceSelected] ?? null;
+              WallZoneSource? selectedSource = selectedZone.sources?[state.currentSourceIndex-1] ?? null;
               WallSubZone selectSubZone = selectedZone.subZones[state.currentSubzoneIndex];
               double volume = selectSubZone.ono.gain.toDouble();
               return Scaffold(
@@ -65,9 +65,6 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
                             if(selectSourceState is SourceSelected){
                               selectedSource = selectSourceState.source;
                             }
-                            // print("selectedSource.sourceName");
-                            // print(selectedSource!.sourceName);
-                            // print(selectedZone.sourceSelected);
                             return GestureDetector(
                                 onTap: () {
                                   showModalBottomSheet(
@@ -99,9 +96,10 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
                               return current is GainUpdated || current is SourceSelected;
                             },
                             builder: (context, gainState) {
-
+                              bool muted = selectSubZone.ono.mute == 1 ? true:false;
                               if(gainState is GainUpdated){
                                 volume = gainState.zoneSourceModel.ono.gain.toDouble();
+                                muted = gainState.zoneSourceModel.ono.mute  == 1 ? true:false;
                               }
                               return Container(
                                 padding: const EdgeInsets.symmetric(
@@ -124,7 +122,7 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
                                           .h4Bold
                                           .copyWith(
                                         fontWeight: FontWeight.w700,
-                                        color: volume != 0 ?
+                                        color: muted ?  context.colorScheme.textDisabled :  volume != 0 ?
                                         context.colorScheme.textPrimary
                                             : context.colorScheme.volumeRed,
                                       ),
@@ -139,19 +137,19 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
                                           crossAxisAlignment: CrossAxisAlignment
                                               .start,
                                           children: [
-                                            Align(
-                                              alignment: Alignment.center,
-                                              child: _navButton(
-                                                context: context,
-                                                icon: Icons.chevron_left,
-                                                onTap: () {
-                                                  context
-                                                      .read<
-                                                      VirtualControllerViewModel>()
-                                                      .previousSource(state.zoneIndex);
-                                                },
-                                              ),
-                                            ),
+                                            // Align(
+                                            //   alignment: Alignment.center,
+                                            //   child: _navButton(
+                                            //     context: context,
+                                            //     icon: Icons.chevron_left,
+                                            //     onTap: () {
+                                            //       context
+                                            //           .read<
+                                            //           VirtualControllerViewModel>()
+                                            //           .previousSource(state.zoneIndex);
+                                            //     },
+                                            //   ),
+                                            // ),
                                             Expanded(
                                                 child: SizedBox(
                                                   child: Stack(
@@ -170,8 +168,9 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
                                                           padding: EdgeInsetsGeometry
                                                               .symmetric(vertical: 5,
                                                               horizontal: 2),
-                                                          child: VerticalAudioSlider(
+                                                          child:VerticalAudioSlider(
                                                             key: key,
+                                                            isMuted: muted,
                                                             initialValue: volume,
                                                             onChanged: (volume) {
 
@@ -181,7 +180,7 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
                                                                   .updateVolume(selectSubZone,volume,sendToService: true);
 
                                                             },
-                                                          ),
+                                                          )
                                                         ),
                                                       )
                                                     ],
@@ -189,19 +188,19 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
                                                 )
                                             ),
 
-                                            Align(
-                                              alignment: Alignment.center,
-                                              child: _navButton(
-                                                context: context,
-                                                icon: Icons.chevron_right,
-                                                onTap: () {
-                                                  context
-                                                      .read<
-                                                      VirtualControllerViewModel>()
-                                                      .nextSource(state.zoneIndex);
-                                                },
-                                              ),
-                                            ),
+                                            // Align(
+                                            //   alignment: Alignment.center,
+                                            //   child: _navButton(
+                                            //     context: context,
+                                            //     icon: Icons.chevron_right,
+                                            //     onTap: () {
+                                            //       context
+                                            //           .read<
+                                            //           VirtualControllerViewModel>()
+                                            //           .nextSource(state.zoneIndex);
+                                            //     },
+                                            //   ),
+                                            // ),
                                           ],
                                         ),
                                       ),
@@ -212,7 +211,10 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
                                     /// Mute Button
                                     GestureDetector(
                                       onTap: () {
-                                        key.currentState!.toggleMute();
+                                        context
+                                            .read<
+                                            VirtualControllerViewModel>()
+                                            .updateVolume(selectSubZone,volume,sendToService: true,isMuted: !muted);
                                       },
                                       child: FusionContainer(
                                         raised: true,
@@ -228,14 +230,13 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
                                               mainAxisAlignment: MainAxisAlignment
                                                   .center,
                                               children: [
-                                                Icon(volume != 0 ? Icons
+                                                Icon(!muted ? Icons
                                                     .volume_off : Icons.volume_up,
                                                     color: context.colorScheme
                                                         .iconDefault),
                                                 const SizedBox(width: 10),
                                                 Text(
-                                                  volume != 0
-                                                      ? "Mute"
+                                                  !muted ? "Mute"
                                                       : "Unmute",
                                                   style: Theme
                                                       .of(context)
@@ -295,11 +296,13 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
 class VerticalAudioSlider extends StatefulWidget {
   final double initialValue;
   final ValueChanged<double>? onChanged;
+  final bool isMuted;
 
   const VerticalAudioSlider({
     super.key,
     this.initialValue = 50,
     this.onChanged,
+    required this.isMuted,
   });
 
   @override
@@ -353,14 +356,14 @@ class VerticalAudioSliderState extends State<VerticalAudioSlider> with SingleTic
     _controller.forward(from: 0);
   }
 
-  void toggleMute() {
-    if (value > 0) {
-      previousValue = value;
-      _animateTo(0);
-    } else {
-      _animateTo(previousValue == 0 ? 50 : previousValue);
-    }
-    widget.onChanged?.call(value);
+  void toggleMute(bool onChange) {
+    // if (value > 0) {
+    //   previousValue = value;
+    //   _animateTo(0);
+    // } else {
+    //   _animateTo(previousValue == 0 ? 50 : previousValue);
+    // }
+   // widget.onMuted?.call(!onChange);
   }
   @override
   void dispose() {
@@ -383,10 +386,16 @@ class VerticalAudioSliderState extends State<VerticalAudioSlider> with SingleTic
               painter:  VolumeMeterPainterBG(
                 value: value,
                 trackColor: context.colorScheme.elevation2,
-                gradientColors: [
+                gradientColors: widget.isMuted ?
+                   [
+                     context.colorScheme.textBody,
+                  context.colorScheme.iconWhite
+                ] : [
+
                   context.colorScheme.primary,
-                  context.colorScheme.iconWhite,
-                ],
+                  context.colorScheme.iconWhite
+                ]
+
               )
           ),
         );

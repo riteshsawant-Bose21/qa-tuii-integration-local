@@ -117,7 +117,7 @@ class WallZone {
     );
   }
 
-  int sourceSelected = 0;
+  int sourceSelected = 1;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'functionId': functionId,

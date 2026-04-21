@@ -112,21 +112,28 @@ class _VirtualControllerState extends State<VirtualController> {
                 'incoming entry for ${entry.value['gain']} is newer. Updating cache.',
               );
 
-              double volume = AudioUtils.toUiVolume(double.parse(entry.value['gain'].toString()));
+              double volume = AudioUtils().dbfsToPercentage(double.parse(entry.value['gain'].toString()));
               //double volume = double.parse(entry.value['gain'].toString()),
               // _cache[item] = sourceModel.copyWith(
               //     volume: volume,
               //     timestamp: incomingTsStr,
               //     muted: entry.value['mute']);
+            print("dbfsToPercentage Converted");
+            print(volume);
+            print(entry.value['gain']);
+            bool muted = entry.value['mute'];
 
               _cache[item] = sourceModel.copyWith(
-                ono: sourceModel.ono.copyWith(gain: volume.toInt(),mute: volume == 0 ? 0 :1),
+                ono: sourceModel.ono.copyWith(gain: volume.toInt(),mute: muted  ? 1 :0),
               );
 
               context
                   .read<
                   VirtualControllerViewModel>()
-                  .updateVolume(_cache[item]!,volume, sendToService: false);
+                  .updateVolume(_cache[item]!,
+                  volume,
+                  sendToService: false,
+                  isMuted: muted);
 
 
 
@@ -198,8 +205,7 @@ class _VirtualControllerState extends State<VirtualController> {
                 future: getSelectSource("${zone.functionId ?? ""}/selector"),
                 builder: (context, AsyncSnapshot<WallZone> snapshot) {
 
-                  zone.sourceSelected = snapshot.data?.sourceSelected ?? 0;
-                
+                  zone.sourceSelected = snapshot.data?.sourceSelected ?? 1;
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -229,8 +235,9 @@ class _VirtualControllerState extends State<VirtualController> {
                                   context.read<VirtualControllerViewModel>().selectZone(
                                       zone,
                                       zoneIndex,
+                                      src.gain.gainID,
                                       currentSubzoneIndex : subzoneIndex,
-                                      sourceIndex: 0);
+                                      sourceIndex:  zone.sourceSelected);
                                   widget.onSelected!();
 
                                 },

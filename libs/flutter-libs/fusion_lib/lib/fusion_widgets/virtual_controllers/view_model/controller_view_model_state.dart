@@ -24,6 +24,22 @@ final class VirtualZonesLoaded extends VirtualControllerState {
   }
 }
 
+final class MuteUpdated extends VirtualControllerState {
+  final bool isMuted;
+
+  MuteUpdated({
+    required this.isMuted,
+  });
+
+  MuteUpdated copyWith({
+    bool? isMuted,
+  }) {
+    return MuteUpdated(
+        isMuted: isMuted ?? this.isMuted
+    );
+  }
+}
+
 final class GainUpdated extends VirtualControllerState {
   final WallSubZone zoneSourceModel;
 
@@ -61,12 +77,14 @@ final class VirtualZoneSelected extends VirtualControllerState {
   final int currentSourceIndex;
   final int zoneIndex;
   final int currentSubzoneIndex;
+  final String gainID;
 
   VirtualZoneSelected({
     required this.zone,
     required this.zoneIndex,
     required this.currentSourceIndex,
     required this.currentSubzoneIndex,
+    required this.gainID,
   });
 
   VirtualZoneSelected copyWith({
@@ -74,12 +92,14 @@ final class VirtualZoneSelected extends VirtualControllerState {
     int? zoneIndex,
     int? currentSubzoneIndex,
     int? currentSourceIndex,
+    String? gainID,
   }) {
     return VirtualZoneSelected(
       zone: zone ?? this.zone,
       zoneIndex: zoneIndex ?? this.zoneIndex,
       currentSubzoneIndex: currentSubzoneIndex ?? this.currentSubzoneIndex,
       currentSourceIndex: currentSourceIndex ?? this.currentSourceIndex,
+      gainID: gainID ?? this.gainID,
     );
   }
 }
