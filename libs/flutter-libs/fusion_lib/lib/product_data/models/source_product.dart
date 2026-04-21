@@ -9,7 +9,6 @@ class SourceProduct {
   final String modelName;
   final String modelFamily;
   final String? description;
-  final double price;
   final SourceType type;
   final SourceConnectionType primaryConnection;
   final List<SourceConnectionType> supportedConnections;
@@ -23,7 +22,6 @@ class SourceProduct {
     required this.modelName,
     required this.modelFamily,
     this.description,
-    required this.price,
     required this.type,
     required this.primaryConnection,
     required this.supportedConnections,
@@ -44,7 +42,6 @@ class SourceProduct {
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
       description: json['description'] as String? ?? 'Professional audio source',
-      price: (json['price'] as num?)?.toDouble() ?? 0.0,
       type: SourceType.fromString(json['source_type']),
       primaryConnection: SourceConnectionType.fromString(specs['primary_connection']),
       supportedConnections: supportedConnections,
@@ -60,7 +57,6 @@ class SourceProduct {
     'model_name': modelName,
     'model_family': modelFamily,
     'description': description,
-    'price': price,
     'source_type': type.name,
     'specifications': {
       'primary_connection': primaryConnection.name,
