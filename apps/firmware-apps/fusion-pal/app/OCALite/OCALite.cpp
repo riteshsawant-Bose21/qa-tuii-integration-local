@@ -703,9 +703,9 @@ bool ValidateConfigurationJson(const Json::Value &config)
 
         for (const auto &source : sources)
         {
-            if (!source.isObject() || !source.isMember("index") || !source.isMember("label"))
+            if (!source.isObject() || !source.isMember("index") || !source.isMember("sourceName"))
             {
-                OCA_LOG_ERROR_PARAMS("Zone '%s' source must have 'index' and 'label' fields", zoneId.c_str());
+                OCA_LOG_ERROR_PARAMS("Zone '%s' source must have 'index' and 'sourceName' fields", zoneId.c_str());
                 return false;
             }
         }

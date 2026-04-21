@@ -56,7 +56,7 @@ inline std::string WallControllerToJsonString(const Controller &controller)
         {
             Json::Value sourceObj;
             sourceObj["index"] = source.index;
-            sourceObj["label"] = source.label;
+            sourceObj["sourceName"] = source.label;
             sources.append(sourceObj);
         }
         zoneObj["sources"] = sources;
@@ -175,8 +175,8 @@ inline std::shared_ptr<Controller> JsonStringToWallController(const std::string 
                     Source source;
                     if (sourceJson.isMember("index") && sourceJson["index"].isInt())
                         source.index = sourceJson["index"].asInt();
-                    if (sourceJson.isMember("label") && sourceJson["label"].isString())
-                        source.label = sourceJson["label"].asString();
+                    if (sourceJson.isMember("sourceName") && sourceJson["sourceName"].isString())
+                        source.label = sourceJson["sourceName"].asString();
 
                     zone->sources.push_back(source);
                 }
