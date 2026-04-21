@@ -34,7 +34,7 @@ class SnapshotList extends StatelessWidget {
   final VoidCallback? onDragEnd;
   final String? draggingSnapshotId;
   final bool isInControlMode;
-  final void Function(String sceneId)? onSnapshotRecall;
+  final Future<void> Function(String sceneId)? onSnapshotRecall;
   final void Function(String value, SnapshotsModel newSnapshot)? onRenameSave;
 
   const SnapshotList({
