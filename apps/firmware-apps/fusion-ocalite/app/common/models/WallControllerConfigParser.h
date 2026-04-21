@@ -78,7 +78,7 @@ inline std::shared_ptr<Controller> JsonStringToWallController(const std::string 
 
     if (!reader.parse(jsonString, root))
     {
-        OCA_LOG_ERROR_PARAMS("Failed to parse JSON: %s", reader.getFormattedErrorMessages());
+        OCA_LOG_ERROR_PARAMS("Failed to parse JSON: %s", reader.getFormattedErrorMessages().c_str());
         return NULL;
     }
 
