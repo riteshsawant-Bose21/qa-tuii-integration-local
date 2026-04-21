@@ -165,10 +165,23 @@ class _SnapshotSetState extends State<SnapshotSet> {
       },
       draggingSnapshotId: state.draggingSnapshotId,
       isInControlMode: isInControlMode,
-      onSnapshotRecall: (String sceneId) {
+      onSnapshotRecall: (String sceneId) async {
         final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
         if (vip != null) {
-          _configSnapshotsViewmodel.recallSnapshot(vip: vip, snapshotId: sceneId);
+          try {
+            final ResponseCallback<bool> result = await _configSnapshotsViewmodel.recallSnapshot(vip: vip, snapshotId: sceneId);
+            if (context.mounted) {
+              if (result.success) {
+                FusionToast.success(context, message: "Snapshot recalled successfully");
+              } else {
+                FusionToast.error(context, message: "Failed to recall snapshot");
+              }
+            }
+          } catch (e) {
+            if (context.mounted) {
+              FusionToast.error(context, message: "Failed to recall snapshot");
+            }
+          }
         }
       },
       onRenameSave: (String value, SnapshotsModel newSnapshot) {
