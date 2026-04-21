@@ -195,21 +195,29 @@ extension ControllerService on ProjectService {
         }
       }
     }
+    print("Ordered zone IDs for WallControllerConfig: $orderedZoneIds");
 
     // Build WallZone list.
     final List<WallZone> wallZones = <WallZone>[];
-    for (final String zoneId in orderedZoneIds) {
-      final Zone? zone = zones.get(zoneId);
-      if (zone == null) continue;
+    for (final String assignedIds in orderedZoneIds) {
+      Zone? zone = zones.get(assignedIds);
+      if (zone == null) {
+        /// assignedIds is a subzone id; fetch parent zone id and then fetch zone details
+        final String? parentZoneId = relationships.getParent(RelationshipType.zoneSubZones, assignedIds);
+        if (parentZoneId != null) {
+          zone = zones.get(parentZoneId);
+        }
+        if (zone == null) continue;
+      }
 
       // Sources (direct + source-set sources).
-      final List<Source> sources = getSourcesAndSourceSetSourcesInZone(zoneId: zoneId);
+      final List<Source> sources = getSourcesAndSourceSetSourcesInZone(zoneId: zone.id);
       final List<WallZoneSource> wallSources = sources
           .asMap()
           .entries
           .map(
             (MapEntry<int, Source> e) => WallZoneSource(
-              index: e.key,
+              index: e.key + 1,
               sourceId: e.value.id,
               sourceName: e.value.name,
             ),
@@ -219,24 +227,38 @@ extension ControllerService on ProjectService {
       // Assign zone ONO first, then sub-zone ONOs so numbers are consecutive.
       final WallZoneOno zoneOno = WallZoneOno.autoAssign();
 
-      final List<SubZone> subZonesList = getSubZones(zoneId);
-      final List<WallSubZone> wallSubZones = subZonesList
-          .map(
-            (SubZone sz) => WallSubZone(
-              id: sz.id,
-              name: sz.name,
-              gain: WallGainConfig(gainID: 'gain${sz.id}'),
-              ono: WallSubZoneOno.autoAssign(),
-            ),
-          )
-          .toList();
+      final List<SubZone> subZonesList = getSubZones(zone.id);
+
+      final List<WallSubZone> wallSubZones = <WallSubZone>[];
+      for (final SubZone sz in subZonesList) {
+        final List<ProcessingBlockModel> szProcessingBlocks = getProcessingBlockFor(parentId: sz.id, includeUserBlocks: true);
+        final ProcessingBlockModel? szProcessingBlockModel = szProcessingBlocks.firstWhereOrNull(
+          (ProcessingBlockModel block) => block.algorithmId == "gain" && block.isforUser,
+        );
+        wallSubZones.add(
+          WallSubZone(
+            id: sz.id,
+            name: sz.name,
+            gain: WallGainConfig(gainID: szProcessingBlockModel?.id ?? ""),
+            ono: WallSubZoneOno.autoAssign(),
+          ),
+        );
+      }
+
+      final List<ProcessingBlockModel> processingBlocks = getProcessingBlockFor(parentId: assignedIds, includeUserBlocks: true);
+      ProcessingBlockModel? processingBlockModel = processingBlocks.firstWhereOrNull(
+        (ProcessingBlockModel block) => block.algorithmId == "gain" && block.isforUser,
+      );
+
+      final String? functionId = getZoneFunction(zoneOrSubZoneId: zone.id)?.id;
 
       wallZones.add(
         WallZone(
           id: zone.id,
           name: zone.name,
-          gain: WallGainConfig(gainID: 'gain${zone.id}'),
+          gain: WallGainConfig(gainID: processingBlockModel?.id ?? ""),
           ono: zoneOno,
+          functionId: functionId,
           sources: wallSources,
           subZones: wallSubZones,
         ),

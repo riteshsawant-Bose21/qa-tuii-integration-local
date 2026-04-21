@@ -283,8 +283,8 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     projectViewModel.updateListeningArea(area: updatedLA);
   }
 
-  Future<void> selectSuggestedSpeaker({required BuildContext context, required SpeakerProduct product, String? cachedImagePath}) async {
-    final bool didApply = await addOrReplaceSpeaker(context: context, cachedImagePath: cachedImagePath, product: product);
+  Future<void> selectSuggestedSpeaker({required BuildContext context, required SpeakerProduct product}) async {
+    final bool didApply = await addOrReplaceSpeaker(context: context, product: product);
     if (!didApply) return;
 
     final LowFrequency? lf = selectedListeningArea?.lowFrequency;
@@ -709,7 +709,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     return copy;
   }
 
-  Future<bool> addOrReplaceSpeaker({required BuildContext context, String? cachedImagePath, required SpeakerProduct product}) async {
+  Future<bool> addOrReplaceSpeaker({required BuildContext context, required SpeakerProduct product}) async {
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
     final String? listeningAreaId = context.read<SpeakerSelectionViewModel>().selectedListeningArea?.id;
     final FloorModel currentFloor = projectViewModel.currentFloor;
@@ -736,7 +736,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     }
 
     final LocationModel location = LocationModel(floorId: currentFloor.id, listeningAreaId: listeningAreaId);
-    final Speaker speaker = projectViewModel.fromSpeakerProductModel(cachedImagePath ?? '', product, location, isFromBuildingPage);
+    final Speaker speaker = projectViewModel.fromSpeakerProductModel(product, location, isFromBuildingPage);
 
     final bool isWithSubwooferMode = selectedListeningArea!.lowFrequency == LowFrequency.withSubwoofer;
 

@@ -26,7 +26,7 @@ class WallControllerConfig {
   };
 
   factory WallControllerConfig.fromJson(Map<String, dynamic> json) {
-   final Map<String, dynamic> inner = Map<String, dynamic>.from(json['wall_controller_config'] as Map);
+    final Map<String, dynamic> inner = Map<String, dynamic>.from(json['wall_controller_config'] as Map);
     return WallControllerConfig(
       controllers: (inner['controllers'] as List<dynamic>?)?.map((e) => WallController.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
       zones: (inner['zones'] as List<dynamic>?)?.map((e) => WallZone.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
@@ -80,67 +80,64 @@ class WallController {
 
 class WallZone {
   final String id;
-  final String? functionId;
   final String name;
   final WallGainConfig gain;
   final WallZoneOno ono;
+  final String? functionId;
   final List<WallZoneSource> sources;
   final List<WallSubZone> subZones;
 
-   WallZone({
-     this.functionId,
+  WallZone({
     required this.id,
     required this.name,
     required this.gain,
     required this.ono,
+    required this.functionId,
     this.sources = const [],
     this.subZones = const [],
   });
 
   WallZone copyWith({
-    String? functionId,
     String? id,
     String? name,
     WallGainConfig? gain,
     WallZoneOno? ono,
+    String? functionId,
     List<WallZoneSource>? sources,
     List<WallSubZone>? subZones,
   }) {
     return WallZone(
-      functionId: functionId ?? this.functionId,
       id: id ?? this.id,
       name: name ?? this.name,
       gain: gain ?? this.gain,
       ono: ono ?? this.ono,
+      functionId: functionId ?? this.functionId,
       sources: sources ?? this.sources,
       subZones: subZones ?? this.subZones,
     );
   }
 
-  int sourceSelected = 1;
+  int sourceSelected = 0;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-    'functionId': functionId,
     'id': id,
     'name': name,
     'gain': gain.toJson(),
     'ono': ono.toJson(),
+    'functionId': functionId,
     'sources': sources.map((s) => s.toJson()).toList(),
     'subZones': subZones.map((sz) => sz.toJson()).toList(),
   };
 
-  factory WallZone.fromJson(Map<String, dynamic> json) {
-
-    return WallZone(
-      functionId: json['functionId'] as String,
-      id: json['id'] as String,
-      name: json['name'] as String,
-      gain: WallGainConfig.fromJson(Map<String, dynamic>.from(json['gain'] as Map)),
-      ono: WallZoneOno.fromJson(Map<String, dynamic>.from(json['ono'] as Map)),
-      sources: (json['sources'] as List<dynamic>?)?.map((e) => WallZoneSource.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
-      subZones: (json['subZones'] as List<dynamic>?)?.map((e) => WallSubZone.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
-    );
-  }
+  factory WallZone.fromJson(Map<String, dynamic> json) => WallZone(
+    id: json['id'] as String,
+    name: json['name'] as String,
+    gain: WallGainConfig.fromJson(Map<String, dynamic>.from(json['gain'] as Map)),
+    ono: WallZoneOno.fromJson(Map<String, dynamic>.from(json['ono'] as Map)),
+    functionId: json['functionId'] as String?,
+    sources: (json['sources'] as List<dynamic>?)?.map((e) => WallZoneSource.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
+    subZones: (json['subZones'] as List<dynamic>?)?.map((e) => WallSubZone.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
+  );
 }
 
 // ---------------------------------------------------------------------------

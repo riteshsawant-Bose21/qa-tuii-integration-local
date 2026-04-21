@@ -336,7 +336,7 @@ func (d *ClusterDelegate) handleDeviceUpdate(message *api.NotifyMessage) {
 	logger.Info("[DeviceUpdate] Received device update from %s for device %s",
 		message.Node, message.DeviceInfo.Id)
 
-	d.hub.BroadcastToObservers(message)
+	d.hub.BroadcastToClusterObservers(message)
 }
 
 // handleSoftwareUpdate processes software update trigger notifications
@@ -386,6 +386,9 @@ func (d *ClusterDelegate) handleSoftwareUpdateAvailable(message *api.NotifyMessa
 		logger.Error("SoftwareUpdateAvailable message with nil payload from %s", message.Node)
 		return
 	}
+
+	// Clean up any stale .swu files whose checksum differs from the incoming bundle.
+	utils.CleanupStaleSwuFiles(api.SoftwareUpdateOTAPath, message.SoftwareUpdate.Checksum, logging.GetLogger())
 
 	// Skip self-originated messages (uploader already has the file)
 	if d.appConfig.NodeName == message.Node {

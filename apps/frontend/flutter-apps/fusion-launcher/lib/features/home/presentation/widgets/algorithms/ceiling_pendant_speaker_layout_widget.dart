@@ -8,12 +8,10 @@ class CeilingPendantSpeakerLayoutWidget extends StatefulWidget {
   const CeilingPendantSpeakerLayoutWidget({super.key});
 
   @override
-  State<CeilingPendantSpeakerLayoutWidget> createState() =>
-      _CeilingPendantSpeakerLayoutWidgetState();
+  State<CeilingPendantSpeakerLayoutWidget> createState() => _CeilingPendantSpeakerLayoutWidgetState();
 }
 
-class _CeilingPendantSpeakerLayoutWidgetState
-    extends State<CeilingPendantSpeakerLayoutWidget> {
+class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeakerLayoutWidget> {
   // Form controllers
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _roomWidthController = TextEditingController(
@@ -34,15 +32,13 @@ class _CeilingPendantSpeakerLayoutWidgetState
   final TextEditingController _pendantHeightController = TextEditingController(
     text: '2.1',
   );
-  final TextEditingController _roomCoordinatesController =
-      TextEditingController(
-        text: '(0,0), (6.1,0), (6.1,4.6), (0,4.6)', // Default rectangle
-      );
+  final TextEditingController _roomCoordinatesController = TextEditingController(
+    text: '(0,0), (6.1,0), (6.1,4.6), (0,4.6)', // Default rectangle
+  );
 
   // Form state
   SpeakerType _selectedSpeakerType = SpeakerType.ceiling;
-  CoveragePreference _selectedCoveragePreference =
-      CoveragePreference.minimumOverlap;
+  CoveragePreference _selectedCoveragePreference = CoveragePreference.minimumOverlap;
   LayoutPattern _selectedLayoutPattern = LayoutPattern.square;
   RoomType _selectedRoomType = RoomType.symmetrical;
   bool _useCustomOrigin = false;
@@ -52,8 +48,6 @@ class _CeilingPendantSpeakerLayoutWidgetState
 
   // Results
   PlacementResult? _result;
-  List<Point2D>? _allGridPoints; // Store all initial grid points
-  List<Point2D>? _removedPoints; // Store removed/filtered points
   bool _isCalculating = false;
 
   @override
@@ -74,8 +68,6 @@ class _CeilingPendantSpeakerLayoutWidgetState
     setState(() {
       _isCalculating = true;
       _result = null;
-      _allGridPoints = null;
-      _removedPoints = null;
     });
 
     try {
@@ -107,16 +99,12 @@ class _CeilingPendantSpeakerLayoutWidgetState
       final SpeakerSpec speakerSpec = SpeakerSpec(
         coverageAngle: double.parse(_coverageAngleController.text),
         type: _selectedSpeakerType,
-        pendantHeight:
-            _selectedSpeakerType == SpeakerType.pendant
-                ? double.tryParse(_pendantHeightController.text)
-                : null,
+        pendantHeight: _selectedSpeakerType == SpeakerType.pendant ? double.tryParse(_pendantHeightController.text) : null,
       );
 
       // Create custom origin offset if specified
       Point2D? customOriginOffset;
-      if (_useCustomOrigin &&
-          (_customOriginOffsetX != 0.0 || _customOriginOffsetY != 0.0)) {
+      if (_useCustomOrigin && (_customOriginOffsetX != 0.0 || _customOriginOffsetY != 0.0)) {
         customOriginOffset = Point2D(
           _customOriginOffsetX,
           _customOriginOffsetY,
@@ -139,21 +127,8 @@ class _CeilingPendantSpeakerLayoutWidgetState
         boundaryOverlapThreshold: clampedBoundaryThreshold,
       );
 
-      // Generate all grid points for display purposes
-      final List<Point2D> allGridPoints = _generateAllGridPoints(
-        room,
-        result,
-        _selectedLayoutPattern,
-      );
-      final List<Point2D> removedPoints = _calculateRemovedPoints(
-        allGridPoints,
-        result.speakerPositions,
-      );
-
       setState(() {
         _result = result;
-        _allGridPoints = allGridPoints;
-        _removedPoints = removedPoints;
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -167,118 +142,6 @@ class _CeilingPendantSpeakerLayoutWidgetState
         _isCalculating = false;
       });
     }
-  }
-
-  /// Generate all initial grid points (before filtering) for visualization
-  List<Point2D> _generateAllGridPoints(
-    Room room,
-    PlacementResult result,
-    LayoutPattern pattern,
-  ) {
-    final List<Point2D> points = <Point2D>[];
-
-    // Safety check for grid spacing
-    if (result.gridSpacing <= 0 || !result.gridSpacing.isFinite) {
-      return points;
-    }
-
-    // Always include the centroid
-    points.add(result.centroid);
-
-    if (pattern == LayoutPattern.square) {
-      // Generate square grid
-      final double maxStepsXDouble =
-          (room.width - result.centroid.x) / result.gridSpacing;
-      final double maxStepsYDouble =
-          (room.roomLength - result.centroid.y) / result.gridSpacing;
-      final double minStepsXDouble = result.centroid.x / result.gridSpacing;
-      final double minStepsYDouble = result.centroid.y / result.gridSpacing;
-
-      if (maxStepsXDouble.isFinite &&
-          maxStepsYDouble.isFinite &&
-          minStepsXDouble.isFinite &&
-          minStepsYDouble.isFinite) {
-        final int maxStepsX = maxStepsXDouble.floor().clamp(0, 50);
-        final int maxStepsY = maxStepsYDouble.floor().clamp(0, 50);
-        final int minStepsX = minStepsXDouble.floor().clamp(0, 50);
-        final int minStepsY = minStepsYDouble.floor().clamp(0, 50);
-
-        for (int i = -minStepsX; i <= maxStepsX; i++) {
-          for (int j = -minStepsY; j <= maxStepsY; j++) {
-            if (i == 0 && j == 0) continue; // Skip centroid (already added)
-
-            final double x = result.centroid.x + (i * result.gridSpacing);
-            final double y = result.centroid.y + (j * result.gridSpacing);
-
-            if (x >= 0 && x <= room.width && y >= 0 && y <= room.roomLength) {
-              points.add(Point2D(x, y));
-            }
-          }
-        }
-      }
-    } else {
-      // Generate hexagonal grid
-      final double horizontalSpacing = result.gridSpacing;
-      final double verticalSpacing = result.gridSpacing * sqrt(3) / 2;
-      final double rowOffset = result.gridSpacing / 2;
-
-      final double maxStepsXDouble =
-          (room.width - result.centroid.x) / horizontalSpacing;
-      final double maxStepsYDouble =
-          (room.roomLength - result.centroid.y) / verticalSpacing;
-      final double minStepsXDouble = result.centroid.x / horizontalSpacing;
-      final double minStepsYDouble = result.centroid.y / verticalSpacing;
-
-      if (maxStepsXDouble.isFinite &&
-          maxStepsYDouble.isFinite &&
-          minStepsXDouble.isFinite &&
-          minStepsYDouble.isFinite) {
-        final int maxStepsX = maxStepsXDouble.floor().clamp(0, 50);
-        final int maxStepsY = maxStepsYDouble.floor().clamp(0, 50);
-        final int minStepsX = minStepsXDouble.floor().clamp(0, 50);
-        final int minStepsY = minStepsYDouble.floor().clamp(0, 50);
-
-        for (int rowIndex = -minStepsY; rowIndex <= maxStepsY; rowIndex++) {
-          for (int colIndex = -minStepsX; colIndex <= maxStepsX; colIndex++) {
-            if (rowIndex == 0 && colIndex == 0) continue; // Skip centroid
-            double x = result.centroid.x + (colIndex * horizontalSpacing);
-            final double y = result.centroid.y + (rowIndex * verticalSpacing);
-
-            if (rowIndex % 2 != 0) {
-              x += rowOffset;
-            }
-
-            if (x >= 0 && x <= room.width && y >= 0 && y <= room.roomLength) {
-              points.add(Point2D(x, y));
-            }
-          }
-        }
-      }
-    }
-
-    return points;
-  }
-
-  /// Calculate which points were removed/filtered out
-  List<Point2D> _calculateRemovedPoints(
-    List<Point2D> allPoints,
-    List<Point2D> validPoints,
-  ) {
-    final List<Point2D> removedPoints = <Point2D>[];
-
-    for (Point2D point in allPoints) {
-      final bool isValid = validPoints.any(
-        (Point2D validPos) =>
-            (point.x - validPos.x).abs() < 0.001 &&
-            (point.y - validPos.y).abs() < 0.001,
-      );
-
-      if (!isValid) {
-        removedPoints.add(point);
-      }
-    }
-
-    return removedPoints;
   }
 
   @override
@@ -403,29 +266,22 @@ class _CeilingPendantSpeakerLayoutWidgetState
                                   });
                                   // Automatically recalculate when room type changes
                                   // But only if coordinates are already provided
-                                  if (_roomCoordinatesController
-                                      .text
-                                      .isNotEmpty) {
+                                  if (_roomCoordinatesController.text.isNotEmpty) {
                                     _calculatePlacement();
                                   }
                                 },
                                 contentPadding: EdgeInsets.zero,
                               ),
 
-                              if (_selectedRoomType ==
-                                  RoomType.asymmetrical) ...<Widget>[
+                              if (_selectedRoomType == RoomType.asymmetrical) ...<Widget>[
                                 const SizedBox(height: 8),
                                 FusionTextFormField(
-                                  semanticId:
-                                      "ceiling_pendant_speaker_layout_room_coordinates",
+                                  semanticId: "ceiling_pendant_speaker_layout_room_coordinates",
                                   controller: _roomCoordinatesController,
                                   maxLines: 3,
                                   title: 'Room Coordinates',
-                                  isRequired:
-                                      _selectedRoomType ==
-                                      RoomType.asymmetrical,
-                                  hintText:
-                                      'Enter coordinates as: (x1,y1), (x2,y2), (x3,y3), ...\nExample: (0,0), (10,0), (10,8), (0,8)',
+                                  isRequired: _selectedRoomType == RoomType.asymmetrical,
+                                  hintText: 'Enter coordinates as: (x1,y1), (x2,y2), (x3,y3), ...\nExample: (0,0), (10,0), (10,8), (0,8)',
                                   // decoration: const InputDecoration(
                                   //   labelText: 'Room Coordinates',
                                   //   hintText: 'Enter coordinates as: (x1,y1), (x2,y2), (x3,y3), ...\nExample: (0,0), (10,0), (10,8), (0,8)',
@@ -435,18 +291,14 @@ class _CeilingPendantSpeakerLayoutWidgetState
                                   // ),
                                   onChanged: (String value) {
                                     // Auto-recalculate when coordinates change (with debounce)
-                                    if (value.isNotEmpty &&
-                                        _selectedRoomType ==
-                                            RoomType.asymmetrical) {
+                                    if (value.isNotEmpty && _selectedRoomType == RoomType.asymmetrical) {
                                       try {
                                         _parseRoomCoordinates(value);
                                         // Only recalculate if coordinates are valid
                                         Future<void>.delayed(
                                           const Duration(milliseconds: 500),
                                           () {
-                                            if (_roomCoordinatesController
-                                                    .text ==
-                                                value) {
+                                            if (_roomCoordinatesController.text == value) {
                                               _calculatePlacement();
                                             }
                                           },
@@ -459,8 +311,7 @@ class _CeilingPendantSpeakerLayoutWidgetState
                                   validator:
                                       _selectedRoomType == RoomType.asymmetrical
                                           ? (String? value) {
-                                            if (value == null ||
-                                                value.isEmpty) {
+                                            if (value == null || value.isEmpty) {
                                               return 'Room coordinates are required';
                                             }
                                             try {
@@ -483,8 +334,7 @@ class _CeilingPendantSpeakerLayoutWidgetState
                                     ),
                                   ),
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: <Widget>[
                                       const Text(
                                         'Quick Templates:',
@@ -533,29 +383,22 @@ class _CeilingPendantSpeakerLayoutWidgetState
                               ),
                               const SizedBox(height: 8),
                               FusionDropdownButtonFormField(
-                                semanticKey:
-                                    "ceiling_pendant_speaker_layout_speaker_type",
+                                semanticKey: "ceiling_pendant_speaker_layout_speaker_type",
                                 value: _selectedSpeakerType.name,
                                 onChanged: (String? value) {
                                   setState(() {
-                                    _selectedSpeakerType = SpeakerType.values
-                                        .firstWhere(
-                                          (SpeakerType type) =>
-                                              type.name == value,
-                                        );
+                                    _selectedSpeakerType = SpeakerType.values.firstWhere(
+                                      (SpeakerType type) => type.name == value,
+                                    );
                                   });
                                   // Auto-recalculate when speaker type changes
                                   _calculatePlacement();
                                 },
-                                options:
-                                    SpeakerType.values
-                                        .map((SpeakerType type) => type.name)
-                                        .toList(),
+                                options: SpeakerType.values.map((SpeakerType type) => type.name).toList(),
                                 displayString: (String value) {
-                                  final SpeakerType type = SpeakerType.values
-                                      .firstWhere(
-                                        (SpeakerType t) => t.name == value,
-                                      );
+                                  final SpeakerType type = SpeakerType.values.firstWhere(
+                                    (SpeakerType t) => t.name == value,
+                                  );
                                   return _getSpeakerTypeLabel(type);
                                 },
                                 // items:
@@ -580,14 +423,12 @@ class _CeilingPendantSpeakerLayoutWidgetState
                               ),
 
                               // Pendant Height (conditional)
-                              if (_selectedSpeakerType ==
-                                  SpeakerType.pendant) ...<Widget>[
+                              if (_selectedSpeakerType == SpeakerType.pendant) ...<Widget>[
                                 const SizedBox(height: 12),
                                 _buildNumberField(
                                   controller: _pendantHeightController,
                                   label: 'Pendant Height (m)',
-                                  hint:
-                                      'Enter pendant speaker height in meters',
+                                  hint: 'Enter pendant speaker height in meters',
                                 ),
                               ],
 
@@ -608,9 +449,7 @@ class _CeilingPendantSpeakerLayoutWidgetState
                               ),
                               const SizedBox(height: 8),
                               FusionContainer(
-                                child: DropdownButtonFormField<
-                                  CoveragePreference
-                                >(
+                                child: DropdownButtonFormField<CoveragePreference>(
                                   initialValue: _selectedCoveragePreference,
                                   onChanged: (CoveragePreference? value) {
                                     setState(() {
@@ -623,19 +462,14 @@ class _CeilingPendantSpeakerLayoutWidgetState
                                       CoveragePreference.values.map((
                                         CoveragePreference pref,
                                       ) {
-                                        return DropdownMenuItem<
-                                          CoveragePreference
-                                        >(
+                                        return DropdownMenuItem<CoveragePreference>(
                                           value: pref,
                                           child: SizedBox(
-                                            height:
-                                                40, // Constrain height to prevent overflow
+                                            height: 40, // Constrain height to prevent overflow
                                             child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
+                                              crossAxisAlignment: CrossAxisAlignment.start,
                                               mainAxisSize: MainAxisSize.min,
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
+                                              mainAxisAlignment: MainAxisAlignment.center,
                                               children: <Widget>[
                                                 Text(
                                                   _getCoveragePreferenceLabel(
@@ -650,14 +484,12 @@ class _CeilingPendantSpeakerLayoutWidgetState
                                                     pref.description,
                                                     style: TextStyle(
                                                       fontSize: 10,
-                                                      color: Colors.grey
-                                                          .withValues(
-                                                            alpha: 0.6,
-                                                          ),
+                                                      color: Colors.grey.withValues(
+                                                        alpha: 0.6,
+                                                      ),
                                                     ),
                                                     maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
+                                                    overflow: TextOverflow.ellipsis,
                                                   ),
                                                 ),
                                               ],
@@ -688,16 +520,13 @@ class _CeilingPendantSpeakerLayoutWidgetState
                               ),
                               const SizedBox(height: 8),
                               FusionDropdownButtonFormField(
-                                semanticKey:
-                                    "ceiling_pendant_speaker_layout_pattern",
+                                semanticKey: "ceiling_pendant_speaker_layout_pattern",
                                 value: _selectedLayoutPattern.name,
                                 onChanged: (String? value) {
                                   setState(() {
-                                    _selectedLayoutPattern = LayoutPattern
-                                        .values
-                                        .firstWhere(
-                                          (LayoutPattern e) => e.name == value,
-                                        );
+                                    _selectedLayoutPattern = LayoutPattern.values.firstWhere(
+                                      (LayoutPattern e) => e.name == value,
+                                    );
                                   });
                                   // Auto-recalculate when layout pattern changes
                                   _calculatePlacement();
@@ -705,16 +534,13 @@ class _CeilingPendantSpeakerLayoutWidgetState
                                 options:
                                     LayoutPattern.values
                                         .map(
-                                          (LayoutPattern pattern) =>
-                                              pattern.name,
+                                          (LayoutPattern pattern) => pattern.name,
                                         )
                                         .toList(),
                                 displayString: (String value) {
-                                  final LayoutPattern pattern = LayoutPattern
-                                      .values
-                                      .firstWhere(
-                                        (LayoutPattern e) => e.name == value,
-                                      );
+                                  final LayoutPattern pattern = LayoutPattern.values.firstWhere(
+                                    (LayoutPattern e) => e.name == value,
+                                  );
                                   return _getLayoutPatternLabel(pattern);
                                 },
                                 // items:
@@ -751,8 +577,7 @@ class _CeilingPendantSpeakerLayoutWidgetState
                                   // Auto-recalculate when custom origin option changes
                                   _calculatePlacement();
                                 },
-                                controlAffinity:
-                                    ListTileControlAffinity.leading,
+                                controlAffinity: ListTileControlAffinity.leading,
                                 contentPadding: EdgeInsets.zero,
                               ),
 
@@ -768,8 +593,7 @@ class _CeilingPendantSpeakerLayoutWidgetState
                                     ),
                                   ),
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: <Widget>[
                                       const Text(
                                         'Origin Offset from Room Centroid',
@@ -799,8 +623,7 @@ class _CeilingPendantSpeakerLayoutWidgetState
                                         min: -3.0,
                                         max: 3.0,
                                         divisions: 60,
-                                        label:
-                                            '${_customOriginOffsetX.toStringAsFixed(2)} m',
+                                        label: '${_customOriginOffsetX.toStringAsFixed(2)} m',
                                         onChanged: (double value) {
                                           setState(() {
                                             _customOriginOffsetX = value;
@@ -823,8 +646,7 @@ class _CeilingPendantSpeakerLayoutWidgetState
                                         min: -3.0,
                                         max: 3.0,
                                         divisions: 60,
-                                        label:
-                                            '${_customOriginOffsetY.toStringAsFixed(2)} m',
+                                        label: '${_customOriginOffsetY.toStringAsFixed(2)} m',
                                         onChanged: (double value) {
                                           setState(() {
                                             _customOriginOffsetY = value;
@@ -913,12 +735,10 @@ class _CeilingPendantSpeakerLayoutWidgetState
                                       min: 0.01,
                                       max: 0.9,
                                       // divisions: 12,
-                                      label:
-                                          '${(_boundaryOverlapThreshold * 100).toStringAsFixed(0)}%',
+                                      label: '${(_boundaryOverlapThreshold * 100).toStringAsFixed(0)}%',
                                       onChanged: (double value) {
                                         setState(() {
-                                          _boundaryOverlapThreshold = value
-                                              .clamp(0.01, 0.9);
+                                          _boundaryOverlapThreshold = value.clamp(0.01, 0.9);
                                         });
                                       },
                                       onChangeEnd: (double value) {
@@ -973,10 +793,7 @@ class _CeilingPendantSpeakerLayoutWidgetState
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
-                                  onPressed:
-                                      _isCalculating
-                                          ? null
-                                          : _calculatePlacement,
+                                  onPressed: _isCalculating ? null : _calculatePlacement,
                                   style: ElevatedButton.styleFrom(
                                     padding: const EdgeInsets.symmetric(
                                       vertical: 16,
@@ -985,16 +802,14 @@ class _CeilingPendantSpeakerLayoutWidgetState
                                   child:
                                       _isCalculating
                                           ? const Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
+                                            mainAxisAlignment: MainAxisAlignment.center,
                                             children: <Widget>[
                                               SizedBox(
                                                 width: 20,
                                                 height: 20,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                      strokeWidth: 2,
-                                                    ),
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                ),
                                               ),
                                               SizedBox(width: 8),
                                               Text('Calculating...'),
@@ -1017,35 +832,28 @@ class _CeilingPendantSpeakerLayoutWidgetState
                   // Results Panel
                   Expanded(
                     flex: 3,
-                    child: FusionFlatContainer(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          const Text(
-                            'Calculation Results',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Expanded(
-                            child:
-                                _result == null
-                                    ? const Center(
-                                      child: Text(
-                                        'Enter room and speaker specifications, then click "Calculate Speaker Placement" to see results.',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                    )
-                                    : _buildResultsDisplay(),
-                          ),
-                        ],
-                      ),
+                    child: CeilingPlacementResult(
+                      result: _result,
+                      roomWidth: double.tryParse(_roomWidthController.text) ?? 0,
+                      roomLength: double.tryParse(_roomLengthController.text) ?? 0,
+                      selectedLayoutPattern: _selectedLayoutPattern,
+                      boundaryOverlapThreshold: _boundaryOverlapThreshold,
+                      selectedCoveragePreference: _selectedCoveragePreference,
+                      selectedSpeakerType: _selectedSpeakerType,
+                      selectedRoomType: _selectedRoomType,
+                      customGeometry:
+                          _selectedRoomType == RoomType.asymmetrical
+                              ? (() {
+                                try {
+                                  return _parseRoomCoordinates(
+                                    _roomCoordinatesController.text,
+                                  );
+                                } catch (_) {
+                                  return null;
+                                }
+                              })()
+                              : null,
+                      coverageAngle: double.tryParse(_coverageAngleController.text) ?? 90.0,
                     ),
                   ),
                 ],
@@ -1139,14 +947,8 @@ class _CeilingPendantSpeakerLayoutWidgetState
       style: ElevatedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         minimumSize: const Size(60, 28),
-        backgroundColor:
-            (_boundaryOverlapThreshold - threshold).abs() < 0.001
-                ? Theme.of(context).primaryColor
-                : null,
-        foregroundColor:
-            (_boundaryOverlapThreshold - threshold).abs() < 0.001
-                ? Colors.white
-                : null,
+        backgroundColor: (_boundaryOverlapThreshold - threshold).abs() < 0.001 ? Theme.of(context).primaryColor : null,
+        foregroundColor: (_boundaryOverlapThreshold - threshold).abs() < 0.001 ? Colors.white : null,
       ),
       child: Text(
         label,
@@ -1186,697 +988,6 @@ class _CeilingPendantSpeakerLayoutWidgetState
     }
 
     return points;
-  }
-
-  Widget _buildResultsDisplay() {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          // Summary Card
-          FusionFlatContainer(
-            color: Colors.blue.withValues(alpha: 0.05),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Text(
-                    'Placement Summary',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildSummaryRow(
-                    'Number of Speakers:',
-                    '${_result!.speakerPositions.length}',
-                  ),
-                  _buildSummaryRow(
-                    'Grid Spacing:',
-                    '${_result!.gridSpacing.toStringAsFixed(2)} m',
-                  ),
-
-                  // Show origin information based on whether custom offset is used
-                  if (_result!.customOriginOffset != null) ...<Widget>[
-                    _buildSummaryRow(
-                      'Base Centroid:',
-                      '${_result!.baseCentroid}',
-                    ),
-                    _buildSummaryRow(
-                      'Custom Offset:',
-                      '${_result!.customOriginOffset}',
-                    ),
-                    _buildSummaryRow(
-                      'Effective Origin:',
-                      '${_result!.centroid}',
-                    ),
-                  ] else ...<Widget>[
-                    _buildSummaryRow(
-                      'Origin (Centroid):',
-                      '${_result!.centroid}',
-                    ),
-                  ],
-
-                  _buildSummaryRow(
-                    'Distance:',
-                    '${_result!.distance.toStringAsFixed(2)} m',
-                  ),
-                  _buildSummaryRow(
-                    'Boundary Threshold:',
-                    '${(_boundaryOverlapThreshold * 100).toStringAsFixed(0)}%',
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // All Grid Coordinates Section
-          if (_allGridPoints != null && _allGridPoints!.isNotEmpty) ...<Widget>[
-            const Text(
-              'All Grid Coordinates (Before Filtering)',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            FusionFlatContainer(
-              color: Colors.grey.withValues(alpha: 0.05),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Row(
-                      children: <Widget>[
-                        Icon(
-                          Icons.info_outline,
-                          color: Colors.blue.withValues(alpha: 0.7),
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Total grid positions generated: ${_allGridPoints!.length}',
-                          style: const TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 200, // Fixed height with scrolling
-                      child: SingleChildScrollView(
-                        child: Column(
-                          children: <Widget>[
-                            for (int i = 0; i < _allGridPoints!.length; i++)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 2.0,
-                                ),
-                                child: Row(
-                                  children: <Widget>[
-                                    Container(
-                                      width: 20,
-                                      height: 20,
-                                      decoration: BoxDecoration(
-                                        color:
-                                            _result!.speakerPositions.any(
-                                                  (Point2D validPos) =>
-                                                      (_allGridPoints![i].x -
-                                                                  validPos.x)
-                                                              .abs() <
-                                                          0.001 &&
-                                                      (_allGridPoints![i].y -
-                                                                  validPos.y)
-                                                              .abs() <
-                                                          0.001,
-                                                )
-                                                ? Colors.green
-                                                : Colors.red,
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Center(
-                                        child: Icon(
-                                          _result!.speakerPositions.any(
-                                                (Point2D validPos) =>
-                                                    (_allGridPoints![i].x -
-                                                                validPos.x)
-                                                            .abs() <
-                                                        0.001 &&
-                                                    (_allGridPoints![i].y -
-                                                                validPos.y)
-                                                            .abs() <
-                                                        0.001,
-                                              )
-                                              ? Icons.check
-                                              : Icons.close,
-                                          color: Colors.white,
-                                          size: 14,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        'Grid ${i + 1}: (${_allGridPoints![i].x.toStringAsFixed(2)}, ${_allGridPoints![i].y.toStringAsFixed(2)})',
-                                        style: const TextStyle(
-                                          fontFamily: 'monospace',
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
-                                    Text(
-                                      _result!.speakerPositions.any(
-                                            (Point2D validPos) =>
-                                                (_allGridPoints![i].x -
-                                                            validPos.x)
-                                                        .abs() <
-                                                    0.001 &&
-                                                (_allGridPoints![i].y -
-                                                            validPos.y)
-                                                        .abs() <
-                                                    0.001,
-                                          )
-                                          ? 'VALID'
-                                          : 'FILTERED',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color:
-                                            _result!.speakerPositions.any(
-                                                  (Point2D validPos) =>
-                                                      (_allGridPoints![i].x -
-                                                                  validPos.x)
-                                                              .abs() <
-                                                          0.001 &&
-                                                      (_allGridPoints![i].y -
-                                                                  validPos.y)
-                                                              .abs() <
-                                                          0.001,
-                                                )
-                                                ? Colors.green.withValues(
-                                                  alpha: 0.7,
-                                                )
-                                                : Colors.red.withValues(
-                                                  alpha: 0.7,
-                                                ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-
-          // Removed Points Section
-          if (_removedPoints != null && _removedPoints!.isNotEmpty) ...<Widget>[
-            const Text(
-              'Filtered Out Positions',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            FusionFlatContainer(
-              color: Colors.red.withValues(alpha: 0.05),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Row(
-                      children: <Widget>[
-                        Icon(
-                          Icons.warning_outlined,
-                          color: Colors.red.withValues(alpha: 0.7),
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Positions removed due to boundary filtering: ${_removedPoints!.length}',
-                          style: const TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: <Widget>[
-                        for (int i = 0; i < _removedPoints!.length; i++)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.red.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.red.withValues(alpha: 0.3),
-                              ),
-                            ),
-                            child: Text(
-                              '(${_removedPoints![i].x.toStringAsFixed(2)}, ${_removedPoints![i].y.toStringAsFixed(2)})',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontFamily: 'monospace',
-                                color: Colors.red.withValues(alpha: 0.8),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'These positions were filtered because they were too close to room boundaries (within ${(_result!.gridSpacing * _selectedCoveragePreference.overlapMultiplier).toStringAsFixed(2)}m margin).',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.red.withValues(alpha: 0.6),
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-
-          // Speaker Positions
-          const Text(
-            'Speaker Positions',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          FusionFlatContainer(
-            color: context.colorScheme.elevation1,
-            child: Column(
-              children: <Widget>[
-                for (int i = 0; i < _result!.speakerPositions.length; i++)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4.0),
-                    child: Row(
-                      children: <Widget>[
-                        Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: Colors.blue,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '${i + 1}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Speaker ${i + 1}: (${_result!.speakerPositions[i].x.toStringAsFixed(2)}, ${_result!.speakerPositions[i].y.toStringAsFixed(2)})',
-                          style: const TextStyle(fontFamily: 'monospace'),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Step-by-Step Calculations
-          const Text(
-            'Step-by-Step Calculations',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          FusionFlatContainer(
-            color: context.colorScheme.elevation2,
-            borderColor: context.colorScheme.elevation2,
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  for (String step in _result!.calculationSteps)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2.0),
-                      child: Text(
-                        step,
-                        style: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Visual Representation
-          const Text(
-            'Visual Layout',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: _buildVisualLayout(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVisualLayout() {
-    if (_result == null) return const SizedBox.shrink();
-
-    // Calculate room dimensions for visualization
-    final double roomWidth = double.parse(_roomWidthController.text);
-    final double roomLength = double.parse(_roomLengthController.text);
-
-    // Create room geometry - for now using rectangular, but can be extended to support custom polygons
-    final List<Point2D> roomGeometry = _generateRoomGeometry(
-      roomWidth,
-      roomLength,
-    );
-
-    return Column(
-      children: <Widget>[
-        // Legend
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: <Widget>[
-            _buildLegendItem(
-              icon:
-                  _selectedSpeakerType == SpeakerType.ceiling
-                      ? Icons.speaker
-                      : Icons.campaign,
-              label: _getSpeakerTypeLabel(_selectedSpeakerType),
-              color: Colors.blue,
-            ),
-            _buildLegendItem(
-              icon: Icons.center_focus_strong,
-              label: 'Base Centroid',
-              color: Colors.blue,
-            ),
-            if (_result!.customOriginOffset != null)
-              _buildLegendItem(
-                icon: Icons.location_on,
-                label: 'Effective Origin',
-                color: Colors.red,
-              ),
-            if (_removedPoints != null && _removedPoints!.isNotEmpty)
-              _buildLegendItem(
-                icon: Icons.close,
-                label: 'Filtered Points',
-                color: Colors.red.withOpacity(0.7),
-              ),
-            _buildLegendItem(
-              icon: Icons.crop_square,
-              label: 'Room Boundary',
-              color: Colors.grey,
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 16),
-
-        // Room Layout Visualization using CustomPainter
-        Container(
-          width: 400,
-          height: 350,
-          decoration: BoxDecoration(
-            color: Colors.grey.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
-          ),
-          child: CustomPaint(
-            size: const Size(400, 350),
-            painter: RoomLayoutPainter(
-              roomGeometry: roomGeometry,
-              speakerPositions: _result!.speakerPositions,
-              allGridPoints: _allGridPoints ?? <Point2D>[],
-              removedPoints: _removedPoints ?? <Point2D>[],
-              centroid: _result!.centroid,
-              baseCentroid: _result!.baseCentroid,
-              customOriginOffset: _result!.customOriginOffset,
-              gridSpacing: _result!.gridSpacing,
-              speakerType: _selectedSpeakerType,
-              layoutPattern: _selectedLayoutPattern,
-              colorscheme: context.colorScheme,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 16),
-
-        // Coordinate system info for custom rooms
-        if (_selectedRoomType == RoomType.asymmetrical)
-          Card(
-            color: Colors.green.withValues(alpha: 0.05),
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      Icon(
-                        Icons.info_outline,
-                        color: Colors.green.withValues(alpha: 0.7),
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Custom Room Coordinates',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '• Origin (0,0) is at bottom-left corner\n'
-                    '• X-axis increases to the right\n'
-                    '• Y-axis increases upward\n'
-                    '• Coordinates define room boundary vertices\n'
-                    '• Last point automatically connects to first point',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Current room shape: ${_selectedRoomType == RoomType.asymmetrical ? "Custom polygon" : "Rectangle"}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.green.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-        const SizedBox(height: 16),
-
-        // Layout Stats
-        _buildLayoutStats(),
-      ],
-    );
-  }
-
-  Widget _buildLegendItem({
-    required IconData icon,
-    required String label,
-    required Color color,
-  }) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Icon(icon, color: color, size: 16),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12),
-        ),
-      ],
-    );
-  }
-
-  List<Point2D> _generateRoomGeometry(double width, double length) {
-    if (_selectedRoomType == RoomType.asymmetrical &&
-        _roomCoordinatesController.text.isNotEmpty) {
-      try {
-        return _parseRoomCoordinates(_roomCoordinatesController.text);
-      } catch (e) {
-        // Fallback to rectangle if parsing fails
-        debugPrint('Error parsing custom coordinates: $e');
-      }
-    }
-
-    // Default rectangle using width and length
-    return <Point2D>[
-      const Point2D(0, 0),
-      Point2D(width, 0),
-      Point2D(width, length),
-      Point2D(0, length),
-    ];
-  }
-
-  Widget _buildStatItem({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Column(
-      children: <Widget>[
-        Icon(icon, color: Colors.blue.withValues(alpha: 0.7), size: 20),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            color: Colors.grey.withValues(alpha: 0.6),
-          ),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLayoutStats() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.blue.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        children: <Widget>[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: <Widget>[
-              _buildStatItem(
-                icon: Icons.grid_on,
-                label: 'Pattern',
-                value: _getLayoutPatternLabel(_selectedLayoutPattern),
-              ),
-              _buildStatItem(
-                icon: Icons.straighten,
-                label: 'Spacing',
-                value: '${_result!.gridSpacing.toStringAsFixed(1)} m',
-              ),
-              _buildStatItem(
-                icon: Icons.settings_input_antenna,
-                label: 'Coverage',
-                value:
-                    _getCoveragePreferenceLabel(
-                      _selectedCoveragePreference,
-                    ).split(' ')[0],
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: <Widget>[
-              _buildStatItem(
-                icon: Icons.height,
-                label: 'Distance',
-                value: '${_result!.distance.toStringAsFixed(1)} m',
-              ),
-              _buildStatItem(
-                icon: Icons.calculate,
-                label: 'Total Speakers',
-                value: '${_result!.speakerPositions.length}',
-              ),
-              _buildStatItem(
-                icon: Icons.rotate_right,
-                label: 'Coverage Angle',
-                value: '${_coverageAngleController.text}°',
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            flex: 2,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Text(
-              value,
-              style: const TextStyle(fontFamily: 'monospace'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _getSpeakerTypeLabel(SpeakerType type) {
-    switch (type) {
-      case SpeakerType.ceiling:
-        return 'Ceiling-mounted';
-      case SpeakerType.pendant:
-        return 'Pendant-mounted';
-    }
-  }
-
-  String _getCoveragePreferenceLabel(CoveragePreference pref) {
-    switch (pref) {
-      case CoveragePreference.edgeToEdge:
-        return 'Edge to Edge';
-      case CoveragePreference.minimumOverlap:
-        return 'Minimum Overlap (Recommended)';
-      case CoveragePreference.centerToCenter:
-        return 'Center to Center';
-    }
-  }
-
-  String _getLayoutPatternLabel(LayoutPattern pattern) {
-    switch (pattern) {
-      case LayoutPattern.square:
-        return 'Square Grid';
-      case LayoutPattern.hexagonal:
-        return 'Hexagonal Grid';
-    }
   }
 }
 
@@ -1977,11 +1088,9 @@ class RoomLayoutPainter extends CustomPainter {
     final double scaledWidth = roomWidth * scaleFactor;
     final double scaledHeight = roomHeight * scaleFactor;
 
-    final double offsetX =
-        (size.width - scaledWidth) / 2 - bounds.minX * scaleFactor;
+    final double offsetX = (size.width - scaledWidth) / 2 - bounds.minX * scaleFactor;
     // Adjust Y offset for bottom-left origin coordinate system
-    final double offsetY =
-        (size.height - scaledHeight) / 2 - bounds.minY * scaleFactor;
+    final double offsetY = (size.height - scaledHeight) / 2 - bounds.minY * scaleFactor;
 
     return Offset(offsetX, offsetY);
   }
@@ -2215,8 +1324,7 @@ class RoomLayoutPainter extends CustomPainter {
     final Offset direction = end - start;
     final double length = direction.distance;
 
-    if (length < arrowLength * 2)
-      return; // Don't draw arrow if line is too short
+    if (length < arrowLength * 2) return; // Don't draw arrow if line is too short
 
     final Offset unitDirection = direction / length;
 
@@ -2420,4 +1528,869 @@ class RoomBounds {
     required this.minY,
     required this.maxY,
   });
+}
+
+class CeilingPlacementResult extends StatelessWidget {
+  static show({
+    required BuildContext context,
+    required PlacementResult? result,
+    required double roomWidth,
+    required double roomLength,
+    required LayoutPattern selectedLayoutPattern,
+    required double boundaryOverlapThreshold,
+    required CoveragePreference selectedCoveragePreference,
+    required SpeakerType selectedSpeakerType,
+    required RoomType selectedRoomType,
+    required double coverageAngle,
+    required List<Point2D>? customGeometry,
+  }) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          child: CeilingPlacementResult(
+            result: result,
+            roomWidth: roomWidth,
+            roomLength: roomLength,
+            selectedLayoutPattern: selectedLayoutPattern,
+            boundaryOverlapThreshold: boundaryOverlapThreshold,
+            selectedCoveragePreference: selectedCoveragePreference,
+            selectedSpeakerType: selectedSpeakerType,
+            selectedRoomType: selectedRoomType,
+            coverageAngle: coverageAngle,
+            customGeometry: customGeometry,
+          ),
+        );
+      },
+    );
+  }
+
+  CeilingPlacementResult({
+    super.key,
+    required this.result,
+    required this.roomWidth,
+    required this.roomLength,
+    required this.selectedLayoutPattern,
+    required this.boundaryOverlapThreshold,
+    required this.selectedCoveragePreference,
+    required this.selectedSpeakerType,
+    required this.selectedRoomType,
+    required this.coverageAngle,
+    this.customGeometry,
+  }) {
+    // Generate all grid points for display purposes
+    if (result != null) {
+      final List<Point2D> allGridPoints = _generateAllGridPoints(
+        roomWidth,
+        roomLength,
+        result!,
+        selectedLayoutPattern,
+      );
+      _allGridPoints.clear();
+      _allGridPoints.addAll(allGridPoints);
+      final List<Point2D> removedPoints = _calculateRemovedPoints(
+        allGridPoints,
+        result!.speakerPositions,
+      );
+      _removedPoints.clear();
+      _removedPoints.addAll(removedPoints);
+    }
+  }
+
+  final LayoutPattern selectedLayoutPattern;
+  final PlacementResult? result;
+  final double roomWidth;
+  final double roomLength;
+  final double boundaryOverlapThreshold;
+  final CoveragePreference selectedCoveragePreference;
+  final SpeakerType selectedSpeakerType;
+  final RoomType selectedRoomType;
+  final double coverageAngle;
+  final List<Point2D>? customGeometry;
+  final List<Point2D> _allGridPoints = <Point2D>[];
+  final List<Point2D> _removedPoints = <Point2D>[];
+  @override
+  Widget build(BuildContext context) {
+    return FusionFlatContainer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Text(
+            'Calculation Results',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child:
+                result == null
+                    ? const Center(
+                      child: Text(
+                        'Enter room and speaker specifications, then click "Calculate Speaker Placement" to see results.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    )
+                    : _buildResultsDisplay(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultsDisplay(BuildContext context) {
+    final PlacementResult? result = this.result;
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          // Summary Card
+          FusionFlatContainer(
+            color: Colors.blue.withValues(alpha: 0.05),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Text(
+                    'Placement Summary',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildSummaryRow(
+                    'Number of Speakers:',
+                    '${result!.speakerPositions.length}',
+                  ),
+                  _buildSummaryRow(
+                    'Grid Spacing:',
+                    '${result.gridSpacing.toStringAsFixed(2)} m',
+                  ),
+
+                  // Show origin information based on whether custom offset is used
+                  if (result.customOriginOffset != null) ...<Widget>[
+                    _buildSummaryRow(
+                      'Base Centroid:',
+                      '${result.baseCentroid}',
+                    ),
+                    _buildSummaryRow(
+                      'Custom Offset:',
+                      '${result.customOriginOffset}',
+                    ),
+                    _buildSummaryRow(
+                      'Effective Origin:',
+                      '${result.centroid}',
+                    ),
+                  ] else ...<Widget>[
+                    _buildSummaryRow(
+                      'Origin (Centroid):',
+                      '${result.centroid}',
+                    ),
+                  ],
+
+                  _buildSummaryRow(
+                    'Distance:',
+                    '${result.distance.toStringAsFixed(2)} m',
+                  ),
+                  _buildSummaryRow(
+                    'Boundary Threshold:',
+                    '${(boundaryOverlapThreshold * 100).toStringAsFixed(0)}%',
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // All Grid Coordinates Section
+          if (_allGridPoints.isNotEmpty) ...<Widget>[
+            const Text(
+              'All Grid Coordinates (Before Filtering)',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            FusionFlatContainer(
+              color: Colors.grey.withValues(alpha: 0.05),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Icon(
+                          Icons.info_outline,
+                          color: Colors.blue.withValues(alpha: 0.7),
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Total grid positions generated: ${_allGridPoints.length}',
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 200, // Fixed height with scrolling
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: <Widget>[
+                            for (int i = 0; i < _allGridPoints.length; i++)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 2.0,
+                                ),
+                                child: Row(
+                                  children: <Widget>[
+                                    Container(
+                                      width: 20,
+                                      height: 20,
+                                      decoration: BoxDecoration(
+                                        color:
+                                            result.speakerPositions.any(
+                                                  (Point2D validPos) =>
+                                                      (_allGridPoints[i].x - validPos.x).abs() < 0.001 && (_allGridPoints[i].y - validPos.y).abs() < 0.001,
+                                                )
+                                                ? Colors.green
+                                                : Colors.red,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Center(
+                                        child: Icon(
+                                          result.speakerPositions.any(
+                                                (Point2D validPos) =>
+                                                    (_allGridPoints[i].x - validPos.x).abs() < 0.001 && (_allGridPoints[i].y - validPos.y).abs() < 0.001,
+                                              )
+                                              ? Icons.check
+                                              : Icons.close,
+                                          color: Colors.white,
+                                          size: 14,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        'Grid ${i + 1}: (${_allGridPoints[i].x.toStringAsFixed(2)}, ${_allGridPoints[i].y.toStringAsFixed(2)})',
+                                        style: const TextStyle(
+                                          fontFamily: 'monospace',
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                    Text(
+                                      result.speakerPositions.any(
+                                            (Point2D validPos) =>
+                                                (_allGridPoints[i].x - validPos.x).abs() < 0.001 && (_allGridPoints[i].y - validPos.y).abs() < 0.001,
+                                          )
+                                          ? 'VALID'
+                                          : 'FILTERED',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color:
+                                            result.speakerPositions.any(
+                                                  (Point2D validPos) =>
+                                                      (_allGridPoints[i].x - validPos.x).abs() < 0.001 && (_allGridPoints[i].y - validPos.y).abs() < 0.001,
+                                                )
+                                                ? Colors.green.withValues(
+                                                  alpha: 0.7,
+                                                )
+                                                : Colors.red.withValues(
+                                                  alpha: 0.7,
+                                                ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // Removed Points Section
+          if (_removedPoints.isNotEmpty) ...<Widget>[
+            const Text(
+              'Filtered Out Positions',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            FusionFlatContainer(
+              color: Colors.red.withValues(alpha: 0.05),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Icon(
+                          Icons.warning_outlined,
+                          color: Colors.red.withValues(alpha: 0.7),
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Positions removed due to boundary filtering: ${_removedPoints.length}',
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: <Widget>[
+                        for (int i = 0; i < _removedPoints.length; i++)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.red.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Text(
+                              '(${_removedPoints[i].x.toStringAsFixed(2)}, ${_removedPoints[i].y.toStringAsFixed(2)})',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontFamily: 'monospace',
+                                color: Colors.red.withValues(alpha: 0.8),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'These positions were filtered because they were too close to room boundaries (within ${(result.gridSpacing * selectedCoveragePreference.overlapMultiplier).toStringAsFixed(2)}m margin).',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.red.withValues(alpha: 0.6),
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // Speaker Positions
+          const Text(
+            'Speaker Positions',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          FusionFlatContainer(
+            color: context.colorScheme.elevation1,
+            child: Column(
+              children: <Widget>[
+                for (int i = 0; i < result.speakerPositions.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                    child: Row(
+                      children: <Widget>[
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: Colors.blue,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '${i + 1}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Speaker ${i + 1}: (${result.speakerPositions[i].x.toStringAsFixed(2)}, ${result.speakerPositions[i].y.toStringAsFixed(2)})',
+                          style: const TextStyle(fontFamily: 'monospace'),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Step-by-Step Calculations
+          const Text(
+            'Step-by-Step Calculations',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          FusionFlatContainer(
+            color: context.colorScheme.elevation2,
+            borderColor: context.colorScheme.elevation2,
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  for (String step in result.calculationSteps)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2.0),
+                      child: Text(
+                        step,
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Visual Representation
+          const Text(
+            'Visual Layout',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: _buildVisualLayout(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVisualLayout(BuildContext context) {
+    final PlacementResult? result = this.result;
+
+    if (result == null) return const SizedBox.shrink();
+
+    // Create room geometry
+    final List<Point2D> roomGeometry = _generateRoomGeometry();
+
+    return Column(
+      children: <Widget>[
+        // Legend
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: <Widget>[
+            _buildLegendItem(
+              icon: selectedSpeakerType == SpeakerType.ceiling ? Icons.speaker : Icons.campaign,
+              label: _getSpeakerTypeLabel(selectedSpeakerType),
+              color: Colors.blue,
+            ),
+            _buildLegendItem(
+              icon: Icons.center_focus_strong,
+              label: 'Base Centroid',
+              color: Colors.blue,
+            ),
+            if (result.customOriginOffset != null)
+              _buildLegendItem(
+                icon: Icons.location_on,
+                label: 'Effective Origin',
+                color: Colors.red,
+              ),
+            if (_removedPoints.isNotEmpty)
+              _buildLegendItem(
+                icon: Icons.close,
+                label: 'Filtered Points',
+                color: Colors.red.withOpacity(0.7),
+              ),
+            _buildLegendItem(
+              icon: Icons.crop_square,
+              label: 'Room Boundary',
+              color: Colors.grey,
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        // Room Layout Visualization using CustomPainter
+        Container(
+          width: 400,
+          height: 350,
+          decoration: BoxDecoration(
+            color: Colors.grey.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+          ),
+          child: CustomPaint(
+            size: const Size(400, 350),
+            painter: RoomLayoutPainter(
+              roomGeometry: roomGeometry,
+              speakerPositions: result.speakerPositions,
+              allGridPoints: _allGridPoints,
+              removedPoints: _removedPoints,
+              centroid: result.centroid,
+              baseCentroid: result.baseCentroid,
+              customOriginOffset: result.customOriginOffset,
+              gridSpacing: result.gridSpacing,
+              speakerType: selectedSpeakerType,
+              layoutPattern: selectedLayoutPattern,
+              colorscheme: context.colorScheme,
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Coordinate system info for custom rooms
+        if (selectedRoomType == RoomType.asymmetrical)
+          Card(
+            color: Colors.green.withValues(alpha: 0.05),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      Icon(
+                        Icons.info_outline,
+                        color: Colors.green.withValues(alpha: 0.7),
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Custom Room Coordinates',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '• Origin (0,0) is at bottom-left corner\n'
+                    '• X-axis increases to the right\n'
+                    '• Y-axis increases upward\n'
+                    '• Coordinates define room boundary vertices\n'
+                    '• Last point automatically connects to first point',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Current room shape: ${selectedRoomType == RoomType.asymmetrical ? "Custom polygon" : "Rectangle"}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.green.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+        const SizedBox(height: 16),
+
+        // Layout Stats
+        _buildLayoutStats(),
+      ],
+    );
+  }
+
+  Widget _buildLegendItem({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Icon(icon, color: color, size: 16),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12),
+        ),
+      ],
+    );
+  }
+
+  List<Point2D> _generateRoomGeometry() {
+    if (selectedRoomType == RoomType.asymmetrical && customGeometry != null && customGeometry!.isNotEmpty) {
+      return customGeometry!;
+    }
+
+    // Default rectangle using width and length
+    return <Point2D>[
+      const Point2D(0, 0),
+      Point2D(roomWidth, 0),
+      Point2D(roomWidth, roomLength),
+      Point2D(0, roomLength),
+    ];
+  }
+
+  Widget _buildStatItem({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Column(
+      children: <Widget>[
+        Icon(icon, color: Colors.blue.withValues(alpha: 0.7), size: 20),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: Colors.grey.withValues(alpha: 0.6),
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLayoutStats() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        children: <Widget>[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: <Widget>[
+              _buildStatItem(
+                icon: Icons.grid_on,
+                label: 'Pattern',
+                value: _getLayoutPatternLabel(selectedLayoutPattern),
+              ),
+              _buildStatItem(
+                icon: Icons.straighten,
+                label: 'Spacing',
+                value: '${result!.gridSpacing.toStringAsFixed(1)} m',
+              ),
+              _buildStatItem(
+                icon: Icons.settings_input_antenna,
+                label: 'Coverage',
+                value:
+                    _getCoveragePreferenceLabel(
+                      selectedCoveragePreference,
+                    ).split(' ')[0],
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: <Widget>[
+              _buildStatItem(
+                icon: Icons.height,
+                label: 'Distance',
+                value: '${result!.distance.toStringAsFixed(1)} m',
+              ),
+              _buildStatItem(
+                icon: Icons.calculate,
+                label: 'Total Speakers',
+                value: '${result!.speakerPositions.length}',
+              ),
+              _buildStatItem(
+                icon: Icons.rotate_right,
+                label: 'Coverage Angle',
+                value: '${coverageAngle.toStringAsFixed(1)}°',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              style: const TextStyle(fontFamily: 'monospace'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Generate all initial grid points (before filtering) for visualization
+  List<Point2D> _generateAllGridPoints(
+    double roomWidth,
+    double roomLength,
+    PlacementResult result,
+    LayoutPattern pattern,
+  ) {
+    final List<Point2D> points = <Point2D>[];
+
+    // Safety check for grid spacing
+    if (result.gridSpacing <= 0 || !result.gridSpacing.isFinite) {
+      return points;
+    }
+
+    // Always include the centroid
+    points.add(result.centroid);
+
+    if (pattern == LayoutPattern.square) {
+      // Generate square grid
+      final double maxStepsXDouble = (roomWidth - result.centroid.x) / result.gridSpacing;
+      final double maxStepsYDouble = (roomLength - result.centroid.y) / result.gridSpacing;
+      final double minStepsXDouble = result.centroid.x / result.gridSpacing;
+      final double minStepsYDouble = result.centroid.y / result.gridSpacing;
+
+      if (maxStepsXDouble.isFinite && maxStepsYDouble.isFinite && minStepsXDouble.isFinite && minStepsYDouble.isFinite) {
+        final int maxStepsX = maxStepsXDouble.floor().clamp(0, 50);
+        final int maxStepsY = maxStepsYDouble.floor().clamp(0, 50);
+        final int minStepsX = minStepsXDouble.floor().clamp(0, 50);
+        final int minStepsY = minStepsYDouble.floor().clamp(0, 50);
+
+        for (int i = -minStepsX; i <= maxStepsX; i++) {
+          for (int j = -minStepsY; j <= maxStepsY; j++) {
+            if (i == 0 && j == 0) continue; // Skip centroid (already added)
+
+            final double x = result.centroid.x + (i * result.gridSpacing);
+            final double y = result.centroid.y + (j * result.gridSpacing);
+
+            if (x >= 0 && x <= roomWidth && y >= 0 && y <= roomLength) {
+              points.add(Point2D(x, y));
+            }
+          }
+        }
+      }
+    } else {
+      // Generate hexagonal grid
+      final double horizontalSpacing = result.gridSpacing;
+      final double verticalSpacing = result.gridSpacing * sqrt(3) / 2;
+      final double rowOffset = result.gridSpacing / 2;
+
+      final double maxStepsXDouble = (roomWidth - result.centroid.x) / horizontalSpacing;
+      final double maxStepsYDouble = (roomLength - result.centroid.y) / verticalSpacing;
+      final double minStepsXDouble = result.centroid.x / horizontalSpacing;
+      final double minStepsYDouble = result.centroid.y / verticalSpacing;
+
+      if (maxStepsXDouble.isFinite && maxStepsYDouble.isFinite && minStepsXDouble.isFinite && minStepsYDouble.isFinite) {
+        final int maxStepsX = maxStepsXDouble.floor().clamp(0, 50);
+        final int maxStepsY = maxStepsYDouble.floor().clamp(0, 50);
+        final int minStepsX = minStepsXDouble.floor().clamp(0, 50);
+        final int minStepsY = minStepsYDouble.floor().clamp(0, 50);
+
+        for (int rowIndex = -minStepsY; rowIndex <= maxStepsY; rowIndex++) {
+          for (int colIndex = -minStepsX; colIndex <= maxStepsX; colIndex++) {
+            if (rowIndex == 0 && colIndex == 0) continue; // Skip centroid
+            double x = result.centroid.x + (colIndex * horizontalSpacing);
+            final double y = result.centroid.y + (rowIndex * verticalSpacing);
+
+            if (rowIndex % 2 != 0) {
+              x += rowOffset;
+            }
+
+            if (x >= 0 && x <= roomWidth && y >= 0 && y <= roomLength) {
+              points.add(Point2D(x, y));
+            }
+          }
+        }
+      }
+    }
+
+    return points;
+  }
+
+  /// Calculate which points were removed/filtered out
+  List<Point2D> _calculateRemovedPoints(
+    List<Point2D> allPoints,
+    List<Point2D> validPoints,
+  ) {
+    final List<Point2D> removedPoints = <Point2D>[];
+
+    for (Point2D point in allPoints) {
+      final bool isValid = validPoints.any(
+        (Point2D validPos) => (point.x - validPos.x).abs() < 0.001 && (point.y - validPos.y).abs() < 0.001,
+      );
+
+      if (!isValid) {
+        removedPoints.add(point);
+      }
+    }
+
+    return removedPoints;
+  }
+}
+
+String _getSpeakerTypeLabel(SpeakerType type) {
+  switch (type) {
+    case SpeakerType.ceiling:
+      return 'Ceiling-mounted';
+    case SpeakerType.pendant:
+      return 'Pendant-mounted';
+  }
+}
+
+String _getCoveragePreferenceLabel(CoveragePreference pref) {
+  switch (pref) {
+    case CoveragePreference.edgeToEdge:
+      return 'Edge to Edge';
+    case CoveragePreference.minimumOverlap:
+      return 'Minimum Overlap (Recommended)';
+    case CoveragePreference.centerToCenter:
+      return 'Center to Center';
+  }
+}
+
+String _getLayoutPatternLabel(LayoutPattern pattern) {
+  switch (pattern) {
+    case LayoutPattern.square:
+      return 'Square Grid';
+    case LayoutPattern.hexagonal:
+      return 'Hexagonal Grid';
+  }
 }

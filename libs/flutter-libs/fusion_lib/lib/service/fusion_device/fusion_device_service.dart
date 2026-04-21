@@ -2,11 +2,31 @@ import 'dart:developer' show log;
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:equatable/equatable.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
-class FirmwareUpdateCheckResult {
+class FirmwareDeviceRebootStatus extends Equatable {
+  final String serialNumber;
+  final String currentBundleVersion;
+  final String status;
+  final String currentState;
+
+  const FirmwareDeviceRebootStatus({
+    required this.serialNumber,
+    required this.currentBundleVersion,
+    required this.status,
+    required this.currentState,
+  });
+
+  @override
+  List<Object?> get props => [serialNumber, currentBundleVersion, status, currentState];
+
+  bool get isSUCCESS => status.toUpperCase() == 'SUCCESS';
+}
+
+class FirmwareUpdateCheckResult extends Equatable {
   final bool updateAvailable;
   final bool appUpdateRequired;
   final String? bundleId;
@@ -33,9 +53,23 @@ class FirmwareUpdateCheckResult {
       minDesktopAppVersion: json['min_desktop_app_version'] as String?,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'update_available': updateAvailable,
+      'app_update_required': appUpdateRequired,
+      'bundle_id': bundleId,
+      'version': version,
+      'release_notes': releaseNotes,
+      'min_desktop_app_version': minDesktopAppVersion,
+    };
+  }
+
+  @override
+  List<Object?> get props => [updateAvailable, appUpdateRequired, bundleId, version, releaseNotes, minDesktopAppVersion];
 }
 
-class BundleDownloadUrlResult {
+class BundleDownloadUrlResult extends Equatable {
   final String downloadUrl;
   final String checksum;
 
@@ -44,42 +78,35 @@ class BundleDownloadUrlResult {
     required this.checksum,
   });
 
+  @override
+  List<Object?> get props => [downloadUrl, checksum];
+
   factory BundleDownloadUrlResult.fromJson(Map<String, dynamic> json) {
     return BundleDownloadUrlResult(
       downloadUrl: json['download_url'] as String? ?? '',
       checksum: json['checksum'] as String? ?? '',
     );
   }
-}
 
-/// Cloud-side registration + claim status for a single device.
-class CloudDeviceStatus {
-  final String id;
-  final bool registered;
-  final bool claimed;
-
-  const CloudDeviceStatus({
-    required this.id,
-    required this.registered,
-    required this.claimed,
-  });
-
-  factory CloudDeviceStatus.fromJson(Map<String, dynamic> json) {
-    return CloudDeviceStatus(
-      id: json['id'] as String? ?? '',
-      registered: json['registered'] as bool? ?? false,
-      claimed: json['claimed'] as bool? ?? false,
-    );
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'download_url': downloadUrl,
+      'checksum': checksum,
+    };
   }
+
+  String get downloadFileName => Uri.parse(downloadUrl).pathSegments.last;
 }
 
 class DeviceBulkRegisterResult {
   final bool success;
+  final String certificate;
   final String deviceId;
   final String error;
 
   const DeviceBulkRegisterResult({
     required this.success,
+    required this.certificate,
     required this.deviceId,
     required this.error,
   });
@@ -87,6 +114,7 @@ class DeviceBulkRegisterResult {
   factory DeviceBulkRegisterResult.fromJson(Map<String, dynamic> json) {
     return DeviceBulkRegisterResult(
       success: json['success'] as bool? ?? false,
+      certificate: json['certificate'] as String? ?? '',
       deviceId: json['device_id'] as String? ?? '',
       error: json['error'] as String? ?? '',
     );
@@ -182,7 +210,7 @@ class FusionDeviceService {
   Future<ResponseCallback<FirmwareUpdateCheckResult>> checkForFirmwareUpdates({
     required String currentFirmwareVersion,
     required String currentDesktopAppVersion,
-    String? channel,
+    required String jenkinsBuildNumber,
   }) async {
     try {
       final ResponseCallback<FirmwareUpdateCheckResult> response = await networkClient.get<FirmwareUpdateCheckResult>(
@@ -190,7 +218,6 @@ class FusionDeviceService {
         urlParameters: <String, dynamic>{
           'current_firmware_version': currentFirmwareVersion,
           'current_desktop_app_version': currentDesktopAppVersion,
-          if (channel != null && channel.trim().isNotEmpty) 'channel': channel.trim(),
         },
         fromJson: (dynamic json) {
           if (json is! Map<String, dynamic>) {
@@ -205,16 +232,15 @@ class FusionDeviceService {
     }
   }
 
-  Future<ResponseCallback<BundleDownloadUrlResult>> requestFirmwareBundleDownloadUrl({required String bundleId}) async {
+  Future<ResponseCallback<BundleDownloadUrlResult>> requestFirmwareBundleDownloadUrl({required String version}) async {
     try {
-      final String trimmedBundleId = bundleId.trim();
-      if (trimmedBundleId.isEmpty) {
+      if (version.isEmpty) {
         return ResponseCallback<BundleDownloadUrlResult>.failure('bundleId is required');
       }
 
       final ResponseCallback<BundleDownloadUrlResult> response = await networkClient.get<BundleDownloadUrlResult>(
         api: FusionApiEndpoint.firmwareBundleDownloadUrl,
-        additionalPath: '$trimmedBundleId/request-download-url',
+        additionalPath: '$version/request-download-url',
         fromJson: (dynamic json) {
           if (json is! Map<String, dynamic>) {
             throw Exception('Unexpected firmware bundle download response format.');
@@ -337,56 +363,52 @@ class FusionDeviceService {
     }
   }
 
-  Future<ResponseCallback<void>> sendStartFirmwareUpdateEvent() async {
+  Future<ResponseCallback<void>> sendStartFirmwareUpdateEvent({required String bundleId}) async {
     try {
       final ResponseCallback<void> response = await networkClient.sendWebSocketMessage<void>(<String, dynamic>{
-        'id': 'sw-update-001',
-        'version': 1,
-        'type': 'start_update',
+        'id': bundleId,
+        "version": 1,
+        "type": "start_update",
       });
+      log("SOFTWARE UPDATE START EVENT TRGIGERED => id: $bundleId, response: ${response.success}, message: ${response.message}");
       return response;
     } catch (e) {
       return ResponseCallback<void>.failure(e.toString());
     }
   }
 
-  Stream<ResponseCallback<FirmwareUpdateProgressEvent>> firmwareUpdateProgressEvents() async* {
-    await for (final ResponseCallback<dynamic> message in networkClient.webSocketMessages) {
-      log('Firmware WS message received: success=${message.success}');
+  Future<ResponseCallback<void>> sendRebootStartupdateEvent({required String bundleId}) async {
+    try {
+      final ResponseCallback<void> response = await networkClient.sendWebSocketMessage<void>(<String, dynamic>{
+        'id': bundleId,
+        "version": 1,
+        "type": "sw_update_info",
+      });
+      log("SOFTWARE REBOOT START EVENT TRGIGERED => id: $bundleId, response: ${response.success}, message: ${response.message}");
+      return response;
+    } catch (e) {
+      return ResponseCallback<void>.failure(e.toString());
+    }
+  }
 
+  Stream<ResponseCallback<FirmwareUpdateProgressEvent>> listenFirmwareUpdateProgressEvents() async* {
+    await for (final ResponseCallback<dynamic> message in networkClient.webSocketMessages) {
       if (!message.success || message.data == null) {
-        log('Firmware WS invalid message: ${message.message}');
         yield ResponseCallback<FirmwareUpdateProgressEvent>.failure(message.message);
         continue;
       }
 
       final dynamic payload = message.data;
       if (payload is! Map<String, dynamic>) {
-        log('Firmware WS ignored non-map payload: ${payload.runtimeType}');
         continue;
       }
 
       final FirmwareUpdateProgressEvent event = FirmwareUpdateProgressEvent.fromJson(payload);
       if (!event.isUpdateProgress) {
-        log('Firmware WS ignored event type=${event.type}');
         continue;
       }
 
-      log('Firmware WS progress event: devices=${event.devicesBySerial.length}, status=${event.status}, code=${event.code}');
-      for (final MapEntry<String, FirmwareUpdateDeviceProgress> entry in event.devicesBySerial.entries) {
-        final FirmwareUpdateDeviceProgress device = entry.value;
-        log('serial=${entry.key}, state=${device.updateState}, step=${device.step}, progress=${device.progress}, task=${device.currentTask}');
-      }
-
       yield ResponseCallback<FirmwareUpdateProgressEvent>.success(event);
-    }
-  }
-
-  Future<ResponseCallback<void>> disconnectFirmwareUpdateWebSocket() async {
-    try {
-      return await networkClient.disconnectWebSocket<void>();
-    } catch (e) {
-      return ResponseCallback<void>.failure(e.toString());
     }
   }
 
@@ -396,18 +418,11 @@ class FusionDeviceService {
     return trimmed.contains(':') ? trimmed : '$trimmed:8080';
   }
 
-  /// Fetches the cloud registration + claim status for all devices belonging
-  /// to the given project from the cloud backend.
-  Future<ResponseCallback<List<CloudDeviceStatus>>> getCloudDevicesStatus({required String projectId}) async {
+  Future<ResponseCallback<void>> disconnectFirmwareUpdateWebSocket() async {
     try {
-      final ResponseCallback<List<CloudDeviceStatus>> response = await networkClient.get(
-        api: FusionApiEndpoint.devicesCloud,
-        urlParameters: <String, dynamic>{'project_id': projectId},
-        fromJson: (dynamic json) => (json as List<dynamic>).whereType<Map<String, dynamic>>().map(CloudDeviceStatus.fromJson).toList(),
-      );
-      return response;
+      return await networkClient.disconnectWebSocket<void>();
     } catch (e) {
-      return ResponseCallback<List<CloudDeviceStatus>>.failure(e.toString());
+      return ResponseCallback<void>.failure(e.toString());
     }
   }
 
@@ -428,40 +443,110 @@ class FusionDeviceService {
     }
   }
 
-  Future<ResponseCallback<List<DeviceBulkRegisterResult>>> registerDevicesBulk({required List<FusionNetworkDevice> devices, required String projectId}) async {
+  Future<ResponseCallback<List<DeviceBulkRegisterResult>>> registerDevicesBulk({
+    required String vip,
+    required List<FusionNetworkDevice> devices,
+    required String projectId,
+  }) async {
     try {
+      Map<String, dynamic> deviceIdToCsr = <String, dynamic>{};
+      try {
+        for (final FusionNetworkDevice device in devices) {
+          final ResponseCallback<dynamic> response = await networkClient.get(
+            api: FusionApiEndpoint.fusionDevice,
+            baseUrlToOverride: vip,
+            isSecure: false,
+            additionalPath: "${device.id}/csr",
+          );
+
+          log("CSR RESPONSE:::${response.data.toString()}");
+          if (response.success && response.data != null) {
+            deviceIdToCsr[device.id] = response.data;
+          }
+        }
+      } catch (e) {
+        log("Failed to fetch CSR for devices: ${e.toString()}");
+      }
+
       final ResponseCallback<dynamic> response = await networkClient.post(
         api: FusionApiEndpoint.devicesBulkCloud,
         data: <String, dynamic>{
           'devices': [
             ...devices.map(
-              (FusionNetworkDevice device) => <String, dynamic>{
-                'client_device_id': device.id,
-                'csr': '', // TODO: SHARATH
-                'device_location': device.location,
-                'device_name': device.name,
-                'device_zone': device.location,
-                // 'firmware_version': device.firmwareVersion, // TODO: check this field
-                'is_primary': device.isPrimary,
-                'mac_address': device.macAddress,
-                'model_name': device.modelName,
-                'project_id': projectId,
-                'serial_number': device.serialNumber,
+              (FusionNetworkDevice device) {
+                return <String, dynamic>{
+                  'client_device_id': device.id,
+                  'csr': deviceIdToCsr[device.id],
+                  'device_location': device.location,
+                  'device_name': device.name,
+                  'device_zone': device.location,
+                  'is_primary': device.isPrimary,
+                  'mac_address': device.macAddress,
+                  'model_name': device.modelName,
+                  'project_id': projectId,
+                  'serial_number': device.serialNumber,
+                };
               },
             ),
           ],
         },
       );
+
       if (response.success) {
         final Map<String, dynamic> data = (response.data as Map<String, dynamic>?) ?? <String, dynamic>{};
         final List<dynamic> resultsJson = (data['results'] as List<dynamic>?) ?? <dynamic>[];
+        log("Bulk Register Response::: ${data['results']}");
+
         final List<DeviceBulkRegisterResult> results = resultsJson.whereType<Map<String, dynamic>>().map(DeviceBulkRegisterResult.fromJson).toList();
+        final certificatesRegisterdResp = await registerCsrInFusionDevice(vip: vip, devices: devices, results: results);
+
+        if (!certificatesRegisterdResp.success) {
+          return ResponseCallback<List<DeviceBulkRegisterResult>>.failure('Failed to register device certificates in Fusion');
+        }
         return ResponseCallback<List<DeviceBulkRegisterResult>>.success(results);
       } else {
         return ResponseCallback<List<DeviceBulkRegisterResult>>.failure(response.message);
       }
     } catch (e) {
       return ResponseCallback<List<DeviceBulkRegisterResult>>.failure(e.toString());
+    }
+  }
+
+  Future<ResponseCallback<List<bool>>> registerCsrInFusionDevice({
+    required String vip,
+    required List<FusionNetworkDevice> devices,
+    required List<DeviceBulkRegisterResult> results,
+  }) async {
+    final List<bool> registrationResults = [];
+
+    try {
+      for (final DeviceBulkRegisterResult result in results) {
+        final fusionDeviceId = devices.singleWhereOrNull((element) => element.serialNumber == result.deviceId)?.id;
+
+        if (fusionDeviceId == null) {
+          registrationResults.add(false);
+          continue;
+        }
+
+        final ResponseCallback<dynamic> response = await networkClient.post(
+          api: FusionApiEndpoint.fusionDevice,
+          baseUrlToOverride: vip,
+          isSecure: false,
+          additionalPath: "$fusionDeviceId/certificate",
+          data: result.certificate,
+        );
+
+        log("CSR RESPONSE::: ${result.certificate} === ${response.data.toString()}");
+        if (response.success) {
+          registrationResults.add(true);
+        } else {
+          registrationResults.add(false);
+        }
+      }
+
+      return ResponseCallback<List<bool>>.success(registrationResults);
+    } catch (e) {
+      return ResponseCallback<List<bool>>.failure(e.toString());
     }
   }
 

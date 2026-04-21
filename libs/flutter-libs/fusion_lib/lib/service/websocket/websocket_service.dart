@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:developer';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-
+import 'package:web_socket_channel/status.dart' as status;
 
 class WebSocketService {
   // Singleton pattern to ensure one instance across the app
@@ -13,116 +11,54 @@ class WebSocketService {
 
   WebSocketChannel? _channel;
 
-
-
-  String _host = '';
-  String get host => _host;
-
-  /// Calculates the correct WebSocket URL based on the platform.
-  Uri get _url {
-    return Uri.parse('ws://$_host:8080/ws');
-  }
-
+  // Broadcaster to allow multiple listeners
   final StreamController _controller = StreamController.broadcast();
   Stream get stream => _controller.stream;
 
-
-  final _connectionStatusController = StreamController<bool>.broadcast();
-  Stream<bool> get connectionStatusStream => _connectionStatusController.stream;
-
   bool _isConnected = false;
   bool get isConnected => _isConnected;
-  bool _isConnecting = false;
-  bool _shouldReconnect = true;
 
-  void subscribe(String key){
-    print('Subscribing to Fusion WebSocket: $key');
-    _channel!.sink.add(jsonEncode({
-      "id": key,
-      "version": 1,
-      "type": "config"
-    }
-    ));
-  }
-
-
-
-  Future<void> connect(String? host) async {
-    if (_isConnected || _isConnecting) return;
-    _isConnecting = true;
-    _shouldReconnect = true;
-
-    if (host != null) {
-      _host = host;
-    }
+  void connect(String url) {
+    if (_isConnected) return;
 
     try {
-      print('Connecting to Fusion WebSocket URI: $_url');
-      _channel = WebSocketChannel.connect(_url);
-
-      // Wait for the connection to be established
-      await _channel!.ready;
-
+      _channel = WebSocketChannel.connect(Uri.parse(url));
       _isConnected = true;
-      _isConnecting = false;
-
-      _connectionStatusController.add(true);
-      print('Connected to Fusion WebSocket: $host');
 
       _channel!.stream.listen(
-            (message) {
-          print("Fusion Web Service : Received :");
+        (message) {
           _controller.add(message);
         },
         onDone: () {
           _isConnected = false;
-
-          _connectionStatusController.add(false);
-          print('Fusion WebSocket connection closed');
-          // Reconnection delay if intentional
-          if (_shouldReconnect) {
-            Future.delayed(const Duration(seconds: 5), () => connect(host!));
-          }
+          debugPrint("Disconnected from server.");
         },
         onError: (error) {
           _isConnected = false;
-          _connectionStatusController.add(false);
-          print('Fusion WebSocket error: $error');
-          // Reconnection is handled by onDone usually, but sometimes onError
-          // fires without onDone.
+          debugPrint("WS Error: $error");
         },
       );
     } catch (e) {
       _isConnected = false;
-      _isConnecting = false;
-      _connectionStatusController.add(false);
-      print('Failed to connect to Fusion WebSocket: $e');
-      // Retry after delay if initial connection fails
-      if (_shouldReconnect) {
-        Future.delayed(const Duration(seconds: 5), () => connect(host!));
-      }
+      debugPrint("Connection failed: $e");
     }
   }
 
-
   void sendMessage(dynamic message) {
     if (_channel != null && _isConnected) {
-      debugPrint("Send message: $message");
       _channel!.sink.add(message);
     } else {
       debugPrint("Cannot send message: Not connected.");
     }
   }
+
   void disconnect() {
-    _shouldReconnect = false;
-    _channel?.sink.close();
+    _channel?.sink.close(status.normalClosure);
     _isConnected = false;
-    _isConnecting = false;
-    _connectionStatusController.add(false);
   }
+
   void dispose() {
-    _channel?.sink.close();
     _controller.close();
-    _connectionStatusController.close();
+    disconnect();
   }
 }

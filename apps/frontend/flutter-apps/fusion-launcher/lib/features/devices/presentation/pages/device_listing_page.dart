@@ -26,12 +26,12 @@ class _DeviceListTabState extends State<DeviceListTab> {
   @override
   void initState() {
     super.initState();
-    serviceLocator<MeterDataViewModel>().registerObserver();
+    serviceLocator<MeterDataViewModel>().registerObserver(this);
   }
 
   @override
   void dispose() {
-    serviceLocator<MeterDataViewModel>().unregisterObserver();
+    serviceLocator<MeterDataViewModel>().unregisterObserver(this);
     super.dispose();
   }
 
@@ -210,7 +210,12 @@ class _DeviceListTabState extends State<DeviceListTab> {
                   height: 26,
                   borderRadius: 6,
                   onTap: () => _showStandbyConfirmation(context, device),
-                  child: FusionImage.asset(AssetIcons.standbyIcon, height: 12, width: 12, assetColor: context.colorScheme.iconWhite),
+                  child: FusionImageAuto(
+                    path: AssetIcons.standbyIcon,
+                    height: 12,
+                    width: 12,
+                    color: context.colorScheme.iconWhite,
+                  ),
                 ),
                 const SizedBox(width: 10),
               ],
@@ -221,7 +226,12 @@ class _DeviceListTabState extends State<DeviceListTab> {
                   height: 26,
                   borderRadius: 6,
                   onTap: () => _showRebootConfirmation(context, device),
-                  child: FusionImage.asset(AssetIcons.rebootIcon, height: 12, width: 12, assetColor: context.colorScheme.iconWhite),
+                  child: FusionImageAuto(
+                    path: AssetIcons.rebootIcon,
+                    height: 12,
+                    width: 12,
+                    color: context.colorScheme.iconWhite,
+                  ),
                 ),
             ],
           ),

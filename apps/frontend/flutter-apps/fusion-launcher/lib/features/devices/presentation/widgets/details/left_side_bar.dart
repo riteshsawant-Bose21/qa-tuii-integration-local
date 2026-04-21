@@ -26,12 +26,12 @@ class _DeviceLeftSideBarState extends State<DeviceLeftSideBar> {
   @override
   void initState() {
     super.initState();
-    serviceLocator<MeterDataViewModel>().registerObserver();
+    serviceLocator<MeterDataViewModel>().registerObserver(this);
   }
 
   @override
   void dispose() {
-    serviceLocator<MeterDataViewModel>().unregisterObserver();
+    serviceLocator<MeterDataViewModel>().unregisterObserver(this);
     super.dispose();
   }
 
@@ -202,9 +202,8 @@ class _DeviceLeftSideBarState extends State<DeviceLeftSideBar> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     alignment: Alignment.center,
-                    child: FusionImage.asset(
-                      widget.device.assetImagePath,
-
+                    child: FusionImageAuto(
+                      path: widget.device.image,
                       height: 64,
                       fit: BoxFit.contain,
                     ), // Placeholder

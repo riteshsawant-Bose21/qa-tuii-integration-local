@@ -5,16 +5,22 @@ import (
 	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/storage/cloudfs"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/validation"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/storage/cloudfs"
 	errorutil "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"go.uber.org/zap"
 )
 
+// SourceService defines the interface for source operations.
+type SourceService interface {
+	GetAllSources(ctx context.Context, logger *zap.Logger) ([]types.SourceItemResponse, error)
+}
+
 // Service provides methods to interact with the product database and sync operations.
 type Service struct {
 	dbService     DatabaseService
+	sourceService SourceService
 	version       string
 	validator     *validation.FieldValidator
 	validationCfg *config.Validation
@@ -58,9 +64,12 @@ type DatabaseService interface {
 }
 
 // NewService creates a new product service.
-func NewService(dbService DatabaseService, version string, validationCfg *config.Validation, processingCfg *config.Processing, s3Client *cloudfs.S3, logger *zap.Logger) *Service {
+func NewService(dbService DatabaseService, sourceService SourceService, version string, validationCfg *config.Validation, processingCfg *config.Processing, s3Client *cloudfs.S3, logger *zap.Logger) *Service {
 	if dbService == nil {
 		panic("dbService cannot be nil")
+	}
+	if sourceService == nil {
+		panic("sourceService cannot be nil")
 	}
 	if validationCfg == nil {
 		panic("validationCfg cannot be nil")
@@ -77,6 +86,7 @@ func NewService(dbService DatabaseService, version string, validationCfg *config
 
 	return &Service{
 		dbService:     dbService,
+		sourceService: sourceService,
 		version:       version,
 		validator:     validation.NewFieldValidator(),
 		validationCfg: validationCfg,

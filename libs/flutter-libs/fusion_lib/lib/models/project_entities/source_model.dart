@@ -15,7 +15,8 @@ enum SourceConnectionType {
   rca("RCA"),
   endpoint("Endpoint"),
   xlr("XLR"),
-  hdmi("HDMI");
+  hdmi("HDMI"),
+  messagePlayer("Message Player");
 
   const SourceConnectionType(this.displayName);
 
@@ -43,6 +44,8 @@ extension SourceConnectionTypeExtension on SourceConnectionType {
         return 'analog';
       case SourceConnectionType.hdmi:
         return 'hdmi';
+      case SourceConnectionType.messagePlayer:
+        return 'playback';
     }
   }
 }
@@ -54,7 +57,6 @@ class Source extends HardwareComponent {
   String? ipAddress; //for AES67 sources
   final String sku;
   final PagingSourceType? pagingSourceType; // Only applicable for paging sources
-  final String? streamID; // for AES67 sources, to identify the stream to connect to.
 
   /// Constructor for SourceEntity
   Source({
@@ -66,7 +68,7 @@ class Source extends HardwareComponent {
     super.zAxis,
     required this.type,
     required this.connectionType,
-    required super.assetImagePath,
+    required super.image,
     this.ipAddress,
     List<int>? portNumbers,
     required this.sku,
@@ -80,7 +82,6 @@ class Source extends HardwareComponent {
     super.outputPortsData,
     required super.addedFromBuildingPage,
     this.pagingSourceType,
-    this.streamID,
   }) : super(
          hardwareName: hardwareName ?? name,
          id: id ?? "SOURCE${FusionUtils.shortStringUUID()}",
@@ -95,7 +96,7 @@ class Source extends HardwareComponent {
     double? zAxis,
     SourceType? type,
     SourceConnectionType? connectionType,
-    String? assetImagePath,
+    String? image,
     LocationModel? locationEntity,
     String? ipAddress,
     String? sku,
@@ -108,7 +109,6 @@ class Source extends HardwareComponent {
     List<PortData>? outputPortsData,
     bool? addedFromBuildingPage,
     PagingSourceType? pagingSourceType,
-    String? streamID,
   }) {
     return Source(
       id: id ?? this.id,
@@ -118,7 +118,7 @@ class Source extends HardwareComponent {
       zAxis: zAxis ?? this.zAxis,
       type: type ?? this.type,
       connectionType: connectionType ?? this.connectionType,
-      assetImagePath: assetImagePath ?? this.assetImagePath,
+      image: image ?? this.image,
       locationEntity: locationEntity ?? this.locationEntity,
       ipAddress: ipAddress ?? this.ipAddress,
       sku: sku ?? this.sku,
@@ -131,7 +131,6 @@ class Source extends HardwareComponent {
       addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
       equipmentLocationPosition: equipmentLocationPosition ?? this.equipmentLocationPosition,
       pagingSourceType: pagingSourceType ?? this.pagingSourceType,
-      streamID: streamID ?? this.streamID,
     );
   }
 
@@ -151,7 +150,8 @@ class Source extends HardwareComponent {
           (e) => e.name == json['type'],
         ), //throw FormatException('Unknown SourceConnectionType in JSON: ${json['connectionType']}'),
       ),
-      assetImagePath: json['assetImagePath'] as String,
+      image:
+          DeserializationUtil.stringDeserializer.deserialize(json['image']) ?? DeserializationUtil.stringDeserializer.deserialize(json['assetImagePath']) ?? '',
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
       ipAddress: json['ipAddress'] as String?,
       sku: json['sku'] as String? ?? '',
@@ -171,7 +171,6 @@ class Source extends HardwareComponent {
               orElse: () => PagingSourceType.messagePlayer,
             )
           : null,
-      streamID: json['streamID'] as String?,
     );
   }
 
@@ -183,7 +182,7 @@ class Source extends HardwareComponent {
       'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
       'type': type.name,
       'connectionType': connectionType.name,
-      'assetImagePath': assetImagePath,
+      'image': image,
       'componentType': 'source',
       'locationEntity': locationEntity.toJson(),
       'ipAddress': ipAddress,
@@ -198,7 +197,6 @@ class Source extends HardwareComponent {
       'addedFromBuildingPage': addedFromBuildingPage,
       'equipmentLocationPosition': equipmentLocationPosition,
       'pagingSourceType': pagingSourceType?.name,
-      'streamID': streamID,
     };
   }
 }

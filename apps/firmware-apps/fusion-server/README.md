@@ -18,9 +18,7 @@ Fusion Server can be run:
 
 ## High Availability
 - **Memberlist** gossip-based cluster membership
-- **HAProxy** load balancing  
 - **Keepalived / VRRP** for Virtual IP failover (`192.168.2.100` by default)
-- Automatic backend registration and health checks
 - Seamless failover and state recovery
 
 ## Audio & PAVA Messaging
@@ -58,7 +56,7 @@ Fusion Server can be run:
 ## Networking Interfaces
 - REST API (primary control interface)
 - WebSocket streaming endpoint (`/ws`)
-- UDP control channel on port `7947`
+- UDP control channel on port `7947` supporting `get`, `put`, and `patch`
 - Bluetooth Low Energy (BLE) GATT service for mobile provisioning  
   - Service ID: `B053`  
   - Characteristic ID: `AD10`
@@ -105,7 +103,6 @@ Fusion Server can be run:
 +-------------------------------------------+
 |       HA Layer (Multipass Deployments)    |
 | - Keepalived (VRRP) for VIP               |
-| - HAProxy load balancing                  |
 +-------------------------------------------+
 ```
 
@@ -126,7 +123,7 @@ Run:
 ```
 
 Local mode:
-- Disables HAProxy / Keepalived
+- Disables Keepalived / VIP management
 - Memberlist runs as a 1‑node cluster
 - Enables BLE (Fusion Mini)
 - Provides the full REST API

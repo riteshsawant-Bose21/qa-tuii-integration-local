@@ -33,6 +33,8 @@ class SnapshotList extends StatelessWidget {
   final Function(String sceneId)? onDragStarted;
   final VoidCallback? onDragEnd;
   final String? draggingSnapshotId;
+  final bool isInControlMode;
+  final void Function(String sceneId)? onSnapshotRecall;
   final void Function(String value, SnapshotsModel newSnapshot)? onRenameSave;
 
   const SnapshotList({
@@ -47,6 +49,8 @@ class SnapshotList extends StatelessWidget {
     this.onDragStarted,
     this.onDragEnd,
     this.draggingSnapshotId,
+    this.isInControlMode = false,
+    this.onSnapshotRecall,
     this.onRenameSave,
   });
 
@@ -163,6 +167,8 @@ class SnapshotList extends StatelessWidget {
               snapShotData: snapShotData,
               isDragging: isDragging,
               isSelected: selectedSnapshotId == snapShotData.id,
+              isInControlMode: isInControlMode,
+              onSnapshotRecall: onSnapshotRecall != null ? () => onSnapshotRecall!(snapShotData.id) : null,
               onRenameSave: (String value, SnapshotsModel newSnapshot) {
                 if (value.isNotEmpty) {
                   if (onRenameSave != null) {

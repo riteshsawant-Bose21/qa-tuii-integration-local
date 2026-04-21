@@ -11,7 +11,7 @@ import 'package:path_provider/path_provider.dart';
 /// ### Folder structure
 /// ```
 /// <appSupport>/
-///   app_cache/
+///   AppCache/
 ///     products/
 ///       products_catalog.json
 ///     sessions/
@@ -45,7 +45,7 @@ class AppCacheService {
 
   // ── factories ─────────────────────────────────────────────────────────────
 
-  /// Creates (or opens) the root `app_cache/` directory inside the app
+  /// Creates (or opens) the root `AppCache/` directory inside the app
   /// support directory. Call this once in your DI/service-locator setup
   /// and register the result as a singleton.
   ///
@@ -55,10 +55,12 @@ class AppCacheService {
   /// ```
   static Future<AppCacheService> root() async {
     final appSupport = await getApplicationSupportDirectory();
-    final dir = Directory(p.join(appSupport.path, 'app_cache'));
+    final dir = Directory(p.join(appSupport.path, 'AppCache'));
     await dir.create(recursive: true);
     return AppCacheService._(dir);
   }
+
+  
 
   /// Returns a child [AppCacheService] scoped to `<current>/<name>/`.
   /// The folder is created automatically if it does not exist.
@@ -67,7 +69,7 @@ class AppCacheService {
   /// Nesting is supported:
   /// ```dart
   /// final deep = await cache.scope('products').then((c) => c.scope('images'));
-  /// // resolves to: app_cache/products/images/
+  /// // resolves to: AppCache/products/images/
   /// ```
   Future<AppCacheService> scope(String name) async {
     assert(

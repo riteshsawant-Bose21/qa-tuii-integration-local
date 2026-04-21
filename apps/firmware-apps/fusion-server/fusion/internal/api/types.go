@@ -161,10 +161,11 @@ type VersionUpdate struct {
 // This separation keeps replication simple and Lamport-correct, while PATCH
 // provides advanced local update semantics.
 type ConfigUpdate struct {
-	Hash    string         `json:"hash"`
-	Data    map[string]any `json:"data"`
-	Version Version        `json:"version"`
-	Clear   bool           `json:"clear,omitempty"`
+	Hash         string         `json:"hash"`
+	Data         map[string]any `json:"data"`
+	ObserverData map[string]any `json:"observer_data,omitempty"`
+	Version      Version        `json:"version"`
+	Clear        bool           `json:"clear,omitempty"`
 }
 
 // ConfigValue represents a key/value pair
@@ -188,8 +189,8 @@ type DeviceInfo struct {
 	FusionMonorepoBranch     string `json:"fusion_monorepo_branch,omitempty"`
 	FusionMonorepoCommitHash string `json:"fusion_monorepo_commit_hash,omitempty"`
 	JenkinsBuildNumber       string `json:"jenkins_build_number,omitempty"`
+	PreReleaseTag            string `json:"pre_release_tag,omitempty"`
 	VrrpPriority             int    `json:"vrrp_priority"`
-
 }
 
 // DevicePatch represents patchable device configuration data.
@@ -313,8 +314,10 @@ type SceneCatalogListResponse struct {
 type TaskType string
 
 const (
-	TaskTypeMessage  TaskType = "message"
-	TaskTypeSnapshot TaskType = "snapshot"
+	TaskTypeMessage       TaskType = "message"
+	TaskTypeSnapshot      TaskType = "snapshot"
+	TaskTypeSceneSnapshot TaskType = "scene_snapshot"
+	TaskTypeSceneActivate TaskType = "scene_activate"
 )
 
 // Task represents a task
@@ -463,11 +466,23 @@ type SoftwareUpdateErrorResponse struct {
 	Message string `json:"message,omitempty"`
 }
 
+// TaskPatchRequest is the HTTP request body for PATCH /tasks/{id}.
+type TaskPatchRequest struct {
+	Description *string          `json:"description,omitempty"`
+	CronExpr    *string          `json:"cron_expr,omitempty"`
+	StartAt     *time.Time       `json:"start_at,omitempty"`
+	EndAt       *time.Time       `json:"end_at,omitempty"`
+	Recurrence  *RecurringWindow `json:"recurrence,omitempty"`
+	Params      map[string]any   `json:"params,omitempty"`
+	Snapshot    *string          `json:"snapshot,omitempty"`
+}
+
 type SoftwareUpdateInfo struct {
 	BuildConfiguration struct {
 		SoftwareUpdateBundleVersion string `json:"FIRMWARE_BUNDLE_VERSION"`
 		FusionMonorepoBranch        string `json:"FUSION_MONOREPO_BRANCH"`
 		FusionMonorepoCommitHash    string `json:"FUSION_MONOREPO_COMMIT_HASH"`
 		JenkinsBuildNumber          string `json:"JENKINS_BUILD_NUMBER"`
+		PreReleaseTag               string `json:"PRE_RELEASE_TAG"`
 	} `json:"build_configuration"`
 }

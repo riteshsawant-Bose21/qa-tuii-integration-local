@@ -85,6 +85,23 @@ func GetJenkinsBuildNumber() string {
 	return fw.BuildConfiguration.JenkinsBuildNumber
 }
 
+func GetPreReleaseTag() string {
+	data, err := os.ReadFile(api.SoftwareUpdateInfoPath)
+	if err != nil {
+		logging.GetLogger().Warn("%s not found.", api.SoftwareUpdateInfoPath)
+		return api.PreReleaseTagUnknown
+	}
+
+	var fw api.SoftwareUpdateInfo
+	err = json.Unmarshal(data, &fw)
+	if err != nil {
+		logging.GetLogger().Warn("Failed to parse software update file")
+		return api.PreReleaseTagUnknown
+	}
+
+	return fw.BuildConfiguration.PreReleaseTag
+}
+
 func GetSerialNumber() string {
 	data, err := os.ReadFile(api.SerialPath)
 	if err != nil {

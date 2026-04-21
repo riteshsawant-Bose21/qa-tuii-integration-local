@@ -8,6 +8,7 @@ import 'package:fusion_launcher/features/wiring_design/algorithm/path_system_sto
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../state/fusion_tool_state.dart';
+import '../../../../state/tools/connection_tool_state.dart';
 import '../mixin/fusion_canvas_interactable_mixin.dart';
 import 'connection_color_util.dart';
 
@@ -57,6 +58,10 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
 
   @override
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter) {
+    final bool isDisconnecting = painter.toolState is ConnectingToolState && (painter.toolState as ConnectingToolState).originalConnection?.id == connection.id;
+    if (isDisconnecting) {
+      return;
+    }
     final bool isSelected = painter.isSelected(id);
     final DateTime startAt = DateTime.now();
     FusionPath? path = pathStorage.getPath(connection, painter);
@@ -66,7 +71,6 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
     List<FusionCanvasPoint> rawPoints = _buildPathPoints(path);
     if (isSelected) {
       final DateTime startTime = DateTime.now();
-      _connectionPaint.color = Colors.blue;
       final FusionToolState toolState = painter.toolState;
       final Set<String> selectedElements = toolState is SelectToolState ? toolState.selectedElementIds : <String>{};
       final List<AxisLock> previousAxisLocks = connection.axisLocks;
@@ -137,9 +141,8 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
         rawPoints = _buildPathPoints(path);
       }
       print("Time taken for axis lock processing: ${DateTime.now().difference(startTime).inMilliseconds} ms");
-    } else {
-      _connectionPaint.color = ConnectionColorUtil.getColorForConnectionType(connection.type);
     }
+    _connectionPaint.color = ConnectionColorUtil.getColorForConnectionType(connection.type);
 
     // Resolve all positions in a single pass to avoid repeated toolState /
     // snapState lookups inside _buildRoundedPath.
@@ -202,6 +205,9 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
 
     canvas.restore();
     if (kDebugMode) drawText(canvas: canvas, text: "${DateTime.now().difference(startAt).inMilliseconds} ms", position: positions.first);
+    if (isSelected) {
+      _drawSelectionHighlight(canvas, positions);
+    }
 
     paintedPath = drawingPath;
   }
@@ -294,6 +300,37 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
     return drawingPath;
   }
 
+  void _drawSelectionHighlight(Canvas canvas, List<Offset> positions) {
+    final Paint highlightPaint =
+        Paint()
+          ..color = Colors.grey
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = _connectionPaint.strokeWidth / 2
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round;
+    final Path highligtedPAth = Path()..addPolygon(positions, false);
+    canvas.drawPath(highligtedPAth, highlightPaint);
+
+    /// Add Circles at vertices
+    for (final Offset position in positions) {
+      canvas.drawCircle(
+        position,
+        6,
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.fill,
+      );
+      canvas.drawCircle(
+        position,
+        6,
+        Paint()
+          ..color = Colors.grey
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+    }
+  }
+
   @override
   bool shouldRepaint(covariant FusionBasePainter oldDelegate) {
     if (oldDelegate is! WiringConnectionPainter) return true;
@@ -308,7 +345,10 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
     final FusionPath? path = fusionPath ?? pathStorage.getPath(connection, painter); //this.fusionPath ??
     if (path == null) return null;
 
-    final List<FusionCanvasPoint> vertices = _buildPathPoints(path);
+    final List<FusionCanvasPoint> vertices =
+        _buildPathPoints(path)
+          ..removeAt(0)
+          ..removeLast();
 
     final double hitThreshold = nonScaling(8, painter);
 

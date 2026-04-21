@@ -329,6 +329,10 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     return projectManager.getAllProcessingBlockData();
   }
 
+  WallControllerConfig get wallControllerConfig {
+    return projectManager.getWallControllerConfig();
+  }
+
   /// Clears the current project selection.
   void closeProject() {
     if (state is ProjectLoaded) {
@@ -346,6 +350,11 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
       emit(ProjectUpdated(projectId: _currentProject!.id));
     }
   }
+  void updateFloorPlan() {
+    if (_currentProject != null) {
+      emit(FloorsUpdated(projectId: _currentProject!.id));
+    }
+  }
 
   void emitVipUpdated(String? vip) {
     emit(VipUpdated(vip: vip));
@@ -355,9 +364,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     emit(TabChanged(tab: tabIndex));
   }
 
-  void emitFloorUpdated() {
-    emit(FloorsUpdated());
-  }
+
 
   void throwError(String message) {
     FusionLogger.log(tag: LogTag.project, message: message);

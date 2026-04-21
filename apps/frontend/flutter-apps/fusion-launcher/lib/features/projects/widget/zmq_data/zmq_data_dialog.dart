@@ -207,7 +207,8 @@ class _BlockTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isSilent = block.value.every((double v) => v <= -100);
+    final bool isSilent = block.value.isEmpty || (block.isFloatType && block.value.every((double v) => v <= -100));
+    final Color color = block.levelColor;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
@@ -215,7 +216,7 @@ class _BlockTile extends StatelessWidget {
           Container(
             width: 6,
             height: 6,
-            decoration: BoxDecoration(color: block.levelColor, shape: BoxShape.circle),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -231,13 +232,16 @@ class _BlockTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Row(
                   children: <Widget>[
-                    Text(
-                      block.meterName,
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 12,
-                        color: Color(0xFFCBD5E0),
-                        fontWeight: FontWeight.w600,
+                    Flexible(
+                      child: Text(
+                        block.meterName,
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 12,
+                          color: Color(0xFFCBD5E0),
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (block.dimensions.isNotEmpty && block.dimensions.first > 1) ...<Widget>[
@@ -254,6 +258,20 @@ class _BlockTile extends StatelessWidget {
                         ),
                       ),
                     ],
+                    if (!block.isFloatType) ...<Widget>[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2D3748),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                        child: Text(
+                          block.valueType,
+                          style: const TextStyle(fontSize: 9, color: Color(0xFF718096), fontFamily: 'monospace'),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ],
@@ -262,9 +280,9 @@ class _BlockTile extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: block.levelColor.withOpacity(isSilent ? 0.08 : 0.15),
+              color: color.withOpacity(isSilent ? 0.08 : 0.15),
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: block.levelColor.withOpacity(isSilent ? 0.2 : 0.4)),
+              border: Border.all(color: color.withOpacity(isSilent ? 0.2 : 0.4)),
             ),
             child: Text(
               block.valueLabel,
@@ -272,7 +290,7 @@ class _BlockTile extends StatelessWidget {
                 fontFamily: 'monospace',
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: block.levelColor,
+                color: color,
               ),
             ),
           ),

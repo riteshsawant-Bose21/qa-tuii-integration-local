@@ -8,9 +8,9 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../core/constants/assets_constants.dart';
 import '../../../core/service_locator.dart';
-import '../../configuration/presentation/viewmodel/project_view_model.dart'
-    show SelectedItemType, ProjectViewModel, ProjectPropertiesViewModel, HardwareViewModel;
+import '../../configuration/presentation/viewmodel/project_view_model.dart' show SelectedItemType, ProjectViewModel, ProjectPropertiesViewModel;
 import '../../processing_block/view/processing_chain_view.dart';
+import '../../speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import '../../zone_functions/source_matrix.dart';
 import '../../zone_functions/source_mix.dart';
 import '../viewModel/source_sets_viewmodel/config_source_sets_viewmodel.dart';
@@ -184,9 +184,9 @@ class _ZoneCardState extends State<ZoneCard> {
               onTap: () {
                 ProcessingChainView.showForZone(context, widget.zoneData);
               },
-              child: FusionImage.asset(
+              child: FusionImageAuto(
+                path: Assets.processingBlocksFilledIcon,
                 semanticId: FusionTestKeys.instance.zonelistprocessingbutton,
-                Assets.processingBlocksFilledWhiteIcon,
                 width: 24,
                 height: 24,
                 fit: BoxFit.contain,
@@ -504,7 +504,7 @@ class _ZoneCardState extends State<ZoneCard> {
                     } else {
                       for (final Source src in availableSources) {
                         final String value = src.id;
-                        final String assetPath = src.assetImagePath;
+                        final String assetPath = src.image;
                         final bool isAlreadyInPriority = prioritySources.contains(value);
                         final bool isCurrentSelection = selectedSourceId == value;
 
@@ -534,8 +534,8 @@ class _ZoneCardState extends State<ZoneCard> {
                                     ),
                                   ),
 
-                                  FusionImage.asset(
-                                    assetPath,
+                                  FusionImageAuto(
+                                    path: assetPath,
                                     width: 14,
                                     height: 14,
                                     fit: BoxFit.contain,
@@ -666,11 +666,11 @@ class _ZoneCardState extends State<ZoneCard> {
                         );
                         setState(() {});
                       },
-                      child: FusionImage.asset(
-                        Assets.deleteIcon,
+                      child: FusionImageAuto(
+                        path: Assets.deleteIcon,
                         width: 17,
                         height: 17,
-                        assetColor: context.colorScheme.primaryWhite,
+                        color: context.colorScheme.primaryWhite,
                       ),
                     )
                     : null,
@@ -819,13 +819,13 @@ class _ZoneCardState extends State<ZoneCard> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    FusionImage.asset(
+                    FusionImageAuto(
+                      path: Assets.configurationIcon,
                       semanticId: FusionTestKeys.instance.functionselecticon,
-                      Assets.configurationIcon,
                       width: 24,
                       height: 24,
                       fit: BoxFit.contain,
-                      assetColor: context.colorScheme.primaryWhite,
+                      color: context.colorScheme.primaryWhite,
                     ),
                   ],
                 ),
@@ -1278,12 +1278,7 @@ class _ZoneCardState extends State<ZoneCard> {
   Widget _buildCircuitCard({required int index, required CircuitModel circuitData, required List<Speaker> speakersList}) {
     final bool isThisCircuitHovered = _hoveredCircuitIndex == index;
 
-    final String assetImagePath =
-        serviceLocator<ProjectViewModel>().getHardwareImage(
-          productId: speakersList.isNotEmpty ? speakersList.first.productId ?? 0 : 0,
-          currentImagePath: speakersList.isNotEmpty ? speakersList.first.assetImagePath : '',
-        ) ??
-        "";
+    final String assetImagePath = serviceLocator<ProductQueryViewModel>().getProductImage(speakersList.firstOrNull?.productId) ?? "";
 
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
@@ -1299,10 +1294,10 @@ class _ZoneCardState extends State<ZoneCard> {
         margin: const EdgeInsets.only(bottom: 4, top: 4, left: 10),
         child: Row(
           children: <Widget>[
-            FusionImage.asset(
+            FusionImageAuto(
+              path: assetImagePath,
               semanticId: "${FusionTestKeys.instance.zonecircuititmimg}_${widget.index}",
               // speakersList.isNotEmpty ? speakersList.first.assetImagePath : "",
-              assetImagePath,
               width: 24,
               height: 24,
               fit: BoxFit.contain,
@@ -1320,12 +1315,12 @@ class _ZoneCardState extends State<ZoneCard> {
               onTap: () {
                 ProcessingChainView.showForCircuit(context, circuitData);
               },
-              child: FusionImage.asset(
+              child: FusionImageAuto(
+                path: Assets.processingBlocksFilledIcon,
                 semanticId: FusionTestKeys.instance.zonecircuititmimg2,
-                Assets.processingBlocksFilledIcon,
                 width: 24,
                 height: 24,
-                assetColor: context.colorScheme.primaryWhite,
+                color: context.colorScheme.primaryWhite,
                 fit: BoxFit.contain,
               ),
             ),

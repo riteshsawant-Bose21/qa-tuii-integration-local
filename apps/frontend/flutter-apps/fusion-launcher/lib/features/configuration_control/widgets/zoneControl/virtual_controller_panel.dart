@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/controller/controller_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Panel displaying the virtual controller emulator
@@ -34,7 +35,7 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           /// Header
-          const PanelSectionHeader(title: 'VIRTUAL CONTROLLER'),
+          PanelSectionHeader(semanticId: FusionTestKeys.instance.zoneControlTabVirtualControllerHeader, title: 'VIRTUAL CONTROLLER'),
 
           /// Content
           Expanded(
@@ -71,6 +72,7 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
           zone = WallZone(
             id: id,
             name: item.name,
+            functionId: item.functionId,
             subZones: <WallSubZone>[],
             sources: item.sources ?? <WallZoneSource>[],
             gain: item.gain,

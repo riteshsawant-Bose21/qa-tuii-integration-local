@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/assets/asset_svg.dart';
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../../speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'circuit_device_widget.dart';
 import 'create_new_location_widget.dart';
 import 'expandable_sub_zone_widgets.dart';
@@ -371,12 +372,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                                     deviceId: deviceId,
                                     circuitModel: circuitData,
                                     circuitDeviceName: circuitData.name,
-                                    assetImagePath:
-                                        serviceLocator<ProjectViewModel>().getHardwareImage(
-                                          productId: speakers.isNotEmpty ? speakers.first.productId ?? 0 : 0,
-                                          currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
-                                        ) ??
-                                        "",
+                                    assetImagePath: serviceLocator<ProductQueryViewModel>().getProductImage(speakers.firstOrNull?.productId) ?? "",
                                     location: location,
                                     speakers: speakers,
                                     projectViewModel: _projectViewModel,
@@ -406,12 +402,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                                       deviceId: deviceId,
                                       circuitModel: circuitData,
                                       circuitDeviceName: circuitData.name,
-                                      assetImagePath:
-                                          serviceLocator<ProjectViewModel>().getHardwareImage(
-                                            productId: speakers.isNotEmpty ? speakers.first.productId ?? 0 : 0,
-                                            currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
-                                          ) ??
-                                          "",
+                                      assetImagePath: serviceLocator<ProductQueryViewModel>().getProductImage(speakers.firstOrNull?.productId) ?? "",
                                       location: location,
                                       speakers: speakers,
                                       projectViewModel: _projectViewModel,
@@ -433,12 +424,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                               deviceId: deviceId,
                               circuitModel: circuitData,
                               circuitDeviceName: circuitData.name,
-                              assetImagePath:
-                                  serviceLocator<ProjectViewModel>().getHardwareImage(
-                                    productId: speakers.isNotEmpty ? speakers.first.productId ?? 0 : 0,
-                                    currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
-                                  ) ??
-                                  "",
+                              assetImagePath: serviceLocator<ProductQueryViewModel>().getProductImage(speakers.firstOrNull?.productId) ?? "",
                               location: location,
                               speakers: speakers,
                               projectViewModel: _projectViewModel,
@@ -1192,10 +1178,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               Expanded(
                 child: FusionAppText(
                   semanticId: "floor_name",
-                  text:
-                      area.name.isNotEmpty
-                          ? "${floorName ?? floorData?.name ?? ''}/${area.name}"
-                          : 'Unnamed Area',
+                  text: area.name.isNotEmpty ? "${floorName ?? floorData?.name ?? ''}/${area.name}" : 'Unnamed Area',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w500,
                     fontSize: 10,
