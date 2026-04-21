@@ -47,7 +47,7 @@ class ProfileScreen extends StatelessWidget {
       bottom: false,
       child: Scaffold(
         backgroundColor: context.colorScheme.primaryBlack,
-        appBar: CommonAppBar(title: 'Profile'),
+        appBar: CommonMobileAppBar(title: 'Profile'),
         body: Column(
           children: [
             SizedBox(height: 20,),

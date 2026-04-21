@@ -387,6 +387,9 @@ func (d *ClusterDelegate) handleSoftwareUpdateAvailable(message *api.NotifyMessa
 		return
 	}
 
+	// Clean up any stale .swu files whose checksum differs from the incoming bundle.
+	utils.CleanupStaleSwuFiles(api.SoftwareUpdateOTAPath, message.SoftwareUpdate.Checksum, logging.GetLogger())
+
 	// Skip self-originated messages (uploader already has the file)
 	if d.appConfig.NodeName == message.Node {
 		logger.Info("[SoftwareUpdateAvailable] Ignoring self-originated software update notification from %s", message.Node)

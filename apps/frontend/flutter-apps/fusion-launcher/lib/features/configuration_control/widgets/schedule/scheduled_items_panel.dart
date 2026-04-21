@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/ScheduleViewModel/schedule_state.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/ScheduleViewModel/schedule_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/controller/controller_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Left panel — SCHEDULED ITEMS.
@@ -27,7 +28,7 @@ class ScheduledItemsPanel extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const PanelSectionHeader(title: 'SCHEDULED ITEMS'),
+              PanelSectionHeader(semanticId: FusionTestKeys.instance.scheduleTabScheduledItemsHeader, title: 'SCHEDULED ITEMS'),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.symmetric(vertical: 8),

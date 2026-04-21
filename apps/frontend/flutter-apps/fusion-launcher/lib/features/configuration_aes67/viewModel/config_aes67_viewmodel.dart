@@ -134,4 +134,15 @@ class ConfigAes67Viewmodel extends Cubit<ConfigAes67State> {
   Aes67Config? getOutputStreamById(String id) {
     return _projectViewModel.getAes67OutputStreamById(id);
   }
+
+  /// Returns all input streams with their assigned source-channel mappings.
+  List<AssignedInputStreamInfo> getAssignedInputStreamChannelsForSource() {
+    return _projectViewModel.getAssignedInputStreamChannelsForSource();
+  }
+
+  /// Returns all output streams that have at least one channel assigned to a
+  /// circuit, grouped by circuit.
+  List<AssignedOutputStreamInfo> getAssignedOutputStreamToCircuit() {
+    return _projectViewModel.getAssignedOutputStreamToCircuit();
+  }
 }
