@@ -572,9 +572,8 @@ inline u32 fusion_cn_alsa_get_buffer_depth(struct fusion_cn_substream *stream)
         snd_pcm_uframes_t avail = (size + hw - app) % size;
         depth = (u32)(size - avail);
     } else {
-        /* capture_avail = (size + app - hw) % size
-           That's also “queued for consumer” in your capture-as-sink model */
-        depth = (u32)((size + app - hw) % size);
+        /* capture_avail = queued for consumer */
+        depth = (u32)((size + hw - app) % size);
     }
     snd_pcm_stream_unlock_irq(ss);
     spin_unlock_irqrestore(&stream->lock, flags);

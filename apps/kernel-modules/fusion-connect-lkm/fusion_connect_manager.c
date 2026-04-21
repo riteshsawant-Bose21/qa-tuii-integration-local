@@ -585,8 +585,11 @@ static inline void fusion_cn_queue_process(void)
         return;
 
     /* Coalesce: only queue if not already pending */
-    if (atomic_cmpxchg(&process_pending, 0, 1) == 0)
+    if (atomic_cmpxchg(&process_pending, 0, 1) == 0) {
         kthread_queue_work(worker, &process_work);
+    } else {
+        printk(KERN_WARNING "fusion_cn: tick arrived but previous tick still pending processing\n");
+    }
 }
 
 /* --- GPT client callback --- */

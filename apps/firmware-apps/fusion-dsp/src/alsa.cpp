@@ -213,6 +213,12 @@ static bool is_fusion_connect_stream_name(const std::string &device_name)
 }
 
 
+static bool use_low_latency_fc_depths(const std::string &device_name, bool use_asrc)
+{
+    return is_fusion_connect_stream_name(device_name) && !use_asrc;
+}
+
+
 int open_pcm(snd_pcm_t **alsa, const std::string &full_device_name,
              snd_pcm_stream_t stream, int mode)
 {
@@ -778,7 +784,7 @@ void AlsaDevice::set_hw_params()
     }
 
     // Set the number of periods in the buffer.
-    const unsigned requested_periods = is_fusion_connect_stream_name(device_name) ? 8 : 64;
+    const unsigned requested_periods = is_fusion_connect_stream_name(device_name) ? 8 : 32;
     error = snd_pcm_hw_params_set_periods(alsa, hw_params, requested_periods, 0);
     if (error < 0)
     {
@@ -1318,6 +1324,14 @@ AlsaIn::AlsaIn(const bosepro::BlockConfiguration &configuration)
             target_depth += period_size - (target_depth % period_size);
         }
     }
+    else if (use_low_latency_fc_depths(device_name, use_asrc))
+    {
+        base_ratio = 1.0;
+        read_samples = get_frame_size();
+        min_depth = 2 * period_size;
+        target_depth = 3 * period_size;
+        max_depth = 4 * period_size;
+    }
     else
     {
         base_ratio = 1.0;
@@ -1443,6 +1457,13 @@ AlsaOut::AlsaOut(const bosepro::BlockConfiguration &configuration)
         {
             target_depth += period_size - (target_depth % period_size);
         }
+    }
+    else if (use_low_latency_fc_depths(device_name, use_asrc))
+    {
+        max_write_samples = get_frame_size();
+        min_depth = 2 * period_size;
+        target_depth = 3 * period_size;
+        max_depth = 4 * period_size;
     }
     else
     {
