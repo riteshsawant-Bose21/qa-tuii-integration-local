@@ -1328,9 +1328,9 @@ AlsaIn::AlsaIn(const bosepro::BlockConfiguration &configuration)
     {
         base_ratio = 1.0;
         read_samples = get_frame_size();
-        min_depth = period_size;
-        target_depth = 2 * period_size;
-        max_depth = 3 * period_size;
+        min_depth = std::max(get_frame_size(), period_size);
+        target_depth = min_depth + period_size;
+        max_depth = target_depth + period_size;
     }
     else
     {
@@ -1461,9 +1461,9 @@ AlsaOut::AlsaOut(const bosepro::BlockConfiguration &configuration)
     else if (use_low_latency_fc_depths(device_name, use_asrc))
     {
         max_write_samples = get_frame_size();
-        min_depth = period_size;
-        target_depth = 2 * period_size;
-        max_depth = 3 * period_size;
+        min_depth = std::max(get_frame_size(), period_size);
+        target_depth = min_depth + period_size;
+        max_depth = target_depth + period_size;
     }
     else
     {
