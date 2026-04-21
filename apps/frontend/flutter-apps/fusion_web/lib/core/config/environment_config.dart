@@ -59,7 +59,8 @@ class EnvironmentConfig {
   // API Configuration
   static String get apiBaseUrl {
     _ensureInitialized();
-    return dotenv.env['API_BASE_URL'] ?? 'http://localhost:8080/api/v1';
+    final base = dotenv.env['API_BASE_URL'] ?? 'http://localhost:8080';
+    return base.endsWith('/api/v1') ? base : '$base/api/v1';
   }
 
   // App Configuration

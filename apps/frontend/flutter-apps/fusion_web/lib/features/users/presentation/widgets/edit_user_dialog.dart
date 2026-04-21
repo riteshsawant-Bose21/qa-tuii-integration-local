@@ -15,64 +15,29 @@ class EditUserDialog extends StatefulWidget {
 
 class _EditUserDialogState extends State<EditUserDialog> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _nameController;
-  late TextEditingController _emailController;
-  late TextEditingController _phoneController;
-
   late String? _selectedRole;
-  late List<String> _selectedProjects;
-  late UserStatus _selectedStatus;
 
   final List<String> _availableRoles = ['Admin', 'Designer', 'Technician'];
-
-  final List<Map<String, String>> _availableProjects = [
-    {'id': 'project-1', 'name': 'Project Alpha'},
-    {'id': 'project-2', 'name': 'Project Beta'},
-    {'id': 'project-3', 'name': 'Project Gamma'},
-    {'id': 'project-4', 'name': 'Project Delta'},
-    {'id': 'project-5', 'name': 'Project Epsilon'},
-  ];
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.user.name);
-    _emailController = TextEditingController(text: widget.user.email);
-    _phoneController = TextEditingController(text: widget.user.phone ?? '');
     _selectedRole = widget.user.roles.isNotEmpty
         ? widget.user.roles.first
         : null;
-    _selectedProjects = List.from(widget.user.associatedProjects);
-    _selectedStatus = widget.user.status;
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
-    super.dispose();
   }
 
   void _handleUpdate() {
     if (_formKey.currentState!.validate()) {
       if (_selectedRole == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Please select a role')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a role')),
+        );
         return;
       }
 
       final updatedUser = widget.user.copyWith(
-        name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
-        phone: _phoneController.text.trim().isEmpty
-            ? null
-            : _phoneController.text.trim(),
         roles: [_selectedRole!],
-        status: _selectedStatus,
-        associatedProjects: _selectedProjects,
-        isActive: _selectedStatus == UserStatus.active,
       );
 
       widget.onUpdate(updatedUser);
@@ -82,6 +47,11 @@ class _EditUserDialogState extends State<EditUserDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final user = widget.user;
+    final displayName = user.name.isEmpty
+        ? user.email.split('@').first
+        : user.name;
+
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -89,8 +59,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
       ),
       backgroundColor: context.colorScheme.elevation1,
       child: Container(
-        width: 600,
-        constraints: const BoxConstraints(maxHeight: 700),
+        width: 520,
         padding: const EdgeInsets.all(32),
         child: Form(
           key: _formKey,
@@ -108,16 +77,16 @@ class _EditUserDialogState extends State<EditUserDialog> {
                       Text(
                         'Edit User',
                         style: GoogleFonts.montserrat(
-                          fontSize: 24,
+                          fontSize: 20,
                           fontWeight: FontWeight.w700,
                           color: context.colorScheme.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Update user details and permissions',
+                        'Update role for this user',
                         style: GoogleFonts.montserrat(
-                          fontSize: 14,
+                          fontSize: 13,
                           color: context.colorScheme.elevation6,
                         ),
                       ),
@@ -132,309 +101,82 @@ class _EditUserDialogState extends State<EditUserDialog> {
                   ),
                 ],
               ),
+
               const SizedBox(height: 24),
+              Divider(color: context.colorScheme.elevation3),
+              const SizedBox(height: 20),
 
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Name Field
-                      TextFormField(
-                        controller: _nameController,
-                        style: TextStyle(
-                          color: context.colorScheme.textPrimary,
-                        ),
-                        decoration: InputDecoration(
-                          labelText: 'Full Name *',
-                          labelStyle: GoogleFonts.montserrat(
-                            color: context.colorScheme.elevation6,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: context.colorScheme.elevation3,
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: context.colorScheme.elevation3,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: context.colorScheme.primaryColor,
-                              width: 1.5,
-                            ),
-                          ),
-                          filled: true,
-                          fillColor: context.colorScheme.elevation2,
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter a name';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Email Field
-                      TextFormField(
-                        controller: _emailController,
-                        style: TextStyle(
-                          color: context.colorScheme.textPrimary,
-                        ),
-                        decoration: InputDecoration(
-                          labelText: 'Email Address *',
-                          labelStyle: GoogleFonts.montserrat(
-                            color: context.colorScheme.elevation6,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: context.colorScheme.elevation3,
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: context.colorScheme.elevation3,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: context.colorScheme.primaryColor,
-                              width: 1.5,
-                            ),
-                          ),
-                          filled: true,
-                          fillColor: context.colorScheme.elevation2,
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter an email';
-                          }
-                          if (!RegExp(
-                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                          ).hasMatch(value)) {
-                            return 'Please enter a valid email';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Phone Field
-                      TextFormField(
-                        controller: _phoneController,
-                        style: TextStyle(
-                          color: context.colorScheme.textPrimary,
-                        ),
-                        decoration: InputDecoration(
-                          labelText: 'Phone Number',
-                          labelStyle: GoogleFonts.montserrat(
-                            color: context.colorScheme.elevation6,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: context.colorScheme.elevation3,
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: context.colorScheme.elevation3,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: context.colorScheme.primaryColor,
-                              width: 1.5,
-                            ),
-                          ),
-                          filled: true,
-                          fillColor: context.colorScheme.elevation2,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Role and Status Row
-                      Row(
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              initialValue: _selectedRole,
-                              dropdownColor: context.colorScheme.elevation2,
-                              style: TextStyle(
-                                color: context.colorScheme.textPrimary,
-                              ),
-                              decoration: InputDecoration(
-                                labelText: 'Role *',
-                                labelStyle: GoogleFonts.montserrat(
-                                  color: context.colorScheme.elevation6,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: context.colorScheme.elevation3,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: context.colorScheme.elevation3,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: context.colorScheme.primaryColor,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                filled: true,
-                                fillColor: context.colorScheme.elevation2,
-                                prefixIcon: Icon(
-                                  Icons.person_outline,
-                                  color: context.colorScheme.elevation6,
-                                ),
-                              ),
-                              items: _availableRoles.map((role) {
-                                return DropdownMenuItem<String>(
-                                  value: role,
-                                  child: Text(
-                                    role,
-                                    style: GoogleFonts.montserrat(),
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (String? value) {
-                                setState(() {
-                                  _selectedRole = value;
-                                });
-                              },
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please select a role';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: DropdownButtonFormField<UserStatus>(
-                              initialValue: _selectedStatus,
-                              dropdownColor: context.colorScheme.elevation2,
-                              style: TextStyle(
-                                color: context.colorScheme.textPrimary,
-                              ),
-                              decoration: InputDecoration(
-                                labelText: 'Status *',
-                                labelStyle: GoogleFonts.montserrat(
-                                  color: context.colorScheme.elevation6,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: context.colorScheme.elevation3,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: context.colorScheme.elevation3,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: context.colorScheme.primaryColor,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                filled: true,
-                                fillColor: context.colorScheme.elevation2,
-                              ),
-                              items: UserStatus.values.map((status) {
-                                return DropdownMenuItem(
-                                  value: status,
-                                  child: Text(status.displayName),
-                                );
-                              }).toList(),
-                              onChanged: (value) {
-                                if (value != null) {
-                                  setState(() {
-                                    _selectedStatus = value;
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Projects Section
-                      Text(
-                        'Assigned Projects',
-                        style: GoogleFonts.montserrat(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: context.colorScheme.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: context.colorScheme.elevation3,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          color: context.colorScheme.elevation2,
-                        ),
-                        child: Column(
-                          children: _availableProjects.map((project) {
-                            final isSelected = _selectedProjects.contains(
-                              project['id'],
-                            );
-                            return CheckboxListTile(
-                              title: Text(
-                                project['name']!,
-                                style: GoogleFonts.montserrat(
-                                  color: context.colorScheme.textPrimary,
-                                ),
-                              ),
-                              value: isSelected,
-                              activeColor: context.colorScheme.primaryColor,
-                              checkColor: context.colorScheme.textPrimary,
-                              onChanged: (selected) {
-                                setState(() {
-                                  if (selected == true) {
-                                    _selectedProjects.add(project['id']!);
-                                  } else {
-                                    _selectedProjects.remove(project['id']);
-                                  }
-                                });
-                              },
-                              controlAffinity: ListTileControlAffinity.leading,
-                            );
-                          }).toList(),
-                        ),
-                      ),
+              // Read-only user info block
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: context.colorScheme.elevation2,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: context.colorScheme.elevation3),
+                ),
+                child: Column(
+                  children: [
+                    _infoRow(context, Icons.person_outline, 'Full Name', displayName),
+                    const SizedBox(height: 12),
+                    _infoRow(context, Icons.email_outlined, 'Email', user.email),
+                    if (user.phone != null && user.phone!.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _infoRow(context, Icons.phone_outlined, 'Phone', user.phone!),
                     ],
-                  ),
+                  ],
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
+
+              // Role Dropdown (only editable field)
+              DropdownButtonFormField<String>(
+                value: _selectedRole,
+                dropdownColor: context.colorScheme.elevation2,
+                style: TextStyle(color: context.colorScheme.textPrimary),
+                decoration: InputDecoration(
+                  labelText: 'Role *',
+                  labelStyle: GoogleFonts.montserrat(
+                    color: context.colorScheme.elevation6,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: context.colorScheme.elevation3),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: context.colorScheme.elevation3),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: context.colorScheme.primaryColor,
+                      width: 1.5,
+                    ),
+                  ),
+                  filled: true,
+                  fillColor: context.colorScheme.elevation2,
+                  prefixIcon: Icon(
+                    Icons.shield_outlined,
+                    color: context.colorScheme.elevation6,
+                  ),
+                ),
+                items: _availableRoles.map((role) {
+                  return DropdownMenuItem<String>(
+                    value: role,
+                    child: Text(role, style: GoogleFonts.montserrat()),
+                  );
+                }).toList(),
+                onChanged: (value) => setState(() => _selectedRole = value),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please select a role';
+                  }
+                  return null;
+                },
+              ),
+
+              const SizedBox(height: 28),
 
               // Action Buttons
               Row(
@@ -449,25 +191,23 @@ class _EditUserDialogState extends State<EditUserDialog> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   ElevatedButton(
                     onPressed: _handleUpdate,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: context.colorScheme.primaryColor,
                       foregroundColor: context.colorScheme.textPrimary,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 16,
+                        horizontal: 28,
+                        vertical: 14,
                       ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                     child: Text(
-                      'Update User',
-                      style: GoogleFonts.montserrat(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      'Save Changes',
+                      style: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -479,30 +219,43 @@ class _EditUserDialogState extends State<EditUserDialog> {
     );
   }
 
-  // Helper methods for role display
-  IconData _getRoleIcon(String role) {
-    switch (role) {
-      case 'Admin':
-        return Icons.admin_panel_settings;
-      case 'Designer':
-        return Icons.design_services;
-      case 'Technician':
-        return Icons.engineering;
-      default:
-        return Icons.person;
-    }
-  }
-
-  Color _getRoleColor(String role) {
-    switch (role) {
-      case 'Admin':
-        return Colors.red[600]!;
-      case 'Designer':
-        return Colors.purple[600]!;
-      case 'Technician':
-        return Colors.blue[600]!;
-      default:
-        return Colors.grey[600]!;
-    }
+  Widget _infoRow(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String value,
+  ) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: context.colorScheme.elevation6),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.montserrat(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: context.colorScheme.elevation6,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: GoogleFonts.montserrat(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: context.colorScheme.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
