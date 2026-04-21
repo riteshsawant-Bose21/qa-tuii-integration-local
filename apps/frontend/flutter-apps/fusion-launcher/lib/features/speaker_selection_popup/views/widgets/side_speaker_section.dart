@@ -512,6 +512,12 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                         if (value) {
                                           final BuildingPageViewModel buildingPageViewModel = context.read<BuildingPageViewModel>();
                                           buildingPageViewModel.setShouldPlaceNonPlacedSpeakers(false);
+                                        } else {
+                                          // Auto-placement disabled: clear currently placed speakers.
+                                          final List<Speaker> placedSpeakers = projectViewModel.getPlacedSpeakersForCurrentListeningArea();
+                                          for (final Speaker speaker in placedSpeakers) {
+                                            projectViewModel.removeHardware(hardwareId: speaker.id);
+                                          }
                                         }
                                         final ListeningArea updatedLA = listeningArea.copyWith(autoPlacement: value);
                                         projectViewModel.updateListeningArea(area: updatedLA);
