@@ -207,6 +207,12 @@ void ignore_alsa_error(const char *file, int line, const char *function,
     (void)fmt;
 }
 
+static bool is_fusion_connect_stream_name(const std::string &device_name)
+{
+    return device_name.rfind("FC_", 0) == 0;
+}
+
+
 int open_pcm(snd_pcm_t **alsa, const std::string &full_device_name,
              snd_pcm_stream_t stream, int mode)
 {
@@ -772,7 +778,8 @@ void AlsaDevice::set_hw_params()
     }
 
     // Set the number of periods in the buffer.
-    error = snd_pcm_hw_params_set_periods(alsa, hw_params, 64, 0);
+    const unsigned requested_periods = is_fusion_connect_stream_name(device_name) ? 8 : 64;
+    error = snd_pcm_hw_params_set_periods(alsa, hw_params, requested_periods, 0);
     if (error < 0)
     {
         SPDLOG_ERROR("Failed to set ALSA number of periods: {}",

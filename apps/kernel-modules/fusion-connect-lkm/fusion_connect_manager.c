@@ -220,8 +220,7 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
         // Two looping cases: 1) packet_time < 1/3ms; 2) packet batching edge cases 
         // Policy: if next_action_times[playback_slot] is 0, we want to playback silence. 
         //         to playback silence in packet_time, we keep time with next_action_time instead
-        //         next_action_time is managed completely from here
-        //         played_action_time tracks the latest action time actually consumed
+        //         played_action_time tracks the latest action time actually consumed--we won't play packets scheduled before that
         //         EARLY_SLACK_NS is a window after the tick to still play back the packet
         while (count < s->buf_size_in_packets) {
             u32 slot = s->playback_slot;
