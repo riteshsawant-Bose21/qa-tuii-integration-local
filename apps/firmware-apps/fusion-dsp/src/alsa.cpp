@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <mutex>
 #include <string>
@@ -153,6 +154,10 @@ private:
     int playback_start_threshold_frames;
     State current_state = DEVICE_STATE_CLOSED;
     snd_pcm_uframes_t negotiated_buffer_size = 0;
+    int bytes_per_sample = 0;
+    uint32_t bluealsa_last_read_hash = 0;
+    uint32_t bluealsa_repeated_read_blocks = 0;
+    uint32_t bluealsa_success_frames_since_log = 0;
     bosepro::AudioSubtask deferred_open_task;
     static pthread_mutex_t open_mutex;
 
@@ -167,6 +172,7 @@ private:
     void set_hw_params();
     void set_sw_params();
     int get_device_number(const std::string &name);
+    void log_bluealsa_successful_read(int samples);
 };
 
 
@@ -222,6 +228,20 @@ static bool is_bluealsa_device_name(const std::string &device_name)
 static const char *pcm_state_name(snd_pcm_t *alsa)
 {
     return alsa ? snd_pcm_state_name(snd_pcm_state(alsa)) : "null";
+}
+
+
+static uint32_t hash_bytes(const uint8_t *data, size_t size)
+{
+    uint32_t hash = 2166136261u;
+
+    for (size_t i = 0; i < size; i++)
+    {
+        hash ^= data[i];
+        hash *= 16777619u;
+    }
+
+    return hash;
 }
 
 
@@ -422,6 +442,9 @@ void AlsaDevice::close_device()
     }
 
     negotiated_buffer_size = 0;
+    bluealsa_last_read_hash = 0;
+    bluealsa_repeated_read_blocks = 0;
+    bluealsa_success_frames_since_log = 0;
 
     ALSA_DEVICE_SET_STATE(DEVICE_STATE_CLOSED, "Closed device {}",
                           device_name.c_str());
@@ -439,6 +462,39 @@ bool AlsaDevice::is_open()
 {
     return current_state == DEVICE_STATE_IDLE
         || current_state == DEVICE_STATE_STREAMING;
+}
+
+
+void AlsaDevice::log_bluealsa_successful_read(int samples)
+{
+    if (!is_bluealsa_device_name(device_name) || !is_input)
+    {
+        return;
+    }
+
+    const int sample_bytes = bytes_per_sample > 0 ? bytes_per_sample : sizeof(float);
+    const size_t byte_count = static_cast<size_t>(samples) * channels * sample_bytes;
+    const uint32_t hash = hash_bytes(sample_buffer.get(), byte_count);
+
+    if (hash == bluealsa_last_read_hash)
+    {
+        bluealsa_repeated_read_blocks++;
+    }
+    else
+    {
+        bluealsa_last_read_hash = hash;
+        bluealsa_repeated_read_blocks = 0;
+    }
+
+    bluealsa_success_frames_since_log += samples;
+    if (bluealsa_success_frames_since_log >= 32)
+    {
+        const int avail = snd_pcm_avail(alsa);
+        SPDLOG_WARN("BlueALSA read ok for {}: requested={} state={} avail={} hash=0x{:08x} repeated_blocks={}",
+                    device_name.c_str(), samples, pcm_state_name(alsa), avail,
+                    hash, bluealsa_repeated_read_blocks);
+        bluealsa_success_frames_since_log = 0;
+    }
 }
 
 
@@ -700,6 +756,7 @@ int AlsaDevice::read(float *buffer, int samples)
     ALSA_DEVICE_SET_STATE(DEVICE_STATE_STREAMING,
                           "Device {} resumed reading", device_name.c_str());
 
+    log_bluealsa_successful_read(samples);
     convert_read(sample_buffer.get(), buffer, channels, samples);
 
     return res;
@@ -849,6 +906,7 @@ void AlsaDevice::set_hw_params()
 
             convert_read = format.convert_read;
             convert_write = format.convert_write;
+            bytes_per_sample = format.bytes_per_sample;
             break;
         }
     }
