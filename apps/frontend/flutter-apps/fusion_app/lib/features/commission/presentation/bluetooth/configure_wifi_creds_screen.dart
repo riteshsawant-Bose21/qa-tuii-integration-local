@@ -28,7 +28,7 @@ class _WifiCredentialsScreenState extends State<WifiCredentialsScreen> {
       bottom: false,
       child: Scaffold(
         backgroundColor: context.colorScheme.primaryBlack,
-        appBar: CommonAppBar(title: 'Configure Network'),
+        appBar: CommonMobileAppBar(title: 'Configure Network'),
         body: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(

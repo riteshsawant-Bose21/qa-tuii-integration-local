@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/zoneControlViewmodel/zone_control_state.dart';
@@ -5,6 +7,11 @@ import 'package:fusion_launcher/features/configuration_control/viewModel/zoneCon
 import 'package:fusion_launcher/features/configuration_control/widgets/zoneControl/zones_list_panel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/zoneControl/virtual_controller_panel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+
+import '../../../../core/service_locator.dart';
+import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../viewModel/configuration_control_state.dart';
+import '../../viewModel/configuration_control_viewmodel.dart';
 
 /// Panel displaying zone control content with zones and virtual controller
 class ZoneControlPanel extends StatelessWidget {
@@ -40,9 +47,22 @@ class ZoneControlPanel extends StatelessWidget {
               const SizedBox(width: 16),
 
               /// Virtual controller emulator
-              const Expanded(
+              Expanded(
                 flex: 8,
-                child: VirtualControllerPanel(),
+                child: BlocBuilder<ConfigurationControlViewmodel, ConfigurationControlState>(
+                  builder: (BuildContext context, ConfigurationControlState state) {
+                    final WallControllerConfig config = serviceLocator<ProjectViewModel>().getWallControllerConfig();
+                    final String prettyJson = const JsonEncoder.withIndent('  ').convert(config.toJson());
+                    debugPrint('─── WallControllerConfig JSON when data changes ───');
+                    debugPrint(prettyJson);
+                    return VirtualControllerPanel(
+                      isDesignMode: !serviceLocator<ProjectViewModel>().isInControlMode,
+                      controllerID: state.selectedControllerId ?? "",
+                      vipAddress: serviceLocator<ProjectViewModel>().virtualIP ?? "192.168.1.110",
+                      config: serviceLocator<ProjectViewModel>().getWallControllerConfig(),
+                    );
+                  },
+                ),
               ),
             ],
           ),

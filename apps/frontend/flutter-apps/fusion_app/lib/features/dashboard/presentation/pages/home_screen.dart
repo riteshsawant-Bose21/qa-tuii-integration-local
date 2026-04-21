@@ -22,7 +22,7 @@ class DashboardScreen extends StatelessWidget {
       bottom: false,
       child: Scaffold(
         backgroundColor: context.colorScheme.primaryBlack,
-        appBar: CommonAppBar(title: 'Dashboard'),
+        appBar: CommonMobileAppBar(title: 'Dashboard'),
         body: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

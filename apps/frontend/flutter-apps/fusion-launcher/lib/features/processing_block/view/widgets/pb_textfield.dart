@@ -210,6 +210,7 @@ class _PBTextFieldState extends State<PBTextField> {
             onTapOutside: (PointerDownEvent event) {
               // controller.text = widget.value ?? '';
               widget.onChanged?.call(controller.text);
+              focusNode.unfocus();
             },
           ),
         ),
