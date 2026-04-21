@@ -18,7 +18,7 @@ class ConfigureVipScreen extends StatelessWidget {
       bottom: false,
       child: Scaffold(
         backgroundColor: context.colorScheme.primaryBlack,
-        appBar: CommonAppBar(title: 'Configure Network'),
+        appBar: CommonMobileAppBar(title: 'Configure Network'),
 
         bottomNavigationBar: Container(
           color: context.colorScheme.elevation1,

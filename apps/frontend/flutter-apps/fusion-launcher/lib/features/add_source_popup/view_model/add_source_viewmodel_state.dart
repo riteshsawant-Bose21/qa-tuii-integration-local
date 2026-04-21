@@ -1,5 +1,7 @@
 part of 'add_source_viewmodel.dart';
 
+// AssignedStreamChannel is now defined in fusion_lib (aes67_config.dart)
+
 class AddSourceViewModelState extends Equatable {
   final SourceSectionType selectedSourceSectionType;
   final SourceSelectionOption selectedSourceOption;
@@ -13,6 +15,7 @@ class AddSourceViewModelState extends Equatable {
   final int? selectedMonoChannel;
   final int? selectedLeftChannel;
   final int? selectedRightChannel;
+  final List<AssignedStreamChannel> assignedStreamChannels;
 
   const AddSourceViewModelState({
     this.selectedSourceSectionType = SourceSectionType.microPhone,
@@ -27,6 +30,7 @@ class AddSourceViewModelState extends Equatable {
     this.selectedMonoChannel = 1,
     this.selectedLeftChannel = 1,
     this.selectedRightChannel = 2,
+    this.assignedStreamChannels = const <AssignedStreamChannel>[],
   });
 
   AddSourceViewModelState copyWith({
@@ -42,6 +46,7 @@ class AddSourceViewModelState extends Equatable {
     int? selectedMonoChannel,
     int? selectedLeftChannel,
     int? selectedRightChannel,
+    List<AssignedStreamChannel>? assignedStreamChannels,
   }) {
     return AddSourceViewModelState(
       selectedSourceSectionType: selectedSourceSectionType ?? this.selectedSourceSectionType,
@@ -56,6 +61,7 @@ class AddSourceViewModelState extends Equatable {
       selectedMonoChannel: selectedMonoChannel ?? this.selectedMonoChannel,
       selectedLeftChannel: selectedLeftChannel ?? this.selectedLeftChannel,
       selectedRightChannel: selectedRightChannel ?? this.selectedRightChannel,
+      assignedStreamChannels: assignedStreamChannels ?? this.assignedStreamChannels,
     );
   }
 
@@ -88,6 +94,7 @@ class AddSourceViewModelState extends Equatable {
     selectedMonoChannel,
     selectedLeftChannel,
     selectedRightChannel,
+    assignedStreamChannels,
   ];
 }
 

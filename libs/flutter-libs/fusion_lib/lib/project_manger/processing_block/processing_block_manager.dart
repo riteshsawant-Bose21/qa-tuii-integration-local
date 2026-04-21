@@ -71,4 +71,12 @@ extension ProcessingBlockManager on ProjectManager {
     }
     projectService!.reOrderProcessingBlocks(parentId, oldIndex, newIndex);
   }
+
+  ProcessingBlockModel? getUserFacingGainBlockForZone({required String zoneId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    final ProcessingBlockModel? processingBlock = projectService!.getUserFacingGainBlockForParent(zoneId);
+    return processingBlock;
+  }
 }

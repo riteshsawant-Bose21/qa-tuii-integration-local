@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/zoneControlViewmodel/zone_control_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/zoneControl/zone_item_widget.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/controller/controller_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Panel displaying zones and subzones in a tree structure
@@ -41,7 +42,7 @@ class ZonesListPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           /// Header
-          const PanelSectionHeader(title: 'ZONES'),
+          PanelSectionHeader(semanticId: FusionTestKeys.instance.zoneControlTabZoneSectionHeader, title: 'ZONES'),
 
           /// Zones list
           Expanded(

@@ -63,9 +63,9 @@ class ToneControlWidget extends StatelessWidget {
                       child: VerticalSlider(
                         semanticId: 'tone_slider$semanticId',
                         value: value.toDouble(),
-                        min: -15,
-                        max: 15,
-                        intervalGap: 15,
+                        min: -15.0,
+                        max: 15.0,
+                        intervalGap: 15.0,
                         onChanged: (num sliderValue) {
                           onChanged(sliderValue);
                         },
@@ -98,8 +98,8 @@ class ToneControlWidget extends StatelessWidget {
                               onChanged(value);
                               // context.read<LimiterController>().updateThreshold(value);
                             },
-                            min: -15,
-                            max: 15,
+                            min: -15.0,
+                            max: 15.0,
                           ),
                         ),
                         const SizedBox(height: 4),

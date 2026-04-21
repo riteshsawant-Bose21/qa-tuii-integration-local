@@ -423,4 +423,13 @@ extension EventsViewModel on ProjectViewModel {
       throwError("Failed to toggle event: $ex");
     }
   }
+
+  List<CreateScheduleTaskDto> getScheduledEventsDto() {
+    try {
+      return projectManager.getScheduledEventsDto();
+    } catch (ex) {
+      throwError("Failed to retrieve all schedule tasks: $ex");
+      return <CreateScheduleTaskDto>[];
+    }
+  }
 }

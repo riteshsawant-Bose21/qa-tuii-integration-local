@@ -32,7 +32,7 @@ class _SnapshotGroupScreenState extends State<SnapshotGroupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.colorScheme.primaryBlack,
-      appBar: CommonAppBar(title: 'Snapshot Group 1'),
+      appBar: CommonMobileAppBar(title: 'Snapshot Group 1'),
       body: Column(
         children: [
 

@@ -59,7 +59,7 @@ class _PasscodeScreenState extends State<PasscodeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.colorScheme.primaryBlack,
-      appBar: CommonAppBar(title: ''),
+      appBar: CommonMobileAppBar(title: ''),
       body: Column(
         children: [
 

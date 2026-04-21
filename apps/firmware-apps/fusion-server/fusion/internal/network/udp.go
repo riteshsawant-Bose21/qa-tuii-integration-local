@@ -298,7 +298,7 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 		msg.ID = ulid.Make().String()
 	}
 
-	payload, err := s.buildJSONPayload(msg.ConfigUpdate.Data, msg.ConfigUpdate.Version, msg.ID, msg.Operation)
+	payload, err := s.buildJSONPayload(configObserverPayload(msg.ConfigUpdate), msg.ConfigUpdate.Version, msg.ID, msg.Operation)
 	if err != nil {
 		return err
 	}
@@ -306,6 +306,16 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 	s.broadcast(payload, msg.ID)
 
 	return nil
+}
+
+func configObserverPayload(update *api.ConfigUpdate) map[string]any {
+	if update == nil {
+		return nil
+	}
+	if len(update.ObserverData) > 0 {
+		return update.ObserverData
+	}
+	return update.Data
 }
 
 func (s *UDPServer) Close() error {
