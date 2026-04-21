@@ -6,6 +6,7 @@ import 'package:fusion_launcher/features/authentication/viewmodel/session_view_m
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/product_data.dart';
 import 'package:fusion_lib/product_data/products.dart';
+import 'package:mutex/mutex.dart';
 
 import '../../../core/service_locator.dart';
 
@@ -67,6 +68,8 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
   }
 
   static const Duration _pricesCacheTtl = Duration(hours: 24);
+
+  final Mutex _pricesMutex = Mutex();
 
   bool _hasLoadedProducts = false;
   late final AppCacheService pricesCacheService;
@@ -143,7 +146,7 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
     return prices.isNotEmpty ? prices.first.price : 0.0;
   }
 
-  String _priceCacheKey(int productId, String currency) => 'prices_${productId}_$currency';
+  String _priceCacheKey(int productId, String currency) => '${productId}_$currency';
 
   Future<void> _fetchProductPrices(int productId, String productType, {bool forceRefresh = false}) async {
     final AppCacheService individualProductPriceCacheService = await pricesCacheService.scope(productType);
@@ -164,9 +167,11 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
       );
 
       if (cachedPrices != null && cachedPrices.isNotEmpty) {
-        final Map<int, List<ProductPriceModel>> updatedPrices = Map<int, List<ProductPriceModel>>.from(state.prices);
-        updatedPrices[productId] = cachedPrices;
-        emit(state.copyWith(prices: updatedPrices));
+        await _pricesMutex.protect(() async {
+          final Map<int, List<ProductPriceModel>> updatedPrices = Map<int, List<ProductPriceModel>>.from(state.prices);
+          updatedPrices[productId] = cachedPrices;
+          emit(state.copyWith(prices: updatedPrices));
+        });
         return;
       }
     }
@@ -185,9 +190,11 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
           pricesVarientMap.add(price);
         }
 
-        final Map<int, List<ProductPriceModel>> updatedPrices = Map<int, List<ProductPriceModel>>.from(state.prices);
-        updatedPrices[productId] = pricesVarientMap;
-        emit(state.copyWith(prices: updatedPrices));
+        await _pricesMutex.protect(() async {
+          final Map<int, List<ProductPriceModel>> updatedPrices = Map<int, List<ProductPriceModel>>.from(state.prices);
+          updatedPrices[productId] = pricesVarientMap;
+          emit(state.copyWith(prices: updatedPrices));
+        });
 
         await individualProductPriceCacheService.setJson(
           cacheKey,
