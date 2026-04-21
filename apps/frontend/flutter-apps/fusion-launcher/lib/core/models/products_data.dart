@@ -15,51 +15,48 @@ abstract class DeviceComponent {
   });
 }
 
-class SpeakerData extends DeviceComponent {
-  final String sku;
-  final OutputType type;
-
-  const SpeakerData({
-    required this.sku,
-    required this.type,
-    required super.assetPath,
-    required super.name,
-    required super.price,
-  }) : super(id: sku);
-
-  static const List<SpeakerData> demoSpeakers = <SpeakerData>[
-    SpeakerData(
-      assetPath: 'assets/images/speakers/MSA12X.png',
-      name: 'MSA12X',
-      sku: 'MSA12X',
-      type: OutputType.analogOutput,
-      price: 500.0,
-    ),
-    SpeakerData(
-      assetPath: 'assets/images/speakers/array1.png',
-      name: 'ArenaMatch AM40',
-      sku: 'CO-12 H120',
-      type: OutputType.analogOutput,
-      price: 600.0,
-    ),
-    SpeakerData(
-      assetPath: 'assets/images/speakers/DM_pendant.png',
-      name: 'DesignMax DM6PE',
-      sku: 'MSA12XOHS',
-      type: OutputType.analogOutput,
-      price: 700.0,
-    ),
-    SpeakerData(
-      assetPath: 'assets/icons/aes67.png',
-      name: 'AES67 Output',
-      sku: 'AES67OUT',
-      type: OutputType.aes67output,
-      price: 100.0,
-    ),
-  ];
-
-  static const List<String> speakerTypes = <String>['Surface', 'Ceiling', 'Pendant', 'Sub'];
-}
+// class SpeakerData extends DeviceComponent {
+//   final String sku;
+//   final OutputType type;
+//   const SpeakerData({
+//     required this.sku,
+//     required this.type,
+//     required super.assetPath,
+//     required super.name,
+//     required super.price,
+//   }) : super(id: sku);
+//   static const List<SpeakerData> demoSpeakers = <SpeakerData>[
+//     SpeakerData(
+//       assetPath: 'assets/images/speakers/MSA12X.png',
+//       name: 'MSA12X',
+//       sku: 'MSA12X',
+//       type: OutputType.analogOutput,
+//       price: 500.0,
+//     ),
+//     SpeakerData(
+//       assetPath: 'assets/images/speakers/array1.png',
+//       name: 'ArenaMatch AM40',
+//       sku: 'CO-12 H120',
+//       type: OutputType.analogOutput,
+//       price: 600.0,
+//     ),
+//     SpeakerData(
+//       assetPath: 'assets/images/speakers/DM_pendant.png',
+//       name: 'DesignMax DM6PE',
+//       sku: 'MSA12XOHS',
+//       type: OutputType.analogOutput,
+//       price: 700.0,
+//     ),
+//     SpeakerData(
+//       assetPath: 'assets/icons/aes67.png',
+//       name: 'AES67 Output',
+//       sku: 'AES67OUT',
+//       type: OutputType.aes67output,
+//       price: 100.0,
+//     ),
+//   ];
+//   static const List<String> speakerTypes = <String>['Surface', 'Ceiling', 'Pendant', 'Sub'];
+// }
 
 class SourceData extends DeviceComponent {
   final SourceType type;
@@ -90,6 +87,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -103,6 +101,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -116,6 +115,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -129,6 +129,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -142,6 +143,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -155,6 +157,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -168,6 +171,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -181,6 +185,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -194,6 +199,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -207,6 +213,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -220,6 +227,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -233,6 +241,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -246,6 +255,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -259,6 +269,7 @@ class SourceData extends DeviceComponent {
       supportedConnectionTypes: <SourceConnectionType>[
         SourceConnectionType.analogInput,
         SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
         SourceConnectionType.aes67input,
       ],
     ),
@@ -460,7 +471,7 @@ class SourceData extends DeviceComponent {
       name: "Message Player",
       assetPath: "assets/images/products/dvdplayer.png",
       type: SourceType.paging,
-      connectionType: SourceConnectionType.analogInput,
+      connectionType: SourceConnectionType.messagePlayer,
       pagingSourceType: PagingSourceType.messagePlayer,
       price: 100.0,
       supportedConnectionTypes: <SourceConnectionType>[],
@@ -500,7 +511,7 @@ class SourceData extends DeviceComponent {
 
   static SourceConnectionType getSourceConnectionType(String id) {
     //search both microphone list and media list and return type
-    for (SourceData item in <SourceData>[...microphoneItems, ...mediaSourceItems]) {
+    for (SourceData item in <SourceData>[...microphoneItems, ...mediaSourceItems, ...pagingItems]) {
       if (item.id == id) {
         return item.connectionType;
       }

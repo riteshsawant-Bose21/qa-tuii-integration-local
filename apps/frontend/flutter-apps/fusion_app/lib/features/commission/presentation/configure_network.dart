@@ -14,7 +14,7 @@ class ConfigureNetworkScreen extends StatelessWidget {
       bottom: false,
       child: Scaffold(
         backgroundColor: colorScheme.primaryBlack,
-        appBar: CommonAppBar(title: 'Configure Network'),
+        appBar: CommonMobileAppBar(title: 'Configure Network'),
         body:_Content(),
         bottomNavigationBar: CustomButton(
           onPressed: () {

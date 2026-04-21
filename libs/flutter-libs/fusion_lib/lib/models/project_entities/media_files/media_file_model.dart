@@ -8,6 +8,7 @@ class MediaFileModel {
   final int size;
   final Duration? length;
   final DateTime date;
+  final String? triggerId;
 
   MediaFileModel({
     String? id,
@@ -16,6 +17,7 @@ class MediaFileModel {
     required this.size,
     this.length,
     required this.date,
+    this.triggerId,
   }) : id = id ?? 'MEDIA${FusionUtils.shortStringUUID()}';
 
   //copy with
@@ -26,6 +28,8 @@ class MediaFileModel {
     int? size,
     Duration? length,
     DateTime? date,
+    String? triggerId,
+    bool clearTriggerId = false,
   }) {
     return MediaFileModel(
       id: id ?? this.id,
@@ -34,6 +38,7 @@ class MediaFileModel {
       size: size ?? this.size,
       length: length ?? this.length,
       date: date ?? this.date,
+      triggerId: clearTriggerId ? null : (triggerId ?? this.triggerId),
     );
   }
 
@@ -44,6 +49,7 @@ class MediaFileModel {
     'size': size,
     'length': length?.inMilliseconds,
     'date': date.toIso8601String(),
+    'triggerId': triggerId,
   };
 
   factory MediaFileModel.fromJson(Map<String, dynamic> json) {
@@ -54,6 +60,7 @@ class MediaFileModel {
       size: json['size'] as int,
       length: json['length'] != null ? Duration(milliseconds: json['length'] as int) : null,
       date: DateTime.parse(json['date'] as String),
+      triggerId: json['triggerId'] as String?,
     );
   }
 

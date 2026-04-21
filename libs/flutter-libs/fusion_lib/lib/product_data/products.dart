@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:archive/archive.dart';
@@ -30,7 +31,6 @@ class ProductImageCache {
     required this.others,
   });
 
-  /// Returns paths for [color] (case-insensitive). Falls back to black.
   List<String> pathsForColor(String color) {
     final key = color.toLowerCase();
     if (key == 'black') return black;
@@ -38,7 +38,6 @@ class ProductImageCache {
     return others[key] ?? black;
   }
 
-  /// First available path across all colors, or null.
   String? get firstPath {
     if (black.isNotEmpty) return black.first;
     if (white.isNotEmpty) return white.first;
@@ -51,21 +50,19 @@ class ProductImageCache {
 
 /// Products API — offline-first product data access.
 ///
-/// ### Folder layout (always under getApplicationSupportDirectory)
-/// ```
-/// <appSupport>/
-///   app_cache/
-///     products/               ← _imagesRootDir
-///       assets/               ← downloaded / extracted images
-///         <base64hash>.jpg
-///         <base64hash>.png
-/// ```
+/// ### Image file naming
+/// Images are saved using their **original filename from the URL**.
+/// e.g. `https://.../original/DM8S_Right-Facing.jpeg`
+///      → `<assetsDir>/DM8S_Right-Facing.jpeg`
+///
+/// A small index file (`assets/_index.json`) maps each URL to its filename
+/// so lookups are O(1) without touching the filesystem per image.
 ///
 /// ### Priority order
 /// ```
 /// 1. API   → save JSON via AppCacheService + download images to assets/
 /// 2. Cache → load JSON from AppCacheService + resolve images from assets/
-/// 3. ZIP   → extract ZIP into products/ folder (only when loadFromZip=true)
+/// 3. ZIP   → extract bundled ZIP (only when loadFromZip = true)
 /// 4. Empty → isLoaded = false
 /// ```
 class Products {
@@ -80,11 +77,7 @@ class Products {
 
   final String baseUrl;
   final FusionNetworkClient networkClient;
-
-  /// Scoped cache service for this feature (app_cache/products/).
-  /// Pass `await rootCache.scope('products')` from your DI setup.
   final AppCacheService cacheService;
-
   final bool fusionOnly;
   final bool loadFromZip;
   final String productCacheZipAssetPath;
@@ -94,14 +87,15 @@ class Products {
   ProductCatalog? _catalog;
   bool _syncedFromApi = false;
 
-  /// url → absolute local image path (only entries confirmed to exist on disk).
+  /// url → absolute local image path (only entries confirmed on disk).
+  /// Persisted to `assets/_index.json` between launches.
   final Map<String, String> _urlToAbsPath = {};
 
   /// productId → ProductImageCache
   final Map<int, ProductImageCache> _imageByProductId = {};
 
-  /// Resolved once in [_ensureRootDir]. Always uses getApplicationSupportDirectory.
-  String? _imagesRootDir;
+  /// `<AppCache>/products/` — set once in [_ensureRootDir].
+  String? _rootDir;
 
   // ── public: lifecycle ─────────────────────────────────────────────────────
 
@@ -122,6 +116,7 @@ class Products {
   List<DspProduct> get dsps => _filter(_catalog?.dsps, (d) => d.isFusionCompatible);
   List<AccessoryProduct> get accessories => _filter(_catalog?.accessories, (a) => a.isFusionCompatible);
   List<IoEndpointProduct> get ioEndpoints => _filter(_catalog?.ioEndpoints, (e) => e.isFusionCompatible);
+  List<SourceProduct> get sources => _filter(_catalog?.sources, (s) => true);
 
   // ── public: individual lookups ────────────────────────────────────────────
 
@@ -131,12 +126,16 @@ class Products {
   DspProduct? getDsp(int id) => _findById(dsps, (d) => d.productId == id);
   AccessoryProduct? getAccessory(int id) => _findById(accessories, (a) => a.productId == id);
   IoEndpointProduct? getIoEndpoint(int id) => _findById(ioEndpoints, (e) => e.productId == id);
+  SourceProduct? getSource(String id) => _findById(sources, (s) => s.productId == id);
 
   // ── public: image access ──────────────────────────────────────────────────
 
   ProductImageCache? imageFor({required int productId}) => _imageByProductId[productId];
 
-  List<String> imagePathsFor({required int productId, String color = 'black'}) => _imageByProductId[productId]?.pathsForColor(color) ?? const [];
+  List<String> imagePathsFor({
+    required int productId,
+    String color = 'black',
+  }) => _imageByProductId[productId]?.pathsForColor(color) ?? const [];
 
   String? firstImagePathFor({required int productId}) => _imageByProductId[productId]?.firstPath;
 
@@ -148,9 +147,7 @@ class Products {
     await cacheService.remove(_kCatalogCacheKey);
     await _ensureRootDir();
     final assetsDir = Directory(_assetsDir);
-    if (await assetsDir.exists()) {
-      await assetsDir.delete(recursive: true);
-    }
+    if (await assetsDir.exists()) await assetsDir.delete(recursive: true);
     _reset();
   }
 
@@ -159,20 +156,21 @@ class Products {
   Future<void> _load() async {
     await _ensureRootDir();
 
-    _log('Starting load. imagesRootDir=$_imagesRootDir');
-
+    // 1. API
     if (await _syncFromApi()) {
       _syncedFromApi = true;
       return;
     }
     _syncedFromApi = false;
 
+    // 2. Cache
     if (await _loadFromCache()) return;
 
+    // 3. ZIP
     if (loadFromZip && await _loadFromZip()) return;
 
     _reset();
-    _log('All load strategies exhausted — no data available.');
+    _log('All load strategies exhausted.');
   }
 
   // ── strategy 1: API ───────────────────────────────────────────────────────
@@ -185,7 +183,7 @@ class Products {
       );
 
       if (!response.success || response.data == null) {
-        _log('API returned failure — ${response.message}');
+        _log('API failure — ${response.message}');
         return false;
       }
 
@@ -215,14 +213,14 @@ class Products {
         _kCatalogCacheKey,
         (raw) => raw is Map<String, dynamic> ? raw : null,
       );
-
       if (json == null) {
         _log('No cached catalog found.');
         return false;
       }
 
       _catalog = ProductCatalog.fromJson(json);
-      _resolveImagesFromDisk(json);
+      await _loadImageIndex(); // restore url→path map from index file
+      _resolveImagesFromDisk(json); // verify files still exist
       _rebuildImageMap(json);
 
       _log(
@@ -243,10 +241,10 @@ class Products {
       _log('Extracting bundled ZIP…');
       await _extractZip();
 
-      // products.json is extracted directly into _imagesRootDir
-      final jsonFile = File(p.join(_imagesRootDir!, 'products.json'));
+      // products.json is extracted into _rootDir
+      final jsonFile = File(p.join(_rootDir!, 'products.json'));
       if (!await jsonFile.exists()) {
-        _log('products.json not found after ZIP extraction at ${jsonFile.path}');
+        _log('products.json not found after ZIP extraction.');
         return false;
       }
 
@@ -262,7 +260,10 @@ class Products {
       // Promote to AppCacheService so next launch uses strategy 2.
       await cacheService.setJson(_kCatalogCacheKey, json);
 
+      // ZIP images are already in assets/ with original filenames.
+      // Build index from what's on disk.
       _resolveImagesFromDisk(json);
+      await _persistImageIndex();
       _rebuildImageMap(json);
 
       _log(
@@ -278,18 +279,17 @@ class Products {
 
   // ── ZIP extraction ────────────────────────────────────────────────────────
 
-  /// Extracts ZIP into [_imagesRootDir].
-  ///
-  /// Expected ZIP layout (from generate_product_cache_zip.py):
+  /// Expected ZIP layout (produced by generate_product_cache_zip.py):
   /// ```
   /// products.json
   /// assets/
-  ///   <base64url>.jpg
-  ///   <base64url>.png
+  ///   DM8S_Right-Facing.jpeg        ← original filename, NOT hashed
+  ///   DM8C_Flush_Group.jpeg
+  ///   …
   /// ```
   /// After extraction the folder looks like:
   /// ```
-  /// <appSupport>/app_cache/products/
+  /// <appSupport>/AppCache/products/
   ///   products.json
   ///   assets/
   ///     <base64url>.jpg
@@ -301,14 +301,9 @@ class Products {
     int extracted = 0;
     for (final entry in archive) {
       final normalized = p.normalize(entry.name);
+      if (normalized.startsWith('..') || p.isAbsolute(normalized)) continue;
 
-      // Guard against path-traversal attacks.
-      if (normalized.startsWith('..') || p.isAbsolute(normalized)) {
-        _log('Skipping unsafe ZIP entry: ${entry.name}');
-        continue;
-      }
-
-      final outPath = p.join(_imagesRootDir!, normalized);
+      final outPath = p.join(_rootDir!, normalized);
 
       if (!entry.isFile) {
         await Directory(outPath).create(recursive: true);
@@ -323,7 +318,7 @@ class Products {
       extracted++;
     }
 
-    _log('ZIP extraction complete. $extracted files written to $_imagesRootDir');
+    _log('ZIP extracted $extracted files to $_rootDir');
   }
 
   // ── image downloading ─────────────────────────────────────────────────────
@@ -341,17 +336,16 @@ class Products {
       final batch = urls.skip(i).take(batchSize);
       final results = await Future.wait(batch.map(_downloadIfNeeded));
       for (final wasNew in results) {
-        if (wasNew)
-          downloaded++;
-        else
-          skipped++;
+        wasNew ? downloaded++ : skipped++;
       }
     }
 
+    // Persist the url→filename index after all downloads complete.
+    await _persistImageIndex();
     _log('Images: $downloaded downloaded, $skipped already cached.');
   }
 
-  /// Returns true if the image was newly downloaded, false if already cached.
+  /// Returns true if newly downloaded, false if already on disk.
   Future<bool> _downloadIfNeeded(String url) async {
     if (!url.startsWith('http')) return false;
 
@@ -388,27 +382,69 @@ class Products {
     }
   }
 
+  // ── image index (url → filename) ─────────────────────────────────────────
+
+  /// Loads the persisted `assets/_index.json` into [_urlToAbsPath].
+  Future<void> _loadImageIndex() async {
+    _urlToAbsPath.clear();
+    final indexFile = File(_imageIndexPath);
+    if (!await indexFile.exists()) return;
+
+    try {
+      final decoded = jsonDecode(await indexFile.readAsString());
+      if (decoded is! Map<String, dynamic>) return;
+
+      decoded.forEach((url, path) {
+        if (path is String) {
+          _urlToAbsPath[url] = path;
+        }
+      });
+    } catch (_) {
+      _urlToAbsPath.clear();
+    }
+  }
+
+  /// Saves [_urlToAbsPath] to `assets/_index.json`.
+  Future<void> _persistImageIndex() async {
+    try {
+      await File(_imageIndexPath).writeAsString(jsonEncode(_urlToAbsPath), flush: true);
+    } catch (e) {
+      _log('Failed to persist image index — $e');
+    }
+  }
+
   // ── image resolution (no network) ────────────────────────────────────────
 
-  /// Maps URLs to on-disk paths without any network access.
-  /// Only URLs whose derived path actually exists on disk are registered.
+  /// Verifies that every URL in [_urlToAbsPath] (and in the JSON) still has
+  /// its file on disk. Removes stale entries. Adds new ones if the file exists
+  /// at the expected path even without an index entry.
   void _resolveImagesFromDisk(Map<String, dynamic> json) {
-    _urlToAbsPath.clear();
     int found = 0;
     int missing = 0;
 
     for (final url in _collectImageUrls(json)) {
       if (!url.startsWith('http')) continue;
-      final absPath = _absPathForUrl(url);
-      if (File(absPath).existsSync()) {
-        _urlToAbsPath[url] = absPath;
+
+      final expected = _absPathForUrl(url);
+
+      // Check existing index entry first.
+      final indexed = _urlToAbsPath[url];
+      if (indexed != null && File(indexed).existsSync()) {
+        found++;
+        continue;
+      }
+
+      // Fall back to computed path (covers ZIP case where index doesn't exist yet).
+      if (File(expected).existsSync()) {
+        _urlToAbsPath[url] = expected;
         found++;
       } else {
+        _urlToAbsPath.remove(url);
         missing++;
       }
     }
 
-    _log('Image resolution: $found found on disk, $missing missing.');
+    _log('Disk resolution: $found found, $missing missing.');
   }
 
   // ── image map rebuild ─────────────────────────────────────────────────────
@@ -475,16 +511,32 @@ class Products {
     return result;
   }
 
-  // ── URL → deterministic local path ───────────────────────────────────────
-  /// Derives a stable absolute path under `<_imagesRootDir>/assets/`.
-  /// Filename = base64url(url) + original extension.
+  // ── URL → local path (original filename) ─────────────────────────────────
+
+  /// Keeps the original filename from the URL.
   ///
-  /// Must stay in sync with Python script's url_to_zip_entry_name().
+  /// `https://.../original/DM8S_Right-Facing_1200x1022.jpeg`
+  ///  → `<assetsDir>/DM8S_Right-Facing_1200x1022.jpeg`
+  ///
+  /// If two different URLs share the same filename (rare but possible),
+  /// the second one gets a numeric suffix: `filename_2.jpeg`.
   String _absPathForUrl(String url) {
     final uri = Uri.parse(url);
-    final ext = p.extension(uri.path).isNotEmpty ? p.extension(uri.path) : '.img';
-    final encoded = base64Url.encode(utf8.encode(url)).replaceAll('=', '');
-    return p.join(_assetsDir, '$encoded$ext');
+    final segments = uri.pathSegments;
+    final rawName = segments.isNotEmpty ? Uri.decodeComponent(segments.last) : 'image_${url.hashCode.abs()}';
+
+    final candidate = p.join(_assetsDir, rawName);
+
+    // Check if another URL already owns this filename.
+    final existing = _urlToAbsPath.entries.where((e) => e.value == candidate && e.key != url).firstOrNull;
+
+    if (existing == null) return candidate;
+
+    // Conflict — append a suffix based on URL hash.
+    final ext = p.extension(rawName);
+    final base = p.basenameWithoutExtension(rawName);
+    final suffix = url.hashCode.abs() % 9999;
+    return p.join(_assetsDir, '${base}_$suffix$ext');
   }
 
   // ── helpers ───────────────────────────────────────────────────────────────
@@ -523,27 +575,22 @@ class Products {
 
   // ── directory management ──────────────────────────────────────────────────
 
-  /// Always uses getApplicationSupportDirectory — sandboxed, persistent,
-  /// correct on macOS/iOS/Android/Windows.
-  ///
-  /// macOS debug:   ~/Library/Containers/{bundle}/Data/Library/Application Support/
-  /// macOS release: ~/Library/Containers/{bundle}/Data/Library/Application Support/
-  /// iOS:           {app}/Library/Application Support/
-  /// Android:       /data/data/{package}/files/
   Future<void> _ensureRootDir() async {
-    if (_imagesRootDir != null) return;
+    if (_rootDir != null) return;
 
-    // Use cacheService.directoryPath — it's already scoped to app_cache/products/
-    // so images land at: app_cache/products/assets/
-    _imagesRootDir = cacheService.directoryPath;
+    // Use the scoped cache service directory — already points to
+    // AppCache/products/ inside getApplicationSupportDirectory().
+    _rootDir = cacheService.directoryPath;
 
     await Directory(_assetsDir).create(recursive: true);
-
-    _log('imagesRootDir resolved to: $_imagesRootDir');
-    _log('assetsDir: $_assetsDir');
+    _log('Cached Root Directory=$_rootDir');
   }
 
-  String get _assetsDir => p.join(_imagesRootDir!, 'assets');
+  /// `<rootDir>/assets/` — where all image files live.
+  String get _assetsDir => p.join(_rootDir!, 'assets');
+
+  /// `<rootDir>/assets/_index.json` — url → absolute path map.
+  String get _imageIndexPath => p.join(_assetsDir, '_index.json');
 
   void _reset() {
     _catalog = null;
@@ -552,7 +599,7 @@ class Products {
     _imageByProductId.clear();
   }
 
-  void _log(String message) => FusionLogger.log(tag: LogTag.project, message: 'Products: $message');
+  void _log(String message) => log(message);
 
   List<T> _filter<T>(List<T>? source, bool Function(T) predicate) {
     if (source == null) return const [];

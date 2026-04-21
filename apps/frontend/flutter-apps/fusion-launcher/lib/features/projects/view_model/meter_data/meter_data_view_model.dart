@@ -19,11 +19,32 @@ enum MeterInactiveReason { notStarted, controlModeOff, projectClosed, refreshing
 // MeterDataViewModel — singleton registered in service_locator.dart
 //
 // Resilient ZMQ telemetry consumer with:
-//  • Heartbeat-based liveness detection (catches silent disconnects)
+//  • Enum-based connection state machine (no desync-able boolean flags)
+//  • Heartbeat liveness detection via last-received timestamp
+//    (ZMQ has no ping/pong — timestamp is the correct mechanism here)
 //  • Exponential-backoff auto-reconnect
-//  • App lifecycle awareness (reconnects on resume from background)
-//  • Observer-gated resource management (no reconnect when no UI watches)
+//  • App lifecycle awareness with background-grace-period guard
+//    (short focus-blips on desktop are ignored; only true backgrounds reconnect)
+//  • Observer-gated resource management via a Set<Object> identity token
+//    (eliminates double-register / double-unregister counter drift)
 // ─────────────────────────────────────────────────────────────────────────────
+
+/// Internal connection state — the single source of truth for what the
+/// telemetry stream is doing right now. All entry points gate on this value.
+///
+/// Unlike [BlockDataViewmodel] there is no `verifying` state because ZMQ
+/// subscriptions do not support a ping/pong handshake. Liveness is inferred
+/// from the timestamp of the last received frame.
+enum _TelemetryState {
+  /// No subscription open. Safe to call [startTelemetry].
+  disconnected,
+
+  /// [networkClient.connect] is in-flight. Duplicate calls are ignored.
+  connecting,
+
+  /// Subscription open; data flowing; heartbeat running.
+  connected,
+}
 
 class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserver {
   MeterDataViewModel() : super(const MeterDataState()) {
@@ -33,49 +54,74 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
 
   final FusionNetworkClient networkClient = serviceLocator<FusionNetworkClient>();
 
-  // ── internals ──────────────────────────────────────────────────────────────
+  // ── Connection state machine ───────────────────────────────────────────────
 
-  StreamSubscription<ResponseCallback<dynamic>>? _telemetrySubscription;
+  _TelemetryState _telemetryState = _TelemetryState.disconnected;
 
-  /// Listens to [ProjectViewModel] state changes and reacts to
-  /// [isInControlMode] flipping on/off.
-  StreamSubscription<dynamic>? _controlModeSubscription;
-
-  /// Timer used for auto-reconnect with exponential backoff.
-  Timer? _reconnectTimer;
-
-  /// Current reconnect delay — doubles after each failed attempt, resets on
-  /// a successful data reception.
-  Duration _reconnectDelay = const Duration(seconds: 2);
-
-  /// Hard ceiling so the backoff doesn't grow without bound.
-  static const Duration _maxReconnectDelay = Duration(seconds: 30);
-
-  /// Whether the last disconnection was intentional (user/control-mode off).
-  /// Prevents auto-reconnect from firing after a deliberate stop.
+  /// Whether [stopTelemetry] was called intentionally.
+  /// Prevents the auto-reconnect path from running after a deliberate stop.
   bool _intentionallyStopped = false;
 
-  /// Number of mounted UI widgets currently observing meter data.
-  /// Auto-reconnect only runs while this is > 0.
-  int _uiObserverCount = 0;
+  StreamSubscription<ResponseCallback<dynamic>>? _telemetrySubscription;
+  StreamSubscription<dynamic>? _controlModeSubscription;
 
-  /// Periodic timer that checks whether we've received any data recently.
-  /// If not, it treats the connection as stale and forces a reconnect.
+  // ── Observer tracking ──────────────────────────────────────────────────────
+
+  /// Identity tokens of currently mounted UI widgets observing this ViewModel.
+  ///
+  /// Using a [Set] rather than a counter prevents counter drift caused by
+  /// mismatched register/unregister calls (e.g. hot-reload, widget rebuild).
+  /// Each widget passes a stable `this` reference or a dedicated token object.
+  final Set<Object> _observers = <Object>{};
+
+  bool get hasActiveObservers => _observers.isNotEmpty;
+
+  // ── Reconnect (exponential backoff) ───────────────────────────────────────
+
+  Timer? _reconnectTimer;
+  Duration _reconnectDelay = const Duration(seconds: 2);
+  static const Duration _kMaxReconnectDelay = Duration(seconds: 30);
+
+  // ── Heartbeat (timestamp-based liveness) ──────────────────────────────────
+  //
+  // ZMQ is a subscriber protocol — there is no application-level ping/pong.
+  // We infer liveness from how recently data arrived. If no frame arrives
+  // within [_kStaleThreshold] the socket is considered silently dead.
+
   Timer? _heartbeatTimer;
 
-  /// How often the heartbeat check fires.
-  static const Duration _heartbeatInterval = Duration(seconds: 8);
+  /// How often the heartbeat fires while connected.
+  static const Duration _kHeartbeatInterval = Duration(seconds: 8);
 
-  /// If no data arrives within this window the connection is considered stale.
-  static const Duration _staleThreshold = Duration(seconds: 15);
+  /// If no data arrives within this window the connection is stale.
+  static const Duration _kStaleThreshold = Duration(seconds: 15);
 
   /// Timestamp of the last successfully received data frame.
   DateTime? _lastDataReceivedAt;
 
-  /// Guards against overlapping connect/disconnect cycles.
-  bool _isConnecting = false;
+  // ── App-lifecycle background detection ────────────────────────────────────
 
-  // ── lifecycle ──────────────────────────────────────────────────────────────
+  /// When the app truly entered a background state (`paused` / `detached`).
+  /// `null` means the app has not been genuinely backgrounded — transient
+  /// `inactive` / `hidden` events on desktop do NOT set this.
+  DateTime? _backgroundedAt;
+
+  /// The last observed lifecycle state. Used to deduplicate repeated callbacks
+  /// (some platforms re-deliver the same state without a real transition).
+  AppLifecycleState? _lastLifecycleState;
+
+  /// Minimum background duration before we consider the socket suspect on
+  /// resume. Anything shorter is a focus blip (menu open, alert, etc.) and
+  /// the socket is almost certainly still alive.
+  static const Duration _kBackgroundGracePeriod = Duration(seconds: 5);
+
+  /// On resume, if the most recent data frame is older than this we assume the
+  /// socket died silently and force a reconnect immediately.
+  static const Duration _kResumeStaleThreshold = Duration(seconds: 10);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Lifecycle
+  // ═══════════════════════════════════════════════════════════════════════════
 
   @override
   Future<void> close() {
@@ -83,95 +129,166 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
     _controlModeSubscription?.cancel();
     _heartbeatTimer?.cancel();
     _reconnectTimer?.cancel();
-    _cancelTelemetry();
+    _teardownTelemetry();
     return super.close();
   }
 
-  // ── app lifecycle ──────────────────────────────────────────────────────────
+  // ── App lifecycle ──────────────────────────────────────────────────────────
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    switch (state) {
+  void didChangeAppLifecycleState(AppLifecycleState lifecycleState) {
+    // Deduplicate — some platforms re-deliver the same state.
+    if (_lastLifecycleState == lifecycleState) return;
+    _lastLifecycleState = lifecycleState;
+
+    switch (lifecycleState) {
       case AppLifecycleState.resumed:
-        debugPrint('[MeterData] App resumed — checking connection…');
-        _onAppResumed();
+        final DateTime? backgroundedAt = _backgroundedAt;
+        _backgroundedAt = null; // Clear regardless of whether we act.
+
+        if (backgroundedAt == null) {
+          // Was never truly backgrounded (e.g. a transient inactive→resumed
+          // flip). Ensure the heartbeat is alive and move on.
+          _ensureHeartbeatRunning();
+          return;
+        }
+
+        final Duration awayFor = DateTime.now().difference(backgroundedAt);
+        debugPrint(
+          '[MeterData] App resumed after ${awayFor.inSeconds}s in background.',
+        );
+        _onAppResumed(awayFor: awayFor);
+
       case AppLifecycleState.paused:
-      case AppLifecycleState.inactive:
       case AppLifecycleState.detached:
-      case AppLifecycleState.hidden:
-        // Stop the heartbeat while backgrounded to save resources.
+        // True background entry — record timestamp, pause heartbeat.
+        _backgroundedAt ??= DateTime.now();
         _heartbeatTimer?.cancel();
         _heartbeatTimer = null;
+
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+        // Transient states: window-focus loss, system overlay, brief
+        // obscuration. The process keeps running and the socket stays valid.
+        // Do NOT set _backgroundedAt or cancel the heartbeat — on desktop
+        // these fire constantly (every menu open, every tooltip, etc.) and
+        // would cause continuous spurious reconnects.
+        break;
     }
   }
 
-  /// Called when the app returns to the foreground. Forces a fresh connection
-  /// check because ZMQ sockets often die silently during background.
-  void _onAppResumed() {
+  /// Handles the app returning to the foreground after a genuine background
+  /// trip. Decides whether the existing subscription can be trusted.
+  ///
+  /// Note: Unlike [BlockDataViewmodel], there is no ping/pong available over
+  /// ZMQ. We probe liveness via the last-received timestamp instead.
+  void _onAppResumed({required Duration awayFor}) {
     final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
     if (!vm.isInControlMode || !hasActiveObservers) return;
 
-    // Force a reconnect — the old socket is almost certainly stale after
-    // the app was backgrounded.
-    _forceReconnect();
+    // Very short absence → trust the socket; the heartbeat will catch any
+    // silent death within [_kHeartbeatInterval].
+    if (awayFor < _kBackgroundGracePeriod) {
+      _ensureHeartbeatRunning();
+      return;
+    }
+
+    // No subscription at all → let the normal connect flow run.
+    if (_telemetryState == _TelemetryState.disconnected) {
+      _ensureHeartbeatRunning();
+      startTelemetry();
+      return;
+    }
+
+    // Subscription exists — check the last-data timestamp to decide if it is
+    // still alive. A fresh frame means the socket survived the background.
+    final DateTime? last = _lastDataReceivedAt;
+    final bool looksAlive = last != null && DateTime.now().difference(last) < _kResumeStaleThreshold;
+
+    if (looksAlive) {
+      debugPrint('[MeterData] Socket looks alive on resume — keeping it.');
+      _ensureHeartbeatRunning();
+    } else {
+      debugPrint(
+        '[MeterData] Socket appears stale on resume — forcing reconnect.',
+      );
+      _forceReconnect();
+    }
   }
 
-  // ── control-mode wiring ────────────────────────────────────────────────────
+  /// Restarts the heartbeat timer only if a subscription is open and the
+  /// timer is not already running.
+  void _ensureHeartbeatRunning() {
+    if (_telemetryState != _TelemetryState.connected) return;
+    if (_heartbeatTimer?.isActive ?? false) return;
+    _startHeartbeat();
+  }
+
+  // ── Control-mode wiring ────────────────────────────────────────────────────
 
   void _attachControlModeListener() {
     final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
-
-    // Seed: react to whatever the current state already is.
     _onControlModeChanged(vm.isInControlMode);
-
-    _controlModeSubscription = vm.stream.map((ProjectViewModelState s) => vm.isInControlMode).distinct().listen(_onControlModeChanged);
+    _controlModeSubscription = vm.stream.map((_) => vm.isInControlMode).distinct().listen(_onControlModeChanged);
   }
 
-  void _onControlModeChanged(bool isActive) {
-    if (isActive) {
+  void _onControlModeChanged(bool active) {
+    if (active) {
       startTelemetry();
     } else {
       stopTelemetry(reason: MeterInactiveReason.controlModeOff);
     }
   }
 
-  void refreshSubscriber() {
-    stopTelemetry(reason: MeterInactiveReason.refreshing);
-    final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
-    if (vm.isInControlMode) {
-      startTelemetry();
-    }
-  }
-
-  // ── public API ─────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Public API
+  // ═══════════════════════════════════════════════════════════════════════════
 
   void onProjectOpened() {
-    final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
-    if (vm.isInControlMode) {
-      startTelemetry();
-    }
+    if (serviceLocator<ProjectViewModel>().isInControlMode) startTelemetry();
   }
 
   void onProjectClosed() {
     stopTelemetry(reason: MeterInactiveReason.projectClosed);
   }
 
-  void registerObserver() {
-    _uiObserverCount++;
-    debugPrint('[MeterData] registerObserver — count: $_uiObserverCount');
-    if (_uiObserverCount == 1) {
+  void refreshSubscriber() {
+    stopTelemetry(reason: MeterInactiveReason.refreshing);
+    if (serviceLocator<ProjectViewModel>().isInControlMode) startTelemetry();
+  }
+
+  // ── Observer management ────────────────────────────────────────────────────
+
+  /// Call from a widget's [State.initState] / [StatefulWidget] mounting point.
+  ///
+  /// Pass a stable identity token — typically `this` from a [State] subclass.
+  /// The Set ensures that a widget calling [registerObserver] twice without an
+  /// intervening [unregisterObserver] does not inflate the count.
+  void registerObserver(Object observer) {
+    final bool wasEmpty = _observers.isEmpty;
+    _observers.add(observer);
+    debugPrint('[MeterData] registerObserver — count: ${_observers.length}');
+
+    if (wasEmpty) {
       final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
-      if (vm.isInControlMode && _telemetrySubscription == null) {
-        debugPrint('[MeterData] First observer mounted — connecting…');
+      if (vm.isInControlMode && _telemetryState == _TelemetryState.disconnected) {
+        debugPrint('[MeterData] First observer — connecting…');
         startTelemetry();
       }
     }
   }
 
-  void unregisterObserver() {
-    _uiObserverCount = (_uiObserverCount - 1).clamp(0, _uiObserverCount);
-    debugPrint('[MeterData] unregisterObserver — count: $_uiObserverCount');
-    if (_uiObserverCount == 0) {
+  /// Call from a widget's [State.dispose].
+  ///
+  /// Safe to call with a token that was never registered (no-op).
+  void unregisterObserver(Object observer) {
+    _observers.remove(observer);
+    debugPrint('[MeterData] unregisterObserver — count: ${_observers.length}');
+
+    if (_observers.isEmpty) {
+      // No UI is watching — pause timers to conserve resources.
+      // The subscription itself is kept alive so data is not lost if an
+      // observer re-mounts quickly (e.g. a tab switch).
       _reconnectTimer?.cancel();
       _reconnectTimer = null;
       _heartbeatTimer?.cancel();
@@ -179,38 +296,43 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
     }
   }
 
-  bool get hasActiveObservers => _uiObserverCount > 0;
-
-  // ── connection ─────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Connection
+  // ═══════════════════════════════════════════════════════════════════════════
 
   Future<void> startTelemetry() async {
-    // Guard: do not double-subscribe or overlap with an in-flight connect.
-    if (_telemetrySubscription != null || _isConnecting) return;
+    // Only start from a clean disconnected state — connecting/connected means
+    // work is already in progress.
+    if (_telemetryState != _TelemetryState.disconnected) return;
 
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _intentionallyStopped = false;
-    _isConnecting = true;
+    _telemetryState = _TelemetryState.connecting;
 
     final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
-    if (vip == null) {
-      _isConnecting = false;
+    if (vip == null || vip.isEmpty) {
+      FusionLogger.log(
+        tag: LogTag.dspConfig,
+        message: '[MeterData] Cannot start: virtualIP is null/empty',
+      );
+      _telemetryState = _TelemetryState.disconnected;
       return;
     }
 
-    debugPrint('[MeterData] Starting telemetry to $vip…');
+    debugPrint('[MeterData] Connecting to $vip…');
 
     try {
       await networkClient.connect(vip: vip);
     } catch (e) {
       debugPrint('[MeterData] Connect failed: $e');
-      _isConnecting = false;
+      _telemetryState = _TelemetryState.disconnected;
       _scheduleReconnect();
       return;
     }
 
-    _lastDataReceivedAt = DateTime.now();
-
+    // Attach stream listener before updating state so we cannot miss the
+    // first frame.
     _telemetrySubscription = networkClient.responseMessages.listen(
       _onDataReceived,
       onError: (dynamic error) {
@@ -224,20 +346,27 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
       cancelOnError: false,
     );
 
-    // Reset backoff on successful connection.
+    _lastDataReceivedAt = DateTime.now();
+
+    // Reset backoff — connection succeeded.
     _reconnectDelay = const Duration(seconds: 2);
-    _isConnecting = false;
+    _telemetryState = _TelemetryState.connected;
 
-    emit(state.copyWith(isConnected: true, clearInactiveReason: true));
+    if (!isClosed) {
+      emit(state.copyWith(isConnected: true, clearInactiveReason: true));
+    }
 
-    // Start the heartbeat checker to detect silent disconnects.
     _startHeartbeat();
+    debugPrint('[MeterData] Telemetry connected.');
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Incoming data
+  // ═══════════════════════════════════════════════════════════════════════════
 
   void _onDataReceived(ResponseCallback<dynamic> message) {
     _lastDataReceivedAt = DateTime.now();
 
-    // If we were in a "disconnected" state, mark as reconnected.
     if (!state.isConnected && !isClosed) {
       emit(state.copyWith(isConnected: true, clearInactiveReason: true));
     }
@@ -249,7 +378,9 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
 
       final Map<String, MeterPacket> updatedPackets = Map<String, MeterPacket>.from(state.packets)..[packet.name] = packet;
 
-      final Map<String, MeterBlock> updatedMeterValues = Map<String, MeterBlock>.from(state.meterValues ?? <String, MeterBlock>{});
+      final Map<String, MeterBlock> updatedMeterValues = Map<String, MeterBlock>.from(
+        state.meterValues ?? <String, MeterBlock>{},
+      );
       for (final MeterBlock block in packet.blocks) {
         updatedMeterValues[block.blockName] = block;
       }
@@ -257,19 +388,20 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
       // Extract per-device system info from fusion_system_monitor packets.
       Map<String, DeviceSystemInfo>? updatedSystemInfo;
       if (packet.name == 'fusion_system_monitor' && packet.deviceId.isNotEmpty) {
-        updatedSystemInfo = Map<String, DeviceSystemInfo>.from(state.deviceSystemInfo);
-        updatedSystemInfo[packet.deviceId] = _parseSystemInfo(packet);
+        updatedSystemInfo = Map<String, DeviceSystemInfo>.from(state.deviceSystemInfo)..[packet.deviceId] = _parseSystemInfo(packet);
       }
 
-      emit(
-        state.copyWith(
-          packets: updatedPackets,
-          meterValues: updatedMeterValues,
-          deviceSystemInfo: updatedSystemInfo,
-          isConnected: true,
-          clearInactiveReason: true,
-        ),
-      );
+      if (!isClosed) {
+        emit(
+          state.copyWith(
+            packets: updatedPackets,
+            meterValues: updatedMeterValues,
+            deviceSystemInfo: updatedSystemInfo,
+            isConnected: true,
+            clearInactiveReason: true,
+          ),
+        );
+      }
     } catch (e) {
       debugPrint('[MeterData] Parse error: $e');
     }
@@ -306,99 +438,99 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
     );
   }
 
-  // ── heartbeat (stale-connection detection) ─────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Heartbeat
+  // ═══════════════════════════════════════════════════════════════════════════
 
   void _startHeartbeat() {
     _heartbeatTimer?.cancel();
-    _heartbeatTimer = Timer.periodic(_heartbeatInterval, (_) {
-      _checkLiveness();
-    });
+    _heartbeatTimer = Timer.periodic(_kHeartbeatInterval, (_) => _checkLiveness());
   }
 
-  /// Checks whether data has been received within [_staleThreshold].
-  /// If not, the connection is considered silently dead and is torn down
-  /// + reconnected.
+  /// Checks whether the most recent frame arrived within [_kStaleThreshold].
+  /// If not, the ZMQ socket is considered silently dead and is torn down.
   void _checkLiveness() {
     if (_intentionallyStopped || isClosed) return;
     if (_lastDataReceivedAt == null) return;
 
     final Duration elapsed = DateTime.now().difference(_lastDataReceivedAt!);
-    if (elapsed > _staleThreshold) {
+    if (elapsed > _kStaleThreshold) {
       debugPrint(
-        '[MeterData] No data for ${elapsed.inSeconds}s — treating as stale, reconnecting…',
+        '[MeterData] No data for ${elapsed.inSeconds}s — '
+        'treating connection as stale, reconnecting…',
       );
       _forceReconnect();
     }
   }
 
-  // ── reconnection ──────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Reconnect
+  // ═══════════════════════════════════════════════════════════════════════════
 
-  /// Tears down the current connection unconditionally and starts a fresh one.
+  /// Unconditionally tears down and restarts the subscription.
+  /// Only called when liveness checks confirm the connection is dead.
   void _forceReconnect() {
-    _cancelTelemetry();
-    if (!isClosed) {
-      emit(state.copyWith(isConnected: false));
-    }
-    // Small delay to let the old socket fully release.
+    _teardownTelemetry();
+    _telemetryState = _TelemetryState.disconnected;
+    if (!isClosed) emit(state.copyWith(isConnected: false));
+
+    // Small delay to let the OS fully release the old socket descriptor.
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(const Duration(milliseconds: 500), () {
-      if (isClosed) return;
+      if (isClosed || _intentionallyStopped) return;
       startTelemetry();
     });
   }
 
   void _handleUnexpectedDisconnect() {
-    _cancelTelemetry();
-    if (!isClosed) {
-      emit(state.copyWith(isConnected: false));
-    }
-
-    if (!_intentionallyStopped) {
-      _scheduleReconnect();
-    }
+    _teardownTelemetry();
+    _telemetryState = _TelemetryState.disconnected;
+    if (!isClosed) emit(state.copyWith(isConnected: false));
+    if (!_intentionallyStopped) _scheduleReconnect();
   }
 
   void _scheduleReconnect() {
     if (_reconnectTimer?.isActive ?? false) return;
     if (isClosed) return;
-
     if (!hasActiveObservers) {
       debugPrint('[MeterData] No active observers — skipping reconnect.');
       return;
     }
-
-    final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
-    if (!vm.isInControlMode) return;
+    if (!serviceLocator<ProjectViewModel>().isInControlMode) return;
 
     debugPrint(
-      '[MeterData] Scheduling reconnect in ${_reconnectDelay.inSeconds}s…',
+      '[MeterData] Reconnecting in ${_reconnectDelay.inSeconds}s '
+      '(backoff: ${_reconnectDelay.inMilliseconds}ms)…',
     );
 
     _reconnectTimer = Timer(_reconnectDelay, () {
-      if (isClosed) return;
-      // Exponential backoff capped at _maxReconnectDelay.
+      if (isClosed || _intentionallyStopped) return;
       _reconnectDelay = Duration(
-        milliseconds: (_reconnectDelay.inMilliseconds * 2).clamp(
-          0,
-          _maxReconnectDelay.inMilliseconds,
-        ),
+        milliseconds: (_reconnectDelay.inMilliseconds * 2).clamp(0, _kMaxReconnectDelay.inMilliseconds),
       );
       startTelemetry();
     });
   }
 
-  // ── teardown ───────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Teardown
+  // ═══════════════════════════════════════════════════════════════════════════
 
+  /// Intentional full stop — clears all state and emits inactive reason.
   void stopTelemetry({required MeterInactiveReason reason}) {
     debugPrint('[MeterData] Stopping telemetry — reason: $reason');
     _intentionallyStopped = true;
+    _telemetryState = _TelemetryState.disconnected;
+
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _heartbeatTimer?.cancel();
     _heartbeatTimer = null;
-    _reconnectDelay = const Duration(seconds: 2);
+    _reconnectDelay = const Duration(seconds: 2); // ← was never reset in original
     _lastDataReceivedAt = null;
-    _cancelTelemetry();
+
+    _teardownTelemetry();
+
     emit(
       MeterDataState(
         packets: const <String, MeterPacket>{},
@@ -408,13 +540,15 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
     );
   }
 
-  void _cancelTelemetry() {
-    _isConnecting = false;
-    _heartbeatTimer?.cancel();
-    _heartbeatTimer = null;
+  /// Low-level subscription cleanup. Does NOT update [_telemetryState] —
+  /// the caller owns that transition.
+  ///
+  /// Note: heartbeat is NOT cancelled here. [stopTelemetry] and
+  /// [_handleUnexpectedDisconnect] handle that explicitly before calling
+  /// this method, avoiding the double-cancel that was in the original code.
+  void _teardownTelemetry() {
     _telemetrySubscription?.cancel();
     _telemetrySubscription = null;
-    // Fire-and-forget: disconnect is best-effort cleanup.
-    networkClient.disconnect();
+    networkClient.disconnect(); // fire-and-forget
   }
 }

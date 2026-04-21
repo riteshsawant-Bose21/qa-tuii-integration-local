@@ -1,9 +1,15 @@
 export 'product_search_service/product_search_service.dart';
 export 'product_search_service/product_list_extensions.dart';
 export 'mdns/mdns_service.dart';
+export 'virtual_controller/virtual_controller_service.dart';
 export 'dsp_sync/fusion_config_sync_service.dart';
 export 'fusion_device/fusion_device_service.dart';
 export 'websocket/websocket_service.dart';
 export 'cache/app_cache_service.dart';
 export 'dowload_manager/dowload_manager.dart';
 export 'dowload_manager/file_download.dart';
+export 'aes67/session_sync_service.dart';
+export 'scene_set/scene_set_activate_service.dart';
+export 'snapshot/snapshot_activate_service.dart';
+export 'event/fusion_event_service.dart';
+export 'message_sync/message_sync_service.dart';

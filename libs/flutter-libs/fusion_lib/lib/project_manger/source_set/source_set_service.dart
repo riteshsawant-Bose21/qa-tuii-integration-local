@@ -278,15 +278,12 @@ extension SourceSetService on ProjectService {
         if (source == sourceId) continue;
 
         final allBlocksInOtherSource = relationships.getChildren(RelationshipType.processingBlock, source).toList();
-        final indexOfProcessingBlockInOtherSource = allBlocksInOtherSource.indexOf(processingBlockId);
+        final String? blockIDToRemove = allBlocksInOtherSource.length > indexOfProcessingBlock ? allBlocksInOtherSource[indexOfProcessingBlock] : null;
 
-        if (indexOfProcessingBlockInOtherSource == -1) {
-          throw (Exception('Processing block $processingBlockId not found in source $source'));
+        if (blockIDToRemove != null) {
+          throw (Exception('Processing blocks are not in sync across sources in linked source set. Cannot remove processing block from other sources in set'));
         }
-
-        final processingBlockToRemove = allBlocksInOtherSource[indexOfProcessingBlockInOtherSource];
-
-        removeProcessingBlockFromParent(processingBlockToRemove, source);
+        removeProcessingBlockFromParent(blockIDToRemove!, source);
       }
     }
   }

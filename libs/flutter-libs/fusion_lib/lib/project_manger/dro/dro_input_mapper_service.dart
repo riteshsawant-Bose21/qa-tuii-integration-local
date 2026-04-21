@@ -1,4 +1,5 @@
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/endpoints.dart';
 
 extension DroInputMapperService on ProjectService {
   DroInputModel getDroInputData() {
@@ -58,10 +59,45 @@ extension DroInputMapperService on ProjectService {
   }
 
   DroInputModel updateInputStreamData(DroInputModel droInputModel) {
+    List<DroInputStream> inputStreams = [];
+
+    List<AssignedInputStreamInfo> inputStreamInfo = getAssignedInputStreamChannelsForSource();
+
+    for (AssignedInputStreamInfo streamInfo in inputStreamInfo) {
+      if (streamInfo.sourceMappings.isEmpty) {
+        continue;
+      }
+      List<StreamChannelMapping> streamChannelMapping = [];
+      for (StreamSourceChannelMapping sourceMapping in streamInfo.sourceMappings) {
+        if (sourceMapping.channelNumbers.isEmpty) {
+          continue;
+        }
+        streamChannelMapping.add(
+          StreamChannelMapping(
+            ioId: sourceMapping.sourceId,
+            ioCh: sourceMapping.channelNumbers.first,
+          ),
+        );
+      }
+      if (streamChannelMapping.isEmpty) {
+        continue;
+      }
+      inputStreams.add(
+        DroInputStream(
+          id: streamInfo.streamId,
+          name: streamInfo.streamName,
+          serverLocation: '',
+          totalChannels: streamInfo.sourceMappings.length,
+          sourcePort: 5004,
+          multicastDestinationIp: streamInfo.ipAddress,
+          streamChannelMapping: streamChannelMapping,
+        ),
+      );
+    }
     //Update Input Stream Data
     droInputModel = droInputModel.copyWith(
       //input steam not implemented yet, so we will use empty list for now
-      inputStreams: [],
+      inputStreams: inputStreams,
     );
     return droInputModel;
   }
@@ -183,6 +219,8 @@ extension DroInputMapperService on ProjectService {
 
       List<Source> functionSources = getSourcesAndSourceSetSourcesInZone(zoneId: zone.id);
 
+      final Map<String, int> sourceIndex = {};
+
       List<DroSourceConnection> droSourceConnections = [];
       for (int i = 0; i < functionSources.length; i++) {
         Source source = functionSources[i];
@@ -195,7 +233,10 @@ extension DroInputMapperService on ProjectService {
             destinationChannel: i + 1,
           ),
         );
+        sourceIndex[source.id] = i;
       }
+
+      updateSourceIndexForFunction(functionId: zoneFunction.id, sourceIndex: sourceIndex);
 
       List<PrioritySourceData> prioritySources = getPrioritySourcesDataInZone(zone.id);
 
@@ -214,13 +255,23 @@ extension DroInputMapperService on ProjectService {
         }
       }
 
+      final bool usesInOutChannels =
+          zoneFunction.type == ZoneFunctionsType.sourceMix ||
+          zoneFunction.type == ZoneFunctionsType.sourceMixWithPriority ||
+          zoneFunction.type == ZoneFunctionsType.sourceMatrix ||
+          zoneFunction.type == ZoneFunctionsType.sourceMatrixWithPriority;
+
       Map<String, dynamic> algorithmProperties = prioritySources.isEmpty
           ? {
-              "source_channels": 1,
+              if (usesInOutChannels) "out_channels": 1 else "source_channels": 1,
+              if (usesInOutChannels) "in_channels": functionSources.length else "total_channels": functionSources.length,
             }
           : {
-              "source_channels": 1,
-              "total_channels": functionSources.length + 1,
+              if (usesInOutChannels) "out_channels": 1 else "source_channels": 1,
+              if (usesInOutChannels)
+                "in_channels": functionSources.length + 1
+              else
+                "total_channels": functionSources.length + 1, //+1 is for the priority source
               "priority_count": prioritySources.length,
             };
 
@@ -262,7 +313,7 @@ extension DroInputMapperService on ProjectService {
           sourceTerminal: "out",
           sourceChannel: 1,
           destinationTerminal: "in",
-          destinationChannel: i + 1,
+          destinationChannel: 1,
         ),
       );
 
@@ -493,6 +544,44 @@ extension DroInputMapperService on ProjectService {
   DroInputModel updateOutputStreamData(DroInputModel droInputModel) {
     List<DroOutputStream> droOutputStreams = [];
 
+    List<AssignedOutputStreamInfo> outputStreams = getAssignedOutputStreamToCircuit();
+
+    for (AssignedOutputStreamInfo streamInfo in outputStreams) {
+      if (streamInfo.assignedCircuits.isEmpty) {
+        continue;
+      }
+
+      List<StreamChannelMapping> streamChannelMapping = [];
+
+      for (AssignedCircuitInfo circuitMapping in streamInfo.assignedCircuits) {
+        if (circuitMapping.channels.isEmpty) {
+          continue;
+        }
+        streamChannelMapping.add(
+          StreamChannelMapping(
+            ioId: circuitMapping.circuitId,
+            ioCh: circuitMapping.channels.first.channelNumber,
+          ),
+        );
+      }
+
+      if (streamChannelMapping.isEmpty) {
+        continue;
+      }
+
+      droOutputStreams.add(
+        DroOutputStream(
+          id: streamInfo.streamId,
+          name: streamInfo.streamName,
+          serverLocation: '',
+          sourcePort: 49152,
+          totalChannels: streamChannelMapping.length,
+          multicastDestinationIp: streamInfo.ipAddress,
+          streamChannelMapping: streamChannelMapping,
+        ),
+      );
+    }
+
     //No output steam implemented yet, so we will use empty list for now
 
     droInputModel = droInputModel.copyWith(
@@ -527,16 +616,16 @@ extension DroInputMapperService on ProjectService {
           connection: connection,
         );
 
-        if (matchedPort == null) {
-          FusionLogger.log(tag: LogTag.dro, message: "No matching port found for connection ${connection.id} on device ${dsp.name}");
-
-          // for(PortData port in inputPorts) {
-          //   FusionLogger.log(tag: LogTag.dro, message: "Input Port - id: ${port.id}, number: ${port.portNumber}, type: ${port.type}");
-          // }
-          for (PortData port in comPorts) {
-            FusionLogger.log(tag: LogTag.dro, message: "Communication Port - id: ${port.id}, number: ${port.portNumber}, type: ${port.type}");
-          }
-        }
+        // if (matchedPort == null) {
+        //   FusionLogger.log(tag: LogTag.dro, message: "No matching port found for connection ${connection.id} on device ${dsp.name}");
+        //
+        //   // for(PortData port in inputPorts) {
+        //   //   FusionLogger.log(tag: LogTag.dro, message: "Input Port - id: ${port.id}, number: ${port.portNumber}, type: ${port.type}");
+        //   // }
+        //   for (PortData port in comPorts) {
+        //     FusionLogger.log(tag: LogTag.dro, message: "Communication Port - id: ${port.id}, number: ${port.portNumber}, type: ${port.type}");
+        //   }
+        // }
 
         if (matchedPort != null) {
           droIoPorts.add(
@@ -608,7 +697,53 @@ extension DroInputMapperService on ProjectService {
       }
     }
 
-    // todo: confirm if we need to add amps or not
+    //endpoints
+    for (FusionEndpoints endpoint in getAllHardware().whereType<FusionEndpoints>()) {
+      DroMaxDevice droMaxDevice = DroMaxDevice(
+        deviceId: endpoint.id,
+        deviceType: endpoint.sku.toLowerCase(),
+        deviceLocation: "",
+      );
+      droMaxDevices.add(droMaxDevice);
+
+      List<WiringConnectionModel> wiringConnections = getConnectionForDevice(endpoint.id) ?? [];
+
+      for (WiringConnectionModel connection in wiringConnections) {
+        List<PortData> inputPorts = endpoint.inputPortsData;
+        List<PortData> comPorts = endpoint.communicationPorts;
+
+        // Find matching port from input or communication ports
+        PortData? matchedPort = _findMatchingPort(
+          inputPorts: inputPorts,
+          comPorts: comPorts,
+          connection: connection,
+        );
+
+        // if (matchedPort == null) {
+        //   FusionLogger.log(tag: LogTag.dro, message: "No matching port found for connection ${connection.id} on endpoint ${endpoint.name}");
+        //   for (PortData port in inputPorts) {
+        //     FusionLogger.log(tag: LogTag.dro, message: "Input Port - id: ${port.id}, number: ${port.portNumber}, type: ${port.type}");
+        //   }
+        //   for (PortData port in comPorts) {
+        //     FusionLogger.log(tag: LogTag.dro, message: "Communication Port - id: ${port.id}, number: ${port.portNumber}, type: ${port.type}");
+        //   }
+        // }
+
+        if (matchedPort != null) {
+          droIoPorts.add(
+            DroIoPorts(
+              ioId: endpoint.id == connection.deviceId ? connection.targetDeviceId : connection.deviceId,
+              deviceId: endpoint.id,
+              portType: connection.type.type,
+              portNums: [
+                matchedPort.portNumber,
+              ],
+            ),
+          );
+        }
+      }
+    }
+
     // for (Amplifier amps in getAllHardware().whereType<Amplifier>()) {
     //   DroMaxDevice droMaxDevice = DroMaxDevice(
     //     deviceId: amps.id,
@@ -621,7 +756,7 @@ extension DroInputMapperService on ProjectService {
     DroUserSetting droUserSetting = DroUserSetting(
       maxDevices: droMaxDevices,
       ioPorts: droIoPorts,
-      deviceCapacity: 90,
+      deviceCapacity: 70,
       maxSolveTime: 60,
       maxDeviceHopCount: 10,
       maxNetworkLatency: 50,

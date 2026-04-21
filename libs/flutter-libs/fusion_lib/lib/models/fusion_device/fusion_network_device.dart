@@ -1,3 +1,5 @@
+import 'package:equatable/equatable.dart';
+
 /// Model class representing a Fusion network device discovered on the network.
 class FusionNetworkDevice {
   /// The IP address of the device.
@@ -39,6 +41,8 @@ class FusionNetworkDevice {
   /// The Jenkins build number running on the device.
   final String jenkinsBuildNumber;
 
+  final String? preReleaseTag;
+
   const FusionNetworkDevice({
     required this.address,
     required this.id,
@@ -53,7 +57,18 @@ class FusionNetworkDevice {
     this.fusionMonorepoBranch = '',
     this.fusionMonorepoCommitHash = '',
     this.jenkinsBuildNumber = '',
+    this.preReleaseTag,
   });
+
+  String? get primaryDeviceVersion {
+    if (!isPrimary) return null;
+
+    if (preReleaseTag != null && preReleaseTag!.isNotEmpty && preReleaseTag!.toLowerCase() != 'unknown') {
+      return "$softwareUpdateVersion-$preReleaseTag.$jenkinsBuildNumber";
+    }
+
+    return softwareUpdateVersion;
+  }
 
   factory FusionNetworkDevice.fromJson(Map<String, dynamic> json) {
     return FusionNetworkDevice(
@@ -61,7 +76,7 @@ class FusionNetworkDevice {
       id: json['id'] as String? ?? '',
       location: json['location'] as String? ?? '',
       name: json['name'] as String? ?? '',
-      modelName: 'FM8Y', //json['model_name'] as String? ?? ''
+      modelName: json['serial_number'] == "07323a09dabc1d39" ? "XLRPAL" : 'FM8Y', //json['model_name'] as String? ?? ''
       serialNumber: json['serial_number'] as String? ?? '',
       isPrimary: json['is_primary'] as bool? ?? false,
       macAddress: json['mac_address'] as String? ?? '',
@@ -70,6 +85,7 @@ class FusionNetworkDevice {
       fusionMonorepoBranch: json['fusion_monorepo_branch'] as String? ?? '',
       fusionMonorepoCommitHash: json['fusion_monorepo_commit_hash'] as String? ?? '',
       jenkinsBuildNumber: json['jenkins_build_number'] as String? ?? '',
+      preReleaseTag: json['pre_release_tag'] as String?,
     );
   }
 
@@ -88,6 +104,7 @@ class FusionNetworkDevice {
       'fusion_monorepo_branch': fusionMonorepoBranch,
       'fusion_monorepo_commit_hash': fusionMonorepoCommitHash,
       'jenkins_build_number': jenkinsBuildNumber,
+      'pre_release_tag': preReleaseTag,
     };
   }
 
@@ -105,6 +122,7 @@ class FusionNetworkDevice {
     String? fusionMonorepoBranch,
     String? fusionMonorepoCommitHash,
     String? jenkinsBuildNumber,
+    String? preReleaseTag,
   }) {
     return FusionNetworkDevice(
       address: address ?? this.address,
@@ -120,6 +138,7 @@ class FusionNetworkDevice {
       fusionMonorepoBranch: fusionMonorepoBranch ?? this.fusionMonorepoBranch,
       fusionMonorepoCommitHash: fusionMonorepoCommitHash ?? this.fusionMonorepoCommitHash,
       jenkinsBuildNumber: jenkinsBuildNumber ?? this.jenkinsBuildNumber,
+      preReleaseTag: preReleaseTag ?? this.preReleaseTag,
     );
   }
 
@@ -129,7 +148,10 @@ class FusionNetworkDevice {
         'modelName: $modelName, serialNumber: $serialNumber, isPrimary: $isPrimary, '
         'macAddress: $macAddress, softwareUpdateVersion: $softwareUpdateVersion, '
         'isDeviceCertificateValid: $isDeviceCertificateValid, '
-        'fusionMonorepoBranch: $fusionMonorepoBranch)';
+        'fusionMonorepoBranch: $fusionMonorepoBranch, '
+        'fusionMonorepoCommitHash: $fusionMonorepoCommitHash, '
+        'jenkinsBuildNumber: $jenkinsBuildNumber, '
+        'preReleaseTag: $preReleaseTag)';
   }
 
   @override
@@ -148,7 +170,8 @@ class FusionNetworkDevice {
         other.isDeviceCertificateValid == isDeviceCertificateValid &&
         other.fusionMonorepoBranch == fusionMonorepoBranch &&
         other.fusionMonorepoCommitHash == fusionMonorepoCommitHash &&
-        other.jenkinsBuildNumber == jenkinsBuildNumber;
+        other.jenkinsBuildNumber == jenkinsBuildNumber &&
+        other.preReleaseTag == preReleaseTag;
   }
 
   @override
@@ -167,6 +190,193 @@ class FusionNetworkDevice {
       fusionMonorepoBranch,
       fusionMonorepoCommitHash,
       jenkinsBuildNumber,
+      preReleaseTag,
+    );
+  }
+}
+
+class FirmwareDeviceRebootStatus extends Equatable {
+  final String serialNumber;
+  final String currentBundleVersion;
+  final String status;
+  final String currentState;
+
+  const FirmwareDeviceRebootStatus({
+    required this.serialNumber,
+    required this.currentBundleVersion,
+    required this.status,
+    required this.currentState,
+  });
+
+  @override
+  List<Object?> get props => [serialNumber, currentBundleVersion, status, currentState];
+
+  bool get isSUCCESS => status.toUpperCase() == 'SUCCESS';
+}
+
+class FirmwareUpdateCheckResult extends Equatable {
+  final bool updateAvailable;
+  final bool appUpdateRequired;
+  final String? bundleId;
+  final String? version;
+  final String? releaseNotes;
+  final String? minDesktopAppVersion;
+
+  const FirmwareUpdateCheckResult({
+    required this.updateAvailable,
+    required this.appUpdateRequired,
+    this.bundleId,
+    this.version,
+    this.releaseNotes,
+    this.minDesktopAppVersion,
+  });
+
+  factory FirmwareUpdateCheckResult.fromJson(Map<String, dynamic> json) {
+    return FirmwareUpdateCheckResult(
+      updateAvailable: json['update_available'] as bool? ?? false,
+      appUpdateRequired: json['app_update_required'] as bool? ?? false,
+      bundleId: json['bundle_id'] as String?,
+      version: json['version'] as String?,
+      releaseNotes: json['release_notes'] as String?,
+      minDesktopAppVersion: json['min_desktop_app_version'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'update_available': updateAvailable,
+      'app_update_required': appUpdateRequired,
+      'bundle_id': bundleId,
+      'version': version,
+      'release_notes': releaseNotes,
+      'min_desktop_app_version': minDesktopAppVersion,
+    };
+  }
+
+  @override
+  List<Object?> get props => [updateAvailable, appUpdateRequired, bundleId, version, releaseNotes, minDesktopAppVersion];
+}
+
+class BundleDownloadUrlResult extends Equatable {
+  final String downloadUrl;
+  final String checksum;
+
+  const BundleDownloadUrlResult({
+    required this.downloadUrl,
+    required this.checksum,
+  });
+
+  @override
+  List<Object?> get props => [downloadUrl, checksum];
+
+  factory BundleDownloadUrlResult.fromJson(Map<String, dynamic> json) {
+    return BundleDownloadUrlResult(
+      downloadUrl: json['download_url'] as String? ?? '',
+      checksum: json['checksum'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'download_url': downloadUrl,
+      'checksum': checksum,
+    };
+  }
+
+  String get downloadFileName => Uri.parse(downloadUrl).pathSegments.last;
+}
+
+class CloudDeviceRegisterResult {
+  final String certificate;
+
+  const CloudDeviceRegisterResult({
+    required this.certificate,
+  });
+
+  factory CloudDeviceRegisterResult.fromJson(Map<String, dynamic> json) {
+    return CloudDeviceRegisterResult(
+      certificate: json['certificate'] as String? ?? '',
+    );
+  }
+}
+
+class FirmwareUpdateDeviceProgress {
+  final String serialNumber;
+  final String node;
+  final String updateState;
+  final String step;
+  final String currentTask;
+  final int progress;
+  final String handler;
+  final String timestamp;
+
+  const FirmwareUpdateDeviceProgress({
+    required this.serialNumber,
+    required this.node,
+    required this.updateState,
+    required this.step,
+    required this.currentTask,
+    required this.progress,
+    required this.handler,
+    required this.timestamp,
+  });
+
+  factory FirmwareUpdateDeviceProgress.fromJson(Map<String, dynamic> json) {
+    final String rawProgress = json['progress']?.toString() ?? '0';
+    final int parsedProgress = int.tryParse(rawProgress) ?? 0;
+    return FirmwareUpdateDeviceProgress(
+      serialNumber: json['serial_number']?.toString() ?? '',
+      node: json['node']?.toString() ?? '',
+      updateState: json['update_state']?.toString() ?? '',
+      step: json['step']?.toString() ?? '0/0',
+      currentTask: json['current_task']?.toString() ?? '',
+      progress: parsedProgress.clamp(0, 100),
+      handler: json['handler']?.toString() ?? '',
+      timestamp: json['timestamp']?.toString() ?? '',
+    );
+  }
+}
+
+class FirmwareUpdateProgressEvent {
+  final String type;
+  final String status;
+  final int code;
+  final String message;
+  final String timestamp;
+  final Map<String, FirmwareUpdateDeviceProgress> devicesBySerial;
+
+  const FirmwareUpdateProgressEvent({
+    required this.type,
+    required this.status,
+    required this.code,
+    required this.message,
+    required this.timestamp,
+    required this.devicesBySerial,
+  });
+
+  bool get isUpdateProgress => type == 'update_progress';
+
+  factory FirmwareUpdateProgressEvent.fromJson(Map<String, dynamic> json) {
+    final Map<String, FirmwareUpdateDeviceProgress> devicesBySerial = <String, FirmwareUpdateDeviceProgress>{};
+    final dynamic rawData = json['data'];
+    if (rawData is Map<String, dynamic>) {
+      for (final MapEntry<String, dynamic> entry in rawData.entries) {
+        final dynamic value = entry.value;
+        if (value is! Map<String, dynamic>) continue;
+        final FirmwareUpdateDeviceProgress parsed = FirmwareUpdateDeviceProgress.fromJson(value);
+        final String serial = parsed.serialNumber.trim();
+        final String key = serial.isNotEmpty ? serial : entry.key;
+        devicesBySerial[key] = parsed;
+      }
+    }
+
+    return FirmwareUpdateProgressEvent(
+      type: json['type']?.toString() ?? '',
+      status: json['status']?.toString() ?? '',
+      code: json['code'] is int ? json['code'] as int : int.tryParse(json['code']?.toString() ?? '') ?? 0,
+      message: json['message']?.toString() ?? '',
+      timestamp: json['timestamp']?.toString() ?? '',
+      devicesBySerial: devicesBySerial,
     );
   }
 }
