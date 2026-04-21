@@ -16,7 +16,10 @@ class FusionDrawer extends StatelessWidget {
     this.onButtonPressed,
     this.onClose,
     this.backgroundColor,
+    this.buttonEnabledNotifier,
   });
+
+  final ValueNotifier<bool>? buttonEnabledNotifier;
 
   ///SemanticId for automation
   final String semanticId;
@@ -69,19 +72,34 @@ class FusionDrawer extends StatelessWidget {
                 testId: SemanticHelper.createTestId(SemanticTypes.container, '${semanticId}_drawer_footer'),
                 child: Container(
                   decoration: BoxDecoration(
+                    color: context.colorScheme.elevation1,
                     boxShadow: [
                       BoxShadow(color: context.colorScheme.shadowDark, blurRadius: 7, offset: const Offset(2, 2)),
                       BoxShadow(color: context.colorScheme.shadowLight, blurRadius: 7, offset: const Offset(-2, -2)),
                     ],
                   ),
                   padding: const EdgeInsets.all(16),
-                  child: FusionAppButton(
-                    height: 48,
-                    semanticId: '${semanticId}_drawer_footer_button',
-                    style: FusionAppButtonStyle.primary,
-                    text: buttonLabel!,
-                    onPressed: buttonLabel != null ? onButtonPressed : null,
-                  ),
+                  child: buttonEnabledNotifier != null
+                      ? ValueListenableBuilder<bool>(
+                          valueListenable: buttonEnabledNotifier!,
+                          builder: (BuildContext context, bool enabled, Widget? child) {
+                            return FusionAppButton(
+                              height: 48,
+                              enabled: enabled,
+                              semanticId: '${semanticId}_drawer_footer_button',
+                              style: FusionAppButtonStyle.primary,
+                              text: buttonLabel!,
+                              onPressed: enabled ? onButtonPressed : null,
+                            );
+                          },
+                        )
+                      : FusionAppButton(
+                          height: 48,
+                          semanticId: '${semanticId}_drawer_footer_button',
+                          style: FusionAppButtonStyle.primary,
+                          text: buttonLabel!,
+                          onPressed: buttonLabel != null ? onButtonPressed : null,
+                        ),
                 ),
               ),
             ],
@@ -130,6 +148,7 @@ class FusionDrawer extends StatelessWidget {
     String? buttonLabel,
     VoidCallback? onButtonPressed,
     Color? backgroundColor,
+    ValueNotifier<bool>? buttonEnabledNotifier,
   }) {
     return showGeneralDialog<T>(
       context: context,
@@ -153,6 +172,7 @@ class FusionDrawer extends StatelessWidget {
                 buttonLabel: buttonLabel,
                 onButtonPressed: onButtonPressed,
                 onClose: () => Navigator.of(ctx).pop(),
+                buttonEnabledNotifier: buttonEnabledNotifier,
               ),
             ),
           ),

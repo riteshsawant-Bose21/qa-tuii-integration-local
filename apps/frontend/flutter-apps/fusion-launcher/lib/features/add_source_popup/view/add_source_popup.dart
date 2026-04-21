@@ -506,6 +506,7 @@ class AddSourcePopup extends StatelessWidget {
                                                                 height: 28,
 
                                                                 onPressed: () {
+                                                                  Navigator.pop(context);
                                                                   InputStreamDialog.show(
                                                                     context,
                                                                     onSave: (Aes67Config stream) {
@@ -534,10 +535,7 @@ class AddSourcePopup extends StatelessWidget {
                                                               text: (option as Aes67Config).name,
                                                               maxLine: 1,
                                                               style: context.textTheme.l1Regular.copyWith(
-                                                                color:
-                                                                    option == state.selectedStream
-                                                                        ? context.colorScheme.primary
-                                                                        : context.colorScheme.textPrimary,
+                                                                color: context.colorScheme.textPrimary,
                                                               ),
                                                             ),
                                                           ),
@@ -545,7 +543,7 @@ class AddSourcePopup extends StatelessWidget {
                                                             Icon(
                                                               Icons.check,
                                                               size: 14,
-                                                              color: context.colorScheme.primary,
+                                                              color: context.colorScheme.iconWhite,
                                                             ),
                                                         ],
                                                       );
