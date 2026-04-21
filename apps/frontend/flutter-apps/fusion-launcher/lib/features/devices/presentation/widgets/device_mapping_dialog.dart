@@ -106,16 +106,23 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
                   text: 'CONFIGURE NETWORK',
                   style: context.textTheme.labelMedium,
                 ),
-                InkWell(
-                  child: Icon(
-                    Icons.close,
-                    color: context.colorScheme.iconWhite,
-                  ),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    if (serviceLocator<ProjectViewModel>().virtualIP == null) {
-                      serviceLocator<ProjectViewModel>().toggleControlMode();
-                    }
+                ValueListenableBuilder<bool>(
+                  valueListenable: serviceLocator<ProjectViewModel>().isDevicesRegisteringNotifier,
+                  builder: (BuildContext context, bool value, Widget? child) {
+                    if (value) return const SizedBox(); // Hide close button when devices are being registered
+
+                    return InkWell(
+                      child: Icon(
+                        Icons.close,
+                        color: context.colorScheme.iconWhite,
+                      ),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        if (serviceLocator<ProjectViewModel>().virtualIP == null) {
+                          serviceLocator<ProjectViewModel>().toggleControlMode();
+                        }
+                      },
+                    );
                   },
                 ),
               ],
