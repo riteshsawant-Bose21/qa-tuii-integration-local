@@ -5,7 +5,7 @@ import 'package:fusion_app/features/shared/presentation/widgets/common/button/bu
 import 'package:fusion_app/features/shared/presentation/widgets/common/empty_state.dart';
 import 'package:fusion_app/features/wall_controllers/models/wall_controller_model.dart';
 import 'package:fusion_app/features/wall_controllers/widgets/wall_controller_card.dart';
-import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_lib.dart' hide WallController;
 
 class WallControllersScreen extends StatefulWidget {
   const WallControllersScreen({super.key});
@@ -57,7 +57,7 @@ class _WallControllersScreenState extends State<WallControllersScreen> {
 
     return Scaffold(
       backgroundColor: context.colorScheme.primaryBlack,
-      appBar: CommonAppBar(title: "Wall Controllers",actions: [
+      appBar: CommonMobileAppBar(title: "Wall Controllers",actions: [
         controllers.isNotEmpty ?  GestureDetector(
             onTap: (){
               Navigator.pushNamed(context, Routes.qrScannerPage);

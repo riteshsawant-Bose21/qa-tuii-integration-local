@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/controller/controller_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
@@ -17,11 +18,11 @@ import 'package:printing/printing.dart';
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 
+/// Virtual Control section — shows a QR code for mobile virtual wall controller access
 class VirtualControlSection extends StatelessWidget {
-  final String? controllerUrl;
   final String? controllerId;
 
-  const VirtualControlSection({super.key, this.controllerUrl, this.controllerId});
+  const VirtualControlSection({super.key, this.controllerId});
 
   String get _qrData => jsonEncode(<String, String>{
     "vip": serviceLocator<ProjectViewModel>().virtualIP ?? "",
@@ -96,39 +97,48 @@ class VirtualControlSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        const PanelSectionHeader(title: 'VIRTUAL CONTROL'),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              _buildQrCode(context),
-              const SizedBox(width: 18),
-              _buildDescription(context),
-            ],
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.settingsTabvirtualControlsection),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          /// Section header — shared PanelSectionHeader widget
+          PanelSectionHeader(semanticId: FusionTestKeys.instance.settingsTabvirtualControlsectionHeader, title: 'VIRTUAL CONTROL'),
+
+          /// QR + description row
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                _buildQrCode(context),
+                const SizedBox(width: 18),
+                _buildDescription(context),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildQrCode(BuildContext context) {
-    return Container(
-      width: 158,
-      height: 158,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation2,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.colorScheme.strokeLight, width: 1),
-      ),
-      child: PrettyQrView.data(
-        data: _qrData,
-        decoration: const PrettyQrDecoration(
-          shape: PrettyQrSmoothSymbol(color: Colors.white),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.settingsTabvirtualControlsectionQrPanel),
+      child: Container(
+        width: 158,
+        height: 158,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: context.colorScheme.elevation2,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: context.colorScheme.strokeLight, width: 1),
+        ),
+        child: PrettyQrView.data(
+          data: _qrData,
+          decoration: const PrettyQrDecoration(
+            shape: PrettyQrSmoothSymbol(color: Colors.white),
+          ),
         ),
       ),
     );
@@ -136,49 +146,66 @@ class VirtualControlSection extends StatelessWidget {
 
   Widget _buildDescription(BuildContext context) {
     return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          FusionAppText(
-            text: 'QR CODE',
-            style: Theme.of(context).textTheme.l1Regular.withColor(
-              context.colorScheme.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 6),
-          FusionAppText(
-            text: 'Scan the QR Code with any mobile devices on the same network to access a virtual wall controller',
-            style: Theme.of(context).textTheme.l1Regular.withColor(
-              context.colorScheme.textBody,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: <Widget>[
-              FusionAppButton(
-                semanticId: "",
-                text: 'Print',
-                height: 32,
-                width: 110,
-                showSuffixIcon: true,
-                suffixIcon: Icons.print_outlined,
-                style: FusionAppButtonStyle.primary,
-                onPressed: () => _printQr(context),
+      child: SemanticHelper.container(
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.container,
+          FusionTestKeys.instance.settingsTabvirtualControlsectiondesc,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            FusionAppText(
+              semanticId: FusionTestKeys.instance.settingsTabvirtualControlsectiondesclabel,
+              text: 'QR CODE',
+              style: Theme.of(context).textTheme.l1Regular.withColor(
+                context.colorScheme.textPrimary,
               ),
-              const SizedBox(width: 12),
-              FusionAppButton(
-                semanticId: "",
-                text: 'Download',
-                height: 32,
-                width: 110,
-                showSuffixIcon: true,
-                suffixIcon: Icons.download_outlined,
-                style: FusionAppButtonStyle.primary,
-                onPressed: () => _downloadQrAsImage(context),
+            ),
+            const SizedBox(height: 6),
+            GestureDetector(
+              onTap: () {
+                final WallControllerConfig config = serviceLocator<ProjectViewModel>().getWallControllerConfig();
+                final String prettyJson = const JsonEncoder.withIndent('  ').convert(config.toJson());
+                debugPrint('─── WallControllerConfig JSON ───');
+                debugPrint(prettyJson);
+              },
+              child: FusionAppText(
+                semanticId: FusionTestKeys.instance.settingsTabvirtualControlsectiondesctext,
+                text: 'Scan the QR Code with any mobile devices on the same network to access a virtual wall controller',
+                style: Theme.of(context).textTheme.l1Regular.withColor(
+                  context.colorScheme.textBody,
+                ),
               ),
-            ],
-          ),
-        ],
+            ),
+            const SizedBox(height: 12),
+            FusionAppButton(
+              semanticId: FusionTestKeys.instance.settingsTabvirtualControlsectiondescdownloadbutton,
+              text: 'Download',
+              height: 32,
+              width: 110,
+              showSuffixIcon: true,
+              suffixIcon: Icons.download_outlined,
+              style: FusionAppButtonStyle.primary,
+              onPressed: () => _downloadQrAsImage(context),
+            ),
+            // Row(
+            //   children: <Widget>[
+            //     FusionAppButton(
+            //       semanticId: FusionTestKeys.instance.settingsTabvirtualControlsectiondescprintbutton,
+            //       text: 'Print',
+            //       height: 32,
+            //       width: 110,
+            //       showSuffixIcon: true,
+            //       suffixIcon: Icons.print_outlined,
+            //       style: FusionAppButtonStyle.primary,
+            //       onPressed: () => _printQr(context),
+            //     ),
+            //     const SizedBox(width: 12),
+            //
+            //   ],
+            // ),
+          ],
+        ),
       ),
     );
   }
@@ -377,15 +404,15 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
-                                _buildLabel(context, 'Printer'),
+                                _buildLabel(context, 'Printer', 'print_dialog_printer_label'),
                                 const SizedBox(height: 6),
                                 _buildPrinterDropdown(context),
                                 const SizedBox(height: 16),
-                                _buildLabel(context, 'Paper Size'),
+                                _buildLabel(context, 'Paper Size', 'print_dialog_paper_size_label'),
                                 const SizedBox(height: 6),
                                 _buildPaperSizeDropdown(context),
                                 const SizedBox(height: 16),
-                                _buildLabel(context, 'Orientation'),
+                                _buildLabel(context, 'Orientation', 'print_dialog_orientation_label'),
                                 const SizedBox(height: 6),
                                 Row(
                                   children: <Widget>[
@@ -395,7 +422,7 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
                                   ],
                                 ),
                                 const SizedBox(height: 16),
-                                _buildLabel(context, 'Copies'),
+                                _buildLabel(context, 'Copies', 'print_dialog_copies_label'),
                                 const SizedBox(height: 6),
                                 _buildCopiesSelector(context),
                               ],
@@ -469,105 +496,118 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
     );
   }
 
-  Widget _buildLabel(BuildContext context, String text) {
+  Widget _buildLabel(BuildContext context, String text, String semanticId) {
     return FusionAppText(
       text: text,
+      semanticId: semanticId,
       style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textBody),
     );
   }
 
   Widget _buildPrinterDropdown(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation1,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: context.colorScheme.strokeLight),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<Printer>(
-          isExpanded: true,
-          value: _selectedPrinter,
-          dropdownColor: context.colorScheme.elevation2,
-          icon: Icon(Icons.arrow_drop_down, color: context.colorScheme.textBody),
-          items:
-              _printers.map((Printer p) {
-                return DropdownMenuItem<Printer>(
-                  value: p,
-                  child: FusionAppText(
-                    text: p.name,
-                    style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textPrimary),
-                  ),
-                );
-              }).toList(),
-          onChanged: (Printer? p) => setState(() => _selectedPrinter = p),
-        ),
-      ),
+    return FusionNeumorphicDropdown<Printer>(
+      semanticId: 'print_dialog_printer_dropdown',
+      value: _selectedPrinter,
+      borderRadius: BorderRadius.circular(8),
+      items: _printers,
+      itemLabelBuilder: (Printer p) => p.name, // ← name may differ, check the class
+      onChanged: (Printer? p) => setState(() => _selectedPrinter = p),
     );
   }
 
   Widget _buildPaperSizeDropdown(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation1,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: context.colorScheme.strokeLight),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<PdfPageFormat>(
-          isExpanded: true,
-          value: _selectedFormat,
-          dropdownColor: context.colorScheme.elevation2,
-          icon: Icon(Icons.arrow_drop_down, color: context.colorScheme.textBody),
-          items:
-              _paperSizes.entries.map((MapEntry<String, PdfPageFormat> e) {
-                return DropdownMenuItem<PdfPageFormat>(
-                  value: e.value,
-                  child: FusionAppText(
-                    text: e.key,
-                    style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textPrimary),
-                  ),
-                );
-              }).toList(),
-          onChanged: (PdfPageFormat? f) {
-            if (f != null) setState(() => _selectedFormat = f);
-          },
-        ),
-      ),
+    return FusionNeumorphicDropdown<PdfPageFormat>(
+      semanticId: 'print_dialog_paper_size_dropdown',
+      value: _selectedFormat,
+      borderRadius: BorderRadius.circular(8),
+      items: _paperSizes.values.toList(),
+      itemLabelBuilder: (PdfPageFormat format) {
+        return _paperSizes.entries.firstWhere((MapEntry<String, PdfPageFormat> e) => e.value == format).key;
+      },
+      onChanged: (PdfPageFormat? f) {
+        if (f != null) setState(() => _selectedFormat = f);
+      },
     );
   }
 
-  Widget _buildOrientationChip(BuildContext context, String label, bool landscape, IconData icon) {
+  Widget _buildOrientationChip(
+    BuildContext context,
+    String label,
+    bool landscape,
+    IconData icon,
+  ) {
     final bool selected = _landscape == landscape;
+
     return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _landscape = landscape),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-          decoration: BoxDecoration(
-            color: selected ? context.colorScheme.primary.withOpacity(0.15) : context.colorScheme.elevation1,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: selected ? context.colorScheme.primary : context.colorScheme.strokeLight,
+      child: SemanticHelper.container(
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.container,
+          'print_dialog_orientation_chip',
+        ),
+        value: label,
+        child: GestureDetector(
+          onTap: () => setState(() => _landscape = landscape),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            decoration: BoxDecoration(
+              color: context.colorScheme.elevation1,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow:
+                  selected
+                      // Pressed-in (inset) shadows
+                      ? <BoxShadow>[
+                        BoxShadow(
+                          color: context.colorScheme.shadowDark,
+                          blurRadius: 1,
+                          offset: const Offset(-2, -2),
+                          blurStyle: BlurStyle.inner,
+                        ),
+                        BoxShadow(
+                          color: context.colorScheme.shadowLight,
+                          blurRadius: 1,
+                          offset: const Offset(2, 2),
+                          blurStyle: BlurStyle.inner,
+                        ),
+                        BoxShadow(
+                          color: context.colorScheme.elevation1,
+                          blurRadius: 4,
+                          blurStyle: BlurStyle.inner,
+                        ),
+                      ]
+                      // Raised (extruded) shadows
+                      : <BoxShadow>[
+                        BoxShadow(
+                          color: context.colorScheme.shadowLight,
+                          blurRadius: 2,
+                          offset: const Offset(-2, -2),
+                        ),
+                        BoxShadow(
+                          color: context.colorScheme.shadowDark,
+                          blurRadius: 4,
+                          offset: const Offset(2, 2),
+                        ),
+                        BoxShadow(color: context.colorScheme.elevation1),
+                      ],
             ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Icon(
-                icon,
-                size: 18,
-                color: selected ? context.colorScheme.primary : context.colorScheme.textBody,
-              ),
-              const SizedBox(width: 8),
-              FusionAppText(
-                text: label,
-                style: Theme.of(context).textTheme.l1Regular.withColor(
-                  selected ? context.colorScheme.primary : context.colorScheme.textPrimary,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Icon(
+                  icon,
+                  size: 18,
+                  color: selected ? context.colorScheme.primary : context.colorScheme.textBody,
                 ),
-              ),
-            ],
+                const SizedBox(width: 8),
+                FusionAppText(
+                  text: label,
+                  style: Theme.of(context).textTheme.l1Regular.withColor(
+                    selected ? context.colorScheme.textPrimary : context.colorScheme.textBody,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -575,33 +615,56 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
   }
 
   Widget _buildCopiesSelector(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation1,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: context.colorScheme.strokeLight),
-      ),
-      child: Row(
-        children: <Widget>[
-          IconButton(
-            icon: const Icon(Icons.remove, size: 18),
-            color: context.colorScheme.textBody,
-            onPressed: _copies > 1 ? () => setState(() => _copies--) : null,
-          ),
-          Expanded(
-            child: Center(
-              child: FusionAppText(
-                text: '$_copies',
-                style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textPrimary),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, 'print_dialog_copies_selector'),
+      value: _copies.toString(),
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: context.colorScheme.elevation1,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: context.colorScheme.shadowDark,
+              blurRadius: 1,
+              offset: const Offset(-2, -2),
+              blurStyle: BlurStyle.inner,
+            ),
+            BoxShadow(
+              color: context.colorScheme.shadowLight,
+              blurRadius: 1,
+              offset: const Offset(2, 2),
+              blurStyle: BlurStyle.inner,
+            ),
+            BoxShadow(
+              color: context.colorScheme.elevation1,
+              blurRadius: 4,
+              blurStyle: BlurStyle.inner,
+            ),
+          ],
+        ),
+        child: Row(
+          children: <Widget>[
+            IconButton(
+              icon: const Icon(Icons.remove, size: 18),
+              color: context.colorScheme.textBody,
+              onPressed: _copies > 1 ? () => setState(() => _copies--) : null,
+            ),
+            Expanded(
+              child: Center(
+                child: FusionAppText(
+                  text: '$_copies',
+                  style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textPrimary),
+                ),
               ),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.add, size: 18),
-            color: context.colorScheme.textBody,
-            onPressed: _copies < 99 ? () => setState(() => _copies++) : null,
-          ),
-        ],
+            IconButton(
+              icon: const Icon(Icons.add, size: 18),
+              color: context.colorScheme.textBody,
+              onPressed: _copies < 99 ? () => setState(() => _copies++) : null,
+            ),
+          ],
+        ),
       ),
     );
   }

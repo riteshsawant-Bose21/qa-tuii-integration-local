@@ -20,7 +20,7 @@ final class QrParsed extends QrScannerState {
 final class QrConnecting extends QrScannerState {}
 
 final class QrConnected extends QrScannerState {
-  final SchemaModel data;
+  final WallControllerConfig data;
   QrConnected(this.data);
 }
 

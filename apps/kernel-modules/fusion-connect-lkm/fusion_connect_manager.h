@@ -61,6 +61,7 @@ struct fusion_cn_manager {
     struct fusion_cn_netlink netlink;
     struct platform_device *pdev;
     struct active_streams active_streams;
+    rwlock_t active_streams_lock;
     u64 tick_ns;
     bool debug;
     bool trace_debug;

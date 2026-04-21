@@ -10,10 +10,12 @@ class EventList extends StatelessWidget {
 
   final Function(String eventId) onDelete;
   final Function(String eventId)? onSelect;
-  final Function(String eventId)? onSwitchChanged;
+  final Function(String eventId, bool isEnabled)? onSwitchChanged;
+  final Future<void> Function(String eventId)? onEventRecall;
 
   final String? selectedEventId;
   final Function(int oldIndex, int newIndex)? onReorder;
+  final bool isInControlMode;
 
   const EventList({
     super.key,
@@ -23,6 +25,8 @@ class EventList extends StatelessWidget {
     this.selectedEventId,
     this.onReorder,
     this.onSwitchChanged,
+    this.onEventRecall,
+    this.isInControlMode = false,
     required this.cubit,
   });
 
@@ -62,9 +66,10 @@ class EventList extends StatelessWidget {
             cubit: cubit,
             eventData: eventData,
             isSelected: selectedEventId == eventData.id,
-            onSwitchChanged: (String eventId) {
+            isInControlMode: isInControlMode,
+            onSwitchChanged: (String eventId, bool isEnabled) {
               if (onSwitchChanged != null) {
-                onSwitchChanged!(eventData.id);
+                onSwitchChanged!(eventData.id, isEnabled);
               }
             },
             onDelete: () {
@@ -75,6 +80,7 @@ class EventList extends StatelessWidget {
                 onSelect!(eventData.id);
               }
             },
+            onEventRecall: onEventRecall != null ? () => onEventRecall!(eventData.id) : null,
           ),
         );
       },

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+String vipAddress="";
 class QRConnectionDetails {
   final String vip;
   final String configId;
@@ -34,6 +35,7 @@ class QRConnectionParser {
             uri.queryParameters['controller_id'] ?? uri.queryParameters['controller_id'];
         print("Parsed URI - VIP: $vip, Config ID: $configId");
         if (vip != null && configId != null) {
+          vipAddress = vip;
           return QRConnectionDetails(vip: vip, configId: configId);
         }
       }

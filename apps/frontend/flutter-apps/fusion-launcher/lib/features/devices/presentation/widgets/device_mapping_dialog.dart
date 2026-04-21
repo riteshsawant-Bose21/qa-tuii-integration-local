@@ -5,8 +5,8 @@ import 'package:fusion_launcher/features/devices/presentation/widgets/dro/dro_co
 import 'package:fusion_launcher/features/devices/presentation/widgets/settings/device_global_settings_tab.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../../firmware_update/views/firmware_update_page.dart';
 import 'device_mapping_screen.dart';
-import '../../../firmware_update/views/device_updates_tab.dart';
 
 enum DeviceMappingDialogTab {
   mapping("Mapping"),
@@ -73,7 +73,7 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
                     case DeviceMappingDialogTab.droConfig:
                       return const DroConfigScreen();
                     case DeviceMappingDialogTab.updates:
-                      return const DeviceUpdatesTab();
+                      return const FirmwareUpdatesTab();
                   }
                 },
               ),

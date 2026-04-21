@@ -69,8 +69,8 @@ class GainBlock extends StatelessWidget {
                                   onChanged: (num value) {
                                     context.read<GainController>().updateGainValue(value);
                                   },
-                                  min: -60,
-                                  max: 12,
+                                  min: -60.0,
+                                  max: 12.0,
                                 ),
                               ),
                               const SizedBox(width: 4),

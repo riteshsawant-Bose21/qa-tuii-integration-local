@@ -154,4 +154,42 @@ extension Aes67Manager on ProjectManager {
       streamIdAtNewIndex: streamIdAtNewIndex,
     );
   }
+
+  // ==================== Source ↔ Stream+Channel Mapping ====================
+
+  /// Assigns multiple stream-channel mappings to [sourceId].
+  void assignStreamChannelsToSource({
+    required String sourceId,
+    required List<AssignedStreamChannel> channels,
+  }) {
+    if (projectService == null) {
+      throw Exception('Project service is not initialized.');
+    }
+    projectService!.assignStreamChannelsToSource(sourceId: sourceId, channels: channels);
+  }
+
+  /// Returns a raw map of streamId → Map<sourceId, Set<channelNumber>>.
+  Map<String, Map<String, Set<int>>> getAllSourceStreamMappings() {
+    if (projectService == null) {
+      throw Exception('Project service is not initialized.');
+    }
+    return projectService!.getAllSourceStreamMappings();
+  }
+
+  /// Returns all input streams that have at least one source mapped to them.
+  List<AssignedInputStreamInfo> getAssignedInputStreamChannelsForSource() {
+    if (projectService == null) {
+      throw Exception('Project service is not initialized.');
+    }
+    return projectService!.getAssignedInputStreamChannelsForSource();
+  }
+
+  /// Returns all output streams that have at least one channel assigned to a
+  /// circuit, grouped by circuit.
+  List<AssignedOutputStreamInfo> getAssignedOutputStreamToCircuit() {
+    if (projectService == null) {
+      throw Exception('Project service is not initialized.');
+    }
+    return projectService!.getAssignedOutputStreamToCircuit();
+  }
 }
