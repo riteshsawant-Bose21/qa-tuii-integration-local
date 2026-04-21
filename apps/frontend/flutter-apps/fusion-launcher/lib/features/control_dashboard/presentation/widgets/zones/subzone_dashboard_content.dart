@@ -42,7 +42,7 @@ class _SubzoneDashboardContentState extends State<SubzoneDashboardContent> {
 
   /// Keep the text field in sync with cubit state.
   void _syncVolumeText(double gain) {
-    final double percentageGain = context.read<ZoneControlViewModel>().dbfsToPercentage(gain);
+    final double percentageGain = FusionUtils().dbfsToPercentage(gain);
     final String formatted = percentageGain.toStringAsFixed(1);
     print("Syncing volume text: gain=$gain, percentageGain=$percentageGain, formatted='$formatted'");
     if (volumeController.text != formatted) {

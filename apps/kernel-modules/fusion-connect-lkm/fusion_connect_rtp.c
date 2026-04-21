@@ -145,7 +145,6 @@ void fusion_cn_rtp_stream_release(struct kref *ref)
     if (stream->next_action_times) {
         kfree(stream->next_action_times);
     }
-    printk(KERN_DEBUG "fusion_cn_rtp: stream_release: release stream %s\n", stream->info.stream_name);
     kfree(stream);
 }
 
@@ -482,10 +481,14 @@ int fusion_cn_rtp_remove_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fu
 {
     struct fusion_cn_packet_map *map;
     struct hlist_node *map_tmp;
+    unsigned long flags;
 
     // TODO: Cleanup profiling and stats gathering
 
+    write_lock_irqsave(&rtp_mgr->lock, flags);
+
     hlist_del(&stream->hnode);
+
     // Only remove from packet_maps for sink streams
     if (!stream->info.is_source) {
         if (fusion_cn_rtp_is_ip_mcast(stream->info.dest_ip)) {
@@ -506,6 +509,9 @@ int fusion_cn_rtp_remove_stream(struct fusion_cn_rtp_manager *rtp_mgr, struct fu
             }
         }
     }
+
+    write_unlock_irqrestore(&rtp_mgr->lock, flags);
+
     kref_put(&stream->ref, fusion_cn_rtp_stream_release);
 
     return 0;
@@ -658,6 +664,26 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
             sched_playout_ns = reconstructed_phc_ns + stream->info.playout_delay;
             late = (sched_playout_ns <= current_phc_ns);
 
+            /*
+             * Prevent a new packet from overwriting a slot that still holds an
+             * unplayed packet. A matching playout time is treated as a duplicate
+             * update for the same slot and is allowed to replace the payload.
+             */
+            if (stream->next_action_times[write_slot] != 0 &&
+                stream->next_action_times[write_slot] > stream->played_action_time &&
+                stream->next_action_times[write_slot] != sched_playout_ns) {
+                if (rtp_mgr->trace_debug) {
+                    printk(KERN_DEBUG
+                           "fusion_cn_rtp: process_packet: drop overwrite stream=%s slot=%u seq=%u existing_playout=%llu new_playout=%llu played_action=%llu\n",
+                           stream->info.stream_name, write_slot, seq_num,
+                           stream->next_action_times[write_slot], sched_playout_ns,
+                           stream->played_action_time);
+                }
+                spin_unlock(&stream->lock);
+                read_unlock_irqrestore(&rtp_mgr->lock, flags);
+                return;
+            }
+
             bytes_per_frame = stream->info.channels * (sample_physical_width_bits / 8);
 
             if (malformed) {
@@ -708,6 +734,7 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
 
             spin_unlock(&stream->lock);
             read_unlock_irqrestore(&rtp_mgr->lock, flags);
+            return;
         }
     }
 

@@ -195,15 +195,23 @@ extension ControllerService on ProjectService {
         }
       }
     }
+    print("Ordered zone IDs for WallControllerConfig: $orderedZoneIds");
 
     // Build WallZone list.
     final List<WallZone> wallZones = <WallZone>[];
-    for (final String zoneId in orderedZoneIds) {
-      final Zone? zone = zones.get(zoneId);
-      if (zone == null) continue;
+    for (final String assignedIds in orderedZoneIds) {
+      Zone? zone = zones.get(assignedIds);
+      if (zone == null) {
+        /// assignedIds is a subzone id; fetch parent zone id and then fetch zone details
+        final String? parentZoneId = relationships.getParent(RelationshipType.zoneSubZones, assignedIds);
+        if (parentZoneId != null) {
+          zone = zones.get(parentZoneId);
+        }
+        if (zone == null) continue;
+      }
 
       // Sources (direct + source-set sources).
-      final List<Source> sources = getSourcesAndSourceSetSourcesInZone(zoneId: zoneId);
+      final List<Source> sources = getSourcesAndSourceSetSourcesInZone(zoneId: zone.id);
       final List<WallZoneSource> wallSources = sources
           .asMap()
           .entries
@@ -219,7 +227,7 @@ extension ControllerService on ProjectService {
       // Assign zone ONO first, then sub-zone ONOs so numbers are consecutive.
       final WallZoneOno zoneOno = WallZoneOno.autoAssign();
 
-      final List<SubZone> subZonesList = getSubZones(zoneId);
+      final List<SubZone> subZonesList = getSubZones(zone.id);
 
       final List<WallSubZone> wallSubZones = <WallSubZone>[];
       for (final SubZone sz in subZonesList) {
@@ -237,12 +245,12 @@ extension ControllerService on ProjectService {
         );
       }
 
-      final List<ProcessingBlockModel> processingBlocks = getProcessingBlockFor(parentId: zoneId, includeUserBlocks: true);
+      final List<ProcessingBlockModel> processingBlocks = getProcessingBlockFor(parentId: assignedIds, includeUserBlocks: true);
       ProcessingBlockModel? processingBlockModel = processingBlocks.firstWhereOrNull(
         (ProcessingBlockModel block) => block.algorithmId == "gain" && block.isforUser,
       );
 
-      final String? functionId = getZoneFunction(zoneOrSubZoneId: zoneId)?.id;
+      final String? functionId = getZoneFunction(zoneOrSubZoneId: zone.id)?.id;
 
       wallZones.add(
         WallZone(

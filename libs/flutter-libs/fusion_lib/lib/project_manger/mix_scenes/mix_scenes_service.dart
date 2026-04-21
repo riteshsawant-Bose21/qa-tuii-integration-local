@@ -204,7 +204,7 @@ extension MixScenesService on ProjectService {
             // Add default MixSettings for the missing source
             final newSetting = MixSettings(
               sourceId: source.id,
-              gain: -24.0,
+              gain: 0.0,
               muted: false,
             );
             existingMixSetting.add(newSetting);
@@ -222,9 +222,10 @@ extension MixScenesService on ProjectService {
             // Add default MatrixSettings for the missing source
             final newSetting = MonoMatrixSettings(
               sourceId: source.id,
-              gain: -24.0,
-              muted: false,
+              inputGain: 0.0,
+              inputMute: false,
               mixLevel: 0.0,
+              isSelected: false,
             );
             existingMatrixSetting.add(newSetting);
           }
@@ -269,7 +270,7 @@ extension MixScenesService on ProjectService {
             // Add default MixSettings for the missing source
             final newSetting = MixSettings(
               sourceId: source.id,
-              gain: -24.0,
+              gain: 0.0,
               muted: false,
             );
             existingMixSetting.add(newSetting);
@@ -284,7 +285,7 @@ extension MixScenesService on ProjectService {
         final MatrixMixer currentMatrixMixer =
             zoneFunction.matrixMixer ??
             MonoMatrixMixer(
-              outGain: -24.0,
+              outGain: 0.0,
               outMuted: false,
             );
         final List<MatrixSettings> existingMatrixSetting = List.from(currentMatrixMixer.settings);
@@ -295,9 +296,10 @@ extension MixScenesService on ProjectService {
             // Add default MatrixSettings for the missing source
             final newSetting = MonoMatrixSettings(
               sourceId: source.id,
-              gain: -24.0,
-              muted: false,
+              inputGain: 0.0,
+              inputMute: false,
               mixLevel: 0.0,
+              isSelected: false,
             );
             existingMatrixSetting.add(newSetting);
           }

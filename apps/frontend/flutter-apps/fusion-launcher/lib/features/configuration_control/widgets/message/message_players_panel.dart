@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/MessageViewModel/message_state.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/MessageViewModel/message_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/controller/controller_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Left column: MESSAGE PLAYERS (checkboxes, top) + MESSAGE LIST (bottom).
@@ -46,7 +47,7 @@ class _MessagePlayersSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const PanelSectionHeader(title: 'MESSAGE PLAYERS'),
+          PanelSectionHeader(semanticId: FusionTestKeys.instance.messageTabMessagePanelMessagePlayersHeader, title: 'MESSAGE PLAYERS'),
           Expanded(
             child:
                 state.messagePlayers.isEmpty
@@ -130,7 +131,7 @@ class _MessageListSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const PanelSectionHeader(title: 'MESSAGE LIST'),
+          PanelSectionHeader(semanticId: FusionTestKeys.instance.messageTabMessagePanelMessageListHeader, title: 'MESSAGE LIST'),
           Expanded(
             child:
                 activePlayers.isEmpty

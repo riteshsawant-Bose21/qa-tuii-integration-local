@@ -4,6 +4,7 @@ import 'package:fusion_launcher/features/configuration_control/viewModel/snapsho
 import 'package:fusion_launcher/features/configuration_control/viewModel/snapshotViewModel/snapshot_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/snapshotsAndScenes/create_snapshot_page_form.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/controller/controller_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 class SnapshotPageSection extends StatelessWidget {
@@ -38,6 +39,7 @@ class SnapshotPageSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           PanelSectionHeader(
+            semanticId: FusionTestKeys.instance.snapshotSectionHeader,
             title: 'SNAPSHOT PAGE',
             trailing: GestureDetector(
               onTap: () => _openCreateForm(context, state),

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/SettingsViewModel/settings_state.dart';
 import 'package:fusion_launcher/features/configuration_control/viewModel/SettingsViewModel/settings_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/controller/controller_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Controller Settings section — Screen Mode, Screen Saver, and Sleep Time.
@@ -13,44 +14,45 @@ class ControllerSettingsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<SettingsViewModel, SettingsState>(
-      builder: (BuildContext context, SettingsState state) {
-        if (state is! SettingsLoaded) return const SizedBox.shrink();
-
-        final SettingsViewModel vm = context.read<SettingsViewModel>();
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const PanelSectionHeader(title: 'CONTROLLER SETTINGS'),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  _buildScreenModeRow(context, state, vm),
-                  const SizedBox(height: 16),
-                  _buildDivider(context),
-                  const SizedBox(height: 16),
-                  _buildScreenSaverRow(context, state, vm),
-                  const SizedBox(height: 16),
-                  _buildDivider(context),
-                  const SizedBox(height: 16),
-                  _buildSleepTimeRow(context, state, vm),
-
-                  // only if it is pro version
-                  if (state.isPro) ...<Widget>[
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.settingsTabControlsection),
+      child: BlocBuilder<SettingsViewModel, SettingsState>(
+        builder: (BuildContext context, SettingsState state) {
+          if (state is! SettingsLoaded) return const SizedBox.shrink();
+          final SettingsViewModel vm = context.read<SettingsViewModel>();
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              PanelSectionHeader(semanticId: FusionTestKeys.instance.settingsTabControlsectionHeader, title: 'CONTROLLER SETTINGS'),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    _buildScreenModeRow(context, state, vm),
                     const SizedBox(height: 16),
                     _buildDivider(context),
                     const SizedBox(height: 16),
-                    _buildWakeFunction(context, state, vm),
+                    _buildScreenSaverRow(context, state, vm),
+                    const SizedBox(height: 16),
+                    _buildDivider(context),
+                    const SizedBox(height: 16),
+                    _buildSleepTimeRow(context, state, vm),
+
+                    // only if it is pro version
+                    if (state.isPro) ...<Widget>[
+                      const SizedBox(height: 16),
+                      _buildDivider(context),
+                      const SizedBox(height: 16),
+                      _buildWakeFunction(context, state, vm),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
-        );
-      },
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -61,71 +63,88 @@ class ControllerSettingsSection extends StatelessWidget {
   // ─── Screen Mode ─────────────────────────────────────────────────────────────
 
   Widget _buildScreenModeRow(BuildContext context, SettingsLoaded state, SettingsViewModel vm) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        FusionAppText(
-          text: 'SCREEN MODE',
-          style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textBody),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: <Widget>[
-            _buildRadioOption<ScreenMode>(
-              context: context,
-              label: 'Light',
-              value: ScreenMode.light,
-              groupValue: state.screenMode,
-              onChanged: (ScreenMode? v) {
-                if (v != null) vm.setScreenMode(v);
-              },
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.settingsTabControlsectionscreenmodecontent),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          FusionAppText(
+            semanticId: FusionTestKeys.instance.settingsTabControlsectionscreenmodelabel,
+            text: 'SCREEN MODE',
+            style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textBody),
+          ),
+          const SizedBox(height: 16),
+          SemanticHelper.container(
+            testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.settingsTabControlsectionscreenmode),
+            child: Row(
+              children: <Widget>[
+                _buildRadioOption<ScreenMode>(
+                  semanticId: FusionTestKeys.instance.settingsTabControlsectionscreenmodelight,
+                  context: context,
+                  label: 'Light',
+                  value: ScreenMode.light,
+                  groupValue: state.screenMode,
+                  onChanged: (ScreenMode? v) {
+                    if (v != null) vm.setScreenMode(v);
+                  },
+                ),
+                const SizedBox(width: 32),
+                _buildRadioOption<ScreenMode>(
+                  semanticId: FusionTestKeys.instance.settingsTabControlsectionscreenmodedark,
+                  context: context,
+                  label: 'Dark',
+                  value: ScreenMode.dark,
+                  groupValue: state.screenMode,
+                  onChanged: (ScreenMode? v) {
+                    if (v != null) vm.setScreenMode(v);
+                  },
+                ),
+              ],
             ),
-            const SizedBox(width: 32),
-            _buildRadioOption<ScreenMode>(
-              context: context,
-              label: 'Dark',
-              value: ScreenMode.dark,
-              groupValue: state.screenMode,
-              onChanged: (ScreenMode? v) {
-                if (v != null) vm.setScreenMode(v);
-              },
-            ),
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 
   // ─── Screen Saver ─────────────────────────────────────────────────────────────
 
   Widget _buildScreenSaverRow(BuildContext context, SettingsLoaded state, SettingsViewModel vm) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        FusionAppText(
-          text: 'SCREEN SAVER',
-          style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textBody),
-        ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 32,
-          runSpacing: 8,
-          children:
-              ScreenSaverOption.values
-                  .map(
-                    (ScreenSaverOption option) => _buildRadioOption<ScreenSaverOption>(
-                      context: context,
-                      label: option.label,
-                      value: option,
-                      groupValue: state.screenSaver,
-                      onChanged: (ScreenSaverOption? v) {
-                        if (v != null) vm.setScreenSaver(v);
-                      },
-                    ),
-                  )
-                  .toList(),
-        ),
-      ],
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.settingsTabControlsectionscreensavermode),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          FusionAppText(
+            semanticId: FusionTestKeys.instance.settingsTabControlsectionscreensavermodelabel,
+            text: 'SCREEN SAVER',
+            style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textBody),
+          ),
+          const SizedBox(height: 16),
+          SemanticHelper.container(
+            testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.settingsTabControlsectionscreensavermodeitems),
+            child: Wrap(
+              spacing: 32,
+              runSpacing: 8,
+              children:
+                  ScreenSaverOption.values
+                      .map(
+                        (ScreenSaverOption option) => _buildRadioOption<ScreenSaverOption>(
+                          semanticId: FusionTestKeys.instance.settingsTabControlsectionscreensavermode,
+                          context: context,
+                          label: option.label,
+                          value: option,
+                          groupValue: state.screenSaver,
+                          onChanged: (ScreenSaverOption? v) {
+                            if (v != null) vm.setScreenSaver(v);
+                          },
+                        ),
+                      )
+                      .toList(),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -135,21 +154,26 @@ class ControllerSettingsSection extends StatelessWidget {
   static const int _maxSleep = 300;
 
   Widget _buildSleepTimeRow(BuildContext context, SettingsLoaded state, SettingsViewModel vm) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        FusionAppText(
-          text: 'SCREEN SLEEP TIME AFTER',
-          style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textBody),
-        ),
-        const SizedBox(height: 2),
-        FusionAppText(
-          text: 'Note: Enter the time in seconds, allowed range $_minSleep-$_maxSleep seconds.',
-          style: Theme.of(context).textTheme.l2Regular.withColor(context.colorScheme.textBody),
-        ),
-        const SizedBox(height: 16),
-        _buildSleepDropdown(context, state, vm),
-      ],
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.settingsTabControlsectionsleeptimer),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          FusionAppText(
+            semanticId: FusionTestKeys.instance.settingsTabControlsectionsleeptimerlabel,
+            text: 'SCREEN SLEEP TIME AFTER',
+            style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textBody),
+          ),
+          const SizedBox(height: 2),
+          FusionAppText(
+            semanticId: FusionTestKeys.instance.settingsTabControlsectionsleeptimertext,
+            text: 'Note: Enter the time in seconds, allowed range $_minSleep-$_maxSleep seconds.',
+            style: Theme.of(context).textTheme.l2Regular.withColor(context.colorScheme.textBody),
+          ),
+          const SizedBox(height: 16),
+          _buildSleepDropdown(context, state, vm),
+        ],
+      ),
     );
   }
 
@@ -157,6 +181,7 @@ class ControllerSettingsSection extends StatelessWidget {
     final List<int> values = List<int>.generate(_maxSleep - _minSleep + 1, (int i) => _minSleep + i);
 
     return FusionNeumorphicDropdown<int>(
+      semanticId: FusionTestKeys.instance.settingsTabControlsectionsleeptimerdropdown,
       value: state.sleepTime,
       height: 38,
       width: 120,
@@ -174,63 +199,78 @@ class ControllerSettingsSection extends StatelessWidget {
   Widget _buildWakeFunction(BuildContext context, SettingsLoaded state, SettingsViewModel vm) {
     final List<WakeFunctionOption> options = WakeFunctionOption.values;
     final List<Zone> zones = state.zones;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        FusionAppText(
-          text: 'UPON WAKE FUNCTION',
-          style: Theme.of(context).textTheme.l1Regular.withColor(
-            context.colorScheme.textBody,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        FusionTestKeys.instance.settingsTabControlsectionWakeFunction,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          FusionAppText(
+            semanticId: FusionTestKeys.instance.settingsTabControlsectionWakeFunctionLabel,
+            text: 'UPON WAKE FUNCTION',
+            style: Theme.of(context).textTheme.l1Regular.withColor(
+              context.colorScheme.textBody,
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: <Widget>[
-            ...options.map((WakeFunctionOption option) {
-              final bool isZone = option == WakeFunctionOption.zone;
-              return Row(
-                children: <Widget>[
-                  _buildRadioOption<WakeFunctionOption>(
-                    context: context,
-                    label: option.label,
-                    value: option,
-                    groupValue: state.wakeFunction,
-                    onChanged: (WakeFunctionOption? v) {
-                      if (v != null) vm.setWakeFunction(v);
-                    },
-                  ),
-                  const SizedBox(
-                    width: 8,
-                  ),
-                  if (isZone && state.wakeFunction == WakeFunctionOption.zone)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8.0),
-                      child: SizedBox(
-                        width: 160,
-                        child: FusionNeumorphicDropdown<String>(
-                          width: 172,
-                          value: state.wakeZoneId,
-                          hintText: 'Select zone',
-                          items: zones.map((Zone z) => z.id).toList(),
-                          itemLabelBuilder: (String id) => zones.firstWhere((Zone z) => z.id == id).name,
-                          onChanged: (String v) {
-                            if (state.wakeFunction == WakeFunctionOption.zone) {
-                              vm.setWakeZone(v);
-                            }
-                          },
-                          borderRadius: BorderRadius.circular(8),
-                          height: 28,
-                          matchChildWidth: true,
-                        ),
+          const SizedBox(height: 16),
+          SemanticHelper.container(
+            testId: SemanticHelper.createTestId(
+              SemanticTypes.container,
+              FusionTestKeys.instance.settingsTabControlsectionWakeFunctionitems,
+            ),
+            child: Row(
+              children: <Widget>[
+                ...options.map((WakeFunctionOption option) {
+                  final bool isZone = option == WakeFunctionOption.zone;
+                  return Row(
+                    children: <Widget>[
+                      _buildRadioOption<WakeFunctionOption>(
+                        semanticId: FusionTestKeys.instance.settingsTabControlsectionWakeFunction,
+                        context: context,
+                        label: option.label,
+                        value: option,
+                        groupValue: state.wakeFunction,
+                        onChanged: (WakeFunctionOption? v) {
+                          if (v != null) vm.setWakeFunction(v);
+                        },
                       ),
-                    ),
-                  const SizedBox(width: 32),
-                ],
-              );
-            }).toList(),
-          ],
-        ),
-      ],
+                      const SizedBox(
+                        width: 8,
+                      ),
+                      if (isZone && state.wakeFunction == WakeFunctionOption.zone)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: SizedBox(
+                            width: 160,
+                            child: FusionNeumorphicDropdown<String>(
+                              semanticId: FusionTestKeys.instance.settingsTabControlsectionWakeFunctionZoneDropdown,
+                              width: 172,
+                              value: state.wakeZoneId,
+                              hintText: 'Select zone',
+                              items: zones.map((Zone z) => z.id).toList(),
+                              itemLabelBuilder: (String id) => zones.firstWhere((Zone z) => z.id == id).name,
+                              onChanged: (String v) {
+                                if (state.wakeFunction == WakeFunctionOption.zone) {
+                                  vm.setWakeZone(v);
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(8),
+                              height: 28,
+                              matchChildWidth: true,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(width: 32),
+                    ],
+                  );
+                }),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -242,29 +282,33 @@ class ControllerSettingsSection extends StatelessWidget {
     required T value,
     required T groupValue,
     required ValueChanged<T?> onChanged,
+    required String semanticId,
   }) {
     final bool isSelected = value == groupValue;
-    final Color activeColor = context.colorScheme.primary;
 
-    return GestureDetector(
-      onTap: () => onChanged(value),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          FusionCheckbox(
-            semanticId: '',
-            onChanged: () => onChanged(value),
-            value: isSelected,
-            shape: BoxShape.circle,
-          ),
-          const SizedBox(width: 6),
-          FusionAppText(
-            text: label,
-            style: Theme.of(context).textTheme.l1Regular.withColor(
-              isSelected ? context.colorScheme.textPrimary : context.colorScheme.textSecondary,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, "${semanticId}_item"),
+      child: GestureDetector(
+        onTap: () => onChanged(value),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            FusionCheckbox(
+              semanticId: '${semanticId}_checkbox',
+              onChanged: () => onChanged(value),
+              value: isSelected,
+              shape: BoxShape.circle,
             ),
-          ),
-        ],
+            const SizedBox(width: 6),
+            FusionAppText(
+              semanticId: '${semanticId}_text',
+              text: label,
+              style: Theme.of(context).textTheme.l1Regular.withColor(
+                isSelected ? context.colorScheme.textPrimary : context.colorScheme.textSecondary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

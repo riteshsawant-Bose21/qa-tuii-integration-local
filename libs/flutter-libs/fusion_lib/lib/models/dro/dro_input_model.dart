@@ -121,6 +121,7 @@ class DroPropertySetting {
 class DroInputStream {
   final String? id;
   final String? name;
+  final int? sourcePort;
   final int? totalChannels;
   final String? serverLocation;
   final String? multicastDestinationIp;
@@ -129,6 +130,7 @@ class DroInputStream {
   DroInputStream({
     this.id,
     this.name,
+    this.sourcePort,
     this.totalChannels,
     this.serverLocation,
     this.multicastDestinationIp,
@@ -140,6 +142,7 @@ class DroInputStream {
     return DroInputStream(
       id: json['id'] as String?,
       name: json['name'] as String?,
+      sourcePort: json['source_port'] as int?,
       totalChannels: json['total_channels'] as int?,
       serverLocation: json['server_location'] as String?,
       multicastDestinationIp: json['multicast_destination_ip'] as String?,
@@ -151,6 +154,7 @@ class DroInputStream {
     'id': id,
     'name': name,
     'total_channels': totalChannels,
+    'source_port': sourcePort,
     'server_location': serverLocation,
     'multicast_destination_ip': multicastDestinationIp,
     'stream_channel_mapping': streamChannelMapping?.map((e) => e.toJson()).toList(),
@@ -160,6 +164,7 @@ class DroInputStream {
     String? id,
     String? name,
     int? totalChannels,
+    int? sourcePort,
     String? serverLocation,
     String? multicastDestinationIp,
     List<StreamChannelMapping>? streamChannelMapping,
@@ -167,6 +172,7 @@ class DroInputStream {
     return DroInputStream(
       id: id ?? this.id,
       name: name ?? this.name,
+      sourcePort: sourcePort ?? this.sourcePort,
       totalChannels: totalChannels ?? this.totalChannels,
       serverLocation: serverLocation ?? this.serverLocation,
       multicastDestinationIp: multicastDestinationIp ?? this.multicastDestinationIp,
@@ -840,6 +846,7 @@ class DroOutputStream {
   final String? id;
   final String? name;
   final int? totalChannels;
+  final int? sourcePort;
   final String? serverLocation;
   final String? multicastDestinationIp;
   final List<StreamChannelMapping>? streamChannelMapping;
@@ -848,6 +855,7 @@ class DroOutputStream {
     this.id,
     this.name,
     this.totalChannels,
+    this.sourcePort,
     this.serverLocation,
     this.multicastDestinationIp,
     this.streamChannelMapping,
@@ -859,6 +867,7 @@ class DroOutputStream {
       id: json['id'] as String?,
       name: json['name'] as String?,
       totalChannels: json['total_channels'] as int?,
+      sourcePort: json['source_port'] as int?,
       serverLocation: json['server_location'] as String?,
       multicastDestinationIp: json['multicast_destination_ip'] as String?,
       streamChannelMapping: (json['stream_channel_mapping'] as List<dynamic>?)?.map((e) => StreamChannelMapping.fromJson(e as Map<String, dynamic>?)).toList(),
@@ -869,6 +878,7 @@ class DroOutputStream {
     'id': id,
     'name': name,
     'total_channels': totalChannels,
+    'source_port': sourcePort,
     'server_location': serverLocation,
     'multicast_destination_ip': multicastDestinationIp,
     'stream_channel_mapping': streamChannelMapping?.map((e) => e.toJson()).toList(),
@@ -878,6 +888,7 @@ class DroOutputStream {
     String? id,
     String? name,
     int? totalChannels,
+    int? sourcePort,
     String? serverLocation,
     String? multicastDestinationIp,
     List<StreamChannelMapping>? streamChannelMapping,
@@ -886,6 +897,7 @@ class DroOutputStream {
       id: id ?? this.id,
       name: name ?? this.name,
       totalChannels: totalChannels ?? this.totalChannels,
+      sourcePort: sourcePort ?? this.sourcePort,
       serverLocation: serverLocation ?? this.serverLocation,
       multicastDestinationIp: multicastDestinationIp ?? this.multicastDestinationIp,
       streamChannelMapping: streamChannelMapping ?? this.streamChannelMapping,
