@@ -446,11 +446,11 @@ type SoftwareUpdateUploadResponse struct {
 
 // MeterDataSample represents a single meter measurement from the telemetry core.
 type MeterDataSample struct {
-	BlockName  string `json:"block_name"`
-	MeterName  string `json:"meter_name"`
-	ValueType  string `json:"value_type"`
-	Dimensions string `json:"dimensions"`
-	Value      string `json:"value"`
+	BlockName  string          `json:"block_name"`
+	MeterName  string          `json:"meter_name"`
+	ValueType  string          `json:"value_type"`
+	Dimensions string          `json:"dimensions"`
+	Value      json.RawMessage `json:"value"`
 }
 
 // MeterDataParameters holds the parameters section of a meter_data message.
