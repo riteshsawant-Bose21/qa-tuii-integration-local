@@ -165,10 +165,23 @@ class EventsPanel extends StatelessWidget {
         }
       },
       isInControlMode: _isInControlMode,
-      onEventRecall: (String eventId) {
+      onEventRecall: (String eventId) async {
         final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
         if (vip != null) {
-          cubit.recallEvent(vip: vip, eventId: eventId);
+          try {
+            final ResponseCallback<bool> result = await cubit.recallEvent(vip: vip, eventId: eventId);
+            if (context.mounted) {
+              if (result.success) {
+                FusionToast.success(context, message: "Event recalled successfully");
+              } else {
+                FusionToast.error(context, message: "Failed to recall event");
+              }
+            }
+          } catch (e) {
+            if (context.mounted) {
+              FusionToast.error(context, message: "Failed to recall event");
+            }
+          }
         }
       },
     );

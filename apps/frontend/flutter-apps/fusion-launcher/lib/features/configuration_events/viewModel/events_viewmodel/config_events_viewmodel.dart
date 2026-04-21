@@ -153,12 +153,31 @@ class ConfigEventsViewmodel extends Cubit<ConfigEventsState> {
     syncWithProjectViewModel();
   }
 
-  /// Recall (trigger) an event by id on the fusion server
+  /// Recall (trigger) an event by id on the fusion server.
+  /// Sets [recallingEventId] in state while the request is in-flight so
+  /// the UI can display a loader, clears it once the response arrives.
   Future<ResponseCallback<bool>> recallEvent({
     required String vip,
     required String eventId,
   }) async {
-    return _eventActivateService.activateEvent(vip: vip, eventId: eventId);
+    final ConfigEventsState currentState = state;
+    if (currentState is EventsLoaded) {
+      emit(currentState.copyWith(recallingEventId: eventId));
+    }
+    try {
+      final ResponseCallback<bool> result = await _eventActivateService.activateEvent(vip: vip, eventId: eventId);
+      final ConfigEventsState updatedState = state;
+      if (updatedState is EventsLoaded) {
+        emit(updatedState.copyWith(clearRecallingEventId: true));
+      }
+      return result;
+    } catch (e) {
+      final ConfigEventsState updatedState = state;
+      if (updatedState is EventsLoaded) {
+        emit(updatedState.copyWith(clearRecallingEventId: true));
+      }
+      rethrow;
+    }
   }
 
   @override
