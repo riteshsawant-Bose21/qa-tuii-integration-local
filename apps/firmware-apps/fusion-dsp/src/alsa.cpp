@@ -784,7 +784,7 @@ void AlsaDevice::set_hw_params()
     }
 
     // Set the number of periods in the buffer.
-    const unsigned requested_periods = is_fusion_connect_stream_name(device_name) ? 8 : 32;
+    const unsigned requested_periods = is_fusion_connect_stream_name(device_name) ? 16 : 32;
     error = snd_pcm_hw_params_set_periods(alsa, hw_params, requested_periods, 0);
     if (error < 0)
     {

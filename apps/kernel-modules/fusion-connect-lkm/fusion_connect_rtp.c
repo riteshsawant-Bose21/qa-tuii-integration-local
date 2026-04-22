@@ -556,6 +556,7 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
     unsigned long flags;
     u32 write_slot, buf_offset;
     u64 current_sac, global_sac;
+    u32 packet_sac;
     u64 current_phc_ns, ns_from_ms_boundary, reconstructed_phc_ns, sched_playout_ns;
     int sample_physical_width_bits;
 
@@ -640,12 +641,19 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
             // get the current SAC for TOP 32 of the RTP timestamp reconstruction
             current_sac = (((current_phc_ns >> (stream->info.sample_rate == 48000 ? 2 : 1)) * 3) / 15625);
 
+            /*
+             * RTP timestamps are 32-bit SAC values plus timestamp_offset.
+             * Remove the offset in 32-bit timestamp space before selecting
+             * the 64-bit epoch from the local PHC-derived SAC.
+             */
+            packet_sac = rtp_timestamp - stream->info.timestamp_offset;
+
             // reconstruct the global SAC by combining the current SAC with the incoming RTP timestamp
-            global_sac = ((current_sac & 0xFFFFFFFF00000000ULL) | rtp_timestamp) - stream->info.timestamp_offset;
+            global_sac = (current_sac & 0xFFFFFFFF00000000ULL) | packet_sac;
             // handle 32-bit RTP timestamp wrap
-            if (rtp_timestamp < 0x3FFFFFFFU && (u32)current_sac >= 0xC0000000U)
+            if (packet_sac < 0x3FFFFFFFU && (u32)current_sac >= 0xC0000000U)
                 global_sac += (1ULL << 32);
-            else if ((u32)current_sac < 0x3FFFFFFFU && rtp_timestamp >= 0xC0000000U)
+            else if ((u32)current_sac < 0x3FFFFFFFU && packet_sac >= 0xC0000000U)
                 global_sac -= (1ULL << 32);
 
             reconstructed_phc_ns = (global_sac * 62500) / (stream->info.sample_rate == 48000 ? 3 : 6);
@@ -696,8 +704,8 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
                        (size_t)stream->info.frames_per_packet * bytes_per_frame);
             }
 
-            if (seq_num != 0 && seq_num < stream->current_seq_num &&
-                       stream->current_seq_num != 65535) {
+            if (stream->current_seq_num &&
+                (s16)(seq_num - stream->current_seq_num) < 0) {
                 printk(KERN_WARNING "fusion_cn_rtp: process_packet: Reorder stream %s, seq=%u\n",
                        stream->info.stream_name, seq_num);
                 reorder = true;
