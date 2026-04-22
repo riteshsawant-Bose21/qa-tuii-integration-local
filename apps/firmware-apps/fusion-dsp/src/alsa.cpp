@@ -13,7 +13,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdint>
 #include <cstring>
 #include <mutex>
 #include <string>
@@ -154,10 +153,6 @@ private:
     int playback_start_threshold_frames;
     State current_state = DEVICE_STATE_CLOSED;
     snd_pcm_uframes_t negotiated_buffer_size = 0;
-    int bytes_per_sample = 0;
-    uint32_t bluealsa_last_read_hash = 0;
-    uint32_t bluealsa_repeated_read_blocks = 0;
-    uint32_t bluealsa_success_frames_since_log = 0;
     bosepro::AudioSubtask deferred_open_task;
     static pthread_mutex_t open_mutex;
 
@@ -172,7 +167,6 @@ private:
     void set_hw_params();
     void set_sw_params();
     int get_device_number(const std::string &name);
-    void log_bluealsa_successful_read(int samples);
 };
 
 
@@ -219,32 +213,6 @@ static bool is_fusion_connect_stream_name(const std::string &device_name)
 }
 
 
-static bool is_bluealsa_device_name(const std::string &device_name)
-{
-    return device_name.rfind("bluealsa:", 0) == 0;
-}
-
-
-static const char *pcm_state_name(snd_pcm_t *alsa)
-{
-    return alsa ? snd_pcm_state_name(snd_pcm_state(alsa)) : "null";
-}
-
-
-static uint32_t hash_bytes(const uint8_t *data, size_t size)
-{
-    uint32_t hash = 2166136261u;
-
-    for (size_t i = 0; i < size; i++)
-    {
-        hash ^= data[i];
-        hash *= 16777619u;
-    }
-
-    return hash;
-}
-
-
 static bool use_low_latency_fc_depths(const std::string &device_name, bool use_asrc)
 {
     return is_fusion_connect_stream_name(device_name) && !use_asrc;
@@ -254,7 +222,7 @@ static bool use_low_latency_fc_depths(const std::string &device_name, bool use_a
 int open_pcm(snd_pcm_t **alsa, const std::string &full_device_name,
              snd_pcm_stream_t stream, int mode)
 {
-    if (!is_bluealsa_device_name(full_device_name))
+    if (full_device_name.compare(0, 9, "bluealsa:") != 0)
     {
         return snd_pcm_open(alsa, full_device_name.c_str(), stream, mode);
     }
@@ -379,11 +347,6 @@ void AlsaDevice::open_device()
     if (error < 0)
     {
         SPDLOG_DEBUG("Failed to open ALSA device: {}", snd_strerror(error));
-        if (is_bluealsa_device_name(device_name))
-        {
-            SPDLOG_WARN("BlueALSA open failed for {}: {} ({})",
-                        device_name.c_str(), error, snd_strerror(error));
-        }
         pthread_mutex_unlock(&open_mutex);
         return;
     }
@@ -395,18 +358,6 @@ void AlsaDevice::open_device()
     if (error < 0)
     {
         SPDLOG_ERROR("Failed to prepare ALSA device: {}", snd_strerror(error));
-        if (is_bluealsa_device_name(device_name))
-        {
-            SPDLOG_WARN("BlueALSA prepare after open failed for {}: {} ({}) state={}",
-                        device_name.c_str(), error, snd_strerror(error),
-                        pcm_state_name(alsa));
-        }
-    }
-    else if (is_bluealsa_device_name(device_name))
-    {
-        SPDLOG_WARN("BlueALSA opened {} state={} buffer={} period={}",
-                    device_name.c_str(), pcm_state_name(alsa),
-                    negotiated_buffer_size, period_size);
     }
 
     pthread_mutex_unlock(&open_mutex);
@@ -420,11 +371,6 @@ void AlsaDevice::close_device()
 {
     if (alsa != nullptr)
     {
-        if (is_bluealsa_device_name(device_name))
-        {
-            SPDLOG_WARN("BlueALSA closing {} state={}",
-                        device_name.c_str(), pcm_state_name(alsa));
-        }
         snd_pcm_close(alsa);
         alsa = nullptr;
     }
@@ -442,9 +388,6 @@ void AlsaDevice::close_device()
     }
 
     negotiated_buffer_size = 0;
-    bluealsa_last_read_hash = 0;
-    bluealsa_repeated_read_blocks = 0;
-    bluealsa_success_frames_since_log = 0;
 
     ALSA_DEVICE_SET_STATE(DEVICE_STATE_CLOSED, "Closed device {}",
                           device_name.c_str());
@@ -465,39 +408,6 @@ bool AlsaDevice::is_open()
 }
 
 
-void AlsaDevice::log_bluealsa_successful_read(int samples)
-{
-    if (!is_bluealsa_device_name(device_name) || !is_input)
-    {
-        return;
-    }
-
-    const int sample_bytes = bytes_per_sample > 0 ? bytes_per_sample : sizeof(float);
-    const size_t byte_count = static_cast<size_t>(samples) * channels * sample_bytes;
-    const uint32_t hash = hash_bytes(sample_buffer.get(), byte_count);
-
-    if (hash == bluealsa_last_read_hash)
-    {
-        bluealsa_repeated_read_blocks++;
-    }
-    else
-    {
-        bluealsa_last_read_hash = hash;
-        bluealsa_repeated_read_blocks = 0;
-    }
-
-    bluealsa_success_frames_since_log += samples;
-    if (bluealsa_success_frames_since_log >= 32)
-    {
-        const int avail = snd_pcm_avail(alsa);
-        SPDLOG_WARN("BlueALSA read ok for {}: requested={} state={} avail={} hash=0x{:08x} repeated_blocks={}",
-                    device_name.c_str(), samples, pcm_state_name(alsa), avail,
-                    hash, bluealsa_repeated_read_blocks);
-        bluealsa_success_frames_since_log = 0;
-    }
-}
-
-
 int AlsaDevice::get_buffer_depth()
 {
     if (!is_open())
@@ -509,13 +419,6 @@ int AlsaDevice::get_buffer_depth()
 
     if (depth < 0)
     {
-        if (is_bluealsa_device_name(device_name))
-        {
-            SPDLOG_WARN("BlueALSA avail failed for {}: {} ({}) state={}",
-                        device_name.c_str(), depth, snd_strerror(depth),
-                        pcm_state_name(alsa));
-        }
-
         if (depth == -ESTRPIPE)
         {
             ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
@@ -550,11 +453,6 @@ int AlsaDevice::adjust_buffer_depth(int samples)
 
     if (snd_pcm_state(alsa) == SND_PCM_STATE_DISCONNECTED)
     {
-        if (is_bluealsa_device_name(device_name))
-        {
-            SPDLOG_WARN("BlueALSA adjust_buffer_depth sees disconnected {}",
-                        device_name.c_str());
-        }
         close_device();
         return -1;
     }
@@ -567,13 +465,6 @@ int AlsaDevice::adjust_buffer_depth(int samples)
 
         if (forwarded < 0)
         {
-            if (is_bluealsa_device_name(device_name))
-            {
-                SPDLOG_WARN("BlueALSA forward failed for {}: requested={} result={} ({}) state={}",
-                            device_name.c_str(), -samples, forwarded,
-                            snd_strerror(forwarded), pcm_state_name(alsa));
-            }
-
             if (forwarded == -ESTRPIPE)
             {
                 ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
@@ -594,12 +485,6 @@ int AlsaDevice::adjust_buffer_depth(int samples)
             ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                                   "Unexpected samples forwarded for {}: {} vs {}",
                                   device_name.c_str(), forwarded, -samples);
-            if (is_bluealsa_device_name(device_name))
-            {
-                SPDLOG_WARN("BlueALSA short forward for {}: requested={} forwarded={} state={}",
-                            device_name.c_str(), -samples, forwarded,
-                            pcm_state_name(alsa));
-            }
         }
     }
     else
@@ -608,13 +493,6 @@ int AlsaDevice::adjust_buffer_depth(int samples)
 
         if (rewound < 0)
         {
-            if (is_bluealsa_device_name(device_name))
-            {
-                SPDLOG_WARN("BlueALSA rewind failed for {}: requested={} result={} ({}) state={}",
-                            device_name.c_str(), samples, rewound,
-                            snd_strerror(rewound), pcm_state_name(alsa));
-            }
-
             if (rewound == -ESTRPIPE)
             {
                 ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
@@ -635,12 +513,6 @@ int AlsaDevice::adjust_buffer_depth(int samples)
             ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                                   "Unexpected samples rewound for {}: {} vs {}",
                                   device_name.c_str(), rewound, samples);
-            if (is_bluealsa_device_name(device_name))
-            {
-                SPDLOG_WARN("BlueALSA short rewind for {}: requested={} rewound={} state={}",
-                            device_name.c_str(), samples, rewound,
-                            pcm_state_name(alsa));
-            }
         }
     }
 
@@ -669,39 +541,19 @@ int AlsaDevice::read(float *buffer, int samples)
 
     if (res == -EAGAIN)
     {
-        if (is_bluealsa_device_name(device_name))
-        {
-            SPDLOG_DEBUG("BlueALSA read would block for {}: requested={} state={}",
-                         device_name.c_str(), samples, pcm_state_name(alsa));
-        }
         std::memset(buffer, 0, samples * channels * sizeof(float));
         return samples;
     }
 
     if (res < 0)
     {
-        if (is_bluealsa_device_name(device_name))
-        {
-            SPDLOG_WARN("BlueALSA read failed for {}: requested={} result={} ({}) state={}",
-                        device_name.c_str(), samples, res, snd_strerror(res),
-                        pcm_state_name(alsa));
-        }
-
         if (res == -EPIPE)
         {
             ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                                   "Capture xrun on {}: {}",
                                   device_name.c_str(), snd_strerror(res));
 
-            int prepare_res = snd_pcm_prepare(alsa);
-            if (is_bluealsa_device_name(device_name))
-            {
-                SPDLOG_WARN("BlueALSA prepare after capture xrun for {}: result={} ({}) state={}",
-                            device_name.c_str(), prepare_res,
-                            prepare_res < 0 ? snd_strerror(prepare_res) : "ok",
-                            pcm_state_name(alsa));
-            }
-            if (prepare_res < 0)
+            if (snd_pcm_prepare(alsa) < 0)
             {
                 close_device();
             }
@@ -739,11 +591,6 @@ int AlsaDevice::read(float *buffer, int samples)
         ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                               "Unexpected samples read from {}: {} vs {}",
                               device_name.c_str(), res, samples);
-        if (is_bluealsa_device_name(device_name))
-        {
-            SPDLOG_WARN("BlueALSA short read for {}: requested={} read={} state={}",
-                        device_name.c_str(), samples, res, pcm_state_name(alsa));
-        }
 
         std::memset(buffer, 0, samples * channels * sizeof(float));
         if (res > 0)
@@ -756,7 +603,6 @@ int AlsaDevice::read(float *buffer, int samples)
     ALSA_DEVICE_SET_STATE(DEVICE_STATE_STREAMING,
                           "Device {} resumed reading", device_name.c_str());
 
-    log_bluealsa_successful_read(samples);
     convert_read(sample_buffer.get(), buffer, channels, samples);
 
     return res;
@@ -780,11 +626,6 @@ void AlsaDevice::write(const float *buffer, int samples)
 
     if (snd_pcm_state(alsa) == SND_PCM_STATE_DISCONNECTED)
     {
-        if (is_bluealsa_device_name(device_name))
-        {
-            SPDLOG_WARN("BlueALSA write sees disconnected {}",
-                        device_name.c_str());
-        }
         close_device();
         return;
     }
@@ -795,38 +636,18 @@ void AlsaDevice::write(const float *buffer, int samples)
 
     if (res == -EAGAIN)
     {
-        if (is_bluealsa_device_name(device_name))
-        {
-            SPDLOG_DEBUG("BlueALSA write would block for {}: requested={} state={}",
-                         device_name.c_str(), samples, pcm_state_name(alsa));
-        }
         return;
     }
 
     if (res < 0)
     {
-        if (is_bluealsa_device_name(device_name))
-        {
-            SPDLOG_WARN("BlueALSA write failed for {}: requested={} result={} ({}) state={}",
-                        device_name.c_str(), samples, res, snd_strerror(res),
-                        pcm_state_name(alsa));
-        }
-
         if (res == -EPIPE)
         {
             ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                                   "Playback xrun on {}: {}",
                                   device_name.c_str(), snd_strerror(res));
 
-            int prepare_res = snd_pcm_prepare(alsa);
-            if (is_bluealsa_device_name(device_name))
-            {
-                SPDLOG_WARN("BlueALSA prepare after playback xrun for {}: result={} ({}) state={}",
-                            device_name.c_str(), prepare_res,
-                            prepare_res < 0 ? snd_strerror(prepare_res) : "ok",
-                            pcm_state_name(alsa));
-            }
-            if (prepare_res < 0)
+            if (snd_pcm_prepare(alsa) < 0)
             {
                 close_device();
             }
@@ -860,11 +681,6 @@ void AlsaDevice::write(const float *buffer, int samples)
         ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                               "Unexpected samples written to {}: {} vs {}",
                               device_name.c_str(), res, samples);
-        if (is_bluealsa_device_name(device_name))
-        {
-            SPDLOG_WARN("BlueALSA short write for {}: requested={} wrote={} state={}",
-                        device_name.c_str(), samples, res, pcm_state_name(alsa));
-        }
         return;
     }
 
@@ -906,7 +722,6 @@ void AlsaDevice::set_hw_params()
 
             convert_read = format.convert_read;
             convert_write = format.convert_write;
-            bytes_per_sample = format.bytes_per_sample;
             break;
         }
     }
