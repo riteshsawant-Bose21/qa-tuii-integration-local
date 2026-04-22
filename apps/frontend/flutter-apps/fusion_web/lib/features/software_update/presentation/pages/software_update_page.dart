@@ -287,7 +287,7 @@ class _SoftwareUpdatePageState extends State<SoftwareUpdatePage> {
     return DataRow(
       cells: [
         DataCell(Text('$rowNumber')),
-        DataCell(Text(bundle.version)),
+        DataCell(SelectableText(bundle.version)),
         DataCell(
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -304,8 +304,8 @@ class _SoftwareUpdatePageState extends State<SoftwareUpdatePage> {
             ),
           ),
         ),
-        DataCell(Text(bundle.minPrevVersion)),
-        DataCell(Text(bundle.minDesktopAppVersion)),
+        DataCell(SelectableText(bundle.minPrevVersion)),
+        DataCell(SelectableText(bundle.minDesktopAppVersion)),
         DataCell(
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 250),

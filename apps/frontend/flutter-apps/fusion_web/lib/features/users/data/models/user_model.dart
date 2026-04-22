@@ -57,7 +57,7 @@ class UserModel {
 
     // Helper function to safely get string value
     String getString(dynamic value, String defaultValue) {
-      if (value == null) return defaultValue;
+      if (value == null || value.toString().isEmpty) return defaultValue;
       return value.toString();
     }
 

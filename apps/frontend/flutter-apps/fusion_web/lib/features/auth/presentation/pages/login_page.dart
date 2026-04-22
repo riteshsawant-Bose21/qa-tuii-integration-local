@@ -20,6 +20,7 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   late AuthViewModel _viewModel;
+  bool _isLoggingIn = false;
 
   @override
   void initState() {
@@ -72,6 +73,9 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _handleLogin() async {
+    if (_isLoggingIn) return;
+    setState(() => _isLoggingIn = true);
+
     // Auth0Web.loginWithRedirect will redirect to Auth0,
     // and then redirect back, so we don't wait for the result here
     await _viewModel.login();
@@ -80,6 +84,8 @@ class _LoginPageState extends State<LoginPage> {
     if (_viewModel.isLoggedIn && mounted) {
       Navigator.pushReplacementNamed(context, AppConstants.dashboardRoute);
     }
+
+    if (mounted) setState(() => _isLoggingIn = false);
   }
 
   @override
@@ -127,9 +133,11 @@ class _LoginPageState extends State<LoginPage> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: <Widget>[
                   NeumorphicDarkButton(
-                    onTap: () {
-                      _handleLogin();
-                    },
+                    onTap: _isLoggingIn
+                        ? null
+                        : () {
+                            _handleLogin();
+                          },
                     height: 60,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12.0),
@@ -138,27 +146,40 @@ class _LoginPageState extends State<LoginPage> {
                         children: <Widget>[
                           Expanded(
                             child: FusionAppText(
-                              text: 'Log in',
+                              text: _isLoggingIn ? 'Logging in...' : 'Log in',
                               style: context.textTheme.labelLarge?.copyWith(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
-                          Container(
-                            height: double.infinity,
-                            width: 47,
-                            margin: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: FusionDarkColorPallette.green20,
-                              borderRadius: BorderRadius.circular(6),
+                          if (_isLoggingIn)
+                            const Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            )
+                          else
+                            Container(
+                              height: double.infinity,
+                              width: 47,
+                              margin: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: FusionDarkColorPallette.green20,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Icon(
+                                LucideIcons.arrowRight,
+                                color: Colors.white,
+                                size: 12,
+                              ),
                             ),
-                            child: Icon(
-                              LucideIcons.arrowRight,
-                              color: Colors.white,
-                              size: 12,
-                            ),
-                          ),
                         ],
                       ),
                     ),
