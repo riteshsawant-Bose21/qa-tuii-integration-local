@@ -1,5 +1,5 @@
 info:
-  name: SoftwareUpdate Status
+  name: Status
   type: websocket
   seq: 4
 
