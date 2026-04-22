@@ -16,7 +16,7 @@ inline Source parseSource(const Json::Value &v)
 {
     Source s;
     s.index = v["index"].asInt();
-    s.label = v["label"].asString();
+    s.label = v["sourceName"].asString();
     return s;
 }
 
