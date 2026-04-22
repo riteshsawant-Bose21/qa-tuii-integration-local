@@ -84,18 +84,34 @@ bool StartOCAServicesWithExponentialBackoff(::Ocp1LiteNetwork *ocp1Network);
 int main(int argc, const char *argv[])
 {
     unsigned int connectionPort = 65000;
-    if (argc > 1)
+    bool traceLogsEnabled = false;
+
+    for (int i = 1; i < argc; ++i)
     {
-        static_cast<void>(sscanf(argv[1], "%u", &connectionPort));
+        if (std::string(argv[i]) == "-v")
+        {
+            traceLogsEnabled = true;
+        }
+        else
+        {
+            static_cast<void>(sscanf(argv[i], "%u", &connectionPort));
+        }
     }
+
+    if (traceLogsEnabled)
+    {
+        ::OcfLiteLogSetLogLevel(OCA_LOG_LVL_TRACE);
+    }
+    else
+    {
+        ::OcfLiteLogSetLogLevel(OCA_LOG_LVL_ERROR);
+    }
+
     OCA_LOG_INFO_PARAMS("Using connection port %d", connectionPort);
+    OCA_LOG_INFO_PARAMS("Trace logs %s", traceLogsEnabled ? "enabled" : "disabled");
 
     // Store connection port globally for configuration updates
     g_connectionPort = connectionPort;
-
-    // Set log level to show INFO messages (including client connection logs)
-    // ::OcfLiteLogSetLogLevel(OCA_LOG_LVL_TRACE);
-    ::OcfLiteLogSetLogLevel(OCA_LOG_LVL_ERROR);
 
     // Initialize the host interfaces
     g_bSuccess = InitializeHostInterfaces();
@@ -703,9 +719,9 @@ bool ValidateConfigurationJson(const Json::Value &config)
 
         for (const auto &source : sources)
         {
-            if (!source.isObject() || !source.isMember("index") || !source.isMember("label"))
+            if (!source.isObject() || !source.isMember("index") || !source.isMember("sourceName"))
             {
-                OCA_LOG_ERROR_PARAMS("Zone '%s' source must have 'index' and 'label' fields", zoneId.c_str());
+                OCA_LOG_ERROR_PARAMS("Zone '%s' source must have 'index' and 'sourceName' fields", zoneId.c_str());
                 return false;
             }
         }

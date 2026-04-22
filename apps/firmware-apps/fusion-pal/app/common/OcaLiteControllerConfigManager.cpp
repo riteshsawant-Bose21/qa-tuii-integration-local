@@ -144,9 +144,13 @@ void OcaLiteControllerConfigManager::ClearConfigData()
                 OCA_LOG_INFO("Processing GET_CONFIG_DETAILS method...");
                 ::OcaUint8 numberOfParameters(0);
                 ::OcaLiteString controllerId;
-                if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
-                    (1 == numberOfParameters) &&
-                    controllerId.Unmarshal(bytesLeft, &pCmdParameters, reader))
+                ::OcaUint32 bytesBeforeParamCountRead(bytesLeft);
+                bool paramCountReadOk(reader.Read(bytesLeft, &pCmdParameters, numberOfParameters));
+                ::OcaUint32 bytesAfterParamCountRead(bytesLeft);
+                bool paramCountValid(paramCountReadOk && (1 == numberOfParameters));
+                bool controllerIdReadOk(paramCountValid && controllerId.Unmarshal(bytesLeft, &pCmdParameters, reader));
+
+                if (controllerIdReadOk)
                 {
                     OCA_LOG_INFO_PARAMS("Successfully unmarshaled %u parameter(s), controller ID: '%s'", numberOfParameters, controllerId.GetString().c_str());
                     ::OcaLiteString configData;
@@ -177,7 +181,16 @@ void OcaLiteControllerConfigManager::ClearConfigData()
                 }
                 else
                 {
-                    OCA_LOG_ERROR("Failed to unmarshal controller ID parameter!");
+                    OCA_LOG_ERROR_PARAMS("Failed to decode GET_CONFIG_DETAILS request (MethodID: %u.%u, parameterSize=%u)",
+                                         methodID.GetDefLevel(), methodID.GetMethodIndex(), parametersSize);
+                    OCA_LOG_ERROR_PARAMS("Decode details: paramCountReadOk=%s, numberOfParameters=%u, expected=1, controllerIdReadOk=%s",
+                                         paramCountReadOk ? "true" : "false",
+                                         numberOfParameters,
+                                         controllerIdReadOk ? "true" : "false");
+                    OCA_LOG_ERROR_PARAMS("Decode bytes: beforeParamCount=%u, afterParamCount=%u, bytesLeftAfterDecode=%u",
+                                         bytesBeforeParamCountRead,
+                                         bytesAfterParamCountRead,
+                                         bytesLeft);
                 }
             }
             break;

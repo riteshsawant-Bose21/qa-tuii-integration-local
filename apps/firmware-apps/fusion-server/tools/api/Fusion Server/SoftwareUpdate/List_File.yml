@@ -1,17 +1,17 @@
 info:
-  name: SoftwareUpdate Trigger
+  name: List File
   type: websocket
-  seq: 3
+  seq: 5
 
 websocket:
   url: ws://{{api_url}}/ws
   message:
     type: json
-    data: |-
+    data: |
       {
-        "id": "sw-update-001",
+        "id": "req-1",
         "version": 1,
-        "type": "start_update"
+        "type": "list_sw_update_files"
       }
   auth: inherit
 

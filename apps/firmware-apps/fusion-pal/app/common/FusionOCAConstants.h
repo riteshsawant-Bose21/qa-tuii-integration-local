@@ -93,9 +93,9 @@ const std::string ZONES_JSON_STRING_FOR_DEV = R"(
                 "default_mute_value": "50"
             },
             "sources": [
-                { "index": 0, "label": "HDMI 1" },
-                { "index": 1, "label": "HDMI 2" },
-                { "index": 2, "label": "Bluetooth" }
+                { "index": 0, "sourceName": "HDMI 1" },
+                { "index": 1, "sourceName": "HDMI 2" },
+                { "index": 2, "sourceName": "Bluetooth" }
             ]
             },
             {
@@ -115,8 +115,8 @@ const std::string ZONES_JSON_STRING_FOR_DEV = R"(
                 "sourceSelector": 8008
             },
             "sources": [
-                { "index": 0, "label": "Radio" },
-                { "index": 1, "label": "Streaming" }
+                { "index": 0, "sourceName": "Radio" },
+                { "index": 1, "sourceName": "Streaming" }
             ]
             },
             {
@@ -136,9 +136,9 @@ const std::string ZONES_JSON_STRING_FOR_DEV = R"(
                 "sourceSelector": 8012
             },
             "sources": [
-                { "index": 0, "label": "TV" },
-                { "index": 1, "label": "AUX" },
-                { "index": 2, "label": "AirPlay" }
+                { "index": 0, "sourceName": "TV" },
+                { "index": 1, "sourceName": "AUX" },
+                { "index": 2, "sourceName": "AirPlay" }
             ]
             }
         ]
