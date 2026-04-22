@@ -1,0 +1,132 @@
+import sys
+import os
+
+from waflib import Options
+
+APPNAME = 'fusion-tuii'
+
+top = '.'
+out = 'build'
+
+
+def options(opt):
+    opt.load('compiler_cxx')
+
+    opt.add_option(
+        '--platform',
+        type=str,
+        default=sys.platform,
+        help='Target platform for cross-compiling'
+    )
+
+
+
+def detect_platform(conf):
+    platforms = [
+        # FLAG          name       strings                is-cross-compile
+        ('IS_VARMINI', 'varmini', ['varmini'],            True),
+        ('IS_LINUX',   'Linux',   ['linux'],              False),
+        ('IS_MACOS',   'macOS',   ['darwin'],             False),
+        ('IS_WIN',     'Windows', ['win32', 'windows'],   False),
+    ]
+
+    conf.env['is_cross_compile'] = False
+    for key, _, _, _ in platforms:
+        conf.env[key] = False
+
+    conf.start_msg('Detecting platform')
+    platform = Options.options.platform
+
+    # Auto-detect Yocto/SDK-style cross-compilers even if --platform wasn't provided.
+    # Example: aarch64-poky-linux-g++ ... --sysroot=/path/to/sysroot
+    cc_env = os.environ.get('CC', '')
+    cxx_env = os.environ.get('CXX', '')
+    toolchain_hint = f"{cc_env} {cxx_env}"
+    if platform.startswith('linux') and (
+        ('aarch64-poky-linux' in toolchain_hint or 'aarch64' in toolchain_hint) and
+        '--sysroot=' in toolchain_hint
+    ):
+        conf.env['IS_VARMINI'] = True
+        conf.env['IS_LINUX'] = False
+        conf.env['IS_MACOS'] = False
+        conf.env['IS_WIN'] = False
+        conf.env['platform'] = 'varmini'
+        conf.env['is_cross_compile'] = True
+        conf.end_msg('varmini (auto)', color='CYAN')
+        return
+
+    for key, name, strings, is_cross in platforms:
+        for s in strings:
+            if platform.startswith(s):
+                conf.env[key] = True
+                conf.env['platform'] = name
+                conf.env['is_cross_compile'] = is_cross
+                conf.end_msg(name, color='CYAN')
+                return
+
+    conf.end_msg(platform, color='YELLOW')
+
+
+def configure(conf):
+    conf.load('compiler_cxx')
+
+    detect_platform(conf)
+
+    if conf.env.is_cross_compile:
+        conf.load(conf.env.platform, tooldir='wafconf')
+
+    # Match telemetry-core's style: modern C++ + warnings.
+    conf.env.append_value('CXXFLAGS', ['-std=c++17', '-Wall'])
+
+    # Hardening flags only for non-cross builds (same rationale as telemetry-core).
+    if not conf.env['is_cross_compile'] and not conf.env['IS_WIN']:
+        conf.env.append_unique('CXXFLAGS', [
+            '-fstack-protector-strong',
+            '-O2',
+            '-D_FORTIFY_SOURCE=2',
+            '-Wformat',
+            '-Wformat-security',
+            '-Werror=format-security',
+        ])
+
+    # spdlog is often configured with external fmt.
+    conf.env.append_value('CXXFLAGS', ['-DSPDLOG_FMT_EXTERNAL'])
+
+    # Threading
+    if not conf.env['IS_WIN']:
+        conf.env.append_value('LDFLAGS', '-lpthread')
+
+    # This greatly reduces binary size. Comment out to include symbols for gdb.
+    if not conf.env['IS_WIN']:
+        conf.env.append_value('LDFLAGS', ['-Wl,-s'])
+
+    # Project-local + monorepo include roots (match telemetry-core pattern)
+    conf.env.append_unique('INCLUDES', [
+        conf.path.abspath(),
+        conf.path.abspath() + '/../fusion-server/tools',
+    ])
+
+    # Fail early for common dependencies (compile-only header checks; avoid link-time dependency noise)
+    conf.check_cxx(header_name='boost/asio.hpp', mandatory=True, features='cxx')
+    conf.check_cxx(header_name='spdlog/spdlog.h', mandatory=True, features='cxx')
+    conf.check_cxx(header_name='json/json.h', mandatory=True, features='cxx')
+
+    # observer header (matches telemetry-core usage)
+    conf.check_cxx(header_name='observer/observer.h', mandatory=True, features='cxx')
+
+def build(bld):
+    bld(
+        export_includes=[
+            '.',
+            '../fusion-server/tools',
+        ],
+        name='default-include'
+    )
+
+    bld.program(
+        target=APPNAME,
+        source=bld.path.ant_glob(['*.cc', '*.cpp']),
+        use=['default-include'],
+        # Libraries are environment-specific; keep the list minimal and aligned with usage.
+        lib=(['boost_system', 'fmt', 'jsoncpp'] + ([] if bld.env['IS_MACOS'] else ['spdlog'])),
+    )
