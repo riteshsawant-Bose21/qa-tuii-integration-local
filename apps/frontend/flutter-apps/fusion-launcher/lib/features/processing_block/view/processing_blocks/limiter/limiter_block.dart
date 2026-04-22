@@ -171,6 +171,7 @@ class LimiterBlock extends StatelessWidget {
                                       SizedBox(
                                         width: 58,
                                         child: PBNumberTextField(
+                                          semanticId: "limiter_attack",
                                           value: context.watch<LimiterController>().currentRMSAttackTime ?? 0,
                                           onChanged: (num value) {
                                             context.read<LimiterController>().updateRMSAttackTime(value);

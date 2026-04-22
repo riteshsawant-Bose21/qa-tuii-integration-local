@@ -154,6 +154,7 @@ class FusionTextField extends StatelessWidget {
           style: style ?? theme.textTheme.bodySmall,
           textAlign: textAlign,
           inputFormatters: inputFormatters,
+          cursorColor: context.colorScheme.elevation6,
           decoration: decoration ?? defaultDecoration,
         ),
       ),

@@ -87,7 +87,7 @@ class WallZone {
   final List<WallZoneSource> sources;
   final List<WallSubZone> subZones;
 
-  const WallZone({
+  WallZone({
     required this.id,
     required this.name,
     required this.gain,
@@ -116,6 +116,8 @@ class WallZone {
       subZones: subZones ?? this.subZones,
     );
   }
+
+  int sourceSelected = 0;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'id': id,

@@ -1,9 +1,10 @@
 class ResponseCallback<T> {
   final bool success;
   final String message;
+  final int? statusCode;
   final T? data;
 
-  ResponseCallback({required this.success, required this.message, this.data});
+  ResponseCallback({required this.success, required this.message, this.statusCode, this.data});
 
   factory ResponseCallback.fromJson(dynamic json, T Function(Map<String, dynamic>)? fromJsonT) {
     // Determine success flag, defaulting to true if absent but data structure is unwrapped
@@ -22,9 +23,22 @@ class ResponseCallback<T> {
     // Apply transformer if provided, otherwise cast payload to T
     final T? data = fromJsonT != null ? ((payload != null && payload.isNotEmpty) ? fromJsonT(payload) : null) : payload as T;
 
-    return ResponseCallback<T>(success: success, message: message, data: data);
+    final int? statusCode = json is Map<String, dynamic> ? json['statusCode'] : null;
+
+    return ResponseCallback<T>(success: success, message: message, statusCode: statusCode, data: data);
   }
 
-  factory ResponseCallback.success(T? data, {String message = ''}) => ResponseCallback<T>(success: true, message: message, data: data);
-  factory ResponseCallback.failure(String message, {T? data}) => ResponseCallback<T>(success: false, message: message, data: data);
+  factory ResponseCallback.success(T? data, {String message = '', int? statusCode}) => ResponseCallback<T>(
+    success: true,
+    message: message,
+    data: data,
+    statusCode: statusCode,
+  );
+
+  factory ResponseCallback.failure(String message, {T? data, int? statusCode}) => ResponseCallback<T>(
+    success: false,
+    message: message,
+    data: data,
+    statusCode: statusCode,
+  );
 }

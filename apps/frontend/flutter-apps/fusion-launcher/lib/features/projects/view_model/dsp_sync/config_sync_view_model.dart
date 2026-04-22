@@ -7,6 +7,10 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/service/dro/dro_config_service.dart';
 
+import '../audio_message_sync/audio_message_sync_view model.dart';
+import '../fusion_events_sync/fusion_events_sync_view_model.dart';
+import '../snapshots_sync/snapshot_sync_view_model.dart';
+
 part 'config_sync_view_model_state.dart';
 
 class ConfigSyncViewModel extends Cubit<ConfigSyncState> {
@@ -105,7 +109,23 @@ class ConfigSyncViewModel extends Cubit<ConfigSyncState> {
       vip: vip,
     );
     if (response.success) {
-      emit(ConfigSyncedWithDsp());
+      final ResponseCallback<bool> response = await serviceLocator<AudioMessageSyncViewModel>().syncPendingAudioMessages();
+      FusionLogger.log(tag: LogTag.dspConfig, message: "Config sync response for audio messages: ${response.success}, ${response.message}");
+
+      final ResponseCallback<bool> snapshotSyncResponse = await serviceLocator<SnapshotSyncViewModel>().updateSnapshotAndSceneSet();
+      FusionLogger.log(
+        tag: LogTag.dspConfig,
+        message: "Config sync response for audio messages: ${snapshotSyncResponse.success}, ${snapshotSyncResponse.message}",
+      );
+
+      final ResponseCallback<bool> eventSyncResponse = await serviceLocator<FusionEventsSyncViewModel>().syncAllFusionEvents();
+      FusionLogger.log(tag: LogTag.dspConfig, message: "Config sync response for audio messages: ${eventSyncResponse.success}, ${eventSyncResponse.message}");
+
+      if (response.success && snapshotSyncResponse.success && eventSyncResponse.success) {
+        emit(ConfigSyncedWithDsp());
+      } else {
+        emit(ConfigSyncFailure(message: "Config synced but failed to sync audio messages: ${response.message}"));
+      }
       // initializeTelemetryData();
     } else {
       emit(DroProcessingFailed(message: response.message));

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/configuration_aes67/view/widgets/outputStreams/assign_circuit_dialog.dart';
 import 'package:fusion_launcher/features/configuration_aes67/view/widgets/outputStreams/output_stream_dialog.dart';
 import 'package:fusion_launcher/features/configuration_aes67/view/widgets/status_dot.dart';
 import 'package:fusion_launcher/features/configuration_aes67/view/widgets/stream_section.dart';
@@ -232,6 +233,7 @@ class _ConfigurationAes67View extends StatelessWidget {
     FusionTableColumn(key: 'bitDepth', header: 'Bit Depth', flex: 2, alignment: Alignment.center),
     FusionTableColumn(key: 'packetTime', header: 'Packet Time', flex: 2, alignment: Alignment.center),
     FusionTableColumn(key: 'status', header: 'Status', flex: 1, sortable: false, alignment: Alignment.center),
+    FusionTableColumn(key: 'assign', header: 'Circuits', flex: 2, sortable: false, alignment: Alignment.center),
     FusionTableColumn(key: 'delete', header: '', flex: 1, sortable: false, alignment: Alignment.center),
   ];
 
@@ -346,6 +348,32 @@ class _ConfigurationAes67View extends StatelessWidget {
               'status': FusionTableCell(
                 value: s.isEnabled,
                 child: StatusDot(active: s.isEnabled),
+              ),
+              'assign': FusionTableCell(
+                value: null,
+                child: SemanticHelper.button(
+                  testId: SemanticHelper.createTestId(SemanticTypes.button, '${FusionTestKeys.instance.aes67_output_assign_button}_${s.id}'),
+                  child: InkWell(
+                    onTap:
+                        () => AssignCircuitDialog.show(
+                          context,
+                          stream: s,
+                          onSave: cubit.updateOutputStream,
+                        ),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      child: FusionAppText(
+                        text: 'Assign',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
               'delete': FusionTableCell(
                 value: null,

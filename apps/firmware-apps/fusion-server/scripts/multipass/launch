@@ -175,7 +175,7 @@ show_instance_status() {
         multipass exec "$instance_name" -- networkctl status
         
         print_step "Service Status"
-        for service in fusion-server keepalived haproxy chrony; do
+        for service in fusion-server keepalived chrony; do
             echo
             printf "${CYAN}=== %s ===${NC}\n" "$service"
             multipass exec "$instance_name" -- systemctl status "$service" --no-pager || true
@@ -185,10 +185,10 @@ show_instance_status() {
         multipass exec "$instance_name" -- ip addr show
 
         print_step "Process Status"
-        multipass exec "$instance_name" -- ps aux | grep -E 'fusion-server|keepalived|haproxy|chrony' || true
+        multipass exec "$instance_name" -- ps aux | grep -E 'fusion-server|keepalived|chrony' || true
     else
         print_header "Basic Status: $instance_name"
-        for service in fusion-server keepalived haproxy chrony; do
+        for service in fusion-server keepalived chrony; do
             status=$(multipass exec "$instance_name" -- systemctl is-active "$service" || echo "inactive")
             if [ "$status" = "active" ]; then
                 print_success "$service is running"
@@ -230,7 +230,7 @@ verify_instance() {
         
         # Check services one by one
         local all_services_running=true
-        for service in fusion-server keepalived haproxy; do
+        for service in fusion-server keepalived; do
             if ! multipass exec "$instance_name" -- systemctl is-active --quiet "$service"; then
                 print_warning "Service $service is not running"
                 all_services_running=false
@@ -333,7 +333,7 @@ setup_instance() {
         print_success "Daemon reload completed"
         
         # Now start each service
-        for service in fusion-server keepalived haproxy; do
+        for service in fusion-server keepalived; do
             print_substep "Starting $service..."
             
             # Enable service without starting
