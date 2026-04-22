@@ -73,11 +73,11 @@ curl -i -sS -X PATCH "$VIP/value" \
 ```
 
 ```bash
-curl -i -sS "$VIP/snapshots/list"
+curl -i -sS "$VIP/snapshots"
 ```
 
 ```bash
-curl -i -sS "$VIP/scenes/list"
+curl -i -sS "$VIP/scenes"
 ```
 
 ```bash
@@ -85,7 +85,7 @@ curl -i -sS "$VIP/scene-sets/list"
 ```
 
 ```bash
-curl -i -sS "$VIP/scene-catalog-list"
+curl -i -sS "$VIP/scene-catalog"
 ```
 
 **2) Activate snapshot and verify DB state patch**
@@ -99,7 +99,7 @@ curl -i -sS "$VIP/value?key=feature_probe"
 
 **3) Activate scene and verify current scene tracking**
 ```bash
-curl -i -sS -X POST "$VIP/scene-sets/activate" \
+curl -i -sS -X POST "$VIP/scenes-sets/activate" \
   -H "Content-Type: application/json" \
   -d '{
     "set_id": "scene-set-test-01",
@@ -112,7 +112,7 @@ curl -i -sS "$VIP/value?key=feature_probe"
 ```
 
 ```bash
-curl -i -sS -X POST "$VIP/scene-sets/current-scene" \
+curl -i -sS -X POST "$VIP/scenes-sets/current-scene" \
   -H "Content-Type: application/json" \
   -d '{
     "set_id": "scene-set-test-01"
@@ -153,7 +153,7 @@ curl -i -sS -X POST "$VIP/snapshots/activate/does-not-exist"
 ```
 
 ```bash
-curl -i -sS -X POST "$VIP/scene-sets/activate" \
+curl -i -sS -X POST "$VIP/scenes-sets/activate" \
   -H "Content-Type: application/json" \
   -d '{
     "set_id": "scene-set-test-01",
@@ -162,7 +162,7 @@ curl -i -sS -X POST "$VIP/scene-sets/activate" \
 ```
 
 ```bash
-curl -i -sS -X POST "$VIP/scene-sets/activate" \
+curl -i -sS -X POST "$VIP/scenes-sets/activate" \
   -H "Content-Type: application/json" \
   -d '{
     "set_id": "missing-set",
@@ -172,27 +172,27 @@ curl -i -sS -X POST "$VIP/scene-sets/activate" \
 
 **6) Replication checks on each node**
 ```bash
-curl -i -sS "$NODE1/snapshots/list"
-curl -i -sS "$NODE2/snapshots/list"
-curl -i -sS "$NODE3/snapshots/list"
+curl -i -sS "$NODE1/snapshots"
+curl -i -sS "$NODE2/snapshots"
+curl -i -sS "$NODE3/snapshots"
 ```
 
 ```bash
-curl -i -sS "$NODE1/scene-sets/list"
-curl -i -sS "$NODE2/scene-sets/list"
-curl -i -sS "$NODE3/scene-sets/list"
+curl -i -sS "$NODE1/scenes-sets"
+curl -i -sS "$NODE2/scenes-sets"
+curl -i -sS "$NODE3/scenes-sets"
 ```
 
 ```bash
-curl -i -sS -X POST "$NODE1/scene-sets/current-scene" \
+curl -i -sS -X POST "$NODE1/scenes-sets/current-scene" \
   -H "Content-Type: application/json" \
   -d '{"set_id":"scene-set-test-01"}'
 
-curl -i -sS -X POST "$NODE2/scene-sets/current-scene" \
+curl -i -sS -X POST "$NODE2/scenes-sets/current-scene" \
   -H "Content-Type: application/json" \
   -d '{"set_id":"scene-set-test-01"}'
 
-curl -i -sS -X POST "$NODE3/scene-sets/current-scene" \
+curl -i -sS -X POST "$NODE3/scenes-sets/current-scene" \
   -H "Content-Type: application/json" \
   -d '{"set_id":"scene-set-test-01"}'
 ```
