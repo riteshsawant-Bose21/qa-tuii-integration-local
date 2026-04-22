@@ -352,12 +352,26 @@ CREATE TABLE bundle_update_status (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TYPE source_type AS ENUM ('mic', 'media', 'generic');
+CREATE TYPE source_type AS ENUM ('mic', 'media', 'generic', 'paging');
 
 CREATE TYPE connection_type AS ENUM (
     'analogInput',
     'hdmi',
-    'usb'
+    'usb',
+    'audioJack',
+    'rca',
+    'xlr',
+    'bluetooth',
+    'endpoint',
+    'aes67input',
+    'messagePlayer'
+);
+
+CREATE TYPE paging_source_type AS ENUM (
+    'messagePlayer',
+    'messagePlayerWithZoneSelect',
+    'pagingMic',
+    'pagingMicWithZoneSelect'
 );
 
 CREATE TABLE source (
@@ -366,5 +380,7 @@ CREATE TABLE source (
     asset_path TEXT NOT NULL,
     type source_type NOT NULL,
     connection_type connection_type NOT NULL,
-    price NUMERIC(10,2) NOT NULL
+    price NUMERIC(10,2) NOT NULL,
+    paging_source_type paging_source_type,
+    supported_connection_types connection_type[] NOT NULL DEFAULT '{}'
 );
