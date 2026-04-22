@@ -16,6 +16,7 @@ import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_utils/image_loader_service.dart';
+import 'package:fusion_lib/models/project_entities/wall_model.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:pdfrx/pdfrx.dart';
 
@@ -27,6 +28,7 @@ import '../../../fusion_canvas/view/painters/elements/derived/hardware_painter/f
 import '../../../fusion_canvas/view/painters/elements/derived/listening_area_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/spl_loader_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/spl_painter.dart';
+import '../../../fusion_canvas/view/painters/elements/derived/wall_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/fusion_dotted_bg_painter.dart';
 import '../../../fusion_canvas/viewmodel/fusion_canvas_state_viewmodel.dart';
 import '../../presentation/project_work_area.dart';
@@ -143,6 +145,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                                                   if (buildingPageViewModel.state.selectedListeningAreaId != null)
                                                     buildingPageViewModel.state.selectedListeningAreaId!,
                                                   if (buildingPageViewModel.state.selectedSpeakerId != null) buildingPageViewModel.state.selectedSpeakerId!,
+                                                  if (buildingPageViewModel.state.selectedWallId != null) buildingPageViewModel.state.selectedWallId!,
                                                 },
 
                                                 elements: <FusionBasePainter>[
@@ -170,7 +173,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                                                   ),
 
                                                   ...listeningAreaPainters,
-
+                                                  for (final Wall wall in serviceLocator<ProjectViewModel>().getWallsForFloor(floorId: floor.id))
+                                                    WallPainter(wall: wall),
                                                   for (final HardwareComponent hw in hardwareInFloorWithPosition)
                                                     if (isAcousticsMode && hw is Speaker)
                                                       HardwareComponentPainter(hardware: hw)
@@ -186,6 +190,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                                                     } else if (value is HardwareComponentPainter) {
                                                       serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
                                                       serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(value.hardware.id);
+                                                    } else if (value is WallPainter) {
+                                                      context.read<BuildingPageViewModel>().selectWall(value.wall.id);
                                                     } else if (value == null) {
                                                       serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
                                                       serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
@@ -201,6 +207,16 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                                                       updatedPoints.insertAll(indexToInsert + 1, points);
                                                       serviceLocator<ProjectViewModel>().updateListeningArea(
                                                         area: area.copyWith(vertices: updatedPoints),
+                                                      );
+                                                      calculateSpl(context);
+                                                    } else if (painter is WallPainter) {
+                                                      final Wall wall = painter.wall;
+                                                      final FusionCanvasPoint start = line.start;
+                                                      final int indexToInsert = wall.vertices.indexWhere((FusionCanvasPoint v) => v.id == start.id);
+                                                      final List<FusionCanvasPoint> updatedPoints = List<FusionCanvasPoint>.from(wall.vertices);
+                                                      updatedPoints.insertAll(indexToInsert + 1, points);
+                                                      serviceLocator<ProjectViewModel>().updateWall(
+                                                        wall: wall.copyWith(vertices: updatedPoints),
                                                       );
                                                       calculateSpl(context);
                                                     }
@@ -232,6 +248,9 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                                                     } else if (painter is HardwareComponentPainter) {
                                                       serviceLocator<ProjectViewModel>().removeHardware(hardwareId: painter.hardware.id);
                                                       calculateSpl(context);
+                                                    } else if (painter is WallPainter) {
+                                                      serviceLocator<ProjectViewModel>().removeWall(wallId: painter.wall.id);
+                                                      calculateSpl(context);
                                                     }
                                                   },
                                                   onRemovePoints: (FusionBasePainter painter, List<String> points) {
@@ -245,6 +264,17 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                                                       }
                                                       serviceLocator<ProjectViewModel>().updateListeningArea(
                                                         area: area.copyWith(vertices: updatedPoints),
+                                                      );
+                                                    } else if (painter is WallPainter) {
+                                                      final Wall wall = painter.wall;
+                                                      final List<FusionCanvasPoint> updatedPoints =
+                                                          wall.vertices.where((FusionCanvasPoint v) => points.every((String p) => !p.contains(v.id))).toList();
+                                                      if (updatedPoints.length < 2) {
+                                                        FusionToast.error(context, message: "Wall should have minimum 2 points");
+                                                        return;
+                                                      }
+                                                      serviceLocator<ProjectViewModel>().updateWall(
+                                                        wall: wall.copyWith(vertices: updatedPoints),
                                                       );
                                                     }
                                                     calculateSpl(context);
@@ -272,6 +302,20 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                                                         ),
                                                       );
                                                       calculateSpl(context);
+                                                    } else if (painter is WallPainter) {
+                                                      final Wall wall = painter.wall;
+                                                      final List<FusionCanvasPoint> updatedPoints =
+                                                          wall.vertices.map((FusionCanvasPoint v) {
+                                                            if (points.any((String p) => p == v.id)) {
+                                                              return v.copyWith(position: v.position + delta);
+                                                            } else {
+                                                              return v;
+                                                            }
+                                                          }).toList();
+                                                      serviceLocator<ProjectViewModel>().updateWall(
+                                                        wall: wall.copyWith(vertices: updatedPoints),
+                                                      );
+                                                      calculateSpl(context);
                                                     }
                                                   },
                                                   inputEvents: FusionCanvasInputEvents(
@@ -287,36 +331,46 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                                                     },
                                                   ),
                                                   penToolEvents: FusionPenToolEvents(
+                                                    onPathCancelled: (List<FusionCanvasPoint> value) {
+                                                      final ProjectViewModel projectVM = serviceLocator<ProjectViewModel>();
+                                                      final BuildingPageToolState state = context.read<BuildingPageViewModel>().state.toolState;
+                                                      if (state is DrawingWallState) {
+                                                        if (value.length >= 2) projectVM.addWall(wall: Wall(vertices: value), floorId: floor.id);
+                                                      }
+                                                    },
                                                     onPathClosed: (List<FusionCanvasPoint> value) {
                                                       final ProjectViewModel projectVM = serviceLocator<ProjectViewModel>();
                                                       if (value.last == value.first) {
                                                         value.removeLast();
                                                       }
                                                       final BuildingPageToolState state = context.read<BuildingPageViewModel>().state.toolState;
-                                                      final String? listeningAreaId =
-                                                          state is DrawingListeningAreaState
-                                                              ? state.listeningAreaId
-                                                              : null; // if we are already in drawing mode, we should update the existing listening area instead of creating a new one
-                                                      final ListeningArea? existingArea = projectVM.listeningAreas.firstWhereOrNull(
-                                                        (ListeningArea element) => element.id == listeningAreaId,
-                                                      );
-                                                      if (existingArea == null) {
-                                                        final ListeningArea listeningArea = ListeningArea(
-                                                          vertices: value,
-                                                          name: "Listening Area ${projectVM.listeningAreas.length + 1}",
+                                                      if (state is DrawingListeningAreaState) {
+                                                        final String? listeningAreaId =
+                                                            state
+                                                                .listeningAreaId; // if we are already in drawing mode, we should update the existing listening area instead of creating a new one
+                                                        final ListeningArea? existingArea = projectVM.listeningAreas.firstWhereOrNull(
+                                                          (ListeningArea element) => element.id == listeningAreaId,
                                                         );
-                                                        projectVM.addListeningArea(
-                                                          area: listeningArea,
-                                                          floorId: floor.id,
-                                                        );
-                                                        projectVM.setCurrentSelectedHardware(null);
-                                                        projectVM.setCurrentSelectedListeningArea(listeningArea.id);
-                                                      } else {
-                                                        projectVM.updateListeningArea(
-                                                          area: existingArea.copyWith(vertices: value, isDrawn: true),
-                                                        );
-                                                        projectVM.setCurrentSelectedHardware(null);
-                                                        projectVM.setCurrentSelectedListeningArea(existingArea.id);
+                                                        if (existingArea == null) {
+                                                          final ListeningArea listeningArea = ListeningArea(
+                                                            vertices: value,
+                                                            name: "Listening Area ${projectVM.listeningAreas.length + 1}",
+                                                          );
+                                                          projectVM.addListeningArea(
+                                                            area: listeningArea,
+                                                            floorId: floor.id,
+                                                          );
+                                                          projectVM.setCurrentSelectedHardware(null);
+                                                          projectVM.setCurrentSelectedListeningArea(listeningArea.id);
+                                                        } else {
+                                                          projectVM.updateListeningArea(
+                                                            area: existingArea.copyWith(vertices: value, isDrawn: true),
+                                                          );
+                                                          projectVM.setCurrentSelectedHardware(null);
+                                                          projectVM.setCurrentSelectedListeningArea(existingArea.id);
+                                                        }
+                                                      } else if (state is DrawingWallState) {
+                                                        projectVM.addWall(wall: Wall(vertices: value), floorId: floor.id);
                                                       }
 
                                                       calculateSpl(context);

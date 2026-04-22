@@ -94,13 +94,14 @@ class SplViewModel extends Cubit<SplState> {
       if (size.width > 0 && size.height > 0) {
         nonZeroAreas.add(area);
       } else {
-        print("Skipping area with zero size: ${area.id}, size: $size");
+        // print("Skipping area with zero size: ${area.id}, size: $size");
       }
     }
 
     await IsolatedMaceCalculationManager.instance.calculateSpl(
       speakers: speakers,
       surfaces: nonZeroAreas,
+      walls: serviceLocator<ProjectViewModel>().getWallsForFloor(floorId: currentFloor.id),
       resolutionSpacing: state.panelData.getResolutionSpacing(),
     );
 

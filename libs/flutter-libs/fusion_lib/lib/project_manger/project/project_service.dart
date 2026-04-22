@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
-import 'package:fusion_lib/models/project_entities/controller_page_model.dart';
 import 'package:fusion_lib/models/project_entities/endpoints.dart';
+import 'package:fusion_lib/models/project_entities/wall_model.dart';
+
 import '../../fusion_lib.dart';
 
 /// -------------------
@@ -39,6 +40,7 @@ class ProjectService {
 
   final FloorRepository floors;
   final ListeningAreaRepository listeningAreas;
+  final WallRepository walls;
   final ZoneRepository zones;
   final SourceSetRepository sourceSets;
   final HardwareRepository hardware;
@@ -110,6 +112,7 @@ class ProjectService {
 
     FloorRepository? floors,
     ListeningAreaRepository? listeningAreas,
+    WallRepository? walls,
     ZoneRepository? zones,
     SubZoneRepository? subZones,
     SourceSetRepository? sourceSets,
@@ -136,6 +139,7 @@ class ProjectService {
     ControllerPageRepository? controllerPages,
   }) : floors = floors ?? FloorRepository(),
        listeningAreas = listeningAreas ?? ListeningAreaRepository(),
+       walls = walls ?? WallRepository(),
        zones = zones ?? ZoneRepository(),
        subZones = subZones ?? SubZoneRepository(),
        sourceSets = sourceSets ?? SourceSetRepository(),
@@ -190,6 +194,7 @@ class ProjectService {
       lastUploadedAt: lastUploadedAt,
       floors: floors,
       listeningAreas: listeningAreas,
+      walls: walls,
       zones: zones,
       subZones: subZones,
       sourceSets: sourceSets,
@@ -255,6 +260,7 @@ class ProjectService {
     ProjectMetaData? metadata,
     FloorRepository? floors,
     ListeningAreaRepository? listeningAreas,
+    WallRepository? walls,
     ZoneRepository? zones,
     SubZoneRepository? subZones,
     SourceSetRepository? sourceSets,
@@ -309,6 +315,7 @@ class ProjectService {
       lastUploadedAt: lastUploadedAt ?? this.lastUploadedAt,
       floors: floors ?? this.floors,
       listeningAreas: listeningAreas ?? this.listeningAreas,
+      walls: walls ?? this.walls,
       zones: zones ?? this.zones,
       subZones: subZones ?? this.subZones,
       sourceSets: sourceSets ?? this.sourceSets,
@@ -379,6 +386,7 @@ class ProjectService {
       "isCloudInstance": isCloudInstance,
       "floors": floors.toJson((f) => f.toJson()),
       "listeningAreas": listeningAreas.toJson((a) => a.toJson()),
+      "walls": walls.toJson((w) => w.toJson()),
       "zones": zones.toJson((z) => z.toJson()),
       "subZones": subZones.toJson((sz) => sz.toJson()),
       "sourceSet": sourceSets.toJson((m) => m.toJson()),
@@ -452,6 +460,7 @@ class ProjectService {
 
     service.floors.fromJsonList(json["floors"], (m) => FloorModel.fromJson(m), "id");
     service.listeningAreas.fromJsonList(json["listeningAreas"], (m) => ListeningArea.fromJson(m), "id");
+    service.walls.fromJsonList(json["walls"], (m) => Wall.fromJson(m), "id");
     service.zones.fromJsonList(json["zones"], (m) => Zone.fromJson(m), "id");
     service.subZones.fromJsonList(json["subZones"], (m) => SubZone.fromJson(m), "id");
     service.sourceSets.fromJsonList(json["sourceSet"], (m) => SourceSet.fromJson(m), "id");

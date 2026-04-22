@@ -178,6 +178,10 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
               toolbarEvents?.penToolEvents?.onPointsChanged?.call(
                 state.points,
               );
+            } else if (state is CancelledPenToolState) {
+              toolbarEvents?.penToolEvents?.onPathCancelled?.call(
+                state.points,
+              );
             }
           },
         ),

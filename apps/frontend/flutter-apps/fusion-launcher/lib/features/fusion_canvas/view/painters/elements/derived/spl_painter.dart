@@ -123,7 +123,7 @@ class SplPainter extends FusionBasePainter {
       final Rect bounds = tmpPath.getBounds();
 
       if (bounds.width <= 0 || bounds.height <= 0 || spl == null) {
-        print("Skipping area ${listeningArea.name} due to invalid bounds or missing SPL data. Bounds: $bounds, SPL: ${spl == null ? 'null' : 'available'}");
+        // print("Skipping area ${listeningArea.name} due to invalid bounds or missing SPL data. Bounds: $bounds, SPL: ${spl == null ? 'null' : 'available'}");
         continue;
       }
 

@@ -22,7 +22,7 @@ class SplLoaderPainter extends FusionBasePainter {
     for (final ListeningArea listeningArea in listeningAreas) {
       final Path? tmpPath = getPolygonPath(FusionCanvasPolygon(points: listeningArea.vertices, id: listeningArea.id), painter);
       if (tmpPath == null) {
-        print("Skipping area ${listeningArea.name} due to invalid path.");
+        // print("Skipping area ${listeningArea.name} due to invalid path.");
         continue;
       }
       // final double spl = listeningArea.splData ?? 0.0;
