@@ -91,16 +91,16 @@ func init() {
 	valueURL = snapServerAddr + routes.ValueEndpoint
 
 	snapshotDefsActivateURL = snapServerAddr + routes.SnapshotsActivateEndpoint
-	snapshotDefsListURL = snapServerAddr + routes.SnapshotsListEndpoint
-	scenesListURL = snapServerAddr + routes.ScenesListEndpoint
+	snapshotDefsListURL = snapServerAddr + routes.SnapshotsEndpoint
+	scenesListURL = snapServerAddr + routes.ScenesEndpoint
 	sceneSetsActivateURL = snapServerAddr + routes.SceneSetsActivateEndpoint
 	sceneSetsCurrentURL = snapServerAddr + routes.SceneSetsCurrentEndpoint
-	sceneSetsListURL = snapServerAddr + routes.SceneSetsListEndpoint
-	sceneCatalogListURL = snapServerAddr + routes.SceneCatalogListEndpoint
+	sceneSetsListURL = snapServerAddr + routes.ScenesSetsEndpoint
+	sceneCatalogListURL = snapServerAddr + routes.SceneCatalogEndpoint
 
 	logging.InitLogger(logging.LogConfig{
-		NodeName:    "snapshot_test",
-		LogDir:      "/tmp/snapshot_test",
+		NodeName:    "time_machine_test",
+		LogDir:      "/tmp/time_machine_test",
 		MaxFileSize: 100,
 		MaxFiles:    5,
 		LogLevel:    logging.ERROR,
@@ -1299,6 +1299,19 @@ func asInt(v any) int {
 }
 
 func getLiveNodeAddresses() ([]string, error) {
+	if clusterConfig != nil && len(clusterConfig.nodes) > 0 {
+		nodes := make([]string, 0, len(clusterConfig.nodes))
+		for _, node := range clusterConfig.nodes {
+			addr := strings.TrimRight(strings.TrimSpace(node.address), "/")
+			if addr != "" {
+				nodes = append(nodes, addr)
+			}
+		}
+		if len(nodes) > 0 {
+			return nodes, nil
+		}
+	}
+
 	resp, err := http.Get(fmt.Sprintf("%s/cluster/members", snapServerAddr))
 	if err != nil {
 		return nil, err

@@ -207,13 +207,11 @@ func (s *FusionServer) ExportState(w http.ResponseWriter, r *http.Request) {
 	state := s.handler.StateManager.GetFullState()
 
 	// Write the JSON response.
-	encoder := json.NewEncoder(w)
-	if err := encoder.Encode(state); err != nil {
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	if err := json.NewEncoder(w).Encode(state); err != nil {
 		logging.GetLogger().Error("Export state failed: %v", err)
-		http.Error(w, "Error exporting state", http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
 
 }
 

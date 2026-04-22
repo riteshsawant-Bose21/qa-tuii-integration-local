@@ -1,11 +1,11 @@
 info:
-  name: List Scene Sets
+  name: List Scenes Sets
   type: http
   seq: 4
 
 http:
   method: GET
-  url: "{{api_url}}/scene-sets/list"
+  url: "{{api_url}}/scenes-sets"
 
 settings:
   encodeUrl: true

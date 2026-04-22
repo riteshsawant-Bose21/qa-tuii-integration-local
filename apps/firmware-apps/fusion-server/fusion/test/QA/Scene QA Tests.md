@@ -90,11 +90,7 @@ curl -i -sS "$VIP/scene-catalog-list"
 
 **2) Activate snapshot and verify DB state patch**
 ```bash
-curl -i -sS -X POST "$VIP/snapshots/activate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "snapshot-test-01"
-  }'
+curl -i -sS -X POST "$VIP/snapshots/activate/snapshot-test-01"
 ```
 
 ```bash
@@ -144,11 +140,7 @@ curl -i -sS -X PATCH "$VIP/value" \
 ```
 
 ```bash
-curl -i -sS -X POST "$VIP/snapshots/activate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "snapshot-test-01"
-  }'
+curl -i -sS -X POST "$VIP/snapshots/activate/snapshot-test-01"
 ```
 
 ```bash
@@ -157,11 +149,7 @@ curl -i -sS "$VIP/value?key=feature_probe"
 
 **5) Negative-path checks**
 ```bash
-curl -i -sS -X POST "$VIP/snapshots/activate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "does-not-exist"
-  }'
+curl -i -sS -X POST "$VIP/snapshots/activate/does-not-exist"
 ```
 
 ```bash
