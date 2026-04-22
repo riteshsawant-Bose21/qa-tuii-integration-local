@@ -35,10 +35,20 @@ class VirtualControllerViewModel extends Cubit<VirtualControllerState> {
     ));
   }
 
-  void selectZone(WallZone zone,int zoneIndex,gainID,{int currentSubzoneIndex=0,int sourceIndex=1}) {
-    activeZone = zone;
+  void selectZone(WallZone zone,int zoneIndex,gainID,{WallSubZone? subZone,int currentSubzoneIndex=0,int sourceIndex=1}) {
+   activeZone = zone;
+
+   WallSubZone? selectSubZone;
+   if(subZone!=null){
+     selectSubZone = subZone;
+   }else{
+     selectSubZone = zone.subZones[currentSubzoneIndex];
+   }
+
+
     emit(VirtualZoneSelected(
       zone: zone,
+      subZone: selectSubZone!,
       zoneIndex: zoneIndex,
       currentSubzoneIndex: currentSubzoneIndex,
       currentSourceIndex: sourceIndex,
@@ -132,7 +142,7 @@ class VirtualControllerViewModel extends Cubit<VirtualControllerState> {
         });
       }
 
-      emit(GainUpdated(zoneSourceModel: zoneSourceModel));
+      emit(GainUpdated(zoneSourceModel: zoneSourceModel,fromServer: sendToService));
 
       emit(VirtualZonesLoaded(zones: _zones));
     } else {
@@ -174,6 +184,7 @@ class VirtualControllerViewModel extends Cubit<VirtualControllerState> {
 
     if(model.data?.exists == false){
       print("getGain: No data received for gainID: $gainID");
+      sourceModel = sourceModel.copyWith(ono: sourceModel.ono.copyWith(gain: 0));
       return sourceModel;
     }
     double volume =  AudioUtils().dbfsToPercentage( model.data?.value.gain ?? 0);

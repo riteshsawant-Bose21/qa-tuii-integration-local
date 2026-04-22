@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/status.dart' as status;
@@ -32,6 +33,7 @@ class WebSocketService {
         onDone: () {
           _isConnected = false;
           debugPrint("Disconnected from server.");
+          connect(url);
         },
         onError: (error) {
           _isConnected = false;
@@ -43,6 +45,16 @@ class WebSocketService {
       debugPrint("Connection failed: $e");
     }
   }
+
+  void subscribe(String key){
+    _channel!.sink.add(jsonEncode({
+      "id": key,
+      "version": 1,
+      "type": "config"
+    }
+    ));
+  }
+
 
   void sendMessage(dynamic message) {
     if (_channel != null && _isConnected) {

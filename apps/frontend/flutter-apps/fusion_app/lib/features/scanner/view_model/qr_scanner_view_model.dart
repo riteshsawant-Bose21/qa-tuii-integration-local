@@ -1,16 +1,9 @@
 import 'dart:convert';
 import 'package:bloc/bloc.dart';
-
 import 'package:flutter/material.dart';
-import 'package:fusion_app/core/models/scheme_model.dart';
-import 'package:fusion_app/core/services/websocket_service.dart';
-import 'package:fusion_app/core/utils/audio_utils.dart';
 import 'package:fusion_app/core/utils/qr_data_parser.dart';
 import 'package:fusion_app/features/scanner/view_model/fusion_qr_service.dart';
-import 'package:fusion_app/features/zones/models/zone_source_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-
-import '../../../core/models/schema_data.dart' show schemeData;
 
 part 'qr_scanner_view_model_state.dart';
 
@@ -84,35 +77,41 @@ class QrScannerViewModel extends Cubit<QrScannerState> {
   /// Connect to device/server
   Future<void> _connect(QRConnectionDetails details) async {
     print("Attempting connection with VIP: ${details.vip}, Controller ID: ${details.configId}");
-    await WebSocketService().connect(details.vip);
+    try{
+     WebSocketService().connect('ws://${details.vip}:8080/ws');
 
 
-      emit(QrConnecting());
+        emit(QrConnecting());
         ResponseCallback<WallControllerConfig> model = await _qrService.getSchema(details.vip);
-
+        print("Connection response: success=${model.success}, message=${model.message}");
         if(model.success) {
           FusionLogger.log(
             tag: LogTag.debug,
-            message: 'Schema retrieved: ${model.data!.toJson()!}',
+            message: 'Schema retrieved: ${model.data!.toJson()}',
           );
+
           final List<String> zoneIds = [];
 
           WallControllerConfig schemaModel = model.data!;
+          WallController? controller = schemaModel.controllers
+              .firstWhereOrNull((ctrl) => ctrl.id == details.configId);
 
-
-          WallController? controller = schemaModel.controllers.firstWhere((ctrl) => ctrl.id == details.configId);
-
-          if (controller != null) {
-            zoneIds.addAll(controller.zoneIds ?? []);
+          if(controller == null){ //dead code itseems
+            print("No Controllers Found");
+            emit(QrError("Invalid QR Code"));
           }
+
+            zoneIds.addAll(controller?.zoneIds ?? []);
+
 
           for (WallZone item in schemaModel.zones ?? []) {
             WallZone? zone;
             for (var id in zoneIds) {
               if (id == item.id) {
                  zone = WallZone(
+                   functionId: item.functionId,
                     id: id,
-                    name: item.name!,
+                    name: item.name,
                     subZones: [],
                     sources: item.sources ?? [],
                    gain: item.gain,
@@ -146,9 +145,8 @@ class QrScannerViewModel extends Cubit<QrScannerState> {
                 'mute': 0,
               }) ,
             ));
-            _zones.add(zone!);
+            _zones.add(zone);
           }
-
 
             // for (var id in zoneIds) {
             //   if (id == item.id) {
@@ -171,30 +169,26 @@ class QrScannerViewModel extends Cubit<QrScannerState> {
             // for (Zones item in item.subZones) {
             //
             // }
-
-
-
-
           print("Zones added: ${_zones.length}");
 
           emit(QrConnected(schemaModel));
         }
         }else{
-
-          emit(QrInitial());
+         // print("Server ERROR: ${model.message}");
+          emit(QrError('Server ERROR'));
         }
 
 
-    //
-    // } catch (e) {
-    //
-    //   FusionLogger.log(
-    //     tag: LogTag.exceptions,
-    //     message: 'Connection error: $e',
-    //   );
-    //
-    //   emit(QrError("Connection failed"));
-    // }
+
+    } catch (e) {
+
+      FusionLogger.log(
+        tag: LogTag.exceptions,
+        message: 'Connection error: $e',
+      );
+
+      emit(QrError("Connection failed"));
+    }
   }
 
   // Future<void> local(raw) async {

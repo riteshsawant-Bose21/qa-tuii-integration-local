@@ -8,9 +8,10 @@ import 'package:fusion_lib/fusion_widgets/virtual_controllers/volume_meter_paint
 
 import 'bottomsheet_select_source.dart';
 class VirtualControllerVolumeControl extends StatefulWidget {
-
-  const VirtualControllerVolumeControl({
+  final bool isDesignMode;
+   VirtualControllerVolumeControl({
     super.key,
+     this.isDesignMode = false
   });
 
   @override
@@ -40,12 +41,15 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
             return current is VirtualZoneSelected;
           },
           builder: (context, state) {
+
             if(state is VirtualZoneSelected) {
               WallZone selectedZone = state.zone;
 
-              WallZoneSource? selectedSource = selectedZone.sources?[state.currentSourceIndex-1] ?? null;
-              WallSubZone selectSubZone = selectedZone.subZones[state.currentSubzoneIndex];
-              double volume = selectSubZone.ono.gain.toDouble();
+              WallZoneSource? selectedSource = selectedZone.sources[state.currentSourceIndex-1] ?? null;
+              WallSubZone selectSubZone = state.subZone;
+
+              double volume = selectSubZone.ono.gain.toDouble() ?? 0;
+
               return Scaffold(
                 backgroundColor: context.colorScheme.primaryBlack,
                 appBar: CommonMobileAppBar(title: selectedZone.name),
@@ -79,7 +83,11 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
                                               context
                                                   .read<
                                                   VirtualControllerViewModel>()
-                                                  .selectSource(source,selectSubZone.id,"${selectedZone.functionId!}/selector",sendToService: true);
+                                                  .selectSource(
+                                                  source,
+                                                  selectSubZone.id ?? "",
+                                                  "${selectedZone.functionId!}/selector",
+                                                  sendToService: !widget.isDesignMode);
 
                                             },
                                           )
@@ -97,9 +105,12 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
                             },
                             builder: (context, gainState) {
                               bool muted = selectSubZone.ono.mute == 1 ? true:false;
+                              bool fromServer=false;
                               if(gainState is GainUpdated){
                                 volume = gainState.zoneSourceModel.ono.gain.toDouble();
                                 muted = gainState.zoneSourceModel.ono.mute  == 1 ? true:false;
+                                fromServer = gainState.fromServer;
+                               // key.currentState!.animateTo(volume);
                               }
                               return Container(
                                 padding: const EdgeInsets.symmetric(
@@ -174,10 +185,15 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
                                                             initialValue: volume,
                                                             onChanged: (volume) {
 
-                                                              context
-                                                                  .read<
-                                                                  VirtualControllerViewModel>()
-                                                                  .updateVolume(selectSubZone,volume,sendToService: true);
+                                                                context
+                                                                    .read<
+                                                                    VirtualControllerViewModel>()
+                                                                    .updateVolume(
+                                                                    selectSubZone!,
+                                                                    volume,
+                                                                    sendToService: !widget
+                                                                        .isDesignMode);
+
 
                                                             },
                                                           )
@@ -214,7 +230,7 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
                                         context
                                             .read<
                                             VirtualControllerViewModel>()
-                                            .updateVolume(selectSubZone,volume,sendToService: true,isMuted: !muted);
+                                            .updateVolume(selectSubZone!,volume,sendToService: !widget.isDesignMode,isMuted: !muted);
                                       },
                                       child: FusionContainer(
                                         raised: true,
@@ -317,8 +333,7 @@ class VerticalAudioSliderState extends State<VerticalAudioSlider> with SingleTic
   Animation<double>? _animation;
   @override
   void initState() {
-    value = widget.initialValue;
-    previousValue = value;
+
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -342,7 +357,7 @@ class VerticalAudioSliderState extends State<VerticalAudioSlider> with SingleTic
     widget.onChanged?.call(newValue);
   }
 
-  void _animateTo(double target) {
+  void animateTo(double target) {
     _animation = Tween<double>(
       begin: value,
       end: target,
@@ -372,6 +387,8 @@ class VerticalAudioSliderState extends State<VerticalAudioSlider> with SingleTic
   }
   @override
   Widget build(BuildContext context) {
+    value = widget.initialValue;
+    previousValue = value;
     return LayoutBuilder(
       builder: (context, constraints) {
         return GestureDetector(

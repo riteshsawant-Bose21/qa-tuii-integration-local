@@ -33,24 +33,25 @@ class _VirtualControllerState extends State<VirtualController> {
 
     //_wsService.connect(context.read<VirtualControllerViewModel>().vipAddress);
 
-    _wsSubscription = _wsService.stream.listen((encoded) {
-      final Map<String, dynamic> data = jsonDecode(encoded);
+    if(!widget.isDesignMode) {
+      _wsSubscription = _wsService.stream.listen((encoded) {
+        final Map<String, dynamic> data = jsonDecode(encoded);
 
-      if(data['type']=="error"){
-        log(data.toString());
-      }
-      log(data['type'].toString());
-      log(data['data']['settings'].toString());
-      if (data['type'] == 'config_update') {
-        final audioSettings =
-        data['data']?['settings']?['audio'];
-
-        if (audioSettings != null) {
-          _processAudioUpdate(audioSettings);
+        if (data['type'] == "error") {
+          log(data.toString());
         }
-      }
-   
-    });
+        log(data['type'].toString());
+        log(data['data']['settings'].toString());
+        if (data['type'] == 'config_update') {
+          final audioSettings =
+          data['data']?['settings']?['audio'];
+
+          if (audioSettings != null) {
+            _processAudioUpdate(audioSettings);
+          }
+        }
+      });
+    }
 
     super.initState();
   }
@@ -118,9 +119,7 @@ class _VirtualControllerState extends State<VirtualController> {
               //     volume: volume,
               //     timestamp: incomingTsStr,
               //     muted: entry.value['mute']);
-            print("dbfsToPercentage Converted");
-            print(volume);
-            print(entry.value['gain']);
+
             bool muted = entry.value['mute'];
 
               _cache[item] = sourceModel.copyWith(
@@ -173,15 +172,22 @@ class _VirtualControllerState extends State<VirtualController> {
       }catch(e){
         log("Error subscribing to gainId $gainId: $e");
       }
+
       _cache[gainId] = sourceModel;
 
       return sourceModel;
     }
-
+    print("sourceModel.ono.gain");
+    print(_cache[gainId]!.ono.gain.toString());
     return Future.value(_cache[gainId]);
 
   }
+  @override
+  void dispose() {
 
+    _wsSubscription?.cancel();
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<VirtualControllerViewModel, VirtualControllerState>(
@@ -211,7 +217,7 @@ class _VirtualControllerState extends State<VirtualController> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(zone.name.toUpperCase()),
-                      SizedBox(height: 20,),
+                      SizedBox(height: 8,),
                       ListView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
@@ -228,7 +234,8 @@ class _VirtualControllerState extends State<VirtualController> {
 
                                 return Container(height: 50,width: 100);
                               }
-                              WallSubZone source = snapshot.data!;
+                              WallSubZone subzone = snapshot.data!;
+
 
                               return ZoneSourceCard(
                                 onTap: () {
@@ -236,14 +243,15 @@ class _VirtualControllerState extends State<VirtualController> {
                                       zone,
                                       zoneIndex,
                                       src.gain.gainID,
+                                      subZone: subzone,
                                       currentSubzoneIndex : subzoneIndex,
                                       sourceIndex:  zone.sourceSelected);
                                   widget.onSelected!();
 
                                 },
-                                title: source.name,
+                                title: subzone.name,
                                 icon: Icons.eighteen_up_rating_outlined,
-                                volume: source.ono.gain.toDouble(),
+                                volume: subzone.ono.gain.toDouble(),
                               );
                             },
                           );
@@ -260,4 +268,5 @@ class _VirtualControllerState extends State<VirtualController> {
       },
     );
   }
+
 }
