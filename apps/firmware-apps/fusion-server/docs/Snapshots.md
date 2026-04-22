@@ -355,7 +355,7 @@ Returns **404** if the set does not exist.
 #### List Snapshot Definitions
 
 ```
-GET /snapshots/list
+GET /snapshots
 ```
 
 Returns all stored snapshot definitions (full objects including `id`, `name`, `data`).
@@ -363,7 +363,7 @@ Returns all stored snapshot definitions (full objects including `id`, `name`, `d
 #### List All Scenes (flat)
 
 ```
-GET /scenes/list
+GET /scenes
 ```
 
 Returns all scenes across all scene sets as a flat list.
@@ -371,10 +371,31 @@ Returns all scenes across all scene sets as a flat list.
 #### List Scene Sets
 
 ```
-GET /scene-sets/list
+GET /scenes-sets
 ```
 
 Returns all stored scene sets (full objects including nested scenes and `current_scene_id`).
+
+#### Delete All Snapshot Definitions
+
+```
+DELETE /snapshots
+```
+
+- Removes every stored snapshot definition from persistent storage
+- Broadcasts `snapshot_defs_delete_all` to the cluster so all nodes are cleared
+- Returns **204** on success
+
+#### Delete All Scene Sets
+
+```
+DELETE /scenes-sets
+```
+
+- Removes every stored scene set from persistent storage
+- Because scenes are embedded in their parent set, this also removes all scenes
+- Broadcasts `scene_sets_delete_all` to the cluster so all nodes are cleared
+- Returns **204** on success
 
 #### List Full Scene Catalog
 

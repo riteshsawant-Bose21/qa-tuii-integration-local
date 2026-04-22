@@ -56,6 +56,21 @@ func (s *FusionServer) ListSnapshotDefinitions(w http.ResponseWriter, r *http.Re
 	json.NewEncoder(w).Encode(api.SnapshotListResponse{Snapshots: snapshots})
 }
 
+// DeleteSnapshotDefinitions handles DELETE /snapshots.
+// Removes all stored snapshot definitions.
+func (s *FusionServer) DeleteSnapshotDefinitions(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	if err := s.handler.HandleDeleteAllSnapshotDefinitions(); err != nil {
+		http.Error(w, fmt.Sprintf("Error deleting snapshots: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // ListScenes handles GET /scenes.
 // Returns a flat list of all scenes across all scene sets.
 func (s *FusionServer) ListScenes(w http.ResponseWriter, r *http.Request) {
@@ -193,6 +208,21 @@ func (s *FusionServer) ListSceneSets(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(api.SceneSetListResponse{SceneSets: sceneSets})
+}
+
+// DeleteSceneSets handles DELETE /scenes-sets.
+// Removes all stored scene sets (and therefore all scenes contained in those sets).
+func (s *FusionServer) DeleteSceneSets(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	if err := s.handler.HandleDeleteAllSceneSets(); err != nil {
+		http.Error(w, fmt.Sprintf("Error deleting scene sets: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // ListSceneCatalog handles GET /scene-catalog-list.

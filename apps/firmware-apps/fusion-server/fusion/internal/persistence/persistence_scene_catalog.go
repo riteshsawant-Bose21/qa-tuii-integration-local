@@ -91,6 +91,25 @@ func (p *Persistence) ListSnapshotDefinitions() ([]api.SnapshotDefinition, error
 	return items, err
 }
 
+// DeleteAllSnapshotDefinitions removes all stored snapshot definitions.
+func (p *Persistence) DeleteAllSnapshotDefinitions() error {
+	err := p.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(bucketSnapshotDefs))
+		if bucket == nil {
+			return fmt.Errorf("bucket '%s' not found", bucketSnapshotDefs)
+		}
+
+		return bucket.ForEach(func(key, _ []byte) error {
+			return bucket.Delete(key)
+		})
+	})
+	if err != nil {
+		return err
+	}
+
+	return p.updateHash()
+}
+
 // SnapshotDefinitionExists checks if a snapshot definition exists.
 func (p *Persistence) SnapshotDefinitionExists(id string) (bool, error) {
 	var exists bool
@@ -187,6 +206,26 @@ func (p *Persistence) ListSceneSets() ([]api.SceneSet, error) {
 	})
 
 	return items, err
+}
+
+// DeleteAllSceneSets removes all stored scene sets.
+// Deleting scene sets also removes their associated scenes because scenes are embedded in each set.
+func (p *Persistence) DeleteAllSceneSets() error {
+	err := p.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(bucketSceneSets))
+		if bucket == nil {
+			return fmt.Errorf("bucket '%s' not found", bucketSceneSets)
+		}
+
+		return bucket.ForEach(func(key, _ []byte) error {
+			return bucket.Delete(key)
+		})
+	})
+	if err != nil {
+		return err
+	}
+
+	return p.updateHash()
 }
 
 // SceneSetExists checks if a scene set exists.

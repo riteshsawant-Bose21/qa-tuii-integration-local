@@ -81,7 +81,7 @@ curl -i -sS "$VIP/scenes"
 ```
 
 ```bash
-curl -i -sS "$VIP/scene-sets/list"
+curl -i -sS "$VIP/scenes-sets"
 ```
 
 ```bash
@@ -170,7 +170,33 @@ curl -i -sS -X POST "$VIP/scenes-sets/activate" \
   }'
 ```
 
-**6) Replication checks on each node**
+**6) Delete all snapshot definitions**
+```bash
+curl -i -sS -X DELETE "$VIP/snapshots"
+```
+
+```bash
+curl -i -sS "$VIP/snapshots"
+```
+
+Expect an empty `snapshots` array.
+
+**7) Delete all scene-sets (also removes all scenes in those sets)**
+```bash
+curl -i -sS -X DELETE "$VIP/scenes-sets"
+```
+
+```bash
+curl -i -sS "$VIP/scenes-sets"
+```
+
+```bash
+curl -i -sS "$VIP/scenes"
+```
+
+Expect empty `scene_sets` and `scenes` arrays.
+
+**8) Replication checks on each node**
 ```bash
 curl -i -sS "$NODE1/snapshots"
 curl -i -sS "$NODE2/snapshots"

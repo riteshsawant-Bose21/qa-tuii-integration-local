@@ -83,6 +83,21 @@ func getCurrentScene(t *testing.T, setID string) api.CurrentSceneResponse {
 	return out
 }
 
+func deleteEndpoint(t *testing.T, endpoint string) *http.Response {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodDelete, endpoint, nil)
+	if err != nil {
+		t.Fatalf("DELETE request build failed: %v", err)
+	}
+
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		t.Fatalf("DELETE request failed: %v", err)
+	}
+
+	return resp
+}
+
 func TestSceneCatalogSnapshotDefUpsertViaPost(t *testing.T) {
 	id := fmt.Sprintf("snap-def-post-%d", time.Now().UnixNano())
 	def := api.SnapshotDefinition{ID: id, Name: "Test Snapshot (POST)", Data: map[string]any{id + "_gain": -6.0}}
@@ -591,5 +606,91 @@ func TestSceneCatalogListAll(t *testing.T) {
 	}
 	if !slices.Contains(setIDs, setID) {
 		t.Errorf("Scene set %s missing from catalog scene sets: %v", setID, setIDs)
+	}
+}
+
+func TestSceneCatalogDeleteAllSnapshotDefinitions(t *testing.T) {
+	prefix := fmt.Sprintf("snap-delete-all-%d", time.Now().UnixNano())
+	defs := []api.SnapshotDefinition{
+		{ID: prefix + "-a", Data: map[string]any{}},
+		{ID: prefix + "-b", Data: map[string]any{}},
+	}
+	upsertSnapshotDefs(t, defs)
+
+	resp := deleteEndpoint(t, snapshotDefsListURL)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("DELETE /snapshots returned %d: %s", resp.StatusCode, string(body))
+	}
+
+	resp, err := http.Get(snapshotDefsListURL)
+	if err != nil {
+		t.Fatalf("GET /snapshots failed after delete-all: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var listResp api.SnapshotListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
+		t.Fatalf("Failed to decode snapshot list response: %v", err)
+	}
+
+	for _, def := range defs {
+		for _, item := range listResp.Snapshots {
+			if item.ID == def.ID {
+				t.Fatalf("Snapshot definition %s still present after delete-all", def.ID)
+			}
+		}
+	}
+}
+
+func TestSceneCatalogDeleteAllSceneSetsAlsoRemovesScenes(t *testing.T) {
+	prefix := fmt.Sprintf("scene-sets-delete-all-%d", time.Now().UnixNano())
+	setID := prefix + "-set"
+	sceneID := prefix + "-scene"
+	upsertSceneSets(t, []api.SceneSet{{
+		SetID:  setID,
+		Scenes: []api.Scene{{ID: sceneID, Data: map[string]any{}}},
+	}})
+
+	resp := deleteEndpoint(t, sceneSetsListURL)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("DELETE /scenes-sets returned %d: %s", resp.StatusCode, string(body))
+	}
+
+	resp, err := http.Get(sceneSetsListURL)
+	if err != nil {
+		t.Fatalf("GET /scenes-sets failed after delete-all: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var setsResp api.SceneSetListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&setsResp); err != nil {
+		t.Fatalf("Failed to decode scene set list response: %v", err)
+	}
+
+	for _, set := range setsResp.SceneSets {
+		if set.SetID == setID {
+			t.Fatalf("Scene set %s still present after delete-all", setID)
+		}
+	}
+
+	resp, err = http.Get(scenesListURL)
+	if err != nil {
+		t.Fatalf("GET /scenes failed after scene-set delete-all: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var scenesResp api.SceneListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&scenesResp); err != nil {
+		t.Fatalf("Failed to decode scene list response: %v", err)
+	}
+
+	for _, scene := range scenesResp.Scenes {
+		if scene.ID == sceneID {
+			t.Fatalf("Scene %s still present after deleting all scene sets", sceneID)
+		}
 	}
 }

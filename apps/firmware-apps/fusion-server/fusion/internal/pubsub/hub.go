@@ -193,6 +193,26 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 			}
 		}
 
+	case api.NotifyOpSnapshotDefsDeleteAll:
+		if h.transport == nil || h.transport.LocalNode() == nil {
+			return fmt.Errorf("cluster transport not configured")
+		}
+		if message.Node != h.transport.LocalNode().Name {
+			if err := h.persistence.DeleteAllSnapshotDefinitions(); err != nil {
+				return fmt.Errorf("error deleting snapshot definitions: %v", err)
+			}
+		}
+
+	case api.NotifyOpSceneSetsDeleteAll:
+		if h.transport == nil || h.transport.LocalNode() == nil {
+			return fmt.Errorf("cluster transport not configured")
+		}
+		if message.Node != h.transport.LocalNode().Name {
+			if err := h.persistence.DeleteAllSceneSets(); err != nil {
+				return fmt.Errorf("error deleting scene sets: %v", err)
+			}
+		}
+
 	case api.NotifyOpSnapshotV2Activate:
 		if message.SnapshotActivation == nil {
 			return fmt.Errorf("SnapshotActivation required for operation")

@@ -259,6 +259,11 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 			logger.Error("Error upserting snapshot definitions: %v", err)
 		}
 
+	case api.NotifyOpSnapshotDefsDeleteAll:
+		if err := d.persistence.DeleteAllSnapshotDefinitions(); err != nil {
+			logger.Error("Error deleting snapshot definitions: %v", err)
+		}
+
 	case api.NotifyOpSceneSetsUpsert:
 		if len(message.SceneSets) == 0 {
 			logger.Error("SceneSetsUpsert message with empty payload from %s", message.Node)
@@ -266,6 +271,11 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		}
 		if err := d.persistence.UpsertSceneSets(message.SceneSets); err != nil {
 			logger.Error("Error upserting scene sets: %v", err)
+		}
+
+	case api.NotifyOpSceneSetsDeleteAll:
+		if err := d.persistence.DeleteAllSceneSets(); err != nil {
+			logger.Error("Error deleting scene sets: %v", err)
 		}
 
 	case api.NotifyOpSnapshotV2Activate:
