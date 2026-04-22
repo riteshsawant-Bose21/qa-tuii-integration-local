@@ -303,18 +303,18 @@ func (app *App) setupPublicRoutes() {
 
 	// Snapshots
 	app.registerPublicPOST(routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
-	app.registerPublicGET(routes.SnapshotsListEndpoint, app.Server.ListSnapshotDefinitions)
+	app.registerPublicGET(routes.SnapshotsEndpoint, app.Server.ListSnapshotDefinitions)
 
 	// Scenes
-	app.registerPublicGET(routes.ScenesListEndpoint, app.Server.ListScenes)
+	app.registerPublicGET(routes.ScenesEndpoint, app.Server.ListScenes)
 
 	// Scene Sets
 	app.registerPublicPOST(routes.SceneSetsActivateEndpoint, app.Server.ActivateSceneSet)
 	app.registerPublicPOST(routes.SceneSetsCurrentEndpoint, app.Server.GetCurrentScene)
-	app.registerPublicGET(routes.SceneSetsListEndpoint, app.Server.ListSceneSets)
+	app.registerPublicGET(routes.ScenesSetsEndpoint, app.Server.ListSceneSets)
 
 	// Scene Catalog
-	app.registerPublicGET(routes.SceneCatalogListEndpoint, app.Server.ListSceneCatalog)
+	app.registerPublicGET(routes.SceneCatalogEndpoint, app.Server.ListSceneCatalog)
 
 	// Tasks
 	app.registerPublicGET(routes.TasksHistoryEndpoint, app.TaskManager.GetHistory)
