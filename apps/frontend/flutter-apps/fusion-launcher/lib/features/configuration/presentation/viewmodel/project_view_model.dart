@@ -92,6 +92,9 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   List<ProjectData> allProjects = <ProjectData>[];
 
+  /// Live drag offsets for hardware components (canvas pos delta during drag, not persisted).
+  final ValueNotifier<Map<String, Offset>> liveDragOffsets = ValueNotifier<Map<String, Offset>>(<String, Offset>{});
+
   ProjectData? _currentProject;
 
   int get totalProjects => allProjects.length;
