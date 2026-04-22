@@ -78,6 +78,12 @@ static uint max_valid_pps_error_param = 10000;
 module_param(max_valid_pps_error_param, uint, 0644);
 MODULE_PARM_DESC(max_valid_pps_error_param, "Maximum absolute PPS interval error in ticks for a sample to be used by servo and discipline logic");
 
+static uint discipline_holdover_timeout_ms_param = 30000;
+module_param_named(discipline_holdover_timeout_ms,
+		   discipline_holdover_timeout_ms_param, uint, 0644);
+MODULE_PARM_DESC(discipline_holdover_timeout_ms,
+		 "Milliseconds to keep discipline_ready without PPS; 0 disables the timeout");
+
 static uint pi_p_threshold_param = 20;
 module_param(pi_p_threshold_param, uint, 0644);
 MODULE_PARM_DESC(pi_p_threshold_param, "PI P-term activation threshold in PPS error ticks");
@@ -249,6 +255,7 @@ struct fusion_gpt
 	/* "Arm-next-PPS" anchor from userspace. */
 	bool pending_future_anchor;
 	u64  pending_future_phc_ns;
+	unsigned long last_pps_jiffies;
 	unsigned long pps_suppress_until_jiffies;
 
 	/* PI servo and DAC state protected by ctrl_lock. */
@@ -313,6 +320,7 @@ static void gpt_reset_timing_state_locked(struct fusion_gpt *g)
 	g->tick_phase = 0;
 	g->pending_future_anchor = false;
 	g->pending_future_phc_ns = 0;
+	g->last_pps_jiffies = 0;
 	g->pps_suppress_until_jiffies = 0;
 }
 
@@ -656,6 +664,9 @@ static int fusion_gpt_reset_timing_state_internal(bool preserve_ready_for_rechec
 	g->pps_suppress_until_jiffies = suppress_until;
 	gpt_reset_servo_state_locked(g, true, preserve_ready_for_recheck,
 				     prev_pps_valid, prev_pps_cap64);
+	if (READ_ONCE(g->discipline_ready) ||
+	    g->discipline_ready_recheck_pending)
+		g->last_pps_jiffies = jiffies;
 	baseline_dac = clamp(g->dac_target, DAC_MIN_VALUE, DAC_MAX_VALUE);
 	raw_spin_unlock(&g->ctrl_lock);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
@@ -781,6 +792,7 @@ static bool gpt_handle_pps_capture(struct fusion_gpt *g, u64 *cap64_out,
 	g->pps_icr1_last32 = cap;
 	g->pps_icr1_last64 = cap64;
 	g->pps_valid = true;
+	g->last_pps_jiffies = jiffies;
 	gpt_rebase_phc_epoch_locked(g, cap64, had_prev, prev_cap64);
 	if (g->phc_epoch_valid)
 		gpt_rephase_of1_from_pps_locked(g, cap64);
@@ -1096,9 +1108,49 @@ static void gpt_maybe_reset_diag_window_locked(struct fusion_gpt *g)
 	g->pps_diag_next_jiffies = jiffies + HZ;
 }
 
+static void gpt_maybe_expire_discipline_holdover(struct fusion_gpt *g)
+{
+	unsigned long flags;
+	unsigned long last_pps;
+	unsigned long timeout_jiffies;
+	unsigned int timeout_ms = READ_ONCE(discipline_holdover_timeout_ms_param);
+	unsigned int elapsed_ms = 0;
+	bool expired = false;
+
+	if (!timeout_ms)
+		return;
+
+	timeout_jiffies = msecs_to_jiffies(timeout_ms);
+
+	raw_spin_lock_irqsave(&g->pps_lock, flags);
+	raw_spin_lock(&g->ctrl_lock);
+
+	last_pps = g->last_pps_jiffies;
+	if (last_pps &&
+	    (READ_ONCE(g->discipline_ready) ||
+	     g->discipline_ready_recheck_pending) &&
+	    time_after_eq(jiffies, last_pps + timeout_jiffies)) {
+		WRITE_ONCE(g->discipline_ready, false);
+		g->discipline_ready_recheck_pending = false;
+		g->discipline_ready_recheck_armed = false;
+		g->discipline_ready_recheck_cap64 = 0;
+		g->lock_streak = 0;
+		elapsed_ms = jiffies_to_msecs(jiffies - last_pps);
+		expired = true;
+	}
+
+	raw_spin_unlock(&g->ctrl_lock);
+	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
+
+	if (expired)
+		pr_warn("fusion_gpt: discipline holdover expired after %u ms without PPS (timeout=%u ms)\n",
+			elapsed_ms, timeout_ms);
+}
+
 static void gpt_handle_of1_compare(struct fusion_gpt *g)
 {
 	gpt_program_next_compare(g);
+	gpt_maybe_expire_discipline_holdover(g);
 	gpt_fusion_cn_tick(g);
 }
 
