@@ -287,7 +287,9 @@ class FusionCanvasEvents {
   final FusionPenToolEvents? penToolEvents;
   final FusionCanvasInputEvents? inputEvents;
   final ValueChanged<List<FusionBasePainter>?>? onLayerSelected;
+  final ValueChanged<List<FusionBasePainter>>? onLayerDragStart;
   final void Function(FusionBasePainter painter, Offset offset)? onMoveLayer;
+  final void Function(FusionBasePainter painter, Offset offset)? onMoveLayerDuringDrag;
   final bool Function(FusionBasePainter painter, FusionCanvasElement? element)? onElementClicked;
 
   final void Function(FusionBasePainter painter, List<FusionCanvasPoint> points, FusionCanvasLine line)? onAddPoints;
@@ -300,7 +302,9 @@ class FusionCanvasEvents {
   FusionCanvasEvents({
     this.penToolEvents,
     this.onLayerSelected,
+    this.onLayerDragStart,
     this.onMoveLayer,
+    this.onMoveLayerDuringDrag,
     this.onAddPoints,
     this.onRemovePoints,
     this.onDeleteLayer,
