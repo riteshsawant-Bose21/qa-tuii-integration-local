@@ -7,7 +7,7 @@ import 'package:fusion_lib/fusion_widgets/fusion_widgets.dart';
 import 'package:intl/intl.dart';
 
 import '../../viewmodel/scheduler_viewmodel.dart';
-import '../sections/scheduler_form.dart';
+import '../sections/scheduler/scheduler_form.dart';
 
 class EventCard extends StatelessWidget {
   final CalendarEvent event;
