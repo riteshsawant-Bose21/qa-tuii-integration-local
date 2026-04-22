@@ -258,7 +258,6 @@ private:
     bosepro::DspStateMemory<servo::Servo> servo;
     bosepro::DspTempMemory<float []> asrc_in_buf;
     bosepro::DspTempMemory<float []> asrc_out_buf;
-    std::string device_name;
     bool use_asrc;
     int channels;
     int read_samples;
@@ -288,6 +287,7 @@ private:
     bosepro::DspStateMemory<servo::Servo> servo;
     bosepro::DspTempMemory<float []> asrc_in_buf;
     bosepro::DspTempMemory<float []> asrc_out_buf;
+    std::string device_name;
     bool use_asrc;
     int channels;
     int max_write_samples;
@@ -436,7 +436,7 @@ void AlsaDevice::log_io_diagnostics(const char *event, int requested,
 
     last_io_diagnostic_log_sec = now;
 
-    SPDLOG_WARNING(
+    SPDLOG_WARN(
         "ALSA {} {} requested={} result={} read_silence{{not_open={},eagain={},error={},short={}}} write_drop{{not_open={},eagain={},error={},short={}}}",
         device_name.c_str(), event, requested, result,
         read_silence_not_open_count, read_silence_eagain_count,
@@ -1608,7 +1608,7 @@ void AlsaOut::process()
         if (now != last_silence_fill_log_sec)
         {
             last_silence_fill_log_sec = now;
-            SPDLOG_WARNING(
+            SPDLOG_WARN(
                 "ALSA output {} inserted silence depth={} target={} min={} max={} fill={} silence_fills={} silence_frames={}",
                 device_name.c_str(), depth, target_depth, min_depth, max_depth,
                 fill_total, silence_fill_count, silence_fill_frames);
