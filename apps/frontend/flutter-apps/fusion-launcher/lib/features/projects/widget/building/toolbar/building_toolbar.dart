@@ -76,9 +76,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
     '24U',
   ];
 
-  final GlobalKey<PopupMenuButtonState<SourceData>>
-  sourcesPopupMenuButtonStateGlobalKey =
-      GlobalKey<PopupMenuButtonState<SourceData>>();
+  final GlobalKey<PopupMenuButtonState<SourceData>> sourcesPopupMenuButtonStateGlobalKey = GlobalKey<PopupMenuButtonState<SourceData>>();
 
   @override
   Widget build(BuildContext context) {
@@ -112,8 +110,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
                     ProjectViewModelState current,
                   ) => current is ToolbarModeChanged,
               listener: (BuildContext context, ProjectViewModelState state) {
-                if (state is ToolbarModeChanged &&
-                    state.mode == ToolbarMode.system) {
+                if (state is ToolbarModeChanged && state.mode == ToolbarMode.system) {
                   // Force SPL off when mode changes to system
                   widget.onSplDisabled();
                 }
@@ -179,8 +176,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   }
 
   Widget _buildModeSwitch() {
-    final ToolbarMode currentMode =
-        context.watch<BuildingPageViewModel>().state.toolbarMode;
+    final ToolbarMode currentMode = context.watch<BuildingPageViewModel>().state.toolbarMode;
 
     return Container(
       decoration: BoxDecoration(
@@ -250,8 +246,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
           curve: Curves.easeInOutCubic,
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
           decoration: BoxDecoration(
-            color:
-                isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
+            color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
             borderRadius: BorderRadius.circular(60.0),
             boxShadow:
                 isSelected
@@ -298,16 +293,10 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 1.0),
             decoration: BoxDecoration(
-              color:
-                  isSelected
-                      ? color.withValues(alpha: 0.15)
-                      : Colors.transparent,
+              color: isSelected ? color.withValues(alpha: 0.15) : Colors.transparent,
               borderRadius: BorderRadius.circular(6.0),
               border: Border.all(
-                color:
-                    isSelected
-                        ? color.withValues(alpha: 0.3)
-                        : Colors.transparent,
+                color: isSelected ? color.withValues(alpha: 0.3) : Colors.transparent,
                 width: 1,
               ),
             ),
@@ -318,10 +307,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
                       child: Icon(
                         icon,
                         size: 18.0,
-                        color:
-                            isSelected
-                                ? _getDarkerShade(color)
-                                : Colors.black54,
+                        color: isSelected ? _getDarkerShade(color) : Colors.black54,
                       ),
                     )
                     : Padding(
@@ -339,31 +325,24 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   }
 
   Widget _buildModeSpecificTools() {
-    final ToolbarMode currentMode =
-       context.read<BuildingPageViewModel>().state.toolbarMode;
+    final ToolbarMode currentMode = context.read<BuildingPageViewModel>().state.toolbarMode;
 
     return Row(
       key: ValueKey<ToolbarMode>(currentMode),
       mainAxisSize: MainAxisSize.min,
-      children:
-          currentMode == ToolbarMode.acoustics
-              ? _buildAcousticsTools()
-              : _buildSystemTools(),
+      children: currentMode == ToolbarMode.acoustics ? _buildAcousticsTools() : _buildSystemTools(),
     );
   }
 
   List<Widget> _buildAcousticsTools() {
-    final int currentDeviceIndex =
-        serviceLocator<ProjectViewModel>().currentDeviceTypeIndex;
+    final int currentDeviceIndex = serviceLocator<ProjectViewModel>().currentDeviceTypeIndex;
 
     return <Widget>[
       // if (serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode)
       GuideShowcaseWrapper(
         semanticId: 'building_toolbar_draw_mode',
         step: GuideShowCaseSteps.drawListeningArea,
-        onHighlightedSpotTap:
-            (TapDownDetails details) =>
-                _onAcousticsToolSelected(_AcousticsToolType.draw),
+        onHighlightedSpotTap: (TapDownDetails details) => _onAcousticsToolSelected(_AcousticsToolType.draw),
         child: _buildToolItem(
           icon: Icons.polyline,
           "Draw Listening Area",
@@ -398,11 +377,8 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   }
 
   List<Widget> _buildSystemTools() {
-    final int currentDeviceIndex =
-        serviceLocator<ProjectViewModel>().currentDeviceTypeIndex;
-    final bool isListeningAreaSelected =
-        serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId !=
-        null;
+    final int currentDeviceIndex = serviceLocator<ProjectViewModel>().currentDeviceTypeIndex;
+    final bool isListeningAreaSelected = serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId != null;
 
     return <Widget>[
       if (isListeningAreaSelected) ...<Widget>[
@@ -471,21 +447,15 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
           SemanticTypes.button,
           "add_sources",
         ),
-        child: AddSourcePopup(
+        child: AddSourceDrawer(
           isFromBuildingPage: true,
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 1.0),
             decoration: BoxDecoration(
-              color:
-                  isSelected
-                      ? Colors.green.withValues(alpha: 0.15)
-                      : Colors.transparent,
+              color: isSelected ? Colors.green.withValues(alpha: 0.15) : Colors.transparent,
               borderRadius: BorderRadius.circular(6.0),
               border: Border.all(
-                color:
-                    isSelected
-                        ? Colors.green.withValues(alpha: 0.3)
-                        : Colors.transparent,
+                color: isSelected ? Colors.green.withValues(alpha: 0.3) : Colors.transparent,
                 width: 1,
               ),
             ),
@@ -496,10 +466,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
                 child: Icon(
                   Icons.mic,
                   size: 18.0,
-                  color:
-                      isSelected
-                          ? _getDarkerShade(Colors.green)
-                          : Colors.black54,
+                  color: isSelected ? _getDarkerShade(Colors.green) : Colors.black54,
                 ),
               ),
             ),
@@ -573,16 +540,10 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 1.0),
           decoration: BoxDecoration(
-            color:
-                isSelected
-                    ? Colors.green.withValues(alpha: 0.15)
-                    : Colors.transparent,
+            color: isSelected ? Colors.green.withValues(alpha: 0.15) : Colors.transparent,
             borderRadius: BorderRadius.circular(6.0),
             border: Border.all(
-              color:
-                  isSelected
-                      ? Colors.green.withValues(alpha: 0.3)
-                      : Colors.transparent,
+              color: isSelected ? Colors.green.withValues(alpha: 0.3) : Colors.transparent,
               width: 1,
             ),
           ),
@@ -593,8 +554,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
               child: Icon(
                 Icons.dns_outlined,
                 size: 18.0,
-                color:
-                    isSelected ? _getDarkerShade(Colors.green) : Colors.black54,
+                color: isSelected ? _getDarkerShade(Colors.green) : Colors.black54,
               ),
             ),
           ),
@@ -614,8 +574,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   }
 
   void _onAcousticsToolSelected(_AcousticsToolType toolType) {
-    final int currentDeviceIndex =
-        serviceLocator<ProjectViewModel>().currentDeviceTypeIndex;
+    final int currentDeviceIndex = serviceLocator<ProjectViewModel>().currentDeviceTypeIndex;
 
     switch (toolType) {
       case _AcousticsToolType.draw:
@@ -681,8 +640,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   }
 
   void _switchMode(ToolbarMode newMode) {
-    final ToolbarMode currentMode =
-        context.read<BuildingPageViewModel>().state.toolbarMode;
+    final ToolbarMode currentMode = context.read<BuildingPageViewModel>().state.toolbarMode;
 
     if (currentMode != newMode) {
       // Deselect any currently selected hardware component or listening area when switching modes

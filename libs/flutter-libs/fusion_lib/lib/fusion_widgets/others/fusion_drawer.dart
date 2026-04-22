@@ -61,7 +61,6 @@ class FusionDrawer extends StatelessWidget {
               child: SemanticHelper.container(
                 testId: SemanticHelper.createTestId(SemanticTypes.container, '${semanticId}_drawer_content'),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                   child: content,
                 ),
               ),
