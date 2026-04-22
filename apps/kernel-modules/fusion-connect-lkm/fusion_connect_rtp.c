@@ -699,6 +699,8 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
             if (malformed) {
                 memset(buf + (size_t)buf_offset * bytes_per_frame, 0,
                        (size_t)stream->info.frames_per_packet * bytes_per_frame);
+                fusion_cn_metrics_kernel_silence_sub(stream->metrics,
+                                                     stream->info.frames_per_packet);
             } else {
                 memcpy(buf + (size_t)buf_offset * bytes_per_frame, payload,
                        (size_t)stream->info.frames_per_packet * bytes_per_frame);

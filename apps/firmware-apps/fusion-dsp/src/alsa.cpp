@@ -258,6 +258,7 @@ private:
     bosepro::DspStateMemory<servo::Servo> servo;
     bosepro::DspTempMemory<float []> asrc_in_buf;
     bosepro::DspTempMemory<float []> asrc_out_buf;
+    std::string device_name;
     bool use_asrc;
     int channels;
     int read_samples;
@@ -268,6 +269,9 @@ private:
     double max_ratio;
     double base_ratio;
     static const int_fast32_t MIN_DEPTH = 1024;
+    uint64_t depth_adjust_count = 0;
+    int64_t depth_adjust_frames = 0;
+    std::time_t last_depth_adjust_log_sec = 0;
 
     ALGORITHM_DECLARE(AlsaIn);
 };
@@ -1343,7 +1347,6 @@ void AlsaDevice::convert_write_s16_be(const float *src, uint8_t *dst,
 AlsaIn::AlsaIn(const bosepro::BlockConfiguration &configuration)
     : bosepro::Algorithm(configuration)
 {
-    std::string device_name;
     int_fast32_t period_size;
     int_fast32_t device_sample_rate;
 
@@ -1446,7 +1449,21 @@ void AlsaIn::process()
     // Perhaps we want to do packet loss concealment here
     if (depth > max_depth || depth < min_depth)
     {
-        depth = device->adjust_buffer_depth(target_depth - depth);
+        int old_depth = depth;
+        int adjust_frames = target_depth - depth;
+        depth = device->adjust_buffer_depth(adjust_frames);
+        depth_adjust_count++;
+        depth_adjust_frames += adjust_frames;
+
+        std::time_t now = std::time(nullptr);
+        if (now != last_depth_adjust_log_sec)
+        {
+            last_depth_adjust_log_sec = now;
+            SPDLOG_WARN(
+                "ALSA input {} adjusted depth old={} new={} target={} min={} max={} adjust={} adjustments={} adjustment_frames={}",
+                device_name.c_str(), old_depth, depth, target_depth, min_depth,
+                max_depth, adjust_frames, depth_adjust_count, depth_adjust_frames);
+        }
 
         if (use_asrc)
         {

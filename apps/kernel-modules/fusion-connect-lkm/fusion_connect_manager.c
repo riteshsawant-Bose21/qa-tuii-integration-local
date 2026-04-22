@@ -250,6 +250,8 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
             if (playing_silence) {
                 fusion_cn_alsa_fill_silence(a, slot * s->info.frames_per_packet,
                                             s->info.frames_per_packet);
+                fusion_cn_metrics_kernel_silence_sub(s->metrics,
+                                                     s->info.frames_per_packet);
                 s->next_action_time += s->packet_time;
             }
 
