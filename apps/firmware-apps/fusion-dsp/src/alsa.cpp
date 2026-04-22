@@ -13,7 +13,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
+#include <ctime>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -155,12 +157,22 @@ private:
     snd_pcm_uframes_t negotiated_buffer_size = 0;
     bosepro::AudioSubtask deferred_open_task;
     static pthread_mutex_t open_mutex;
+    uint64_t read_silence_not_open_count = 0;
+    uint64_t read_silence_eagain_count = 0;
+    uint64_t read_silence_error_count = 0;
+    uint64_t read_silence_short_count = 0;
+    uint64_t write_drop_not_open_count = 0;
+    uint64_t write_drop_eagain_count = 0;
+    uint64_t write_drop_error_count = 0;
+    uint64_t write_drop_short_count = 0;
+    std::time_t last_io_diagnostic_log_sec = 0;
 
     void (*convert_read)(const uint8_t *src, float *dst,
                          int channels, int samples) = nullptr;
     void (*convert_write)(const float *src, uint8_t *dst,
                           int channels, int samples) = nullptr;
 
+    void log_io_diagnostics(const char *event, int requested, int result);
     void open_device();
     void close_device();
     bool is_open();
@@ -246,6 +258,7 @@ private:
     bosepro::DspStateMemory<servo::Servo> servo;
     bosepro::DspTempMemory<float []> asrc_in_buf;
     bosepro::DspTempMemory<float []> asrc_out_buf;
+    std::string device_name;
     bool use_asrc;
     int channels;
     int read_samples;
@@ -284,6 +297,9 @@ private:
     double min_ratio;
     double max_ratio;
     static const int_fast32_t MIN_DEPTH = 1024;
+    uint64_t silence_fill_count = 0;
+    uint64_t silence_fill_frames = 0;
+    std::time_t last_silence_fill_log_sec = 0;
 
     ALGORITHM_DECLARE(AlsaOut);
 };
@@ -408,6 +424,28 @@ bool AlsaDevice::is_open()
 }
 
 
+void AlsaDevice::log_io_diagnostics(const char *event, int requested,
+                                    int result)
+{
+    std::time_t now = std::time(nullptr);
+
+    if (now == last_io_diagnostic_log_sec)
+    {
+        return;
+    }
+
+    last_io_diagnostic_log_sec = now;
+
+    SPDLOG_WARNING(
+        "ALSA {} {} requested={} result={} read_silence{{not_open={},eagain={},error={},short={}}} write_drop{{not_open={},eagain={},error={},short={}}}",
+        device_name.c_str(), event, requested, result,
+        read_silence_not_open_count, read_silence_eagain_count,
+        read_silence_error_count, read_silence_short_count,
+        write_drop_not_open_count, write_drop_eagain_count,
+        write_drop_error_count, write_drop_short_count);
+}
+
+
 int AlsaDevice::get_buffer_depth()
 {
     if (!is_open())
@@ -525,6 +563,8 @@ int AlsaDevice::read(float *buffer, int samples)
     if (!is_open())
     {
         deferred_open_task.tick();
+        read_silence_not_open_count++;
+        log_io_diagnostics("read silence: device not open", samples, 0);
         std::memset(buffer, 0, samples * channels * sizeof(float));
         return samples;
     }
@@ -541,6 +581,8 @@ int AlsaDevice::read(float *buffer, int samples)
 
     if (res == -EAGAIN)
     {
+        read_silence_eagain_count++;
+        log_io_diagnostics("read silence: EAGAIN", samples, res);
         std::memset(buffer, 0, samples * channels * sizeof(float));
         return samples;
     }
@@ -558,6 +600,8 @@ int AlsaDevice::read(float *buffer, int samples)
                 close_device();
             }
 
+            read_silence_error_count++;
+            log_io_diagnostics("read silence: xrun", samples, res);
             std::memset(buffer, 0, samples * channels * sizeof(float));
             return samples;
         }
@@ -565,6 +609,8 @@ int AlsaDevice::read(float *buffer, int samples)
         if (res == -EBADFD || res == -ENODEV)
         {
             close_device();
+            read_silence_error_count++;
+            log_io_diagnostics("read silence: unavailable", samples, res);
             std::memset(buffer, 0, samples * channels * sizeof(float));
             return samples;
         }
@@ -574,6 +620,8 @@ int AlsaDevice::read(float *buffer, int samples)
             ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                                   "Capture stream suspended on {}: {}",
                                   device_name.c_str(), snd_strerror(res));
+            read_silence_error_count++;
+            log_io_diagnostics("read silence: suspended", samples, res);
             std::memset(buffer, 0, samples * channels * sizeof(float));
             return samples;
         }
@@ -582,6 +630,8 @@ int AlsaDevice::read(float *buffer, int samples)
                               "Unable to read from {}: {}",
                               device_name.c_str(), snd_strerror(res));
         close_device();
+        read_silence_error_count++;
+        log_io_diagnostics("read silence: error", samples, res);
         std::memset(buffer, 0, samples * channels * sizeof(float));
         return samples;
     }
@@ -592,6 +642,8 @@ int AlsaDevice::read(float *buffer, int samples)
                               "Unexpected samples read from {}: {} vs {}",
                               device_name.c_str(), res, samples);
 
+        read_silence_short_count++;
+        log_io_diagnostics("read silence: short read", samples, res);
         std::memset(buffer, 0, samples * channels * sizeof(float));
         if (res > 0)
         {
@@ -614,6 +666,8 @@ void AlsaDevice::write(const float *buffer, int samples)
     if (!is_open())
     {
         deferred_open_task.tick();
+        write_drop_not_open_count++;
+        log_io_diagnostics("write dropped: device not open", samples, 0);
         return;
     }
 
@@ -636,6 +690,8 @@ void AlsaDevice::write(const float *buffer, int samples)
 
     if (res == -EAGAIN)
     {
+        write_drop_eagain_count++;
+        log_io_diagnostics("write dropped: EAGAIN", samples, res);
         return;
     }
 
@@ -652,12 +708,16 @@ void AlsaDevice::write(const float *buffer, int samples)
                 close_device();
             }
 
+            write_drop_error_count++;
+            log_io_diagnostics("write dropped: xrun", samples, res);
             return;
         }
 
         if (res == -EBADFD || res == -ENODEV)
         {
             close_device();
+            write_drop_error_count++;
+            log_io_diagnostics("write dropped: unavailable", samples, res);
             return;
         }
 
@@ -666,6 +726,8 @@ void AlsaDevice::write(const float *buffer, int samples)
             ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                                   "Playback stream suspended on {}: {}",
                                   device_name.c_str(), snd_strerror(res));
+            write_drop_error_count++;
+            log_io_diagnostics("write dropped: suspended", samples, res);
             return;
         }
 
@@ -673,6 +735,8 @@ void AlsaDevice::write(const float *buffer, int samples)
                               "Unable to write {}: {}",
                               device_name.c_str(), snd_strerror(res));
         close_device();
+        write_drop_error_count++;
+        log_io_diagnostics("write dropped: error", samples, res);
         return;
     }
 
@@ -681,6 +745,8 @@ void AlsaDevice::write(const float *buffer, int samples)
         ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                               "Unexpected samples written to {}: {} vs {}",
                               device_name.c_str(), res, samples);
+        write_drop_short_count++;
+        log_io_diagnostics("write dropped: short write", samples, res);
         return;
     }
 
@@ -1328,7 +1394,7 @@ AlsaIn::AlsaIn(const bosepro::BlockConfiguration &configuration)
     {
         base_ratio = 1.0;
         read_samples = get_frame_size();
-        min_depth = std::max(get_frame_size(), period_size);
+        min_depth = std::max(get_frame_size(), 3 * period_size);
         target_depth = min_depth + period_size;
         max_depth = target_depth + period_size;
     }
@@ -1336,9 +1402,9 @@ AlsaIn::AlsaIn(const bosepro::BlockConfiguration &configuration)
     {
         base_ratio = 1.0;
         read_samples = get_frame_size();
-        min_depth = 2 * std::max(get_frame_size(), period_size);
-        max_depth = 2 * min_depth;
+        min_depth = 5 * std::max(get_frame_size(), period_size);
         target_depth = min_depth + period_size;
+        max_depth = 2 * min_depth;
     }
 
     // The JND for pitch is about 0.6% (or about 10 cents).  We can limit the
@@ -1425,7 +1491,6 @@ void AlsaIn::process()
 AlsaOut::AlsaOut(const bosepro::BlockConfiguration &configuration)
     : bosepro::Algorithm(configuration)
 {
-    std::string device_name;
     int_fast32_t period_size;
 
     get_property("use_asrc", use_asrc);
@@ -1461,16 +1526,16 @@ AlsaOut::AlsaOut(const bosepro::BlockConfiguration &configuration)
     else if (use_low_latency_fc_depths(device_name, use_asrc))
     {
         max_write_samples = get_frame_size();
-        min_depth = std::max(get_frame_size(), period_size);
+        min_depth = std::max(get_frame_size(), 3 * period_size);
         target_depth = min_depth + period_size;
         max_depth = target_depth + period_size;
     }
     else
     {
         max_write_samples = get_frame_size();
-        min_depth = 2 * std::max(get_frame_size(), period_size);
-        max_depth = 2 * min_depth;
+        min_depth = 5 * std::max(get_frame_size(), period_size);
         target_depth = min_depth + period_size;
+        max_depth = 2 * min_depth;
     }
 
     // The JND for pitch is about 0.6% (or about 10 cents).  We can limit the
@@ -1523,6 +1588,7 @@ void AlsaOut::process()
     else if (depth < min_depth)
     {
         int_fast32_t fill_amount = target_depth - depth;
+        int_fast32_t fill_total = fill_amount;
 
         while (fill_amount > 0)
         {
@@ -1534,6 +1600,18 @@ void AlsaOut::process()
                           std::min(fill_amount, get_frame_size()));
 
             fill_amount -= get_frame_size();
+        }
+
+        silence_fill_count++;
+        silence_fill_frames += fill_total;
+        std::time_t now = std::time(nullptr);
+        if (now != last_silence_fill_log_sec)
+        {
+            last_silence_fill_log_sec = now;
+            SPDLOG_WARNING(
+                "ALSA output {} inserted silence depth={} target={} min={} max={} fill={} silence_fills={} silence_frames={}",
+                device_name.c_str(), depth, target_depth, min_depth, max_depth,
+                fill_total, silence_fill_count, silence_fill_frames);
         }
 
         if (use_asrc)
