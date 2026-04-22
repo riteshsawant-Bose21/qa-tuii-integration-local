@@ -489,7 +489,7 @@ bool FusionTUIIBridge::processSourceUpdate(const std::string &zoneID, uint16_t s
 
     TuiiZoneConfig &zone = m_zoneConfigs[idx];
 
-    if (sourceIndex < 0 || static_cast<size_t>(sourceIndex) >= zone.sources.size())
+    if (static_cast<size_t>(sourceIndex) >= zone.sources.size())
     {
         spdlog::error("[FusionTUIIBridge] Source update failed: input {} (0-based {}) out of range for key '{}' (sources={})",
                       sourceIndex, sourceIndex, zoneID, zone.sources.size());
